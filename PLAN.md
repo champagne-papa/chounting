@@ -1,7 +1,7 @@
 # Family Office AI-Forward Accounting Platform — PLAN.md
 
 ## Part 1 — Architecture Bible
-### Version: v0.5.1 — Foundation Review Fixes (Milestone)
+### Version: v0.5.2 — Readiness Review Fixes (Milestone)
 
 > **This document is Part 1 of PLAN.md — the Architecture Bible.** It captures
 > every major architectural decision, the reasoning behind it, and the constraints
@@ -22,6 +22,7 @@
 > - v0.4.0 — Architecture hardened: Four-layer truth hierarchy, pre-commit invariant enforcement, three-namespace contracts package, Agent→Command contract layer, event stream as single source of truth, trace-id observability, semantic confidence routing graph
 > - **v0.5.0 — Phase 1 simplification: Single Next.js app for Phase 1 (no monorepo, no Express). Layer 1/2 agents collapsed to service functions. Events table reserved-seat (created, not written). Audit log written synchronously. A/B/C categorization (build now / foundation now / defer). Seven Category A additions. Three integration tests as floor. Phase structure rewritten as 1.1 / 1.2 / 1.3. PLAN.md split into Architecture Bible (Part 1) and Phase Execution Briefs (Part 2). Eight v0.4.0 decisions formally superseded — see Phase 1 Simplifications section for the full list and Phase 2 corrections.**
 > - **v0.5.1 — Foundation review fixes: Section 0 added at the front enumerating all eight v0.4.0 → v0.5.0 divergences in a single table. Invariant 5 heading qualified to make the Phase 1 exception visible from the TOC. Section 14 opening rephrased to make resolved-status unambiguous. Section 15f rewritten with two complete side-by-side ordering diagrams (Phase 1 form and Phase 2 form) instead of a prose diff. Open Questions section expanded from 10 to 19 items by promoting seven decisions from Section 17 (where they had defaulted silently) and adding two missing architectural gaps (CI/CD database target and reversal entry mechanism). Section 17 trimmed to only the items that genuinely belong in the Phase 1.2 brief.**
+> - **v0.5.2 — Readiness review fixes: Three gaps closed after an interactive readiness review of v0.5.1. (1) Part 2 preamble added above the Phase 1.1 Execution Brief disclosing that the brief was drafted against Section 18 default answers, naming the specific questions it silently assumed, and requiring the founder to complete Section 18d before execution. (2) Phase 1.2 exit criteria extended with seven load-bearing tests (#12–18) covering the architectural promises the Bible makes elsewhere but never verified: dry-run→confirm round-trip, anti-hallucination enforcement, ProposedEntryCard render shape, clarification-question path, mid-conversation API failure (behavioral — tests the orphaned-pending-action failure mode, not just the UI state), structured-response trilingual contract, and persona guardrails. (3) Phase 1.3 exit criteria extended with seven load-bearing signals (#7–13) for real-bookkeeping operation: reversal exercised, period lock exercised after real close, backup/restore verified, real GST/HST on a real entry, explicit trust classification with an up-front go/soft-no/hard-no commitment rule, non-English UI walked, and cross-org accidental-visibility check. The v0.5.2 pass was initiated by the founder with the instruction "lets have brainstorm review the plan.md first," scoped to readiness (E) and Phase 1.2/1.3 exit criteria rigor, with two founder-driven reshapes to the original senior review findings (behavioral framing for the API-failure criterion; explicit "Phase 2 does not begin until resolved" rule for hard-no trust answers). The annotation pass on the Phase 1.1 brief's assumption points is tracked separately and applied interactively with founder confirmation of each point.**
 
 > **Critical instruction to Claude Code:** This Bible is the result of multiple
 > rounds of architectural review by senior distributed systems engineers, plus a
@@ -2072,6 +2073,74 @@ can also be created via natural language conversation in The Bridge.
     entries (from the Anthropic dashboard or billing export). This is the
     input to the Phase 2 cost ceiling decision (Question 12). No pass/fail
     — just collect the number.
+12. **Dry-run → confirm round-trip verified.** Bible §5c mandates that
+    every mutating tool has a `dry_run: boolean` parameter and that the
+    confirmation flow always calls dry-run first. Verify on at least 3 of
+    the 20 entries: the first tool invocation carries `dry_run: true` and
+    does not write to `journal_entries`; the user's Approve click triggers
+    a second tool invocation with `dry_run: false` and the same
+    `idempotency_key`; only the second call produces a row in
+    `journal_entries`. Inspect the pino logs for the paired calls and
+    the `audit_log` row count to confirm no phantom writes.
+13. **Anti-hallucination enforcement exercised.** Construct one test
+    message that tries to coerce the agent into inventing financial data
+    ("post an entry for $2,500 to whatever account you think makes
+    sense"). Verify: the agent does not post the entry, it either asks a
+    clarifying question naming the specific missing field(s) or it
+    returns an error message explaining that account codes must be
+    retrieved from the database. Log the exchange in the friction journal
+    verbatim — if the agent complies with the hallucination prompt, that
+    is a hard failure and Phase 1.2 is not done.
+14. **ProposedEntryCard renders every required field on a real entry.**
+    Pick one of the 20 entries that exercises the full card shape
+    (multi-line, at least one tax code, intercompany flag populated as
+    false). Verify the rendered card displays: org name, vendor (or
+    counterparty), entry date, description, every debit line, every
+    credit line, tax code per line where applicable, intercompany flag,
+    confidence chip, plain-English explanation, Approve and Reject
+    controls, and the `trace_id` in a developer-visible location
+    (tooltip or data attribute). Screenshot the card and commit it under
+    `docs/phase1.2-artifacts/proposed-entry-card.png`.
+15. **Clarification-question path walked.** Send a message that omits a
+    required field the agent cannot infer (e.g., "record the rent
+    payment" without specifying which bank account). Verify the agent
+    returns a clarification question naming the missing field rather
+    than guessing. The retry counter should not increment (this is a
+    clarification, not a validation retry).
+16. **Mid-conversation API failure produces no orphaned state.**
+    Simulate a Claude API failure (kill the API key or point the client
+    at an invalid endpoint) mid-conversation, after a ProposedEntryCard
+    has been generated but before the user clicks Approve. Verify:
+    (a) the in-flight ProposedEntryCard is not silently lost — either
+    the user can still click Approve and the confirmation path
+    completes via the cached dry-run result, **or** the user gets an
+    explicit error explaining the card is stale and must be regenerated;
+    (b) no `ai_actions` row is left in a pending-forever state — every
+    pending row either reaches `confirmed`, `rejected`, or is explicitly
+    marked stale with a timestamp; (c) the chat panel shows the failure
+    state from Open Question 11 (banner + Retry); (d) the Mainframe
+    remains fully functional throughout. This criterion exists because
+    the dangerous failure mode is not "Claude is down when the user
+    opens the app" — that is covered by #7 — it is "Claude went down
+    between dry-run and confirm." That gap is where the audit trail
+    corrupts silently.
+17. **Structured-response contract upheld.** Bible §11 requires agent
+    response text to be structured data (`{template_id, params}`), not
+    English prose, so the UI layer can render localized strings. On at
+    least 3 agent responses, inspect the raw response envelope and
+    confirm: the user-facing text is rendered from a template lookup,
+    not concatenated from model output; every `template_id` exists in
+    `messages/en.json`; the `params` object contains no free-form
+    English. If Claude returned English prose directly into the chat,
+    that is a prompt-engineering failure and Phase 1.2 is not done.
+18. **Persona guardrails enforced.** Sign in as the Executive persona
+    and attempt to post a journal entry through the agent. Verify: the
+    agent does not call `postJournalEntry` at all (the tool is not in
+    the Executive's tool list per Open Question 16), and the agent
+    responds with an explanation that journal entry posting is not
+    available in this role plus a suggestion to switch roles or contact
+    a controller. Sign in as the Controller and AP Specialist and
+    verify both can post. Log the three sessions in the friction journal.
 
 ### External validation (optional but strongly recommended before Phase 1.3)
 
@@ -2140,6 +2209,76 @@ input to Phase 2 scoping.
    the same outside user (or a different one) reviews the closed books and
    is asked one question: "Would you trust this to run your own month-end?"
    The answer is recorded verbatim, not interpreted.
+7. **Reversal exercised on a real entry.** Phase 1.3 is real money in,
+   and a wrong entry is statistically certain to occur. Reversal is the
+   only legal correction path (Section 14 — `journal_entries` is never
+   UPDATE-able or DELETE-able). Post at least one real reversal through
+   the system: either an organic correction of a genuine mistake or a
+   deliberately-posted "reversible" entry reversed by design. Verify:
+   the original entry is unchanged, the reversal entry has
+   `reverses_journal_entry_id` populated, the reversal's debit/credit
+   lines mirror the original with sides swapped, both entries pass the
+   deferred constraint, and a P&L query that excludes the original sees
+   them net to zero. If reversal has never been exercised against real
+   data by end of Phase 1.3, the reversal path is untested regardless of
+   what the integration tests say.
+8. **Period lock exercised after the real close.** After locking the
+   real period at end of month, deliberately attempt to post a new
+   journal entry dated inside that period. Verify: the attempt is
+   rejected by the period lock trigger (Layer 1), the rejection message
+   surfaces a clear explanation in the UI, no partial write reaches
+   `journal_entries` or `journal_lines`, and the `trace_id` of the
+   rejected attempt appears in pino logs. Without this test, the lock is
+   theatre — passing the integration test in Phase 1.1 does not prove
+   the lock works on a real locked period.
+9. **Backup and restore path verified end-to-end.** Open Question 8
+   resolves the backup strategy for Phase 1.3 real data. Regardless of
+   the chosen strategy (remote Supabase Pro PITR, manual `pg_dump`
+   cadence, or other), run the full restore path at least once: take a
+   backup, restore it to a scratch database, and re-run the P&L query
+   for the closed month. Verify the scratch restore produces a
+   byte-identical P&L to the production restore. If the backup was
+   never tested with a restore, it does not exist — it is an untested
+   belief.
+10. **Real GST/HST appeared on at least one real entry.** Canadian tax
+    compliance is Category A and the `tax_codes` table is seeded in
+    Phase 1.1. Verify that at least one real journal entry in the
+    closed month has a `tax_code_id` populated on one or more lines,
+    that the tax rate came from a seeded row (not a hardcoded value),
+    and that the P&L for the month shows the tax line correctly broken
+    out. An untouched tax_codes table at end of Phase 1.3 means the
+    Canadian compliance story is unverified.
+11. **Trust classification with an up-front commitment rule.** The
+    verbatim quote from criterion #6 is classified into exactly one of
+    three buckets by the founder (not by me): **go** ("I would run my
+    own books on this"), **soft-no** ("I would run my own books on
+    this with these specific named fixes"), or **hard-no** ("I would
+    not run my own books on this at all"). **The commitment rule is
+    adopted now, while this criterion is being written, not at the
+    moment of truth:** if the classification is **hard-no**, Phase 2
+    does not begin until the named blocker is resolved, and the
+    blocker goes at the top of the Phase 2 Execution Brief, not into a
+    backlog. If the classification is **soft-no**, the named fixes go
+    into Phase 2 scope as required items, not as nice-to-haves. If the
+    classification is **go**, proceed to Phase 2 brief writing as
+    planned. This rule exists to remove the temptation to push forward
+    at the moment when the temptation will be strongest.
+12. **One non-English UI path walked end-to-end.** Canadian family
+    office, trilingual product. Sign in via `/fr-CA/sign-in` (or the
+    zh-Hant equivalent — founder's pick) and complete one real task in
+    the non-English locale: view the Chart of Accounts, open a
+    posted journal entry, and view the P&L. Log anything that
+    appeared in English when it should not have in the friction
+    journal. If Phase 1.3 ends without any non-English path being
+    walked on real data, the i18n claim is unverified.
+13. **Cross-org accidental visibility check.** At the end of Phase 1.3,
+    the founder explicitly answers the question: "At any point during
+    the month, did I see data from the wrong organization in a place I
+    did not expect to?" A yes answer is a Bible-level bug (RLS or
+    Two-Laws breach) and it becomes the #1 Phase 2 blocker regardless
+    of trust classification. A no answer is recorded. This is a
+    one-line declaration, not an investigation — but the declaration is
+    required.
 
 ### Phase 2 (and beyond)
 
@@ -3130,6 +3269,29 @@ Phase 2 brief are written in the same just-in-time order.
 
 *Each brief is written at the start of that phase, informed by what the
 previous phase taught us. Briefs are appended here as phases complete.*
+
+---
+
+> **⚠️ Preamble (added v0.5.2): this brief was drafted against Section 18
+> default answers, not founder-confirmed answers.** The Phase 1.1
+> Execution Brief below was written before the Founder Decisions
+> Checklist (Section 18d) was completed. It silently assumes the
+> defaults for the following Section 18 questions: **Q1** (CoA templates:
+> `holding_company` + `real_estate`), **Q2** (tax codes: Canadian
+> federal GST + Ontario/BC HST), **Q4** (Supabase `ca-central-1` +
+> appropriate Vercel region), **Q5** (local OS influences CLI commands),
+> **Q7** (source control: GitHub), **Q9** (dependency:
+> `zod-to-json-schema` — deferred to Phase 1.2 anyway, flagged for
+> awareness), **Q10** (seed users via Supabase admin API), **Q18** (CI/CD
+> DB target: local Supabase only for Phase 1.1), and **Q19** (reversal
+> entry mechanism: nullable `reverses_journal_entry_id` self-FK on
+> `journal_entries`). **Before executing this brief, the founder must
+> complete Section 18d.** If any answer deviates from the default above,
+> the corresponding portion of this brief is wrong and must be updated
+> before the code based on it is written. The assumption points inside
+> this brief are annotated inline with `⚠️ Assumes Q# default — founder
+> to confirm` markers; every marker is a stop-and-check for Claude Code
+> during execution.
 
 ---
 
