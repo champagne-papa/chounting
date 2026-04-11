@@ -1,7 +1,7 @@
 # Family Office AI-Forward Accounting Platform — PLAN.md
 
 ## Part 1 — Architecture Bible
-### Version: v0.5.2 — Readiness Review Fixes (Milestone)
+### Version: v0.5.3 — Correctness & Risk Review Fixes (Milestone)
 
 > **This document is Part 1 of PLAN.md — the Architecture Bible.** It captures
 > every major architectural decision, the reasoning behind it, and the constraints
@@ -22,6 +22,7 @@
 > - v0.4.0 — Architecture hardened: Four-layer truth hierarchy, pre-commit invariant enforcement, three-namespace contracts package, Agent→Command contract layer, event stream as single source of truth, trace-id observability, semantic confidence routing graph
 > - **v0.5.0 — Phase 1 simplification: Single Next.js app for Phase 1 (no monorepo, no Express). Layer 1/2 agents collapsed to service functions. Events table reserved-seat (created, not written). Audit log written synchronously. A/B/C categorization (build now / foundation now / defer). Seven Category A additions. Three integration tests as floor. Phase structure rewritten as 1.1 / 1.2 / 1.3. PLAN.md split into Architecture Bible (Part 1) and Phase Execution Briefs (Part 2). Eight v0.4.0 decisions formally superseded — see Phase 1 Simplifications section for the full list and Phase 2 corrections.**
 > - **v0.5.1 — Foundation review fixes: Section 0 added at the front enumerating all eight v0.4.0 → v0.5.0 divergences in a single table. Invariant 5 heading qualified to make the Phase 1 exception visible from the TOC. Section 14 opening rephrased to make resolved-status unambiguous. Section 15f rewritten with two complete side-by-side ordering diagrams (Phase 1 form and Phase 2 form) instead of a prose diff. Open Questions section expanded from 10 to 19 items by promoting seven decisions from Section 17 (where they had defaulted silently) and adding two missing architectural gaps (CI/CD database target and reversal entry mechanism). Section 17 trimmed to only the items that genuinely belong in the Phase 1.2 brief.**
+> - **v0.5.3 — Correctness and risk review fixes: Sixteen findings resolved in one commit after back-to-back A (risk hunt) and D (technical correctness) reviews of v0.5.2. A found 10 items (5 Bible changes + 4 inline notes + 1 Phase 1.1 brief addition) — period-lock/ai_actions race, SECURITY DEFINER search_path leak, unenforced service-side authorization, trace_id break at the Claude API boundary, unconstrained Vercel/Supabase region pairing, idempotency key scoping gap, events-table backfill INSERT-only requirement, pnpm-vs-npm lockfile trap in the Phase 1.1 brief, next-intl fallback behavior, and inactive CoA account filtering. D found 11 items (7 Bible changes + 4 inline notes) — period-lock concurrency race (row-lock fix on fiscal_periods), money-as-JavaScript-Number silent rounding, RLS documented on only 3 of 20+ tenant-scoped tables (completed uniformly), events-table TRUNCATE bypass, undocumented multi-currency amount_cad/amount_original/fx_rate invariant (CHECK added), deferred-constraint trigger firing N times per commit (documented and kept in Bible now — not deferred), missing idempotency CHECK constraint for agent source, memberships→auth.users missing ON DELETE CASCADE, unspecified transaction isolation level, events.sequence_number gap warning, and zero-value line decision (**rejected at the database via CHECK — at least one side must be non-zero; a zero-balanced line is an invisible audit-context error worse than a rejected entry**). Full changelog with each finding and its resolution in docs/prompt-history/CHANGELOG.md.**
 > - **v0.5.2 — Readiness review fixes: Three gaps closed after an interactive readiness review of v0.5.1. (1) Part 2 preamble added above the Phase 1.1 Execution Brief disclosing that the brief was drafted against Section 18 default answers, naming the specific questions it silently assumed, and requiring the founder to complete Section 18d before execution. (2) Phase 1.2 exit criteria extended with seven load-bearing tests (#12–18) covering the architectural promises the Bible makes elsewhere but never verified: dry-run→confirm round-trip, anti-hallucination enforcement, ProposedEntryCard render shape, clarification-question path, mid-conversation API failure (behavioral — tests the orphaned-pending-action failure mode, not just the UI state), structured-response trilingual contract, and persona guardrails. (3) Phase 1.3 exit criteria extended with seven load-bearing signals (#7–13) for real-bookkeeping operation: reversal exercised, period lock exercised after real close, backup/restore verified, real GST/HST on a real entry, explicit trust classification with an up-front go/soft-no/hard-no commitment rule, non-English UI walked, and cross-org accidental-visibility check. The v0.5.2 pass was initiated by the founder with the instruction "lets have brainstorm review the plan.md first," scoped to readiness (E) and Phase 1.2/1.3 exit criteria rigor, with two founder-driven reshapes to the original senior review findings (behavioral framing for the API-failure criterion; explicit "Phase 2 does not begin until resolved" rule for hard-no trust answers). The annotation pass on the Phase 1.1 brief's assumption points is tracked separately and applied interactively with founder confirmation of each point.**
 
 > **Critical instruction to Claude Code:** This Bible is the result of multiple
@@ -469,6 +470,20 @@ simpler synchronous path is correct for ~100 users on Phase 1 traffic.
 5. A backfill script replays every Phase 1 `audit_log` row into the events
    table so the historical record is reconstructed correctly. This script is
    written and tested before Phase 2 ships, not after.
+   **v0.5.3 (A6): the backfill script must be pure `INSERT` — no
+   `ON CONFLICT DO UPDATE`, no `UPSERT`, no `MERGE`.** The events table's
+   append-only triggers (`BEFORE UPDATE`, `BEFORE DELETE`, and
+   `BEFORE TRUNCATE` — v0.5.3) reject any statement that touches an
+   existing row, and an `ON CONFLICT DO UPDATE` clause fires the
+   `BEFORE UPDATE` trigger on the conflicting row. If the backfill
+   script is run twice and attempts an upsert on the second run, it
+   will be rejected by the trigger even though the script author
+   intended idempotency. The correct idempotency pattern is: generate a
+   deterministic `event_id` from (`aggregate_id`, `sequence_number`,
+   `event_type`), and rely on a pre-check (`SELECT 1 FROM events
+   WHERE event_id = $1`) to skip already-backfilled rows before
+   INSERT. Tested against a Phase 1 audit_log snapshot in a scratch DB
+   before Phase 2 shipping.
 
 **Phase 2 acceptance criterion:** Querying `events` for any historical
 `JournalEntryPostedEvent` returns the same data that exists in `audit_log`,
@@ -982,20 +997,81 @@ The `DEFERRABLE INITIALLY DEFERRED` clause is critical — it tells Postgres
 to defer the check until COMMIT. Without it, the check fires after every
 row insert and rejects the first line of every entry.
 
+**Performance note (v0.5.3): this trigger fires N times at commit for N
+inserted lines.** Postgres constraint triggers must be row-level
+(`FOR EACH ROW` is the only form `CREATE CONSTRAINT TRIGGER` supports),
+and deferred constraint trigger invocations are not deduplicated. So for
+a 10-line entry, Postgres queues 10 deferred invocations and all 10 fire
+at commit — each running the same `SUM(debit_amount), SUM(credit_amount)
+WHERE journal_entry_id = X`. With the `(journal_entry_id)` index in place
+(Section 2e) each SUM is cheap (~1 ms on Phase 1 data), so the cost is
+~N ms per commit where N is lines-per-entry. For Phase 1 with 5–20 line
+entries this is invisible. For Phase 2 AP batches with 50+ lines it will
+be noticeable but still acceptable. **Do not treat this as a bug during
+Phase 1.2 implementation** — it is correct behavior; all N invocations
+return the same result. Do not try to "fix" it by switching to
+`FOR EACH STATEMENT` (unsupported for deferrable constraint triggers) or
+by adding `pg_trigger_depth()` guards (deferred triggers all fire at the
+same depth, so the guard does not apply). If Phase 2 intercompany batches
+show commit-latency issues, the path is to replace the constraint trigger
+with an explicit `SELECT assert_journal_entry_balanced(entry_id)` call at
+the end of `journalEntryService.post()` — but that moves enforcement from
+Layer 1 (DB) to Layer 2 (service) and is a v0.6.0+ decision, not a
+Phase 1.2 optimization.
+
 **Other triggers (period lock, events table append-only) remain triggers**
 because they enforce single-row rules, not set-level rules.
 
 ```sql
 -- Period lock: reject any insert on journal_lines if the period is locked.
-CREATE OR REPLACE FUNCTION enforce_period_not_locked() ...
-CREATE TRIGGER trg_enforce_period_not_locked
-  BEFORE INSERT OR UPDATE ON journal_lines ... ;
+-- v0.5.3: the function takes a row-level lock on fiscal_periods via
+-- SELECT ... FOR UPDATE before reading is_locked. This prevents the
+-- race condition where transaction A reads is_locked=false, transaction
+-- B locks the period and commits, and transaction A then commits lines
+-- into a now-locked period. Under READ COMMITTED (the Postgres default
+-- and the isolation level this system uses — see Section 10c), the
+-- row lock serializes concurrent period-lock attempts behind any
+-- in-flight journal post.
+CREATE OR REPLACE FUNCTION enforce_period_not_locked()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_is_locked boolean;
+BEGIN
+  -- Row-lock the period row so any concurrent lock attempt waits for us.
+  SELECT is_locked INTO v_is_locked
+  FROM fiscal_periods
+  WHERE period_id = (
+    SELECT fiscal_period_id FROM journal_entries
+    WHERE journal_entry_id = NEW.journal_entry_id
+  )
+  FOR UPDATE;
 
--- Events table append-only: reject UPDATE and DELETE.
+  IF v_is_locked THEN
+    RAISE EXCEPTION
+      'Cannot post to a locked fiscal period (journal_entry_id=%)',
+      NEW.journal_entry_id
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_enforce_period_not_locked
+  BEFORE INSERT OR UPDATE ON journal_lines
+  FOR EACH ROW
+  EXECUTE FUNCTION enforce_period_not_locked();
+
+-- Events table append-only: reject UPDATE, DELETE, AND TRUNCATE.
+-- v0.5.3: TRUNCATE was previously uncovered — a BEFORE UPDATE/DELETE
+-- trigger does not fire on TRUNCATE. Any role with table-owner privileges
+-- (including service_role by default) could TRUNCATE events and wipe the
+-- append-only history silently. We install a TRUNCATE trigger AND revoke
+-- the privilege from every role that does not need it.
 CREATE OR REPLACE FUNCTION reject_events_mutation()
 RETURNS TRIGGER AS $$
 BEGIN
-  RAISE EXCEPTION 'events table is append-only — UPDATE and DELETE are forbidden'
+  RAISE EXCEPTION 'events table is append-only — UPDATE, DELETE, and TRUNCATE are forbidden'
     USING ERRCODE = 'feature_not_supported';
 END;
 $$ LANGUAGE plpgsql;
@@ -1004,6 +1080,14 @@ CREATE TRIGGER trg_events_no_update BEFORE UPDATE ON events
   FOR EACH ROW EXECUTE FUNCTION reject_events_mutation();
 CREATE TRIGGER trg_events_no_delete BEFORE DELETE ON events
   FOR EACH ROW EXECUTE FUNCTION reject_events_mutation();
+CREATE TRIGGER trg_events_no_truncate BEFORE TRUNCATE ON events
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_events_mutation();
+
+REVOKE TRUNCATE ON events FROM PUBLIC;
+REVOKE TRUNCATE ON events FROM authenticated;
+REVOKE TRUNCATE ON events FROM anon;
+-- service_role retains TRUNCATE only because Supabase's automatic grants
+-- cannot easily be revoked; the trigger above is the actual enforcement.
 ```
 
 ### 1e. Migration & Type Generation Strategy
@@ -1039,7 +1123,11 @@ For every tenant-scoped table, `org_id` is a required non-null foreign key to
 holding_company), `functional_currency` (default 'CAD'), `fiscal_year_start_month`,
 `created_at`, `created_by`.
 
-**`memberships`** — `membership_id` (UUID PK), `user_id` (FK to `auth.users`),
+**`memberships`** — `membership_id` (UUID PK), `user_id` (FK to
+`auth.users(id) ON DELETE CASCADE` — v0.5.3: cascade is required; without
+it, the seed script's idempotent `deleteUser` call fails silently on the
+second run, leaving the prior user row in place while `createUser` errors,
+and any production user-deletion path will also break on FK violation),
 `org_id` (FK), `role` (enum: executive, controller, ap_specialist),
 `created_at`. UNIQUE on `(user_id, org_id)`.
 
@@ -1129,12 +1217,28 @@ Seeded with current Canadian federal/provincial rates.
 
 **`ai_actions`** — `ai_action_id` (UUID PK), `org_id` (FK), `user_id`,
 `session_id`, `trace_id`, `tool_name`, `prompt`, `tool_input` (jsonb),
-`status` (enum: 'pending' | 'confirmed' | 'rejected' | 'auto_posted'),
+`status` (enum: 'pending' | 'confirmed' | 'rejected' | 'auto_posted' | 'stale'),
 `confidence` (enum: 'high' | 'medium' | 'low' | 'novel', nullable),
 `routing_path` (text, nullable — Category A reservation, used in Phase 2),
 `journal_entry_id` (FK, nullable), `confirming_user_id` (nullable),
 `rejection_reason` (text, nullable), `idempotency_key` (UUID),
+`response_payload` (jsonb, nullable — cached dry-run result for
+idempotent replay), `staled_at` (timestamptz, nullable),
 `created_at`, `confirmed_at`. UNIQUE on `(org_id, idempotency_key)`.
+**v0.5.3: `ai_actions` row insertion happens inside the same mutation
+transaction as the `journal_entries` write during the confirm path, not
+before it.** The dry-run path inserts an `ai_actions` row in `pending`
+status in its own transaction (required so the idempotency_key slot is
+claimed before the user clicks Approve). The confirm path runs a single
+transaction that (a) loads the pending `ai_actions` row `FOR UPDATE`,
+(b) inserts `journal_entries` + `journal_lines` + `audit_log`, (c) flips
+`ai_actions.status` to `confirmed` and sets `journal_entry_id` and
+`confirmed_at`, and commits. If any step fails, the transaction rolls
+back and `ai_actions.status` returns to `pending`. The `stale` status
+plus `staled_at` timestamp covers the mid-conversation API failure case
+from Phase 1.2 exit criterion #16: if a pending action cannot be
+confirmed because the Claude context is lost, a cleanup path marks it
+`stale` rather than leaving it `pending` forever.
 
 **`events`** — `event_id` (UUID PK), `event_type` (text), `org_id` (FK),
 `aggregate_id` (UUID), `aggregate_type` (text), `payload` (jsonb),
@@ -1142,6 +1246,14 @@ Seeded with current Canadian federal/provincial rates.
 `trace_id` (UUID), `_event_version` (text), `sequence_number` (bigserial).
 **Phase 1: created with append-only trigger, NOT written to (Simplification 2).**
 **Phase 2: begins receiving writes inside mutation transactions.**
+**v0.5.3 — `sequence_number` gap warning:** `bigserial` is monotonic but
+Postgres sequences increment regardless of transaction outcome. A
+rolled-back `INSERT INTO events` leaves a gap in `sequence_number`.
+Replay logic must order by `(occurred_at, sequence_number)` and must
+never assume gap-free density. Any Phase 2+ code that does
+`WHERE sequence_number BETWEEN X AND Y` assuming every integer in that
+range maps to a real event is wrong. `occurred_at` is the temporal
+source of truth; `sequence_number` is only a tiebreaker.
 
 **`agent_sessions`** — `session_id` (UUID PK), `user_id`, `org_id`,
 `locale`, `started_at`, `last_activity_at`, `state` (jsonb).
@@ -1151,44 +1263,128 @@ Persistence for in-flight conversations. Cleaned up after 30 days.
 
 | Invariant | Mechanism | Notes |
 |---|---|---|
-| `SUM(debits) = SUM(credits)` per journal entry | **Deferred constraint** (Section 1d) | Runs at COMMIT |
-| Period not locked when posting | BEFORE INSERT trigger on `journal_lines` | Single-row check |
-| `events` table append-only | BEFORE UPDATE/DELETE triggers reject all | No code path can bypass |
+| `SUM(debits) = SUM(credits)` per journal entry | **Deferred constraint** (Section 1d) | Runs at COMMIT; fires N times per N-line entry, all redundant but correct |
+| Period not locked when posting | BEFORE INSERT trigger on `journal_lines` with row lock on `fiscal_periods` | Row lock prevents race with concurrent `UPDATE fiscal_periods SET is_locked = true` |
+| `events` table append-only | BEFORE UPDATE/DELETE/**TRUNCATE** triggers reject all | v0.5.3: TRUNCATE trigger added; no code path can bypass |
 | `org_id` NOT NULL on every tenant-scoped table | Column constraint | |
 | `bill_lines.amount` positive | CHECK constraint | |
 | `idempotency_key` unique per org on `ai_actions` | UNIQUE constraint on `(org_id, idempotency_key)` | |
 | Journal line is debit OR credit, not both | CHECK on `journal_lines` | |
+| **Journal line is never all-zero** (v0.5.3, D11) | CHECK on `journal_lines`: `(debit_amount >= 0 AND credit_amount >= 0) AND (debit_amount > 0 OR credit_amount > 0)` | Zero-value lines that technically balance are invisible audit errors — worse than rejected entries. At least one side must be non-zero. |
+| **Multi-currency amount invariant** (v0.5.3, D5) | CHECK on `journal_lines`: `amount_original = debit_amount + credit_amount AND amount_cad = ROUND(amount_original * fx_rate, 4)` | Prevents silent P&L corruption where debit=credit holds but `amount_cad` is unpopulated or mismatched. For CAD functional currency, `fx_rate = 1.0` and `amount_cad = amount_original`. |
+| **Idempotency key required for agent source** (v0.5.3, D7) | CHECK on `journal_entries`: `source != 'agent' OR idempotency_key IS NOT NULL` | Makes the Bible's "nullable for manual, required for agent" rule a DB-enforced constraint instead of TypeScript-side discipline. |
 
 ### 2c. RLS Policies
 
+**v0.5.3 — coverage rule:** RLS is enabled on every tenant-scoped table
+in the Phase 1.1 initial migration. v0.5.1 and v0.5.2 only documented
+three tables; v0.5.3 completes the set. Missing RLS is not the same as
+"RLS returns no rows" — on a table where RLS was never `ENABLE`d, every
+authenticated caller sees every row regardless of policy, which would
+silently break the "every tenant-scoped table from day one" promise in
+the Phase 1 Simplifications section.
+
 ```sql
+-- ------------------------------------------------------------------
 -- Helper: does the current user have a membership in this org?
-CREATE OR REPLACE FUNCTION user_has_org_access(target_org_id uuid)
-RETURNS boolean AS $$
+-- v0.5.3 — hardened SECURITY DEFINER:
+--   * SET search_path = '' to prevent search-path injection attacks
+--     (a malicious role cannot shadow `public.memberships` with a
+--     local temp table because every reference is schema-qualified)
+--   * explicit grant only to `authenticated`; revoke from PUBLIC so
+--     the anon role cannot enumerate membership via this function
+--   * STABLE means the optimizer can memoize within a single statement
+-- ------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.user_has_org_access(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
   SELECT EXISTS (
-    SELECT 1 FROM memberships
+    SELECT 1 FROM public.memberships
     WHERE user_id = auth.uid() AND org_id = target_org_id
   );
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$;
 
--- journal_entries: only visible to users with membership
+REVOKE ALL ON FUNCTION public.user_has_org_access(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_org_access(uuid) TO authenticated;
+
+-- Helper: is the current user a controller in this org? Used by the
+-- audit_log and ai_actions policies. Same hardening.
+CREATE OR REPLACE FUNCTION public.user_is_controller(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships
+    WHERE user_id = auth.uid()
+      AND org_id = target_org_id
+      AND role = 'controller'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_is_controller(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_is_controller(uuid) TO authenticated;
+
+-- ------------------------------------------------------------------
+-- Standard tenant-scoped pattern (applied to ~14 tables below).
+-- Each gets: SELECT + INSERT by membership; UPDATE + DELETE deny.
+-- UPDATE and DELETE are not used in Phase 1 for any accounting data;
+-- corrections are via reversal entries. Non-accounting tables that
+-- need UPDATE (e.g., vendors, customers) are listed separately below.
+-- ------------------------------------------------------------------
+
+-- organizations — users see orgs they have membership in
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY organizations_select ON organizations
+  FOR SELECT USING (user_has_org_access(org_id));
+-- Insert via service-role client only (org creation flow); no user-client policy.
+
+-- memberships — users see their own memberships; controllers see all in their orgs
+ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
+CREATE POLICY memberships_select ON memberships
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+
+-- chart_of_accounts — standard tenant pattern, no UPDATE/DELETE
+ALTER TABLE chart_of_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chart_of_accounts_select ON chart_of_accounts
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_insert ON chart_of_accounts
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_update ON chart_of_accounts
+  FOR UPDATE USING (user_has_org_access(org_id));
+-- No DELETE — accounts are deactivated via is_active, not deleted
+
+-- fiscal_periods — members can see, controllers can lock
+ALTER TABLE fiscal_periods ENABLE ROW LEVEL SECURITY;
+CREATE POLICY fiscal_periods_select ON fiscal_periods
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY fiscal_periods_insert ON fiscal_periods
+  FOR INSERT WITH CHECK (user_is_controller(org_id));
+CREATE POLICY fiscal_periods_update ON fiscal_periods
+  FOR UPDATE USING (user_is_controller(org_id));
+-- No DELETE — periods are immutable history
+
+-- journal_entries — standard pattern; UPDATE and DELETE denied for audit integrity
 ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY journal_entries_select ON journal_entries
   FOR SELECT USING (user_has_org_access(org_id));
-
 CREATE POLICY journal_entries_insert ON journal_entries
   FOR INSERT WITH CHECK (user_has_org_access(org_id));
-
 CREATE POLICY journal_entries_no_update ON journal_entries
   FOR UPDATE USING (false);  -- never updatable; corrections via reversal entries
-
 CREATE POLICY journal_entries_no_delete ON journal_entries
   FOR DELETE USING (false);  -- never deletable
 
--- journal_lines: same pattern, plus block updates if period is locked
+-- journal_lines — inherits the org via its parent journal_entry
 ALTER TABLE journal_lines ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY journal_lines_select ON journal_lines
   FOR SELECT USING (
     EXISTS (
@@ -1197,20 +1393,147 @@ CREATE POLICY journal_lines_select ON journal_lines
         AND user_has_org_access(je.org_id)
     )
   );
-
--- ai_actions: only the initiator OR a controller in the same org can SELECT
-ALTER TABLE ai_actions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY ai_actions_select ON ai_actions
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM memberships
-      WHERE user_id = auth.uid()
-        AND org_id = ai_actions.org_id
-        AND role = 'controller'
+CREATE POLICY journal_lines_insert ON journal_lines
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM journal_entries je
+      WHERE je.journal_entry_id = journal_lines.journal_entry_id
+        AND user_has_org_access(je.org_id)
     )
   );
+CREATE POLICY journal_lines_no_update ON journal_lines
+  FOR UPDATE USING (false);
+CREATE POLICY journal_lines_no_delete ON journal_lines
+  FOR DELETE USING (false);
+
+-- vendors — standard tenant pattern with UPDATE allowed
+ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+CREATE POLICY vendors_select ON vendors
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY vendors_insert ON vendors
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY vendors_update ON vendors
+  FOR UPDATE USING (user_has_org_access(org_id));
+
+-- customers — same as vendors
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY customers_select ON customers
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY customers_insert ON customers
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY customers_update ON customers
+  FOR UPDATE USING (user_has_org_access(org_id));
+
+-- vendor_rules — controller-only write; all members can read
+ALTER TABLE vendor_rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY vendor_rules_select ON vendor_rules
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY vendor_rules_cud ON vendor_rules
+  FOR ALL USING (user_is_controller(org_id))
+  WITH CHECK (user_is_controller(org_id));
+
+-- bills, bill_lines, invoices, invoice_lines, payments,
+-- bank_accounts, bank_transactions — all standard tenant pattern.
+-- Phase 1 does not use these tables; policies exist so that when
+-- Phase 2 lights them up, the security model is not a retrofit.
+ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
+CREATE POLICY bills_tenant ON bills FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE bill_lines ENABLE ROW LEVEL SECURITY;
+CREATE POLICY bill_lines_tenant ON bill_lines FOR ALL
+  USING (EXISTS (SELECT 1 FROM bills b WHERE b.bill_id = bill_lines.bill_id AND user_has_org_access(b.org_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM bills b WHERE b.bill_id = bill_lines.bill_id AND user_has_org_access(b.org_id)));
+
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY invoices_tenant ON invoices FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE invoice_lines ENABLE ROW LEVEL SECURITY;
+CREATE POLICY invoice_lines_tenant ON invoice_lines FOR ALL
+  USING (EXISTS (SELECT 1 FROM invoices i WHERE i.invoice_id = invoice_lines.invoice_id AND user_has_org_access(i.org_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM invoices i WHERE i.invoice_id = invoice_lines.invoice_id AND user_has_org_access(i.org_id)));
+
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY payments_tenant ON payments FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE bank_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY bank_accounts_tenant ON bank_accounts FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY bank_transactions_tenant ON bank_transactions FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY items_tenant ON items FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE intercompany_relationships ENABLE ROW LEVEL SECURITY;
+CREATE POLICY intercompany_relationships_select ON intercompany_relationships
+  FOR SELECT USING (user_has_org_access(org_a_id) OR user_has_org_access(org_b_id));
+-- Inserts go through the service-role client only in Phase 2.
+
+ALTER TABLE org_context ENABLE ROW LEVEL SECURITY;
+CREATE POLICY org_context_tenant ON org_context FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+ALTER TABLE agent_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_sessions_select ON agent_sessions
+  FOR SELECT USING (user_id = auth.uid());
+-- Inserts/updates via service-role client only.
+
+-- audit_log — same-org members can read, nobody can write from user client
+-- (service-role bypasses RLS for the synchronous audit write in Phase 1)
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY audit_log_select ON audit_log
+  FOR SELECT USING (user_has_org_access(org_id));
+-- No INSERT policy — service-role only.
+
+-- events — Phase 1 is not written to via user client; still enable RLS
+-- for defense in depth when Phase 2 begins writing
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY events_select ON events
+  FOR SELECT USING (user_has_org_access(org_id));
+-- No INSERT policy — service-role only in Phase 2.
+
+-- ai_actions — initiator OR same-org controller can read
+ALTER TABLE ai_actions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY ai_actions_select ON ai_actions
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+-- Inserts via service-role client only.
+
+-- ------------------------------------------------------------------
+-- Three explicit exceptions (tables that do NOT follow the tenant pattern):
+-- ------------------------------------------------------------------
+
+-- chart_of_accounts_templates — global, industry-keyed, not org-scoped.
+-- Readable by all authenticated users. No RLS needed; revoke write.
+ALTER TABLE chart_of_accounts_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY coa_templates_select ON chart_of_accounts_templates
+  FOR SELECT TO authenticated USING (true);
+-- No INSERT/UPDATE/DELETE policy — seeded via migration only.
+
+-- tax_codes — can be org-scoped (custom) or shared (org_id IS NULL).
+-- Shared codes visible to all authenticated; org codes to that org.
+ALTER TABLE tax_codes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tax_codes_select ON tax_codes
+  FOR SELECT USING (
+    org_id IS NULL OR user_has_org_access(org_id)
+  );
+-- Inserts/updates via service-role client only (Canadian rate table maintenance).
+
+-- auth.users — managed by Supabase Auth itself; do not touch.
 ```
 
 **Why two Supabase clients?** The Next.js API routes (`src/app/api/`) and
@@ -1273,10 +1596,73 @@ service function.
 
 ### 3a. Zod Input Schema
 
+**v0.5.3 — money never crosses the service boundary as a JavaScript
+`Number`.** JavaScript numbers are IEEE 754 doubles. `0.1 + 0.2` equals
+`0.30000000000000004`, not `0.3`. For a single entry the error is
+invisible (Postgres rounds it back to `numeric(20,4)`). For a year of
+entries the accumulated rounding produces P&L figures that disagree
+with the per-entry sums, *even though every entry passes the deferred
+constraint*. The multi-currency case is worse: `amount_cad =
+amount_original * fx_rate` computed in JS with an 8-decimal FX rate
+loses precision on the way to a 4-decimal CAD value, and the result
+does not match what Postgres would compute for the same inputs —
+silently breaking the D5 invariant (`amount_cad = ROUND(amount_original
+* fx_rate, 4)`).
+
+**The rule:** every field that represents money or an FX rate is a
+`z.string()` matching a strict decimal regex at the service boundary.
+Arithmetic on money happens in Postgres (`numeric` type) or via a
+decimal library (`decimal.js`) — never via JS `+`, `*`, or `reduce`.
+Branded types make misuse a compile-time error.
+
+`src/shared/schemas/accounting/money.schema.ts`:
+
+```typescript
+import { z } from 'zod';
+import Decimal from 'decimal.js';
+
+// Money is always a string at the boundary. The regex matches an
+// optional sign, up to 16 digits before the decimal, and 0-4 digits
+// after. This fits numeric(20,4) exactly. Rejects scientific notation,
+// commas, currency symbols, and whitespace.
+export const MoneyAmountSchema = z
+  .string()
+  .regex(/^-?\d{1,16}(\.\d{1,4})?$/, 'must be a decimal string with up to 4 fractional digits');
+
+// FX rates are numeric(20,8) — up to 8 fractional digits.
+export const FxRateSchema = z
+  .string()
+  .regex(/^-?\d{1,12}(\.\d{1,8})?$/, 'must be a decimal string with up to 8 fractional digits');
+
+// Branded types so you cannot accidentally pass a raw string where
+// a MoneyAmount is expected. Parse once, thread the brand everywhere.
+export type MoneyAmount = string & { readonly __brand: 'MoneyAmount' };
+export type FxRate = string & { readonly __brand: 'FxRate' };
+
+// Helper for arithmetic that MUST go through decimal.js, not JS math.
+export function addMoney(a: MoneyAmount, b: MoneyAmount): MoneyAmount {
+  return new Decimal(a).plus(new Decimal(b)).toFixed(4) as MoneyAmount;
+}
+
+export function multiplyMoneyByRate(amount: MoneyAmount, rate: FxRate): MoneyAmount {
+  // Matches Postgres ROUND(amount * rate, 4) behavior (HALF_UP).
+  return new Decimal(amount)
+    .times(new Decimal(rate))
+    .toDecimalPlaces(4, Decimal.ROUND_HALF_UP)
+    .toFixed(4) as MoneyAmount;
+}
+
+export function eqMoney(a: MoneyAmount, b: MoneyAmount): boolean {
+  return new Decimal(a).eq(new Decimal(b));
+}
+```
+
 `src/shared/schemas/accounting/journalEntry.schema.ts`:
 
 ```typescript
 import { z } from 'zod';
+import Decimal from 'decimal.js';
+import { MoneyAmountSchema, FxRateSchema, type MoneyAmount } from './money.schema';
 
 // Plain English: a Zod schema is a runtime check that a JavaScript object
 // has the shape you expect. It also produces a TypeScript type for free.
@@ -1285,17 +1671,42 @@ import { z } from 'zod';
 export const JournalLineInputSchema = z.object({
   account_id: z.string().uuid(),
   description: z.string().max(500).optional(),
-  debit_amount: z.number().nonnegative(),
-  credit_amount: z.number().nonnegative(),
+  debit_amount: MoneyAmountSchema,
+  credit_amount: MoneyAmountSchema,
   tax_code_id: z.string().uuid().optional(),
-  // Multi-currency fields — Category A, present from day one
+  // Multi-currency fields — Category A, present from day one.
+  // All monetary values are decimal strings, never JS Numbers.
   currency: z.string().length(3).default('CAD'),
-  amount_original: z.number().nonnegative(),
-  amount_cad: z.number().nonnegative(),
-  fx_rate: z.number().positive().default(1.0),
+  amount_original: MoneyAmountSchema,
+  amount_cad: MoneyAmountSchema,
+  fx_rate: FxRateSchema.default('1.00000000'),
 }).refine(
-  (line) => (line.debit_amount > 0) !== (line.credit_amount > 0),
-  { message: 'A journal line must be either a debit or a credit, never both or neither.' }
+  // Exactly one side must be non-zero (matches the D11 DB CHECK constraint
+  // — at least one side > 0, never both positive).
+  (line) => {
+    const d = new Decimal(line.debit_amount);
+    const c = new Decimal(line.credit_amount);
+    return (d.gt(0) && c.eq(0)) || (d.eq(0) && c.gt(0));
+  },
+  { message: 'A journal line must be exactly one of: a positive debit or a positive credit. Zero-value lines are rejected (D11).' }
+).refine(
+  // amount_original = debit_amount + credit_amount (matches the D5 DB CHECK).
+  (line) => {
+    const d = new Decimal(line.debit_amount);
+    const c = new Decimal(line.credit_amount);
+    const original = new Decimal(line.amount_original);
+    return original.eq(d.plus(c));
+  },
+  { message: 'amount_original must equal debit_amount + credit_amount.' }
+).refine(
+  // amount_cad = ROUND(amount_original * fx_rate, 4) (matches the D5 DB CHECK).
+  (line) => {
+    const computed = new Decimal(line.amount_original)
+      .times(new Decimal(line.fx_rate))
+      .toDecimalPlaces(4, Decimal.ROUND_HALF_UP);
+    return computed.eq(new Decimal(line.amount_cad));
+  },
+  { message: 'amount_cad must equal ROUND(amount_original * fx_rate, 4). Recompute using multiplyMoneyByRate().' }
 );
 
 export const PostJournalEntryInputSchema = z.object({
@@ -1309,12 +1720,19 @@ export const PostJournalEntryInputSchema = z.object({
   dry_run: z.boolean().default(false),
   lines: z.array(JournalLineInputSchema).min(2),
 }).refine(
+  // Debit total equals credit total — computed with decimal.js, not JS math.
   (entry) => {
-    const debits = entry.lines.reduce((s, l) => s + l.debit_amount, 0);
-    const credits = entry.lines.reduce((s, l) => s + l.credit_amount, 0);
-    return Math.abs(debits - credits) < 0.005; // tolerance for float arithmetic
+    const debits = entry.lines.reduce(
+      (acc, l) => acc.plus(new Decimal(l.debit_amount)),
+      new Decimal(0)
+    );
+    const credits = entry.lines.reduce(
+      (acc, l) => acc.plus(new Decimal(l.credit_amount)),
+      new Decimal(0)
+    );
+    return debits.eq(credits);
   },
-  { message: 'Sum of debits must equal sum of credits.' }
+  { message: 'Sum of debits must equal sum of credits (exact decimal, no tolerance).' }
 ).refine(
   (entry) => entry.source !== 'agent' || entry.idempotency_key !== undefined,
   { message: 'idempotency_key is required when source is "agent".' }
@@ -1323,9 +1741,14 @@ export const PostJournalEntryInputSchema = z.object({
 export type PostJournalEntryInput = z.infer<typeof PostJournalEntryInputSchema>;
 ```
 
-The application-layer `.refine()` for debit=credit gives an early, readable
-error message. The deferred database constraint (Section 1d) is the hard
-guarantee — it catches anything that bypasses the application layer.
+The application-layer `.refine()` for debit=credit gives an early,
+readable error message using exact decimal comparison — **no tolerance
+window**. The previous v0.5.2 schema used `Math.abs(debits - credits) <
+0.005` as a float-tolerance; v0.5.3 removes this because with string
+money and decimal.js there is no float drift to tolerate. If debits and
+credits are not exactly equal, the entry is wrong. The deferred database
+constraint (Section 1d) is the hard guarantee — it catches anything
+that bypasses the application layer.
 
 ### 3b. Zod Output Schema
 
@@ -1728,6 +2151,20 @@ Two additional read-only tools support the conversation:
 That is the entire Phase 1 agent toolbox. Three tools. One mutating, two
 reading.
 
+**v0.5.3 — inactive Chart of Accounts filtering rule (A10):** The
+`listChartOfAccounts` tool filters `chart_of_accounts` where
+`is_active = true` by default. The agent cannot post to an inactive
+account because it cannot see one. If a user explicitly asks about a
+historical account ("did we ever have an account called X?"), the tool
+accepts an optional `include_inactive: boolean` parameter which
+returns inactive accounts *flagged as inactive in the response* — but
+`postJournalEntry` validates at the service layer that the target
+`account_id` has `is_active = true` and rejects inactive targets with a
+clarification error regardless of what the listing tool returned. This
+is belt and suspenders: the tool's default protects the agent from
+proposing inactive accounts, and the service rejects them if the agent
+somehow produces one anyway.
+
 **What "Double Entry Agent" means in Phase 1.2:**
 - A Claude tool definition with the JSON schema generated from the
   `PostJournalEntryInputSchema` Zod schema.
@@ -1807,6 +2244,65 @@ in `src/agent/orchestrator/systemPrompts/`. Each prompt declares: who the
 user is, what org they are in, what their role permits, what tools are
 available, and the cardinal rule — *never invent financial data, always
 retrieve it through tools*.
+
+**v0.5.3 — trace_id propagation across the Anthropic client boundary (A4).**
+Anthropic's API does not carry application-level trace IDs — the SDK
+has no `trace_id` header. Without explicit wrapping, any Claude API
+failure (500, timeout, rate limit) produces a pino log line with no
+`trace_id`, making it impossible to correlate the failure with the
+user message that caused it. The fix: every `anthropic.messages.create`
+call runs inside a pino child logger bound to the current `trace_id`,
+and the call itself is wrapped in a helper that logs start/end/error
+on that child logger. Use this shape inside the orchestrator:
+
+```typescript
+// src/agent/orchestrator/anthropicClient.ts
+import Anthropic from '@anthropic-ai/sdk';
+import type { Logger } from 'pino';
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export async function callClaude(
+  params: Anthropic.MessageCreateParams,
+  traceLogger: Logger,
+): Promise<Anthropic.Message> {
+  const start = Date.now();
+  traceLogger.info({ event: 'anthropic.request.start', model: params.model });
+  try {
+    const response = await client.messages.create(params);
+    traceLogger.info({
+      event: 'anthropic.request.success',
+      duration_ms: Date.now() - start,
+      usage: response.usage,
+      stop_reason: response.stop_reason,
+    });
+    return response;
+  } catch (err) {
+    traceLogger.error({
+      event: 'anthropic.request.error',
+      duration_ms: Date.now() - start,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+}
+```
+
+And inside `handleUserMessage`, the child logger is created before
+any Claude call:
+
+```typescript
+const trace_id = crypto.randomUUID();
+const traceLogger = baseLogger.child({ trace_id, user_id: input.user_id, org_id: input.org_id });
+// ... build request ...
+const response = await callClaude(params, traceLogger);
+```
+
+Every log line from a Claude round trip now carries `trace_id`, so
+filtering pino by `trace_id=X` returns the user message, orchestrator
+decision, every Claude API call, every tool invocation, every service
+call, and the audit row — in order. Without this wrapper, the Claude
+side of the story is blind.
 
 ### 5c. Phase 1 Anti-Hallucination Rules (non-negotiable)
 
@@ -1999,6 +2495,13 @@ model, auth, UI shell, and the manual journal entry path proven to work.
     entries. Record it in the friction journal. Target: under 2 minutes
     once familiar; anything over 5 minutes is a UX flag to capture, not a
     failure to block on.
+15. **Hosting region pinned (v0.5.3, A7).** Both Supabase and Vercel
+    deploy to Canadian regions per Section 9a.0. Verify: the Supabase
+    project's region in the dashboard is `ca-central-1`; `vercel.json`
+    contains `"regions": ["yul1"]` (or an equivalent Canadian region);
+    the Vercel dashboard → Project → Settings → Functions shows the
+    region pinned for both Preview and Production. A US-region
+    deployment is a Phase 1.1 failure regardless of the other criteria.
 
 **Phase 1.1 explicitly does NOT include:** any agent code, the
 ProposedEntryCard component, the AI Action Review queue (the route exists
@@ -2388,6 +2891,45 @@ re-argue them.
 
 ## Section 9 — Security and Secrets Management
 
+### 9a.0 Hosting Region Pinning (v0.5.3, A7) — Hard Constraint, Not a Founder Choice
+
+**Vercel and Supabase must both deploy to a Canadian region.** Specifically:
+
+- Supabase: `ca-central-1` (Toronto) — the only Canadian Supabase region.
+- Vercel: `yul1` (Montreal) or equivalent Canadian region for the serverless
+  function execution — set via `vercel.json` `regions` field and confirmed
+  in the Vercel dashboard per-environment.
+
+**Why this is a hard constraint, not Open Question 4's "appropriate Vercel
+region":** Open Q4 asks the founder to "confirm" the region. v0.5.3
+upgrades this from a choice to a rule. If Vercel executes serverless
+functions in `iad1` (US East, default) while Supabase is in
+`ca-central-1`, every API route round-trip pays ~30 ms for the
+transit to Toronto and back. For the Phase 1.1 P&L query, the manual
+entry form, and Phase 1.2's agent confirmation path, this manifests as
+a vague "the system is slow" founder perception — the actual cause
+being geographic, not architectural. The founder will spend debugging
+effort on the wrong layer.
+
+**Canadian data residency** is also a legitimate reason for a family
+office handling financial data: HST/GST records, intercompany
+relationships, and controller-signed audit entries are all regulated
+data categories that benefit from not crossing a border.
+
+**How to verify during Phase 1.1 setup:**
+1. Supabase project creation step: select `ca-central-1` in the region
+   dropdown. If the project was already created in a different region,
+   delete and recreate before writing any data.
+2. `vercel.json` at the repo root contains:
+   ```json
+   { "regions": ["yul1"] }
+   ```
+3. Vercel dashboard → Project → Settings → Functions → verify `yul1`
+   is listed. Preview and production deployments both pinned.
+
+This criterion blocks Phase 1.1 exit — see Phase 1.1 exit criterion #15
+(added in v0.5.3).
+
 ### 9a. Environment Variable Table
 
 | Variable | Consumed By | Client-Safe? | Notes |
@@ -2506,6 +3048,41 @@ These are decisions that are painful to retrofit. Not premature optimization.
   query using Postgres JOINs. Never loop.
 - **Caching:** Defer entirely. No Redis, no query caching in Phases 1–2.
   Flag as Phase 3+ when report generation becomes slow.
+
+### 10c. Transaction Isolation Level (v0.5.3, D9)
+
+**The default isolation level is READ COMMITTED** — Postgres's default,
+and the level under which all integration tests and service functions
+run unless explicitly overridden. The service layer does not elevate
+to `SERIALIZABLE` because:
+
+1. The v0.5.3 period lock trigger (Section 1d) takes a row-level lock
+   on `fiscal_periods` via `SELECT ... FOR UPDATE`, which is the precise
+   concurrency protection `SERIALIZABLE` would provide for the one case
+   where it matters (race between a journal post and a period lock).
+   Row locks are cheap; `SERIALIZABLE` is not.
+2. The deferred constraint for debit=credit (Section 1d) runs at commit
+   and is already transaction-scoped — isolation level does not change
+   its semantics.
+3. `SERIALIZABLE` in Postgres uses predicate locking (SSI) and can
+   produce unpredictable `could not serialize access due to
+   read/write dependencies` errors that the service layer would then
+   have to retry. For a single-founder Phase 1 with low concurrency,
+   this is cost without benefit.
+
+**The rule is explicit:** Phase 1 mutating service functions run under
+READ COMMITTED. They rely on row-level locks (`SELECT ... FOR UPDATE`)
+at the specific points where write skew would otherwise occur — the
+period lock trigger is the only such point in Phase 1. If a future
+feature introduces another read-then-write pattern with cross-row
+dependency (e.g., a "reserve the next invoice number in sequence"
+path), the service function adds a row lock at that point, not a
+blanket isolation bump.
+
+**What `SERIALIZABLE` would catch that row locks do not:** nothing, in
+Phase 1. In Phase 2 with concurrent AP batch ingestion, the decision
+is revisited — but the default position remains READ COMMITTED with
+targeted row locks, not `SERIALIZABLE` everywhere.
 
 ---
 
@@ -2626,6 +3203,21 @@ Day 1 requirement, not an afterthought.
   with the user's locale. Never hardcode date or currency formatting.
 - **Traditional Mandarin note:** `zh-Hant`, not `zh-TW`. The `next-intl`
   config uses `zh-Hant` as the key.
+- **v0.5.3 — placeholder locale fallback rule (A9).** Phase 1.1
+  populates `messages/en.json` only. `messages/fr.json` and
+  `messages/zh-Hant.json` exist with the same key structure but with
+  **English fallback values cloned from `en.json`**, not empty strings
+  and not missing keys. Empty strings render as blank UI; missing keys
+  throw at runtime in `next-intl` dev mode and fall back to the raw
+  `template_id` string in production. Neither is acceptable. The
+  Phase 1.1 brief generates `fr.json` and `zh-Hant.json` by `cp en.json
+  fr.json && cp en.json zh-Hant.json` as a baseline, and real French
+  and Traditional Chinese strings replace the English values
+  incrementally in later phases. **Every key in `en.json` must have a
+  corresponding key in both other locale files, even if the value is
+  still English** — this makes Phase 1.3 exit criterion #12 ("walk one
+  non-English path end-to-end") meaningful instead of blocked on
+  missing keys.
 
 ---
 
@@ -2856,9 +3448,29 @@ Wraps every service function. Pre-flight checks:
 - Command carries an idempotency key (if mutating + source=agent)
 - `org_id` in the command is consistent with the authenticated user's
   memberships
+- **v0.5.3 (A3): `canUserPerformAction()` is invoked automatically by
+  `withInvariants()` for every mutating service function.** The previous
+  design relied on each service function to remember to call it. That
+  is not good enough — a single forgotten call is a cross-tenant data
+  breach because the service-role client bypasses RLS. The middleware
+  now requires every wrapped service function to declare an
+  `action: ActionName` in its registration, and `withInvariants()`
+  calls `canUserPerformAction({ caller, org_id, action })` unconditionally
+  before invoking the function body. A service function that mutates
+  without being wrapped by `withInvariants()` is a build-time error
+  enforced by a lint rule (`no-unwrapped-service-mutation`).
 
 If any check fails, throws `InvariantViolationError` before touching the
 database.
+
+**v0.5.3 — test for the A3 middleware rule:** add a fourth integration
+test to `tests/integration/` — `serviceMiddlewareAuthorization.test.ts` —
+that calls `journalEntryService.post()` with a `ServiceContext` whose
+`caller.user_id` has no membership in the target `org_id`. The
+expected result is an `InvariantViolationError` thrown before any
+database write occurs. The test asserts that no row exists in
+`journal_entries` afterward and no row exists in `audit_log` — proving
+the check runs before the transaction begins, not inside it.
 
 **Layer 3 — Phase 2 only.** Event middleware that runs sequencing checks
 inside the same transaction as the mutation. Phase 1 does not have this
@@ -3320,6 +3932,45 @@ the agent into a canvas component that already compiles.
 ---
 
 ### 2. Clean Slate Prerequisite
+
+#### 2.0 Package Manager Pinning (v0.5.3, A8) — Do This First
+
+**Before anything else — before deleting any files — pin the package
+manager to pnpm.** The existing `package.json` from the earlier
+`create-next-app` run uses npm scripts, and the Bible's scripts block
+(Section 1b) is pnpm. If the founder runs `npm install` on any step of
+this brief, a `package-lock.json` gets regenerated and mixed with the
+pnpm workflow, producing silently divergent dependency resolution
+across machines.
+
+Run these commands from the repo root, in this exact order:
+
+```bash
+# Confirm pnpm is installed and recent enough. Minimum: 9.x.
+pnpm --version
+
+# If pnpm is not installed (exit code ≠ 0 above), install via Corepack
+# (bundled with Node ≥ 16.10, the Phase 1.1 supported version):
+corepack enable
+corepack prepare pnpm@latest --activate
+pnpm --version   # verify
+```
+
+After this step, **never type `npm install` or `npm run` again during
+Phase 1.1 or 1.2**. Use `pnpm install` and `pnpm <script>` exclusively.
+If the founder sees `package-lock.json` or `yarn.lock` appear in the
+repo at any point after this step, something ran a non-pnpm command —
+stop, delete the stray lockfile, and re-run `pnpm install`.
+
+> ⚠️ Assumes Q5 default — founder to confirm (Windows / macOS / Linux).
+> The `corepack enable` command works on all three, but on Windows the
+> first run may require an elevated PowerShell or a Terminal restart.
+> If `pnpm --version` still fails after `corepack enable`, consult the
+> troubleshooting note at the end of this section.
+
+---
+
+#### 2.1 Clean Slate
 
 **Before any Phase 1.1 work begins, delete the default Next.js scaffold
 files.** A `create-next-app` run was performed earlier in this project
