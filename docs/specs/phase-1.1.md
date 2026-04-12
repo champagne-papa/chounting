@@ -342,7 +342,7 @@ the-bridge/                              # repo root
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
     "db:generate-types": "supabase gen types typescript --local > src/db/types.ts",
-    "db:seed": "psql \"$LOCAL_DATABASE_URL\" -f src/db/migrations/seed/dev.sql"
+    "db:seed": "psql \"$LOCAL_DATABASE_URL\" -f src/db/seed/dev.sql"
   },
   "dependencies": {
     "next": "^15.0.0",
@@ -380,7 +380,7 @@ the-bridge/                              # repo root
 ### 4. Database Schema
 
 The complete `001_initial_schema.sql` migration. Runnable as a single
-file. Place at `src/db/migrations/001_initial_schema.sql`.
+file. Place at `supabase/migrations/20240101000000_initial_schema.sql`.
 
 **Synced with Bible v0.5.3** (Correctness & Risk Review Fixes). The
 migration below propagates every v0.5.3 §1d, §2a, §2b, and §2c change
@@ -1505,7 +1505,7 @@ COMMIT;
 
 ### 5. Seed Script
 
-`src/db/migrations/seed/dev.sql` — idempotent dev seed that creates the
+`src/db/seed/dev.sql` — idempotent dev seed that creates the
 two real orgs, three real users (one per role), the membership links, and
 the CoA loaded from each org's industry template.
 
@@ -1597,7 +1597,7 @@ Add to `package.json` scripts:
 "db:seed:all": "pnpm db:seed:auth && pnpm db:seed"
 ```
 
-#### 5b. SQL Seed (`src/db/migrations/seed/dev.sql`)
+#### 5b. SQL Seed (`src/db/seed/dev.sql`)
 
 ```sql
 -- =============================================================
@@ -1695,6 +1695,16 @@ pass requirement.
 (Plain English: an "integration test" runs against a real database. A unit
 test runs against fake stand-ins. For accounting correctness, only the
 real database can prove the deferred constraint and the RLS policies work.)
+
+**Test infrastructure convention (v0.5.7).** Test helper SQL functions
+(e.g., `test_post_unbalanced_entry`, `test_post_balanced_entry`) are
+loaded by `tests/setup/globalSetup.ts` via `psql` before any test file
+runs. They are NOT in `supabase/migrations/` — test functions must never
+ship to production. `globalSetup.ts` is wired into `vitest.config.ts`
+via the `globalSetup` field. If you add new test helper SQL functions,
+add them to `tests/setup/test_helpers.sql` and they'll be loaded
+automatically. If `globalSetup` fails (psql not found, DB unreachable),
+every test in the suite is skipped with a clear error message.
 
 #### 6a. Test setup (`tests/setup/testDb.ts`)
 
@@ -3685,15 +3695,1686 @@ before checking the box. A checked box must mean what it says.
 - [ ] **Postman collection v1.1 passes** — health check, org creation,
       chart of accounts list
 
+#### Manual journal entry path
+
+- [ ] **Manual journal entry form works end-to-end** — sign in as
+      controller, navigate to form via Mainframe rail, post a balanced
+      entry to the holding company org, verify the entry + lines exist
+      in `journal_entries` / `journal_lines` via psql, verify the
+      `audit_log` row is present with `trace_id` populated
+- [ ] **Journal entry list shows posted entries** — after posting via
+      the form, the list shows the entry with correct date, description,
+      total debits/credits (aggregated via `amount_cad`)
+- [ ] **Journal entry detail view renders correctly** — click an entry
+      in the list, see all lines with account code, account name, debit,
+      credit, currency, tax code
+- [ ] **Reversal UI works end-to-end** — from the detail view, click
+      "Reverse this entry," see prefilled reversal form with mirrored
+      lines (read-only), fill in reversal reason, submit, verify the
+      reversal entry exists in DB with `reverses_journal_entry_id` and
+      `reversal_reason` populated
+- [ ] **Period gap banner renders** — when reversal's period differs
+      from the original entry's period, the non-dismissible warning
+      banner appears per §4h
+- [ ] **Locked period rejected gracefully** — the locked prior-year
+      period does NOT appear in the fiscal_period_id dropdown
+      (`periodService.listOpen` filters it out)
+- [ ] **Basic P&L report renders correctly** — post 3+ entries, open
+      P&L, verify Revenue / Expenses / Net Income / Balance Sheet
+      summary totals match hand-calculated values from the posted entries
+- [ ] **P&L reversal behavior correct** — reverse one entry, verify P&L
+      updates and reversal nets to zero per §18 Q21 resolution
+- [ ] **Post 5 manual journal entries** across both orgs through the
+      manual form (PLAN.md §7 exit criterion #9). The deferred
+      constraint catches an intentional unbalanced entry. The period
+      lock trigger catches an intentional locked-period post.
+- [ ] **Audit_log row present for each posted entry** with `trace_id`
+      populated (PLAN.md §7 exit criterion #10)
+- [ ] **Time-to-first-post measured** — record clock time from "open
+      the manual entry form" to "entry posted and visible in the list"
+      in `docs/friction-journal.md` (PLAN.md §7 exit criterion #14)
+- [ ] **Friction journal has ≥3 real entries** from Phase 1.1 work
+      (PLAN.md §7 exit criterion #13)
+- [ ] **Hosting region pinned** — Supabase project region is
+      `ca-central-1` in the Supabase dashboard; Vercel deployment region
+      is `yul1` (or equivalent Canadian region) in Vercel dashboard →
+      Project → Settings → Functions (PLAN.md §7 exit criterion #15)
+- [ ] **Integration tests: all five Category A floor tests pass**
+      including Test 4 (service middleware authorization, §6f) and
+      Test 5 (reversal mirror enforcement, §6g)
+- [ ] **Postman collection v1.1 updated** — health check, org creation,
+      chart of accounts list, journal entry CRUD, period check
+
+---
+
+### 15. Phase 1.1 Expansion: Manual Journal Entry Path
+
+*This section was added during Phase 1.1 implementation after the
+initial foundation (database, auth, UI shell, five Category A tests)
+was built. It covers the manual journal entry form, list, detail,
+reversal UI, and basic P&L view — all listed in PLAN.md §7 as Phase
+1.1 deliverables that were not in the original brief extraction.*
+
+*Decision recorded in PLAN.md §18d Q20: a minimal
+`journalEntryService.post()` stub was landed in Phase 1.1 to unblock
+Tests 4 and 5. This section builds on that stub to deliver the full
+manual path.*
+
+---
+
+#### 15.0 Brief Reconciliation Checklist (Step 0a)
+
+**Execute these edits before any §15 implementation work. Each edit
+is mechanical — no judgment calls. The brief must match PLAN.md
+v0.5.5/v0.5.6 before the manual path is built on top of it.**
+
+Run `pnpm typecheck` and `pnpm test:integration` after completing
+all edits. All 5 Category A tests must pass before moving to step 0b.
+
+1. **§4 `journal_entries` DDL:** Add `reversal_reason text` column
+   and CHECK constraint per PLAN.md §2a and ADR-001. Remove stale
+   "Open Question 19 (pending founder confirmation)" comment. The
+   column and constraint already exist in the running database via
+   `002_add_reversal_reason.sql`; this edit reconciles the brief's
+   DDL to match the deployed schema.
+
+2. **§4 `tax_codes` table ordering:** Move `tax_codes` CREATE TABLE
+   above `journal_lines` so the `tax_code_id` FK resolves. (The
+   running database has the correct order; the brief's DDL listing
+   is wrong.)
+
+3. **§4 DDL audit:** Read the brief's §4 line-by-line against
+   PLAN.md §2a and §2b. Verify every v0.5.3+ constraint is present.
+   The `reversal_reason` gap proves v0.5.6 did not reconcile
+   everything; do not trust "was applied" without verifying each
+   constraint.
+
+4. **Tax codes seed migration:** Create
+   `supabase/migrations/20240103000000_seed_tax_codes.sql` (separate file, not
+   inline — follows §8c pattern of tax code changes as their own
+   migration lineage):
+   - `GST`: code='GST', rate=0.05, jurisdiction='CA',
+     effective_from=2024-01-01, `org_id=NULL` (shared per §2c
+     hybrid RLS policy)
+   - `PST_BC`: code='PST_BC', rate=0.07, jurisdiction='CA-BC',
+     effective_from=2024-01-01, `org_id=NULL`
+   - No historical rows per PLAN.md §18a.2 RESOLVED
+   - Remove brief's stale note that Q2 is unresolved
+
+5. **§3 folder tree updates:**
+   - Add `src/services/accounting/journalEntryService.ts` explicitly
+     as a Phase 1.1 file (remove "created in Phase 1.2" comment)
+   - Add `src/shared/schemas/accounting/` directory with
+     `money.schema.ts` and `journalEntry.schema.ts`
+   - Add `src/components/canvas/JournalEntryForm.tsx`,
+     `JournalEntryDetailView.tsx`, `ReversalForm.tsx`,
+     `BasicPLView.tsx`
+
+6. **§3 folder tree: verify `journalEntryService.ts` stub against
+   PLAN.md §3d.** Open the existing file and check against §3d's
+   worked example: Zod re-validation at the boundary, authorization,
+   period check, dry-run branch, transaction, audit_log write,
+   return shape. **Note divergences in the friction journal — do NOT
+   fix in step 0a.** Fixes belong in step 0c after schemas land in
+   step 0b.
+
+7. **§6 test section:** Update opening text from "three tests" to
+   "five tests."
+
+8. **§9d `ProposedEntryCard` type:** Change `debit: number;
+   credit: number;` to `MoneyAmount` strings per PLAN.md §3a.
+
+9. **§5b seed script:** Add documentation note that the seed runs
+   as the postgres superuser (bypassing RLS) and that adapting for
+   a remote Supabase client requires the service-role key or a
+   bootstrap path.
+
+10. **§9g org creation:** Flag the auto-controller-grant as a known
+    Phase 1.1 simplification with a Phase 1.2 cleanup note.
+
+11. **§18 P&L Open Question (add to PLAN.md §18):** "P&L report
+    rendering: when a reversal entry exists, should the P&L show
+    (a) the original entry and the reversal entry as separate line
+    items that net to zero, or (b) the aggregated net (which equals
+    zero for the reversed pair, so neither line appears)? Both are
+    IFRS-correct. (a) preserves audit-trail visibility in the report;
+    (b) is cleaner but hides the existence of reversals. Default:
+    (a). Confirm." Step 5 (P&L) waits for this answer.
+
+12. **Create `docs/friction-journal.md`** with the following opening
+    entries:
+    ```
+    ## Friction Journal
+
+    Format: `[date] [category] [one-line description]`
+
+    Categories:
+    - WANT — wanted to do X, couldn't (missing capability)
+    - CLUNKY — did X, was painful (UX or DX problem)
+    - WRONG — the spec or the system was wrong about X
+
+    ## Phase 1.1
+
+    - 2026-04-12 WRONG  PLAN.md v0.5.6 claimed Part 2 was reconciled
+      during step-5 split; brief still missing Q19 reversal_reason
+      column, exit criteria #9/#13/#14/#15, and several §3 folder
+      tree entries. Reconciled in this pass.
+    - 2026-04-12 NOTE   Verified ADR-001 exists (390 lines), matches
+      §18c.19 RESOLVED. CLAUDE.md Rule 7 reference is live.
+    ```
+
+**Process gate:** `pnpm typecheck` clean, `pnpm test:integration`
+all 5 green.
+
+---
+
+#### 15.1 Branded Types and Zod Schemas (Step 0b)
+
+**Goal:** Create the type foundation that the form, service, and API
+routes all build against. Nothing in step 1 can start without this.
+
+**New dependency:** Add `decimal.js` to `package.json` dependencies.
+PLAN.md §3a uses it throughout; the Phase 1.1 brief did not list it.
+
+Friction journal entry:
+```
+- [date] WRONG  Phase 1.1 brief §3a does not list decimal.js in
+  dependencies despite PLAN.md §3a using it throughout. Added in
+  step 0b.
+```
+
+##### `src/shared/schemas/accounting/money.schema.ts`
+
+Branded types per PLAN.md §3a:
+
+- `MoneyAmount`: `string & { __brand: 'MoneyAmount' }` validated by
+  `/^-?\d{1,16}(\.\d{1,4})?$/` (PLAN.md §3a verbatim: signed, 16-digit
+  cap before decimal, optional 1–4 decimal digits). The regex allows
+  negative values (needed for reversal-side FX adjustments), caps at
+  16 digits before the decimal (matching `numeric(20,4)` exactly:
+  16 + 4 = 20), and allows whole numbers without a decimal portion.
+
+- `FxRate`: `string & { __brand: 'FxRate' }` validated by
+  `/^-?\d{1,12}(\.\d{1,8})?$/` (PLAN.md §3a verbatim).
+
+- Zod schemas: `MoneyAmountSchema` and `FxRateSchema` that parse
+  strings and return branded types.
+
+Helper functions (using `decimal.js`, **confined to this one file** —
+no other file imports `decimal.js` directly; `grep 'from.*decimal.js'`
+should find exactly one file):
+
+```typescript
+import Decimal from 'decimal.js';
+
+export function addMoney(a: MoneyAmount, b: MoneyAmount): MoneyAmount {
+  return new Decimal(a).plus(new Decimal(b)).toFixed(4) as MoneyAmount;
+}
+
+export function multiplyMoneyByRate(
+  amount: MoneyAmount,
+  rate: FxRate,
+): MoneyAmount {
+  return new Decimal(amount)
+    .times(new Decimal(rate))
+    .toDecimalPlaces(4, Decimal.ROUND_HALF_UP)
+    .toFixed(4) as MoneyAmount;
+}
+
+export function eqMoney(a: MoneyAmount, b: MoneyAmount): boolean {
+  return new Decimal(a).eq(new Decimal(b));
+}
+
+export function eqRate(a: FxRate, b: FxRate): boolean {
+  return new Decimal(a).eq(new Decimal(b));
+}
+
+export function zeroMoney(): MoneyAmount {
+  return '0.0000' as MoneyAmount;
+}
+
+export function oneRate(): FxRate {
+  return '1.00000000' as FxRate;
+}
+```
+
+`multiplyMoneyByRate` must match Postgres `ROUND(amount_original *
+fx_rate, 4)` exactly. Postgres uses half-away-from-zero rounding;
+`decimal.js` with `ROUND_HALF_UP` matches it. A hand-rolled integer
+multiply would silently disagree on edge cases where the trailing
+digit is exactly 5.
+
+##### `src/shared/schemas/accounting/journalEntry.schema.ts`
+
+`JournalLineSchema` — Zod object with three `.refine()` checks from
+PLAN.md §3a:
+
+1. **Debit XOR credit:** both non-negative, at least one positive
+   (matches D11 DB CHECK).
+2. **`amount_original = debit_amount + credit_amount`** (matches D5
+   CHECK, uses `addMoney`).
+3. **`amount_cad = ROUND(amount_original * fx_rate, 4)`** (matches
+   D5 CHECK, uses `multiplyMoneyByRate` and `eqMoney` for the
+   comparison — NOT `===`, because `eqMoney` handles trailing-zero
+   equivalence like `'100.0000'` vs `'100'`).
+
+`entry_date` uses `z.string().date()` (Zod 3.23+ built-in) instead
+of a regex.
+
+Schema architecture — base schema, then two refined schemas:
+
+```typescript
+// Base, unrefined — never used directly
+const JournalEntryBaseSchema = z.object({
+  org_id: z.string().uuid(),
+  fiscal_period_id: z.string().uuid(),
+  entry_date: z.string().date(),
+  description: z.string().min(1),
+  reference: z.string().optional(),
+  source: z.enum(['manual', 'agent', 'import']),
+  idempotency_key: z.string().uuid().optional(),
+  dry_run: z.boolean().default(false),
+  lines: z.array(JournalLineSchema).min(2),
+});
+```
+
+Two refined schemas sharing the base:
+
+```typescript
+// Create form: reversal fields rejected if present
+export const PostJournalEntryInputSchema = JournalEntryBaseSchema
+  .extend({
+    reverses_journal_entry_id: z.undefined().optional(),
+    reversal_reason: z.undefined().optional(),
+  })
+  .refine(balancedRefinement, balancedMessage)
+  .refine(idempotencyRefinement, idempotencyMessage)
+  .refine(
+    (entry) => entry.source !== 'agent',
+    { message: 'source: "agent" is not implemented in Phase 1.1.' }
+  )
+  .refine(
+    (entry) => entry.dry_run !== true,
+    { message: 'dry_run: true is not implemented in Phase 1.1.' }
+  );
+
+// Reversal form: reversal fields required
+export const ReversalInputSchema = JournalEntryBaseSchema
+  .extend({
+    reverses_journal_entry_id: z.string().uuid(),
+    reversal_reason: z.string().min(1),
+  })
+  .refine(balancedRefinement, balancedMessage)
+  .refine(idempotencyRefinement, idempotencyMessage)
+  .refine(
+    (entry) => entry.source !== 'agent',
+    { message: 'source: "agent" is not implemented in Phase 1.1.' }
+  )
+  .refine(
+    (entry) => entry.dry_run !== true,
+    { message: 'dry_run: true is not implemented in Phase 1.1.' }
+  );
+
+// Service boundary accepts either
+export const JournalEntryServiceInputSchema = z.union([
+  PostJournalEntryInputSchema,
+  ReversalInputSchema,
+]);
+```
+
+The `z.undefined().optional()` trick on `PostJournalEntryInputSchema`
+means TypeScript rejects any attempt to set
+`reverses_journal_entry_id` on a create input at compile time. Two
+schemas, two forms, two resolvers, no mode prop.
+
+Shared refinement helpers (extracted so both schemas stay in sync):
+
+```typescript
+const balancedRefinement = (entry: { lines: JournalLine[] }) => {
+  const debits = entry.lines.reduce(
+    (acc, l) => addMoney(acc, l.debit_amount), zeroMoney()
+  );
+  const credits = entry.lines.reduce(
+    (acc, l) => addMoney(acc, l.credit_amount), zeroMoney()
+  );
+  return eqMoney(debits, credits);
+};
+const balancedMessage = {
+  message: 'Sum of debits must equal sum of credits (exact).',
+};
+
+const idempotencyRefinement = (
+  entry: { source: string; idempotency_key?: string }
+) => entry.source !== 'agent' || entry.idempotency_key !== undefined;
+const idempotencyMessage = {
+  message: 'idempotency_key is required when source is "agent".',
+};
+```
+
+Phase 1.2 deferral rejections (`source: 'agent'` and
+`dry_run: true`) are in the Zod schemas, not the service body. The
+Zod layer catches them at the API boundary and at the form's
+`zodResolver` before the request reaches the service. Defense-in-depth:
+the service also rejects these if they somehow pass Zod, but the
+primary user-facing rejection is Zod.
+
+Friction journal entry:
+```
+- [date] CLUNKY  Phase 1.2 deferral rejections (dry_run, source:agent)
+  belong in Zod schemas (0b), not service body (0c). 0b design did
+  not originally include them; added during design review when the
+  deferral decision was made.
+```
+
+**Process gate:**
+
+1. `pnpm typecheck` — new files compile, existing tests unaffected.
+2. Scratch-verify the five helpers before moving to 0c:
+   ```typescript
+   addMoney('0.1000', '0.2000')           // → '0.3000'
+   multiplyMoneyByRate('100.0000', '1.05000000')  // → '105.0000'
+   multiplyMoneyByRate('100.0050', '1.00000000')  // → '100.0050'
+   multiplyMoneyByRate('10.0000', '0.33333333')   // → '3.3333'
+   eqMoney('100.0000', '100')             // → true
+   ```
+   Delete the scratch file after verification.
+
+---
+
+#### 15.2 Service Verification and Fixes (Step 0c)
+
+**Goal:** Verify the existing `journalEntryService.post()` stub
+against PLAN.md §3d and §15e, replace its inline schemas with the
+shared schemas from step 0b, and fix divergences.
+
+**Process: audit first, fix second. Log each divergence as its own
+friction journal entry before fixing.**
+
+##### Phase 1 — Audit
+
+1. Read `journalEntryService.ts` line-by-line against PLAN.md §3d.
+   Log each divergence individually.
+2. Read the reversal mirror check against PLAN.md §15e Layer 2's
+   five sub-checks. Log divergences.
+3. Read the existing test helpers (`buildValidJournalEntryInput` in
+   Test 4, `buildBalancedEntryInput` / `buildMirroredReversal` in
+   Test 5) against the new schemas. Log any money fields that need
+   converting to branded `MoneyAmount` strings.
+
+##### Phase 2 — Fix (in priority order)
+
+**(a) Replace inline Zod schemas** with imports from
+`journalEntry.schema.ts`. The service's `post()` function parses
+input through `JournalEntryServiceInputSchema` (the union). Delete
+the inline `PostJournalEntryInput`, `JournalLineInput`, and
+`MoneyString` schemas.
+
+**(g) Update test helpers** to match the new schemas. Convert any
+money fields to `MoneyAmount`-format strings that pass the regex
+`/^-?\d{1,16}(\.\d{1,4})?$/` and the line refinement checks. **This
+must happen immediately after (a)** because the integration tests
+must compile before verifying any subsequent fix.
+
+**Intermediate gate:** `pnpm typecheck` must pass after (a) + (g).
+
+**(b) Replace `parseInt`-based balance check** with `addMoney` /
+`eqMoney`:
+```typescript
+const totalDebit = lines.reduce(
+  (acc, l) => addMoney(acc, l.debit_amount), zeroMoney()
+);
+const totalCredit = lines.reduce(
+  (acc, l) => addMoney(acc, l.credit_amount), zeroMoney()
+);
+if (!eqMoney(totalDebit, totalCredit))
+  throw new ServiceError('UNBALANCED', ...);
+```
+
+**(c) Replace `toMoney` / `toRate` normalizers in mirror check**
+with `eqMoney` and `eqRate`. The current mirror check uses
+`Number(v).toFixed(4)` to normalize DB-returned numerics against
+input strings. Replace each money comparison with `eqMoney(dbValue,
+inputValue)`. Replace fx_rate comparison with `eqRate(dbValue,
+inputValue)`.
+
+Verify `eqRate` exists in `money.schema.ts` (added in 0b alongside
+`eqMoney`). If it was missed in 0b, add it now and log:
+```
+- [date] CLUNKY  eqRate helper missed in 0b; added during 0c when
+  mirror check needed it. Both helpers should have been planned
+  together.
+```
+
+**(d) Verify reversal mirror check** implements all five §15e Layer 2
+sub-checks:
+
+1. Load referenced entry, verify same `org_id` → reject
+   `REVERSAL_CROSS_ORG`
+2. Verify line count matches → reject
+   `REVERSAL_PARTIAL_NOT_SUPPORTED`
+3. For each line, find mirror line in original (match on:
+   `account_id`, `currency`, `amount_original`, `amount_cad`,
+   `fx_rate`, `tax_code_id` — all unchanged; `debit_amount` and
+   `credit_amount` swapped) → reject `REVERSAL_NOT_MIRROR`
+4. Verify `reversal_reason` non-empty → reject
+5. All checks happen before BEGIN — no audit row written for a
+   rejected reversal
+
+If any sub-check is missing, implement it in step 0c. This is not
+deferrable — Test 5 requires it.
+
+**(e) Add explicit service-level rejections** for deferred Phase 1.2
+features (defense-in-depth behind the Zod rejections from 0b):
+- `dry_run: true` →
+  `ServiceError('DRY_RUN_NOT_IMPLEMENTED_PHASE_1_1', ...)`
+- `source: 'agent'` →
+  `ServiceError('AGENT_SOURCE_NOT_IMPLEMENTED_PHASE_1_1', ...)`
+
+**(f) Verify `audit_log` action field:** `'journal_entry.post'` for
+creates, `'journal_entry.reverse'` for reversals.
+
+Friction journal entries for deferred features:
+```
+- [date] WANT  Phase 1.1 service does not implement dry_run branch
+  per §3d (transaction-with-rollback shape). Manual form does not
+  need it. Phase 1.2 adds it before agent integration.
+- [date] WANT  Phase 1.1 service does not implement idempotency
+  check per §3d (which queries ai_actions, not journal_entries).
+  Manual form does not need it. Phase 1.2 adds it alongside dry-run.
+```
+
+**Process gate:**
+
+1. `pnpm typecheck` — service compiles against new schemas.
+2. `pnpm test:integration` — all 5 Category A tests green.
+3. If any test fails: diagnose whether it's a helper-shape issue
+   (fix in 0c) or a real divergence (investigate before continuing).
+   Do not move to step 0d with red tests.
+
+---
+
+#### 15.3 Manual Journal Entry Path Specification (Step 0d)
+
+**Goal:** This step produces the detailed spec for the five UI steps
+(form, list, detail, reversal, P&L) so the implementer has a clear
+contract. It is a documentation step — no code.
+
+Re-read the service's final contract after 0c fixes before writing
+this section. The spec must reference the actual shape of
+`journalEntryService.post()`, not a hoped-for shape.
+
+The five UI steps follow. Each is self-contained: it lists the new
+files, the dependencies, the behavior, and the process gate.
+
+---
+
+#### 15.4 Manual Journal Entry Form (Step 1)
+
+##### New service functions
+
+- `periodService.listOpen({ org_id }, ctx)` in
+  `src/services/accounting/periodService.ts`: queries
+  `fiscal_periods` where `org_id` matches and `is_locked = false`.
+  Read-only — called directly from the API route without
+  `withInvariants` (per CLAUDE.md Rule 2: mutation-only wrapping).
+
+- `taxCodeService.listShared(ctx)` in
+  `src/services/accounting/taxCodeService.ts`: queries `tax_codes`
+  where `org_id IS NULL`, ordered by code. Read-only.
+
+##### New API routes
+
+All read routes call services directly with `buildServiceContext(req)`
+for auth. No `withInvariants` wrapping — reads, not mutations, per
+CLAUDE.md Rule 2's literal wording.
+
+- **`src/app/api/orgs/[orgId]/fiscal-periods/route.ts`** — GET.
+  Calls `periodService.listOpen`. Returns open periods for the org.
+
+- **`src/app/api/orgs/[orgId]/chart-of-accounts/route.ts`** — GET.
+  Calls `chartOfAccountsService.list` with `is_active: true` filter.
+  **Replaces** the existing `/api/chart-of-accounts` route (which
+  used `org_id` as a query param). Existing callers
+  (`ChartOfAccountsView.tsx`) must be updated to the new URL.
+  Grep the codebase for `/api/chart-of-accounts` before declaring
+  step 1 done; any remaining hits are stale callers.
+
+- **`src/app/api/tax-codes/route.ts`** — GET. Calls
+  `taxCodeService.listShared`. Returns shared tax codes
+  (`org_id IS NULL`).
+
+- **`src/app/api/journal-entries/route.ts`** — POST. This is the
+  mutation route:
+  - Parses body through `PostJournalEntryInputSchema` (Zod at the
+    boundary, per Rule 5)
+  - Calls `buildServiceContext(req)` for auth
+  - Calls `withInvariants(journalEntryService.post, { action:
+    'journal_entry.post' })(parsed, ctx)`
+  - Try/catch: 400 for Zod errors, 401 for auth, 403 for
+    permission, 422 for `UNBALANCED` / `PERIOD_LOCKED`, 500
+    unexpected
+  - Returns `{ journal_entry_id }` on success
+
+Friction journal entry:
+```
+- [date] CLUNKY  OrgSwitcher reads memberships directly via anon-key
+  client, bypassing service layer. Inconsistent with Law 1 spirit.
+  JournalEntryForm reads through API routes (correct pattern);
+  OrgSwitcher refactor deferred to Phase 1.2.
+```
+
+##### `src/components/canvas/JournalEntryForm.tsx` — client component
+
+**Schema split (Option B).** The form uses a separate
+`JournalEntryFormSchema` (UI shape) distinct from
+`PostJournalEntryInputSchema` (service/wire shape). The reason: the
+user enters `debit_or_credit` and `amount` per line; `amount_original`,
+`amount_cad`, and `fx_rate` are computed at submit time. Validating
+computed fields on every keystroke via react-hook-form produces stale-
+state bugs. The form schema validates only user-input fields; the
+transform function produces the service shape on submit.
+
+- `JournalEntryFormSchema` — defined inline in the form file (UI
+  concern, not service contract). Fields: `fiscal_period_id`,
+  `entry_date`, `description`, `reference` (optional), `lines[]`
+  where each line has `account_id`, `debit_or_credit` (enum:
+  'debit' | 'credit'), `amount` (string validated against
+  `MoneyAmountSchema`), `tax_code_id` (optional).
+
+- `formStateToServiceInput(formState, orgId)` — transform function,
+  inline. Computes per line: `debit_amount` / `credit_amount` (one
+  is the amount, other is `zeroMoney()`), `amount_original` (=
+  `addMoney(debit_amount, credit_amount)`), `amount_cad` (=
+  `amount_original`, Phase 1.1 CAD-only), `fx_rate` (`oneRate()`),
+  `currency` ('CAD'). Sets `source: 'manual'`, `dry_run: false`.
+  Returns a `PostJournalEntryInput`.
+
+Friction journal entry:
+```
+- [date] WANT  Form schema (UI-shape) and service schema
+  (wire-shape) are intentionally separate. Form transforms to
+  service shape on submit.
+```
+
+**Form fields:**
+
+- `fiscal_period_id` — dropdown of open periods (fetched from
+  `/api/orgs/[orgId]/fiscal-periods`). Locked periods do not appear.
+- `entry_date` — date input, defaults to today.
+- `description` — text input, required.
+- `reference` — text input, optional.
+- Dynamic line array via `useFieldArray`:
+  - `account_id` — dropdown from chart of accounts (fetched from
+    `/api/orgs/[orgId]/chart-of-accounts`)
+  - `debit_or_credit` — toggle/select: "Debit" or "Credit"
+  - `amount` — text input, validated against `MoneyAmountSchema`
+    on change
+  - `tax_code_id` — optional dropdown from shared tax codes
+    (fetched from `/api/tax-codes`). Phase 1.3 exit criterion #10
+    requires this works on at least one real entry.
+- Add/remove line buttons. Minimum 2 lines enforced by schema.
+
+**Not user-editable in Phase 1.1:**
+- `currency` — hardcoded 'CAD' per line, no dropdown. Multi-currency
+  form fields are deferred to Phase 4 per PLAN.md §8b.
+- `fx_rate`, `amount_original`, `amount_cad` — computed
+  programmatically by the transform function.
+
+Friction journal entry:
+```
+- [date] WANT  Multi-currency form fields deferred to Phase 4
+  per §8b. Phase 1.1 form posts CAD-only.
+```
+
+**Running balance indicator:**
+- Computes only over `MoneyAmount`-validated form state.
+- While any line has a raw-input string that doesn't match the
+  `MoneyAmountSchema` regex: shows "—".
+- Once all lines validate: shows red (unbalanced) or green (balanced)
+  using `eqMoney(totalDebit, totalCredit)`.
+
+**Submit flow:**
+- Calls `formStateToServiceInput()` to transform UI shape →
+  service shape.
+- POSTs to `/api/journal-entries`.
+- On success: navigates canvas to `{ type: 'chart_of_accounts',
+  orgId }` (step 2 updates this to `journal_entry_list`).
+- On error: Zod errors as field-level, service errors as form-level
+  inline message.
+- Always passes `source: 'manual'`, `dry_run: false`.
+
+**MainframeRail integration:**
+- New icon/action sets canvas directive to
+  `{ type: 'journal_entry_form', orgId }`.
+- `ContextualCanvas` gets a new case in `renderDirective`.
+
+**Process gate:**
+
+1. `pnpm typecheck` — form, routes, services compile.
+2. `pnpm test:integration` — all 5 Category A tests green.
+3. Manual smoke test (happy path): sign in as controller → navigate
+   to form via Mainframe → post one balanced entry to holding company
+   org → verify via `psql` that entry + lines exist in
+   `journal_entries` / `journal_lines` and `audit_log` row is present
+   with `trace_id` populated.
+4. Manual smoke test (locked period): sign in as controller → switch
+   to Real Estate org → open form → confirm the locked prior-year
+   period does NOT appear in the `fiscal_period_id` dropdown. If
+   belt-and-suspenders: POST directly to `/api/journal-entries` via
+   Postman with the locked period UUID; verify 422 with
+   `PERIOD_LOCKED`.
+5. Friction journal: record time-to-first-post (PLAN.md §7 exit
+   criterion #14).
+
+---
+
+#### 15.5 Journal Entry List (Step 2)
+
+##### New service function
+
+- `journalEntryService.list({ org_id, fiscal_period_id? }, ctx)` in
+  `src/services/accounting/journalEntryService.ts`: read-only, no
+  `withInvariants`. Returns entries with `journal_entry_id`,
+  `entry_date`, `description`, `reference`, `source`, `created_at`,
+  `reverses_journal_entry_id`, `reversal_reason`, and per-entry
+  debit/credit totals aggregated via `amount_cad` (not
+  `debit_amount`/`credit_amount` — multi-currency-correct from day
+  one per §2b D5), using `FILTER (WHERE jl.debit_amount > 0)` and
+  `FILTER (WHERE jl.credit_amount > 0)` to split the totals.
+
+##### New API route
+
+- **`src/app/api/orgs/[orgId]/journal-entries/route.ts`** — GET.
+  Calls `journalEntryService.list`. Filterable by `fiscal_period_id`
+  query param (optional — omit to show all).
+
+##### `src/components/canvas/JournalEntryListView.tsx`
+
+The existing shell is replaced with a real component.
+
+- Table view: date, description, reference, source, total debit CAD,
+  total credit CAD, reversal indicator (small label if
+  `reverses_journal_entry_id` is populated).
+- Sortable by date (default: newest first).
+- Period filter dropdown (reuses fiscal periods fetch from step 1).
+- Row click sets canvas directive to `{ type: 'journal_entry',
+  entryId, mode: 'view' }` — navigates to the detail view (step 3).
+
+**Step 1 update:** Change `JournalEntryForm`'s success navigation
+from `chart_of_accounts` to `{ type: 'journal_entry_list', orgId }`.
+
+**Process gate:**
+
+1. `pnpm typecheck` + `pnpm test:integration` — all 5 green.
+2. Manual: post an entry via the form → verify it appears in the
+   list immediately after navigation.
+
+---
+
+#### 15.6 Journal Entry Detail View (Step 3)
+
+##### New service function
+
+- `journalEntryService.get({ journal_entry_id }, ctx)` in
+  `src/services/accounting/journalEntryService.ts`: read-only.
+  Returns the full entry with all lines joined (account code + name
+  from `chart_of_accounts`), `reverses_journal_entry_id`,
+  `reversal_reason`, fiscal period name, and `reversed_by_entry_id`.
+
+  The `reversed_by_entry_id` is populated via a single-query LEFT
+  JOIN:
+  ```sql
+  SELECT
+    je.*,
+    reverse_entry.journal_entry_id AS reversed_by_entry_id
+  FROM journal_entries je
+  LEFT JOIN journal_entries reverse_entry
+    ON reverse_entry.reverses_journal_entry_id = je.journal_entry_id
+  WHERE je.journal_entry_id = $1
+  ```
+  The §2e partial index `idx_je_reverses` makes this cheap.
+
+##### New API route
+
+- **`src/app/api/journal-entries/[entryId]/route.ts`** — GET. Calls
+  `journalEntryService.get`.
+
+##### `src/components/canvas/JournalEntryDetailView.tsx`
+
+- Header: entry date, description, reference, source, period name,
+  created_at.
+- If this entry is a reversal: shows `reversal_reason` and a link
+  to the original entry.
+- If this entry has been reversed: shows "Reversed by [entry_id]"
+  with a link.
+- Lines table: account code, account name, debit, credit, currency,
+  tax code.
+- Footer: total debits, total credits (must match — visual
+  confirmation).
+- **"Reverse this entry" button:** visible to controller and
+  ap_specialist roles (verify against PLAN.md §4h — executive
+  cannot reverse). Disabled if `reversed_by_entry_id` is not null
+  (entry already reversed). Clicking the button builds a
+  `reversalPrefill` using the `mirrorLines` helper (see step 4) and
+  sets the canvas directive to `{ type: 'journal_entry_form', orgId,
+  prefill: reversalPrefill }`.
+
+**ContextualCanvas integration:**
+- New case for `'journal_entry'` directive rendering
+  `<JournalEntryDetailView>`.
+
+**Process gate:**
+
+1. `pnpm typecheck` + `pnpm test:integration` — all 5 green.
+2. Manual: post an entry → see it in list → click it → see detail
+   view with correct lines and totals.
+
+---
+
+#### 15.7 Reversal UI (Step 4)
+
+##### `mirrorLines` pure helper
+
+Added to `src/shared/schemas/accounting/journalEntry.schema.ts` (or
+a sibling file). Pure function: swaps `debit_amount` ↔
+`credit_amount` per line, leaves `account_id`, `currency`,
+`amount_original`, `amount_cad`, `fx_rate`, `tax_code_id` unchanged.
+
+Used by:
+- The detail view's reversal launcher (step 4).
+- The Phase 1.2 agent's `reverseJournalEntry` tool.
+
+Unit test `mirrorLines.test.ts`: covers swap correctness on a multi-
+line fixture. Not a Category A integration test — a unit test on a
+pure function.
+
+##### `src/components/canvas/ReversalForm.tsx` — client component
+
+Sibling to `JournalEntryForm`. Two forms, two schemas, two resolvers,
+no mode prop.
+
+**Lines are locked via props, not form state.** Lines are passed as
+props to `ReversalForm` from the detail view's reversal launcher.
+They are rendered as read-only `<div>` elements, not form inputs.
+They are NOT in `ReversalFormSchema` (which only validates user-
+editable fields: `entry_date`, `reversal_reason`). The reason: the
+user cannot edit mirrored lines in Phase 1.1 (no partial reversals
+per ADR-001 §18c.19). Locking the lines means the form is small and
+the only thing the user does is provide the reason. Faster, less
+friction, no risk of producing an invalid mirror.
+
+`reversalFormStateToServiceInput(formState, lockedLines,
+originalEntryId, currentPeriodId)` — combines form state with locked
+data to produce a `ReversalInput`.
+
+**`ReversalFormSchema`** — defined inline in the form file. Only
+validates user-editable fields:
+- `entry_date` — date input, defaults to today, editable
+- `reversal_reason` — required text, multiline, min 1 character
+
+**Period gap banner (§4h, non-negotiable):**
+
+When the reversal's `fiscal_period_id` (current open period) differs
+from the original entry's period, render a warning banner at the top
+of the form:
+
+> You are reversing a **[original period name]** entry into
+> **[reversal period name]**. The reversal will appear in
+> **[reversal period name]**, not in the original period, because
+> [original period name] is closed. Verify this is the behaviour
+> you want before posting.
+
+- Non-dismissible. Disappears only when the periods match.
+- Styled as warning (yellow), not error (red) — the action is legal.
+
+**Submit flow:**
+- Transforms via `reversalFormStateToServiceInput()`.
+- POSTs to `/api/journal-entries` (same endpoint — the service
+  handles both creates and reversals via the union schema).
+- On success: navigates to the detail view of the new reversal entry.
+
+**ContextualCanvas integration:**
+- When the `'journal_entry_form'` directive has `prefill` containing
+  `reverses_journal_entry_id`, render `<ReversalForm>` instead of
+  `<JournalEntryForm>`. This is routing, not form logic.
+
+**Process gate:**
+
+1. `pnpm typecheck` + `pnpm test:integration` — all 5 green.
+2. `mirrorLines.test.ts` unit test passes.
+3. Manual (happy path): post an entry → view detail → click
+   "Reverse this entry" → see prefilled reversal form with mirrored
+   lines (read-only) → fill in reason → submit → verify reversal
+   entry exists in DB with `reverses_journal_entry_id` and
+   `reversal_reason` populated → verify original entry's detail
+   view now shows "Reversed by [id]."
+4. Manual (period gap): if original entry is in a different period
+   than the current open one, verify the banner appears. Can be
+   tested by posting the original to the Real Estate org's open
+   period, then locking that period via psql, opening a new period,
+   and attempting the reversal.
+
+---
+
+#### 15.8 Basic P&L Report (Step 5)
+
+**Prerequisite:** §18 Q21 (P&L reversal rendering) must be answered
+before step 5 begins. The question was added to PLAN.md §18 during
+step 0a. Step 5 waits for the founder's answer.
+
+##### New service function
+
+- `reportService.profitAndLoss({ org_id, fiscal_period_id? }, ctx)`
+  in `src/services/reporting/reportService.ts`: read-only.
+
+  The query groups by `account_type` only (not per-account),
+  producing five rows. Sums `amount_cad` (not
+  `debit_amount`/`credit_amount` — multi-currency-correct from day
+  one per §2b D5). Drilldown by account is Phase 2 (a second query
+  from the same service function). For Phase 1.1, summary-by-type
+  is sufficient per PLAN.md §7.
+
+  **If §18 Q21 answer is (a) — show separate lines (default):** the
+  query includes all entries; reversals net to zero naturally:
+  ```sql
+  SELECT
+    coa.account_type,
+    SUM(jl.amount_cad) FILTER (WHERE jl.credit_amount > 0)
+      AS total_credits_cad,
+    SUM(jl.amount_cad) FILTER (WHERE jl.debit_amount > 0)
+      AS total_debits_cad
+  FROM journal_lines jl
+  JOIN journal_entries je
+    ON jl.journal_entry_id = je.journal_entry_id
+  JOIN chart_of_accounts coa
+    ON jl.account_id = coa.account_id
+  WHERE je.org_id = $1
+    AND ($2::uuid IS NULL OR je.fiscal_period_id = $2)
+  GROUP BY coa.account_type
+  ORDER BY
+    CASE coa.account_type
+      WHEN 'revenue' THEN 1
+      WHEN 'expense' THEN 2
+      WHEN 'asset' THEN 3
+      WHEN 'liability' THEN 4
+      WHEN 'equity' THEN 5
+    END
+  ```
+
+  **If §18 Q21 answer is (b) — aggregate net:** add
+  `WHERE NOT EXISTS (SELECT 1 FROM journal_entries r WHERE
+  r.reverses_journal_entry_id = je.journal_entry_id)` to suppress
+  reversed originals, plus `AND je.reverses_journal_entry_id IS NULL`
+  to suppress the reversals themselves.
+
+##### New API route
+
+- **`src/app/api/orgs/[orgId]/reports/pl/route.ts`** — GET. Calls
+  `reportService.profitAndLoss`. Filterable by `fiscal_period_id`
+  query param.
+
+##### `src/components/canvas/BasicPLView.tsx`
+
+- Period filter dropdown (reuses fiscal periods fetch).
+- Structured as a financial statement:
+  - **Revenue** section: credit totals for revenue accounts.
+  - **Expenses** section: debit totals for expense accounts.
+  - **Net Income** line: Revenue credits minus Expense debits,
+    computed via `addMoney` helpers.
+- **Balance Sheet summary** below the P&L: Asset, Liability, Equity
+  totals from the same query's remaining three rows. Proves the books
+  balance: Assets = Liabilities + Equity + Net Income.
+- P&L and Balance Sheet summary share one query, not two.
+
+**MainframeRail integration:**
+- New icon/action for P&L sets directive to
+  `{ type: 'report_pl', orgId, from: periodStart, to: periodEnd }`.
+- `ContextualCanvas` gets a new case rendering `<BasicPLView>`.
+
+**Process gate:**
+
+1. `pnpm typecheck` + `pnpm test:integration` — all 5 green.
+2. Manual: post 3+ entries across both orgs → open P&L → verify
+   totals.
+3. **Hand-verification:** export posted entries to a scratch
+   spreadsheet, sum by `account_type`, compare to P&L view. Must
+   match exactly. If they don't, the query is wrong — fix in step 5.
+4. Reverse one entry → verify P&L updates and reversal nets to zero
+   per §18 Q21 resolution.
+
+---
+
+#### 15.9 Phase 1.1 Exit Criteria Walkthrough
+
+After step 5, run the full Phase 1.1 exit criteria from §14 — all
+items, including the new rows added during step 0a. The friction
+journal should have accumulated entries throughout steps 0a–5.
+
+Specific criteria to verify at this stage:
+- **#9:** 5 manual journal entries posted across both orgs (accumulated
+  across steps 1–5 process gates).
+- **#13:** Friction journal has ≥3 real entries (will have many more).
+- **#14:** Time-to-first-post measured and recorded (captured in
+  step 1 process gate).
+- **#15:** Region pinning: Supabase `ca-central-1`, Vercel `yul1`.
+
+**Do not begin Phase 1.2 work until the founder approves the completed
+checklist and confirms readiness.**
+
+---
+
+---
+
+### 16. v0.5.7 Closeout Reconciliation — Three CTO Reviews
+
+*Added 2026-04-12. This section reconciles the Phase 1.1 brief against
+three external CTO/architecture reviews conducted after §15 was written.
+The reviews compared PLAN.md, CLAUDE.md, and this brief against
+accounting software industry best practices. Most findings confirm
+existing architecture; the actionable items below are additions that
+prevent throwaway work or close gaps auditors would flag.*
+
+*This spec is the canonical design. If an implementation plan produced
+by a writing-plans tool conflicts with this spec, this spec wins on
+what to build. The implementation plan wins on the order to build it.
+Conflicts about scope or correctness are resolved by re-reading
+PLAN.md and the relevant ADR.*
+
+*The friction journal canonical path is `docs/friction-journal.md`
+(no phase suffix). All friction journal references in this brief and
+in PLAN.md converge on this path.*
+
+---
+
+#### 16.1 Context
+
+Three external reviews assessed the project documents against industry
+standards. The reviews produced thirty-six total additions, triaged
+into four categories:
+
+- **Act on now (Phase 1.1):** schema additions, test strengthening,
+  CLAUDE.md/PLAN.md edits, exit criteria additions.
+- **Defer to Phase 1.2 brief writing:** posting engine separation,
+  maker-checker constraint, CoA hierarchy validation, Cash Flow
+  Statement, user activity log, recurring entries, budget tables,
+  reporting strategy.
+- **Already addressed in PLAN.md:** PITR strategy (§18a Q8), FX
+  schema correctness (§8b + D5 CHECK), trigger performance (§1d),
+  synchronous audit log (Simplification 1), events table
+  append-only coverage.
+- **Rejected:** moving invariants to a renamed "Constitution"
+  section (no behavior change), converting §14 to Markdown tasks
+  (§14 already uses `- [ ]`), moving FX wiring to Phase 1.2
+  (schema is already correct; wiring is Phase 4 per §8b).
+
+The additions below are organized into the same step structure as
+§15 (0a through 5), with new sub-steps where needed.
+
+---
+
+#### 16.2 Step 0a Additions (Brief Reconciliation)
+
+Append to §15.0's checklist. Execute in the same pass, same process
+gate (`pnpm typecheck` + `pnpm test:integration` all 5 green).
+
+**Preflight (before 0a-1):** Run `ls supabase/migrations/` and
+confirm `20240101000000_initial_schema.sql` and
+`20240102000000_add_reversal_reason.sql` are present. Migrations
+003-006 use Supabase CLI timestamp naming and are created in
+`supabase/migrations/` during this 0a pass:
+`20240103000000_seed_tax_codes.sql` (§15.0 item 4),
+`20240104000000_add_entry_number.sql` (§16.2 item 13),
+`20240105000000_add_entry_type.sql` (§16.2 item 14),
+`20240106000000_add_attachments.sql` (§16.2 item 15).
+If any unexpected migration files are present, stop and
+investigate before continuing.
+
+**Migration convention (v0.5.7):** All migrations live in
+`supabase/migrations/` with Supabase CLI timestamp-prefixed
+filenames. The `src/db/migrations/` directory was removed during
+Phase 1.1 closeout — it was dead code that caused migration 002
+to go unapplied for an unknown duration. Seed data lives in
+`src/db/seed/`. Test helpers are loaded by
+`tests/setup/globalSetup.ts`, not by migrations.
+
+##### 0a-1: DDL Changes
+
+**13. §4 DDL: add `entry_number` to `journal_entries`.**
+
+```sql
+-- After idempotency_key column, before CONSTRAINT block:
+entry_number        bigint NOT NULL,
+
+-- New constraint, after existing constraints:
+CONSTRAINT unique_entry_number_per_org_period
+  UNIQUE (org_id, fiscal_period_id, entry_number)
+```
+
+Auditors require sequential entry numbering per org per period.
+UUIDs are not acceptable as entry references. The number is assigned
+by `journalEntryService.post()` inside the transaction via
+`SELECT COALESCE(MAX(entry_number), 0) + 1 FROM journal_entries
+WHERE org_id = $1 AND fiscal_period_id = $2 FOR UPDATE`. The
+`FOR UPDATE` serializes concurrent inserts within the same period
+(same row-locking pattern as §1d period lock). Not a Postgres
+sequence — sequences leave gaps on rolled-back transactions, which
+auditors flag.
+
+Migration `20240102000000_add_reversal_reason.sql` already exists
+in `supabase/migrations/`. Create
+`supabase/migrations/20240104000000_add_entry_number.sql` (after
+`20240103000000_seed_tax_codes.sql`):
+
+```sql
+ALTER TABLE journal_entries
+  ADD COLUMN entry_number bigint;
+
+-- Backfill existing rows (seeded/test entries) in creation order:
+UPDATE journal_entries je SET entry_number = sub.rn
+FROM (
+  SELECT journal_entry_id,
+         ROW_NUMBER() OVER (
+           PARTITION BY org_id, fiscal_period_id
+           ORDER BY created_at
+         ) AS rn
+  FROM journal_entries
+) sub
+WHERE je.journal_entry_id = sub.journal_entry_id;
+
+ALTER TABLE journal_entries
+  ALTER COLUMN entry_number SET NOT NULL;
+
+ALTER TABLE journal_entries
+  ADD CONSTRAINT unique_entry_number_per_org_period
+  UNIQUE (org_id, fiscal_period_id, entry_number);
+```
+
+**14. §4 DDL: add `entry_type` enum and column.**
+
+```sql
+-- New enum (place with other enums at top of 001):
+CREATE TYPE entry_type AS ENUM (
+  'regular',
+  'adjusting',
+  'closing',
+  'reversing'
+);
+
+-- New column on journal_entries (after reversal_reason):
+entry_type  entry_type NOT NULL DEFAULT 'regular'
+```
+
+IFRS requires distinguishing regular from adjusting/closing/reversing
+entries for period-end reporting. The column is defaulted; no UI
+field in Phase 1.1. `journalEntryService.post()` sets
+`entry_type = 'reversing'` programmatically when
+`reverses_journal_entry_id` is populated; all other entries default
+to `'regular'`. Phase 2 surfaces adjusting/closing entries as
+distinct workflows.
+
+Migration `supabase/migrations/20240105000000_add_entry_type.sql`:
+
+```sql
+CREATE TYPE entry_type AS ENUM (
+  'regular', 'adjusting', 'closing', 'reversing'
+);
+
+ALTER TABLE journal_entries
+  ADD COLUMN entry_type entry_type NOT NULL DEFAULT 'regular';
+
+-- Set existing reversal entries to 'reversing':
+UPDATE journal_entries
+  SET entry_type = 'reversing'
+  WHERE reverses_journal_entry_id IS NOT NULL;
+```
+
+**15. §4 DDL: add `journal_entry_attachments` table.**
+
+```sql
+CREATE TABLE journal_entry_attachments (
+  attachment_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  journal_entry_id    uuid NOT NULL REFERENCES journal_entries(journal_entry_id)
+    ON DELETE CASCADE,
+  storage_path        text NOT NULL,
+  original_filename   text NOT NULL,
+  uploaded_by         uuid REFERENCES auth.users(id),
+  uploaded_at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_je_attachments_entry
+  ON journal_entry_attachments (journal_entry_id);
+
+ALTER TABLE journal_entry_attachments ENABLE ROW LEVEL SECURITY;
+
+-- Inherit tenant scope via parent journal entry:
+CREATE POLICY je_attachments_select ON journal_entry_attachments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM journal_entries je
+      WHERE je.journal_entry_id =
+            journal_entry_attachments.journal_entry_id
+        AND user_has_org_access(je.org_id)
+    )
+  );
+
+COMMENT ON TABLE journal_entry_attachments IS
+  'Populated in Phase 2 by AP Agent. Do not write to manually.';
+```
+
+Empty in Phase 1.1. Same Category A reservation pattern as
+`intercompany_relationships`. Migration
+`supabase/migrations/20240106000000_add_attachments.sql`.
+
+##### 0a-2: Brief Paperwork
+
+Items 5-10 from §15.0 remain unchanged. Add:
+
+**16. §14 exit criteria: add criterion #16 "Document Sync."**
+
+Add to §14 under a new subheading `#### Document sync`:
+
+```markdown
+- [ ] **Document Sync completed** — before declaring Phase 1.1
+      complete: (a) PLAN.md §1a folder tree audited against
+      actual filesystem — every file listed exists, no unlisted
+      files in key directories; (b) stale references grepped
+      (test counts, table counts, file paths, version numbers)
+      and all discrepancies resolved; (c) Open Questions in §18
+      that were answered during Phase 1.1 moved to RESOLVED
+      markers in the relevant Bible sections; (d) friction
+      journal audited for entries that should become ADRs per
+      docs/decisions/README.md threshold; (e) all discrepancies
+      recorded in docs/friction-journal.md with the fix applied
+```
+
+This prevents the v0.5.6 failure mode where reconciliation was
+claimed without being performed.
+
+##### 0a-3: Meta-Edits
+
+**17. §18 Open Question: Soft close vs. hard close.**
+
+Add to PLAN.md §18:
+
+> **Q21 — Period close model.** PLAN.md treats `is_locked` as
+> binary (open/closed), which is hard close only. Standard
+> accounting practice distinguishes soft close (controller can
+> still post adjusting entries) from hard close (period sealed,
+> no writes from any role). Phase 1.1 ships hard close only per
+> §7. Phase 2+: add soft close state, requires schema change to
+> `fiscal_periods` (`status` enum replacing `is_locked`), RLS
+> policy update on `journal_entries` to allow controller writes
+> when state is `soft_closed`, and UI for two-stage close flow.
+> Default: defer to Phase 2+.
+
+**18. PLAN.md §16 edit: add six-document-type enumeration.**
+
+Add a subsection to PLAN.md §16 listing the document hierarchy:
+
+1. **Spec/PRD** — static, defines the goal. Currently embedded in
+   PLAN.md "The Product" section.
+2. **PLAN.md (Architecture Bible)** — active/fluid, defines
+   architectural decisions. Edited at version boundaries.
+3. **ADR** — permanent, records decisions made in anger. One file
+   per decision under `docs/decisions/`.
+4. **Phase Briefs** — active, phase-scoped. One file per phase
+   under `docs/specs/`. Historical reference after phase closes.
+5. **CLAUDE.md** — derived from PLAN.md, stable. Edited only when
+   standing rules change. Loaded every session.
+6. **Friction Journal** — append-only, written during work.
+   Canonical path: `docs/friction-journal.md`. Feeds next phase's
+   brief writing and identifies ADR candidates.
+
+**19. PLAN.md §16 edit: add at-phase-boundary reconciliation
+ritual.**
+
+At the end of every phase, before writing the next phase's brief:
+(a) audit PLAN.md §1a folder tree against actual filesystem,
+(b) move resolved Open Questions from §18 into relevant Bible
+sections with `RESOLVED v0.X.Y` markers, (c) audit friction
+journal for entries that should become ADRs, (d) read changelog
+claims against actual state. Phase boundaries are the cadence,
+not weekly.
+
+**20. CLAUDE.md edit: sharpen drift-handling rule.**
+
+Add one line to CLAUDE.md "When in doubt" section:
+
+> "Code that deviates from PLAN.md during a session is wrong
+> unless an ADR is written to update the Bible first. The ADR
+> comes before the code, not after."
+
+##### 0a-4: Friction Journal Entries
+
+Write all entries for items 13-20 above. Additionally:
+
+```
+- 2026-04-12 WRONG  PLAN.md §2a defines journal_entries with UUID
+  PK only. Auditors require sequential entry numbering per org per
+  period. Bible gap caught by external CTO review. Added
+  entry_number column + UNIQUE constraint in 0a.
+- 2026-04-12 WANT   entry_type schema reservation added per CTO
+  review. Column defaulted; no UI in Phase 1.1. Phase 2 surfaces
+  adjusting/closing entries as distinct workflow.
+- 2026-04-12 WANT   journal_entry_attachments table added as
+  Category A reservation per CTO review. Empty Phase 1.1; Phase 2
+  AP Agent populates.
+- 2026-04-12 NOTE   External CTO review recommends moving
+  FX/multi-currency wiring into Phase 1.2. Bible §8b explicitly
+  defers to Phase 4 with schema correctness in Phase 1.1.
+  Reviewer's concern addressed by step 1 process gate verification
+  that amount_cad/fx_rate are populated on every posted entry.
+  Phase 1.2 scope unchanged.
+- 2026-04-12 WANT   PLAN.md is 256KB; ~5,000 words is changelog
+  history current readers don't need. CTO review recommends
+  extracting to docs/prompt-history/CHANGELOG.md. Deferred to
+  post-Phase-1.1 close so it doesn't compete with brief
+  reconciliation.
+- 2026-04-12 WANT   Soft close vs. hard close gap logged as §18
+  Open Question. Phase 1.1 ships hard close only.
+- 2026-04-12 WANT   CTO "delete the UI, does the balance sheet
+  still work?" test adopted as Phase 1.1 closeout verification.
+  Run integration tests + manual psql P&L query at end of step 5.
+```
+
+**Process gate:** same as §15.0 — `pnpm typecheck` clean,
+`pnpm test:integration` all 5 green. The new DDL migrations must
+apply without error.
+
+---
+
+#### 16.3 Step 0c Additions (Service Verification)
+
+Append to §15.2's work.
+
+**A. `journalEntryService.post`: assign `entry_number`.**
+
+Inside the transaction, before the `journal_entries` INSERT:
+
+```typescript
+const { data } = await tx
+  .from('journal_entries')
+  .select('entry_number')
+  .eq('org_id', input.org_id)
+  .eq('fiscal_period_id', input.fiscal_period_id)
+  .order('entry_number', { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+const nextEntryNumber = (data?.entry_number ?? 0) + 1;
+```
+
+The entry_number is included in the INSERT and in the return value.
+
+**Phase 1.1 concurrency decision:** This query does NOT use
+`FOR UPDATE` row-locking. The Supabase query builder does not
+expose `FOR UPDATE` directly; achieving it requires a Postgres
+RPC function. Phase 1.1 has a single founder posting one entry
+at a time — the concurrent insert race window is zero. Phase 1.2
+promotes this to a Postgres RPC function with explicit
+`SELECT ... FOR UPDATE` before the agent path lights up
+concurrent posting. This follows §10c's isolation reasoning:
+row-level locks are added at the specific points where write
+skew would otherwise occur, and Phase 1.1 doesn't have that
+skew yet.
+
+Friction journal entry:
+```
+- [date] CLUNKY  entry_number assignment uses MAX+1 without
+  FOR UPDATE row locking in Phase 1.1 because Supabase query
+  builder doesn't expose FOR UPDATE directly. Single-founder
+  Phase 1.1 has zero concurrent insert risk. Phase 1.2 promotes
+  to Postgres RPC function with explicit FOR UPDATE before agent
+  path lights up concurrent posting.
+```
+
+**B. `journalEntryService.post`: set `entry_type`.**
+
+When `input.reverses_journal_entry_id` is populated, set
+`entry_type = 'reversing'` on the INSERT. Otherwise default
+`'regular'`. The form never sends `entry_type`; the service
+assigns it programmatically.
+
+**C. Strengthen Test 3 to table-parameterized RLS coverage.**
+
+Expand `crossOrgRlsIsolation.test.ts` from CoA-only to all
+tenant-scoped tables:
+
+```typescript
+describe.each([
+  'chart_of_accounts',
+  'journal_entries',
+  'journal_lines',
+  'fiscal_periods',
+  'vendors',
+  'audit_log',
+  'ai_actions',
+])('RLS isolates %s across orgs', (tableName) => {
+  it('AP Specialist cannot read holding company rows', async () => {
+    // Sign in as AP Specialist (real_estate org only)
+    // Attempt SELECT from tableName WHERE org_id = holding_co_org_id
+    // Assert: zero rows returned (RLS filters)
+  });
+});
+```
+
+Category A floor stays at five tests; Test 3 covers more ground.
+
+**Test-local setup for empty tables:** Tables that are empty in
+Phase 1.1 (`vendors`, `ai_actions`) need one row per org to make
+the assertion meaningful — an empty table returns zero rows for
+any user, which is a vacuous pass. `crossOrgRlsIsolation.test.ts`
+inserts one row per tested table per org in `beforeAll` and
+deletes them in `afterAll`. Does NOT modify `dev.sql`. The seed
+script stays focused on universal fixtures (orgs, CoA,
+memberships, periods); test-specific data is co-located with the
+test that needs it.
+
+---
+
+#### 16.4 Step 1 Additions (Form Work)
+
+Append to §15.4's work.
+
+**A. `orgService.createOrgWithTemplate`: auto-generate fiscal
+periods.**
+
+After CoA template loading and membership creation, generate 12
+monthly fiscal periods for the current fiscal year.
+
+Extract the generation as a pure function
+`generateMonthlyFiscalPeriods(startMonth, currentYear, orgId)`
+returning `FiscalPeriodInsert[]`. The function lives in
+`src/services/org/orgService.ts` or a sibling helper file.
+
+```typescript
+type FiscalPeriodInsert = {
+  org_id: string;
+  name: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string;   // YYYY-MM-DD
+  is_locked: boolean;
+};
+
+export function generateMonthlyFiscalPeriods(
+  startMonth: number, // 1-12
+  currentYear: number,
+  orgId: string,
+): FiscalPeriodInsert[] {
+  const periods: FiscalPeriodInsert[] = [];
+  for (let i = 0; i < 12; i++) {
+    const month = ((startMonth - 1 + i) % 12) + 1;
+    const year = month < startMonth
+      ? currentYear + 1
+      : currentYear;
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // last day
+    periods.push({
+      org_id: orgId,
+      name: `${startDate.toLocaleString('en', {
+        month: 'long',
+      })} ${year}`,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0],
+      is_locked: false,
+    });
+  }
+  return periods;
+}
+```
+
+The service calls this function, then bulk-inserts the result
+inside the org-creation transaction.
+
+**Unit test required:** `generateFiscalPeriods.test.ts` verifies
+the output for `startMonth` values {1, 6, 7, 12} to cover the
+wraparound boundary. Each case asserts: 12 periods produced,
+first period starts in `startMonth`, last period ends in
+`startMonth - 1` (wrapping), no gaps between consecutive periods'
+`end_date` and `start_date`. Pass `currentYear` explicitly (the
+function signature already accepts it) so the test is
+deterministic. Include `currentYear` values {2024, 2025} for at
+least one `startMonth` to verify the February 28/29 boundary —
+`new Date(year, 2, 0)` returns Feb 28 in non-leap years and
+Feb 29 in leap years; without both cases a developer running
+tests in a leap year sees different output than CI in a non-leap
+year. Pure function, trivially testable.
+
+The seed script (`dev.sql`) keeps its hardcoded periods with fixed
+UUIDs because the integration tests reference those UUIDs.
+`orgService` auto-generation only fires for new orgs created via
+the UI, not for seeded orgs. The seed script runs after schema
+migrations; the auto-generation is a service function.
+
+**B. Process gate addition: multi-currency columns verification.**
+
+After step 1's existing process gate, add:
+
+```
+5. psql verification: SELECT entry_date, amount_original,
+   amount_cad, fx_rate FROM journal_lines WHERE journal_entry_id
+   = [newly posted entry]. Verify: amount_original > 0,
+   amount_cad = amount_original (CAD-only), fx_rate = 1.00000000.
+   None are NULL or zero.
+```
+
+This proves the multi-currency contract is honored even on
+CAD-only entries, addressing the CTO review concern without
+changing Phase 1.2 scope.
+
+---
+
+#### 16.5 Step 5 Additions (P&L + Trial Balance)
+
+Append to §15.8's work.
+
+**The "delete the UI" verification in step 5's process gate is the
+architectural correctness test for the entire Phase 1.1 ledger.**
+If it passes, Tier 1 (ledger truth) is genuinely separable from
+Tier 3 (UI presentation) and the system has the foundation for
+Phase 1.2 onward. If it fails, there is logic in the UI that
+should be in the service layer, and the gap must be closed before
+Phase 1.2 begins.
+
+##### Trial Balance View
+
+**Scope is intentionally minimal.** A flat table with columns:
+`account_code`, `account_name`, `account_type`, `debit_total_cad`,
+`credit_total_cad`. Footer row shows `SUM(debit_total_cad)` and
+`SUM(credit_total_cad)`. The footer values must be equal — this is
+the verification primitive.
+
+**Not in scope:** hierarchical rendering, parent/child indentation,
+subtotals by account_type, running balances, period-over-period
+comparison. Any of these lands as a friction journal `WANT`, not
+as in-scope work. Phase 1.2+ may add them.
+
+Phase 1.1's Trial Balance exists to give the controller a "do the
+books balance?" answer in 30 seconds.
+
+##### New service function
+
+`reportService.trialBalance({ org_id, fiscal_period_id? }, ctx)`
+in `src/services/reporting/reportService.ts`: read-only.
+
+Query:
+
+```sql
+SELECT
+  coa.account_code,
+  coa.account_name,
+  coa.account_type,
+  COALESCE(SUM(jl.debit_amount), 0) AS debit_total_cad,
+  COALESCE(SUM(jl.credit_amount), 0) AS credit_total_cad
+FROM chart_of_accounts coa
+LEFT JOIN journal_lines jl
+  ON jl.account_id = coa.account_id
+LEFT JOIN journal_entries je
+  ON jl.journal_entry_id = je.journal_entry_id
+  AND je.org_id = $1
+  AND ($2::uuid IS NULL OR je.fiscal_period_id = $2)
+WHERE coa.org_id = $1
+  AND coa.is_active = true
+GROUP BY coa.account_id, coa.account_code, coa.account_name,
+         coa.account_type
+ORDER BY coa.account_code
+```
+
+Uses `amount_cad` columns (multi-currency-correct). LEFT JOIN
+ensures accounts with no entries still appear (zero balances).
+
+##### New API route
+
+`src/app/api/orgs/[orgId]/reports/trial-balance/route.ts` — GET.
+Calls `reportService.trialBalance`. Filterable by
+`fiscal_period_id` query param.
+
+##### `src/components/canvas/BasicTrialBalanceView.tsx`
+
+- Period filter dropdown (shared with P&L, reuses fiscal periods
+  fetch).
+- Flat table: one row per active account, ordered by account_code.
+- Footer row: sum of debit_total_cad, sum of credit_total_cad.
+  Styled distinctly (bold, background). If sums are not equal,
+  render in red — this is a bug signal, not a user error.
+- No interactivity. No drill-down. No sorting. Read-only.
+
+##### MainframeRail integration
+
+New icon/action for Trial Balance sets directive to
+`{ type: 'report_trial_balance', orgId, periodId }`.
+`ContextualCanvas` gets a new case rendering
+`<BasicTrialBalanceView>`.
+
+##### Updated process gate for step 5
+
+Replace §15.8's process gate with:
+
+1. `pnpm typecheck` + `pnpm test:integration` — all 5 green.
+2. Manual: post 3+ entries across both orgs → open Trial Balance →
+   verify footer row sums are equal.
+3. **Hand-verification (Trial Balance primary):** export posted
+   entries to a scratch spreadsheet, sum debits and credits per
+   account, compare to Trial Balance view. Must match exactly.
+4. Open P&L → verify totals. P&L totals must be derivable from the
+   Trial Balance (revenue accounts' credit totals, expense
+   accounts' debit totals).
+5. Reverse one entry → verify Trial Balance footer still balances
+   and P&L updates per §18 Q21 resolution.
+6. **CTO "delete the UI" test:** Run a manual psql query that
+   produces per-account-type sums directly from `journal_lines`
+   joined to `chart_of_accounts`. Compare the psql output to both
+   the Trial Balance view and the P&L view. All three must agree.
+   If the psql query and the UI views disagree, there is logic in
+   the UI that should be in the service query — fix in step 5.
+
+---
+
+#### 16.6 Deferred Items
+
+The following items were raised by the CTO reviews and are
+explicitly **not** Phase 1.1 work. They are logged here so
+Phase 1.2 brief writing has the trace. Each becomes a friction
+journal entry during 0a-4 and a §18 Open Question when the
+relevant phase brief is written.
+
+| Item | Target Phase | Reason for Deferral |
+|---|---|---|
+| **Posting engine separation** — distinct `proposeFromUserIntent` layer between agent reasoning and `journalEntryService.post()` | Phase 1.2 brief | Phase 1.1 has no events to translate. The separation matters when the AP Agent needs the same propose→post pattern as the Double Entry Agent. |
+| **Maker-checker constraint** — `created_by != confirming_user_id` for agent-source entries | Phase 1.2 brief | Phase 1.1 has one founder; constraint would reject self-posting. Natural fit alongside agent confirmation flow. |
+| **CoA hierarchy validation** — depth check, type consistency, orphan prevention on `chart_of_accounts` mutations | Whichever phase ships CoA mutation | Phase 1.1 CoA is read-only (loaded from templates). No mutation path exists. |
+| **Cash Flow Statement** — requires operating/investing/financing categorization | Phase 2+ | Schema does not have activity categorization. Most complex of the three IFRS statements. |
+| **User activity log** — login audit, failed attempts, session tracking for SOC 2 | Phase 2+ | Phase 1.1 has one user. Supabase Auth logs internally; surfacing is Phase 2 work informed by SOC 2 pursuit decision. |
+| **Recurring journal entries** — templates with frequency, effective dates, auto-generation | Phase 2 brief | Requires pg-boss (Phase 2). Schema design is a real conversation, not a Category A reservation. |
+| **Budget tables** — budget vs. actual variance analysis | Phase 3+ | Feature, not architectural gap. Executive persona is Phase 3+ for full functionality. |
+| **Reporting strategy** — materialized views, read models, or ETL for scale | Phase 2 brief | Phase 1.1 live Postgres aggregates are sufficient. Phase 1.3 query latency measurements inform the choice. |
+| **PLAN.md changelog extraction** — move ~5,000 words of version history to `docs/prompt-history/CHANGELOG.md` | Post-Phase-1.1 | Cross-references between changelog entries need to follow the move. Deferred so it doesn't compete with brief reconciliation. |
+| **Audit log query view** — self-service audit trail for controllers | Phase 1.2 | Phase 1.1 has nothing to query. Ships alongside AI Action Review queue activation. |
+
+---
+
+#### 16.7 Recap Pause
+
+**Between completing 0a (all four sub-steps) and starting 0b,
+stop. Read the reconciled brief end-to-end against PLAN.md,
+side by side.**
+
+This is not optional. Three external reviews added items that
+interact with each other and with existing §15 design in ways
+that are invisible until the reconciled state is read as a whole.
+The recap produces one artifact: a list of contradictions found
+(ideally empty; realistically 1-3 small items). Each contradiction
+is resolved immediately or logged as a friction journal entry.
+
+##### Cross-cutting interaction checklist
+
+Verify each of these during the recap. The list is finite; the
+recap is bounded.
+
+1. **`entry_type` column ↔ Test 3 strengthening.** The new
+   table-parameterized RLS test inserts into `journal_entries`.
+   Verify the test helper rows include `entry_type` (defaulted to
+   `'regular'`) so inserts don't fail on the NOT NULL constraint.
+
+2. **`entry_number` column ↔ Tests 1, 2, 5.** All three tests
+   insert into `journal_entries` via test helpers. Verify the
+   helpers either (a) set `entry_number` explicitly, or (b) use
+   `journalEntryService.post()` which assigns it automatically.
+   If tests bypass the service and insert directly via SQL, those
+   inserts need an `entry_number` value. The backfill migration
+   handles existing rows; new test inserts need the column.
+
+3. **`reversal_reason` CHECK ↔ reversal mirror test (§6g).** The
+   test's "happy path" branch must pass a non-empty
+   `reversal_reason`. Verify the test fixture covers this.
+
+4. **`mirrorLines` helper ↔ `entry_type` assignment.** When the
+   reversal form launcher calls `mirrorLines`, the prefill flows
+   through `ReversalForm` → `reversalFormStateToServiceInput` →
+   `ReversalInput`. `entry_type = 'reversing'` is set by
+   `journalEntryService.post()` (not the form). Verify the
+   service sets it when `reverses_journal_entry_id` is populated.
+
+5. **Document Sync exit criterion (#16) ↔ friction journal
+   accumulation (#13).** Both reference `docs/friction-journal.md`.
+   Verify this path is used consistently throughout the brief and
+   in PLAN.md §7.
+
+6. **`003_seed_tax_codes.sql` ↔ test setup ordering.** If tests
+   need tax codes, verify `testDb.ts` runs migrations in order:
+   001 → 002 → 003 → 004 → 005 → 006. Supabase CLI handles
+   ordering by filename; verify filenames sort correctly.
+
+7. **`orgService.createOrgWithTemplate` auto-generated periods ↔
+   `dev.sql` seed script.** The seed script creates hardcoded
+   periods with fixed UUIDs that tests reference.
+   `orgService` auto-generates for new UI-created orgs only.
+   Verify: the seed script does NOT call `orgService` — it
+   inserts directly via SQL. The auto-generation only fires in
+   the service function, not in the seed path. No duplication.
+
+8. **Migration file numbering ↔ spec assumptions.** Run
+   `ls supabase/migrations/` and verify the timestamps sort
+   correctly: `20240101*` (initial), `20240102*` (reversal_reason),
+   then 003-006 created during 0a. If any migration exists that
+   the spec doesn't account for, investigate before applying
+   new ones. Wrong ordering cascades into "type from a later
+   migration doesn't exist" failures.
+
+**After the recap:** if contradictions were found and resolved,
+re-run `pnpm typecheck` + `pnpm test:integration`. Then proceed
+to 0b.
+
 ---
 
 **End of Phase 1.1 Execution Brief.**
 
-The Phase 1.2 Execution Brief is **not** written until every item above
-is checked. When you complete the checklist, report to the founder which
-items required deviation from the brief (note them in the friction
-journal) and what the friction journal taught you. Those notes are the
-input to writing the Phase 1.2 brief.
+The Phase 1.2 Execution Brief is **not** written until every item
+above is checked — including §16's additions and the Document Sync
+exit criterion (#16 in §14). When you complete the checklist, report
+to the founder which items required deviation from the brief (note
+them in the friction journal) and what the friction journal taught
+you. Those notes are the input to writing the Phase 1.2 brief.
 
 Do not begin Phase 1.2 work until the founder approves the completed
 Phase 1.1 checklist and confirms readiness for the next phase.

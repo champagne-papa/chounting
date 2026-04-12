@@ -15,9 +15,10 @@
     "db:migrate": "supabase migration up --local",
     "db:reset": "supabase db reset --local",
     "db:generate-types": "supabase gen types typescript --local > src/db/types.ts",
-    "db:seed": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f src/db/migrations/seed/dev.sql",
+    "db:seed": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f src/db/seed/dev.sql",
     "db:seed:auth": "dotenv -e .env.local -- tsx scripts/seed-auth-users.ts",
-    "db:seed:all": "pnpm db:seed:auth && pnpm db:seed"
+    "db:seed:all": "pnpm db:seed:auth && pnpm db:seed",
+    "test:no-hardcoded-urls": "! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.0",

@@ -891,7 +891,7 @@ No agent logic moves. The seams are already in the right places.
     "db:reset": "supabase db reset",
     "db:generate-types": "supabase gen types typescript --local > src/db/types.ts",
     "db:seed:auth": "tsx scripts/seed-auth-users.ts",
-    "db:seed": "psql \"$LOCAL_DATABASE_URL\" -f src/db/migrations/seed/dev.sql",
+    "db:seed": "psql \"$LOCAL_DATABASE_URL\" -f src/db/seed/dev.sql",
     "db:seed:all": "pnpm db:seed:auth && pnpm db:seed"
   }
 }
@@ -912,7 +912,7 @@ SDK call, not SQL. The split:
   via `admin.auth.admin.createUser()` with fixed UUIDs that the SQL
   seed and integration tests both reference.
 - **`db:seed`** — runs `psql` against `LOCAL_DATABASE_URL` loading
-  `src/db/migrations/seed/dev.sql`, which creates the two orgs, loads
+  `src/db/seed/dev.sql`, which creates the two orgs, loads
   industry CoA templates, inserts memberships, and creates one open
   fiscal period per org plus one LOCKED period used by integration
   test 2.
@@ -1154,7 +1154,7 @@ after every migration. Wired as `pnpm db:generate-types`. Generated types are
 committed to the repo so reviewers can see schema changes in PRs.
 
 **Workflow:**
-1. Write SQL migration file in `src/db/migrations/`
+1. Write SQL migration file in `supabase/migrations/` (timestamp-prefixed, e.g. `20240103000000_seed_tax_codes.sql`)
 2. `pnpm db:migrate` — applies to local Supabase
 3. `pnpm db:generate-types` — regenerates TypeScript types
 4. Run `pnpm test:integration` to verify the five Category A floor tests still pass (v0.5.5 — see §10a)
@@ -4645,6 +4645,26 @@ Architecture Bible. §0 through §18d. This file is the *why* and
 the *decisions*, not the *what* or the *how*.
 
 ---
+
+### Section 18d — Decisions Recorded During Phase 1.1 Implementation
+
+20. **Minimal `journalEntryService.post()` stub landed in Phase 1.1
+    despite the spec saying "Phase 1.2."** The Phase 1.1 exit criteria
+    (§14, CLAUDE.md "What done means" item 2) require all five Category A
+    integration tests passing. Tests 4 (service middleware authorization)
+    and 5 (reversal mirror) both exercise `journalEntryService.post()`
+    through `withInvariants()`. The spec's folder structure (§3 line 235)
+    says "journalEntryService.ts is created in Phase 1.2, not 1.1" — a
+    contradiction.
+
+    **RESOLVED 2026-04-12:** Implement a minimal stub in Phase 1.1 —
+    just enough to satisfy the invariants and reversal-mirror tests
+    (balanced check, period lock check, insert + mirror on reversal).
+    Richer features (idempotency keys, attachments, approval workflow)
+    are deferred to Phase 1.2. The stub is NOT wired to any UI in
+    Phase 1.1; `ProposedEntryCard` stays a shell. The tests exercise
+    the service directly. This unblocks the tests without scope creep,
+    and the tests guard the stub as it grows in Phase 1.2.
 
 *End of PLAN.md — Architecture Bible v0.5.6*
 
