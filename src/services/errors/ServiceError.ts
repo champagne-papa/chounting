@@ -21,7 +21,8 @@ export type ServiceErrorCode =
   // Org / CoA
   | 'ORG_CREATE_FAILED'
   | 'TEMPLATE_NOT_FOUND'
-  | 'COA_LOAD_FAILED';
+  | 'COA_LOAD_FAILED'
+  | 'PERIOD_GENERATION_FAILED';
 
 export class ServiceError extends Error {
   constructor(

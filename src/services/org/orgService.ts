@@ -3,6 +3,7 @@ import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { generateMonthlyFiscalPeriods } from './generateFiscalPeriods';
 
 interface CreateOrgInput {
   name: string;
@@ -25,7 +26,7 @@ export const orgService = {
         functional_currency: 'CAD',
         created_by: ctx.caller.user_id,
       })
-      .select('org_id')
+      .select('org_id, fiscal_year_start_month')
       .single();
 
     if (orgErr || !org) {
@@ -63,8 +64,24 @@ export const orgService = {
       role: 'controller',
     });
 
-    log.info({ org_id: org.org_id, accounts_loaded: coaRows.length }, 'Org created');
+    // 4. Auto-generate 12 monthly fiscal periods for the current fiscal year.
+    //    Only fires for orgs created via this service, not for seeded orgs
+    //    (seed uses raw SQL INSERTs with its own period fixtures).
+    const periods = generateMonthlyFiscalPeriods(
+      org.fiscal_year_start_month,
+      new Date().getFullYear(),
+      org.org_id,
+    );
+    const { error: periodErr } = await db.from('fiscal_periods').insert(periods);
+    if (periodErr) {
+      throw new ServiceError('PERIOD_GENERATION_FAILED', periodErr.message);
+    }
 
-    return { org_id: org.org_id, accounts_loaded: coaRows.length };
+    log.info(
+      { org_id: org.org_id, accounts_loaded: coaRows.length, periods_created: periods.length },
+      'Org created with CoA and fiscal periods',
+    );
+
+    return { org_id: org.org_id, accounts_loaded: coaRows.length, periods_created: periods.length };
   },
 };

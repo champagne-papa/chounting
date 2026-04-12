@@ -355,6 +355,23 @@ Categories:
   established for Tasks 11-17 (UI work, subagent-driven). Task 18
   (final verification) returns to inline mode after UI block.
 
+- 2026-04-13 NOTE   Task 11 orgService wiring is not test-verified.
+  createOrgWithTemplate is called by src/app/api/org/route.ts but
+  no integration test exercises that route. The seed bypasses the
+  service entirely (raw SQL). First Phase 1.2 task that exercises
+  org creation via the API should verify the fiscal period
+  auto-generation fires correctly end-to-end.
+
+- 2026-04-13 NOTE   Task 11 initially hardcoded fiscal_year_start_month = 1
+  in the orgService wiring. Caught during review — the org row's
+  actual fiscal_year_start_month should be read from the INSERT's
+  RETURNING clause. Fixed: SELECT now returns org_id +
+  fiscal_year_start_month, passed to generateMonthlyFiscalPeriods.
+
+- 2026-04-13 NOTE   Task 11 complete. Inline block (Tasks 1-11)
+  done. UI block (Tasks 12-17) starts next session, subagent-driven.
+  Task 18 returns to inline for final verification.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
