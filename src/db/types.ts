@@ -776,12 +776,15 @@ export type Database = {
           created_by: string | null
           description: string
           entry_date: string
+          entry_number: number | null
+          entry_type: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id: string
           idempotency_key: string | null
           intercompany_batch_id: string | null
           journal_entry_id: string
           org_id: string
           reference: string | null
+          reversal_reason: string | null
           reverses_journal_entry_id: string | null
           source: Database["public"]["Enums"]["journal_entry_source"]
         }
@@ -790,12 +793,15 @@ export type Database = {
           created_by?: string | null
           description: string
           entry_date: string
+          entry_number?: number | null
+          entry_type?: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id: string
           idempotency_key?: string | null
           intercompany_batch_id?: string | null
           journal_entry_id?: string
           org_id: string
           reference?: string | null
+          reversal_reason?: string | null
           reverses_journal_entry_id?: string | null
           source: Database["public"]["Enums"]["journal_entry_source"]
         }
@@ -804,12 +810,15 @@ export type Database = {
           created_by?: string | null
           description?: string
           entry_date?: string
+          entry_number?: number | null
+          entry_type?: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id?: string
           idempotency_key?: string | null
           intercompany_batch_id?: string | null
           journal_entry_id?: string
           org_id?: string
           reference?: string | null
+          reversal_reason?: string | null
           reverses_journal_entry_id?: string | null
           source?: Database["public"]["Enums"]["journal_entry_source"]
         }
@@ -831,6 +840,41 @@ export type Database = {
           {
             foreignKeyName: "journal_entries_reverses_journal_entry_id_fkey"
             columns: ["reverses_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["journal_entry_id"]
+          },
+        ]
+      }
+      journal_entry_attachments: {
+        Row: {
+          attachment_id: string
+          journal_entry_id: string
+          original_filename: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          attachment_id?: string
+          journal_entry_id: string
+          original_filename: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          attachment_id?: string
+          journal_entry_id?: string
+          original_filename?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_attachments_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
             referencedColumns: ["journal_entry_id"]
@@ -1153,6 +1197,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      test_post_balanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_amount: number
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_debit_amount: number
+          p_credit_amount: number
+        }
+        Returns: string
+      }
       user_has_org_access: {
         Args: {
           target_org_id: string
@@ -1176,6 +1241,7 @@ export type Database = {
         | "stale"
       autonomy_tier: "always_confirm" | "notify_auto" | "silent"
       confidence_level: "high" | "medium" | "low" | "novel"
+      entry_type: "regular" | "adjusting" | "closing" | "reversing"
       journal_entry_source: "manual" | "agent" | "import"
       org_industry:
         | "healthcare"
