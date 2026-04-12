@@ -400,6 +400,32 @@ Categories:
   exercises them. Phase 12B's API routes will be the first
   runtime exercise.
 
+- 2026-04-14 NOTE   First subagent task (Phase 12B) produced zero
+  drift. The literal-code approach in the brief — specifying exact
+  imports, exact function signatures, exact error handling patterns
+  — resulted in the subagent outputting byte-for-byte matches to
+  the brief's code blocks. The 12-point review checklist found
+  nothing to correct. Lesson: the more literal the brief, the less
+  review work. Descriptions produce interpretation; code produces
+  copies. Future briefs should maximize literal code blocks and
+  minimize prose descriptions of code behavior.
+
+- 2026-04-14 NOTE   Phase 12B smoke test deferred. The API routes
+  require authenticated Supabase Auth cookies, which can't be
+  easily tested via bare curl. Full end-to-end testing happens
+  when Tasks 13-17's UI forms exercise the routes. The routes are
+  typecheck-verified and integration-test-regression-free but not
+  runtime-verified against a live server yet. Same pattern as
+  Phase 12A's service functions (typecheck-verified, not
+  runtime-verified until a consumer exercises them).
+
+- 2026-04-14 NOTE   Plan Task 12 response shape descriptions were
+  stale relative to Phase 12A service return types. The plan said
+  GET detail returns { entry, lines } but the service returns the
+  entry with journal_lines nested. Phase 12B brief used the
+  service shapes directly. Plan should be updated post-closeout
+  if it gets reused as a template.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
