@@ -9,8 +9,10 @@ This is the first subagent-driven task. The brief needs:
 - Files to create: src/app/api/orgs/[orgId]/journal-entries/route.ts
   (POST + GET) and .../[entryId]/route.ts (GET)
 - Do NOT modify files under constraints: src/services/, src/shared/schemas/
-- Service functions to call: journalEntryService.post (via withInvariants),
-  journalEntryService.list (direct), journalEntryService.get (direct)
+- POST: withInvariants(journalEntryService.post, { action: 'journal_entry.post' })
+- GET list: journalEntryService.list(input, ctx) — direct, no withInvariants
+- GET detail: journalEntryService.get(input, ctx) — direct, no withInvariants
+  (Reads don't use withInvariants per CLAUDE.md Rule 2: "every mutating")
 - Error helper: src/app/api/_helpers/serviceErrorToStatus.ts
 - Auth: buildServiceContext(req) from src/services/middleware/serviceContext.ts
 - Path convention: /api/orgs/[orgId]/journal-entries[/[entryId]]
