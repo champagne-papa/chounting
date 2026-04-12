@@ -1,0 +1,56 @@
+# Normalize line endings to LF for every text file in the repo.
+# This is a Windows + WSL2 + macOS + Linux codebase (PLAN.md §12,
+# Q5 resolution) and the repo is authoritative: files on disk are
+# LF in the repo regardless of what any individual contributor's
+# core.autocrlf setting says.
+
+# Default: let git detect text, force LF in the repo.
+* text=auto eol=lf
+
+# Explicit text file types (belt-and-suspenders for the common
+# formats in this codebase — markdown, TypeScript, SQL, JSON, etc.)
+*.md       text eol=lf
+*.mdx      text eol=lf
+*.ts       text eol=lf
+*.tsx      text eol=lf
+*.js       text eol=lf
+*.jsx      text eol=lf
+*.mjs      text eol=lf
+*.cjs      text eol=lf
+*.json     text eol=lf
+*.jsonc    text eol=lf
+*.sql      text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.toml     text eol=lf
+*.css      text eol=lf
+*.scss     text eol=lf
+*.html     text eol=lf
+*.svg      text eol=lf
+*.sh       text eol=lf
+*.env.example text eol=lf
+.env.example  text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+.nvmrc        text eol=lf
+Dockerfile    text eol=lf
+
+# Binary — never touch line endings
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.ico      binary
+*.webp     binary
+*.pdf      binary
+*.woff     binary
+*.woff2    binary
+*.ttf      binary
+*.otf      binary
+*.eot      binary
+*.zip      binary
+*.gz       binary
+*.tar      binary
+*.db       binary
+*.sqlite   binary
+*.sqlite3  binary
