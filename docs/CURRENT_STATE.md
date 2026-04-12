@@ -1,36 +1,32 @@
-# Where I am as of 2026-04-14
+# Where I am as of 2026-04-14 (Phase 13A complete)
 
-Task 12 complete (both Phase 12A inline service extension and Phase
-12B subagent API routes). First subagent task produced zero drift.
+Phase 13A (inline data-source prep) complete. All data sources the
+form needs now exist as API routes:
 
-Next session entry point: Task 13 (Journal Entry Form Component).
-Subagent-driven per hybrid execution plan. Re-read spec §15.4
-before writing the brief. The form is a client component that:
-- Fetches open periods and chart of accounts via existing API routes
-- Uses PostJournalEntryInputSchema via zodResolver
-- Transforms form state to service input (computes amount_original,
-  amount_cad, fx_rate for CAD-only)
-- POSTs to /api/orgs/[orgId]/journal-entries
-- Also requires: canvas directive types update, ContextualCanvas
-  wiring, MainframeRail icon addition
+- /api/orgs/[orgId]/journal-entries — POST + GET (Task 12B)
+- /api/orgs/[orgId]/journal-entries/[entryId] — GET (Task 12B)
+- /api/orgs/[orgId]/chart-of-accounts — GET (migrated in 13A)
+- /api/orgs/[orgId]/fiscal-periods — GET (new in 13A)
+- /api/tax-codes — GET (new in 13A, flat path for shared data)
 
-Task 13 touches more files than Task 12 and modifies existing
-components (canvasDirective.ts, ContextualCanvas.tsx, MainframeRail.tsx).
-The brief constraints need to be different from Task 12's.
+react-hook-form + @hookform/resolvers installed.
+report_trial_balance directive type added to canvasDirective.ts.
 
-Task 13 brief needs a DIFFERENT structure than Task 12's:
-- Task 12 was pure creation with strict deny-list. Task 13 modifies
-  existing files — the constraint is "modify these 3 files in these
-  specific ways" not "touch nothing outside the allow-list."
-- Literal-code approach works for interfaces (props, state shape,
-  API call signatures) but not for full form UX. Be descriptive
-  about behaviors, explicit about constraints, let subagent make
-  local UX decisions within bounds.
-- Pre-check: verify API routes exist for open periods and chart of
-  accounts. If not, Task 13 scope balloons into a sub-task.
-- Task 13 is the first consumer that exercises Phase 12A/12B at
-  runtime. If anything's broken in service or routes, Task 13
-  surfaces it. Don't assume form bugs are form bugs.
+Next session entry point: Phase 13B (subagent: JournalEntryForm component).
+Brief structure: literal code for interfaces (props, state shape, API
+calls, directive type), descriptive for behaviors (validation, submit
+flow, error display), surgical modifications for existing files.
 
-Tasks 14-17 remain subagent-driven after 13.
+Files to create: src/components/canvas/JournalEntryForm.tsx
+Files to modify (surgically):
+  - ContextualCanvas.tsx: change journal_entry_form case from
+    ComingSoonPlaceholder to real JournalEntryForm
+  - MainframeRail.tsx: NO changes (form reachability is Task 14's
+    "New Entry" button in the list view)
+
+Key spec sections: §15.4 (form fields, schema split, submit flow)
+Key patterns: useFieldArray, zodResolver, formStateToServiceInput
+transform, MoneyAmount branded types for amounts.
+
+Tasks 14-17 remain subagent-driven after 13B.
 Task 18 returns to inline for final verification.

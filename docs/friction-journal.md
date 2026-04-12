@@ -426,6 +426,33 @@ Categories:
   service shapes directly. Plan should be updated post-closeout
   if it gets reused as a template.
 
+- 2026-04-14 NOTE   Plan Task 13 was written against assumptions
+  about service and API surface that were stale by execution time.
+  Pre-check surfaced three missing data sources (fiscal_periods
+  list, tax_codes list, periodService.listOpen), no installed form
+  library, and stale URL conventions. Phase 13A inline scope
+  expanded to address all gaps. Lesson: tasks that consume
+  multiple architecture layers need pre-checks against all of them.
+
+- 2026-04-14 NOTE   API URL convention established in Phase 13A:
+  org-scoped data uses nested routes /api/orgs/[orgId]/{resource};
+  globally-readable reference data uses flat routes /api/{resource}.
+  Examples: /api/orgs/[orgId]/journal-entries (org-scoped),
+  /api/tax-codes (shared). The distinction is whether RLS is
+  org-scoped or globally readable.
+
+- 2026-04-14 NOTE   Chart-of-accounts route migrated from flat
+  /api/chart-of-accounts?org_id= to nested /api/orgs/[orgId]/
+  chart-of-accounts during Phase 13A. Was the only route wrapping
+  a read with withInvariants (violating CLAUDE.md Rule 2). Fixed:
+  inline auth check added to service, withInvariants removed from
+  route. All reads now consistently call services directly.
+
+- 2026-04-14 NOTE   Next.js .next/types/ cache persists type info
+  for deleted routes. After removing chart-of-accounts/route.ts,
+  typecheck failed on stale cached types. Fix: rm -rf .next before
+  typecheck. Worth remembering when deleting or moving route files.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
