@@ -242,6 +242,7 @@ export type JournalEntryListItem = {
 
 export type JournalEntryDetail = {
   journal_entry_id: string;
+  org_id: string;
   entry_number: number;
   entry_date: string;
   description: string;
@@ -307,7 +308,7 @@ async function get(
   // NOT_FOUND (don't leak existence).
   const { data: entry, error } = await db
     .from('journal_entries')
-    .select('journal_entry_id, entry_number, entry_date, description, reference, source, entry_type, reverses_journal_entry_id, reversal_reason, created_at, created_by, journal_lines(journal_line_id, account_id, description, debit_amount, credit_amount, currency, amount_original, amount_cad, fx_rate, tax_code_id)')
+    .select('journal_entry_id, org_id, entry_number, entry_date, description, reference, source, entry_type, reverses_journal_entry_id, reversal_reason, created_at, created_by, journal_lines(journal_line_id, account_id, description, debit_amount, credit_amount, currency, amount_original, amount_cad, fx_rate, tax_code_id)')
     .eq('journal_entry_id', input.journal_entry_id)
     .in('org_id', ctx.caller.org_ids)
     .maybeSingle();
