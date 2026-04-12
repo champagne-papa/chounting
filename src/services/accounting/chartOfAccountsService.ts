@@ -4,6 +4,7 @@
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
+import { ServiceError } from '@/services/errors/ServiceError';
 
 export const chartOfAccountsService = {
   /**
@@ -13,6 +14,16 @@ export const chartOfAccountsService = {
     input: { org_id: string },
     ctx: ServiceContext,
   ) {
+    // Authorization: caller must be a member of the requested org.
+    // Matches Phase 12A pattern for read functions (writes use
+    // withInvariants Invariant 3 instead).
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
