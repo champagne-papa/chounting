@@ -324,6 +324,37 @@ Categories:
   false negatives. Accept the false positive — manual inspection
   takes 5 seconds. Phase 1.2 may revisit.
 
+- 2026-04-12 CLUNKY Supabase analytics container (logflare) became
+  unhealthy during Task 10 after multiple db:reset cycles and
+  blocked db:start. Fixed by setting [analytics] enabled = false in
+  supabase/config.toml. The logflare container is non-essential for
+  local development but its health check was preventing supabase
+  start from completing. Phase 1.3 readiness: config-toml-review
+  step needed before remote deployment. Supabase CLI v1.226.4
+  (current v2.84.2) — meaningful version gap, upgrade before
+  Phase 1.3.
+
+- 2026-04-12 WRONG  Test 3 journal_entries "CAN read own org"
+  failure was misdiagnosed as a UNIQUE collision, RLS issue, and
+  test execution order problem. The actual cause was stale JWT
+  keys in .env.local after a Supabase db:stop + db:start cycle
+  regenerated the demo keys. The dynamic MAX + 1 entry_number
+  computation and the ai_actions user_id fix were both correct
+  improvements that weren't actually addressing the original
+  failure. Lesson: when environment state is unknown, verify
+  every layer (containers, health endpoints, JWT keys, schema
+  state) before concluding a test failure is a code issue. Future
+  debugging: always check .env.local against
+  `supabase status -o env` after any db:stop/db:start cycle.
+
+- 2026-04-12 NOTE   Inline tasks (1-10) complete. Six migrations
+  applying cleanly, journalEntryService refactored with branded
+  types and entry_number/entry_type assignment, parameterized RLS
+  test covering 6 tenant-scoped tables. 5 test files / 18 test
+  cases all green. Schema baseline + service layer + test layer
+  established for Tasks 11-17 (UI work, subagent-driven). Task 18
+  (final verification) returns to inline mode after UI block.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
