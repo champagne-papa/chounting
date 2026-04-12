@@ -372,6 +372,34 @@ Categories:
   done. UI block (Tasks 12-17) starts next session, subagent-driven.
   Task 18 returns to inline for final verification.
 
+- 2026-04-13 NOTE   Task 12 split into Phase 12A (inline service
+  extension) and Phase 12B (subagent route creation). Phase 12A
+  adds journalEntryService.list and .get, NOT_FOUND + READ_FAILED
+  error codes, and shared serviceErrorToStatus helper. The split
+  preserves the architectural-layer-locked constraint for the
+  subagent: Phase 12B's brief forbids modifying src/services/.
+
+- 2026-04-13 NOTE   Task 12 spec/plan inconsistencies resolved.
+  (1) "journal-entries" not "journals" — matches table name and
+  codebase vocabulary. (2) Always include [orgId] segment:
+  /api/orgs/[orgId]/journal-entries[/[entryId]]. (3) Reads don't
+  use withInvariants per CLAUDE.md Rule 2 ("every mutating").
+
+- 2026-04-13 NOTE   Read functions (list, get) now have explicit
+  authorization checks. list checks ctx.caller.org_ids.includes(
+  input.org_id) at the top. get uses .in('org_id', ctx.caller.
+  org_ids) as inline query filter — same effect as RLS, doesn't
+  leak existence (unauthorized returns NOT_FOUND, not 403).
+  Writes already had this via withInvariants Invariant 3; reads
+  were a gap because they bypass withInvariants. Gap closed in
+  Phase 12A rather than deferred. The pattern is the template
+  for all future read functions.
+
+- 2026-04-13 NOTE   Read functions (list, get) are typecheck-
+  verified but not runtime-verified. No integration test
+  exercises them. Phase 12B's API routes will be the first
+  runtime exercise.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because

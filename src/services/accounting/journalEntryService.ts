@@ -227,6 +227,99 @@ async function validateReversalMirror(
   log.debug('Reversal mirror check passed');
 }
 
+// --- Return types for read functions ---
+
+export type JournalEntryListItem = {
+  journal_entry_id: string;
+  entry_number: number;
+  entry_date: string;
+  description: string;
+  source: string;
+  entry_type: string;
+  reverses_journal_entry_id: string | null;
+  created_at: string;
+};
+
+export type JournalEntryDetail = {
+  journal_entry_id: string;
+  entry_number: number;
+  entry_date: string;
+  description: string;
+  reference: string | null;
+  source: string;
+  entry_type: string;
+  reverses_journal_entry_id: string | null;
+  reversal_reason: string | null;
+  created_at: string;
+  created_by: string | null;
+  journal_lines: Array<{
+    journal_line_id: string;
+    account_id: string;
+    description: string | null;
+    debit_amount: string;
+    credit_amount: string;
+    currency: string;
+    amount_original: string;
+    amount_cad: string;
+    fx_rate: string;
+    tax_code_id: string | null;
+  }>;
+};
+
+// --- Read functions ---
+
+async function list(
+  input: { org_id: string; fiscal_period_id?: string },
+  ctx: ServiceContext,
+): Promise<JournalEntryListItem[]> {
+  // Authorization: caller must be a member of the requested org.
+  // Writes get this check from withInvariants Invariant 3; reads
+  // do it inline because they don't go through withInvariants.
+  if (!ctx.caller.org_ids.includes(input.org_id)) {
+    throw new ServiceError('ORG_ACCESS_DENIED', `Caller does not have access to org_id=${input.org_id}`);
+  }
+
+  const db = adminClient();
+  let query = db
+    .from('journal_entries')
+    .select('journal_entry_id, entry_number, entry_date, description, source, entry_type, reverses_journal_entry_id, created_at')
+    .eq('org_id', input.org_id)
+    .order('entry_number', { ascending: false });
+
+  if (input.fiscal_period_id) {
+    query = query.eq('fiscal_period_id', input.fiscal_period_id);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new ServiceError('READ_FAILED', error.message);
+  return (data ?? []) as JournalEntryListItem[];
+}
+
+async function get(
+  input: { journal_entry_id: string },
+  ctx: ServiceContext,
+): Promise<JournalEntryDetail> {
+  const db = adminClient();
+
+  // Inline authorization via .in('org_id', ...) — same effect as
+  // RLS but using admin client. If the caller doesn't have access
+  // to the entry's org, the query returns zero rows and we throw
+  // NOT_FOUND (don't leak existence).
+  const { data: entry, error } = await db
+    .from('journal_entries')
+    .select('journal_entry_id, entry_number, entry_date, description, reference, source, entry_type, reverses_journal_entry_id, reversal_reason, created_at, created_by, journal_lines(journal_line_id, account_id, description, debit_amount, credit_amount, currency, amount_original, amount_cad, fx_rate, tax_code_id)')
+    .eq('journal_entry_id', input.journal_entry_id)
+    .in('org_id', ctx.caller.org_ids)
+    .maybeSingle();
+
+  if (error) throw new ServiceError('READ_FAILED', error.message);
+  if (!entry) throw new ServiceError('NOT_FOUND', 'Journal entry not found');
+
+  return entry as JournalEntryDetail;
+}
+
 export const journalEntryService = {
   post,
+  list,
+  get,
 };
