@@ -95,7 +95,7 @@ const JournalEntryBaseSchema = z.object({
   reference: z.string().optional(),
   source: z.enum(['manual', 'agent', 'import']),
   idempotency_key: z.string().uuid().optional(),
-  dry_run: z.boolean().default(false),
+  dry_run: z.boolean().optional().default(false),
   lines: z.array(JournalLineSchema).min(2),
 });
 
@@ -137,5 +137,10 @@ export const ReversalInputSchema = JournalEntryBaseSchema
 
 // --- Exported types ---
 
+// Output types (after parse — defaults applied, transforms run)
 export type PostJournalEntryInput = z.infer<typeof PostJournalEntryInputSchema>;
 export type ReversalInput = z.infer<typeof ReversalInputSchema>;
+
+// Input types (before parse — optional fields allowed)
+export type PostJournalEntryInputRaw = z.input<typeof PostJournalEntryInputSchema>;
+export type ReversalInputRaw = z.input<typeof ReversalInputSchema>;

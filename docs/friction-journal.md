@@ -270,6 +270,22 @@ Categories:
   upper-bound rejection cases. Future plan-writing: derive test
   expectations from the spec regex itself, not from assumptions.
 
+- 2026-04-12 NOTE   Service-level balance check (integer arithmetic
+  via parseInt(debit_amount.replace('.', ''), 10)) removed during
+  Task 9 Phase A. The Zod schema (Task 8) already enforces balanced
+  debits/credits via .refine() using addMoney/eqMoney. Two sources
+  of truth would drift. Schema is the boundary; service trusts
+  parsed input. DB deferred constraint remains as third layer.
+  Three layers: Zod (boundary) -> service (trust) -> DB (guard).
+
+- 2026-04-12 NOTE   Zod z.input<> vs z.infer<> distinction surfaced
+  during Task 9. Service accepts raw input (before parse), so the
+  function parameter type must use z.input<> (optional fields
+  allowed) not z.infer<> (defaults applied, all required). Tests
+  that omit dry_run were failing typecheck because z.infer<> makes
+  dry_run required (it has a .default(false)). Fixed by exporting
+  Raw types alongside parsed types.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
