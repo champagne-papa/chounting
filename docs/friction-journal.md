@@ -176,3 +176,85 @@ Categories:
   defense (Zod, service, DB CHECK). Currently Test 5 only
   exercises the service layer; the DB layer is implicit. Defer
   to Task 10.
+
+- 2026-04-12 WANT   Canonical Table from external CTO review is
+  the cleanest one-page system-of-laws summary for any double-entry
+  accounting system seen in this project. Seven sections plus a
+  "How These Pieces Fit Together" dataflow diagram. Add as PLAN.md
+  §0 during post-closeout extraction work alongside the changelog
+  move. Source attribution: external CTO review. Content is
+  reference material, not new architectural decisions.
+
+- 2026-04-12 NOTE   External CTO review recommended adding
+  template_id column to journal_entries during Phase 1.1 to avoid
+  "painful Phase 1.2 migration." REJECTED. Reasoning: (1)
+  idempotency_key already exists per §2a hardening with the
+  idempotency_required_for_agent CHECK constraint enforcing it at
+  the DB level for agent-source entries — verified during
+  five-table audit. Reviewer didn't notice. (2) template_id is
+  the schema half of the posting engine separation item already
+  deferred to Phase 1.2 brief writing. (3) Adding a nullable
+  column in Phase 1.2 is a 3-line migration, not painful. (4)
+  Premature schema addition forecloses design options for Phase
+  1.2 brief writing where the posting engine shape will be
+  designed properly.
+
+- 2026-04-12 NOTE   External CTO review underlying concern about
+  FX Gain/Loss being calculated journal entries (not UI display
+  values) is correct and matches PLAN.md §8b's Phase 4 intent.
+  FX revaluation in Phase 4 will produce real journal entries
+  hitting an "Unrealized FX Gain/Loss" account. Already addressed
+  in §8b deferral. No action.
+
+- 2026-04-12 WANT   External CTO review flagged that PLAN.md
+  doesn't have a one-line statement saying "CAD is the functional
+  currency for all entities in Phase 1." The schema enforces this
+  via the D5 CHECK constraint family but the invariant isn't
+  stated as text. Add a one-line invariant to PLAN.md §8b during
+  post-closeout extraction work. Documentation clarification, not
+  a schema change.
+
+- 2026-04-12 WANT   External CTO review recommended two CLAUDE.md
+  rules: (1) every mutation in src/services/ must require
+  correlation_id or external_id, (2) forbid AI from choosing
+  accounts for automated events, must look up PostingRule for
+  that event type. Both deferred to Phase 1.2 brief writing
+  because Phase 1.1 has zero AI-driven events and no agent path.
+  CLAUDE.md additions land alongside Phase 1.2 brief.
+
+- 2026-04-12 WANT   External CTO review recommended Test 6
+  (idempotency double-post test). Deferred to Phase 1.2 because
+  Phase 1.1's service Zod-rejects idempotency_key. Adding a test
+  for a feature that doesn't exist yet would test nothing. The
+  DB CHECK constraint idempotency_required_for_agent (verified
+  during five-table audit) is already in place; Phase 1.2 just
+  needs to wire the service path.
+
+- 2026-04-12 NOTE   External CTO review recommended explicit
+  REVOKE UPDATE, DELETE on ledger tables (journal_entries,
+  journal_lines) at the GRANT level for defense-in-depth beyond
+  RLS. Currently relying on RLS only (FOR UPDATE USING (false),
+  no DELETE policy). Added to Task 18 Step 1.5 as a verification
+  item. Belt-and-suspenders only — RLS is the primary defense.
+
+- 2026-04-12 NOTE   chart_of_accounts_templates uses FOR SELECT
+  TO authenticated USING (true) — globally readable, not
+  tenant-scoped. Correct for shared reference data. Phase 1.2
+  CoA mutation work needs to enforce write restrictions
+  separately. Discovered during five-table audit.
+
+- 2026-04-12 NOTE   Five-table audit (chart_of_accounts,
+  chart_of_accounts_templates, journal_entries, journal_lines,
+  fiscal_periods) ran after Step F commit. Zero drift. Confirms
+  schema baseline is clean before Tasks 3-17 add migrations
+  004-006 on top. Task 18 Step 1.5 will run the broader audit
+  against all 24 tables.
+
+- 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
+  cannot land in isolation. Adding entry_number with NOT NULL +
+  UNIQUE in migration 004 breaks the test suite because
+  journalEntryService.post (Task 9) doesn't yet supply the value.
+  Cross-task interaction not caught during plan writing. Fix:
+  Task 3 lands the migration with entry_number nullable, no
+  UNIQUE constraint. Task 9 updates the service to populate it,
+  then adds NOT NULL + UNIQUE. Tasks 3 and 9 are coupled.

@@ -5290,6 +5290,11 @@ relevant phase brief is written.
 | **Reporting strategy** — materialized views, read models, or ETL for scale | Phase 2 brief | Phase 1.1 live Postgres aggregates are sufficient. Phase 1.3 query latency measurements inform the choice. |
 | **PLAN.md changelog extraction** — move ~5,000 words of version history to `docs/prompt-history/CHANGELOG.md` | Post-Phase-1.1 | Cross-references between changelog entries need to follow the move. Deferred so it doesn't compete with brief reconciliation. |
 | **Audit log query view** — self-service audit trail for controllers | Phase 1.2 | Phase 1.1 has nothing to query. Ships alongside AI Action Review queue activation. |
+| **Q22 — Adjustment period support** — "13th month" year-end adjustment period for prior-year adjustments after operations move to new fiscal year | Phase 2+ | Phase 1.1 ships 12 monthly periods only. Phase 2+: add `adjustment_period` boolean or `period_type` enum to `fiscal_periods`, service rule that adjustment periods only accept `entry_type='adjusting'` entries. Alongside Q21 (soft close). |
+| **Q23 — CoA hierarchy roll-up query support** — parent-child rollups for hierarchical reports (e.g., "Total Operating Expenses") | Phase 2+ | Phase 1.1 reports group by `account_type` (flat). `parent_account_id` exists as schema for hierarchy but no roll-up query. Choices: (a) recursive CTE, (b) materialized path column, (c) closure table. Deferred to whichever phase ships hierarchical reports. |
+| **Test 6 — Idempotency double-post test** — verify same `idempotency_key` returns cached result, not duplicate entry | Phase 1.2 brief | Phase 1.1 service Zod-rejects `idempotency_key`. Test belongs alongside Phase 1.2's agent path where the service accepts and honors it. DB CHECK `idempotency_required_for_agent` already in place. |
+| **CLAUDE.md agent rules** — (1) every mutation requires `correlation_id`, (2) forbid AI from choosing accounts without `PostingRule` lookup | Phase 1.2 brief | Phase 1.1 has zero AI-driven events and no agent path. Rules land alongside the Phase 1.2 brief, not before. |
+| **Canonical Table addition** — seven-section system-of-laws summary from CTO review, add as PLAN.md §0 reference | Post-Phase-1.1 | Reference material, not new architectural decisions. Lands alongside the PLAN.md changelog extraction. |
 
 ---
 
