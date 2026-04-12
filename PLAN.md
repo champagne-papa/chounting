@@ -4211,16 +4211,35 @@ the-bridge/                              # repo root
 The complete `001_initial_schema.sql` migration. Runnable as a single
 file. Place at `src/db/migrations/001_initial_schema.sql`.
 
+**Synced with Bible v0.5.3** (Correctness & Risk Review Fixes). The
+migration below propagates every v0.5.3 §1d, §2a, §2b, and §2c change
+into executable SQL. Where the Bible and this migration disagree, the
+Bible is authoritative and this file is wrong — flag and fix
+immediately.
+
 **What is included:** all Phase 1.1 tables (Category A only — see Bible
-A/B/C section), the deferred constraint for debit=credit, the period lock
-trigger, the events append-only trigger, all multi-currency columns on the
-four financial tables, the `source` enum, the `autonomy_tier` reservation,
-the `routing_path` reservation, the `intercompany_batch_id` reservation,
-the `reverses_journal_entry_id` reservation (Open Question 19's proposed
-design, pending founder confirmation), RLS enabled on all tenant-scoped
-tables, the three explicit RLS policies for `journal_entries`,
-`journal_lines`, and `ai_actions`, and seed inserts for two CoA templates
-(holding company and real estate).
+A/B/C section); the deferred constraint for debit=credit with its
+intentional N-times-at-commit behavior documented (D6); the period-lock
+trigger **with row-lock fix** (D1) that serializes concurrent
+`UPDATE fiscal_periods SET is_locked = true` behind any in-flight
+journal post; the events append-only triggers including
+**BEFORE TRUNCATE** (D4) and the accompanying `REVOKE TRUNCATE`
+statements; the multi-currency columns plus **CHECK constraints
+enforcing `amount_original = debit_amount + credit_amount` and
+`amount_cad = ROUND(amount_original * fx_rate, 4)`** (D5); the
+**idempotency CHECK on `journal_entries`** requiring a key when
+`source = 'agent'` (D7); the **zero-line rejection CHECK** requiring
+at least one of debit or credit to be positive (D11); the
+**`ON DELETE CASCADE`** on `memberships.user_id → auth.users(id)`
+(D8); the **hardened SECURITY DEFINER helpers** `user_has_org_access`
+and `user_is_controller` with `SET search_path = ''`, explicit
+`REVOKE FROM PUBLIC`, and `GRANT EXECUTE TO authenticated` (A2); the
+**`stale` status** on `ai_actions` with `response_payload` and
+`staled_at` columns for the mid-conversation API failure cleanup path
+(A1/Phase 1.2 exit #16); **RLS policies on every tenant-scoped table**
+(D3) with the three explicit exceptions (`chart_of_accounts_templates`
+global, `tax_codes` shared/org hybrid, `auth.users` Supabase-managed);
+and seed inserts for two CoA templates (holding company and real estate).
 
 **What is NOT included:** any GL balance projection tables, any pg-boss
 job tables, any Phase 2+ tables. Empty schema reservations are present
@@ -4285,11 +4304,16 @@ CREATE TYPE autonomy_tier AS ENUM (
   'silent'
 );
 
+-- v0.5.3 (A1): 'stale' added for the mid-conversation API failure path.
+-- When Claude is unreachable between dry-run and confirm, the pending row
+-- is marked 'stale' with a timestamp rather than left pending forever.
+-- See Phase 1.2 exit criterion #16 and Bible §2a ai_actions entry.
 CREATE TYPE ai_action_status AS ENUM (
   'pending',
   'confirmed',
   'rejected',
-  'auto_posted'
+  'auto_posted',
+  'stale'
 );
 
 CREATE TYPE confidence_level AS ENUM (
@@ -4422,7 +4446,13 @@ CREATE TABLE journal_entries (
   reverses_journal_entry_id uuid REFERENCES journal_entries(journal_entry_id),
   idempotency_key           uuid,
   created_at                timestamptz NOT NULL DEFAULT now(),
-  created_by                uuid REFERENCES auth.users(id)
+  created_by                uuid REFERENCES auth.users(id),
+  -- v0.5.3 (D7): agent-source entries must carry an idempotency key.
+  -- Enforcement was previously TypeScript-side only, which meant a
+  -- forgotten key silently produced a NULL-accepted row. Now the DB
+  -- rejects it regardless of the service layer's behavior.
+  CONSTRAINT idempotency_required_for_agent
+    CHECK (source <> 'agent' OR idempotency_key IS NOT NULL)
 );
 
 CREATE INDEX idx_je_org_period ON journal_entries (org_id, fiscal_period_id);
@@ -4443,15 +4473,46 @@ CREATE TABLE journal_lines (
   description        text,
   debit_amount       numeric(20,4) NOT NULL DEFAULT 0,
   credit_amount      numeric(20,4) NOT NULL DEFAULT 0,
-  tax_code_id        uuid,
+  tax_code_id        uuid REFERENCES tax_codes(tax_code_id),
   -- Multi-currency reservations
   currency           char(3) NOT NULL DEFAULT 'CAD',
   amount_original    numeric(20,4) NOT NULL DEFAULT 0,
   amount_cad         numeric(20,4) NOT NULL DEFAULT 0,
   fx_rate            numeric(20,8) NOT NULL DEFAULT 1.0,
-  CHECK (debit_amount >= 0 AND credit_amount >= 0),
-  CHECK ((debit_amount = 0) OR (credit_amount = 0)),
-  CHECK (debit_amount > 0 OR credit_amount > 0)
+
+  -- Non-negative magnitudes (unchanged from v0.5.2).
+  CONSTRAINT line_amounts_nonneg
+    CHECK (debit_amount >= 0 AND credit_amount >= 0),
+
+  -- Debit XOR credit (unchanged from v0.5.2): a single line is never both.
+  CONSTRAINT line_is_debit_xor_credit
+    CHECK ((debit_amount = 0) OR (credit_amount = 0)),
+
+  -- v0.5.3 (D11): reject zero-value lines. At least one side must be
+  -- strictly positive. A zero-balanced line is worse than a rejected
+  -- entry because it silently pollutes the audit trail while passing
+  -- every higher-level balance check. Founder position: reject at the
+  -- database layer, not just the application layer.
+  CONSTRAINT line_is_not_all_zero
+    CHECK (debit_amount > 0 OR credit_amount > 0),
+
+  -- v0.5.3 (D5): multi-currency amount_original invariant.
+  -- amount_original must equal debit_amount + credit_amount (since the
+  -- line is exactly one of the two by the XOR check above, this is
+  -- equivalent to amount_original = max(debit_amount, credit_amount)).
+  -- Prevents silent drift between the base-currency debit/credit columns
+  -- and the multi-currency reporting column.
+  CONSTRAINT line_amount_original_matches_base
+    CHECK (amount_original = debit_amount + credit_amount),
+
+  -- v0.5.3 (D5): multi-currency amount_cad invariant.
+  -- amount_cad must equal ROUND(amount_original * fx_rate, 4).
+  -- Prevents service-side bugs where amount_cad is left at its default
+  -- of 0 or computed incorrectly in JavaScript. For CAD functional
+  -- currency, fx_rate = 1.0 and amount_cad = amount_original.
+  -- Matches the Zod .refine() check in money.schema.ts (Bible §3a).
+  CONSTRAINT line_amount_cad_matches_fx
+    CHECK (amount_cad = ROUND(amount_original * fx_rate, 4))
 );
 
 CREATE INDEX idx_jl_entry ON journal_lines (journal_entry_id);
@@ -4460,6 +4521,21 @@ CREATE INDEX idx_jl_account ON journal_lines (account_id);
 -- -----------------------------------------------------------------
 -- DEFERRED CONSTRAINT: debit = credit per journal entry
 -- Bible Section 1d. Runs at COMMIT, never per-row.
+--
+-- v0.5.3 (D6) — expected behavior, not a bug:
+-- Postgres constraint triggers must be FOR EACH ROW (statement-level
+-- constraint triggers are not supported). A 10-line journal entry
+-- queues 10 deferred invocations of this trigger and fires all 10 at
+-- COMMIT. Each invocation re-runs the same SUM query. This is correct
+-- — all N return the same result — but it costs ~N ms per commit.
+-- With the journal_entry_id index it is invisible on Phase 1 entries
+-- (5-20 lines) and acceptable on Phase 2 AP batches (50+ lines).
+-- Do NOT try to "optimize" this by:
+--   * switching to FOR EACH STATEMENT (unsupported for DEFERRABLE)
+--   * adding pg_trigger_depth() guards (deferred triggers share depth)
+--   * moving the check to the service layer (violates Layer 1 rule)
+-- If Phase 2 performance becomes a real issue, revisit in v0.6.0+
+-- with a considered ADR, not an unplanned optimization.
 -- -----------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION enforce_journal_entry_balance()
@@ -4493,23 +4569,42 @@ CREATE CONSTRAINT TRIGGER trg_enforce_journal_entry_balance
   EXECUTE FUNCTION enforce_journal_entry_balance();
 
 -- -----------------------------------------------------------------
--- TRIGGER: period not locked (immediate, per-row)
+-- TRIGGER: period not locked (immediate, per-row, with row lock)
+--
+-- v0.5.3 (D1): takes a row-level lock on the fiscal_periods row via
+-- SELECT ... FOR UPDATE before reading is_locked. This closes the
+-- race condition where transaction A reads is_locked=false, a
+-- concurrent transaction B locks the period and commits, and
+-- transaction A then commits lines into a now-locked period.
+--
+-- Under Postgres default isolation (READ COMMITTED, Bible §10c), the
+-- row lock serializes any concurrent `UPDATE fiscal_periods SET
+-- is_locked = true` behind this trigger's commit. One path sees the
+-- other. For a solo-founder Phase 1 the window is theoretical; for
+-- Phase 2 concurrent AP ingestion it is a daily risk.
 -- -----------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION enforce_period_not_locked()
 RETURNS TRIGGER AS $$
 DECLARE
+  v_period_id uuid;
   v_is_locked boolean;
 BEGIN
+  -- Resolve the fiscal_period_id for this line's parent entry.
+  SELECT je.fiscal_period_id INTO v_period_id
+  FROM journal_entries je
+  WHERE je.journal_entry_id = NEW.journal_entry_id;
+
+  -- Row-lock the period row so any concurrent lock attempt waits for us.
   SELECT fp.is_locked INTO v_is_locked
   FROM fiscal_periods fp
-  JOIN journal_entries je ON je.fiscal_period_id = fp.period_id
-  WHERE je.journal_entry_id = NEW.journal_entry_id;
+  WHERE fp.period_id = v_period_id
+  FOR UPDATE;
 
   IF v_is_locked THEN
     RAISE EXCEPTION
-      'Cannot post to a locked fiscal period (journal_entry_id=%)',
-      NEW.journal_entry_id
+      'Cannot post to a locked fiscal period (journal_entry_id=%, period_id=%)',
+      NEW.journal_entry_id, v_period_id
       USING ERRCODE = 'check_violation';
   END IF;
 
@@ -4730,9 +4825,25 @@ CREATE TABLE ai_actions (
   confirming_user_id  uuid REFERENCES auth.users(id),
   rejection_reason    text,
   idempotency_key     uuid NOT NULL,
+  -- v0.5.3 (A1): cached dry-run response for idempotent replay.
+  -- When the confirm path retries with the same idempotency_key,
+  -- the service layer can replay the cached dry_run result instead
+  -- of re-calling Claude. Also the mid-conversation API failure path
+  -- (Phase 1.2 exit #16) uses this to let the user confirm an already
+  -- generated ProposedEntryCard even when Claude is unreachable.
+  response_payload    jsonb,
+  -- v0.5.3 (A1): timestamp set when status flips to 'stale' because
+  -- the Claude context was lost between dry-run and confirm. A stale
+  -- row is never re-confirmed — the user must regenerate from scratch.
+  staled_at           timestamptz,
   created_at          timestamptz NOT NULL DEFAULT now(),
   confirmed_at        timestamptz,
-  UNIQUE (org_id, idempotency_key)
+  UNIQUE (org_id, idempotency_key),
+  -- v0.5.3 (A1): stale rows must carry a staled_at timestamp; non-stale
+  -- rows must not. Prevents ambiguous state where a row is stale but
+  -- the timestamp is missing (or vice versa).
+  CONSTRAINT stale_status_has_timestamp
+    CHECK ((status = 'stale') = (staled_at IS NOT NULL))
 );
 
 CREATE INDEX idx_ai_actions_org_status ON ai_actions (org_id, status, created_at DESC);
@@ -4781,13 +4892,24 @@ COMMENT ON TABLE events IS
   'Reserved seat. Nothing writes here until Phase 2. Append-only trigger installed in Phase 1.1 to make the rule physical from day one.';
 
 -- -----------------------------------------------------------------
--- TRIGGER: events table is append-only (immediate, per-row)
+-- TRIGGER: events table is append-only
+--
+-- v0.5.3 (D4): TRUNCATE trigger added. A BEFORE UPDATE/DELETE trigger
+-- does not fire on TRUNCATE — TRUNCATE is its own event type. Before
+-- v0.5.3, any role with TRUNCATE privilege (including service_role
+-- by default) could wipe the events table silently, breaking the
+-- append-only guarantee that Phase 2 treats as the single source of
+-- truth. The fix is two-layer: a BEFORE TRUNCATE FOR EACH STATEMENT
+-- trigger that raises exception, plus explicit REVOKE TRUNCATE from
+-- PUBLIC, authenticated, and anon. service_role retains TRUNCATE
+-- because Supabase's automatic grants cannot easily be revoked, but
+-- the trigger is the actual enforcement.
 -- -----------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION reject_events_mutation()
 RETURNS TRIGGER AS $$
 BEGIN
-  RAISE EXCEPTION 'events table is append-only — UPDATE and DELETE are forbidden'
+  RAISE EXCEPTION 'events table is append-only — UPDATE, DELETE, and TRUNCATE are forbidden'
     USING ERRCODE = 'feature_not_supported';
 END;
 $$ LANGUAGE plpgsql;
@@ -4802,62 +4924,184 @@ CREATE TRIGGER trg_events_no_delete
   FOR EACH ROW
   EXECUTE FUNCTION reject_events_mutation();
 
+-- v0.5.3 (D4): TRUNCATE is a statement-level event, not row-level.
+CREATE TRIGGER trg_events_no_truncate
+  BEFORE TRUNCATE ON events
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION reject_events_mutation();
+
+-- v0.5.3 (D4): revoke TRUNCATE from every role that does not need it.
+REVOKE TRUNCATE ON events FROM PUBLIC;
+REVOKE TRUNCATE ON events FROM authenticated;
+REVOKE TRUNCATE ON events FROM anon;
+
+-- =================================================================
+-- ROW LEVEL SECURITY (v0.5.3 — D3 + A2 complete coverage)
+--
+-- v0.5.3 completes the RLS story: every tenant-scoped table gets
+-- ENABLE + explicit policies in this migration file, not "to be
+-- added later." The previous draft left 16+ tables to be derived
+-- during implementation, which is where cross-tenant bugs come from.
+--
+-- Two hardened SECURITY DEFINER helpers are used throughout:
+--   user_has_org_access(org_id)  — is the caller a member of this org?
+--   user_is_controller(org_id)   — is the caller a controller here?
+--
+-- Both helpers:
+--   * SET search_path = '' to defeat search-path injection
+--   * schema-qualify every reference (public.memberships)
+--   * REVOKE FROM PUBLIC; GRANT EXECUTE TO authenticated only
+--   * STABLE so the optimizer can memoize per statement
+--
+-- Three tables are explicit exceptions to the tenant pattern:
+--   chart_of_accounts_templates — global, readable by all authenticated
+--   tax_codes                   — org_id IS NULL rows are shared
+--   auth.users                  — managed by Supabase Auth; do not touch
+-- =================================================================
+
 -- -----------------------------------------------------------------
--- ROW LEVEL SECURITY
+-- HELPER 1: user_has_org_access (hardened, v0.5.3 A2)
 -- -----------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION user_has_org_access(target_org_id uuid)
-RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION public.user_has_org_access(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
   SELECT EXISTS (
-    SELECT 1 FROM memberships
+    SELECT 1 FROM public.memberships
     WHERE user_id = auth.uid() AND org_id = target_org_id
   );
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$;
 
-ALTER TABLE organizations              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE memberships                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chart_of_accounts          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fiscal_periods             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE intercompany_relationships ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_entries            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_lines              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vendors                    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vendor_rules               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoices                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE invoice_lines              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bills                      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bill_lines                 ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payments                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bank_accounts              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bank_transactions          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tax_codes                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ai_actions                 ENABLE ROW LEVEL SECURITY;
-ALTER TABLE agent_sessions             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events                     ENABLE ROW LEVEL SECURITY;
-
--- Default policies for tables not given explicit policies in this brief:
--- "User can SELECT/INSERT/UPDATE rows where their membership grants org access."
--- The three explicit policies below are required by the brief; the rest follow
--- the same pattern and should be added inside this same migration.
+REVOKE ALL ON FUNCTION public.user_has_org_access(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_org_access(uuid) TO authenticated;
 
 -- -----------------------------------------------------------------
--- RLS POLICIES — explicit for journal_entries, journal_lines, ai_actions, invoices
+-- HELPER 2: user_is_controller (hardened, v0.5.3 A2)
+-- Used by the audit_log, ai_actions, memberships, fiscal_periods,
+-- and vendor_rules policies below.
 -- -----------------------------------------------------------------
 
+CREATE OR REPLACE FUNCTION public.user_is_controller(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships
+    WHERE user_id = auth.uid()
+      AND org_id = target_org_id
+      AND role = 'controller'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_is_controller(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_is_controller(uuid) TO authenticated;
+
+-- -----------------------------------------------------------------
+-- ENABLE RLS on every tenant-scoped table
+-- -----------------------------------------------------------------
+
+ALTER TABLE organizations                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memberships                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts_templates  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fiscal_periods               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE intercompany_relationships   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_lines                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors                      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_rules                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_lines                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills                        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bill_lines                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_accounts                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_transactions            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tax_codes                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_actions                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_sessions               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events                       ENABLE ROW LEVEL SECURITY;
+
+-- -----------------------------------------------------------------
+-- organizations: users see orgs they have membership in
+-- -----------------------------------------------------------------
+CREATE POLICY organizations_select ON organizations
+  FOR SELECT USING (user_has_org_access(org_id));
+-- INSERT via service-role client only (admin org creation flow).
+
+-- -----------------------------------------------------------------
+-- memberships: self + controllers in same org
+-- -----------------------------------------------------------------
+CREATE POLICY memberships_select ON memberships
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+-- INSERT/UPDATE/DELETE via service-role client only.
+
+-- -----------------------------------------------------------------
+-- chart_of_accounts: standard tenant pattern, UPDATE allowed
+-- (accounts deactivated via is_active, not DELETE)
+-- -----------------------------------------------------------------
+CREATE POLICY chart_of_accounts_select ON chart_of_accounts
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_insert ON chart_of_accounts
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_update ON chart_of_accounts
+  FOR UPDATE USING (user_has_org_access(org_id));
+-- No DELETE policy — accounts are never deleted.
+
+-- -----------------------------------------------------------------
+-- chart_of_accounts_templates: global, readable by all authenticated.
+-- EXCEPTION — not org-scoped.
+-- -----------------------------------------------------------------
+CREATE POLICY coa_templates_select ON chart_of_accounts_templates
+  FOR SELECT TO authenticated USING (true);
+-- INSERT/UPDATE/DELETE via migration only.
+
+-- -----------------------------------------------------------------
+-- fiscal_periods: members read; controllers create/update (lock)
+-- -----------------------------------------------------------------
+CREATE POLICY fiscal_periods_select ON fiscal_periods
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY fiscal_periods_insert ON fiscal_periods
+  FOR INSERT WITH CHECK (user_is_controller(org_id));
+CREATE POLICY fiscal_periods_update ON fiscal_periods
+  FOR UPDATE USING (user_is_controller(org_id));
+-- No DELETE — periods are immutable history.
+
+-- -----------------------------------------------------------------
+-- intercompany_relationships: visible to members of either side
+-- -----------------------------------------------------------------
+CREATE POLICY intercompany_relationships_select ON intercompany_relationships
+  FOR SELECT USING (
+    user_has_org_access(org_a_id) OR user_has_org_access(org_b_id)
+  );
+-- INSERTs via service-role client only (Phase 2 AP Agent).
+
+-- -----------------------------------------------------------------
+-- journal_entries: standard + immutable (reversal via new entries)
+-- -----------------------------------------------------------------
 CREATE POLICY journal_entries_select ON journal_entries
   FOR SELECT USING (user_has_org_access(org_id));
-
 CREATE POLICY journal_entries_insert ON journal_entries
   FOR INSERT WITH CHECK (user_has_org_access(org_id));
-
 CREATE POLICY journal_entries_no_update ON journal_entries
   FOR UPDATE USING (false);
-
 CREATE POLICY journal_entries_no_delete ON journal_entries
   FOR DELETE USING (false);
 
+-- -----------------------------------------------------------------
+-- journal_lines: inherit org via parent entry; immutable
+-- -----------------------------------------------------------------
 CREATE POLICY journal_lines_select ON journal_lines
   FOR SELECT USING (
     EXISTS (
@@ -4866,7 +5110,6 @@ CREATE POLICY journal_lines_select ON journal_lines
         AND user_has_org_access(je.org_id)
     )
   );
-
 CREATE POLICY journal_lines_insert ON journal_lines
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -4875,33 +5118,146 @@ CREATE POLICY journal_lines_insert ON journal_lines
         AND user_has_org_access(je.org_id)
     )
   );
+CREATE POLICY journal_lines_no_update ON journal_lines
+  FOR UPDATE USING (false);
+CREATE POLICY journal_lines_no_delete ON journal_lines
+  FOR DELETE USING (false);
 
-CREATE POLICY ai_actions_select ON ai_actions
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM memberships
-      WHERE user_id = auth.uid()
-        AND org_id = ai_actions.org_id
-        AND role = 'controller'
-    )
-  );
-
-CREATE POLICY ai_actions_insert ON ai_actions
-  FOR INSERT WITH CHECK (user_has_org_access(org_id));
-
-CREATE POLICY invoices_select ON invoices
+-- -----------------------------------------------------------------
+-- vendors: standard tenant pattern with UPDATE
+-- -----------------------------------------------------------------
+CREATE POLICY vendors_select ON vendors
   FOR SELECT USING (user_has_org_access(org_id));
-
-CREATE POLICY invoices_insert ON invoices
+CREATE POLICY vendors_insert ON vendors
   FOR INSERT WITH CHECK (user_has_org_access(org_id));
-
-CREATE POLICY invoices_update ON invoices
+CREATE POLICY vendors_update ON vendors
   FOR UPDATE USING (user_has_org_access(org_id));
 
--- (Similar policies for organizations, memberships, chart_of_accounts,
---  vendors, customers, bills, fiscal_periods, audit_log, agent_sessions
---  go here following the same pattern. Omitted from this brief for length.)
+-- -----------------------------------------------------------------
+-- vendor_rules: members read; controllers create/update/delete
+-- -----------------------------------------------------------------
+CREATE POLICY vendor_rules_select ON vendor_rules
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY vendor_rules_cud ON vendor_rules
+  FOR ALL USING (user_is_controller(org_id))
+  WITH CHECK (user_is_controller(org_id));
+
+-- -----------------------------------------------------------------
+-- customers: standard tenant pattern with UPDATE
+-- -----------------------------------------------------------------
+CREATE POLICY customers_select ON customers
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY customers_insert ON customers
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY customers_update ON customers
+  FOR UPDATE USING (user_has_org_access(org_id));
+
+-- -----------------------------------------------------------------
+-- invoices / invoice_lines: standard tenant pattern (Phase 2+)
+-- -----------------------------------------------------------------
+CREATE POLICY invoices_tenant ON invoices FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+CREATE POLICY invoice_lines_tenant ON invoice_lines FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM invoices i
+            WHERE i.invoice_id = invoice_lines.invoice_id
+              AND user_has_org_access(i.org_id))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM invoices i
+            WHERE i.invoice_id = invoice_lines.invoice_id
+              AND user_has_org_access(i.org_id))
+  );
+
+-- -----------------------------------------------------------------
+-- bills / bill_lines: standard tenant pattern (Phase 2+)
+-- -----------------------------------------------------------------
+CREATE POLICY bills_tenant ON bills FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+CREATE POLICY bill_lines_tenant ON bill_lines FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM bills b
+            WHERE b.bill_id = bill_lines.bill_id
+              AND user_has_org_access(b.org_id))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM bills b
+            WHERE b.bill_id = bill_lines.bill_id
+              AND user_has_org_access(b.org_id))
+  );
+
+-- -----------------------------------------------------------------
+-- payments: standard tenant pattern (Phase 2+)
+-- -----------------------------------------------------------------
+CREATE POLICY payments_tenant ON payments FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+-- -----------------------------------------------------------------
+-- bank_accounts / bank_transactions: standard tenant pattern (Phase 2+)
+-- -----------------------------------------------------------------
+CREATE POLICY bank_accounts_tenant ON bank_accounts FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+CREATE POLICY bank_transactions_tenant ON bank_transactions FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+
+-- -----------------------------------------------------------------
+-- tax_codes: shared (org_id IS NULL) visible to all authenticated;
+-- org-specific codes only to that org. EXCEPTION — hybrid scope.
+-- -----------------------------------------------------------------
+CREATE POLICY tax_codes_select ON tax_codes
+  FOR SELECT USING (
+    org_id IS NULL OR user_has_org_access(org_id)
+  );
+-- INSERT/UPDATE/DELETE via service-role client only.
+
+-- -----------------------------------------------------------------
+-- audit_log: same-org members can read; no user-client writes
+-- (service-role bypasses RLS for the synchronous audit write)
+-- -----------------------------------------------------------------
+CREATE POLICY audit_log_select ON audit_log
+  FOR SELECT USING (user_has_org_access(org_id));
+-- No INSERT policy — service-role only.
+
+-- -----------------------------------------------------------------
+-- ai_actions: initiator OR same-org controller can read
+-- -----------------------------------------------------------------
+CREATE POLICY ai_actions_select ON ai_actions
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+CREATE POLICY ai_actions_insert ON ai_actions
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+-- UPDATE via service-role client only (confirm / reject / stale flip).
+
+-- -----------------------------------------------------------------
+-- agent_sessions: only the session owner
+-- -----------------------------------------------------------------
+CREATE POLICY agent_sessions_select ON agent_sessions
+  FOR SELECT USING (user_id = auth.uid());
+-- INSERT/UPDATE via service-role client only.
+
+-- -----------------------------------------------------------------
+-- events: Phase 1 reads via defense-in-depth; writes are service-role
+-- only (and Phase 1 writes nothing anyway — Simplification 2)
+-- -----------------------------------------------------------------
+CREATE POLICY events_select ON events
+  FOR SELECT USING (user_has_org_access(org_id));
+-- No INSERT policy — service-role only in Phase 2.
+
+-- -----------------------------------------------------------------
+-- items: standard tenant pattern (reserved for Phase 2+)
+-- -----------------------------------------------------------------
+-- NOTE: items table is not created in this Phase 1.1 migration;
+-- schema is added in the Phase 2 brief. This comment is a reminder
+-- to add the ENABLE + policy in the same commit as the table.
 
 -- -----------------------------------------------------------------
 -- SEED: Two CoA templates (holding_company + real_estate)
@@ -4961,13 +5317,18 @@ COMMIT;
 > `tax_codes` table is created empty. The Phase 1.1 seed migration will
 > add a small follow-up `002_seed_tax_codes.sql` once Q2 is answered.
 
-> **Note on the omitted RLS policies:** The brief includes explicit policies
-> for `journal_entries`, `journal_lines`, `ai_actions`, and `invoices` (the
-> four required by the prompt). The remaining tenant-scoped tables follow
-> the identical pattern (`user_has_org_access(org_id)` for SELECT/INSERT,
-> `false` for UPDATE/DELETE on append-only-by-convention tables). Add them
-> in the same migration during Phase 1.1 implementation. Do not skip them —
-> "RLS enabled" without policies blocks all access by default in Postgres.
+> **v0.5.3 RLS coverage note:** Earlier drafts of this brief (v0.5.1,
+> v0.5.2) left most RLS policies "to be added during Phase 1.1
+> implementation." v0.5.3 closes that gap — every tenant-scoped table
+> in this migration has an explicit `ENABLE ROW LEVEL SECURITY` and at
+> least one policy above. The three explicit exceptions are
+> `chart_of_accounts_templates` (global, readable by all authenticated),
+> `tax_codes` (hybrid — shared codes with `org_id IS NULL` plus
+> org-specific codes), and `auth.users` (Supabase-managed, not
+> touched). If a future Phase 1.1 edit adds a new tenant-scoped table,
+> the same commit must add its `ENABLE` + policies — unprotected tables
+> with RLS disabled are the exact class of bug v0.5.3 D3 exists to
+> prevent.
 
 ---
 
