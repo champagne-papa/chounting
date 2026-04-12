@@ -250,6 +250,16 @@ Categories:
   004-006 on top. Task 18 Step 1.5 will run the broader audit
   against all 24 tables.
 
+- 2026-04-12 NOTE   Migration block complete. Tasks 1-5 of Phase
+  1.1 closeout landed: six migrations in supabase/migrations/
+  (001 initial, 002 reversal_reason, 003 tax codes, 004
+  entry_number nullable, 005 entry_type, 006 attachments).
+  All 5 integration tests pass on fresh db:reset. pnpm typecheck
+  clean. Generated types include all new columns and tables.
+  Schema baseline established for Tasks 6-17 (TypeScript
+  architecture work). Pausing here for fresh-context start of
+  next inline block.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
