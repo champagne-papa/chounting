@@ -1,19 +1,20 @@
-# Where I am as of 2026-04-12 evening
+# Where I am as of 2026-04-13
 
-Phase 1.1 closeout inline block (Tasks 1-10) complete. 13 commits
-on staging branch. All 18 integration tests green, typecheck clean.
+Phase 1.1 closeout inline block (Tasks 1-11) complete. 15 commits
+on staging branch. 5 test files / 18 integration tests + 3 unit
+test files / 35 unit tests. All green, typecheck clean.
 
-Next session entry point: Task 11 (fiscal period auto-generation +
-generateFiscalPeriods pure function). UI block begins at Task 12
-(API routes) and is subagent-driven per hybrid execution plan.
-Re-read spec §15 before delegating to ensure brief accuracy.
-Task 18 returns to inline mode after UI block.
+Next session entry point: Task 12 (Journal Entry API Routes).
+Tasks 12-17 are subagent-driven per hybrid execution plan.
+Re-read spec §15 before writing subagent briefs.
+Task 18 returns to inline mode for final verification.
 
-Key context for next session:
+Key context:
+- generateMonthlyFiscalPeriods pure function + orgService wiring done
+- orgService wiring NOT test-verified (no integration test for org
+  creation via API route). Phase 1.2 obligation.
+- journalEntryService.ts uses branded types, entry_number MAX+1,
+  entry_type programmatic assignment
 - Supabase analytics disabled in config.toml (logflare workaround)
-- .env.local has standard Supabase demo JWT keys (updated this session)
-- journalEntryService.ts accepts PostJournalEntryInputRaw | ReversalInputRaw
-- entry_number is NOT NULL + UNIQUE, assigned via MAX + 1 in service
-- entry_type defaults to 'regular', set to 'reversing' programmatically
-- Test helpers use dynamic MAX + 1 for entry_number (not hardcoded)
-- Friction journal has ~35 entries — read the last 10 before starting
+- .env.local has standard Supabase demo JWT keys
+- Friction journal has ~40 entries — read last 5 before starting
