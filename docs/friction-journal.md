@@ -260,6 +260,16 @@ Categories:
   architecture work). Pausing here for fresh-context start of
   next inline block.
 
+- 2026-04-12 WRONG  Plan Task 7 test cases asserted that
+  MoneyAmountSchema.parse('100') should throw and
+  FxRateSchema.parse('1.0') should throw. Both are wrong against
+  the actual spec contract. PLAN.md §3a regex makes the decimal
+  portion optional, so '100' is valid. FxRate regex allows 1-8
+  decimal digits, so '1.0' is valid. Plan tests were too strict.
+  Fixed in execution: tests now match the contract, added
+  upper-bound rejection cases. Future plan-writing: derive test
+  expectations from the spec regex itself, not from assumptions.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
