@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "signIn": "Sign in to The Bridge",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signOut": "Sign out"
+  },
+  "nav": {
+    "chartOfAccounts": "Chart of Accounts",
+    "journalEntries": "Journal Entries",
+    "agentUnavailable": "Agent unavailable — use quick navigation"
+  },
+  "orgSwitcher": {
+    "label": "Organization",
+    "switchTo": "Switch to {orgName}"
+  },
+  "agent": {
+    "emptyState": "What would you like to do?",
+    "suggestedPromptsHeading": "Try one of these"
+  }
+}

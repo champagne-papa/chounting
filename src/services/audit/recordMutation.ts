@@ -1,0 +1,55 @@
+// src/services/audit/recordMutation.ts
+// Synchronous audit log writer (Simplification 1).
+// Called inside the same database transaction as the mutation it records.
+// In Phase 2 this role moves to the events table; for now audit_log is
+// the Layer 3 truth written synchronously within the mutation transaction.
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ServiceContext } from '@/services/middleware/serviceContext';
+
+export interface AuditEntry {
+  org_id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  before_state?: Record<string, unknown>;
+  after_state_id?: string;
+  tool_name?: string;
+  idempotency_key?: string;
+}
+
+/**
+ * Writes one row to the `audit_log` table.
+ *
+ * Accepts a `SupabaseClient` rather than creating its own so the caller
+ * can pass the same client (and therefore the same transaction) that is
+ * performing the mutation. This guarantees the audit row is committed
+ * atomically with the data change — if the transaction rolls back, the
+ * audit row disappears too.
+ *
+ * @param db   - The Supabase client participating in the current transaction.
+ * @param ctx  - The ServiceContext for this request (provides org_id, user_id, trace_id).
+ * @param entry - The audit payload describing what changed.
+ */
+export async function recordMutation(
+  db: SupabaseClient,
+  ctx: ServiceContext,
+  entry: AuditEntry,
+): Promise<void> {
+  const { error } = await db.from('audit_log').insert({
+    org_id: entry.org_id,
+    user_id: ctx.caller.user_id,
+    trace_id: ctx.trace_id,
+    action: entry.action,
+    entity_type: entry.entity_type,
+    entity_id: entry.entity_id ?? null,
+    before_state: entry.before_state ?? null,
+    after_state_id: entry.after_state_id ?? null,
+    tool_name: entry.tool_name ?? null,
+    idempotency_key: entry.idempotency_key ?? null,
+  });
+
+  if (error) {
+    throw new Error(`[AUDIT_WRITE_FAILED] ${error.message}`);
+  }
+}
