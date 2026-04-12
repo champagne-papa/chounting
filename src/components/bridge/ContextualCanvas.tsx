@@ -97,6 +97,7 @@ function renderDirective(d: CanvasDirective) {
     case 'journal_entry_form':
     case 'ai_action_review_queue':
     case 'report_pl':
+    case 'report_trial_balance':
     case 'ap_queue':
     case 'vendor_detail':
     case 'bank_reconciliation':

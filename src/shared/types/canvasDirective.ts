@@ -12,6 +12,7 @@ export type CanvasDirective =
   | { type: 'proposed_entry_card'; card: ProposedEntryCard }
   | { type: 'ai_action_review_queue'; orgId: string }
   | { type: 'report_pl'; orgId: string; from: string; to: string }
+  | { type: 'report_trial_balance'; orgId: string; periodId?: string }
   | { type: 'none' }
 
   // Phase 2+ stubs — directive type defined now, canvas component is a
