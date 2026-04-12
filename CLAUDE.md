@@ -180,5 +180,8 @@ For any work you do on this project, done means:
 - If something in this file contradicts PLAN.md, PLAN.md wins and
   this file is wrong — fix it here, and record the fix in a
   friction-journal entry so the next reader sees what changed.
+- Code that deviates from PLAN.md during a session is wrong
+  unless an ADR is written to update the Bible first. The ADR
+  comes before the code, not after.
 - If something in PLAN.md contradicts itself, PLAN.md §0 is the
   tiebreaker.
