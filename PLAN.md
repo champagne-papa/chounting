@@ -1,7 +1,7 @@
 # Family Office AI-Forward Accounting Platform — PLAN.md
 
 ## Part 1 — Architecture Bible
-### Version: v0.5.4 — Phase 1.2 Canvas Context Injection (Milestone)
+### Version: v0.5.5 — Founder answers + reversal mechanism + consistency pass
 
 > **This document is Part 1 of PLAN.md — the Architecture Bible.** It captures
 > every major architectural decision, the reasoning behind it, and the constraints
@@ -25,6 +25,7 @@
 > - **v0.5.4 — Phase 1.2 Canvas Context Injection:** The minimal bidirectional canvas pattern — canvas → chat selection context — is moved from Phase 2 into Phase 1.2 alongside the initial agent build. The founder's position, which this version adopts: the failure mode of a disconnected split-screen UI in Phase 1.3 real-user testing is a hard-no trust classification for UX reasons rather than accounting correctness, which is the exact class of failure the product cannot afford because point 1 of the product's differentiation is the persistent split-screen pattern. If the reverse direction does not work on real workflows, the differentiator is theatre and a savvy reviewer feels it inside 30 seconds. v0.5.4 adds three components — a `CanvasContext` type, a Zustand selector that builds it from the current canvas state, and click handlers on exactly two selectable row types (journal entry rows in the list view and chart-of-accounts rows in the CoA view) — plus a `canvas_context?: CanvasContext` input on `handleUserMessage` and a subordinate canvas-context section in the system prompt labeled as "context only, do not assume the user is asking about this unless their message refers to it." P&L drill-down is explicitly out of scope for Phase 1.2 — the P&L canvas view exists in Phase 1.1 as read-only but is not one of the two selectable row types, so P&L line drill-down naturally defers to Phase 2 without needing a separate scope decision. Canvas context is client-ephemeral (sent on each message from Zustand, never persisted server-side in `agent_sessions.state`) to avoid a staleness window and to match how the canvas actually works — the server cannot know what the user clicked. One new exit criterion (#19) tests the over-anchoring failure mode the founder correctly identified with three concrete scenarios: (a) clicked entry + ambiguous question → agent uses the selection, (b) clicked entry + explicit reference to a different entry → agent follows the explicit reference and does not anchor on the stale selection, (c) no click + ambiguous question → agent asks a clarification question rather than guessing from a ghost selection. Phase 2 still owns the full bidirectional UX (hover states, contextual action bar, multi-selection, canvas tabs, P&L drill-down, persistent-across-navigation selection). No migration changes; no impact on any v0.5.3 finding; one Phase 1.1 folder tree addition for the shared type so Phase 1.2 wiring is additive. Estimated ~150 Bible lines.**
 > - **v0.5.3 — Correctness and risk review fixes: Sixteen findings resolved in one commit after back-to-back A (risk hunt) and D (technical correctness) reviews of v0.5.2. A found 10 items (5 Bible changes + 4 inline notes + 1 Phase 1.1 brief addition) — period-lock/ai_actions race, SECURITY DEFINER search_path leak, unenforced service-side authorization, trace_id break at the Claude API boundary, unconstrained Vercel/Supabase region pairing, idempotency key scoping gap, events-table backfill INSERT-only requirement, pnpm-vs-npm lockfile trap in the Phase 1.1 brief, next-intl fallback behavior, and inactive CoA account filtering. D found 11 items (7 Bible changes + 4 inline notes) — period-lock concurrency race (row-lock fix on fiscal_periods), money-as-JavaScript-Number silent rounding, RLS documented on only 3 of 20+ tenant-scoped tables (completed uniformly), events-table TRUNCATE bypass, undocumented multi-currency amount_cad/amount_original/fx_rate invariant (CHECK added), deferred-constraint trigger firing N times per commit (documented and kept in Bible now — not deferred), missing idempotency CHECK constraint for agent source, memberships→auth.users missing ON DELETE CASCADE, unspecified transaction isolation level, events.sequence_number gap warning, and zero-value line decision (**rejected at the database via CHECK — at least one side must be non-zero; a zero-balanced line is an invisible audit-context error worse than a rejected entry**). Full changelog with each finding and its resolution in docs/prompt-history/CHANGELOG.md.**
 > - **v0.5.2 — Readiness review fixes: Three gaps closed after an interactive readiness review of v0.5.1. (1) Part 2 preamble added above the Phase 1.1 Execution Brief disclosing that the brief was drafted against Section 18 default answers, naming the specific questions it silently assumed, and requiring the founder to complete Section 18d before execution. (2) Phase 1.2 exit criteria extended with seven load-bearing tests (#12–18) covering the architectural promises the Bible makes elsewhere but never verified: dry-run→confirm round-trip, anti-hallucination enforcement, ProposedEntryCard render shape, clarification-question path, mid-conversation API failure (behavioral — tests the orphaned-pending-action failure mode, not just the UI state), structured-response trilingual contract, and persona guardrails. (3) Phase 1.3 exit criteria extended with seven load-bearing signals (#7–13) for real-bookkeeping operation: reversal exercised, period lock exercised after real close, backup/restore verified, real GST/HST on a real entry, explicit trust classification with an up-front go/soft-no/hard-no commitment rule, non-English UI walked, and cross-org accidental-visibility check. The v0.5.2 pass was initiated by the founder with the instruction "lets have brainstorm review the plan.md first," scoped to readiness (E) and Phase 1.2/1.3 exit criteria rigor, with two founder-driven reshapes to the original senior review findings (behavioral framing for the API-failure criterion; explicit "Phase 2 does not begin until resolved" rule for hard-no trust answers). The annotation pass on the Phase 1.1 brief's assumption points is tracked separately and applied interactively with founder confirmation of each point.**
+> - **v0.5.5 — Founder answers + reversal mechanism + consistency pass.** One coherent commit bundling the outcome of a four-step sequence: (1) a document-strategy audit that classified Part 1 as ~95% SETTLED with four SOFT items and §18 OPEN; (2) two pre-existing v0.5.3 consistency slips in the §3 worked example fixed before any founder answers landed — §3b `ProposedEntryCardSchema.lines[].debit/credit` changed from `z.number()` to `MoneyAmountSchema` so the output schema stops contradicting §3a's string-money rule, and §3d step 4 (the application-layer debit=credit re-check) replaced with a load-bearing comment after confirming the block literally does not compile under v0.5.3's string-money rule and was vestigial defense-in-depth against a bypass that cannot happen; (3) the nine-question minimum-unblock set from §18 answered by the founder with reasoning captured alongside each decision; (4) a full-width consistency re-read of Part 1 that caught three stale "three tests" references in §1e, §10a opening, and the Category A table in §A/B/C — all propagated to the new v0.5.5 five-test floor count. **Founder answers resolved (9):** Q1 `holding_company + real_estate`; Q2 BC with GST + PST_BC (not HST — BC reverted the HST experiment in 2013); Q4 Supabase `ca-central-1` + Vercel `yul1` with §9a.0 accepted as a hard constraint; Q5 Windows host + WSL2 Ubuntu 22.04 as the actual dev shell (native Windows explicitly unsupported, §12 Prerequisites updated); Q7 GitHub + GitHub Actions; Q9 add `zod-to-json-schema` pinned with major bumps as ADR-required; Q10 Supabase admin API for user seeding, `devUsers.sql` → `devUsers.ts` with `tsx` as a new dev dependency; Q18 (a) local Supabase for Phase 1.1/1.2 and (b) remote for Phase 1.3 with **tests parameterized by `SUPABASE_TEST_URL` from day one and a CI grep-fail check rejecting any test file that hardcodes `localhost:54321`**; Q19 accepted with three explicit Phase 1.1 additions. **Q19 reversal mechanism** is the most load-bearing answer and produced the largest edit footprint: `journal_entries.reverses_journal_entry_id` nullable self-FK added in §2a; `journal_entries.reversal_reason` nullable text column added in §2a with a conditional DB CHECK enforcing non-empty whenever `reverses_journal_entry_id` is populated — this column was briefly placed on `audit_log` during the same v0.5.5 cycle because the founder's Q19 wording was "the audit log captures," then migrated to `journal_entries` after the founder reconsidered the placement and corrected the phrasing to "the audit trail captures"; the trail is the broader concept including `journal_entries` columns alongside `audit_log` rows, and the reason is a property of the reversal entry, not of the mutation record that created it; the full placement history is preserved inline in §2a's `audit_log` and `journal_entries` definitions and will be captured verbatim in ADR-001 during the step-5 split; §2b gains a new invariant row for the service-layer reversal mirror check; §2e gains a partial index on `journal_entries (reverses_journal_entry_id) WHERE NOT NULL`; §4h is a new subsection specifying the reversal UI including the mandatory non-dismissible period gap banner when the current open period differs from the original entry's period; §15e Layer 2 gains the full reversal-mirror procedure with five reject branches (`REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`, `REVERSAL_NOT_MIRROR`, the non-empty `reversal_reason` check, and the same-line-count precondition); §10a test file layout adds `reversal-mirror.test.ts` as Category A floor #5 and propagates the v0.5.3 service-middleware authorization test as Category A floor #4 (a v0.5.3 count correction that was never pushed into §10a); §7 Phase 1.1 "What is built" adds a reversal path bullet and bumps the test count from three to five; Phase 1.1 exit criterion #3 updated to the new count. **Partial reversals, reversal-of-reversal chain UI, and automatic period-end reversals are explicitly deferred to Phase 2** — named deferrals in §4h and in the Q19 RESOLVED section, not silent omissions. The Q19 resolution section is explicitly flagged as the seed material for **ADR-001: Reversal semantics**, to be written verbatim into `docs/decisions/0001-reversal-semantics.md` after the split in step 5. **Decision log:** §18a questions 1, 2, 4, 5, 7, 9, 10 and §18c questions 18, 19 each have a `RESOLVED v0.5.5` block appended preserving the original question text plus the founder's answer and reasoning. §18d checklist rows filled in for the same nine questions; rows 3, 6, 8, 11–17 remain `_still open — not in step-2 unblock set_` because they are not required to write the Phase 1.1 brief. **Known divergence deferred to the step-5 split:** Part 2 (Phase 1.1 Execution Brief) has a richer seed-script split (`db:seed:auth` via `tsx` + `db:seed` via `psql`) than Part 1's simplified single-script model. Part 2 also still references "three integration tests" in several places. Both are Part 2 reconciliation items to handle when Part 2 is extracted to `docs/specs/phase-1.1.md` — they are not v0.5.5 Bible edits because Part 1 is the authoritative design and Part 2 is the executable instance. v0.5.5 stamps Part 1 only; Part 2's v0.5.5 propagation happens during the split. **What v0.5.5 does NOT touch:** the stack (§256–281), the invariants (§284–409), the Phase 1 Simplifications (§412–605), §0's eight-divergence table, §14's event-sourcing decision, or any Phase 2+ plan content. The CLAUDE.md derivation and the Part 1/Part 2 split are step 4 and step 5 of the strategy sequence, not v0.5.5 content.**
 
 > **Critical instruction to Claude Code:** This Bible is the result of multiple
 > rounds of architectural review by senior distributed systems engineers, plus a
@@ -644,7 +645,7 @@ Each item is non-negotiable for Phase 1.1.
 | `routing_path` field on the `ProposedEntryCard` TypeScript type | Display only in Phase 1; routing logic in Phase 2 — reserved |
 | Boot-time assertion throwing on missing critical env vars | `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` — refuse to start without them |
 | `pino` structured logger with redact list configured at boot | Trace IDs are useless without a searchable log; redact list per Section 9e |
-| Three integration tests as a correctness floor | (1) unbalanced entry rejected by deferred constraint, (2) post to locked period rejected, (3) cross-org RLS isolation |
+| **Five** integration tests as a correctness floor (v0.5.5 count — see §10a) | (1) unbalanced entry rejected by deferred constraint, (2) post to locked period rejected, (3) cross-org RLS isolation, (4) service middleware authorization (v0.5.3, A3), (5) reversal mirror enforcement (v0.5.5, Q19) |
 | Seed script: 2 orgs + 3 users with three roles | Lets you nuke and rebuild local state in 30 seconds |
 | Industry CoA templates seeded for ONLY the orgs you will actually create | Likely two: holding company + real estate. Other four added when needed. |
 
@@ -791,8 +792,8 @@ the-bridge/                    # single Next.js app, single repo, no pnpm worksp
       migrations/
         001_initial_schema.sql          # full Phase 1.1 migration (see Section 2d)
         seed/
-          industryCoA.sql               # CoA templates for the orgs that will actually exist
-          devUsers.sql                  # 2 orgs + 3 users — local dev only
+          industryCoA.sql               # CoA templates for the orgs that will actually exist (Q1: holding_company + real_estate)
+          devUsers.ts                   # 2 orgs + 3 users — local dev only. TypeScript, not SQL: Supabase Auth users are created via the admin API (Q10), with membership rows inserted after. Run via `pnpm db:seed` → `tsx src/db/migrations/seed/devUsers.ts`.
     shared/
       schemas/                          # Zod primitives shared across services and UI
         accounting/
@@ -867,7 +868,7 @@ No agent logic moves. The seams are already in the right places.
     "db:migrate": "supabase db push",
     "db:reset": "supabase db reset",
     "db:generate-types": "supabase gen types typescript --local > src/db/types.ts",
-    "db:seed": "psql $LOCAL_DATABASE_URL -f src/db/migrations/seed/devUsers.sql"
+    "db:seed": "tsx src/db/migrations/seed/devUsers.ts"
   }
 }
 ```
@@ -1107,7 +1108,7 @@ committed to the repo so reviewers can see schema changes in PRs.
 1. Write SQL migration file in `src/db/migrations/`
 2. `pnpm db:migrate` — applies to local Supabase
 3. `pnpm db:generate-types` — regenerates TypeScript types
-4. Run `pnpm test:integration` to verify the three Category A tests still pass
+4. Run `pnpm test:integration` to verify the five Category A floor tests still pass (v0.5.5 — see §10a)
 5. Commit migration + generated types in the same PR
 
 ---
@@ -1154,6 +1155,44 @@ nullable), `is_intercompany_capable`, `is_active`, `created_at`. UNIQUE on
 `fiscal_period_id` (FK), `entry_date`, `description`, `reference`,
 `source` (enum: 'manual' | 'agent' | 'import' — **all three values from day one**),
 `intercompany_batch_id` (UUID, nullable — Category A reservation),
+`reverses_journal_entry_id` (UUID, nullable, self-FK to
+`journal_entries(journal_entry_id)` — **v0.5.5, Q19 resolution**. NULL for
+original entries; populated on reversal entries to link back to the entry
+being reversed. The reversal entry itself is a normal journal entry whose
+lines mirror the referenced entry with `debit_amount` and `credit_amount`
+swapped. The mirror rule is a service-layer invariant (§2b, §15e) because
+it is set-level across two entries and cannot be a DB CHECK constraint.
+Phase 1.1 ships with the column, the service-layer check, the manual
+reversal UI (§4h), and a dedicated integration test (`reversal-mirror.test.ts`,
+§10a). Partial reversals are schema-permitted but not surfaced in
+Phase 1.1 UI — the Phase 2 AP Agent adds partial-reversal workflows.),
+`reversal_reason` (text, nullable — **v0.5.5, Q19 resolution (migrated
+from `audit_log`)**. NULL for original entries; required non-empty on
+reversal entries (the CHECK is `reverses_journal_entry_id IS NULL OR
+(reversal_reason IS NOT NULL AND length(trim(reversal_reason)) > 0)`).
+Captures the human story of *why* the reversal was posted — "vendor
+misclassified," "duplicate of entry #12345," "wrong amount, FX rate
+corrected." The reason is a property of the reversal entry itself, not
+of the mutation that created it, which is why it lives here and not on
+`audit_log`. **Placement rationale and history (read this before
+moving the column again):** the v0.5.5 first draft placed this column
+on `audit_log` because the founder's Q19 wording was "the audit log
+captures a reversal_reason text field." On reconsideration the founder
+corrected the wording to "the audit *trail* captures," where the trail
+is the broader concept that includes `journal_entries` columns
+alongside `audit_log` rows. The trail and the log are different
+things. Two reasons the column belongs here: (1) the reason is a
+property of the reversal entry, not of the mutation that created it —
+audit_log is a generic mutation record and domain-specific columns
+there (`invoice_void_reason`, `payment_reversal_reason`, ...) would
+eventually erode its meaning; (2) queries for "show me all reversals
+and why" become a single-table self-join (`SELECT r.*, o.* FROM
+journal_entries r JOIN journal_entries o ON
+r.reverses_journal_entry_id = o.journal_entry_id WHERE
+r.reverses_journal_entry_id IS NOT NULL`) instead of joining through
+audit_log and filtering by `action` type. This decision is captured
+here in the Bible and in ADR-001 so the tradeoff is visible to any
+future reader considering moving the column again.),
 `created_at`, `created_by`, `idempotency_key` (UUID, nullable for manual,
 required for agent — see ai_actions).
 
@@ -1215,6 +1254,15 @@ Seeded with current Canadian federal/provincial rates.
 `tool_name` (nullable), `idempotency_key` (nullable), `created_at`.
 **Phase 1: written synchronously inside the mutation transaction (Simplification 1).**
 **Phase 2: written asynchronously by pg-boss as a projection of events.**
+**Note on `reversal_reason` (v0.5.5):** a nullable `reversal_reason`
+column was briefly added to this table during the v0.5.5 Q19
+resolution and then migrated to `journal_entries` after the founder
+reconsidered the placement. The column is now at
+`journal_entries.reversal_reason`. `audit_log` intentionally holds no
+domain-specific columns — if a future resolution wants to add
+`invoice_void_reason` or similar, the same reasoning applies: the
+reason is a property of the entity, not of the mutation record, and
+belongs on the entity's table. `audit_log` stays generic.
 
 **`ai_actions`** — `ai_action_id` (UUID PK), `org_id` (FK), `user_id`,
 `session_id`, `trace_id`, `tool_name`, `prompt`, `tool_input` (jsonb),
@@ -1274,6 +1322,7 @@ Persistence for in-flight conversations. Cleaned up after 30 days.
 | **Journal line is never all-zero** (v0.5.3, D11) | CHECK on `journal_lines`: `(debit_amount >= 0 AND credit_amount >= 0) AND (debit_amount > 0 OR credit_amount > 0)` | Zero-value lines that technically balance are invisible audit errors — worse than rejected entries. At least one side must be non-zero. |
 | **Multi-currency amount invariant** (v0.5.3, D5) | CHECK on `journal_lines`: `amount_original = debit_amount + credit_amount AND amount_cad = ROUND(amount_original * fx_rate, 4)` | Prevents silent P&L corruption where debit=credit holds but `amount_cad` is unpopulated or mismatched. For CAD functional currency, `fx_rate = 1.0` and `amount_cad = amount_original`. |
 | **Idempotency key required for agent source** (v0.5.3, D7) | CHECK on `journal_entries`: `source != 'agent' OR idempotency_key IS NOT NULL` | Makes the Bible's "nullable for manual, required for agent" rule a DB-enforced constraint instead of TypeScript-side discipline. |
+| **Reversal entry mirror rule** (v0.5.5, Q19) | Service-layer check inside `journalEntryService.post`: when `reverses_journal_entry_id` is populated, the service loads the referenced entry and verifies that every line in the new entry mirrors a line in the referenced entry with `debit_amount` and `credit_amount` swapped and `amount_original`/`amount_cad` unchanged. Hard reject with `ServiceError('REVERSAL_NOT_MIRROR', ...)` if the mirror does not hold. | Set-level invariant across two entries; cannot be a DB CHECK constraint because CHECK operates on a single row and cannot reference rows in another journal entry. Mandatory in Phase 1.1 — ships with the schema and with a dedicated integration test (`reversal-mirror.test.ts`, §10a). Partial reversals are deferred to Phase 2; the Phase 1 check assumes full mirror. The deferred debit=credit constraint (§1d) catches an unbalanced reversal the same way it catches an unbalanced original — no new trigger needed. |
 
 ### 2c. RLS Policies
 
@@ -1578,6 +1627,7 @@ Every index is justified by a query pattern.
 | `events (trace_id)` | Cross-layer trace correlation |
 | `audit_log (org_id, trace_id)` | Trace correlation |
 | `audit_log (org_id, created_at)` | Audit timeline |
+| `journal_entries (reverses_journal_entry_id)` WHERE `reverses_journal_entry_id IS NOT NULL` (v0.5.5, Q19) | Reversal lookup — "find the reversal of entry X" and "list all reversals for org Y." Partial index because reversal entries are a minority of rows. |
 
 ---
 
@@ -1763,8 +1813,8 @@ export const ProposedEntryCardSchema = z.object({
   lines: z.array(z.object({
     account_code: z.string(),
     account_name: z.string(),
-    debit: z.number(),
-    credit: z.number(),
+    debit: MoneyAmountSchema,
+    credit: MoneyAmountSchema,
     currency: z.string().length(3),
   })),
   intercompany_flag: z.boolean(),
@@ -1894,12 +1944,13 @@ export const journalEntryService = {
         `${periodCheck.period_name} is locked. Post to a different period or ask a controller to unlock.`);
     }
 
-    // 4. Application-layer debit=credit check (Zod refine already ran; this is a guard against bypass)
-    const debits = validated.lines.reduce((s, l) => s + l.debit_amount, 0);
-    const credits = validated.lines.reduce((s, l) => s + l.credit_amount, 0);
-    if (Math.abs(debits - credits) >= 0.005) {
-      throw new ServiceError('UNBALANCED', `Debits=${debits}, Credits=${credits}`);
-    }
+    // 4. Debit=credit balance is already enforced upstream and downstream:
+    //    upstream by the Zod refine at step 0 (§3a, exact-equality via
+    //    decimal.js on MoneyAmount strings), downstream by the deferred
+    //    constraint at COMMIT (§1d, the hard guarantee). No application-layer
+    //    re-check lives here — a tolerance window or a JS-math reducer would
+    //    reintroduce the float drift the v0.5.3 string-money rule exists to
+    //    prevent. Do not re-add.
 
     // 5. DRY RUN: build the proposed card without persisting
     if (validated.dry_run) {
@@ -2265,6 +2316,104 @@ that list of in-place edits.
   threads selection through navigation events)
 - Additional selection types beyond `journal_entry` and `account`
 
+### 4h. Reversal UI (Phase 1.1, v0.5.5 — Q19 resolution)
+
+The `journal_entries` table is append-only by RLS (§2c): `FOR UPDATE
+USING (false)` and `FOR DELETE USING (false)`. Corrections are made via
+reversal entries, which is IFRS-correct. Phase 1.1 must ship a manual
+reversal flow, not just the schema reservation, because the moment a
+real user posts a real wrong entry in Phase 1.3 they need a legal way
+to correct it, and Q19 confirmed there is no other path.
+
+**Launch point.** The journal entry detail canvas view
+(`/[locale]/[orgId]/accounting/journals/[entryId]`) gets a "Reverse
+this entry" button, visible to users whose role permits posting to
+the entry's org (controller and ap_specialist). The Executive persona
+cannot reverse entries, same as it cannot post them — see §5d and
+Open Question 16.
+
+**Prefill.** Clicking the button launches a `journal_entry_form`
+canvas directive with prefill data that:
+
+- Copies every line from the original entry, swapping `debit_amount`
+  and `credit_amount` per line. `amount_original`, `amount_cad`,
+  `currency`, `fx_rate`, and `tax_code_id` are unchanged — only which
+  side they appear on flips.
+- Populates `reverses_journal_entry_id` with the original entry's ID.
+- Auto-assigns `fiscal_period_id` to the **current open period for
+  the entry's org**, which may or may not be the original entry's period.
+- Sets `description` to `"Reversal of #{original.reference ??
+  original.journal_entry_id}"` as a starting point. The user is
+  expected to edit this and add the `reversal_reason`.
+
+**Period gap banner — mandatory.** When the auto-assigned reversal
+period differs from the original entry's period, the reversal form
+surfaces an inline banner at the top of the canvas, in the form's
+header zone, with this shape:
+
+> **You are reversing a {original_period_name} entry into
+> {current_period_name}.** The reversal will appear in
+> **{current_period_name}**, not in the original period, because
+> {original_period_name} is closed. Verify this is the behaviour you
+> want before posting.
+
+Banner rules:
+
+- Visible by default. Cannot be dismissed. Disappears only when the
+  user manually changes `fiscal_period_id` (if another period is
+  open) or when the original and reversal periods are the same.
+- Restates both period names by their human label (e.g., "March 2026"
+  and "April 2026"), not by UUID.
+- Styled as a warning, not an error — the action is legal. The
+  banner exists because a user reversing a March entry from April
+  needs to understand the reversal posts to April, not back into
+  March. Without this surfacing, P&L anomalies appear in the wrong
+  month and the user spends an afternoon finding out why.
+
+**Reversal reason field — mandatory.** The reversal form adds one
+required field that original journal entries do not have:
+`reversal_reason` (text, multiline). This is the story of *why* the
+reversal is being posted — "vendor misclassified," "duplicate of
+entry #12345," "wrong amount, FX rate corrected," and so on. The
+service layer writes this into `journal_entries.reversal_reason`
+(§2a) in the same INSERT as the rest of the reversal entry, inside
+the same transaction. A DB CHECK constraint enforces non-empty
+`reversal_reason` whenever `reverses_journal_entry_id` is populated,
+so the column cannot be blank on a reversal even if the service
+layer is bypassed. Blank reasons are rejected at the form level;
+empty-string reasons are rejected at the service layer (§15e step 5)
+and again at the DB layer. Three layers of protection for the same
+rule — an auditor asking "why was this posted?" must always get an
+answer.
+
+**Service-layer enforcement.** See §2b (reversal mirror invariant)
+and §15e Layer 2 (enforcement wiring). The UI is the ergonomic
+surface; the service layer is what prevents a tampered reversal form
+from posting a non-mirror.
+
+**Explicitly deferred to Phase 2.**
+
+- **Partial reversals** — reversing only some lines of a multi-line
+  entry. The schema does not preclude them (the mirror check could
+  be relaxed to "every line in the new entry has a counterpart in
+  the original"), but the Phase 1.1 check assumes full mirror and
+  the UI offers no partial-selection affordance.
+- **Reversal-of-reversal UI affordances.** Phase 1.1 permits
+  reversing a reversal (it's just another entry with
+  `reverses_journal_entry_id` pointing at the reversal), but the UI
+  does not visualize the chain. Phase 2 adds a reversal-chain view.
+- **Automatic period-end reversals** (the accrual accounting pattern
+  where an accrual posted on the last day of a period is
+  auto-reversed on the first day of the next period). Phase 2
+  introduces the schedule; Phase 1.1 has no automatic reversal.
+
+**Agent integration (Phase 1.2, not Phase 1.1).** Phase 1.2 adds a
+`reverseJournalEntry` agent tool that wraps the same
+`journalEntryService.post` call with `reverses_journal_entry_id`
+pre-populated from conversation context. The Bible flags it here for
+continuity — Phase 1.2's Section 7 scope list gets the corresponding
+bullet — but the Phase 1.1 deliverable is the manual form path only.
+
 ---
 
 ## Section 5 — Agent Architecture (v0.5.0 Phase 1 form)
@@ -2605,16 +2754,35 @@ model, auth, UI shell, and the manual journal entry path proven to work.
 - All Category A items from the A/B/C section
 - `pino` structured logger with redact list, configured at boot
 - Boot-time assertion on critical env vars
-- Three integration tests (Category A floor):
+- **Five integration tests (Category A floor — v0.5.5 count):**
   1. Unbalanced journal entry rejected by deferred constraint at COMMIT
   2. Insert into locked period rejected by trigger
   3. Cross-org RLS isolation: User A's session cannot SELECT Org B's data
+  4. Service middleware authorization: a call with no membership in
+     the target org is rejected before any DB write (v0.5.3, A3)
+  5. Reversal mirror enforcement: a reversal entry whose lines do not
+     mirror the referenced entry with debits and credits swapped is
+     rejected by `journalEntryService.post` before the transaction
+     begins (v0.5.5, Q19 — §15e Layer 2)
 - Seed script: 2 orgs (holding company + real estate) + 3 users (one per role)
 - Service functions: `canUserPerformAction`, `journalEntryService.post`,
   `chartOfAccountsService`, `periodService.isOpen`, `recordMutation`,
   `withInvariants` middleware, `ServiceContext` type with required
   `trace_id`, `org_id`, `caller`
 - Manual journal entry form (full canvas component)
+- **Manual reversal path** (v0.5.5, Q19): "Reverse this entry" button
+  on the journal entry detail view launches the journal entry form
+  prefilled with lines mirrored (debits↔credits), `reverses_journal_entry_id`
+  populated, `fiscal_period_id` auto-assigned to the current open period,
+  and a **mandatory period gap banner** when the open period differs
+  from the original entry's period. A **required `reversal_reason`
+  text field** captures the human story of why the reversal is being
+  posted; the service layer writes it into `journal_entries.reversal_reason`
+  (not `audit_log` — the reason is a property of the reversal entry,
+  not of the mutation; see §2a placement rationale). Service-layer
+  mirror check enforces the lines-are-swapped rule (§2b, §15e).
+  Integration test ships in Phase 1.1 (§10a, Category A floor #5).
+  See §4h for the full UI specification.
 - Chart of Accounts canvas view
 - Journal entry list canvas view
 - Basic P&L canvas view (read-only)
@@ -2632,7 +2800,9 @@ model, auth, UI shell, and the manual journal entry path proven to work.
 **Phase 1.1 Exit Criteria (all must pass before Phase 1.2 begins):**
 1. `pnpm dev` starts cleanly with zero TypeScript errors.
 2. `pnpm build` succeeds.
-3. `pnpm test:integration` passes all three Category A tests.
+3. `pnpm test:integration` passes all **five** Category A floor tests
+   — three v0.5.0 originals plus the v0.5.3 service-middleware
+   authorization test plus the v0.5.5 reversal mirror test.
 4. Health check returns 200.
 5. Sign-in screen renders (English translations populated).
 6. **Create the two real orgs** (holding company + real estate) via the
@@ -3333,7 +3503,9 @@ targeted row locks, not `SERIALIZABLE` everywhere.
 
 ## Section 10a — Testing Strategy (Service Layer)
 
-The three Category A integration tests are the floor, not the ceiling. They
+The **five** Category A integration tests (v0.5.5 — raised from three
+after v0.5.3 added the service-middleware authorization test and v0.5.5
+added the Q19 reversal mirror test) are the floor, not the ceiling. They
 prove the invariants cannot be bypassed. They do not prove that the service
 functions compute the right answer. Unit tests do that.
 
@@ -3351,6 +3523,21 @@ functions compute the right answer. Unit tests do that.
 - **Do mock the outside world.** Anthropic API calls, Flinks, Supabase
   Storage, email inbound — anything over the network is mocked at the
   module boundary, not inside the service function.
+- **v0.5.5 (Q18) — Database connection is parameterized from day one.**
+  Integration and unit tests read the Supabase URL and service-role
+  key from environment variables (`SUPABASE_TEST_URL`,
+  `SUPABASE_TEST_SERVICE_ROLE_KEY`) with a documented fallback chain:
+  test-specific env vars first, then the normal `SUPABASE_URL` /
+  `SUPABASE_SERVICE_ROLE_KEY`, then local Supabase defaults
+  (`http://localhost:54321` and the fixed local dev key printed by
+  `supabase status`). **No test file may hardcode
+  `http://localhost:54321` or any local dev key.** This rule exists so
+  that the Phase 1.3 switch from "local Supabase only" to "remote
+  Supabase dev project" (Q18 resolution) is a config change — two
+  new env vars in CI and in local `.env.test.local` — not a code
+  change that touches every test file. A CI workflow added in
+  Phase 1.1 grep-fails on any test file containing the literal
+  string `localhost:54321`.
 - **Coverage targets** (not enforced by CI in Phase 1, just a written
   expectation):
   - `journalEntryService.post` and its invariant helpers: **80%+**. This
@@ -3370,17 +3557,27 @@ functions compute the right answer. Unit tests do that.
   code or configuration — covered implicitly by the integration tests
   passing.
 
-**Test file layout in Phase 1.1:**
+**Test file layout in Phase 1.1 (v0.5.5 — five-test Category A floor):**
 ```
 src/services/journalEntry/
   journalEntryService.ts
-  journalEntryService.test.ts        ← unit tests (Postgres-backed)
+  journalEntryService.test.ts               ← unit tests (Postgres-backed)
   types.ts
 tests/integration/
-  debit-credit-invariant.test.ts     ← Category A floor #1
-  period-lock.test.ts                ← Category A floor #2
-  rls-cross-org.test.ts              ← Category A floor #3
+  debit-credit-invariant.test.ts            ← Category A floor #1
+  period-lock.test.ts                       ← Category A floor #2
+  rls-cross-org.test.ts                     ← Category A floor #3
+  service-middleware-authorization.test.ts  ← Category A floor #4 (v0.5.3, A3)
+  reversal-mirror.test.ts                   ← Category A floor #5 (v0.5.5, Q19)
 ```
+
+**Category A floor count history:** v0.5.0 established three tests.
+v0.5.3 added the A3 middleware authorization test but left §7 and
+§10a's counts at three — v0.5.5 propagates the correction. v0.5.5
+adds the Q19 reversal mirror test, bringing the floor to five. The
+floor is a minimum — additional tests live in
+`tests/integration/` and in per-service `*.test.ts` files next to
+the service under test.
 
 ---
 
@@ -3473,14 +3670,34 @@ should be able to go from a clean laptop to a running local environment by
 following this section alone.
 
 ### Prerequisites
-- Node.js v20+ (use `nvm` — `.nvmrc` is committed)
-- pnpm v9+ (`npm install -g pnpm`) — used for `pnpm dev` even though the
-  repo is not a workspace in Phase 1; pnpm is faster than npm
-- Supabase CLI (`brew install supabase/tap/supabase` or platform equivalent)
-- Postman
+
+- **Windows dev shell: WSL2, not native Windows** (v0.5.5, Q5 resolution).
+  On Windows, the Phase 1.1 brief targets **Ubuntu 22.04 LTS on WSL2**
+  as the actual dev shell. VS Code runs on the Windows host and
+  connects to WSL2 via the Remote-WSL extension; `git`, `pnpm`,
+  `nvm`, the Supabase CLI, and `supabase start`'s Docker containers
+  all run inside WSL2. Native Windows is not supported for this
+  project because (a) Docker Desktop file-watcher behavior on
+  Windows NTFS produces phantom rebuilds and missed HMR events,
+  (b) line-ending handling is a recurring low-value distraction,
+  and (c) every shell command in this Bible and the Phase 1.1 brief
+  is written for bash, not PowerShell. WSL2 makes all three
+  non-issues at the cost of one setup step. **macOS and Linux
+  developers skip this section** and install natively.
+- Node.js v20+ (use `nvm` — `.nvmrc` is committed). On WSL2, install
+  `nvm` inside the WSL2 shell, not on Windows.
+- pnpm v9+ (`npm install -g pnpm`) — used for `pnpm dev` even though
+  the repo is not a workspace in Phase 1; pnpm is faster than npm
+- Supabase CLI. macOS: `brew install supabase/tap/supabase`. Linux
+  and WSL2: download the latest release from the Supabase CLI
+  GitHub releases page or use `npx supabase` as a transitional
+  install. Native Windows: not supported — use WSL2 per the first
+  bullet.
+- Postman (runs on the Windows host for WSL2 developers; talks to
+  `http://localhost:3000` which WSL2 forwards automatically)
 - Anthropic API key (request from team lead)
 - VS Code with extensions: ESLint, Prettier, Tailwind CSS IntelliSense,
-  Supabase
+  Supabase, and (on Windows) the **Remote-WSL** extension
 
 ### Step-by-Step Setup
 1. `git clone [repo] && cd the-bridge`
@@ -3717,6 +3934,49 @@ database write occurs. The test asserts that no row exists in
 `journal_entries` afterward and no row exists in `audit_log` — proving
 the check runs before the transaction begins, not inside it.
 
+**v0.5.5 (Q19) — Reversal mirror check.** Unlike the middleware
+pre-flight checks above, this check lives inside
+`journalEntryService.post`, not in `withInvariants()`, because
+verifying a mirror requires loading the referenced entry from the
+database — middleware cannot make arbitrary DB calls without breaking
+the "pre-flight only" rule. The placement rule: `withInvariants()`
+runs checks that can be answered from the command alone; inside-the-
+service checks answer questions that need data the command does not
+carry. The reversal mirror belongs in the second bucket. See §2b for
+the invariant definition and §4h for the UI surface.
+
+When the input has `reverses_journal_entry_id` populated,
+`journalEntryService.post` runs this sequence **before** the BEGIN
+transaction:
+
+1. Load the referenced entry and all its lines by `journal_entry_id`.
+2. Verify the referenced entry exists in the same `org_id` — cross-org
+   reversal is impossible and rejected with
+   `ServiceError('REVERSAL_CROSS_ORG', ...)`.
+3. Verify line count matches. Partial reversals are Phase 2; a count
+   mismatch is rejected with `REVERSAL_PARTIAL_NOT_SUPPORTED`.
+4. For each line in the new entry, find a line in the referenced
+   entry with the same `account_id`, `currency`, `amount_original`,
+   `amount_cad`, `fx_rate`, and `tax_code_id` — and `debit_amount`
+   and `credit_amount` **swapped**. If any line cannot be matched,
+   reject with `REVERSAL_NOT_MIRROR` and include the offending line
+   index in the error message.
+5. Verify `reversal_reason` (on the new `journal_entries` row, not
+   on `audit_log` — see §2a for placement rationale) is present and
+   non-empty. The UI form (§4h) rejects empty; the service re-validates
+   as defense-in-depth because the agent path in Phase 1.2 will bypass
+   the form; the DB CHECK constraint
+   (`reverses_journal_entry_id IS NULL OR (reversal_reason IS NOT NULL
+   AND length(trim(reversal_reason)) > 0)`) catches anything that
+   somehow reaches the INSERT. Three layers for the same rule.
+
+The check runs before the transaction because rejecting upstream
+costs less than rolling back a failed INSERT, and because rejection
+must happen before the `audit_log` write so no audit row references
+a reversal that did not happen. Integration test:
+`tests/integration/reversal-mirror.test.ts` (§10a, Category A floor #5).
+The test exercises every reject branch above plus the happy path.
+
 **Layer 3 — Phase 2 only.** Event middleware that runs sequencing checks
 inside the same transaction as the mutation. Phase 1 does not have this
 layer because it does not write to the events table (Simplification 2).
@@ -3911,10 +4171,29 @@ The 19 questions are grouped into three categories:
    them as the founder's likely first orgs. **Confirm** these are the two
    the founder will create real orgs for, or name the correct two.
 
+   **RESOLVED v0.5.5:** `holding_company` + `real_estate`. These are
+   the two industry CoA templates seeded in the Phase 1.1 initial
+   migration; the other four templates (healthcare, hospitality,
+   trading, restaurant) stay unseeded until Phase 1.3 or Phase 2 per
+   the A/B/C table. The two orgs the founder creates in Phase 1.1
+   exit criterion #6 use these templates.
+
 2. **Which Canadian provinces' tax rates are seeded in Phase 1.1?** The
    `tax_codes` table is Category A. Phase 1.1 needs concrete seed rows.
    I have assumed federal GST plus the provinces where the founder's
    actual entities operate. **Specify which provinces.**
+
+   **RESOLVED v0.5.5:** British Columbia. Seed rows for Phase 1.1:
+   federal GST (5%, jurisdiction `CA`) and BC provincial sales tax
+   PST_BC (7%, jurisdiction `CA-BC`). **BC uses GST + PST as two
+   separate taxes, not HST** — BC had HST from 2010 to 2013 and
+   reverted via referendum, so the seed does not include an HST_BC
+   row. Additional provincial rows (HST_ON, HST_NS, HST_NB, HST_NL,
+   HST_PE, QST, PST_SK, PST_MB) are added as new orgs are created in
+   those provinces — not preemptively. Effective-from dates on all
+   seed rows match the currently-in-force Canadian federal and BC
+   rates as of the v0.5.5 commit date; historical rate rows are not
+   seeded.
 
 3. **Which real calendar month is targeted for Phase 1.3?** Phase 1.3
    exit criterion #1 is "close one real month for one real org." The
@@ -3927,9 +4206,27 @@ The 19 questions are grouped into three categories:
    (`ca-central-1`). Vercel offers regional deployment. **Confirm
    `ca-central-1` for Supabase and the appropriate Vercel region.**
 
+   **RESOLVED v0.5.5:** Confirmed. Supabase `ca-central-1` (Toronto),
+   Vercel `yul1` (Montreal). Founder accepts §9a.0 as a hard
+   constraint, not a founder choice. Phase 1.1 exit criterion #15
+   (v0.5.3) remains the enforcement point — a US-region deployment is
+   a Phase 1.1 failure regardless of other criteria.
+
 5. **Local development OS.** This affects the Supabase CLI install
    command in Section 12 and the line endings convention. **Confirm
    macOS, Linux, or Windows.**
+
+   **RESOLVED v0.5.5:** Windows host + WSL2 (Ubuntu 22.04 LTS) as
+   the actual dev shell. VS Code runs on the Windows host and
+   connects into WSL2 via the Remote-WSL extension; all
+   bash/git/pnpm/nvm/Docker work happens inside WSL2. **Native
+   Windows is explicitly not supported** because Docker Desktop
+   file-watcher behavior on NTFS produces phantom rebuilds and
+   missed HMR events, line-ending handling is a recurring
+   low-value distraction, and every shell command in this Bible
+   and the Phase 1.1 brief is written for bash, not PowerShell.
+   §12 Prerequisites is updated in v0.5.5 to reflect the WSL2
+   targeting.
 
 6. **The two real users for Phase 1.1 testing.** The seed script creates
    3 dev users. The two real users in Phase 1.1 exit criterion #7 are
@@ -3938,6 +4235,10 @@ The 19 questions are grouped into three categories:
    addresses for these or test addresses initially.**
 
 7. **Source control hosting.** Assumed GitHub from v0.4.0 spec. **Confirm.**
+
+   **RESOLVED v0.5.5:** GitHub. CI is GitHub Actions. Repository
+   URL conventions, the grep-fail CI check from Q18, and every
+   shell example in §12 and the Phase 1.1 brief assume GitHub.
 
 8. **Backup and restore strategy for the local Supabase database.**
    Phase 1.3 uses the system for real bookkeeping. The local Supabase
@@ -3951,10 +4252,33 @@ The 19 questions are grouped into three categories:
    Claude's tool input schema format. **Confirm willingness to add this
    dependency** or specify an alternative (write JSON schemas by hand).
 
+   **RESOLVED v0.5.5:** Yes — add `zod-to-json-schema`. Pin the
+   version in `package.json` and treat major-version bumps as
+   explicit decisions requiring an ADR. The drift risk of
+   hand-written JSON schemas is unacceptable for a safety-critical
+   agent tool layer: Invariant 6 ("no free-form data at service
+   boundaries") exists precisely to keep the agent boundary typed
+   and Zod-validated, and hand-writing the same schema twice in two
+   formats is exactly the drift that invariant exists to prevent.
+   **ADR material:** capture this reasoning verbatim when
+   `zod-to-json-schema` is added to `package.json` in Phase 1.2,
+   including the alternative (hand-written JSON schemas) and why it
+   was rejected. The ADR also names the update rule: major-version
+   bumps require a decision entry; minor/patch bumps do not.
+
 10. **Dev seed users — auth flow.** Supabase Auth requires real signup or
     admin-API user creation. The seed script needs to create users via
     the Supabase admin API, not via SQL directly (Supabase Auth manages
     its own tables). **Confirm this approach.**
+
+    **RESOLVED v0.5.5:** Yes — Supabase admin API. The seed script
+    changes from `devUsers.sql` to `devUsers.ts` (TypeScript, run via
+    `tsx`). Memberships rows may stay SQL and run as a second step,
+    or be inserted via the Supabase client inside the TypeScript
+    script — either is acceptable; the Phase 1.1 brief picks one.
+    **Part 1 edits:** §1a folder tree updated; §1b `db:seed` script
+    command updated from `psql -f ... .sql` to `tsx ... .ts`.
+    `tsx` is added as a dev dependency.
 
 ### Section 18b — Architectural Decisions Promoted from Section 17 in v0.5.1
 
@@ -4026,6 +4350,18 @@ should be the founder's call, not mine.
     My default: **(a) local-only for Phase 1.1, switch to (b) for Phase
     1.3** when real data starts going in. **Confirm or specify alternative.**
 
+    **RESOLVED v0.5.5:** Accept the default. (a) local-only Supabase
+    for Phase 1.1 and Phase 1.2; switch to (b) remote Supabase dev
+    project for Phase 1.3. **Non-negotiable requirement added in
+    v0.5.5:** the integration test setup is parameterized by
+    `SUPABASE_TEST_URL` and `SUPABASE_TEST_SERVICE_ROLE_KEY`
+    environment variables from day one. **No test file may hardcode
+    `http://localhost:54321` or any local dev key.** A CI grep-fail
+    check runs in Phase 1.1 onward. The Phase 1.3 switch is a config
+    change — two env vars in CI and in `.env.test.local` — not a
+    code change that touches test files. See §10a for the full
+    parameterization rule.
+
 19. **Reversal entry mechanism — how is a wrong entry corrected?**
     Section 14 says "corrections are made via reversal entries (which is
     IFRS-correct)" but **the schema and workflow for creating a reversal
@@ -4048,6 +4384,130 @@ should be the founder's call, not mine.
       conversationally
     **Confirm this design**, or specify an alternative reversal mechanism.
 
+    **RESOLVED v0.5.5:** Accept the proposed design with three
+    explicit additions — every addition ships in Phase 1.1, not
+    deferred:
+
+    **(1) Service-layer mirror check, mandatory in Phase 1.1 with
+    a dedicated integration test.** When `reverses_journal_entry_id`
+    is populated, `journalEntryService.post` loads the referenced
+    entry, verifies same-`org_id`, verifies line count matches (no
+    partial reversals in Phase 1), and verifies every line in the
+    new entry mirrors a line in the referenced entry with
+    `debit_amount` and `credit_amount` swapped and all other fields
+    (account_id, currency, amount_original, amount_cad, fx_rate,
+    tax_code_id) unchanged. Hard reject with one of
+    `REVERSAL_CROSS_ORG` / `REVERSAL_PARTIAL_NOT_SUPPORTED` /
+    `REVERSAL_NOT_MIRROR` if any check fails. The sequence runs
+    **before** `BEGIN` so rejection never produces a rollback or an
+    audit row for a non-event. Full procedure in §15e Layer 2;
+    invariant row in §2b; integration test at
+    `tests/integration/reversal-mirror.test.ts` (Category A floor #5,
+    see §10a).
+
+    **(2) Period gap banner in the reversal UI, mandatory,
+    non-dismissible.** When the auto-assigned reversal period differs
+    from the original entry's period, the reversal form surfaces a
+    warning banner at the top of the canvas, restating both period
+    labels by name. *"You are reversing a March 2026 entry into
+    April 2026. The reversal will appear in April 2026, not in the
+    original period, because March 2026 is closed. Verify this is
+    the behaviour you want before posting."* Styled as a warning,
+    not an error — the action is legal — but the user must
+    understand the period mismatch before committing. See §4h for
+    the full UI specification.
+
+    **(3) `reversal_reason` text column on `journal_entries`,
+    required non-empty on every reversal entry, enforced by a DB
+    CHECK constraint.** A nullable `text` column added to
+    `journal_entries` in §2a. The reversal UI has a required
+    multiline `reversal_reason` field (§4h); blank values are
+    rejected at the form layer, re-validated at the service layer
+    (§15e step 5), and enforced at the database layer by a CHECK
+    constraint conditional on `reverses_journal_entry_id` being
+    populated. Three layers for the same rule. This captures *why*
+    the reversal was posted ("vendor misclassified," "duplicate of
+    entry #12345," "wrong amount, FX rate corrected") — the story
+    auditors care about, distinct from the structural FK link on
+    `journal_entries.reverses_journal_entry_id`.
+
+    **Placement rationale and history (this is the load-bearing
+    call Q19 produced — read carefully if considering moving it).**
+    The v0.5.5 first draft placed this column on `audit_log`
+    because the founder's Q19 wording was "the audit log captures a
+    reversal_reason text field." Claude made the literal placement,
+    surfaced the trade-off explicitly as a veto point with both
+    alternatives documented in §2a, and the founder reconsidered
+    within the same v0.5.5 cycle. The corrected wording is "the
+    audit *trail* captures," where the trail is the broader concept
+    that includes `journal_entries` columns alongside `audit_log`
+    rows. The trail and the log are different things. Two reasons
+    the column belongs on `journal_entries`:
+
+    1. **Semantic fit.** The reason is a property of the reversal
+       entry itself, not of the mutation record that created it.
+       `audit_log` is a generic mutation log; once you start adding
+       domain-specific columns there (`invoice_void_reason`,
+       `payment_reversal_reason`, ...), the table loses its
+       meaning as a generic record.
+    2. **Query shape.** "Show me all reversals and why" becomes a
+       single-table self-join on `journal_entries` (matching
+       reversals to their originals) rather than a join through
+       `audit_log` filtered by `action` type. The self-join is
+       simpler, faster, and does not depend on `audit_log`'s Phase
+       1→Phase 2 projection evolution (§2a audit_log note,
+       Simplification 1).
+
+    This reasoning — including the "audit log vs audit trail"
+    distinction — is ADR-001 material and will be captured verbatim
+    in `docs/decisions/0001-reversal-semantics.md` during the step-5
+    split. The Bible keeps the full rationale inline in §2a so a
+    future reader considering moving the column again sees the
+    tradeoff without having to dig into the ADR folder.
+
+    **Explicitly deferred to Phase 2 (confirmed by Q19 resolution):**
+    - **Partial reversals** (reversing only some lines of a
+      multi-line entry). The schema does not preclude them, but the
+      Phase 1.1 mirror check assumes full mirror and the UI has no
+      partial-selection affordance.
+    - **Reversal-of-reversal chain visualization.** Phase 1.1 permits
+      reversing a reversal (it's just another entry with
+      `reverses_journal_entry_id` pointing at the reversal), but no
+      UI visualizes the chain. Phase 2 adds a reversal-chain view.
+    - **Automatic period-end reversals** (accrual reversal pattern).
+      Phase 2 introduces the schedule; Phase 1.1 has no automatic
+      reversal.
+
+    **ADR-001 seed material.** The reasoning above — the three
+    additions, why each ships in Phase 1.1, the `audit_log` vs
+    `journal_entries` placement call, and the explicit Phase 2
+    deferrals — is the content of ADR-001 and will be written
+    verbatim into `docs/decisions/0001-reversal-semantics.md` after
+    the split, per the step-5 plan. Capture the reasoning *as
+    written here*, not paraphrased.
+
+    **Part 1 edits produced by this resolution:**
+    - §2a `journal_entries`: add `reverses_journal_entry_id` column
+      AND `reversal_reason` column (the second moved from
+      `audit_log` during the same v0.5.5 cycle after founder
+      reconsideration — see (3) above)
+    - §2a `audit_log`: unchanged in final shape — a short
+      explanatory note preserves the history of the brief migration
+      so future readers see why `reversal_reason` is not there
+    - §2b: add reversal mirror invariant row (service-layer)
+    - §2e: add reversal lookup partial index
+    - §4h: new subsection for reversal UI (launch point, prefill,
+      period gap banner, reversal_reason field, Phase 2 deferrals)
+    - §7 Phase 1.1 "What is built": add reversal path bullet
+    - §7 Phase 1.1 exit criterion #3: bump from three to five
+      integration tests
+    - §10a test file layout: add `reversal-mirror.test.ts` and
+      `service-middleware-authorization.test.ts` (the latter
+      propagates the v0.5.3 count correction that was never pushed
+      into §10a)
+    - §15e Layer 2: add the full reversal mirror check procedure,
+      including step 5 pointing at `journal_entries.reversal_reason`
+
 ### Section 18d — Founder Decisions Checklist (One-Page View)
 
 Print this, fill it in, commit it as `docs/decisions/founder-answers-v0.5.1.md`.
@@ -4056,25 +4516,25 @@ Every row must have an explicit answer before the Phase 1.1 brief is written.
 
 | # | Question | Your answer | Impacts |
 |---|---|---|---|
-| 1 | Which two CoA templates for Phase 1.1? | _______ | Seed data in `001_initial_schema.sql` |
-| 2 | Which provinces' tax codes? | _______ | `tax_codes` seed rows |
-| 3 | Which org + month for Phase 1.3 close? | _______ | Real-data collection during Phase 1.2 |
-| 4 | Supabase region (`ca-central-1`?) + Vercel region | _______ | Data residency; provisioning |
-| 5 | Local dev OS (macOS / Linux / Windows) | _______ | Supabase CLI install; line endings |
-| 6 | Real-email or test-email accounts for Phase 1.1 users | _______ | Auth flow testing |
-| 7 | Source control host (GitHub?) | _______ | CI configuration |
-| 8 | Phase 1.3 DB: remote Supabase or local `pg_dump` cadence | _______ | Backup story for real financial data |
-| 9 | Add `zod-to-json-schema` dependency? | _______ | Agent tool schema conversion (Section 3c) |
-| 10 | Seed users via Supabase admin API? | _______ | Seed script design |
-| 11 | Claude API failure UX: banner + Retry? | _______ | Mainframe degradation path |
-| 12 | Agent cost ceiling in Phase 1.2: measure-first? | _______ | Cost budget; model choice |
-| 13 | Tool-call retry count (1 / 2 / 3) | _______ | Agent orchestrator retry policy |
-| 14 | Streaming or batch agent responses in Phase 1.2 | _______ | Agent UI rendering path |
-| 15 | AgentSession TTL (default 30 days) | _______ | Session cleanup script |
-| 16 | Executive persona scope in Phase 1.2 | _______ | Persona prompts; tool whitelist |
-| 17 | Data export / audit package urgency | _______ | Phase 1.2 vs Phase 2 scope |
-| 18 | CI/CD DB target (local / remote dev project) | _______ | Test harness; CI config |
-| 19 | Reversal entry mechanism (confirm proposed design?) | _______ | `journal_entries` schema field |
+| 1 | Which two CoA templates for Phase 1.1? | **v0.5.5: holding_company + real_estate** | Seed data in `001_initial_schema.sql` |
+| 2 | Which provinces' tax codes? | **v0.5.5: BC → federal GST (5%) + PST_BC (7%); not HST** | `tax_codes` seed rows |
+| 3 | Which org + month for Phase 1.3 close? | _still open — not in step-2 unblock set_ | Real-data collection during Phase 1.2 |
+| 4 | Supabase region (`ca-central-1`?) + Vercel region | **v0.5.5: Supabase `ca-central-1`, Vercel `yul1`; §9a.0 accepted as hard constraint** | Data residency; provisioning |
+| 5 | Local dev OS (macOS / Linux / Windows) | **v0.5.5: Windows host + WSL2 (Ubuntu 22.04 LTS); native Windows not supported** | Supabase CLI install; line endings |
+| 6 | Real-email or test-email accounts for Phase 1.1 users | _still open — not in step-2 unblock set_ | Auth flow testing |
+| 7 | Source control host (GitHub?) | **v0.5.5: GitHub; CI is GitHub Actions** | CI configuration |
+| 8 | Phase 1.3 DB: remote Supabase or local `pg_dump` cadence | _still open — not in step-2 unblock set_ | Backup story for real financial data |
+| 9 | Add `zod-to-json-schema` dependency? | **v0.5.5: yes, pinned; major bumps require ADR; ADR-TBD material** | Agent tool schema conversion (Section 3c) |
+| 10 | Seed users via Supabase admin API? | **v0.5.5: yes; `devUsers.sql` → `devUsers.ts`; `tsx` added as dev dependency** | Seed script design |
+| 11 | Claude API failure UX: banner + Retry? | _still open — not in step-2 unblock set_ | Mainframe degradation path |
+| 12 | Agent cost ceiling in Phase 1.2: measure-first? | _still open — not in step-2 unblock set_ | Cost budget; model choice |
+| 13 | Tool-call retry count (1 / 2 / 3) | _still open — not in step-2 unblock set_ | Agent orchestrator retry policy |
+| 14 | Streaming or batch agent responses in Phase 1.2 | _still open — not in step-2 unblock set_ | Agent UI rendering path |
+| 15 | AgentSession TTL (default 30 days) | _still open — not in step-2 unblock set_ | Session cleanup script |
+| 16 | Executive persona scope in Phase 1.2 | _still open — not in step-2 unblock set_ | Persona prompts; tool whitelist |
+| 17 | Data export / audit package urgency | _still open — not in step-2 unblock set_ | Phase 1.2 vs Phase 2 scope |
+| 18 | CI/CD DB target (local / remote dev project) | **v0.5.5: (a) local for 1.1/1.2, (b) remote for 1.3; tests parameterized by SUPABASE_TEST_URL from day one; CI grep-fails hardcoded localhost** | Test harness; CI config |
+| 19 | Reversal entry mechanism (confirm proposed design?) | **v0.5.5: accepted with three additions — service-layer mirror check (mandatory P1.1), period gap banner in UI, `reversal_reason` on `journal_entries` (migrated from `audit_log` mid-cycle after founder reconsideration — see §18c.19 RESOLVED for full rationale); Phase 2 defers partial reversals, chain UI, auto period-end reversals; ADR-001 seed material** | `journal_entries` schema (two new columns: `reverses_journal_entry_id` + `reversal_reason` with a conditional CHECK), + §4h UI spec, + §15e Layer 2 with full procedure, + §10a Category A floor test #5 |
 
 **Rule:** no answer is "I'll decide later." Either you pick the value or you
 accept my default explicitly. Silent inheritance is what v0.5.1 exists to stop.
