@@ -1,7 +1,7 @@
 # Family Office AI-Forward Accounting Platform — PLAN.md
 
 ## Part 1 — Architecture Bible
-### Version: v0.5.3 — Correctness & Risk Review Fixes (Milestone)
+### Version: v0.5.4 — Phase 1.2 Canvas Context Injection (Milestone)
 
 > **This document is Part 1 of PLAN.md — the Architecture Bible.** It captures
 > every major architectural decision, the reasoning behind it, and the constraints
@@ -22,6 +22,7 @@
 > - v0.4.0 — Architecture hardened: Four-layer truth hierarchy, pre-commit invariant enforcement, three-namespace contracts package, Agent→Command contract layer, event stream as single source of truth, trace-id observability, semantic confidence routing graph
 > - **v0.5.0 — Phase 1 simplification: Single Next.js app for Phase 1 (no monorepo, no Express). Layer 1/2 agents collapsed to service functions. Events table reserved-seat (created, not written). Audit log written synchronously. A/B/C categorization (build now / foundation now / defer). Seven Category A additions. Three integration tests as floor. Phase structure rewritten as 1.1 / 1.2 / 1.3. PLAN.md split into Architecture Bible (Part 1) and Phase Execution Briefs (Part 2). Eight v0.4.0 decisions formally superseded — see Phase 1 Simplifications section for the full list and Phase 2 corrections.**
 > - **v0.5.1 — Foundation review fixes: Section 0 added at the front enumerating all eight v0.4.0 → v0.5.0 divergences in a single table. Invariant 5 heading qualified to make the Phase 1 exception visible from the TOC. Section 14 opening rephrased to make resolved-status unambiguous. Section 15f rewritten with two complete side-by-side ordering diagrams (Phase 1 form and Phase 2 form) instead of a prose diff. Open Questions section expanded from 10 to 19 items by promoting seven decisions from Section 17 (where they had defaulted silently) and adding two missing architectural gaps (CI/CD database target and reversal entry mechanism). Section 17 trimmed to only the items that genuinely belong in the Phase 1.2 brief.**
+> - **v0.5.4 — Phase 1.2 Canvas Context Injection:** The minimal bidirectional canvas pattern — canvas → chat selection context — is moved from Phase 2 into Phase 1.2 alongside the initial agent build. The founder's position, which this version adopts: the failure mode of a disconnected split-screen UI in Phase 1.3 real-user testing is a hard-no trust classification for UX reasons rather than accounting correctness, which is the exact class of failure the product cannot afford because point 1 of the product's differentiation is the persistent split-screen pattern. If the reverse direction does not work on real workflows, the differentiator is theatre and a savvy reviewer feels it inside 30 seconds. v0.5.4 adds three components — a `CanvasContext` type, a Zustand selector that builds it from the current canvas state, and click handlers on exactly two selectable row types (journal entry rows in the list view and chart-of-accounts rows in the CoA view) — plus a `canvas_context?: CanvasContext` input on `handleUserMessage` and a subordinate canvas-context section in the system prompt labeled as "context only, do not assume the user is asking about this unless their message refers to it." P&L drill-down is explicitly out of scope for Phase 1.2 — the P&L canvas view exists in Phase 1.1 as read-only but is not one of the two selectable row types, so P&L line drill-down naturally defers to Phase 2 without needing a separate scope decision. Canvas context is client-ephemeral (sent on each message from Zustand, never persisted server-side in `agent_sessions.state`) to avoid a staleness window and to match how the canvas actually works — the server cannot know what the user clicked. One new exit criterion (#19) tests the over-anchoring failure mode the founder correctly identified with three concrete scenarios: (a) clicked entry + ambiguous question → agent uses the selection, (b) clicked entry + explicit reference to a different entry → agent follows the explicit reference and does not anchor on the stale selection, (c) no click + ambiguous question → agent asks a clarification question rather than guessing from a ghost selection. Phase 2 still owns the full bidirectional UX (hover states, contextual action bar, multi-selection, canvas tabs, P&L drill-down, persistent-across-navigation selection). No migration changes; no impact on any v0.5.3 finding; one Phase 1.1 folder tree addition for the shared type so Phase 1.2 wiring is additive. Estimated ~150 Bible lines.**
 > - **v0.5.3 — Correctness and risk review fixes: Sixteen findings resolved in one commit after back-to-back A (risk hunt) and D (technical correctness) reviews of v0.5.2. A found 10 items (5 Bible changes + 4 inline notes + 1 Phase 1.1 brief addition) — period-lock/ai_actions race, SECURITY DEFINER search_path leak, unenforced service-side authorization, trace_id break at the Claude API boundary, unconstrained Vercel/Supabase region pairing, idempotency key scoping gap, events-table backfill INSERT-only requirement, pnpm-vs-npm lockfile trap in the Phase 1.1 brief, next-intl fallback behavior, and inactive CoA account filtering. D found 11 items (7 Bible changes + 4 inline notes) — period-lock concurrency race (row-lock fix on fiscal_periods), money-as-JavaScript-Number silent rounding, RLS documented on only 3 of 20+ tenant-scoped tables (completed uniformly), events-table TRUNCATE bypass, undocumented multi-currency amount_cad/amount_original/fx_rate invariant (CHECK added), deferred-constraint trigger firing N times per commit (documented and kept in Bible now — not deferred), missing idempotency CHECK constraint for agent source, memberships→auth.users missing ON DELETE CASCADE, unspecified transaction isolation level, events.sequence_number gap warning, and zero-value line decision (**rejected at the database via CHECK — at least one side must be non-zero; a zero-balanced line is an invisible audit-context error worse than a rejected entry**). Full changelog with each finding and its resolution in docs/prompt-history/CHANGELOG.md.**
 > - **v0.5.2 — Readiness review fixes: Three gaps closed after an interactive readiness review of v0.5.1. (1) Part 2 preamble added above the Phase 1.1 Execution Brief disclosing that the brief was drafted against Section 18 default answers, naming the specific questions it silently assumed, and requiring the founder to complete Section 18d before execution. (2) Phase 1.2 exit criteria extended with seven load-bearing tests (#12–18) covering the architectural promises the Bible makes elsewhere but never verified: dry-run→confirm round-trip, anti-hallucination enforcement, ProposedEntryCard render shape, clarification-question path, mid-conversation API failure (behavioral — tests the orphaned-pending-action failure mode, not just the UI state), structured-response trilingual contract, and persona guardrails. (3) Phase 1.3 exit criteria extended with seven load-bearing signals (#7–13) for real-bookkeeping operation: reversal exercised, period lock exercised after real close, backup/restore verified, real GST/HST on a real entry, explicit trust classification with an up-front go/soft-no/hard-no commitment rule, non-English UI walked, and cross-org accidental-visibility check. The v0.5.2 pass was initiated by the founder with the instruction "lets have brainstorm review the plan.md first," scoped to readiness (E) and Phase 1.2/1.3 exit criteria rigor, with two founder-driven reshapes to the original senior review findings (behavioral framing for the API-failure criterion; explicit "Phase 2 does not begin until resolved" rule for hard-no trust answers). The annotation pass on the Phase 1.1 brief's assumption points is tracked separately and applied interactively with founder confirmation of each point.**
 
@@ -2126,6 +2127,144 @@ must also be reachable via the Mainframe — not only by asking the agent.
 | `/[locale]/consolidated/dashboard` | Stub in 1.1 | Role-gated |
 | `/admin/orgs` | 1.1 | Org creation with industry CoA template selection |
 
+### 4g. Canvas Context Injection — Phase 1.2 minimal bidirectional pattern (v0.5.4)
+
+The Bridge's core metaphor is a chat panel that knows what the user is
+looking at in the canvas. Without that, the split-screen layout is two
+unconnected panes sitting next to each other — the exact problem
+Pennylane and Puzzle never solved and which The Bridge is supposed to
+solve structurally. The full bidirectional UX (hover, contextual
+action bar, multi-selection, canvas tabs, persistent-across-navigation
+selection, P&L drill-down) is Phase 2. But a **minimal version** lands
+in Phase 1.2 alongside the initial agent build because the failure
+mode of a disconnected UI in Phase 1.3 real-user testing is a hard-no
+trust classification for UX reasons, which is the wrong reason to
+fail Phase 1.3.
+
+**Three components, nothing more:**
+
+1. A `CanvasContext` TypeScript type.
+2. A Zustand selector that builds a `CanvasContext` snapshot from the
+   current canvas state.
+3. Click handlers on exactly two selectable row types: journal entry
+   rows in the journal entry list view, and chart-of-accounts rows in
+   the CoA view.
+
+Plus two downstream wirings:
+
+4. `canvas_context?: CanvasContext` added as an optional field on
+   `handleUserMessage` input (Section 5b).
+5. A subordinate canvas-context section appended to the system prompt,
+   labeled as *"context only, do not assume the user is asking about
+   this unless their message refers to it."*
+
+**The type:**
+
+```typescript
+// src/shared/types/canvasContext.ts — created empty in Phase 1.1, used in Phase 1.2.
+
+import type { CanvasDirective } from './canvasDirective';
+
+export type SelectedEntity =
+  | { type: 'journal_entry'; id: string; display_name: string }
+  | { type: 'account';       id: string; display_name: string };
+
+export type CanvasContext = {
+  /** The directive currently rendered by ContextualCanvas, verbatim. */
+  current_directive: CanvasDirective;
+
+  /**
+   * The entity the user has clicked on, if any. Undefined means the user
+   * is looking at the canvas but has not clicked any specific row.
+   * Phase 1.2 supports exactly two selection types: journal_entry and
+   * account. Additional types (P&L line drill-down, multi-select, etc.)
+   * are Phase 2.
+   */
+  selected_entity?: SelectedEntity;
+};
+```
+
+**The client-ephemeral rule:** `CanvasContext` is built by the Zustand
+selector at the moment the user sends a message, sent as part of the
+`/api/agent/message` request body, and **not persisted server-side** in
+`agent_sessions.state`. The server never tries to guess what the user
+has clicked; the client always tells it. This is the right choice
+because (a) the server cannot know what the user clicked, (b) it
+avoids a staleness window when the canvas navigates, and (c) it keeps
+`agent_sessions.state` focused on conversation-turn state, not UI
+state.
+
+**The two selection types, exactly:**
+
+| Selection type | Selectable in | `id` references | Phase |
+|---|---|---|---|
+| `journal_entry` | Journal entry list view row click | `journal_entries.journal_entry_id` | 1.2 |
+| `account` | Chart of Accounts view row click | `chart_of_accounts.account_id` | 1.2 |
+| ~~P&L line~~ | P&L canvas view | Aggregation, not a table row | **Phase 2** |
+| ~~Period~~ | Period picker | `fiscal_periods.period_id` | Phase 2 |
+| ~~Vendor~~ | Vendor detail view | `vendors.vendor_id` | Phase 2 |
+
+**Why P&L drill-down is not in Phase 1.2 even though it is the most
+compelling demo:** a P&L line is an aggregation
+(account × period × org), not a row in any table. Its `id` has no
+clean shape — it would need to be a synthetic key encoding the
+dimensions, or a period range plus an account ID, and either choice
+has Phase 2-era data-model implications (intercompany rollup,
+consolidated view across orgs). The cost of designing the
+aggregation-selection schema in Phase 1.2 exceeds the cost of
+deferring the demo until Phase 2, when it can be designed properly
+alongside the AP Agent's other aggregation needs. The two row-based
+selection types (journal entry, account) both map cleanly to existing
+table primary keys and have no open data-model questions.
+
+**The system prompt framing — explicitly subordinate:**
+
+```
+## Current canvas context (reference only)
+
+The user is currently looking at: {current_directive.description}
+
+{#if selected_entity}
+The user has clicked on: {selected_entity.display_name}
+({selected_entity.type}, id: {selected_entity.id})
+{/if}
+
+This context is reference material only. Use it when the user's
+message is ambiguous ("this", "here", "why is it so high") to
+resolve which entity they mean. **Do not assume the user is asking
+about the selected entity or the current canvas unless their message
+refers to it.** If the user sends a message that explicitly names a
+different entity, follow the explicit reference and ignore the
+selection. If the user sends a message with no clear referent and
+nothing is selected, ask a clarifying question rather than guessing
+from a stale selection.
+```
+
+**The over-anchoring failure mode is real and must be tested.** The
+risk of canvas context injection is that the agent over-anchors on
+what is in the canvas and ignores what the user actually typed. The
+subordinate-framing instructions above are the mitigation. The test
+that proves they work is Phase 1.2 exit criterion #19 — see Section 7.
+
+**What the Phase 1.2 implementation touches in Phase 1.1 code:** the
+two canvas components (`JournalEntryListView.tsx`,
+`ChartOfAccountsView.tsx`) get click handlers added in Phase 1.2.
+This is an edit to Phase 1.1 components, not an addition. The
+implicit "Phase 1.2 is purely additive to Phase 1.1" rule was never
+really real — Phase 1.2 also converts `AgentChatPanel.tsx` from
+empty-state to streaming rendering. Canvas context injection joins
+that list of in-place edits.
+
+**What Phase 2 still owns after this lands:**
+- Hover states and a contextual action bar on hover
+- Multi-selection (ctrl-click, shift-click)
+- Canvas tabs with per-tab context
+- P&L line drill-down (the aggregation-selection problem)
+- Persistent-across-navigation selection (the Zustand selector is
+  rebuilt from scratch on canvas navigation in Phase 1.2; Phase 2
+  threads selection through navigation events)
+- Additional selection types beyond `journal_entry` and `account`
+
 ---
 
 ## Section 5 — Agent Architecture (v0.5.0 Phase 1 form)
@@ -2197,18 +2336,31 @@ handles tool calls, returns a response with a canvas directive.
 
 ```typescript
 // src/agent/orchestrator/index.ts (sketch)
+import type { CanvasContext } from '@/shared/types/canvasContext';
+
 export async function handleUserMessage(input: {
   user_id: string;
   org_id: string;
   locale: 'en' | 'fr-CA' | 'zh-Hant';
   message: string;
   session_id?: string;
+  // v0.5.4: client-ephemeral canvas context sent from Zustand on each
+  // message. Not persisted in agent_sessions.state. See Section 4g.
+  canvas_context?: CanvasContext;
 }) {
   const trace_id = crypto.randomUUID();
   const session = await loadOrCreateSession(input);
   const orgContext = await orgContextManager.load(input.org_id);
   const persona = await getPersonaForUser(input.user_id, input.org_id);
-  const systemPrompt = buildSystemPrompt(persona, orgContext, input.locale);
+  // v0.5.4: canvas_context threaded into buildSystemPrompt as a subordinate
+  // context block. Labeled "reference only" — see Section 4g for the exact
+  // framing that prevents over-anchoring.
+  const systemPrompt = buildSystemPrompt(
+    persona,
+    orgContext,
+    input.locale,
+    input.canvas_context,
+  );
 
   let response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
@@ -2319,6 +2471,18 @@ service boundary by Zod validation.
   journal entries.
 - If the agent cannot produce a valid typed value for a required field, it
   must ask the user a clarifying question rather than guess.
+- **v0.5.4 — Canvas context is reference material, never a substitute
+  for tool-retrieved data.** The subordinate canvas-context block in
+  the system prompt (Section 4g) tells the agent what the user is
+  looking at and what they have clicked on. The agent may use this to
+  resolve ambiguous references ("this," "here," "why is it so high")
+  but may NOT use it as a source of financial data. If the user asks
+  "what's the balance of this account?" with an `account` selection,
+  the agent must still call `listChartOfAccounts` or a future balance
+  tool to retrieve the number — it cannot fabricate the balance from
+  context. Canvas context tells the agent *which entity* the user
+  cares about; tool calls tell the agent *what is true about that
+  entity*. The two do not substitute for each other.
 
 ### 5d. Agent Autonomy Model (Hybrid, Trust-Escalating)
 
@@ -2542,6 +2706,24 @@ can also be created via natural language conversation in The Bridge.
 - Org-switch behavior: switching orgs closes the current AgentSession and
   starts a new one
 - Postman collection v1.2: agent message endpoints, idempotency check tests
+- **v0.5.4 — Canvas context injection (minimal bidirectional, Section 4g):**
+  - `src/shared/types/canvasContext.ts` populated with the full type —
+    the empty file was created in Phase 1.1 per the updated Phase 1.1
+    folder tree (Part 2 §3)
+  - Zustand store slice for canvas state with a selector that builds
+    a `CanvasContext` snapshot on each outgoing agent message
+  - Click handlers added in-place to **two existing Phase 1.1 canvas
+    components**: `JournalEntryListView.tsx` (row click → select
+    `journal_entry`) and `ChartOfAccountsView.tsx` (row click → select
+    `account`). P&L drill-down is explicitly **not** in scope — the
+    P&L canvas view remains read-only and non-selectable in Phase 1.2.
+  - `canvas_context?: CanvasContext` added as an optional field on
+    `handleUserMessage` input (Section 5b) and threaded through
+    `buildSystemPrompt()`
+  - System-prompt canvas-context block added per persona with the
+    subordinate "reference only, do not anchor" framing from Section 4g
+  - Canvas context is sent ephemerally on every `/api/agent/message`
+    request from the client; never persisted in `agent_sessions.state`
 
 **Phase 1.2 Exit Criteria:**
 1. Phase 1.1 exit criteria all still pass (regression check).
@@ -2644,6 +2826,59 @@ can also be created via natural language conversation in The Bridge.
     available in this role plus a suggestion to switch roles or contact
     a controller. Sign in as the Controller and AP Specialist and
     verify both can post. Log the three sessions in the friction journal.
+19. **Canvas context injection works without over-anchoring (v0.5.4).**
+    The minimal bidirectional canvas pattern from Section 4g is the
+    most architecturally load-bearing Phase 1.2 feature — if it works,
+    the split-screen metaphor lands on real users; if it over-anchors,
+    the agent feels stupid in exactly the moment users are forming
+    their trust judgment. This criterion tests all three failure modes
+    the subordinate-context framing is supposed to prevent. Run the
+    three scenarios below during real usage of the 20 agent entries
+    from criterion #2. Log each verbatim in the friction journal —
+    exact user message, exact agent response, and a one-line verdict
+    (**works / over-anchored / under-anchored**):
+
+    - **(a) Clicked entry + ambiguous question → agent uses the selection.**
+      Navigate to the journal entry list view. Click any posted
+      journal entry row. In the chat panel, ask an ambiguous
+      follow-up like *"why was this posted?"* or *"what's going on
+      with this one?"* Verify the agent's response references the
+      selected entry by its description, date, or amount — proving
+      the canvas context resolved the ambiguous "this." Expected:
+      **works**. If the agent asks a clarification question despite a
+      clear selection, that is **under-anchored** and a prompt bug.
+
+    - **(b) Clicked entry + explicit reference to a different entry →
+      agent follows the explicit reference.** With the same journal
+      entry still selected from (a), send a message that explicitly
+      names a *different* entry by reference number or date —
+      e.g., *"what about the March 14 rent entry?"* when the
+      selected entry is from a different date. Verify the agent's
+      response is about the entry named in the message, not the
+      selected one. If the agent anchors on the selection and ignores
+      the explicit reference, that is **over-anchored** — the core
+      failure mode this criterion exists to catch. **Over-anchoring
+      is a hard failure for Phase 1.2: the subordinate-context
+      framing in the system prompt must be tuned until the agent
+      passes this scenario.**
+
+    - **(c) No click + ambiguous question → agent asks a clarification
+      question.** Clear the selection by navigating the canvas away
+      and back, or by loading a view that does not auto-select
+      anything. Without clicking any row, send an ambiguous message
+      like *"what's going on with this?"* Verify the agent asks a
+      clarification question naming what it would need to know to
+      answer, rather than guessing from a stale or missing
+      selection. If the agent returns a confident answer about a
+      ghost selection, that is **over-anchored** and fails this
+      criterion regardless of whether (a) and (b) passed.
+
+    **All three scenarios must pass on the same system-prompt
+    configuration.** Tuning the prompt to fix (b) should not regress
+    (a) or (c). Log the final system-prompt snippet that passed all
+    three in `docs/phase1.2-artifacts/canvas-context-prompt.md` for
+    the Phase 1.3 friction journal to reference when debugging
+    selection-related issues in real usage.
 
 ### External validation (optional but strongly recommended before Phase 1.3)
 
@@ -2804,8 +3039,18 @@ Section 2 of PLAN.md. The Bible expectations for Phase 2 are:
 - Intercompany detection and reciprocal entry proposal (Section 6)
 - Flinks bank feed integration (Canadian institutions)
 - Confidence-based routing graph wired to `routing_path` field
-- Bidirectional canvas state
-- Canvas tabs
+- **Full bidirectional canvas UX (v0.5.4 — minimal version now in
+  Phase 1.2; Phase 2 extends):** hover states and a contextual action
+  bar on hover, multi-selection (ctrl-click, shift-click), canvas tabs
+  with per-tab context, P&L line drill-down (the aggregation-selection
+  problem — `selected_entity.type` for an aggregation needs a proper
+  data-model design alongside intercompany rollup), persistent
+  selection across canvas navigation (Phase 1.2 rebuilds the Zustand
+  selector on navigation; Phase 2 threads selection through nav
+  events), and additional selection types beyond `journal_entry` and
+  `account` (period, vendor, bill, invoice, bank transaction).
+- Canvas tabs (subset of the Phase 2 bidirectional canvas work above —
+  listed separately because it has its own per-tab state model)
 
 ### Timeline Reality
 
@@ -4097,6 +4342,7 @@ the-bridge/                              # repo root
         userRole.ts                      # 'executive' | 'controller' | 'ap_specialist'
         proposedEntryCard.ts             # full type — used by component shell (Section 9)
         canvasDirective.ts               # discriminated union (Bible Section 4b)
+        canvasContext.ts                 # v0.5.4 — CanvasContext + SelectedEntity types (Bible §4g). Empty of consumers in 1.1; wired up by the Phase 1.2 agent. Created in Phase 1.1 so Phase 1.2 is purely additive to shared/types/.
 
     components/
       bridge/

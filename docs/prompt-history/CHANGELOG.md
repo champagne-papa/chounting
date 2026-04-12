@@ -8,6 +8,84 @@ and post-hoc review.
 
 ---
 
+## v0.5.4 — Phase 1.2 Canvas Context Injection
+
+**Origin:** Founder-initiated scope decision after review of the Phase
+1.2 canvas story. The argument: the minimal version of bidirectional
+canvas context (canvas → chat, not just chat → canvas) must land in
+Phase 1.2 alongside the initial agent build, not in Phase 2 alongside
+the AP Agent. If it slips to Phase 2, the Phase 1.3 real-user test
+happens on a split-screen UI where the chat and canvas feel like two
+unconnected panes — which is the exact failure mode the product is
+supposed to solve structurally. A hard-no trust classification for UX
+disconnection is the wrong reason to fail Phase 1.3.
+
+**What changed:**
+
+| Bible section | Change |
+|---|---|
+| Version header | v0.5.3 → v0.5.4 |
+| Version history block | New v0.5.4 entry (condensed form) |
+| §4g Canvas Context Injection | **New section.** Defines the `CanvasContext` type, the two Phase 1.2 selection types (`journal_entry`, `account`), the client-ephemeral rule, the subordinate-context framing principle, the in-place edit to Phase 1.1 components in Phase 1.2, and the explicit list of what Phase 2 still owns. |
+| §5b The Orchestrator | `handleUserMessage` input extended with optional `canvas_context?: CanvasContext`; `buildSystemPrompt()` signature extended to take canvas_context. |
+| §5c Anti-Hallucination Rules | New rule: canvas context is reference material only, never a substitute for tool-retrieved data. The agent may use selection to resolve ambiguous references but must still call tools for financial facts. |
+| §7 Phase 1.2 "What is built" | Added the three v0.5.4 components (type, Zustand selector, click handlers on two canvas components) plus the two wirings (orchestrator input field, system-prompt block). |
+| §7 Phase 1.2 Exit Criteria | New criterion #19 — three-scenario over-anchoring test. (a) clicked entry + ambiguous question → uses selection; (b) clicked entry + explicit reference to different entry → follows explicit reference, does not anchor; (c) no click + ambiguous question → asks clarification. All three must pass on the same system-prompt configuration. |
+| §7 Phase 2 expectations | "Bidirectional canvas state" line expanded into an explicit list of what Phase 2 still owns after v0.5.4 lands: hover states, action bar, multi-selection, canvas tabs, P&L drill-down, persistent-across-navigation selection, and additional selection types. |
+| Part 2 Phase 1.1 Brief §3 | Folder tree gets `src/shared/types/canvasContext.ts` added, empty of consumers in Phase 1.1 so the Phase 1.2 wiring is purely additive. |
+
+**Explicitly NOT changed:**
+
+- No `001_initial_schema.sql` changes. Canvas context is a runtime
+  TypeScript/Zustand concern with no SQL footprint.
+- No v0.5.3 finding is re-opened or revised.
+- No new Open Question. The three sharpenings (scope to two row
+  types, over-anchoring test, client-ephemeral rule) are decisions
+  made now, in the Bible, not deferred.
+
+**Scope decisions made and documented:**
+
+1. **Only two selection types in Phase 1.2:** `journal_entry`
+   (from journal entry list view) and `account` (from CoA view).
+   P&L drill-down is explicitly out of scope because a P&L line is
+   an aggregation (account × period × org), not a table row, and
+   the aggregation-selection schema has Phase 2-era data-model
+   implications. This decision did not need a separate discussion
+   because the Phase 1.2 canvas scope already limits interactive
+   views to the journal entry list and CoA view — the P&L canvas
+   view exists in Phase 1.1 as read-only but is naturally not
+   selectable without a new schema.
+
+2. **Client-ephemeral, not server-persisted.** Canvas context is
+   built by the Zustand selector at the moment the user sends a
+   message, sent in the request body, and never stored in
+   `agent_sessions.state`. The server does not try to guess what
+   the user clicked. Rationale: (a) the server cannot know what the
+   user clicked, (b) it avoids a staleness window on canvas
+   navigation, (c) it keeps `agent_sessions.state` focused on
+   conversation-turn state.
+
+3. **Subordinate framing in the system prompt.** The canvas-context
+   block is explicitly labeled as "reference only, do not assume
+   the user is asking about this unless their message refers to
+   it." The over-anchoring risk is mitigated by prompt structure
+   and verified by exit criterion #19 scenario (b).
+
+4. **In-place edit to Phase 1.1 components, not new components.**
+   `JournalEntryListView.tsx` and `ChartOfAccountsView.tsx` — both
+   created in Phase 1.1 — get click handlers added in Phase 1.2.
+   This breaks the implicit "Phase 1.2 is purely additive to Phase
+   1.1" rule, but that rule was never real — Phase 1.2 also
+   converts `AgentChatPanel.tsx` from empty-state to streaming
+   rendering. Canvas context wiring joins the list of Phase 1.2
+   in-place edits.
+
+**Estimated footprint:** ~150 Bible lines; no migration changes;
+one Phase 1.1 folder tree addition (`canvasContext.ts`); no impact
+on any v0.5.3 finding.
+
+---
+
 ## v0.5.3 — Correctness & Risk Review Fixes (16 findings)
 
 **Reviews that produced this version:**
