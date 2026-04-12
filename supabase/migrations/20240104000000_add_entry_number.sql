@@ -24,5 +24,12 @@ FROM (
 ) sub
 WHERE je.journal_entry_id = sub.journal_entry_id;
 
--- NOT NULL and UNIQUE constraint are added in Task 9 after
--- journalEntryService.post is updated to populate entry_number.
+-- NOT NULL and UNIQUE constraint added in Task 9 Phase B after
+-- journalEntryService.post verified to populate entry_number on
+-- every INSERT, and test helpers updated to supply the column.
+ALTER TABLE journal_entries
+  ALTER COLUMN entry_number SET NOT NULL;
+
+ALTER TABLE journal_entries
+  ADD CONSTRAINT unique_entry_number_per_org_period
+  UNIQUE (org_id, fiscal_period_id, entry_number);

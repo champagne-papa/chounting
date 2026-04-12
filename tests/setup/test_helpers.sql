@@ -8,9 +8,19 @@ CREATE OR REPLACE FUNCTION test_post_unbalanced_entry(
 ) RETURNS uuid AS $$
 DECLARE
   v_entry_id uuid;
+  v_next_entry_number bigint;
 BEGIN
-  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source)
-  VALUES (p_org_id, p_period_id, current_date, 'TEST UNBALANCED', 'manual')
+  -- Compute next entry_number (same MAX + 1 pattern as the service).
+  -- Test entries that roll back (deferred constraint rejects unbalanced)
+  -- still need a valid entry_number to pass the NOT NULL constraint
+  -- before the deferred check fires at COMMIT.
+  SELECT COALESCE(MAX(entry_number), 0) + 1
+    INTO v_next_entry_number
+    FROM journal_entries
+    WHERE org_id = p_org_id AND fiscal_period_id = p_period_id;
+
+  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, entry_number)
+  VALUES (p_org_id, p_period_id, current_date, 'TEST UNBALANCED', 'manual', v_next_entry_number)
   RETURNING journal_entry_id INTO v_entry_id;
 
   INSERT INTO journal_lines (journal_entry_id, account_id, debit_amount, amount_original, amount_cad)
@@ -32,9 +42,16 @@ CREATE OR REPLACE FUNCTION test_post_balanced_entry(
 ) RETURNS uuid AS $$
 DECLARE
   v_entry_id uuid;
+  v_next_entry_number bigint;
 BEGIN
-  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source)
-  VALUES (p_org_id, p_period_id, current_date, 'TEST BALANCED', 'manual')
+  -- Compute next entry_number (same MAX + 1 pattern as the service).
+  SELECT COALESCE(MAX(entry_number), 0) + 1
+    INTO v_next_entry_number
+    FROM journal_entries
+    WHERE org_id = p_org_id AND fiscal_period_id = p_period_id;
+
+  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, entry_number)
+  VALUES (p_org_id, p_period_id, current_date, 'TEST BALANCED', 'manual', v_next_entry_number)
   RETURNING journal_entry_id INTO v_entry_id;
 
   INSERT INTO journal_lines (journal_entry_id, account_id, debit_amount, amount_original, amount_cad)

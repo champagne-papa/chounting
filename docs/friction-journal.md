@@ -286,6 +286,44 @@ Categories:
   dry_run required (it has a .default(false)). Fixed by exporting
   Raw types alongside parsed types.
 
+- 2026-04-12 WRONG  Plan Task 9 Phase B: hardcoded entry_number = 1
+  in test helpers collided with Test 5's service-inserted entries.
+  Tests run sequentially (reversalMirror before unbalanced) and
+  share DB state. Test 5 inserts entry_number 1+2 via service;
+  Test 1's helper then tries entry_number = 1 in the same period.
+  UNIQUE violation. Fix: changed helpers to MAX + 1 dynamic
+  computation matching the service pattern. The original assumption
+  "tests don't share state" was wrong — vitest fileParallelism:false
+  means sequential execution, not isolated state. Rolled-back
+  entries don't persist, but committed entries from prior test
+  files do. Future test helper additions: always compute dynamic
+  values for UNIQUE columns, never hardcode.
+
+- 2026-04-12 NOTE   Test 5's "empty reversal_reason" branch was
+  previously testing a service-level rejection. After Task 9
+  Phase A removed the inline schemas, the rejection now happens
+  at the Zod boundary (ZodError, not ServiceError). The test
+  still passes via .toThrow() but is implicitly testing the
+  schema, not the DB CHECK constraint. Task 10 should add a
+  sub-test verifying the DB CHECK independently.
+
+- 2026-04-12 NOTE   In-place edit of migration 004 in Task 9 Phase B
+  is acceptable only because Phase 1.1 has not shipped to any
+  remote environment. After Phase 1.3 deploys to remote Supabase,
+  migration files become append-only. Phase 1.3 brief should
+  formalize this rule.
+
+- 2026-04-12 WANT   z.input<> vs z.infer<> distinction (discovered
+  Task 9 Phase A) deserves to land as a permanent rule in PLAN.md
+  §3a or in ADR-002 when written during post-closeout extraction.
+  Rule: service signatures use z.input<> for parameters, service
+  bodies use z.infer<> after parse.
+
+- 2026-04-12 NOTE   Grep check for deferred-feature rejection
+  strings matched a comment, not code. Tightening the regex risks
+  false negatives. Accept the false positive — manual inspection
+  takes 5 seconds. Phase 1.2 may revisit.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
