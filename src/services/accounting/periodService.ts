@@ -5,7 +5,45 @@ import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
 
+import { ServiceError } from '@/services/errors/ServiceError';
+
+export type FiscalPeriodListItem = {
+  period_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+};
+
 export const periodService = {
+  /**
+   * Lists all open (unlocked) fiscal periods for an org.
+   * Used by the journal entry form's period dropdown.
+   */
+  async listOpen(
+    input: { org_id: string },
+    ctx: ServiceContext,
+  ): Promise<FiscalPeriodListItem[]> {
+    // Authorization: caller must be a member of the requested org.
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
+    const db = adminClient();
+    const { data, error } = await db
+      .from('fiscal_periods')
+      .select('period_id, name, start_date, end_date, is_locked')
+      .eq('org_id', input.org_id)
+      .eq('is_locked', false)
+      .order('start_date', { ascending: true });
+
+    if (error) throw new ServiceError('READ_FAILED', error.message);
+    return (data ?? []) as FiscalPeriodListItem[];
+  },
+
   /**
    * Checks whether the fiscal period covering `entryDate` in `orgId` is open.
    * Returns the period if open, or null if locked / not found.
