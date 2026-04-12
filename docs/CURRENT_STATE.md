@@ -1,20 +1,20 @@
 # Where I am as of 2026-04-13
 
-Phase 1.1 closeout inline block (Tasks 1-11) complete. 15 commits
-on staging branch. 5 test files / 18 integration tests + 3 unit
-test files / 35 unit tests. All green, typecheck clean.
+Phase 12A (inline service extension) complete. journalEntryService
+now has post, list, and get. serviceErrorToStatus helper created.
+Read authorization gap closed.
 
-Next session entry point: Task 12 (Journal Entry API Routes).
-Tasks 12-17 are subagent-driven per hybrid execution plan.
-Re-read spec §15 before writing subagent briefs.
-Task 18 returns to inline mode for final verification.
+Next session entry point: Phase 12B (subagent: create API routes).
+This is the first subagent-driven task. The brief needs:
+- Files to create: src/app/api/orgs/[orgId]/journal-entries/route.ts
+  (POST + GET) and .../[entryId]/route.ts (GET)
+- Do NOT modify files under constraints: src/services/, src/shared/schemas/
+- Service functions to call: journalEntryService.post (via withInvariants),
+  journalEntryService.list (direct), journalEntryService.get (direct)
+- Error helper: src/app/api/_helpers/serviceErrorToStatus.ts
+- Auth: buildServiceContext(req) from src/services/middleware/serviceContext.ts
+- Path convention: /api/orgs/[orgId]/journal-entries[/[entryId]]
+- POST validates URL orgId matches body org_id
 
-Key context:
-- generateMonthlyFiscalPeriods pure function + orgService wiring done
-- orgService wiring NOT test-verified (no integration test for org
-  creation via API route). Phase 1.2 obligation.
-- journalEntryService.ts uses branded types, entry_number MAX+1,
-  entry_type programmatic assignment
-- Supabase analytics disabled in config.toml (logflare workaround)
-- .env.local has standard Supabase demo JWT keys
-- Friction journal has ~40 entries — read last 5 before starting
+Tasks 13-17 remain subagent-driven after 12B.
+Task 18 returns to inline for final verification.
