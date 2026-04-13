@@ -1,14 +1,17 @@
 // src/components/canvas/JournalEntryListView.tsx
 // Empty list canvas view for journal entries.
-// Phase 1.1: shows placeholder since no entries exist yet without the agent.
+// Phase 14B replaces this shell with a real component.
 
 'use client';
 
+import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
+
 interface Props {
   orgId: string;
+  onNavigate: CanvasNavigateFn;
 }
 
-export function JournalEntryListView({ orgId: _orgId }: Props) {
+export function JournalEntryListView({ orgId: _orgId, onNavigate: _onNavigate }: Props) {
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4">Journal Entries</h2>

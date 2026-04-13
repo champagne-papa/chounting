@@ -22,3 +22,9 @@ export type CanvasDirective =
   | { type: 'bank_reconciliation'; accountId: string }
   | { type: 'ar_aging'; orgId: string }
   | { type: 'consolidated_dashboard' };
+
+/** Callback type for canvas directive navigation. Used by components
+ *  that need to trigger directive changes (e.g., list → detail,
+ *  form → list on success). Standardized to prevent type drift
+ *  across navigating components. */
+export type CanvasNavigateFn = (directive: CanvasDirective) => void;

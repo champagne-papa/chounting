@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { CanvasDirective } from '@/shared/types/canvasDirective';
+import type { CanvasDirective, CanvasNavigateFn } from '@/shared/types/canvasDirective';
 import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
@@ -72,20 +72,20 @@ export function ContextualCanvas({ directive, onDirectiveChange }: Props) {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {renderDirective(history[historyIndex])}
+        {renderDirective(history[historyIndex], onDirectiveChange)}
       </div>
     </main>
   );
 }
 
-function renderDirective(d: CanvasDirective) {
+function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
   switch (d.type) {
     case 'chart_of_accounts':
       return <ChartOfAccountsView orgId={d.orgId} />;
     case 'journal_entry_list':
-      return <JournalEntryListView orgId={d.orgId} />;
+      return <JournalEntryListView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'journal_entry_form':
-      return <JournalEntryForm orgId={d.orgId} />;
+      return <JournalEntryForm orgId={d.orgId} onNavigate={onNavigate} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

@@ -17,6 +17,7 @@ import {
   oneRate,
   type MoneyAmount,
 } from '@/shared/schemas/accounting/money.schema';
+import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
 
 // ---------------------------------------------------------------------------
 // Form schema (UI shape — intentionally different from PostJournalEntryInputSchema)
@@ -110,10 +111,11 @@ function formStateToServiceInput(
 
 type JournalEntryFormProps = {
   orgId: string;
+  onNavigate: CanvasNavigateFn;
   prefill?: Record<string, unknown>; // Reserved for Task 15 reversal; ignored in Task 13
 };
 
-export function JournalEntryForm({ orgId }: JournalEntryFormProps) {
+export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
   const [periods, setPeriods] = useState<FiscalPeriod[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
@@ -242,9 +244,9 @@ export function JournalEntryForm({ orgId }: JournalEntryFormProps) {
         return;
       }
 
-      const result = await response.json();
-      console.log('Journal entry posted:', result);
-      // TODO: navigate canvas to journal_entry_list after Task 14 exists
+      await response.json();
+      form.reset();
+      onNavigate({ type: 'journal_entry_list', orgId });
     } catch {
       setFormError('An unexpected error occurred. Please try again.');
     } finally {
