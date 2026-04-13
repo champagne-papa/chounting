@@ -271,10 +271,10 @@ export type JournalEntryDetail = {
     amount_cad: string;
     fx_rate: string;
     tax_code_id: string | null;
-    chart_of_accounts: Array<{
+    chart_of_accounts: {
       account_code: string;
       account_name: string;
-    }>;
+    } | null;
   }>;
 };
 
@@ -356,7 +356,11 @@ async function get(
   if (error) throw new ServiceError('READ_FAILED', error.message);
   if (!entry) throw new ServiceError('NOT_FOUND', 'Journal entry not found');
 
-  return entry as JournalEntryDetail;
+  // PostgREST returns chart_of_accounts as a single object for many-to-one
+  // FK relationships, but Supabase's generated types model it as an array.
+  // The runtime shape is { account_code, account_name }, not [{ ... }].
+  // Double assertion bridges the Supabase type → our JournalEntryDetail type.
+  return entry as unknown as JournalEntryDetail;
 }
 
 export const journalEntryService = {

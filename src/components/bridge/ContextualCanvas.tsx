@@ -12,6 +12,7 @@ import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
 import { ProposedEntryCard } from '@/components/ProposedEntryCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
+import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 
 interface Props {
   directive: CanvasDirective;
@@ -86,6 +87,8 @@ function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
       return <JournalEntryListView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'journal_entry_form':
       return <JournalEntryForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'journal_entry':
+      return <JournalEntryDetailView orgId={d.orgId} entryId={d.entryId} onNavigate={onNavigate} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':
@@ -96,7 +99,6 @@ function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
       );
 
     // Phase 2+ directive types — render placeholder
-    case 'journal_entry':
     case 'reversal_form':
     case 'ai_action_review_queue':
     case 'report_pl':
