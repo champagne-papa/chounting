@@ -12,7 +12,7 @@ export const MoneyAmountSchema = z
   .string()
   .regex(
     /^-?\d{1,16}(\.\d{1,4})?$/,
-    'MoneyAmount must match /^-?\\d{1,16}(\\.\\d{1,4})?$/',
+    'Must be a valid amount (up to 4 decimal places)',
   )
   .transform((v) => v as MoneyAmount);
 
@@ -20,7 +20,7 @@ export const FxRateSchema = z
   .string()
   .regex(
     /^-?\d{1,12}(\.\d{1,8})?$/,
-    'FxRate must match /^-?\\d{1,12}(\\.\\d{1,8})?$/',
+    'Must be a valid rate (up to 8 decimal places)',
   )
   .transform((v) => v as FxRate);
 
