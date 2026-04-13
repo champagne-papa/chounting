@@ -261,6 +261,7 @@ export type JournalEntryDetail = {
   reversal_reason: string | null;
   created_at: string;
   created_by: string | null;
+  reversed_by: { entry_id: string; entry_number: number } | null;
   journal_lines: Array<{
     journal_line_id: string;
     account_id: string;
@@ -375,11 +376,22 @@ async function get(
   if (error) throw new ServiceError('READ_FAILED', error.message);
   if (!entry) throw new ServiceError('NOT_FOUND', 'Journal entry not found');
 
+  // Check if this entry has been reversed
+  const { data: reversingEntry } = await db
+    .from('journal_entries')
+    .select('journal_entry_id, entry_number')
+    .eq('reverses_journal_entry_id', input.journal_entry_id)
+    .maybeSingle();
+
+  const reversed_by = reversingEntry
+    ? { entry_id: reversingEntry.journal_entry_id, entry_number: reversingEntry.entry_number }
+    : null;
+
   // PostgREST returns chart_of_accounts as a single object for many-to-one
   // FK relationships, but Supabase's generated types model it as an array.
   // The runtime shape is { account_code, account_name }, not [{ ... }].
   // Double assertion bridges the Supabase type → our JournalEntryDetail type.
-  return entry as unknown as JournalEntryDetail;
+  return { ...(entry as unknown as JournalEntryDetail), reversed_by };
 }
 
 export const journalEntryService = {
