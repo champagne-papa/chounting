@@ -377,10 +377,15 @@ async function get(
   if (!entry) throw new ServiceError('NOT_FOUND', 'Journal entry not found');
 
   // Check if this entry has been reversed
+  // maybeSingle() would throw if multiple reversals exist for the same entry
+  // (the service allows reversal of already-reversed entries). Use limit(1)
+  // with descending order to get the most recent reversal.
   const { data: reversingEntry } = await db
     .from('journal_entries')
     .select('journal_entry_id, entry_number')
     .eq('reverses_journal_entry_id', input.journal_entry_id)
+    .order('entry_number', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   const reversed_by = reversingEntry
