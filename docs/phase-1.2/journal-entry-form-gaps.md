@@ -32,6 +32,14 @@ Phase 1.1's JournalEntryForm.tsx.
 - Choose Template / Make Recurring — Phase 2+ automation per §18
   deferred items (Q23 recurring entries)
 
+## UX fixes (quick wins for Phase 1.2)
+- MoneyAmount validation error leaks regex to user. Fix: already applied
+  in Phase 15B (custom message in money.schema.ts). Audit FxRate and
+  any other branded type schemas for similar missing custom messages.
+- Fiscal Period dropdown "Select a period..." is a selectable option
+  instead of a disabled placeholder. Fix: `<option disabled value="">`.
+  Affects both JournalEntryForm and ReversalForm period dropdowns.
+
 ## Phase 2+ features (not for Phase 1.2)
 - Accrual vs Cash reporting method toggle
 - Transaction Type categorization (beyond entry_type enum)

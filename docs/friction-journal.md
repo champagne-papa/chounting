@@ -598,6 +598,37 @@ Categories:
   makes JOINs harder than separate queries. Phase 1.2 optimization
   candidate if query latency becomes noticeable.
 
+- 2026-04-17 WRONG  Third closeout bug in "typecheck passes, runtime
+  shape doesn't match" category. Phase 13B: form.watch vs useWatch
+  (React re-render). Phase 14B: chart_of_accounts array-vs-object
+  (PostgREST embed). Phase 15B: MoneyAmount number-vs-string
+  (Supabase Postgres driver serializes NUMERIC as JS numbers).
+  Each only caught during user-executed smoke test. Pattern: type
+  casts provide compile-time safety but zero runtime enforcement.
+  Every external-system boundary needs explicit runtime shaping.
+  Fix: toMoneyAmount/toFxRate coercion at service boundaries.
+
+- 2026-04-17 NOTE   JournalEntryDetail.journal_lines[] types use
+  plain string instead of MoneyAmount/FxRate branded types. The
+  as MoneyAmount casts in consumers can't be removed without
+  narrowing the service return type. Post-15B.3, the casts are
+  truthful (runtime values are canonical strings) instead of lies
+  (coercing numbers). Phase 1.2 type-narrowing refactor scope.
+
+- 2026-04-17 NOTE   Fourth consecutive subagent task (Phase 15B)
+  zero structural drift on 28-point review. All four runtime bugs
+  (13B useWatch, 14B.1 chart_of_accounts, 15B money type) came
+  from brief-author runtime assumptions, not subagent execution.
+  The brief-writing step is the quality bottleneck.
+
+- 2026-04-17 NOTE   Adversarial test of JournalEntryForm submitting
+  empty form surfaced UX bug: MoneyAmount regex leaks to user
+  ("MoneyAmount must match /^-?\\d{1,16}..."). Fixed in Phase 15B
+  commit: custom message "Must be a valid amount (up to 4 decimal
+  places)". Also: fiscal period dropdown placeholder is selectable
+  instead of disabled. Both latent since Phase 13B — only caught
+  now during adversarial testing. Phase 1.2 form UX pass scope.
+
 - 2026-04-17 NOTE   Phase 15A uses the current service contract where
   client sends mirrored lines and service validates. Alternative:
   service-computes-mirror on just the source entry ID. Simpler
