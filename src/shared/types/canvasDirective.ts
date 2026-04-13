@@ -13,6 +13,7 @@ export type CanvasDirective =
   | { type: 'ai_action_review_queue'; orgId: string }
   | { type: 'report_pl'; orgId: string; from: string; to: string }
   | { type: 'report_trial_balance'; orgId: string; periodId?: string }
+  | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'none' }
 
   // Phase 2+ stubs — directive type defined now, canvas component is a

@@ -97,6 +97,7 @@ function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
 
     // Phase 2+ directive types — render placeholder
     case 'journal_entry':
+    case 'reversal_form':
     case 'ai_action_review_queue':
     case 'report_pl':
     case 'report_trial_balance':
