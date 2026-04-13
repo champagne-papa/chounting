@@ -14,6 +14,11 @@ import {
   type ReversalInputRaw,
   type ReversalInput,
 } from '@/shared/schemas/accounting/journalEntry.schema';
+import {
+  addMoney,
+  zeroMoney,
+  type MoneyAmount,
+} from '@/shared/schemas/accounting/money.schema';
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
@@ -238,6 +243,8 @@ export type JournalEntryListItem = {
   entry_type: string;
   reverses_journal_entry_id: string | null;
   created_at: string;
+  total_debit: MoneyAmount;
+  total_credit: MoneyAmount;
 };
 
 export type JournalEntryDetail = {
@@ -281,6 +288,8 @@ async function list(
   }
 
   const db = adminClient();
+
+  // Step 1: Fetch journal entries (header data)
   let query = db
     .from('journal_entries')
     .select('journal_entry_id, entry_number, entry_date, description, source, entry_type, reverses_journal_entry_id, created_at')
@@ -291,9 +300,36 @@ async function list(
     query = query.eq('fiscal_period_id', input.fiscal_period_id);
   }
 
-  const { data, error } = await query;
-  if (error) throw new ServiceError('READ_FAILED', error.message);
-  return (data ?? []) as JournalEntryListItem[];
+  const { data: entries, error: entriesError } = await query;
+  if (entriesError) throw new ServiceError('READ_FAILED', entriesError.message);
+  if (!entries || entries.length === 0) return [];
+
+  // Step 2: Fetch lines for those entries in one round trip
+  const entryIds = entries.map((e) => e.journal_entry_id);
+  const { data: lines, error: linesError } = await db
+    .from('journal_lines')
+    .select('journal_entry_id, debit_amount, credit_amount')
+    .in('journal_entry_id', entryIds);
+  if (linesError) throw new ServiceError('READ_FAILED', linesError.message);
+
+  // Step 3: Aggregate totals per entry using branded money helpers
+  const totalsByEntryId = new Map<string, { debit: MoneyAmount; credit: MoneyAmount }>();
+  for (const entryId of entryIds) {
+    totalsByEntryId.set(entryId, { debit: zeroMoney(), credit: zeroMoney() });
+  }
+  for (const line of lines ?? []) {
+    const totals = totalsByEntryId.get(line.journal_entry_id);
+    if (!totals) continue;
+    totals.debit = addMoney(totals.debit, line.debit_amount as MoneyAmount);
+    totals.credit = addMoney(totals.credit, line.credit_amount as MoneyAmount);
+  }
+
+  // Step 4: Merge totals into entries
+  return entries.map((e) => ({
+    ...e,
+    total_debit: totalsByEntryId.get(e.journal_entry_id)?.debit ?? zeroMoney(),
+    total_credit: totalsByEntryId.get(e.journal_entry_id)?.credit ?? zeroMoney(),
+  })) as JournalEntryListItem[];
 }
 
 async function get(
