@@ -39,6 +39,10 @@ Phase 1.1's JournalEntryForm.tsx.
 - Fiscal Period dropdown "Select a period..." is a selectable option
   instead of a disabled placeholder. Fix: `<option disabled value="">`.
   Affects both JournalEntryForm and ReversalForm period dropdowns.
+- Fiscal Period dropdown defaults to an arbitrary month instead of the
+  period matching the entry_date. Fix: compute default by finding the
+  period whose start_date <= entry_date <= end_date. Discovered during
+  Task 17 smoke test (seed creates 12 monthly periods, not "FY Current").
 
 ## Phase 2+ features (not for Phase 1.2)
 - Accrual vs Cash reporting method toggle

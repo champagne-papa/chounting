@@ -689,3 +689,37 @@ Categories:
   expectations. Same underlying cause as the entry_number collision
   in Phase 12A (WRONG entry from 2026-04-12) — vitest sequential
   execution shares committed state.
+
+- 2026-04-13 NOTE   Seed creates 12 monthly fiscal periods per org
+  (January 2026 through December 2026), not "FY Current" as assumed
+  throughout Phase 15. JournalEntryForm period dropdown defaults to
+  an arbitrary month rather than the period matching entry_date.
+  Phase 1.2 form UX fix: compute default period by finding the
+  period whose start_date <= entry_date <= end_date.
+
+- 2026-04-13 WRONG  Task 17 smoke test revealed: seeded auth users
+  don't have memberships in seeded orgs after pnpm db:seed:all.
+  pnpm db:seed:auth creates users, pnpm db:seed creates orgs and
+  memberships, but the membership INSERT uses hardcoded UUIDs that
+  match the seed user UUIDs. The actual issue is that each smoke
+  test session requires creating a new org via the form because
+  prior session state doesn't persist across db:reset. This is
+  working-as-designed but confusing. Phase 1.2: document the
+  smoke test setup sequence explicitly in CURRENT_STATE.md.
+
+- 2026-04-13 NOTE   Fifth consecutive zero-drift subagent task
+  (Phase 17B). Pattern validated across every UI complexity tier:
+  mechanical routes (12B), complex forms (13B), navigation views
+  (14B), specialized forms (15B), dual report views (17B). The
+  subagent's _onNavigate idiom for unused props was a defensible
+  local improvement not specified in the brief. Brief-writing
+  quality remains the bottleneck — all runtime bugs in the closeout
+  came from brief-author assumptions, never from subagent execution.
+
+- 2026-04-13 NOTE   P&L net income spec formula (revenue.credit -
+  expense.debit) is wrong for the reversal case chosen in Q21(a).
+  The correct formula is (rev.credit - rev.debit) - (exp.debit -
+  exp.credit), accounting for reversal debits on revenue accounts
+  and reversal credits on expense accounts. Task 17 implements the
+  correct formula. The simplified formula would report wrong net
+  income whenever a reversed entry exists in the filtered period.
