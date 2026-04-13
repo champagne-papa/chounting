@@ -7,6 +7,8 @@ import {
   eqMoney,
   zeroMoney,
   oneRate,
+  toMoneyAmount,
+  toFxRate,
   type MoneyAmount,
   type FxRate,
 } from '@/shared/schemas/accounting/money.schema';
@@ -88,5 +90,45 @@ describe('Money arithmetic', () => {
 
   it('oneRate returns correct format', () => {
     expect(oneRate()).toBe('1.00000000');
+  });
+});
+
+describe('toMoneyAmount (DB boundary coercion)', () => {
+  it('coerces number to 4-decimal string', () => {
+    expect(toMoneyAmount(100)).toBe('100.0000');
+  });
+
+  it('coerces string to canonical 4-decimal format', () => {
+    expect(toMoneyAmount('100')).toBe('100.0000');
+    expect(toMoneyAmount('100.5')).toBe('100.5000');
+  });
+
+  it('is idempotent on already-correct input', () => {
+    expect(toMoneyAmount('0.0000')).toBe('0.0000');
+    expect(toMoneyAmount('100.1234')).toBe('100.1234');
+  });
+
+  it('handles zero correctly (matches zeroMoney)', () => {
+    expect(toMoneyAmount(0)).toBe('0.0000');
+    expect(toMoneyAmount(0)).toBe(zeroMoney());
+  });
+
+  it('rounds to 4 decimal places (half-up)', () => {
+    expect(toMoneyAmount('100.12345')).toBe('100.1235');
+  });
+});
+
+describe('toFxRate (DB boundary coercion)', () => {
+  it('coerces number to 8-decimal string', () => {
+    expect(toFxRate(1)).toBe('1.00000000');
+    expect(toFxRate(1.5)).toBe('1.50000000');
+  });
+
+  it('is idempotent on already-correct input', () => {
+    expect(toFxRate('1.00000000')).toBe('1.00000000');
+  });
+
+  it('matches oneRate for value 1', () => {
+    expect(toFxRate(1)).toBe(oneRate());
   });
 });
