@@ -30,12 +30,7 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
       case 'journals':
         return onNavigate({ type: 'journal_entry_list', orgId });
       case 'pl':
-        return onNavigate({
-          type: 'report_pl',
-          orgId,
-          from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
-          to: new Date().toISOString().slice(0, 10),
-        });
+        return onNavigate({ type: 'report_pl', orgId });
       case 'actions':
         return onNavigate({ type: 'ai_action_review_queue', orgId });
     }
