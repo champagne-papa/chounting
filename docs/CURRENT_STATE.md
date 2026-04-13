@@ -1,32 +1,22 @@
-# Where I am as of 2026-04-14 (Phase 13A complete)
+# Where I am as of 2026-04-15
 
-Phase 13A (inline data-source prep) complete. All data sources the
-form needs now exist as API routes:
+Phase 13B (JournalEntryForm component) committed. Second subagent task,
+zero drift on 32-point review. Manual smoke test still needed.
 
-- /api/orgs/[orgId]/journal-entries — POST + GET (Task 12B)
-- /api/orgs/[orgId]/journal-entries/[entryId] — GET (Task 12B)
-- /api/orgs/[orgId]/chart-of-accounts — GET (migrated in 13A)
-- /api/orgs/[orgId]/fiscal-periods — GET (new in 13A)
-- /api/tax-codes — GET (new in 13A, flat path for shared data)
+BEFORE starting Task 14: run the deferred smoke test.
+1. pnpm dev
+2. Sign in as controller@thebridge.local / DevSeed!Controller#2
+3. Trigger journal_entry_form directive (via dev tools or temp button)
+4. Verify: form renders, 3 dropdowns populate, running balance updates
+5. If it works: proceed to Task 14
+6. If it fails: diagnose — could be Phase 12A/12B route issue or
+   Phase 13A data-source issue, not necessarily a form bug
 
-react-hook-form + @hookform/resolvers installed.
-report_trial_balance directive type added to canvasDirective.ts.
+Next task: Task 14 (Journal Entry List + Detail Views).
+Subagent-driven. The list view already exists as a shell
+(JournalEntryListView.tsx) that needs replacing with a real component.
+The detail view (JournalEntryDetailView.tsx) is new. Both consume the
+Phase 12B journal-entries API routes.
 
-Next session entry point: Phase 13B (subagent: JournalEntryForm component).
-Brief structure: literal code for interfaces (props, state shape, API
-calls, directive type), descriptive for behaviors (validation, submit
-flow, error display), surgical modifications for existing files.
-
-Files to create: src/components/canvas/JournalEntryForm.tsx
-Files to modify (surgically):
-  - ContextualCanvas.tsx: change journal_entry_form case from
-    ComingSoonPlaceholder to real JournalEntryForm
-  - MainframeRail.tsx: NO changes (form reachability is Task 14's
-    "New Entry" button in the list view)
-
-Key spec sections: §15.4 (form fields, schema split, submit flow)
-Key patterns: useFieldArray, zodResolver, formStateToServiceInput
-transform, MoneyAmount branded types for amounts.
-
-Tasks 14-17 remain subagent-driven after 13B.
+Tasks 15-17 remain subagent-driven after 14.
 Task 18 returns to inline for final verification.

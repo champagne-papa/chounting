@@ -453,6 +453,32 @@ Categories:
   typecheck failed on stale cached types. Fix: rm -rf .next before
   typecheck. Worth remembering when deleting or moving route files.
 
+- 2026-04-15 NOTE   Second subagent task (Phase 13B — form component)
+  produced zero drift on a 32-point review checklist. The literal-for-
+  interfaces, descriptive-for-behaviors brief structure worked for a
+  component significantly more complex than Phase 12B's routes (~494
+  lines vs ~100 lines). The brief's literal code blocks (schema,
+  running balance, submit handler, formStateToServiceInput, balance
+  indicator render) were copied exactly. Descriptive sections (layout,
+  styling) were interpreted correctly within the constraints. Two
+  subagent decisions (type-safe setError path, bare catch) were
+  improvements over the brief. The brief structure is validated for
+  complex UI components, not just mechanical route adapters.
+
+- 2026-04-15 NOTE   Phase 13B smoke test deferred. Subagent couldn't
+  run browser (CLI context). Form is typecheck-verified, 32 review
+  checks pass, ContextualCanvas modification matches brief's literal
+  before/after diff. Manual smoke test in next session before
+  proceeding to Task 14. If form doesn't render, the bug is likely
+  in the data-fetching layer (Phase 13A routes) not the form itself.
+
+- 2026-04-15 NOTE   Plan Task 13 had four spec/decision conflicts at
+  brief-writing time. All resolved during pre-check rather than
+  during execution: POST URL stale, submit scope underspecified,
+  MainframeRail changes removed, success navigation target updated.
+  Lesson: plan documents are snapshots, not canonical sources, once
+  execution surfaces drift.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
