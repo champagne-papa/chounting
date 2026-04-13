@@ -25,6 +25,16 @@ This prompt is part of a recurring audit practice (see DESIGN.md).
 It runs at the end of every major phase. The orientation pass is
 the first phase and shapes everything downstream.
 
+**Audit scope:** This audit is cumulative. The codebase at end of
+Phase 1.1 includes everything from Phase 0 (foundation: schemas,
+migrations, auth, RLS, multi-tenant routing, UI shell, test
+infrastructure, i18n) and Phase 1.1 (manual journal entry path:
+create, list, detail, reverse, chart of accounts view, P&L and
+Trial Balance reports, service layer, API routes). Both phases are
+in scope. The distinction between "Phase 0 work" and "Phase 1.1
+work" is not audit-relevant — you are assessing the full codebase
+as it exists today, not evaluating the phases separately.
+
 **Project:** The Bridge (chounting) — an AI-native accounting
 platform for a Canadian family office. Next.js + Supabase +
 Claude API. Multi-tenant, double-entry bookkeeping, agent-driven.
@@ -78,6 +88,15 @@ file builds on the previous one's context.
 ### Tier 4: Prior decisions (read if referenced)
 12. `docs/decisions/0001-reversal-semantics.md` — ADR on reversal
     placement
+
+### Tier 5: Known concerns (read after Tier 2)
+13. `docs/audits/phase-{X}/known-concerns.md` — if it exists for
+    the current phase's audit directory, read it. This file contains
+    specific concerns identified during the build phase that have
+    prior evidence of risk. Generate hypotheses targeting these
+    specifically, and ensure category scanners investigate them.
+    These are not the only concerns — generate additional hypotheses
+    beyond what the known-concerns file lists.
 
 ## What to look for
 

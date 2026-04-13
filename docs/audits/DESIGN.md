@@ -250,6 +250,35 @@ Phase 1.2+ adds `comparison-to-prior-audits.md` alongside
 
 ---
 
+## Scope of a Single Audit
+
+Audits are always cumulative — the scope is the codebase as it
+exists at the audit checkpoint. Phase-named directories (phase-1.1/,
+phase-1.2/) indicate when the audit ran, not what was audited.
+Each audit includes everything in the codebase at its checkpoint,
+regardless of which phase produced it. This prevents audits from
+becoming archaeological exercises about obsoleted states.
+
+### Pre-execution artifact: known-concerns.md
+
+Before each audit runs, a `known-concerns.md` file is drafted in
+the phase's audit directory (e.g., `docs/audits/phase-1.1/known-concerns.md`).
+This file contains specific concerns identified during the build
+phase that have prior evidence of risk — things discovered in the
+friction journal, smoke tests, or session diagnostics that weren't
+fully resolved.
+
+The orientation agent reads this file and generates hypotheses
+targeting these concerns specifically. Category scanners investigate
+them deeply. The known-concerns file is prior-evidence injection,
+not the only source of hypotheses — the orientation agent generates
+additional hypotheses beyond what the file lists.
+
+The file is a standard per-phase pre-execution artifact. Each phase
+drafts its own version before its audit runs.
+
+---
+
 ## Constraints
 
 These apply to every audit execution regardless of phase:

@@ -25,6 +25,11 @@ Claude API. Multi-tenant, double-entry bookkeeping, agent-driven.
 **Phase:** End of Phase 1.1. Manual journal entry path complete.
 Phase 1.2 (agent integration) is next.
 
+**Audit scope:** This audit is cumulative. The codebase includes
+everything from Phase 0 (foundation) and Phase 1.1 (manual journal
+entry path). Both are in scope. Assess the full codebase as it
+exists today, not the phases separately.
+
 **Your category:** Code Quality & Maintainability
 
 **Audit framework:** See `docs/audits/DESIGN.md` for the full
