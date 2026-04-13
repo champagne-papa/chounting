@@ -548,6 +548,41 @@ Categories:
   Same 13A-style pattern: pre-check surfaces missing infrastructure,
   inline phase builds it, subagent consumes it.
 
+- 2026-04-16 WRONG  Phase 14A.2 typed chart_of_accounts as
+  Array<{...}> to match Supabase's generated database types.
+  PostgREST runtime returns many-to-one FK embeds as a single
+  object, not an array. Typecheck passed (Array<{...}> accepts
+  empty arrays), but runtime access via [0]?.account_code resolved
+  to undefined. Caught during Phase 14B smoke test: accounts
+  rendered as "— — Unknown." Fixed: type changed to single object
+  | null, cast through unknown in service. Lesson: Supabase's
+  generated types model FK relationships as arrays regardless of
+  cardinality; PostgREST flattens many-to-one to single objects.
+  When generated type and runtime shape differ, runtime wins.
+  Second closeout bug in this category (Phase 13B's form.watch
+  was the first): "passes typecheck but runtime contract doesn't
+  match what the type claims."
+
+- 2026-04-16 NOTE   Third consecutive subagent task (Phase 14B)
+  produced zero drift on a 31-point review. Literal-for-interfaces,
+  descriptive-for-behaviors brief structure validated across three
+  complexity levels: mechanical routes (12B), complex forms (13B),
+  navigation-coupled views (14B). The one runtime bug came from
+  the brief author's Phase 14A.2 type error, not the subagent.
+
+- 2026-04-16 NOTE   Task 14 smoke test surfaced UX gap: list view
+  shows no indicator that an entry has been reversed by another
+  entry. JournalEntryListItem has no reversed_by_entry_id field.
+  Deferred to Task 15 — requires service query change (LEFT JOIN)
+  and list view visual treatment. Task 15 scope should include
+  this alongside the actual reversal form.
+
+- 2026-04-16 NOTE   Task 14 list view UX: entries from multiple
+  fiscal periods all show entry_number starting from 1. Looks like
+  duplicate IDs without period context. Not a bug (unique per
+  org+period by design) but needs a Period column or contextual
+  numbering like "#1 (Apr 2026)". Phase 1.2 design doc scope.
+
 - 2026-04-16 NOTE   CanvasNavigateFn standardized callback type
   added to canvasDirective.ts. Prevents type drift across
   navigating components. Every component that needs to change the
