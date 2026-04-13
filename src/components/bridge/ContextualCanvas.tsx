@@ -11,6 +11,7 @@ import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
 import { ProposedEntryCard } from '@/components/ProposedEntryCard';
+import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 
 interface Props {
   directive: CanvasDirective;
@@ -83,6 +84,8 @@ function renderDirective(d: CanvasDirective) {
       return <ChartOfAccountsView orgId={d.orgId} />;
     case 'journal_entry_list':
       return <JournalEntryListView orgId={d.orgId} />;
+    case 'journal_entry_form':
+      return <JournalEntryForm orgId={d.orgId} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':
@@ -94,7 +97,6 @@ function renderDirective(d: CanvasDirective) {
 
     // Phase 2+ directive types — render placeholder
     case 'journal_entry':
-    case 'journal_entry_form':
     case 'ai_action_review_queue':
     case 'report_pl':
     case 'report_trial_balance':
