@@ -514,6 +514,23 @@ Categories:
   actual seed uses DevSeed!Controller#1. All seed passwords end
   in #1. Corrected in CURRENT_STATE.md.
 
+- 2026-04-15 NOTE   Phase 13B.1 useWatch fix verified in browser
+  after dev server restart. Balance indicator updates reactively
+  as amounts are typed — shows "Debits: 100.0000 / Credits:
+  100.0000" in green for balanced, updates correctly across
+  multiple orgs (Bridge Holding Co, PC & Friends), clears back
+  to "—" when amounts are invalidated. Fix is genuinely complete,
+  not just typecheck-complete.
+
+- 2026-04-15 WRONG  rm -rf .next while dev server is running
+  causes Internal Server Error on next request — server references
+  deleted vendor chunks in memory. Second occurrence in closeout
+  (first: Phase 13A delete-route-file). Rule: kill dev server
+  before clearing .next, or restart immediately after. The error
+  message ("ENOENT: vendor-chunks/@supabase+auth-js") looks like
+  a code bug but is actually a cache-invalidation infrastructure
+  issue. Don't misdiagnose.
+
 - 2026-04-15 NOTE   Phase 1.2 form gap analysis captured in
   docs/phase-1.2/journal-entry-form-gaps.md. Compared against
   Zoho Books New Journal form during smoke test. Key gaps:
