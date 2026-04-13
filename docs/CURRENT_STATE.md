@@ -1,33 +1,38 @@
-# Where I am as of 2026-04-17 (Phase 15A complete)
+# Where I am as of 2026-04-17 (Task 15 complete)
 
-Phase 15A (inline, 5 commits):
-1. mirrorLines pure helper + 6 unit tests
-2. reversed_by in JournalEntryListItem (separate query, Option Q)
-3. reversed_by in JournalEntryDetail (separate query)
-4. List view "Reversed" indicator (opacity-60 + badge)
-5. Detail view Reverse button disabled when already reversed
+Phase 15A (inline, 7 commits): mirrorLines helper + tests,
+reversed_by in list + detail types/services, list visual indicator,
+detail button disabling, .maybeSingle crash fix, fiscal_period embed.
 
-Next: Phase 15B (subagent: ReversalForm component).
-The form:
-- Fetches source entry via GET /api/orgs/${orgId}/journal-entries/${sourceEntryId}
-- Calls mirrorLines on source entry's lines → read-only preview
-- User edits only: entry_date (default today) and reversal_reason (required)
-- ReversalFormSchema validates ONLY user-editable fields
-- reversalFormStateToServiceInput combines form state + locked mirrored
-  lines + original entry ID + current period → ReversalInput
-- POSTs to /api/orgs/${orgId}/journal-entries (same endpoint, discriminated
-  union routing on reverses_journal_entry_id)
-- Period gap banner: non-dismissible yellow warning when reversal period
-  differs from original entry's period
-- Success: navigate to detail view of the NEW reversal entry
-- ContextualCanvas: move reversal_form from Phase 2+ group to dedicated
-  case rendering ReversalForm
+Phase 15B (subagent, 1 commit + 4 runtime fix commits):
+- ReversalForm.tsx: fetches source entry, mirrors lines via helper,
+  collects period/date/reason, posts through reversal discriminated
+  union, navigates to new reversal's detail on success.
+- ContextualCanvas: reversal_form case moved to dedicated render.
+- Runtime verified: Entry #9 → Reverse → Entry #16 round-trip works.
 
-Key interfaces:
-- reversal_form directive: { type: 'reversal_form'; orgId: string; sourceEntryId: string }
-- mirrorLines: imported from journalEntry.schema.ts
-- ReversalInputSchema: requires lines array + reverses_journal_entry_id + reversal_reason
-- The form constructs the full ReversalInput including mirrored lines
+Phase 15B.1-15B.4 (inline runtime fix): Supabase driver returns
+NUMERIC columns as JS numbers, not strings. Added toMoneyAmount /
+toFxRate coercion helpers, applied at journalEntryService.get
+(for detail lines) and .list (for line aggregation). Runtime shape
+of money values now matches branded type declaration.
+
+Next task: Task 16 (Reports — P&L and Trial Balance).
+Subagent-driven (with likely Phase 16A inline for report service
+functions and Phase 16B subagent for UI views).
+
+Task 16 scope sketch:
+- Create reportService with P&L and Trial Balance query functions
+- P&L: aggregate by account type (revenue, expense) within period
+- Trial Balance: aggregate by account, show debit/credit balances
+- API routes at /api/orgs/[orgId]/reports/pl and /trial-balance
+- UI components: BasicPLView.tsx and BasicTrialBalanceView.tsx
+- Per spec §15.8 and §16.5
+
+Phase 1.2 type-narrowing deferred:
+- JournalEntryDetail.journal_lines[] → use MoneyAmount/FxRate
+- MoneyAmount regex UX fix already applied
+- Dropdown placeholder fix deferred
 
 Seed passwords (all end in #1):
 - executive@thebridge.local / DevSeed!Executive#1
@@ -35,3 +40,6 @@ Seed passwords (all end in #1):
 - ap@thebridge.local / DevSeed!ApSpec#1
 
 Dev server rule: kill before rm -rf .next, or restart after.
+
+Tasks 17 remains subagent-driven after 16.
+Task 18 returns to inline for final verification.
