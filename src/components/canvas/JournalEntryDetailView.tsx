@@ -162,18 +162,24 @@ export function JournalEntryDetailView({ orgId, entryId, onNavigate }: Props) {
 
           {/* Actions */}
           <div className="mt-4">
-            <button
-              className="text-sm text-red-600 hover:underline"
-              onClick={() =>
-                onNavigate({
-                  type: 'reversal_form',
-                  orgId,
-                  sourceEntryId: entry.journal_entry_id,
-                })
-              }
-            >
-              Reverse this entry
-            </button>
+            {entry.reversed_by ? (
+              <div className="text-sm text-neutral-500">
+                This entry has already been reversed by Entry #{entry.reversed_by.entry_number}
+              </div>
+            ) : (
+              <button
+                className="text-sm text-red-600 hover:underline"
+                onClick={() =>
+                  onNavigate({
+                    type: 'reversal_form',
+                    orgId,
+                    sourceEntryId: entry.journal_entry_id,
+                  })
+                }
+              >
+                Reverse this entry
+              </button>
+            )}
           </div>
         </>
       )}
