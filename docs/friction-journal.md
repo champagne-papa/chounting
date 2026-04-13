@@ -538,6 +538,21 @@ Categories:
   link, attachments upload UX, save-as-draft. All are Phase 1.2
   or later scope — Phase 1.1's form is correctly minimal.
 
+- 2026-04-16 NOTE   Task 14 diagnostic surfaced Phase 14A scope:
+  (1) JournalEntryListItem missing per-entry debit/credit totals —
+  service needed 2-query aggregation with branded addMoney. (2)
+  ContextualCanvas renderDirective lacked onNavigate callback —
+  child components couldn't trigger directive changes. (3) Form
+  success navigation was console.log TODO — needed real onNavigate
+  to list view. All three fixed inline before subagent brief.
+  Same 13A-style pattern: pre-check surfaces missing infrastructure,
+  inline phase builds it, subagent consumes it.
+
+- 2026-04-16 NOTE   CanvasNavigateFn standardized callback type
+  added to canvasDirective.ts. Prevents type drift across
+  navigating components. Every component that needs to change the
+  canvas directive declares onNavigate: CanvasNavigateFn in props.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
