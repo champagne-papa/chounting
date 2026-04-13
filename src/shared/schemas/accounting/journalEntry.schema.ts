@@ -7,6 +7,7 @@ import {
   multiplyMoneyByRate,
   zeroMoney,
   type MoneyAmount,
+  type FxRate,
 } from './money.schema';
 
 // --- Journal Line Schema ---
@@ -144,3 +145,28 @@ export type ReversalInput = z.infer<typeof ReversalInputSchema>;
 // Input types (before parse — optional fields allowed)
 export type PostJournalEntryInputRaw = z.input<typeof PostJournalEntryInputSchema>;
 export type ReversalInputRaw = z.input<typeof ReversalInputSchema>;
+
+// --- mirrorLines pure helper (§15.7) ---
+// Swaps debit_amount ↔ credit_amount per line.
+// Preserves account_id, currency, amount_original, amount_cad, fx_rate, tax_code_id.
+// Used by the ReversalForm to construct the reversal lines from the source entry.
+// The service (validateReversalMirror) validates the mirror is correct.
+
+export type MirrorableLine = {
+  account_id: string;
+  debit_amount: MoneyAmount;
+  credit_amount: MoneyAmount;
+  currency: string;
+  amount_original: MoneyAmount;
+  amount_cad: MoneyAmount;
+  fx_rate: FxRate;
+  tax_code_id: string | null;
+};
+
+export function mirrorLines(lines: MirrorableLine[]): MirrorableLine[] {
+  return lines.map((line) => ({
+    ...line,
+    debit_amount: line.credit_amount,
+    credit_amount: line.debit_amount,
+  }));
+}
