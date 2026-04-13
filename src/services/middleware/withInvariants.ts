@@ -17,10 +17,18 @@
 import type { ServiceContext } from './serviceContext';
 import { InvariantViolationError } from './errors';
 import { loggerWith } from '@/shared/logger/pino';
+import { canUserPerformAction, type ActionName } from '@/services/auth/canUserPerformAction';
 
 type ServiceFn<I, O> = (input: I, ctx: ServiceContext) => Promise<O>;
 
-export function withInvariants<I, O>(fn: ServiceFn<I, O>): ServiceFn<I, O> {
+interface WithInvariantsOptions {
+  action?: ActionName;
+}
+
+export function withInvariants<I, O>(
+  fn: ServiceFn<I, O>,
+  opts?: WithInvariantsOptions,
+): ServiceFn<I, O> {
   return async (input, ctx) => {
     const log = loggerWith({ trace_id: ctx?.trace_id, user_id: ctx?.caller?.user_id });
 
@@ -58,6 +66,16 @@ export function withInvariants<I, O>(fn: ServiceFn<I, O>): ServiceFn<I, O> {
         'ORG_ACCESS_DENIED',
         `Caller does not have access to org_id=${claimedOrgId}`,
       );
+    }
+
+    // Invariant 4: role-based authorization.
+    // If an action is specified and the input carries an org_id,
+    // check that the caller's role permits the action.
+    if (opts?.action && typeof claimedOrgId === 'string' && claimedOrgId) {
+      const authResult = await canUserPerformAction(ctx, opts.action, claimedOrgId);
+      if (!authResult.permitted) {
+        throw new InvariantViolationError('PERMISSION_DENIED', authResult.reason);
+      }
     }
 
     log.debug({ fn: fn.name }, 'withInvariants: pre-flight passed');

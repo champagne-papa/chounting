@@ -1,13 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+// Rule 8: SUPABASE_TEST_URL → SUPABASE_URL → error
 const SUPABASE_URL =
   process.env.SUPABASE_TEST_URL ??
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  (() => { throw new Error('SUPABASE_TEST_URL or NEXT_PUBLIC_SUPABASE_URL must be set'); })();
+  process.env.SUPABASE_URL ??
+  (() => { throw new Error('SUPABASE_TEST_URL or SUPABASE_URL must be set'); })();
 
+// Rule 8: SUPABASE_TEST_SERVICE_ROLE_KEY → SUPABASE_SERVICE_ROLE_KEY → error
 const SERVICE_ROLE_KEY =
+  process.env.SUPABASE_TEST_SERVICE_ROLE_KEY ??
   process.env.SUPABASE_SERVICE_ROLE_KEY ??
-  (() => { throw new Error('SUPABASE_SERVICE_ROLE_KEY must be set'); })();
+  (() => { throw new Error('SUPABASE_TEST_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY must be set'); })();
 
 const ANON_KEY =
   process.env.SUPABASE_ANON_KEY_LOCAL ??

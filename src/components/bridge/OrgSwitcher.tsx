@@ -31,9 +31,11 @@ export function OrgSwitcher({ currentOrgId }: Props) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
-    supabase
-      .from('memberships')
-      .select('org_id, role, organizations(name)')
+    Promise.resolve(
+      supabase
+        .from('memberships')
+        .select('org_id, role, organizations(name)')
+    )
       .then(({ data }) => {
         if (data) {
           setOrgs(
@@ -44,7 +46,8 @@ export function OrgSwitcher({ currentOrgId }: Props) {
             })),
           );
         }
-      });
+      })
+      .catch(() => { /* auth session may not be available yet */ });
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
