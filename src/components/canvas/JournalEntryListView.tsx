@@ -74,7 +74,9 @@ export function JournalEntryListView({ orgId, onNavigate }: Props) {
             {entries.map((entry) => (
               <tr
                 key={entry.journal_entry_id}
-                className="border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                className={`border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer${
+                  entry.reversed_by != null ? ' opacity-60' : ''
+                }`}
                 onClick={() =>
                   onNavigate({
                     type: 'journal_entry',
@@ -90,6 +92,9 @@ export function JournalEntryListView({ orgId, onNavigate }: Props) {
                   {entry.description}
                   {entry.reverses_journal_entry_id != null && (
                     <span className="text-xs text-amber-600 ml-2">Reversal</span>
+                  )}
+                  {entry.reversed_by != null && (
+                    <span className="text-xs text-neutral-500 ml-2">Reversed</span>
                   )}
                 </td>
                 <td className="py-2 pr-4">{entry.entry_type}</td>
