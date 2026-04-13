@@ -1,10 +1,7 @@
-# Category Scan: Architecture Fit
+# Category Scan: Backend Design & API
 
 Phase 2 scanner prompt. One of nine category scans that run in
-parallel. This prompt also serves as the TEMPLATE for all other
-category scan prompts — the structure, constraints, and output
-format sections are shared; only the "Category Definition" and
-"What To Examine" sections change per category.
+parallel.
 
 ---
 
@@ -28,7 +25,7 @@ Claude API. Multi-tenant, double-entry bookkeeping, agent-driven.
 **Phase:** End of Phase 1.1. Manual journal entry path complete.
 Phase 1.2 (agent integration) is next.
 
-**Your category:** Architecture Fit
+**Your category:** Backend Design & API
 
 **Audit framework:** See `docs/audits/DESIGN.md` for the full
 execution model. You are Phase 2. Your output feeds Phase 3
@@ -71,82 +68,103 @@ count them as discoveries.
 You have full read access to the codebase. The "What To Examine"
 section below tells you where to focus for this category.
 
-## Category Definition: Architecture Fit
+## Category Definition: Backend Design & API
 
-Does the architecture match the problem? Evaluate:
+Does the backend implement its contracts correctly? Evaluate:
 
-- **Layering:** Are the architectural layers (database, service,
-  API, frontend) cleanly separated? Do boundaries fall in the
-  right places for the domain (accounting, multi-tenant,
-  agent-driven)?
+- **Service contracts:** Do service functions match the contracts
+  described in PLAN.md Section 15? Are inputs and outputs typed
+  with Zod schemas? Are return types explicit or inferred? Do
+  service functions handle all documented error branches?
 
-- **Separation of concerns:** Does each module/file/function do
-  one thing? Are responsibilities clearly assigned? When a
-  concern spans layers, is it handled consistently?
+- **API route patterns:** Do routes follow a consistent pattern
+  for request parsing, auth extraction, service delegation, and
+  response shaping? Is there duplication across routes that should
+  be extracted, or appropriate duplication that keeps routes
+  readable?
 
-- **Boundary choices:** Where are the system boundaries drawn
-  (service boundaries, API boundaries, trust boundaries)? Are
-  they in the right place for this domain? Do they match the
-  stated architecture (CLAUDE.md Laws 1 and 2)?
+- **Error handling chain:** How do errors flow from database
+  through service through API route to HTTP response? Is the
+  `ServiceError` -> `serviceErrorToStatus` chain complete and
+  consistent? Are there error branches that fall through to
+  generic 500s when they should return specific status codes?
 
-- **Pattern consistency:** When the codebase uses a pattern
-  (e.g., withInvariants wrapping, Zod validation at boundaries,
-  service-role client for writes), is it applied consistently
-  everywhere it should be? Inconsistency is a stronger signal
-  than a bad pattern choice.
+- **Middleware correctness:** Does `withInvariants` correctly
+  enforce `canUserPerformAction` before every mutating service
+  call? Does `serviceContext` correctly extract and propagate
+  org_id, user_id, and trace_id? Are there edge cases where
+  context propagation fails?
 
-- **Domain fit:** Is the chosen architecture appropriate for
-  accounting specifically? Double-entry bookkeeping has hard
-  correctness requirements (balanced entries, immutable posted
-  entries, audit trails). Does the architecture enforce these
-  structurally, or rely on convention?
+- **Audit trail completeness:** Does every mutation path call
+  `recordMutation`? Are there mutation paths that skip the audit
+  log? Does the audit record capture sufficient detail for
+  post-incident investigation?
 
-- **Agent readiness:** Phase 1.2 adds agent integration. Does
-  the current architecture have clean extension points for
-  agent-driven mutations, or will the agent need to work around
-  the architecture?
+- **Validation consistency:** Is Zod validation applied at every
+  service boundary (API route validates request, service function
+  re-validates input)? Are there service functions that accept
+  unvalidated input? Are Zod schemas shared between route and
+  service, or duplicated with potential drift?
 
-- **Multi-tenancy:** Is tenant isolation structural (RLS, org_id
-  scoping) or conventional (every query remembers to filter)?
-  Where are the weakest points?
+- **Money handling:** Do service functions respect the money-as-
+  string invariant (CLAUDE.md Rule 3)? Is arithmetic performed
+  only in Postgres or via `decimal.js`? Are there any code paths
+  where money values could pass through JavaScript `+` or `*`?
+
+- **Reversal logic:** Does the reversal mirror check in
+  `journalEntryService.post` implement all rejection branches
+  documented in CLAUDE.md Rule 7? Are edge cases handled
+  (reversal of a reversal, reversal of an entry with many lines)?
 
 ## What To Examine
 
 ### Must-read files (read fully)
-- `CLAUDE.md` — the architectural contract
-- `src/services/middleware/withInvariants.ts` — the enforcement
-  mechanism for Law 2 (all mutations through middleware)
-- `src/services/middleware/serviceContext.ts` — how context
-  (org_id, user_id, trace_id) flows through the system
-- `src/services/accounting/journalEntryService.ts` — the most
-  complex service; primary mutation path
-- `src/app/api/orgs/[orgId]/journal-entries/route.ts` — the
-  primary API route; shows the route-to-service boundary
+- `src/services/accounting/journalEntryService.ts` — primary
+  mutation path; reversal logic lives here
+- `src/services/middleware/withInvariants.ts` — enforcement
+  mechanism for all mutating calls
+- `src/services/middleware/serviceContext.ts` — context
+  propagation (org_id, user_id, trace_id)
+- `src/services/errors/ServiceError.ts` — error type definition
+- `src/app/api/_helpers/serviceErrorToStatus.ts` — error-to-HTTP
+  mapping
+- `src/app/api/orgs/[orgId]/journal-entries/route.ts` — primary
+  API route; most complex request/response handling
+- `src/app/api/orgs/[orgId]/journal-entries/[entryId]/route.ts`
+  — single-entry operations
 
 ### Must-read for patterns (read 2-3 for consistency check)
-- Other services: `orgService.ts`, `reportService.ts`,
-  `chartOfAccountsService.ts`
-- Other API routes: any 2 routes under `src/app/api/orgs/`
-- Schema files: `journalEntry.schema.ts`, `money.schema.ts`
+- `src/services/accounting/chartOfAccountsService.ts` — simpler
+  service; does it follow the same patterns as journal entry?
+- `src/services/accounting/periodService.ts` — period locking
+  logic
+- `src/services/accounting/taxCodeService.ts` — read-only or
+  near-read-only service
+- `src/services/org/orgService.ts` — org creation with template;
+  different domain, same middleware?
+- `src/services/reporting/reportService.ts` — read-path service;
+  does it go through withInvariants or bypass?
+- `src/app/api/orgs/[orgId]/chart-of-accounts/route.ts` — does
+  this route follow the same patterns as journal entries?
+- `src/app/api/orgs/[orgId]/reports/pl/route.ts` — read-path
+  route; different auth pattern?
 
-### Skim for boundary assessment
-- `src/db/adminClient.ts`, `src/db/userClient.ts` — database
-  client separation (service-role vs user-scoped)
-- `src/components/bridge/ContextualCanvas.tsx` — frontend entry
-  point; how does it interact with the backend?
-- `supabase/migrations/20240101000000_initial_schema.sql` — does
-  the DB schema match the architectural claims?
+### Must-read for validation chain
+- `src/shared/schemas/accounting/journalEntry.schema.ts` — Zod
+  schemas for journal entry input/output
+- `src/shared/schemas/accounting/money.schema.ts` — MoneyAmount
+  and FxRate branded types
 - `src/services/audit/recordMutation.ts` — audit trail mechanism
 
 ### Check for absence (does X exist?)
-- Is there a file or mechanism that enforces "all DB access goes
-  through services"? Or is this purely convention?
-- Is there a file or mechanism that enforces "all journal entries
-  go through journalEntryService.post"? Or is this convention?
-- Is there a lint rule for `no-unwrapped-service-mutation`
-  (mentioned in CLAUDE.md Rule 2)?
-- Are there barrel exports or re-exports that blur layer
-  boundaries?
+- Is there a shared API route helper that extracts auth context
+  and org_id, or does every route re-implement this?
+- Is there a pattern for API response typing, or are responses
+  shaped ad-hoc per route?
+- Are there integration tests that verify the full API route ->
+  service -> database -> response chain (not just service-level)?
+- Is there error-code documentation or a registry of ServiceError
+  codes?
 
 ## Producing Findings
 
@@ -214,12 +232,12 @@ When you notice something that affects another category, add a
 
 ## Output Format
 
-Produce `findings/architecture-fit.md` in this exact structure:
+Produce `findings/backend-design.md` in this exact structure:
 
 ```markdown
-# Architecture Fit — Findings Log
+# Backend Design & API — Findings Log
 
-Scanner: Architecture Fit
+Scanner: Backend Design & API
 Phase: {phase identifier, e.g., "End of Phase 1.1"}
 Date: {date}
 Hypotheses investigated: {list of H-NN IDs assigned to this
@@ -237,7 +255,7 @@ For each hypothesis assigned to this scanner:
 
 ## Findings
 
-### {ARCHFIT-001}: {one-line title}
+### {BACKEND-001}: {one-line title}
 - **Severity:** Critical | High | Medium | Low
 - **Description:** {1-3 paragraphs. Specific, not generic.}
 - **Evidence:**
@@ -247,14 +265,14 @@ For each hypothesis assigned to this scanner:
 - **Cross-references:**
   - {other categories or hypotheses this relates to}
 
-### {ARCHFIT-002}: {one-line title}
+### {BACKEND-002}: {one-line title}
 ...
 
 ## Category Summary
 
 {2-3 sentences. Overall assessment of this category. What's the
 single most important thing the synthesis agent should know about
-Architecture Fit at this phase?}
+Backend Design & API at this phase?}
 ```
 
 ## Effort Budget
@@ -286,37 +304,3 @@ findings across the severity spectrum.
 - **Flag self-audit bias.** If you helped build this codebase,
   say so in the summary and flag findings where your familiarity
   may have softened the assessment.
-
----
-
-## Template Notes (for creating other scan prompts)
-
-This file is the template for all nine category scan prompts. To
-create a new category scan prompt:
-
-1. Copy this file
-2. Replace "Architecture Fit" with the new category name
-   everywhere it appears: the title, the Context section's
-   "Your category" field, the Category Definition heading,
-   and the Output Format section's filename and header
-3. Replace the "Category Definition" section with the new
-   category's evaluation criteria
-4. Replace the "What To Examine" section with category-specific
-   file lists
-5. Replace `ARCHFIT` in finding IDs with the new category's
-   prefix:
-   - Architecture Fit: `ARCHFIT`
-   - Backend Design & API: `BACKEND`
-   - Frontend Architecture: `FRONTEND`
-   - Data Layer & Database Design: `DATALAYER`
-   - Security & Compliance: `SECURITY`
-   - Infrastructure & DevOps: `INFRA`
-   - Observability & Reliability: `OBSERVE`
-   - Performance & Scalability: `PERF`
-   - Code Quality & Maintainability: `QUALITY`
-
-Everything else — Role, Context, Inputs, Producing Findings,
-Output Format, Effort Budget, Reminders — stays identical across
-all category scan prompts. If you need to change these shared
-sections, change them in ALL scan prompts (or extract a shared
-preamble).
