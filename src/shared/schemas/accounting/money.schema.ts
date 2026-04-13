@@ -55,3 +55,23 @@ export function zeroMoney(): MoneyAmount {
 export function oneRate(): FxRate {
   return '1.00000000' as FxRate;
 }
+
+/**
+ * Coerce a value from an external source (database driver, JSON fetch)
+ * into a canonical MoneyAmount string. Handles the Supabase/PostgREST
+ * case where NUMERIC columns are serialized as JavaScript numbers.
+ *
+ * Canonical format: 4-decimal-place string (matches zeroMoney() and
+ * addMoney() output).
+ */
+export function toMoneyAmount(value: string | number): MoneyAmount {
+  return new Decimal(value).toFixed(4) as MoneyAmount;
+}
+
+/**
+ * Coerce a value into a canonical FxRate string. Same rationale as
+ * toMoneyAmount but with 8 decimal places per the FxRate convention.
+ */
+export function toFxRate(value: string | number): FxRate {
+  return new Decimal(value).toFixed(8) as FxRate;
+}
