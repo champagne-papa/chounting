@@ -17,6 +17,8 @@ import {
 import {
   addMoney,
   zeroMoney,
+  toMoneyAmount,
+  toFxRate,
   type MoneyAmount,
 } from '@/shared/schemas/accounting/money.schema';
 import { adminClient } from '@/db/adminClient';
@@ -401,9 +403,24 @@ async function get(
 
   // PostgREST returns chart_of_accounts as a single object for many-to-one
   // FK relationships, but Supabase's generated types model it as an array.
-  // The runtime shape is { account_code, account_name }, not [{ ... }].
   // Double assertion bridges the Supabase type → our JournalEntryDetail type.
-  return { ...(entry as unknown as JournalEntryDetail), reversed_by };
+  //
+  // Coerce money/rate fields from numbers to canonical strings. Supabase's
+  // Postgres driver serializes NUMERIC columns as JS numbers, but our
+  // branded MoneyAmount/FxRate types require strings.
+  const hydrated = entry as unknown as JournalEntryDetail;
+  return {
+    ...hydrated,
+    reversed_by,
+    journal_lines: hydrated.journal_lines.map((line) => ({
+      ...line,
+      debit_amount: toMoneyAmount(line.debit_amount),
+      credit_amount: toMoneyAmount(line.credit_amount),
+      amount_original: toMoneyAmount(line.amount_original),
+      amount_cad: toMoneyAmount(line.amount_cad),
+      fx_rate: toFxRate(line.fx_rate),
+    })),
+  };
 }
 
 export const journalEntryService = {
