@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -167,7 +167,7 @@ export function JournalEntryForm({ orgId }: JournalEntryFormProps) {
 
   // --- Running balance ---
 
-  const watchedLines = form.watch('lines');
+  const watchedLines = useWatch({ control: form.control, name: 'lines' });
 
   const balanceState = useMemo(() => {
     let totalDebit: MoneyAmount = zeroMoney();

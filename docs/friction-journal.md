@@ -479,6 +479,48 @@ Categories:
   Lesson: plan documents are snapshots, not canonical sources, once
   execution surfaces drift.
 
+- 2026-04-15 NOTE   Phase 13B smoke test: FIRST END-TO-END RUNTIME
+  VERIFICATION of the entire posting pipeline. Five journal entries
+  posted successfully from an authenticated browser through
+  JournalEntryForm → fetch → API route → withInvariants →
+  journalEntryService.post → Zod validation → DB insert → response
+  → console.log. Sequential entry_numbers (1-5), correct
+  multi-currency columns, balanced debits/credits. The full vertical
+  slice works.
+
+- 2026-04-15 WRONG  form.watch('lines') does not trigger re-renders
+  correctly for the running balance useMemo. The balance indicator
+  showed "—" throughout despite valid amounts being entered. Fix:
+  replaced with useWatch({ control, name: 'lines' }) which is
+  react-hook-form's recommended pattern for watching field arrays
+  in render. The 32-point structural review couldn't catch this
+  because both patterns typecheck identically — the difference is
+  purely runtime re-render behavior. Lesson: form.watch() works
+  in event handlers (imperative); useWatch() works in render
+  (reactive). The brief should have specified useWatch for the
+  balance computation.
+
+- 2026-04-15 NOTE   Smoke test revealed no success feedback to user
+  after form submission. The form submits successfully (console
+  logs result, DB has entries) but the user sees nothing change.
+  The brief explicitly deferred navigation: "TODO: navigate canvas
+  to journal_entry_list after Task 14 exists." Task 14 should add
+  both the navigation and a brief success message. Four duplicate
+  entries were created because the user couldn't tell the first
+  click worked.
+
+- 2026-04-15 NOTE   Seed password documentation was stale.
+  Bookmark and specs referenced DevSeed!Controller#2 but the
+  actual seed uses DevSeed!Controller#1. All seed passwords end
+  in #1. Corrected in CURRENT_STATE.md.
+
+- 2026-04-15 NOTE   Phase 1.2 form gap analysis captured in
+  docs/phase-1.2/journal-entry-form-gaps.md. Compared against
+  Zoho Books New Journal form during smoke test. Key gaps:
+  per-line description, draft/posted status, vendor/customer
+  link, attachments upload UX, save-as-draft. All are Phase 1.2
+  or later scope — Phase 1.1's form is correctly minimal.
+
 - 2026-04-12 WRONG  Plan Task 3 (migration 004 — entry_number)
   cannot land in isolation. Adding entry_number with NOT NULL +
   UNIQUE in migration 004 breaks the test suite because
