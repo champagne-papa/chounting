@@ -335,8 +335,8 @@ async function list(
   for (const line of lines ?? []) {
     const totals = totalsByEntryId.get(line.journal_entry_id);
     if (!totals) continue;
-    totals.debit = addMoney(totals.debit, line.debit_amount as MoneyAmount);
-    totals.credit = addMoney(totals.credit, line.credit_amount as MoneyAmount);
+    totals.debit = addMoney(totals.debit, toMoneyAmount(line.debit_amount));
+    totals.credit = addMoney(totals.credit, toMoneyAmount(line.credit_amount));
   }
 
   // Step 4: Find which entries have been reversed (separate query, Option Q)
