@@ -1,31 +1,29 @@
 # Where I am as of 2026-04-15
 
-Phase 13B FULLY VERIFIED via smoke test. First end-to-end runtime
-verification of the journal entry posting pipeline. Five entries
-posted successfully from authenticated browser.
+Phase 13B FULLY VERIFIED — runtime verified in authenticated browser.
+Balance indicator updates reactively (useWatch fix confirmed working).
+Five journal entries successfully posted end-to-end. Form works across
+multiple orgs. Auth integration confirmed functional.
 
-Bug found and fixed: form.watch('lines') → useWatch({ control, name })
-for running balance computation. The 32-point structural review
-couldn't catch this (both typecheck identically; difference is
-runtime re-render behavior).
-
-Known gap: no success feedback to user after submit (deferred to
-Task 14 which adds navigation to journal_entry_list).
-
-Phase 1.2 form gap analysis captured in
-docs/phase-1.2/journal-entry-form-gaps.md.
-
-Seed passwords (all end in #1, not #2):
+Seed passwords (all end in #1):
 - executive@thebridge.local / DevSeed!Executive#1
 - controller@thebridge.local / DevSeed!Controller#1
 - ap@thebridge.local / DevSeed!ApSpec#1
 
+Phase 1.2 form gap analysis: docs/phase-1.2/journal-entry-form-gaps.md
+
 Next task: Task 14 (Journal Entry List + Detail Views).
-Subagent-driven. The list view shell exists (JournalEntryListView.tsx),
-the detail view is new (JournalEntryDetailView.tsx). Both consume
-Phase 12B API routes. Task 14 also adds the "New Entry" button in the
-list view that navigates to the form (making the form reachable
-without the temporary directive hack).
+Subagent-driven. Key points:
+- JournalEntryListView.tsx exists as a shell — replace with real component
+- JournalEntryDetailView.tsx is new
+- Both consume Phase 12B journal-entries API routes (GET list, GET detail)
+- Task 14 adds the "New Entry" button in the list view (making the form
+  reachable without the temporary directive hack used for smoke testing)
+- Task 14 also adds success navigation: after form submit, navigate
+  canvas to journal_entry_list (the TODO in JournalEntryForm.tsx:247)
+
+Dev server rule: kill before rm -rf .next, or restart after.
+The .next cache footgun has bitten twice in the closeout.
 
 Tasks 15-17 remain subagent-driven after 14.
 Task 18 returns to inline for final verification.
