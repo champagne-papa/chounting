@@ -6,7 +6,7 @@ import type { ProposedEntryCard } from './proposedEntryCard';
 export type CanvasDirective =
   // Phase 1.1 — built fully:
   | { type: 'chart_of_accounts'; orgId: string }
-  | { type: 'journal_entry'; entryId: string; mode: 'view' | 'edit' }
+  | { type: 'journal_entry'; orgId: string; entryId: string; mode: 'view' | 'edit' }
   | { type: 'journal_entry_form'; orgId: string; prefill?: Record<string, unknown> }
   | { type: 'journal_entry_list'; orgId: string }
   | { type: 'proposed_entry_card'; card: ProposedEntryCard }
