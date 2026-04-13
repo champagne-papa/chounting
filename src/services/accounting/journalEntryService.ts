@@ -245,6 +245,7 @@ export type JournalEntryListItem = {
   created_at: string;
   total_debit: MoneyAmount;
   total_credit: MoneyAmount;
+  reversed_by: { entry_id: string; entry_number: number } | null;
 };
 
 export type JournalEntryDetail = {
@@ -328,11 +329,29 @@ async function list(
     totals.credit = addMoney(totals.credit, line.credit_amount as MoneyAmount);
   }
 
-  // Step 4: Merge totals into entries
+  // Step 4: Find which entries have been reversed (separate query, Option Q)
+  const { data: reversingEntries, error: revError } = await db
+    .from('journal_entries')
+    .select('journal_entry_id, entry_number, reverses_journal_entry_id')
+    .in('reverses_journal_entry_id', entryIds);
+  if (revError) throw new ServiceError('READ_FAILED', revError.message);
+
+  const reversedByMap = new Map<string, { entry_id: string; entry_number: number }>();
+  for (const rev of reversingEntries ?? []) {
+    if (rev.reverses_journal_entry_id) {
+      reversedByMap.set(rev.reverses_journal_entry_id, {
+        entry_id: rev.journal_entry_id,
+        entry_number: rev.entry_number,
+      });
+    }
+  }
+
+  // Step 5: Merge totals + reversed_by into entries
   return entries.map((e) => ({
     ...e,
     total_debit: totalsByEntryId.get(e.journal_entry_id)?.debit ?? zeroMoney(),
     total_credit: totalsByEntryId.get(e.journal_entry_id)?.credit ?? zeroMoney(),
+    reversed_by: reversedByMap.get(e.journal_entry_id) ?? null,
   })) as JournalEntryListItem[];
 }
 
