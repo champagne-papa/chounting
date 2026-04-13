@@ -583,6 +583,28 @@ Categories:
   org+period by design) but needs a Period column or contextual
   numbering like "#1 (Apr 2026)". Phase 1.2 design doc scope.
 
+- 2026-04-17 NOTE   Phase 15A: mirrorLines helper is 9 lines of code
+  covering the entire debit↔credit swap. Pure function, immutable,
+  6 unit tests including FX rate edge case. The simplicity validates
+  the spec's §15.7 design: "swap debit/credit, keep everything else."
+  No domain complexity — the complexity is in the service's mirror
+  validation, not in the swap itself.
+
+- 2026-04-17 NOTE   reversed_by field uses the separate-query pattern
+  (Option Q) for both list and detail, consistent with line totals
+  aggregation. List now makes 3 DB round trips (entries, lines, 
+  reversing entries). Detail makes 2 (entry+lines, reversing entry).
+  Could optimize to 1 with JOINs but PostgREST's query builder
+  makes JOINs harder than separate queries. Phase 1.2 optimization
+  candidate if query latency becomes noticeable.
+
+- 2026-04-17 NOTE   Phase 15A uses the current service contract where
+  client sends mirrored lines and service validates. Alternative:
+  service-computes-mirror on just the source entry ID. Simpler
+  client, cleaner API, but requires changing ReversalInputSchema
+  and the service. Defer to Phase 1.2 if the form-sends-lines
+  pattern proves painful.
+
 - 2026-04-16 NOTE   CanvasNavigateFn standardized callback type
   added to canvasDirective.ts. Prevents type drift across
   navigating components. Every component that needs to change the
