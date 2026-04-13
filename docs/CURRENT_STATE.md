@@ -1,37 +1,43 @@
-# Where I am as of 2026-04-17 (Task 15 complete)
+# Where I am as of 2026-04-13 (Task 16 complete)
 
-Phase 15A (inline, 7 commits): mirrorLines helper + tests,
-reversed_by in list + detail types/services, list visual indicator,
-detail button disabling, .maybeSingle crash fix, fiscal_period embed.
+Phase 16A (inline, 8 commits):
+- 3 cleanup commits: uncommitted floor tests, locale rename,
+  multi-tenant routing infrastructure (discovered at session start)
+- Migration 0007: get_profit_and_loss and get_trial_balance RPC
+  functions (LANGUAGE sql, SECURITY INVOKER, amount_cad for both)
+- reportService.ts with profitAndLoss() and trialBalance() functions
+  calling RPC via adminClient().rpc()
+- 4 P&L integration tests (baseline-delta pattern, hand-calculated)
+- 4 Trial Balance integration tests (same pattern)
+- API routes: GET /api/orgs/[orgId]/reports/pl and /trial-balance
+- Directive type: report_pl updated from { from, to } to { periodId? }
+- Friction journal: 5 entries (git hygiene, Q21 gap, TB spec override,
+  RPC conventions, baseline-delta test pattern)
 
-Phase 15B (subagent, 1 commit + 4 runtime fix commits):
-- ReversalForm.tsx: fetches source entry, mirrors lines via helper,
-  collects period/date/reason, posts through reversal discriminated
-  union, navigates to new reversal's detail on success.
-- ContextualCanvas: reversal_form case moved to dedicated render.
-- Runtime verified: Entry #9 → Reverse → Entry #16 round-trip works.
+Architectural decisions made in Task 16:
+- Q21 (a): reversals net naturally, no WHERE NOT EXISTS exclusion
+- Trial Balance uses amount_cad (override of spec's native-currency SQL)
+- Decision 4.1: period-based filtering, not date-range
+- RPC conventions established (first callable RPC in codebase)
 
-Phase 15B.1-15B.4 (inline runtime fix): Supabase driver returns
-NUMERIC columns as JS numbers, not strings. Added toMoneyAmount /
-toFxRate coercion helpers, applied at journalEntryService.get
-(for detail lines) and .list (for line aggregation). Runtime shape
-of money values now matches branded type declaration.
+Next task: Task 17 (P&L and Trial Balance Views).
+Subagent-driven. Creates BasicPLView.tsx and BasicTrialBalanceView.tsx,
+wires into ContextualCanvas and MainframeRail.
 
-Next task: Task 16 (Reports — P&L and Trial Balance).
-Subagent-driven (with likely Phase 16A inline for report service
-functions and Phase 16B subagent for UI views).
-
-Task 16 scope sketch:
-- Create reportService with P&L and Trial Balance query functions
-- P&L: aggregate by account type (revenue, expense) within period
-- Trial Balance: aggregate by account, show debit/credit balances
-- API routes at /api/orgs/[orgId]/reports/pl and /trial-balance
-- UI components: BasicPLView.tsx and BasicTrialBalanceView.tsx
+Task 17 scope (from closeout plan):
+- BasicPLView: period filter, Revenue/Expense/Net Income sections,
+  Balance Sheet summary (Asset/Liability/Equity from same query)
+- BasicTrialBalanceView: flat table, account_code ordering, footer
+  row with debit/credit sums, red if unbalanced
+- ContextualCanvas: report_pl and report_trial_balance cases
+- MainframeRail: Trial Balance icon/action (P&L already has one)
+- Hand-verification: psql "delete the UI" test
 - Per spec §15.8 and §16.5
+
+Task 18 returns to inline for final verification.
 
 Phase 1.2 type-narrowing deferred:
 - JournalEntryDetail.journal_lines[] → use MoneyAmount/FxRate
-- MoneyAmount regex UX fix already applied
 - Dropdown placeholder fix deferred
 
 Seed passwords (all end in #1):
@@ -41,5 +47,5 @@ Seed passwords (all end in #1):
 
 Dev server rule: kill before rm -rf .next, or restart after.
 
-Tasks 17 remains subagent-driven after 16.
-Task 18 returns to inline for final verification.
+Test counts: 26 integration (7 files), 49 unit (4 files).
+Migration count: 7 (001-007).

@@ -649,3 +649,43 @@ Categories:
   Task 3 lands the migration with entry_number nullable, no
   UNIQUE constraint. Task 9 updates the service to populate it,
   then adds NOT NULL + UNIQUE. Tasks 3 and 9 are coupled.
+
+- 2026-04-13 NOTE   Task 16 session start discovered 14 uncommitted
+  files persisting across multiple sessions (Phase 13B through 15B).
+  Root cause: git status was never run as a session-start gate; every
+  session committed specific files by path (git add <file>) not
+  git add ., so dirty files were never swept in or addressed.
+  Included two Category A floor tests (reversalMirror, serviceMiddleware
+  Authorization) that were passing in pnpm test:integration but
+  untracked in git. Rule for Phase 1.2: every session-start entry
+  sequence includes git status --short; expected output is empty.
+
+- 2026-04-13 NOTE   Spec §15.8 references "§18 Q21 (P&L reversal
+  rendering)" as a prerequisite for step 5, but Q21 was never created
+  in PLAN.md §18 (which only has Q1-Q19). The question about how
+  reversed entries appear in P&L was answered inline during Task 16:
+  decision (a) — include all entries, reversals net naturally via
+  aggregation. Simple query, no WHERE NOT EXISTS exclusion.
+
+- 2026-04-13 NOTE   Trial Balance spec SQL (§16.5) uses native-currency
+  columns (debit_amount/credit_amount) while P&L spec (§15.8)
+  explicitly uses amount_cad for multi-currency correctness. Task 16
+  overrides the Trial Balance spec to use amount_cad for consistency.
+  In CAD-only Phase 1.1 the values are identical; in Phase 2+
+  multi-currency they would diverge.
+
+- 2026-04-13 NOTE   First use of RPC functions (migration 0007). Neither
+  the P&L nor Trial Balance queries are expressible through the
+  Supabase PostgREST query builder (FILTER clauses, conditional JOIN
+  predicates). Established conventions: get_ prefix for reads, p_ prefix
+  for params, LANGUAGE sql for single-SELECT functions, SECURITY INVOKER,
+  GRANT EXECUTE to service_role only. adminClient().rpc() is the call
+  pattern.
+
+- 2026-04-13 NOTE   Integration tests for report aggregation required
+  baseline-then-delta pattern because tests share database state across
+  files. Each report test captures the current totals before posting its
+  own known entries, then asserts that deltas match hand-calculated
+  expectations. Same underlying cause as the entry_number collision
+  in Phase 12A (WRONG entry from 2026-04-12) — vitest sequential
+  execution shares committed state.
