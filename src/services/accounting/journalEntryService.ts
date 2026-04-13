@@ -261,6 +261,13 @@ export type JournalEntryDetail = {
   reversal_reason: string | null;
   created_at: string;
   created_by: string | null;
+  fiscal_period_id: string;
+  fiscal_periods: {
+    period_id: string;
+    name: string;
+    start_date: string;
+    end_date: string;
+  } | null;
   reversed_by: { entry_id: string; entry_number: number } | null;
   journal_lines: Array<{
     journal_line_id: string;
@@ -368,7 +375,7 @@ async function get(
   // NOT_FOUND (don't leak existence).
   const { data: entry, error } = await db
     .from('journal_entries')
-    .select('journal_entry_id, org_id, entry_number, entry_date, description, reference, source, entry_type, reverses_journal_entry_id, reversal_reason, created_at, created_by, journal_lines(journal_line_id, account_id, description, debit_amount, credit_amount, currency, amount_original, amount_cad, fx_rate, tax_code_id, chart_of_accounts(account_code, account_name))')
+    .select('journal_entry_id, org_id, entry_number, fiscal_period_id, entry_date, description, reference, source, entry_type, reverses_journal_entry_id, reversal_reason, created_at, created_by, fiscal_periods(period_id, name, start_date, end_date), journal_lines(journal_line_id, account_id, description, debit_amount, credit_amount, currency, amount_original, amount_cad, fx_rate, tax_code_id, chart_of_accounts(account_code, account_name))')
     .eq('journal_entry_id', input.journal_entry_id)
     .in('org_id', ctx.caller.org_ids)
     .maybeSingle();
