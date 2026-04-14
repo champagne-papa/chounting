@@ -723,46 +723,55 @@ so that the Phase 2 split is mechanical (move folders out of `src/` into
 the-bridge/                    # single Next.js app, single repo, no pnpm workspaces
   src/
     app/                       # Next.js App Router
+      layout.tsx               # root layout
+      page.tsx                 # root redirect
       [locale]/
+        layout.tsx             # locale layout (next-intl provider)
+        page.tsx               # locale root
         [orgId]/
-          accounting/
+          page.tsx             # org dashboard — catch-all for org-scoped routes
+          accounting/          # directories exist; page.tsx files are Phase 1.2
             chart-of-accounts/
-              page.tsx         # CoA list canvas view
-              [accountId]/
-                page.tsx       # CoA detail
             journals/
-              page.tsx         # Journal entry list canvas view
-              new/
-                page.tsx       # Manual journal entry form
-              [entryId]/
-                page.tsx       # Journal entry detail
           agent/
             actions/
-              page.tsx         # AI Action Review queue (controller role)
           reports/
             pl/
-              page.tsx         # Basic P&L canvas view (read-only)
         consolidated/
           dashboard/
-            page.tsx           # Stub, role-gated
-      admin/
-        orgs/
-          page.tsx             # Org creation with industry CoA template selection
-      sign-in/
-        page.tsx
+        admin/
+          orgs/
+            page.tsx           # Org creation with industry CoA template selection
+        sign-in/
+          page.tsx
+        sign-out/
+          page.tsx
       api/                     # Next.js API routes — thin adapters over src/services/
-        accounting/
-          journals/
-            route.ts           # POST creates a journal entry via journalEntryService
-          chart-of-accounts/
-            route.ts
-        agent/
-          message/
-            route.ts           # POST sends a user message to the orchestrator
-          confirm/
-            route.ts           # POST confirms a ProposedEntryCard
+        _helpers/
+          serviceErrorToStatus.ts  # maps ServiceError codes to HTTP status
         health/
           route.ts             # GET health check
+        org/
+          route.ts             # POST org creation
+        orgs/
+          [orgId]/
+            chart-of-accounts/
+              route.ts         # GET list chart of accounts
+            fiscal-periods/
+              route.ts         # GET list open fiscal periods
+            journal-entries/
+              route.ts         # GET list / POST create journal entry
+              [entryId]/
+                route.ts       # GET journal entry detail
+            reports/
+              pl/
+                route.ts       # GET P&L report
+              trial-balance/
+                route.ts       # GET Trial Balance report
+        tax-codes/
+          route.ts             # GET tax codes
+      test/
+        page.tsx               # dev-only test page
     services/                  # ALL business logic — Invariant 1, single source of truth
       auth/
         canUserPerformAction.ts
@@ -771,92 +780,111 @@ the-bridge/                    # single Next.js app, single repo, no pnpm worksp
         journalEntryService.ts          # journalEntryService.post() — Law 2 enforcement point
         chartOfAccountsService.ts
         periodService.ts                # periodService.isOpen() — replaces v0.4.0 Period Agent
+        taxCodeService.ts
       org/
         orgService.ts
         membershipService.ts
+        generateFiscalPeriods.ts
       audit/
         recordMutation.ts               # synchronous audit_log write — Simplification 1
+      errors/
+        ServiceError.ts                 # typed service error class
       middleware/
         withInvariants.ts               # the universal service wrapper
         serviceContext.ts               # ServiceContext type with trace_id, org_id, caller
-      index.ts                          # exports only — no logic
-    agent/                              # the agent layer (minimal in Phase 1)
+        errors.ts                       # middleware error utilities
+      reporting/
+        reportService.ts                # P&L and Trial Balance via Postgres RPC
+    agent/                              # the agent layer — empty stubs in Phase 1.1, populated in Phase 1.2
       orchestrator/
-        index.ts                        # main agent loop — Claude API call, tool routing
-        systemPrompts/
-          controller.ts                 # one persona prompt — others added in Phase 2
-          executive.ts
-          apSpecialist.ts
-      tools/
-        postJournalEntry.ts             # the ONE tool definition — wraps journalEntryService.post()
-        listChartOfAccounts.ts
-        checkPeriod.ts
-      session/
-        agentSession.ts                 # AgentSession type, in-Postgres persistence
-      memory/
-        orgContextManager.ts            # loads vendor rules, intercompany map per org
-      canvas/
-        directives.ts                   # CanvasDirective discriminated union
-    contracts/                          # one folder, one file in Phase 1
-      doubleEntry.contract.ts           # PostJournalEntryCommand schema with version, trace, idempotency
+        systemPrompts/                  # empty — persona prompts added in Phase 1.2
+      tools/                            # empty — tool definitions added in Phase 1.2
+      session/                          # empty — AgentSession persistence added in Phase 1.2
+      memory/                           # empty — org context manager added in Phase 1.2
+      canvas/                           # empty — CanvasDirective moved to src/shared/types/ in Phase 1.1
+    contracts/                          # reserved for Phase 1.2 — .gitkeep only
     db/
       adminClient.ts                    # service-role Supabase client (server-only)
       userClient.ts                     # user-scoped Supabase client (RLS-respecting)
       types.ts                          # generated by `supabase gen types typescript`
-      migrations/
-        001_initial_schema.sql          # full Phase 1.1 migration (see Section 2d)
-        seed/
-          industryCoA.sql               # CoA templates per industry — Phase 1.1 seeds holding_company + real_estate (Q1)
-          dev.sql                       # orgs + memberships + fiscal periods — runs AFTER scripts/seed-auth-users.ts has created the Supabase Auth users. See docs/specs/phase-1.1.md §5b.
+      seed/
+        dev.sql                         # orgs + memberships + fiscal periods — runs AFTER scripts/seed-auth-users.ts
     shared/
+      env.ts                            # runtime environment validation
       schemas/                          # Zod primitives shared across services and UI
         accounting/
           journalEntry.schema.ts        # the canonical schema, imported by service + tool + form
-        ids.schema.ts                   # branded UUID types
+          money.schema.ts               # MoneyAmount/FxRate branded types, addMoney/multiplyMoneyByRate/eqMoney helpers
       types/
+        canvasContext.ts                # CanvasContext type — created in Phase 1.1, consumed in Phase 1.2
+        canvasDirective.ts              # CanvasDirective discriminated union
         proposedEntryCard.ts
         userRole.ts
       i18n/
         config.ts                       # next-intl config — en, fr-CA, zh-Hant
+        request.ts                      # next-intl request configuration
       logger/
         pino.ts                         # structured logger with redact list
     components/
+      ProposedEntryCard.tsx             # rendered when directive.type === 'proposed_entry_card'
       bridge/
         SplitScreenLayout.tsx           # the main shell — chat panel + canvas panel + Mainframe rail
         AgentChatPanel.tsx
+        ApiStatusDot.tsx                # Mainframe API status indicator
         ContextualCanvas.tsx
         MainframeRail.tsx
+        OrgSwitcher.tsx
+        SuggestedPrompts.tsx            # persona-aware empty-state prompts
       canvas/
+        BasicPLView.tsx                 # standalone P&L report view
+        BasicTrialBalanceView.tsx        # standalone Trial Balance view
         ChartOfAccountsView.tsx         # standalone — does not require the agent
-        JournalEntryForm.tsx            # standalone
-        JournalEntryList.tsx            # standalone
-        ProposedEntryCard.tsx           # rendered when directive.type === 'proposed_entry_card'
-        BasicPLView.tsx                 # standalone
-        AIActionReviewQueue.tsx         # standalone
+        ComingSoonPlaceholder.tsx        # renders for Phase 2+ canvas directive types
+        JournalEntryDetailView.tsx       # journal entry detail
+        JournalEntryForm.tsx            # manual journal entry form
+        JournalEntryListView.tsx         # journal entry list
+        ReversalForm.tsx                # reversal entry form with period gap banner
+  supabase/
+    migrations/                         # Supabase CLI timestamp-prefixed migrations
+      20240101000000_initial_schema.sql
+      20240102000000_add_reversal_reason.sql
+      20240103000000_seed_tax_codes.sql
+      20240104000000_add_entry_number.sql
+      20240105000000_add_entry_type.sql
+      20240106000000_add_attachments.sql
+      20240107000000_report_rpc_functions.sql
   messages/                             # next-intl translation files
     en.json                             # populated in Phase 1.1
-    fr.json                             # placeholder structure, content in later phases
-    zh-Hant.json                        # placeholder structure, content in later phases
+    fr-CA.json                          # placeholder structure (English fallback), content in later phases
+    zh-Hant.json                        # placeholder structure (English fallback), content in later phases
   docs/
     prompt-history/
-      CHANGELOG.md                      # master version log
-      v0.5.0-phase1-simplification.md
+      CHANGELOG.md                      # full version history (extracted from PLAN.md in Phase 1.1 closeout)
     decisions/
-      README.md                         # ADR template only — no pre-populated ADRs
-    troubleshooting/
-      rls.md                            # "if a query returns empty when you expect data, suspect RLS first"
-  postman/
-    collection.json
+      README.md                         # ADR template and guidance
+      0001-reversal-semantics.md        # Q19 reversal mechanism — written during v0.5.6 step-5 split
+    friction-journal.md                 # append-only, written during work (40+ entries from Phase 1.1)
+    specs/
+      phase-1.1.md                      # Phase 1.1 Execution Brief (functionally complete)
   tests/
     setup/
       testDb.ts                         # parameterized SUPABASE_TEST_URL fallback chain — Q18, no hardcoded localhost
       loadEnv.ts                        # loads .env.test.local for integration tests
-    integration/
+      globalSetup.ts                    # Vitest global setup — migrations + seed
+      test_helpers.sql                  # SQL helper functions for test fixtures
+    integration/                        # 7 files, 26 tests
       unbalancedJournalEntry.test.ts              # Category A floor #1 — deferred constraint
       lockedPeriodRejection.test.ts               # Category A floor #2 — period-lock trigger
       crossOrgRlsIsolation.test.ts                # Category A floor #3 — RLS
       serviceMiddlewareAuthorization.test.ts      # Category A floor #4 — withInvariants() A3 (v0.5.3)
       reversalMirror.test.ts                      # Category A floor #5 — reversal mirror (v0.5.5, Q19)
+      reportProfitAndLoss.test.ts                 # P&L report correctness
+      reportTrialBalance.test.ts                  # Trial Balance report correctness
+    unit/                               # 4 files, 49 tests
+      generateFiscalPeriods.test.ts
+      journalEntrySchema.test.ts
+      mirrorLines.test.ts
+      moneySchema.test.ts
   scripts/
     seed-auth-users.ts                  # tsx — creates Supabase Auth users via admin API (Q10). Runs BEFORE dev.sql.
   .env.example
@@ -1893,7 +1921,7 @@ export type PostJournalEntryOutput = z.infer<typeof PostJournalEntryOutputSchema
 
 The same Zod schema is imported by:
 
-**1. Next.js API route** (`src/app/api/accounting/journals/route.ts`):
+**1. Next.js API route** (`src/app/api/orgs/[orgId]/journal-entries/route.ts`):
 
 ```typescript
 import { PostJournalEntryInputSchema } from '@/shared/schemas/accounting/journalEntry.schema';
@@ -2100,14 +2128,14 @@ are standalone.
 ### 4b. The `canvas_directive` Contract (Agent-to-UI Protocol)
 
 The most important interface in The Bridge. Defined as a TypeScript
-discriminated union in `src/agent/canvas/directives.ts`. Every agent tool
+discriminated union in `src/shared/types/canvasDirective.ts`. Every agent tool
 response (and every API route response that affects what the canvas should
 show) includes a `canvas_directive`. The frontend reads the directive and
 renders the appropriate canvas component. **The agent never produces HTML.
 It produces structured data. The UI renders it.**
 
 ```typescript
-// src/agent/canvas/directives.ts
+// src/shared/types/canvasDirective.ts
 // (Plain English: a discriminated union is a TypeScript pattern where a
 // shared "type" field tells you which shape the rest of the object has.
 // The compiler enforces that you handle every possible type.)
@@ -2842,10 +2870,8 @@ model, auth, UI shell, and the manual journal entry path proven to work.
   no agent yet — but rendered)
 - i18n URL structure `/[locale]/[orgId]/...` from day one with English
   strings; fr-CA and zh-Hant translation files have placeholder structure
-- `docs/decisions/README.md` with ADR template (no pre-populated ADRs)
-- `docs/troubleshooting/rls.md` with the "suspect RLS first" guidance
-- Postman collection v1.1: health check, auth, org CRUD, CoA CRUD, journal
-  entry CRUD, period check
+- `docs/decisions/README.md` with ADR template; `0001-reversal-semantics.md` written during v0.5.6 split
+- `docs/friction-journal.md` with 40+ entries from Phase 1.1 work
 
 **Phase 1.1 Exit Criteria (all must pass before Phase 1.2 begins):**
 1. `pnpm dev` starts cleanly with zero TypeScript errors.
@@ -2871,7 +2897,7 @@ model, auth, UI shell, and the manual journal entry path proven to work.
 12. Postman v1.1 collection passes all requests.
 13. **Usage signal (not just build signal):** the founder has personally
     posted at least 5 manual journal entries across the two real orgs, and
-    the friction journal (`docs/phase1.1-friction.md`) has at least 3 real
+    the friction journal (`docs/friction-journal.md`) has at least 3 real
     entries. Zero entries means the founder ran the build but did not use
     the system — not done.
 14. **Time-to-first-post:** measure clock time from "open the manual entry
@@ -2910,7 +2936,7 @@ can also be created via natural language conversation in The Bridge.
 - `src/agent/session/agentSession.ts` — Postgres-backed session persistence
 - `src/agent/memory/orgContextManager.ts` — load fiscal calendar, org row;
   vendor/intercompany arrays empty
-- `src/agent/canvas/directives.ts` — full discriminated union (Phase 2+
+- `src/shared/types/canvasDirective.ts` — full discriminated union (Phase 2+
   types render "Coming Soon")
 - `src/components/canvas/ProposedEntryCard.tsx` — full component
 - `/api/agent/message` and `/api/agent/confirm` Next.js API routes
@@ -3607,18 +3633,21 @@ functions compute the right answer. Unit tests do that.
   code or configuration — covered implicitly by the integration tests
   passing.
 
-**Test file layout in Phase 1.1 (v0.5.5 — five-test Category A floor):**
+**Test file layout (Phase 1.1 actual — 7 integration files, 4 unit files):**
 ```
-src/services/journalEntry/
-  journalEntryService.ts
-  journalEntryService.test.ts               ← unit tests (Postgres-backed)
-  types.ts
 tests/integration/
-  debit-credit-invariant.test.ts            ← Category A floor #1
-  period-lock.test.ts                       ← Category A floor #2
-  rls-cross-org.test.ts                     ← Category A floor #3
-  service-middleware-authorization.test.ts  ← Category A floor #4 (v0.5.3, A3)
-  reversal-mirror.test.ts                   ← Category A floor #5 (v0.5.5, Q19)
+  unbalancedJournalEntry.test.ts              ← Category A floor #1 — deferred constraint
+  lockedPeriodRejection.test.ts               ← Category A floor #2 — period-lock trigger
+  crossOrgRlsIsolation.test.ts                ← Category A floor #3 — RLS
+  serviceMiddlewareAuthorization.test.ts      ← Category A floor #4 (v0.5.3, A3)
+  reversalMirror.test.ts                      ← Category A floor #5 (v0.5.5, Q19)
+  reportProfitAndLoss.test.ts                 ← P&L report correctness
+  reportTrialBalance.test.ts                  ← Trial Balance report correctness
+tests/unit/
+  generateFiscalPeriods.test.ts
+  journalEntrySchema.test.ts
+  mirrorLines.test.ts
+  moneySchema.test.ts
 ```
 
 **Category A floor count history:** v0.5.0 established three tests.
@@ -3777,7 +3806,7 @@ your local key — it changes every time you reset local Supabase) and
 
 **RLS blocking a query / empty result set.** **Suspect RLS first.** A
 policy that silently returns empty result sets looks identical to "no data
-exists" and the error message is unhelpful. See `docs/troubleshooting/rls.md`.
+exists" and the error message is unhelpful.
 Check that the service is using the service-role client
 (`src/db/adminClient.ts`), not the anon client. If you are in a server
 component, you are correctly using the user-scoped client and RLS is
@@ -4118,55 +4147,19 @@ ceremony. Pre-populated ADRs become cargo-cult docs that rot.
 
 ### What Phase 1.1 creates:
 
-**`docs/prompt-history/CHANGELOG.md`** — pre-populated with v0.1.0 through
-v0.5.0, including what changed in each version and why. This is the master
-version log of the architecture itself.
+**`docs/prompt-history/CHANGELOG.md`** — full version history from v0.1.0
+through v0.5.6, including what changed in each version and why. The
+condensed inline version history was extracted from PLAN.md to this file
+during the Phase 1.1 Document Sync closeout.
 
-**`docs/prompt-history/v0.5.0-phase1-simplification.md`** — the milestone
-note for v0.5.0 capturing the eight superseded decisions (see "Eight
-v0.4.0 decisions formally superseded" in the version history at the top
-of this document) and the reasoning.
+**`docs/decisions/README.md`** — ADR template and guidance.
+**`docs/decisions/0001-reversal-semantics.md`** — the first ADR, written
+during the v0.5.6 step-5 split from §18c.19 RESOLVED verbatim.
 
-**`docs/decisions/README.md`** — the ADR template only. No ADR-001
-through ADR-NNN files. The README contains:
-
-```markdown
-# Architecture Decision Records
-
-This folder will hold one ADR per major architectural decision as it is made.
-ADRs are written in anger — when there is a real tradeoff with real options
-and a real reason for choosing one over the others. ADRs are not written in
-advance as documentation ceremony.
-
-## When to write an ADR
-- A decision that took more than 30 minutes to make
-- A decision that closes off other options
-- A decision a future contributor will reasonably ask "why?" about
-- A decision that contradicts something in PLAN.md (in which case, also
-  bump PLAN.md)
-
-## Template
-\`\`\`
-# ADR-NNN: [Decision Title]
-## Status: Accepted | Superseded by ADR-MMM | Deprecated
-## Date: YYYY-MM-DD
-## Context: [What problem needed solving and what constraints apply]
-## Decision: [What was decided in one or two sentences]
-## Consequences: [What this enables and what it constrains]
-## Alternatives considered: [What was rejected and why]
-## Triggered by: [Which conversation, PR, or incident prompted this]
-\`\`\`
-```
-
-**`docs/troubleshooting/rls.md`** — the "suspect RLS first" guide for
-debugging empty result sets that look like missing data.
-
-**`docs/phase1.3-friction.md`** — created empty in Phase 1.1, populated
-during Phase 1.3 (the Reality Check phase).
+**`docs/friction-journal.md`** — append-only friction journal with 40+
+entries from Phase 1.1 work.
 
 ### What Phase 1.1 does NOT create:
-- ADR-001 through ADR-NNN files (written organically during Phase 1.1
-  and 1.2 as real decisions are made)
 - Pre-built Layer 3 workflow agent stubs
 - Empty interface files for Phase 2+ features beyond the ones explicitly
   required (canvas directive types and the contracts file)
@@ -4199,13 +4192,12 @@ Questions for the founder to resolve before Phase 1.1 begins.
 
 ## Section 18 — Open Questions
 
-These are gaps and ambiguities that I (Claude, drafting v0.5.1) want the
-founder to resolve before the Phase 1.1 brief is written. Each has a
-proposed resolution, but **the proposed resolution is mine, not yours** —
-silently inheriting any of these defaults would violate the "zero
-reasonable assumptions" rule.
+These are gaps and ambiguities originally drafted in v0.5.1 for the founder
+to resolve before the Phase 1.1 brief was written. **Status as of Phase 1.1
+closeout: 10 RESOLVED (Q1, Q2, Q4, Q5, Q7, Q9, Q10, Q18, Q19, Q20),
+10 still open (Q3, Q6, Q8, Q11–Q17) — all deferred to Phase 1.2+ scope.**
 
-The 19 questions are grouped into three categories:
+The 20 questions are grouped into four categories:
 - **Section 18a — Founder data and environment** (Questions 1–10): things
   only the founder knows, like which orgs and which months
 - **Section 18b — Architectural decisions promoted from Section 17 in v0.5.1**
@@ -4213,6 +4205,9 @@ The 19 questions are grouped into three categories:
   promoted in v0.5.1 because they are foundational, not Phase 1.2 details
 - **Section 18c — Architectural gaps not previously surfaced** (Questions
   18–19): genuine architectural questions the v0.5.0 review missed
+- **Section 18d — Decisions recorded during Phase 1.1 implementation**
+  (Question 20): decisions made during implementation that were not
+  anticipated by the original questions
 
 ### Section 18a — Founder Data and Environment
 
@@ -4509,9 +4504,9 @@ should be the founder's call, not mine.
        Simplification 1).
 
     This reasoning — including the "audit log vs audit trail"
-    distinction — is ADR-001 material and will be captured verbatim
-    in `docs/decisions/0001-reversal-semantics.md` during the step-5
-    split. The Bible keeps the full rationale inline in §2a so a
+    distinction — is ADR-001 material and was captured verbatim
+    in `docs/decisions/0001-reversal-semantics.md` during the v0.5.6
+    step-5 split. The Bible keeps the full rationale inline in §2a so a
     future reader considering moving the column again sees the
     tradeoff without having to dig into the ADR folder.
 
@@ -4531,10 +4526,9 @@ should be the founder's call, not mine.
     **ADR-001 seed material.** The reasoning above — the three
     additions, why each ships in Phase 1.1, the `audit_log` vs
     `journal_entries` placement call, and the explicit Phase 2
-    deferrals — is the content of ADR-001 and will be written
-    verbatim into `docs/decisions/0001-reversal-semantics.md` after
-    the split, per the step-5 plan. Capture the reasoning *as
-    written here*, not paraphrased.
+    deferrals — is the content of ADR-001 and was written
+    verbatim into `docs/decisions/0001-reversal-semantics.md` during
+    the v0.5.6 step-5 split.
 
     **Part 1 edits produced by this resolution:**
     - §2a `journal_entries`: add `reverses_journal_entry_id` column

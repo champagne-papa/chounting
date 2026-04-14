@@ -723,3 +723,20 @@ Categories:
   and reversal credits on expense accounts. Task 17 implements the
   correct formula. The simplified formula would report wrong net
   income whenever a reversed entry exists in the filtered period.
+
+- 2026-04-13 NOTE   Document Sync session (Phase 1.1 exit criterion
+  #16). PLAN.md drift audit found: folder tree had 28 stale paths
+  (wrong API routes, wrong migration location, missing files,
+  Phase 1.2 stubs presented as populated), §10a test layout used
+  kebab-case names vs actual camelCase, §16 referenced nonexistent
+  docs/troubleshooting/rls.md and docs/prompt-history/v0.5.0-phase1-
+  simplification.md, two future-tense ADR-001 references ("will be
+  captured") when ADR-001 already exists, CHANGELOG.md missing v0.5.5
+  and v0.5.6 entries. All fixed. Changelog block (~2,700 words)
+  extracted from PLAN.md to docs/prompt-history/CHANGELOG.md.
+
+- 2026-04-13 NOTE   CTO review amendments (Posting Engine separation,
+  functional currency handling, COA hierarchy validation) from §16
+  of the Phase 1.1 brief didn't land in PLAN.md during Phase 1.1.
+  Deferred to Phase 1.2 as architecture-authoring work. Not part of
+  Document Sync scope.
