@@ -2,9 +2,77 @@
 
 Full changelog for `PLAN.md` — the Architecture Bible for The Bridge.
 Each entry names the version, the review that produced it, and every
-finding resolved. The canonical condensed version history lives at the
-top of Part 1 of `PLAN.md`; this file is the expanded form for audit
-and post-hoc review.
+finding resolved. This file is the single source of truth for version
+history; the inline version history block was extracted from PLAN.md
+during the Phase 1.1 Document Sync closeout.
+
+---
+
+## v0.5.6 — Step-5 split: Part 2 → docs/specs/phase-1.1.md, CLAUDE.md derived, ADR-001 written
+
+The step-5 split the v0.5.5 commit described as "next session, fresh
+eyes" is now complete.
+
+**Four deliverables:**
+
+1. **Part 2 extracted** verbatim via `sed` from PLAN.md to
+   `docs/specs/phase-1.1.md` with three known divergences fixed during
+   extraction — the obsolete v0.5.2 preamble block replaced with a
+   v0.5.5-confirmed block; test counts propagated from three to five;
+   Q5 assumption marker replaced with confirmed WSL2 note. Tests 4 and
+   5 (service-middleware authorization and reversal mirror) added as new
+   subsections §6f and §6g.
+
+2. **`CLAUDE.md` derived at the repo root** (184 lines) from §0, §1d,
+   §2b, §3a, §5c, §15, and the Critical Architectural Invariants. Ten
+   non-negotiable rules filtered by the throwaway-work test.
+
+3. **`docs/decisions/0001-reversal-semantics.md` written** from §18c.19
+   RESOLVED verbatim as a 389-line ADR with the full template, including
+   the mid-cycle `audit_log` → `journal_entries` placement migration.
+
+4. **`docs/decisions/README.md` written** as the ADR template and "when
+   to write an ADR" guidance per §16.
+
+**Part 1 edits:** §1a folder tree updated; §1b `db:seed` script replaced
+with the three-script model; §2d updated to reference `docs/specs/`;
+top-of-file and "End of Part 1" blocks rewritten for the split world.
+
+**What v0.5.6 does NOT touch:** any of the §0-§18 architectural content.
+The split was file reorganization, not an architectural revision.
+
+---
+
+## v0.5.5 — Founder answers + reversal mechanism + consistency pass
+
+One coherent commit bundling a four-step sequence:
+
+1. **Document-strategy audit** classifying Part 1 as ~95% SETTLED with
+   four SOFT items and §18 OPEN.
+2. **Two pre-existing v0.5.3 consistency slips fixed** — §3b
+   `ProposedEntryCardSchema.lines[].debit/credit` changed from
+   `z.number()` to `MoneyAmountSchema`; §3d step 4 replaced with a
+   load-bearing comment (vestigial defense-in-depth that doesn't compile
+   under v0.5.3's string-money rule).
+3. **Nine-question minimum-unblock set answered** — Q1 `holding_company +
+   real_estate`; Q2 BC with GST + PST_BC (not HST); Q4 Supabase
+   `ca-central-1` + Vercel `yul1`; Q5 Windows + WSL2; Q7 GitHub; Q9
+   `zod-to-json-schema` pinned; Q10 Supabase admin API for seeding; Q18
+   local for 1.1/1.2, remote for 1.3 with parameterized tests; Q19
+   reversal mechanism accepted with three additions.
+4. **Full-width consistency re-read** catching three stale "three tests"
+   references propagated to the five-test floor count.
+
+**Q19 reversal mechanism** produced the largest edit footprint:
+`reverses_journal_entry_id` nullable self-FK, `reversal_reason` on
+`journal_entries` (migrated from `audit_log` mid-cycle after founder
+reconsidered "audit log" → "audit trail" phrasing), mirror check in §15e,
+partial index in §2e, reversal UI in §4h, Category A floor test #5.
+Partial reversals, chain UI, and auto period-end reversals deferred to
+Phase 2.
+
+**What v0.5.5 does NOT touch:** the stack, the invariants, the Phase 1
+Simplifications, §0's divergence table, §14, or any Phase 2+ content.
 
 ---
 
@@ -170,20 +238,54 @@ on any v0.5.3 finding.
 
 ## v0.5.2 — Readiness Review Fixes
 
-(See the condensed version history block at the top of `PLAN.md` Part 1.
-Full narrative deferred — v0.5.2 was the first version to ship a
-changelog file and earlier versions are documented only in the
-in-Bible version history.)
+Three gaps closed after an interactive readiness review of v0.5.1:
+(1) Part 2 preamble added disclosing the brief was drafted against §18
+default answers; (2) Phase 1.2 exit criteria extended with seven
+load-bearing tests (#12–18); (3) Phase 1.3 exit criteria extended with
+seven real-bookkeeping signals (#7–13).
+
+---
 
 ## v0.5.1 — Foundation Review Fixes
 
-(See the condensed version history block.)
+Section 0 added enumerating all eight v0.4.0 → v0.5.0 divergences.
+Section 15f rewritten with side-by-side ordering diagrams. Open Questions
+expanded from 10 to 19 by promoting seven decisions from Section 17 and
+adding two architectural gaps (CI/CD DB target and reversal mechanism).
+
+---
 
 ## v0.5.0 — Phase 1 Simplification
 
-(See the condensed version history block.)
+Single Next.js app for Phase 1 (no monorepo, no Express). Layer 1/2
+agents collapsed to service functions. Events table reserved-seat.
+Audit log written synchronously. A/B/C categorization. Phase structure
+rewritten as 1.1/1.2/1.3. Eight v0.4.0 decisions formally superseded.
 
-## v0.4.0 and earlier
+---
 
-Pre-changelog. See the condensed version history block at the top of
-`PLAN.md` Part 1.
+## v0.4.0 — Architecture Hardened
+
+Four-layer truth hierarchy, pre-commit invariant enforcement,
+three-namespace contracts package, Agent→Command contract layer, event
+stream as single source of truth, trace-id observability, semantic
+confidence routing graph.
+
+---
+
+## v0.3.0 — Layered Agents
+
+Three-layer stack, Two Laws, Phase 1 scoped to manual journal entry
+proof-of-concept.
+
+---
+
+## v0.2.0 — Canvas
+
+Bridge UI, Contextual Canvas, canvas_directive protocol, Mainframe rail.
+
+---
+
+## v0.1.0 — Initial
+
+Zoho module surface, flat tool catalog, create_bill worked example.
