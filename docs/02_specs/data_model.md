@@ -1063,5 +1063,628 @@ caching if report generation becomes slow.
 
 ---
 
-**End of Part 1.** Part 2 (RLS policies and helper functions) will
-be appended as a separate commit.
+## Part 2 — RLS Policies and Helper Functions
+
+Row-level security is the tenant-isolation enforcement mechanism for
+every table with an `org_id` column. Part 2 documents the full RLS
+policy SQL verbatim from
+`supabase/migrations/20240101000000_initial_schema.sql`, along with
+the helper functions the policies call and the operational rules
+that make RLS comprehensible at the application layer.
+
+Unlike named CHECK constraints and triggers (which are rules first
+and appear only as cross-references in Part 1 with their full SQL
+in `ledger_truth_model.md`), RLS policies are data-scoping
+infrastructure and their full SQL lives here. See
+`docs/02_specs/ledger_truth_model.md` INV-RLS-001 for the single
+architectural invariant ("cross-org data is never visible to a
+user outside the org") that all of the policies below collectively
+enforce.
+
+---
+
+## The Two-Client Rule
+
+Every RLS policy in this file applies to one of two Supabase
+clients. Understanding which client is being used is the
+prerequisite to understanding what RLS actually enforces.
+
+**`userClient`** (`src/db/userClient.ts`) — a Supabase client
+created with the anon key and the user's JWT. Every query through
+this client runs under the user's auth context (`auth.uid()`
+returns the user's ID) and respects RLS policies. This is the
+client used by Next.js server components that read data for
+display, and by any code that needs RLS-enforced isolation for
+defense in depth.
+
+**`adminClient`** (`src/db/adminClient.ts`) — a Supabase client
+created with the service-role key. Queries through this client
+**bypass RLS entirely**. `auth.uid()` returns NULL because there
+is no user session. This is the client used by every service
+function in `src/services/` because service functions are
+authoritative and must be able to write across RLS boundaries
+(e.g., writing an `audit_log` row for an action the user took on
+their own org).
+
+**The rule.** Never use `adminClient` from Next.js route handlers
+or React components. Route handlers call service functions, and
+service functions use `adminClient` internally. The user-scoped
+view of the database (from a component reading for display) goes
+through `userClient`; the authoritative write path (from a service
+function) goes through `adminClient`. This split is what makes
+RLS defense-in-depth for reads without making it the primary
+enforcement for writes.
+
+**Why RLS still matters when writes go through `adminClient`.** The
+service layer is authoritative — `withInvariants()` enforces
+`canUserPerformAction()` before any mutation runs (INV-AUTH-001),
+and the service layer is the only path that writes to the
+database. RLS is not the primary enforcement for writes; the
+service layer is. RLS matters for two reasons:
+
+1. **Read defense-in-depth.** Any read from a `userClient` —
+   including the Supabase-generated query builder that a React
+   component might use directly — is scoped to rows the user can
+   see. If a developer accidentally exposes a query that shouldn't
+   be visible cross-org, RLS stops the leak before it becomes a
+   data exposure.
+2. **Append-only enforcement on `journal_entries` and
+   `journal_lines`.** The `USING (false)` policies on UPDATE and
+   DELETE apply to *any* client that respects RLS — including any
+   future read-only reporting client or a downstream service that
+   somehow obtains anon-key credentials. Even if a bug in the
+   service layer tried to UPDATE a journal entry, the RLS policy
+   would reject it *if* the call went through anything other than
+   `adminClient`.
+
+---
+
+## Helper Functions
+
+Two `SECURITY DEFINER` helper functions do the heavy lifting for
+every RLS policy. They are installed in the public schema with
+`STABLE` volatility (so the planner can inline them) and
+`SET search_path = ''` (so the function body resolves tables by
+fully-qualified name, preventing search-path attacks).
+
+### `user_has_org_access(target_org_id uuid) → boolean`
+
+```sql
+CREATE OR REPLACE FUNCTION public.user_has_org_access(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships
+    WHERE user_id = auth.uid() AND org_id = target_org_id
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_has_org_access(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_org_access(uuid) TO authenticated;
+```
+
+Returns `true` if the calling user has any membership row for the
+target org. Used as the default tenant-scoping predicate in
+policies like `journal_entries_select`, `chart_of_accounts_select`,
+and most other tenant tables.
+
+**Why `SECURITY DEFINER`.** The function runs with the privileges
+of its definer (the migration-time superuser), not the caller.
+Without this, a non-privileged user running a SELECT against
+`memberships` would hit the `memberships_select` policy and get a
+recursive RLS evaluation. `SECURITY DEFINER` breaks the recursion
+by letting the function read `memberships` directly without
+policy evaluation. The `REVOKE ALL ... FROM PUBLIC` and explicit
+`GRANT EXECUTE ... TO authenticated` ensure only logged-in users
+can call the function.
+
+### `user_is_controller(target_org_id uuid) → boolean`
+
+```sql
+CREATE OR REPLACE FUNCTION public.user_is_controller(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships
+    WHERE user_id = auth.uid()
+      AND org_id = target_org_id
+      AND role = 'controller'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_is_controller(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_is_controller(uuid) TO authenticated;
+```
+
+Returns `true` if the calling user has a `controller` role
+membership in the target org. Used as the tenant-scoping predicate
+in policies that require elevated permissions (locking a fiscal
+period, managing vendor rules, viewing all AI actions rather than
+just one's own).
+
+---
+
+## Standard Tenant Pattern
+
+Most tables with an `org_id` column follow the same three-policy
+pattern for their SELECT/INSERT/UPDATE access:
+
+```sql
+CREATE POLICY <table>_select ON <table>
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY <table>_insert ON <table>
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY <table>_update ON <table>
+  FOR UPDATE USING (user_has_org_access(org_id));
+```
+
+This is the default for: `chart_of_accounts`, `vendors`,
+`customers`. These three tables follow the pattern exactly and have
+no deviations.
+
+Many other tables use a variation of this pattern — same
+`user_has_org_access(org_id)` scoping but collapsed into a single
+`FOR ALL` policy, or with the scoping adapted for junction tables.
+The per-table section below documents each.
+
+**Tables deviating from this pattern** are cataloged in the
+"Standard-Pattern Exceptions" section at the end of Part 2, with
+the reason for each deviation.
+
+**INV-RLS-001.** The collective effect of every RLS policy in this
+file is the single architectural invariant *cross-org data is
+never visible to a user outside the org*. See
+`docs/02_specs/ledger_truth_model.md` for the full invariant
+statement and `tests/integration/crossOrgRlsIsolation.test.ts` for
+the test coverage.
+
+---
+
+## Enable RLS Block
+
+Before any policies are defined, the migration enables RLS on
+every tenant-scoped table plus `chart_of_accounts_templates` and
+`tax_codes`. A table without RLS enabled has no policy enforcement,
+so the `ENABLE ROW LEVEL SECURITY` statement is as load-bearing as
+the policies themselves.
+
+```sql
+ALTER TABLE organizations                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE memberships                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts_templates  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fiscal_periods               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE intercompany_relationships   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_lines                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors                      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_rules                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_lines                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills                        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bill_lines                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_accounts                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_transactions            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tax_codes                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_actions                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_sessions               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events                       ENABLE ROW LEVEL SECURITY;
+```
+
+Every table that exists in the schema has RLS enabled. There is
+no unprotected table.
+
+---
+
+## Per-Table Policies
+
+Policies are presented in schema order (matching Part 1's table
+order) so a reader walking from a table definition to its policies
+follows the same navigation.
+
+### `organizations`
+
+```sql
+CREATE POLICY organizations_select ON organizations
+  FOR SELECT USING (user_has_org_access(org_id));
+```
+
+Standard SELECT-only tenant pattern. `organizations` rows are
+created via `orgService.create()` through `adminClient`; no RLS
+policy for INSERT exists because orgs are not user-writable from
+the client side.
+
+### `memberships`
+
+```sql
+CREATE POLICY memberships_select ON memberships
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+```
+
+**Deviation from standard pattern.** Users see their own memberships
+(the `user_id = auth.uid()` branch — "what orgs am I in?") and
+controllers see all memberships in their orgs (the
+`user_is_controller(org_id)` branch — "who is in this org I
+administer?"). No INSERT/UPDATE/DELETE policies — memberships are
+created via `membershipService` through `adminClient`.
+
+### `chart_of_accounts`
+
+```sql
+CREATE POLICY chart_of_accounts_select ON chart_of_accounts
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_insert ON chart_of_accounts
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY chart_of_accounts_update ON chart_of_accounts
+  FOR UPDATE USING (user_has_org_access(org_id));
+```
+
+Standard tenant pattern — three policies, one per write action,
+using `user_has_org_access`. No DELETE policy; accounts are
+archived via `is_active = false`, not deleted.
+
+### `chart_of_accounts_templates`
+
+```sql
+CREATE POLICY coa_templates_select ON chart_of_accounts_templates
+  FOR SELECT TO authenticated USING (true);
+```
+
+**Deviation from standard pattern.** No org scoping — any
+authenticated user can read any template. See Part 1 for the
+reasoning (the org creation flow needs to read templates before
+the user has an `org_id` to scope to). There is no
+INSERT/UPDATE/DELETE policy because templates are seed-only and
+modifying them requires a migration.
+
+### `fiscal_periods`
+
+```sql
+CREATE POLICY fiscal_periods_select ON fiscal_periods
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY fiscal_periods_insert ON fiscal_periods
+  FOR INSERT WITH CHECK (user_is_controller(org_id));
+CREATE POLICY fiscal_periods_update ON fiscal_periods
+  FOR UPDATE USING (user_is_controller(org_id));
+```
+
+**Deviation from standard pattern.** SELECT uses
+`user_has_org_access` (any org member can see fiscal periods), but
+INSERT and UPDATE require `user_is_controller` — only controllers
+can create periods or lock them. Locking a period is the
+controller-only action that drives INV-LEDGER-002 enforcement via
+`trg_enforce_period_not_locked` on `journal_lines`.
+
+### `intercompany_relationships`
+
+```sql
+CREATE POLICY intercompany_relationships_select ON intercompany_relationships
+  FOR SELECT USING (
+    user_has_org_access(org_a_id) OR user_has_org_access(org_b_id)
+  );
+```
+
+**Deviation from standard pattern.** The predicate is a dual
+`user_has_org_access` check — the user sees the relationship row
+if they have access to *either* org involved. This makes sense for
+an intercompany relationship: a user in org A should see "org A has
+an intercompany relationship with org B" even if they don't have
+access to org B. Phase 1.1 has only SELECT; Phase 2 adds
+INSERT/UPDATE policies when the AP Agent populates the table.
+
+### `journal_entries`
+
+```sql
+CREATE POLICY journal_entries_select ON journal_entries
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY journal_entries_insert ON journal_entries
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY journal_entries_no_update ON journal_entries
+  FOR UPDATE USING (false);
+CREATE POLICY journal_entries_no_delete ON journal_entries
+  FOR DELETE USING (false);
+```
+
+**Deviation from standard pattern.** SELECT and INSERT follow the
+standard tenant pattern, but UPDATE and DELETE use `USING (false)`
+— the append-only RLS enforcement. Any UPDATE or DELETE attempt
+through a `userClient` is rejected by RLS. As noted in Part 1,
+`adminClient` bypasses RLS, but no service function issues
+UPDATE/DELETE on journal_entries by construction; corrections
+happen via reversal entries.
+
+### `journal_lines`
+
+```sql
+CREATE POLICY journal_lines_select ON journal_lines
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM journal_entries je
+      WHERE je.journal_entry_id = journal_lines.journal_entry_id
+        AND user_has_org_access(je.org_id)
+    )
+  );
+CREATE POLICY journal_lines_insert ON journal_lines
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM journal_entries je
+      WHERE je.journal_entry_id = journal_lines.journal_entry_id
+        AND user_has_org_access(je.org_id)
+    )
+  );
+CREATE POLICY journal_lines_no_update ON journal_lines
+  FOR UPDATE USING (false);
+CREATE POLICY journal_lines_no_delete ON journal_lines
+  FOR DELETE USING (false);
+```
+
+**Deviation from standard pattern.** `journal_lines` has no
+`org_id` column directly — it joins to its parent `journal_entries`
+row for org access. The `EXISTS` subquery pattern is the standard
+RLS approach for junction-shape tables. Like `journal_entries`,
+journal_lines is append-only via `USING (false)` for UPDATE and
+DELETE.
+
+### `vendors`
+
+```sql
+CREATE POLICY vendors_select ON vendors
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY vendors_insert ON vendors
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY vendors_update ON vendors
+  FOR UPDATE USING (user_has_org_access(org_id));
+```
+
+Standard tenant pattern. Phase 1.1: empty.
+
+### `vendor_rules`
+
+```sql
+CREATE POLICY vendor_rules_select ON vendor_rules
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY vendor_rules_cud ON vendor_rules
+  FOR ALL USING (user_is_controller(org_id))
+  WITH CHECK (user_is_controller(org_id));
+```
+
+**Deviation from standard pattern.** SELECT uses `user_has_org_access`
+(any org member can see vendor rules), but a single `FOR ALL`
+policy requires `user_is_controller` for create/update/delete.
+Only controllers can define or modify autonomy tiers and default
+account mappings for vendors. Phase 1.1: empty.
+
+### `customers`
+
+```sql
+CREATE POLICY customers_select ON customers
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY customers_insert ON customers
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY customers_update ON customers
+  FOR UPDATE USING (user_has_org_access(org_id));
+```
+
+Standard tenant pattern. Phase 1.1: empty.
+
+### `invoices`
+
+```sql
+CREATE POLICY invoices_tenant ON invoices FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+```
+
+Single `FOR ALL` policy variant of the standard tenant pattern.
+Phase 1.1: empty.
+
+### `invoice_lines`
+
+```sql
+CREATE POLICY invoice_lines_tenant ON invoice_lines FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM invoices i
+            WHERE i.invoice_id = invoice_lines.invoice_id
+              AND user_has_org_access(i.org_id))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM invoices i
+            WHERE i.invoice_id = invoice_lines.invoice_id
+              AND user_has_org_access(i.org_id))
+  );
+```
+
+Junction-shape EXISTS subquery pattern (same shape as
+`journal_lines`) in a single `FOR ALL` policy. Phase 1.1: empty.
+
+### `bills`
+
+```sql
+CREATE POLICY bills_tenant ON bills FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+```
+
+Single `FOR ALL` policy, standard tenant pattern. Phase 1.1: empty.
+
+### `bill_lines`
+
+```sql
+CREATE POLICY bill_lines_tenant ON bill_lines FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM bills b
+            WHERE b.bill_id = bill_lines.bill_id
+              AND user_has_org_access(b.org_id))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM bills b
+            WHERE b.bill_id = bill_lines.bill_id
+              AND user_has_org_access(b.org_id))
+  );
+```
+
+Junction-shape EXISTS subquery pattern. Phase 1.1: empty.
+
+### `payments`
+
+```sql
+CREATE POLICY payments_tenant ON payments FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+```
+
+Single `FOR ALL` policy, standard tenant pattern. Phase 1.1: empty.
+
+### `bank_accounts`
+
+```sql
+CREATE POLICY bank_accounts_tenant ON bank_accounts FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+```
+
+Single `FOR ALL` policy, standard tenant pattern. Phase 1.1: empty.
+
+### `bank_transactions`
+
+```sql
+CREATE POLICY bank_transactions_tenant ON bank_transactions FOR ALL
+  USING (user_has_org_access(org_id))
+  WITH CHECK (user_has_org_access(org_id));
+```
+
+Single `FOR ALL` policy, standard tenant pattern. Phase 1.1: empty.
+
+### `tax_codes`
+
+```sql
+CREATE POLICY tax_codes_select ON tax_codes
+  FOR SELECT USING (
+    org_id IS NULL OR user_has_org_access(org_id)
+  );
+```
+
+**Deviation from standard pattern.** The nullable-org exception —
+any authenticated user sees global tax codes (NULL `org_id`) plus
+codes scoped to their orgs. There is no INSERT/UPDATE/DELETE policy
+because tax codes are seed-only in Phase 1.1; Phase 2 adds write
+policies when org-specific tax codes become editable.
+
+### `audit_log`
+
+```sql
+CREATE POLICY audit_log_select ON audit_log
+  FOR SELECT USING (user_has_org_access(org_id));
+```
+
+SELECT-only tenant pattern. Writes happen through `adminClient`
+from `recordMutation()` — no INSERT policy is needed because no
+user-scoped client should ever write to the audit log directly.
+The absence of a write policy combined with RLS being enabled
+means a `userClient` INSERT would fail with "new row violates RLS
+policy" — defense in depth against accidental user-side writes.
+
+### `ai_actions`
+
+```sql
+CREATE POLICY ai_actions_select ON ai_actions
+  FOR SELECT USING (
+    user_id = auth.uid() OR user_is_controller(org_id)
+  );
+CREATE POLICY ai_actions_insert ON ai_actions
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+```
+
+**Deviation from standard pattern.** SELECT uses the same
+user-or-controller pattern as `memberships` (users see their own
+actions; controllers see all actions in their orgs — this is how
+the AI Action Review queue works). INSERT uses the standard
+`user_has_org_access` pattern, though in practice only the
+orchestrator writes via `adminClient`.
+
+### `agent_sessions`
+
+```sql
+CREATE POLICY agent_sessions_select ON agent_sessions
+  FOR SELECT USING (user_id = auth.uid());
+```
+
+**Deviation from standard pattern.** User-scoped only — not
+org-scoped. A user sees only their own sessions, and even
+controllers do not see other users' sessions. Sessions contain
+conversation state that is considered user-private.
+
+### `events`
+
+```sql
+CREATE POLICY events_select ON events
+  FOR SELECT USING (user_has_org_access(org_id));
+```
+
+SELECT-only tenant pattern. No INSERT policy because events are
+written only from `adminClient` by Phase 2 code (Phase 1.1 installs
+the schema but writes nothing). The append-only triggers
+(`trg_events_no_update`, `trg_events_no_delete`, `trg_events_no_truncate`)
+enforce the append-only rule regardless of client.
+
+---
+
+## Standard-Pattern Exceptions Summary
+
+The following tables deviate from the default
+`user_has_org_access(org_id)` SELECT/INSERT/UPDATE pattern. The
+reason for each deviation is noted inline above; this summary
+exists so a reader can find the deviations at a glance:
+
+- **`chart_of_accounts_templates`** — global SELECT for authenticated
+  users (no org scoping); seed-only, no writes.
+- **`memberships`** — user-scoped SELECT (own rows) plus
+  controller-scoped SELECT (all rows in the org); no policies for
+  writes.
+- **`fiscal_periods`** — `user_has_org_access` SELECT but
+  `user_is_controller` INSERT/UPDATE (controller-only period
+  management).
+- **`intercompany_relationships`** — dual-org SELECT
+  (`access(org_a) OR access(org_b)`).
+- **`journal_entries`** — append-only (`USING (false)` on UPDATE
+  and DELETE).
+- **`journal_lines`** — junction-shape EXISTS subquery for parent
+  org access, plus append-only.
+- **`vendor_rules`** — `user_has_org_access` SELECT but
+  `user_is_controller` for all writes.
+- **`tax_codes`** — nullable-org SELECT (`org_id IS NULL OR
+  user_has_org_access(org_id)`); seed-only, no writes in Phase 1.1.
+- **`ai_actions`** — user-or-controller SELECT (same pattern as
+  `memberships`).
+- **`agent_sessions`** — user-scoped only (no org dimension; even
+  controllers cannot see other users' sessions).
+
+Every other tenant table (`chart_of_accounts`, `vendors`, `customers`,
+`invoices`, `invoice_lines`, `bills`, `bill_lines`, `payments`,
+`bank_accounts`, `bank_transactions`, `events`) follows the
+standard tenant pattern either directly or as a `FOR ALL` single-
+policy variant with the same `user_has_org_access(org_id)` predicate.
+
+**On `organizations` and `audit_log`.** These are tenant-scoped
+tables that follow the standard pattern for SELECT but have no
+user-side write policy at all. Writes happen through service
+functions via `adminClient`, which bypasses RLS. This is neither
+a deviation (the SELECT is standard) nor a full standard (the
+INSERT/UPDATE policies are absent). It is a "read-through-RLS,
+write-through-services" posture — the same posture every
+tenant-scoped table could adopt if it chose to, but these two do
+so explicitly because user-side writes to them would be
+operationally incorrect regardless of access control.
