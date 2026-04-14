@@ -21,7 +21,7 @@ Task 18 (final verification) produced four deliverables:
 
 ## What Phase 1.2 inherits
 
-See docs/phase-1.2-obligations.md for the full list. Key items:
+See docs/09_briefs/phase-1.2/obligations.md for the full list. Key items:
 - Agent integration (orchestrator, tools, canvas context)
 - Form UX polish (period defaults, dropdown placeholders)
 - Balance Sheet report

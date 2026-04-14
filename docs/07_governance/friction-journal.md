@@ -32,7 +32,7 @@ Categories:
   Phase 1.2 scope unchanged.
 - 2026-04-12 WANT   PLAN.md is 256KB; ~5,000 words is changelog
   history current readers don't need. CTO review recommends
-  extracting to docs/prompt-history/CHANGELOG.md. Deferred to
+  extracting to docs/08_releases/CHANGELOG.md. Deferred to
   post-Phase-1.1 close.
 - 2026-04-12 WANT   Soft close vs. hard close gap logged as §18
   Open Question. Phase 1.1 ships hard close only.
@@ -532,7 +532,7 @@ Categories:
   issue. Don't misdiagnose.
 
 - 2026-04-15 NOTE   Phase 1.2 form gap analysis captured in
-  docs/phase-1.2/journal-entry-form-gaps.md. Compared against
+  docs/09_briefs/phase-1.2/journal_entry_form_gaps.md. Compared against
   Zoho Books New Journal form during smoke test. Key gaps:
   per-line description, draft/posted status, vendor/customer
   link, attachments upload UX, save-as-draft. All are Phase 1.2
@@ -733,7 +733,7 @@ Categories:
   simplification.md, two future-tense ADR-001 references ("will be
   captured") when ADR-001 already exists, CHANGELOG.md missing v0.5.5
   and v0.5.6 entries. All fixed. Changelog block (~2,700 words)
-  extracted from PLAN.md to docs/prompt-history/CHANGELOG.md.
+  extracted from PLAN.md to docs/08_releases/CHANGELOG.md.
 
 - 2026-04-13 NOTE   CTO review amendments (Posting Engine separation,
   functional currency handling, COA hierarchy validation) from §16
