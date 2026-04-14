@@ -1,3 +1,7 @@
+> **Phase 1.1 closed on 2026-04-13.** This brief is preserved as
+> historical reference. Current obligations are in
+> /docs/09_briefs/phase-1.2/obligations.md.
+
 # Phase 1.1 Execution Brief — The Bridge
 
 *This document is the Phase 1.1 execution spec for The Bridge (Family
