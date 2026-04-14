@@ -122,6 +122,26 @@ begins.
 
 ---
 
+## Deferred Decisions (resolve during Phase 1.2 brief writing)
+
+These are implementation-detail decisions that PLAN.md deliberately
+did not pre-resolve. They are not open questions — they are decisions
+that depend on real implementation experience from Phase 1.1 and
+Phase 1.2 early work. The Phase 1.2 Execution Brief should resolve
+each one.
+
+Source: extracted from PLAN.md §17 during Phase 1.1 closeout
+restructure.
+
+| Decision | Why it's deferred |
+|---|---|
+| **Exact Claude model selection** (Sonnet 4.5 vs Sonnet 4 vs Haiku for orchestrator) | Depends on prompt-caching cost data we cannot have until Phase 1.2 begins. The brief picks a starting model and sets a measurement plan. |
+| **Prompt caching configuration details** (which prompt segments to cache, cache TTL) | Prompt caching is a Phase 1.2 day-1 default, but the exact segmentation depends on the final system prompt structure, which depends on persona prompts written during Phase 1.2. |
+| **Persona prompt content for Controller and AP Specialist** | The prompts exist in the Phase 1.2 brief, not the architecture. They are tuned during Phase 1.2 development. |
+| **Tool-call retry backoff** (immediate retry vs 1s delay vs exponential) | Depends on observed Claude API behavior. The brief picks an initial value and adjusts based on Phase 1.3 friction. |
+
+---
+
 ## Phase 2+ deferrals (NOT Phase 1.2 obligations)
 
 These were explicitly deferred past Phase 1.2:
