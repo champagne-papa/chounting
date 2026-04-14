@@ -5,7 +5,85 @@ constraints it operates under.
 
 Source: extracted from PLAN.md "The Product," "Who This Is For,"
 "Non-Negotiable Constraints," and "Locked-In Stack" sections during
-Phase 1.1 closeout restructure.
+Phase 1.1 closeout restructure. The Thesis section below was added
+during the commit-4b prelude based on external architectural review.
+
+---
+
+## The Thesis
+
+> **This system is not an accounting UI with AI assistance. It is a
+> deterministic financial engine with a probabilistic interface.**
+>
+> Agents interpret intent and propose actions. Services execute
+> domain logic deterministically. The database enforces invariants
+> absolutely. Authority flows down; structured errors flow up.
+
+This is the one-sentence statement of what The Bridge is. Every
+architectural decision in this project is evaluated against it.
+
+The two halves of the thesis are doing different work:
+
+- **"Deterministic financial engine"** — The accounting core
+  (`src/services/`, `supabase/migrations/`, the database constraints)
+  is strictly typed, fully testable, and absolutely correct. It has
+  no natural language in it, no probabilistic reasoning, no model
+  calls on the critical path of a journal entry. Double-entry math
+  is enforced by Postgres constraints. Authorization is enforced by
+  middleware. The ledger is append-only by RLS. None of this depends
+  on an LLM being right.
+
+- **"Probabilistic interface"** — The user-facing layer is an AI
+  agent that reads messy human input, interprets intent, suggests
+  actions, and explains outcomes. It is probabilistic because it has
+  to be: real accounting workflows are ambiguous, contextual, and
+  human. The agent layer is allowed to be wrong because the engine
+  catches it. Authority never flows the other way — the agent cannot
+  bypass the engine, cannot write to the database directly, cannot
+  invent amounts or account codes.
+
+The authority gradient — **agents propose, services decide, the
+database enforces** — is the mechanical implementation of the
+thesis. See `docs/02_specs/ledger_truth_model.md` for how each layer
+of the gradient is specified and enforced. See
+`docs/03_architecture/phase_simplifications.md` for why Phase 1
+collapses the Layer 1 / Layer 2 "agents" from the v0.4.0 design into
+deterministic service functions — that collapse is what makes the
+engine half of the thesis actually hold.
+
+**What the thesis requires in practice.** Three disciplines, all
+non-negotiable, that prevent the system from drifting back into
+"normal software with AI on top":
+
+1. **No logic in agents.** Agents select rules and produce
+   parameters; they never own business logic. Debit/credit math,
+   period enforcement, FX calculation, and ledger writes happen in
+   services, never in agents.
+2. **No ambiguity in services.** Services accept strictly-typed
+   inputs (Zod schemas at every boundary) and produce strictly-typed
+   outputs including structured errors. No free-form strings cross a
+   service boundary. No "agent thinks this is right" values.
+3. **Strict error contracts.** When a service rejects a call, it
+   returns a typed `ServiceError` with a code the agent can act on
+   programmatically (`PERIOD_LOCKED`, `REVERSAL_NOT_MIRROR`,
+   `PERMISSION_DENIED`, etc.), not a natural-language explanation
+   the agent has to interpret.
+
+These three disciplines are what make the system meaningfully
+distinct from "AI bolted onto QuickBooks." Without them, the
+architecture drifts back into a UI with AI assistance — correct on
+paper but indistinguishable from competitors in practice.
+
+**A forward-looking note.** Phase 1.1 and Phase 1.2 implement the
+engine half of the thesis in full. The interface half is
+UI-coupled in Phase 1.2 — the Proposed Entry Card is a React
+component, confirmation is a button click, the agent's outputs
+include `canvas_directive` render instructions. Phase 2 extracts the
+interaction model (proposal, confirmation, session flow) into
+API-level primitives so the system can run headless, with any
+interface (UI, CLI, another agent, a script) driving it. See
+`docs/09_briefs/phase-2/interaction_model_extraction.md` for the
+Phase 2 extraction plan.
 
 ---
 
@@ -31,18 +109,31 @@ AI agents).
 
 Puzzle.io and Pennylane are modern-looking wrappers around the same
 paradigm as QuickBooks and Xero. They added an AI chatbot on top of
-a traditional accounting system. That is the wrong direction. **The
-Bridge is an AI agent system that happens to have a traditional
-accounting UI underneath it — not the reverse.**
+a traditional accounting system. That is a UI-led system with an AI
+assistance layer — the AI is a helper, not an actor, and the primary
+surface is still forms and screens the user clicks through.
+
+The Bridge is the inverse, but not in the shallow "AI-first UI" sense
+— it's inverse in the architectural sense named in the Thesis above.
+The engine is a deterministic financial engine that can in principle
+run headless (agent + API, no UI). The interface is a probabilistic
+agent that translates messy human intent into structured service
+calls. The UI is one possible renderer of that interaction model,
+and explicitly not the only one.
 
 The philosophical difference:
 - In Xero, you open a screen, fill in a form, click Save. The AI is
   a helper.
-- In The Bridge, the AI agent is the primary actor. It reads your
-  email, sees the invoice, proposes the journal entry, shows you a
-  confirmation card, and you approve with one click. The traditional
-  screen exists as a fallback and a power-user tool — not the default
-  path.
+- In The Bridge, the AI agent is the primary actor in the
+  interaction layer. It reads your email, sees the invoice, proposes
+  the journal entry, shows you a confirmation card, and you approve.
+  The traditional screen exists as a fallback (the Mainframe) and a
+  power-user tool — not the default path.
+- The engine underneath is the same in both cases (double-entry,
+  period locks, audit trail, IFRS). What differs is that The Bridge
+  treats the engine as the product's core and the interface as
+  pluggable, where Xero treats the screens as the product and the
+  engine as plumbing.
 
 ### What genuinely differentiates this product
 
@@ -89,7 +180,11 @@ The philosophical difference:
    rule from institutional memory, and a plain-English explanation of
    why the agent made this choice. One-click Approve or a free-text
    rejection reason. This is the trust layer that makes the system
-   auditable.
+   auditable. In Phase 1.2 the card is a React component and the
+   confirmation loop lives in the UI; Phase 2 extracts proposal,
+   confirmation, and session state into API-level primitives so the
+   same trust layer works for any interface, not just the UI (see
+   `docs/09_briefs/phase-2/interaction_model_extraction.md`).
 
 6. **Industry-specific Chart of Accounts templates** — On org
    creation, the user selects an industry (healthcare, real estate,
