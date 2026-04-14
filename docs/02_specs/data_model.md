@@ -40,10 +40,11 @@ data-scoping infrastructure rather than a ledger rule.
 
 ## Part 1 — Core Tables
 
-This section covers all 23 tables in the current Phase 1.1 schema,
-in the order they appear in `supabase/migrations/20240101000000_initial_schema.sql`
-(schema dependency order — foreign key references resolve as a reader
-walks down the file).
+This section covers all 24 tables in the current Phase 1.1 schema,
+in the order they appear across
+`supabase/migrations/20240101000000_initial_schema.sql` and its
+follow-up migrations (002 through 007 — schema dependency order,
+with follow-up migrations extending the initial schema).
 
 Tables are documented in one of two treatment tiers:
 
@@ -53,14 +54,14 @@ Tables are documented in one of two treatment tiers:
   `audit_log`, `ai_actions`, `events`. These tables receive full
   column lists, named CHECK constraints with INV cross-references,
   trigger references, operational notes, and index rationales.
-- **Phase 2+ reserved (terse treatment, 12 tables):** `customers`,
+- **Phase 2+ reserved (terse treatment, 13 tables):** `customers`,
   `vendors`, `vendor_rules`, `invoices`, `invoice_lines`, `bills`,
   `bill_lines`, `payments`, `bank_accounts`, `bank_transactions`,
-  `intercompany_relationships`, `agent_sessions`. These tables
-  exist in the schema with columns, constraints, and RLS policies,
-  but nothing writes to most of them in Phase 1.1. They receive
-  column lists and a short Phase 2 note, without the full
-  operational commentary.
+  `intercompany_relationships`, `agent_sessions`,
+  `journal_entry_attachments`. These tables exist in the schema
+  with columns, constraints, and RLS policies, but nothing writes
+  to most of them in Phase 1.1. They receive column lists and a
+  short Phase 2 note, without the full operational commentary.
 
 ---
 
@@ -362,10 +363,12 @@ CREATE TABLE journal_entries (
   journal_entry_id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id                    uuid NOT NULL REFERENCES organizations(org_id) ON DELETE RESTRICT,
   fiscal_period_id          uuid NOT NULL REFERENCES fiscal_periods(period_id),
+  entry_number              bigint NOT NULL,                -- added by migration 004
   entry_date                date NOT NULL,
   description               text NOT NULL,
   reference                 text,
   source                    journal_entry_source NOT NULL,  -- 'manual' | 'agent' | 'import'
+  entry_type                entry_type NOT NULL DEFAULT 'regular',  -- added by migration 005
   intercompany_batch_id     uuid,                           -- reserved for Phase 2
   reverses_journal_entry_id uuid REFERENCES journal_entries(journal_entry_id),
   idempotency_key           uuid,
@@ -379,6 +382,12 @@ CREATE TABLE journal_entries (
 
 - `idempotency_required_for_agent` — `source <> 'agent' OR idempotency_key IS NOT NULL`. Enforces that any journal entry originating from the agent layer carries an idempotency key. Manual and import sources may omit it. **INV-IDEMPOTENCY-001** — see `docs/02_specs/ledger_truth_model.md`.
 - `reversal_reason_required_when_reversing` — `reverses_journal_entry_id IS NULL OR (reversal_reason IS NOT NULL AND length(trim(reversal_reason)) > 0)`. Added by migration `20240102000000_add_reversal_reason.sql`. Enforces that any journal entry reversing another carries a non-empty explanation. **INV-REVERSAL-002** — see `docs/02_specs/ledger_truth_model.md`.
+
+**Named UNIQUE constraint on this table:**
+
+- `unique_entry_number_per_org_period` — `UNIQUE (org_id, fiscal_period_id, entry_number)`. Added by migration `20240104000000_add_entry_number.sql`. Enforces sequential entry numbering within each (org, period) pair for audit traceability — auditors expect to see entry numbers 1, 2, 3... within a period with no gaps. `journalEntryService.post()` populates `entry_number` by computing `MAX(entry_number) + 1` within the target (org, period) scope at post time. Local consistency constraint with no INV attribution — the audit-traceability rule is enforced by this UNIQUE alone, not by any INV.
+
+**`entry_type` enum (added by migration 005).** The `entry_type` enum has four values: `'regular'` (the default — ordinary business transactions), `'adjusting'` (period-end adjustments), `'closing'` (year-end closing entries), and `'reversing'` (reversal entries with `reverses_journal_entry_id` populated). Phase 1.1 posts all entries with `entry_type = 'regular'` by default and sets `entry_type = 'reversing'` automatically when `reverses_journal_entry_id` is populated. Adjusting and closing workflows are Phase 2+ scope.
 
 **Triggers:** none directly attached to `journal_entries`. The deferred balance constraint and the period-lock trigger attach to `journal_lines` (see below).
 
@@ -435,7 +444,7 @@ start date. No INV attribution.
 
 **Nullable `org_id`.** Unlike other tenant-scoped tables, `org_id`
 is nullable here. A NULL `org_id` means "global tax code available
-to all orgs" — used for the seeded Canada-wide GST/HST rates. A
+to all orgs" — used for the Canada-wide GST + PST_BC seed rates. A
 non-NULL `org_id` means "org-specific tax code" — Phase 2 allows
 orgs to define custom tax codes (e.g., a municipal tax not in the
 seed set).
@@ -447,12 +456,20 @@ their orgs. This is the second of the standard-pattern exceptions to
 tenant RLS (the first being `chart_of_accounts_templates`).
 
 **Phase 1.1 seed.** The seed in migration
-`20240103000000_seed_tax_codes.sql` populates Canadian GST/HST rates:
-federal GST (5%), provincial HST for relevant provinces, and
-zero-rated codes for exempt categories. Real provincial rates are
-tracked from their effective dates for audit correctness — an
-invoice dated 2024-03-15 uses the rate in effect on 2024-03-15, not
-today's rate.
+`20240103000000_seed_tax_codes.sql` populates exactly two rows:
+federal **GST** at 5% (jurisdiction `CA`, effective from
+`2024-01-01`) and British Columbia **PST_BC** at 7% (jurisdiction
+`CA-BC`, effective from `2024-01-01`). Both are seeded with
+`org_id = NULL` to make them visible to every org via the
+nullable-org RLS exception. **BC uses GST + PST as two separate
+taxes, not HST** — BC had HST briefly but reverted to the
+GST + PST split. Other provincial codes (HST_ON, HST_NS, HST_NB,
+QST_QC, PST_SK, PST_MB) are Phase 2+ additions as new orgs onboard
+in those provinces. No historical rate rows are seeded — when
+provincial rates change, a Phase 2+ migration adds a new row with
+the new `effective_from` date, and `effective_to` is set on the
+prior row so that historical entries continue to reference the
+rate in effect when they were created.
 
 **Indexes:**
 
@@ -1015,6 +1032,43 @@ the table is absent.
 
 ---
 
+### `journal_entry_attachments`
+
+*Phase 2+ reserved — terse treatment.*
+
+```sql
+CREATE TABLE journal_entry_attachments (
+  attachment_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  journal_entry_id    uuid NOT NULL
+    REFERENCES journal_entries(journal_entry_id) ON DELETE CASCADE,
+  storage_path        text NOT NULL,
+  original_filename   text NOT NULL,
+  uploaded_by         uuid REFERENCES auth.users(id),
+  uploaded_at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_je_attachments_entry
+  ON journal_entry_attachments (journal_entry_id);
+```
+
+Added by migration `20240106000000_add_attachments.sql`. No
+`org_id` column — the table joins to its parent `journal_entries`
+row for org access (same junction-shape pattern as
+`journal_lines`). `storage_path` points at a Supabase Storage
+bucket object; Phase 1.1 installs the schema but no upload
+pipeline yet writes to storage or this table.
+
+**Phase 1.1 status:** empty. The table carries a
+`COMMENT ON TABLE journal_entry_attachments IS 'Populated in Phase
+2 by AP Agent. Do not write to manually.'` — Phase 2's email
+ingestion + OCR pipeline uploads the source PDF for each bill and
+writes the attachment row that links the stored file back to the
+journal entry the agent proposed. **Indexes:**
+`idx_je_attachments_entry` on `(journal_entry_id)` supports
+"show me the attachments for this entry" detail-view queries.
+
+---
+
 ## Index Plan
 
 A summary of the query patterns that the Phase 1.1 indexes support.
@@ -1048,6 +1102,7 @@ Performance Conventions.
 | `events` | `idx_events_org_aggregate` | Aggregate replay (Phase 2) |
 | `events` | `idx_events_trace` | Trace-based event query (Phase 2) |
 | `events` | `idx_events_type_recorded` | Event-type filtering (Phase 2) |
+| `journal_entry_attachments` | `idx_je_attachments_entry` | Attachments for a journal entry (Phase 2) |
 
 **Partial indexes** (`idx_je_org_intercompany` and `idx_je_reverses`)
 cover only rows where the indexed column is non-NULL. This keeps
@@ -1280,10 +1335,13 @@ ALTER TABLE audit_log                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_actions                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_sessions               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events                       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entry_attachments    ENABLE ROW LEVEL SECURITY;
 ```
 
 Every table that exists in the schema has RLS enabled. There is
-no unprotected table.
+no unprotected table. (The attachments table is enabled from its
+own migration `20240106000000_add_attachments.sql` rather than
+the initial schema, but the effect is identical.)
 
 ---
 
@@ -1640,6 +1698,156 @@ the schema but writes nothing). The append-only triggers
 (`trg_events_no_update`, `trg_events_no_delete`, `trg_events_no_truncate`)
 enforce the append-only rule regardless of client.
 
+### `journal_entry_attachments`
+
+```sql
+CREATE POLICY je_attachments_select ON journal_entry_attachments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM journal_entries je
+      WHERE je.journal_entry_id =
+            journal_entry_attachments.journal_entry_id
+        AND user_has_org_access(je.org_id)
+    )
+  );
+```
+
+**Deviation from standard pattern.** Junction-shape EXISTS subquery
+through `journal_entries` for org access — same shape as
+`journal_lines_select`. SELECT-only in Phase 1.1; Phase 2 adds
+INSERT policies when the AP Agent populates the table from OCR'd
+attachments.
+
+---
+
+## RPC Functions
+
+Two Postgres RPC functions support the Phase 1.1 reporting
+pathway. Both are called from `src/services/reporting/reportService.ts`
+via `adminClient().rpc()` — they cannot be expressed through the
+Supabase PostgREST query builder because they use `FILTER` clauses
+that are not in the builder's surface.
+
+Both functions:
+
+- Use `amount_cad` exclusively for multi-currency correctness.
+- Accept `NULL` for `p_period_id` to mean "all periods."
+- Include reversed entries and their reversals; reversals net
+  naturally via aggregation per the Q21 decision (reversals are
+  not excluded from the aggregate).
+- Use `LANGUAGE sql` (single SELECT, planner can inline).
+- Use `SECURITY INVOKER` (respect RLS, run under the caller's
+  permissions — but since the service layer calls them through
+  `adminClient`, RLS is bypassed in practice).
+- Grant `EXECUTE` to `service_role` only — not to `authenticated`
+  — so only the service layer (not user-scoped clients) can call
+  them.
+
+Added by migration `20240107000000_report_rpc_functions.sql`.
+
+### `get_profit_and_loss(p_org_id uuid, p_period_id uuid)`
+
+Returns per-account-type aggregates for the P&L and Balance Sheet
+summary. One row per account type (`asset`, `liability`, `equity`,
+`revenue`, `expense`) with `debit_total_cad` and
+`credit_total_cad` columns. Net income is computed UI-side as
+`revenue.credit_total_cad - expense.debit_total_cad`.
+
+```sql
+CREATE OR REPLACE FUNCTION get_profit_and_loss(
+  p_org_id uuid,
+  p_period_id uuid
+)
+RETURNS TABLE (
+  account_type text,
+  debit_total_cad numeric,
+  credit_total_cad numeric
+)
+LANGUAGE sql
+SECURITY INVOKER
+AS $$
+  SELECT
+    coa.account_type::text AS account_type,
+    COALESCE(SUM(jl.amount_cad) FILTER (WHERE jl.debit_amount > 0), 0) AS debit_total_cad,
+    COALESCE(SUM(jl.amount_cad) FILTER (WHERE jl.credit_amount > 0), 0) AS credit_total_cad
+  FROM chart_of_accounts coa
+  LEFT JOIN journal_lines jl ON jl.account_id = coa.account_id
+  LEFT JOIN journal_entries je ON je.journal_entry_id = jl.journal_entry_id
+    AND je.org_id = p_org_id
+    AND (p_period_id IS NULL OR je.fiscal_period_id = p_period_id)
+  WHERE coa.org_id = p_org_id
+  GROUP BY coa.account_type
+  ORDER BY
+    CASE coa.account_type::text
+      WHEN 'asset' THEN 1
+      WHEN 'liability' THEN 2
+      WHEN 'equity' THEN 3
+      WHEN 'revenue' THEN 4
+      WHEN 'expense' THEN 5
+    END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_profit_and_loss(uuid, uuid) TO service_role;
+```
+
+### `get_trial_balance(p_org_id uuid, p_period_id uuid)`
+
+Returns per-account balance totals. Uses `LEFT JOIN` to ensure
+zero-balance accounts still appear in the output — a Trial Balance
+must show every account the org has, not only those with activity
+in the period. Returns `account_id`, `account_code`,
+`account_name`, `account_type`, `debit_total_cad`, and
+`credit_total_cad`.
+
+```sql
+CREATE OR REPLACE FUNCTION get_trial_balance(
+  p_org_id uuid,
+  p_period_id uuid
+)
+RETURNS TABLE (
+  account_id uuid,
+  account_code text,
+  account_name text,
+  account_type text,
+  debit_total_cad numeric,
+  credit_total_cad numeric
+)
+LANGUAGE sql
+SECURITY INVOKER
+AS $$
+  SELECT
+    coa.account_id,
+    coa.account_code,
+    coa.account_name,
+    coa.account_type::text AS account_type,
+    COALESCE(SUM(jl.amount_cad) FILTER (WHERE jl.debit_amount > 0), 0) AS debit_total_cad,
+    COALESCE(SUM(jl.amount_cad) FILTER (WHERE jl.credit_amount > 0), 0) AS credit_total_cad
+  FROM chart_of_accounts coa
+  LEFT JOIN journal_lines jl ON jl.account_id = coa.account_id
+  LEFT JOIN journal_entries je ON je.journal_entry_id = jl.journal_entry_id
+    AND je.org_id = p_org_id
+    AND (p_period_id IS NULL OR je.fiscal_period_id = p_period_id)
+  WHERE coa.org_id = p_org_id
+  GROUP BY coa.account_id, coa.account_code, coa.account_name, coa.account_type
+  ORDER BY coa.account_code;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_trial_balance(uuid, uuid) TO service_role;
+```
+
+**Why RPC and not a query builder.** PostgREST's generated query
+builder cannot express `FILTER (WHERE ...)` clauses on aggregates,
+and the P&L aggregation requires filtering SUM by
+`debit_amount > 0` vs `credit_amount > 0` within a single row
+output. An attempt to build this in the TypeScript service layer
+would require multiple round trips (one per account type) and
+client-side aggregation — which would produce slower reports and
+reintroduce the JS-number money-precision risk
+(`INV-MONEY-001`) that the service boundary otherwise rules out.
+The RPC does the aggregation in Postgres where `numeric` precision
+is exact, and returns already-aggregated rows the service layer
+consumes directly.
+
 ---
 
 ## Standard-Pattern Exceptions Summary
@@ -1671,6 +1879,9 @@ exists so a reader can find the deviations at a glance:
   `memberships`).
 - **`agent_sessions`** — user-scoped only (no org dimension; even
   controllers cannot see other users' sessions).
+- **`journal_entry_attachments`** — junction-shape EXISTS subquery
+  for parent org access (same shape as `journal_lines`);
+  SELECT-only in Phase 1.1.
 
 Every other tenant table (`chart_of_accounts`, `vendors`, `customers`,
 `invoices`, `invoice_lines`, `bills`, `bill_lines`, `payments`,
