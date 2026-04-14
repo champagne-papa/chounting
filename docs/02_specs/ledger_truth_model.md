@@ -252,6 +252,1281 @@ simplified" bullet.
 
 ---
 
+### INV-LEDGER-002 — Posting to a locked period is rejected
+
+**Invariant.** A journal line whose parent `journal_entries` row
+references a `fiscal_periods` row with `is_locked = true` cannot
+be inserted. The insert is rejected by the database with
+`check_violation` before the row reaches `journal_lines`. Locked
+periods are immutable history; corrections to a locked period
+are made via a reversal entry posted to a currently-open period
+(see INV-REVERSAL-001 for the mirror rule and INV-REVERSAL-002
+for the reason requirement).
+
+**Enforcement.** `TRIGGER trg_enforce_period_not_locked`,
+defined in
+`supabase/migrations/20240101000000_initial_schema.sql`. The
+trigger fires `BEFORE INSERT OR UPDATE` on `journal_lines` and
+rejects the operation if the parent entry's period is locked.
+The trigger body takes a row-level lock on the `fiscal_periods`
+row via `SELECT ... FOR UPDATE` before reading `is_locked`:
+
+```sql
+CREATE OR REPLACE FUNCTION enforce_period_not_locked()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_period_id uuid;
+  v_is_locked boolean;
+BEGIN
+  SELECT je.fiscal_period_id INTO v_period_id
+  FROM journal_entries je
+  WHERE je.journal_entry_id = NEW.journal_entry_id;
+
+  SELECT fp.is_locked INTO v_is_locked
+  FROM fiscal_periods fp
+  WHERE fp.period_id = v_period_id
+  FOR UPDATE;
+
+  IF v_is_locked THEN
+    RAISE EXCEPTION
+      'Cannot post to a locked fiscal period (journal_entry_id=%, period_id=%)',
+      NEW.journal_entry_id, v_period_id
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_enforce_period_not_locked
+  BEFORE INSERT OR UPDATE ON journal_lines
+  FOR EACH ROW
+  EXECUTE FUNCTION enforce_period_not_locked();
+```
+
+**Why a row-level lock, and why it is load-bearing.** Without
+the `FOR UPDATE` clause, this trigger has a race condition.
+Consider two concurrent transactions:
+
+- Transaction A: posting a new journal entry to period P. The
+  trigger reads `is_locked` and sees `false`.
+- Transaction B: locking period P via
+  `periodService.lock()`, running
+  `UPDATE fiscal_periods SET is_locked = true WHERE period_id = P`.
+
+Under READ COMMITTED isolation, if transaction B commits
+between A's read and A's commit, A's `journal_lines` insert
+succeeds and commits into a now-locked period. The lock
+intended to freeze period P has been circumvented by
+concurrent transaction ordering. In an accounting system, a
+journal entry that posts after a period is locked is a silent
+correctness failure — it appears in the period's P&L but was
+never approved as part of that period's close.
+
+`SELECT ... FOR UPDATE` on the `fiscal_periods` row closes the
+race. The trigger takes a row-level lock on the period before
+reading `is_locked`. Any concurrent `periodService.lock()`
+transaction attempting to
+`UPDATE fiscal_periods SET is_locked = true` on the same row
+blocks until the trigger's transaction either commits (at
+which point B proceeds and locks the period for future posts)
+or rolls back. This serializes the check against concurrent
+locks without elevating isolation across the entire
+transaction.
+
+**Interaction with the service layer.**
+`journalEntryService.post()` calls `periodService.isOpen()` as
+a pre-flight check *before* `BEGIN`. That pre-flight reads
+`is_locked` without a row lock and returns a clean
+`ServiceError('PERIOD_LOCKED', ...)` if the period is already
+locked. This is an ergonomic optimization — it lets the common
+case ("user tried to post to a period they already knew was
+locked") return a clean typed error before any transaction is
+opened. **But the service-layer check is not authoritative.**
+An attacker or regression that bypassed
+`journalEntryService.post()` and issued direct DML through the
+service-role client would still hit the trigger at INSERT
+time, and the race between a concurrent period lock and a
+journal post is handled only by the trigger's `FOR UPDATE`.
+The service-layer check is a pre-flight comfort feature; the
+trigger is the rule.
+
+**Transaction isolation note.** The `FOR UPDATE` row-lock
+strategy is the reason Phase 1.1 runs under Postgres's default
+READ COMMITTED isolation instead of elevating to
+`SERIALIZABLE`. A targeted row lock is cheaper than SSI
+predicate locking for the single race pattern that matters in
+Phase 1. See the Transaction Isolation section at the end of
+this layer for the three-reason rejection of `SERIALIZABLE`
+and the Phase 2 revisit criteria.
+
+**Category A floor test.**
+`tests/integration/lockedPeriodRejection.test.ts` seeds a
+locked fiscal period, attempts to post a journal entry whose
+`fiscal_period_id` references that locked period through the
+service layer, and asserts that the call raises
+`ServiceError('PERIOD_LOCKED', ...)` with no rows created in
+`journal_entries` or `journal_lines`. This is the mechanical
+proof that INV-LEDGER-002 cannot be bypassed by any code path
+that respects the trigger. See
+`docs/04_engineering/testing_strategy.md` for the full
+Category A floor table.
+
+**Phase 2 evolution.** The trigger shape does not change in
+Phase 2. When the events table begins receiving writes (the
+Simplification 2 correction), a `PeriodLockedEvent` will be
+written inside the same transaction as the
+`UPDATE fiscal_periods SET is_locked = true` statement, and
+the Phase 2 projection layer will update `audit_log` and any
+other derived state asynchronously. The authoritative lock
+enforcement — the trigger and its `FOR UPDATE` — is
+unchanged.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`fiscal_periods` section (lock mechanism paragraph) and
+`journal_lines` section (triggers list);
+`docs/03_architecture/request_lifecycle.md` manual path
+(Period check step); `docs/03_architecture/phase_plan.md`
+Phase 1.1 "What was built" bullet and Phase 1.3 exit
+criterion 8 ("Period lock exercised after the real close");
+`docs/04_engineering/testing_strategy.md` Category A floor
+table; `docs/04_engineering/conventions.md` row-lock pattern
+note.
+
+---
+
+### INV-LEDGER-003 — The events table is append-only
+
+**Invariant.** No `UPDATE`, no `DELETE`, and no `TRUNCATE`
+can modify rows in the `events` table. Once a row is
+inserted, it is permanent. This is the Layer 1 enforcement
+of the append-only rule that makes the events table
+trustworthy as a source of truth in Phase 2.
+
+**Scope in Phase 1.1.** The `events` table is a reserved seat
+— created in the Phase 1.1 initial migration with
+append-only triggers installed from day one, but no code
+writes to it until Phase 2 (Simplification 2, see
+`docs/03_architecture/phase_simplifications.md`). The
+invariant is still a Layer 1 rule today because the triggers
+are installed and would fire on any attempt to mutate an
+`events` row, whether by direct DML, a misconfigured service
+function, or a malicious caller. The rule *becomes
+observable* in Phase 2 when events begin to carry real
+content. It *is enforceable* in Phase 1.1 because the
+physical enforcement exists now.
+
+**Enforcement.** Three triggers plus three `REVOKE`
+statements, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`. Two
+of the triggers fire `BEFORE` row-level mutations and one
+fires `BEFORE` a statement-level `TRUNCATE`. The triggers all
+call the same rejection function:
+
+```sql
+CREATE OR REPLACE FUNCTION reject_events_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'events table is append-only — UPDATE, DELETE, and TRUNCATE are forbidden'
+    USING ERRCODE = 'feature_not_supported';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_events_no_update
+  BEFORE UPDATE ON events
+  FOR EACH ROW
+  EXECUTE FUNCTION reject_events_mutation();
+
+CREATE TRIGGER trg_events_no_delete
+  BEFORE DELETE ON events
+  FOR EACH ROW
+  EXECUTE FUNCTION reject_events_mutation();
+
+CREATE TRIGGER trg_events_no_truncate
+  BEFORE TRUNCATE ON events
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION reject_events_mutation();
+
+REVOKE TRUNCATE ON events FROM PUBLIC;
+REVOKE TRUNCATE ON events FROM authenticated;
+REVOKE TRUNCATE ON events FROM anon;
+```
+
+**Why three triggers instead of one.** Postgres fires
+different trigger events for different DML operations, and a
+`BEFORE UPDATE` trigger does not catch `DELETE` or
+`TRUNCATE`. A `BEFORE UPDATE OR DELETE` compound trigger
+still does not catch `TRUNCATE`, because `TRUNCATE` is a
+DDL-adjacent operation with its own trigger event. Each
+mutation path has its own trigger. The rule "events are
+append-only" has to be stated to Postgres three times to
+cover three different ways a row could disappear.
+
+**Why REVOKE TRUNCATE plus the trigger — defense in depth.**
+`TRUNCATE` was specifically called out in v0.5.3 of the
+architecture as the one mutation path that could silently
+wipe the append-only history. A role with `TRUNCATE`
+privilege could bypass any row-level trigger because row-level
+triggers do not fire during `TRUNCATE` — only statement-level
+`BEFORE TRUNCATE` triggers do. The Phase 1.1 migration
+therefore takes two protections: it installs
+`trg_events_no_truncate` as a `BEFORE TRUNCATE` statement
+trigger that raises `feature_not_supported`, AND it revokes
+the `TRUNCATE` privilege from every non-privileged role
+(`PUBLIC`, `authenticated`, `anon`). The Supabase-managed
+`service_role` retains the `TRUNCATE` privilege because the
+platform's grant management makes revoking it awkward, but
+the trigger catches it anyway. The trigger is the
+authoritative enforcement; the REVOKE is the second line.
+
+**Interaction with the service layer.** No service function
+in Phase 1.1 writes to `events` — the path does not exist
+because events are reserved for Phase 2. The trigger
+enforcement runs regardless of which client issues the DML,
+including the service-role client, because triggers fire on
+every DML operation that matches their trigger events.
+**Phase 2 service functions** that begin writing events
+inside mutation transactions (per the Simplification 1
+correction) will rely on these triggers to guarantee that the
+only legal operation on `events` is `INSERT`; any Phase 2 bug
+that tries to update or delete an event is caught by the
+database.
+
+**No dedicated integration test — Phase 1.2 obligation.**
+INV-LEDGER-003 is not on the Category A floor today because
+the `events` table is not yet exercised by any Phase 1.1 code
+path. The correctness floor test for the append-only rule is
+scheduled to land in Phase 2 alongside the first service
+function that writes events. Until then, the invariant is
+enforced but not exercised by a test. A manual verification
+procedure (issue `UPDATE events SET payload = '{}' WHERE
+event_id = any_uuid` through `psql` and confirm the
+`feature_not_supported` error surfaces) is documented in
+`docs/04_engineering/conventions.md` as a spot-check.
+
+**Phase 2 evolution.** When the events table begins receiving
+writes, INV-LEDGER-003 moves from "enforced but not
+exercised" to "the single most load-bearing rule in the
+system," because the event stream becomes the source of
+truth from which `audit_log` and other projections are
+rebuilt (Invariant 5 in the Architecture Bible). Phase 2
+adds the dedicated integration test that attempts every
+mutation path (`UPDATE`, `DELETE`, `TRUNCATE`) and asserts
+each is rejected by the trigger. The trigger shape and the
+REVOKE statements do not change; the test coverage around
+them grows.
+
+**Referenced by:** `docs/02_specs/data_model.md` `events`
+section (triggers list and reserved-seat rationale);
+`docs/03_architecture/phase_simplifications.md`
+Simplification 2 ("Events table reserved seat");
+`docs/03_architecture/phase_plan.md` Phase 2 "What lights
+up" bullet; `docs/04_engineering/conventions.md` manual
+spot-check procedure; `docs/04_engineering/testing_strategy.md`
+Phase 2 test obligations.
+
+---
+
+### INV-LEDGER-006 — Journal line amounts are non-negative
+
+**Invariant.** Both `debit_amount` and `credit_amount` on
+any row in `journal_lines` must be greater than or equal to
+zero. Negative amounts are never legal on either side of a
+journal line; a correction to an over-posted amount is made
+by a reversal entry (which swaps debits and credits), not by
+a negative amount on the same side.
+
+**Enforcement.** `CONSTRAINT line_amounts_nonneg CHECK
+(debit_amount >= 0 AND credit_amount >= 0)` on
+`journal_lines`, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT line_amounts_nonneg
+  CHECK (debit_amount >= 0 AND credit_amount >= 0)
+```
+
+**Why a CHECK and not a domain type.** Postgres supports
+domain types (`CREATE DOMAIN non_negative_amount AS
+numeric(20,4) CHECK (VALUE >= 0)`) which would let the rule
+be declared on the type rather than repeated per column. The
+schema does not use domains because the pattern is rare
+elsewhere in the project and the extra indirection hurts
+readability when a reader is walking from a `CREATE TABLE`
+block to the rules that apply to it. Inline `CHECK`
+constraints are the convention; domains are a potential
+future cleanup.
+
+**Interaction with INV-LEDGER-004 and INV-LEDGER-005.** This
+rule is one of three CHECK constraints that together define
+what a valid `journal_lines` row looks like: (a) both
+amounts non-negative (this invariant), (b) one amount is
+zero (INV-LEDGER-004 — debit XOR credit), (c) the other is
+strictly positive (INV-LEDGER-005 — not all-zero).
+Collectively they enforce that every journal line is
+*exactly one* of "a positive debit" or "a positive credit,"
+which is the atomic shape the double-entry ledger rule
+operates on. Violating any one of the three rejects the
+insert with `check_violation`.
+
+**Interaction with the service layer.** The Zod schema
+`JournalLineInputSchema` in
+`src/shared/schemas/accounting/journalEntry.schema.ts` also
+validates that both amounts are non-negative at the service
+boundary, as part of the XOR `.refine()` that jointly
+enforces this invariant together with INV-LEDGER-004 and
+INV-LEDGER-005. The Zod refine is a pre-flight ergonomic
+check — it produces a clean
+`z.ZodError` with a specific field path before `BEGIN`,
+which is a better user experience than a generic
+`check_violation` from Postgres. **The database CHECK is the
+authoritative enforcement.** An agent path or a manual-DML
+path that skipped Zod validation would still hit the CHECK
+at insert time.
+
+**No dedicated integration test — implicit coverage.**
+INV-LEDGER-006 is not on the Category A floor as a standalone
+test. It is exercised implicitly by:
+`tests/integration/unbalancedJournalEntry.test.ts` (whose
+input constructions assume non-negative amounts and would
+surface a Zod error if they drifted);
+`tests/unit/journalEntrySchema.test.ts` (which tests the
+Zod `.refine()` logic for the combined XOR +
+non-negative + non-zero rule); and the Phase 1.1 manual
+journal entry exit criterion #9 (the founder's 5 real posts,
+none of which can have negative amounts because the form
+input widget does not accept them). The CHECK itself has no
+dedicated "try to post a negative amount" test because
+doing so would require bypassing both the Zod schema and the
+manual entry form; the CHECK is the last line of defense
+against a path that does not exist in Phase 1.1 code.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list);
+`docs/03_architecture/phase_plan.md` Phase 1.1 schema
+obligations; `docs/04_engineering/testing_strategy.md` unit
+test coverage for `journalEntrySchema.test.ts`;
+`docs/04_engineering/conventions.md` Zod-at-boundary pattern.
+
+---
+
+### INV-LEDGER-004 — A journal line is debit XOR credit
+
+**Invariant.** For any row in `journal_lines`, at least one
+of `debit_amount` and `credit_amount` must be zero. A line
+can be a debit (positive `debit_amount`, zero
+`credit_amount`) or a credit (zero `debit_amount`, positive
+`credit_amount`), but not both. This rule is what makes
+"debit" and "credit" two separate columns instead of one
+signed column: the presence of a value in one column is the
+direction, and the direction is exclusive.
+
+**Enforcement.** `CONSTRAINT line_is_debit_xor_credit CHECK
+((debit_amount = 0) OR (credit_amount = 0))` on
+`journal_lines`, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT line_is_debit_xor_credit
+  CHECK ((debit_amount = 0) OR (credit_amount = 0))
+```
+
+**Why not a signed column.** A single signed `amount`
+column with a positive/negative convention would satisfy
+the accounting math with less schema surface, but it
+produces a category of bugs that the two-column schema
+prevents. A signed-column schema forces every query that
+computes "sum of debits" or "sum of credits" to branch on
+sign (`SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS
+debits`), and a forgotten branch silently produces wrong
+results. The two-column schema makes the branches
+explicit at the column level: the P&L query sums
+`debit_amount` from one column and `credit_amount` from
+another, and there is no sign convention to forget. The
+cost of two columns plus this CHECK is paid once at schema
+time; the cost of a signed column would be paid on every
+query for the life of the project.
+
+**Why this is a CHECK and not application-side.** The rule
+holds *for every row regardless of which code path writes
+it*, and the database is the only place in the system that
+every write path passes through. A service-layer check
+would be duplicate enforcement that could drift (a new
+service function forgetting to call it, an agent path
+skipping it). The CHECK is the single source of truth; the
+service layer's Zod refine (see INV-LEDGER-006 interaction
+note) exists only for the ergonomic error message.
+
+**Interaction with INV-LEDGER-005 and INV-LEDGER-006.** See
+the "Interaction with INV-LEDGER-004 and INV-LEDGER-005"
+note under INV-LEDGER-006 above — the three CHECK
+constraints on `journal_lines` jointly define the valid
+shape of a line. INV-LEDGER-004 says "one side is zero,"
+INV-LEDGER-005 says "the other side is strictly positive,"
+and INV-LEDGER-006 says "neither is negative." Each is
+necessary; none is sufficient on its own.
+
+**Interaction with the service layer.** The Zod schema's
+XOR `.refine()` in
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+validates this rule at the service boundary for ergonomic
+error messages, not as authoritative enforcement. The
+database CHECK is the rule; the Zod refine is the nice
+error message.
+
+**No dedicated integration test — implicit coverage.**
+Same posture as INV-LEDGER-006: the XOR rule is exercised
+implicitly by `tests/unit/journalEntrySchema.test.ts` and by
+the construction of every integration test that posts real
+journal entries. The CHECK has no dedicated "try to post a
+line with both debit and credit set" test because the form
+input and the Zod schema both reject it before the CHECK
+can fire.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list);
+`docs/03_architecture/phase_plan.md` Phase 1.1 schema
+obligations; `docs/04_engineering/testing_strategy.md` unit
+test coverage; `docs/04_engineering/conventions.md` Zod
+`.refine()` pattern.
+
+---
+
+### INV-LEDGER-005 — A journal line is never all-zero
+
+**Invariant.** For any row in `journal_lines`, at least one
+of `debit_amount` and `credit_amount` must be strictly
+positive. A line where both amounts are zero is rejected,
+even though such a line would trivially satisfy the
+debit-equals-credit rule at the aggregate level.
+
+**Enforcement.** `CONSTRAINT line_is_not_all_zero CHECK
+(debit_amount > 0 OR credit_amount > 0)` on
+`journal_lines`, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT line_is_not_all_zero
+  CHECK (debit_amount > 0 OR credit_amount > 0)
+```
+
+**Why this rule exists.** An all-zero journal line is
+technically legal under INV-LEDGER-001 (debits equal
+credits — 0 = 0) and technically legal under INV-LEDGER-004
+(at least one side is zero — both are). Without this
+constraint, a service-layer bug or a misconfigured import
+path could produce a journal entry containing several
+all-zero lines plus the real ones, and the entry would pass
+every other check. The result is a journal entry with
+invisible "filler" rows — invisible because they produce
+no P&L impact, and invisible because no report surfaces
+them. An auditor walking through the entry sees rows that
+convey no information but exist in the ledger. This is
+worse than a rejected entry: it is a ledger that *looks*
+correct but contains junk.
+
+The rule exists to make all-zero lines a rejected class
+rather than a silently-accepted one. An entry that would
+have inserted an all-zero line is rejected at the database
+layer with `check_violation`, and the service-layer Zod
+refine surfaces the rejection at the boundary with a
+specific error message pointing at the offending line
+index. The Phase 1.1 system does not permit a line whose
+sole purpose is to exist.
+
+**Interaction with INV-LEDGER-004 and INV-LEDGER-006.** See
+the note under INV-LEDGER-006. The three CHECKs jointly
+define the valid shape of a line; INV-LEDGER-005 is the one
+that closes the "both zero" gap that INV-LEDGER-004 and
+INV-LEDGER-006 alone would leave open.
+
+**Interaction with the service layer.** The Zod refine on
+`JournalLineInputSchema` in
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+encodes this rule as part of the combined XOR + non-zero
+check, so a Zod validation failure names the specific line
+and the specific rule. The database CHECK is the
+authoritative enforcement for any path that bypasses Zod.
+
+**No dedicated integration test — implicit coverage.**
+Same posture as INV-LEDGER-006 and INV-LEDGER-004. The rule
+is exercised by `tests/unit/journalEntrySchema.test.ts`
+and is implicit in the construction of every real journal
+entry integration test.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list and D11
+reference); `docs/03_architecture/phase_plan.md` Phase 1.1
+schema obligations;
+`docs/04_engineering/testing_strategy.md` unit test
+coverage; `docs/04_engineering/conventions.md` Zod
+`.refine()` pattern.
+
+---
+
+### INV-MONEY-002 — Original amount matches base amount
+
+**Invariant.** For any row in `journal_lines`,
+`amount_original` must equal `debit_amount + credit_amount`.
+Because INV-LEDGER-004 guarantees that at most one of
+`debit_amount` and `credit_amount` is non-zero per line,
+the sum equals whichever side is populated.
+`amount_original` is therefore the unsigned magnitude of
+the line, with direction conveyed by which column is
+non-zero. This rule ties the multi-currency view of the
+line (`amount_original` in the line's own `currency`) to
+the debit/credit view at the row level, preventing a
+desync where a line's multi-currency amount contradicts
+its debit/credit amounts.
+
+**Enforcement.** `CONSTRAINT
+line_amount_original_matches_base CHECK (amount_original =
+debit_amount + credit_amount)` on `journal_lines`, defined
+in `supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT line_amount_original_matches_base
+  CHECK (amount_original = debit_amount + credit_amount)
+```
+
+**Why the equation works.** Given INV-LEDGER-004 (one side
+is zero), `debit_amount + credit_amount` equals `max(debit_amount,
+credit_amount)`, which is the unsigned magnitude of the line.
+For a pure-CAD transaction with `fx_rate = 1.0` and
+`amount_cad = amount_original`, the equation says
+"`amount_original` is whichever side is populated" — which
+is the obvious definition. For a multi-currency transaction
+where `amount_original` is in the line's own `currency` and
+`amount_cad` is the CAD-converted value (see
+INV-MONEY-003), the equation still says "`amount_original`
+is whichever side is populated" because debit and credit
+columns are always in the functional currency magnitude of
+the line — they are not in any particular currency. They
+are the row's direction.
+
+**Why this CHECK prevents a silent P&L corruption pattern.**
+Without this rule, a service function bug (or an import
+path that populated `amount_original` and `amount_cad` from
+one source and `debit_amount` / `credit_amount` from
+another) could produce a line where the debit/credit
+magnitude disagrees with the declared original amount. The
+debit-equals-credit constraint (INV-LEDGER-001) would still
+pass at the aggregate level, because the debit and credit
+columns still balance. The P&L query that sums `amount_cad`
+would return a number, but that number would be inconsistent
+with the entry-by-entry sum of debits and credits. An
+auditor walking down the entry would see "`debit_amount =
+100`, `amount_original = 200`" — a row where the same
+number means two different things, and there is no
+principled way to decide which is authoritative. The CHECK
+makes this class of bug impossible at the row level.
+
+**Interaction with the service layer.** The Zod schema's
+`.refine()` for `JournalLineInputSchema` in
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+validates this equation at the service boundary using
+`decimal.js` arithmetic against the string-typed
+`MoneyAmount` brand (INV-MONEY-001). The service-layer
+check prevents a well-formed Zod input from reaching the
+database with a mismatch. **The database CHECK is the
+authoritative enforcement** and fires regardless of which
+client issues the insert.
+
+**Why decimal.js matches Postgres `numeric`.** JavaScript
+`Number` arithmetic is IEEE 754 and cannot represent
+`0.1 + 0.2` exactly. A service function that computed
+`amount_original` by summing debit and credit via JS math
+could produce a value that differs from Postgres's exact
+`numeric(20,4)` addition in the last place. The
+`decimal.js`-backed `addMoney()` helper matches Postgres
+semantics, so the Zod refine and the database CHECK agree
+on every input. See INV-MONEY-001 for the full
+"money-as-string" rationale.
+
+**No dedicated integration test — implicit coverage.**
+INV-MONEY-002 is exercised by
+`tests/unit/moneySchema.test.ts` (which tests the
+`addMoney()` helper against known input/output pairs
+including boundary values at four decimal places) and by
+the construction of every integration test that posts
+multi-line journal entries. The CHECK has no dedicated
+"try to post a mismatch" test because the Zod refine
+prevents the mismatch from leaving the service boundary.
+
+**Phase 2 evolution.** INV-MONEY-002 is permanent and does
+not change in Phase 2. Multi-currency journal entries from
+Phase 2 AP Agent imports populate `amount_original` in the
+bill's currency, `amount_cad` via FX conversion
+(INV-MONEY-003), and `debit_amount`/`credit_amount` in the
+row's direction magnitude. The equation holds regardless of
+currency.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list, D5 reference);
+`docs/03_architecture/phase_plan.md` Phase 1.1 multi-currency
+schema obligations; `docs/04_engineering/testing_strategy.md`
+`moneySchema.test.ts` coverage;
+`docs/04_engineering/conventions.md` money-as-string pattern.
+
+---
+
+### INV-MONEY-003 — CAD amount matches FX-converted original
+
+**Invariant.** For any row in `journal_lines`, `amount_cad`
+must equal `ROUND(amount_original * fx_rate, 4)`. This ties
+the multi-currency row to its functional-currency (CAD)
+value via the stored FX rate, and prevents a desync where
+the CAD amount differs from what the FX conversion would
+produce. Every Phase 1.1 journal line stores the FX rate
+used at post time (`1.0` for CAD-native transactions), so
+the CAD amount is always reproducible from the original
+amount and the rate.
+
+**Enforcement.** `CONSTRAINT line_amount_cad_matches_fx
+CHECK (amount_cad = ROUND(amount_original * fx_rate, 4))`
+on `journal_lines`, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT line_amount_cad_matches_fx
+  CHECK (amount_cad = ROUND(amount_original * fx_rate, 4))
+```
+
+**Why ROUND and why four decimal places.** The `numeric(20,4)`
+type used for `amount_cad` can represent exactly four
+fractional digits. FX conversion in a multi-currency system
+produces values with arbitrary precision (the `fx_rate`
+column is `numeric(20,8)` — eight fractional digits — so
+the raw product can have up to twelve fractional digits).
+The CHECK rounds the product to four places using
+Postgres's built-in `ROUND()` with `HALF_UP` rounding,
+which is the standard accounting rounding mode. The
+service layer's `multiplyMoneyByRate()` helper in
+`src/shared/schemas/accounting/money.schema.ts` uses
+`decimal.js` with `Decimal.ROUND_HALF_UP` to match Postgres
+behavior exactly, so the pre-flight Zod refine and the
+database CHECK agree on every input.
+
+**Why this invariant is separate from INV-MONEY-002.**
+INV-MONEY-002 ties `amount_original` to the
+debit/credit columns (the row's own direction magnitude).
+INV-MONEY-003 ties `amount_cad` to `amount_original` via
+the FX rate. The two rules operate on different column
+pairs and would need to be checked separately even if the
+schema collapsed them. Phase 1.1 is almost entirely CAD-
+native, so `fx_rate = 1.0` and `amount_cad =
+amount_original` for every real journal entry today — the
+rule is trivially satisfied. But the rule *must be
+enforceable from day one* because Phase 2 AP Agent bill
+ingestion will post USD and EUR bills from intercompany
+vendors, and the Phase 1.1 schema reservation for
+multi-currency columns is meaningful only if the
+consistency rule between them is enforced. Retrofitting an
+integrity constraint to a populated table is painful;
+installing it on day one is free.
+
+**Interaction with the service layer.** The
+`multiplyMoneyByRate()` helper and the corresponding Zod
+refine in `JournalLineInputSchema` validate this rule at
+the service boundary before `BEGIN`. A mismatch between the
+service-layer computation and the database CHECK would
+indicate a bug in `multiplyMoneyByRate()` or a drift
+between `decimal.js` rounding and Postgres `ROUND()` —
+both of which are tested in
+`tests/unit/moneySchema.test.ts` against known boundary
+cases. The database CHECK is the authoritative
+enforcement; the service-layer computation is how a clean
+input reaches the database.
+
+**Why CAD and not the functional currency.** The project is
+locked to Canadian family offices operating in CAD
+(Architecture Bible Section "Non-Negotiable Constraints"),
+so the functional currency is CAD across all orgs in
+Phase 1.1. Every org's `organizations.functional_currency`
+is hard-coded to `'CAD'`. The column name `amount_cad`
+encodes this assumption in the schema: a multi-currency
+transaction's functional-currency amount is always the
+CAD amount. A future expansion to orgs with non-CAD
+functional currencies (Phase 3+) would rename the column to
+`amount_functional` and loosen the constraint to
+`amount_functional = ROUND(amount_original * fx_rate, 4)`
+while keeping the rule shape identical. That rename is not
+Phase 1 work.
+
+**No dedicated integration test — implicit coverage.**
+INV-MONEY-003 is exercised by
+`tests/unit/moneySchema.test.ts` (which tests
+`multiplyMoneyByRate()` against boundary cases at the
+`numeric(20,4)` precision edge) and is implicit in every
+integration test that posts real journal entries (every
+Phase 1.1 entry has `fx_rate = 1.0` and the rule trivially
+holds). The CHECK has no dedicated multi-currency test
+because no Phase 1.1 code path produces a non-`1.0` FX
+rate — that test lands in Phase 2 alongside the first AP
+Agent multi-currency bill.
+
+**Phase 2 evolution.** The rule is permanent. Phase 2
+introduces real multi-currency bills (USD, EUR, GBP from
+intercompany entities) and the `fx_rate` column starts
+carrying values other than `1.0`. The CHECK is what makes
+the FX conversion trustworthy under load.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list, D5 reference);
+`docs/03_architecture/phase_plan.md` Phase 1.1 multi-currency
+schema obligations and Phase 2 AP Agent expectations;
+`docs/04_engineering/testing_strategy.md`
+`moneySchema.test.ts` coverage;
+`docs/04_engineering/conventions.md` money-as-string
+pattern; `docs/09_briefs/phase-2/*` multi-currency bill
+ingestion brief (when written).
+
+---
+
+### INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key
+
+**Invariant.** Any row in `journal_entries` with `source =
+'agent'` must have a non-null `idempotency_key`. Rows with
+`source = 'manual'` or `source = 'import'` may omit the key
+(it is nullable for those sources). This rule makes "agent
+posts are idempotent" a schema fact rather than a
+TypeScript-side convention.
+
+**Enforcement.** `CONSTRAINT idempotency_required_for_agent
+CHECK (source <> 'agent' OR idempotency_key IS NOT NULL)`
+on `journal_entries`, defined in
+`supabase/migrations/20240101000000_initial_schema.sql`:
+
+```sql
+CONSTRAINT idempotency_required_for_agent
+  CHECK (source <> 'agent' OR idempotency_key IS NOT NULL)
+```
+
+**Why the rule applies only to agent source.** Manual
+journal entries are submitted one at a time by a user
+clicking a form button. The form submission path has no
+retry semantics — if the user clicks twice, the second
+click is a user action, not a retry. An idempotency key
+would be ceremonial for manual entries. **Agent journal
+entries are different**: they are produced by a Claude tool
+call inside an orchestrator loop, and the loop has retry
+semantics (tool-call validation retry, network retry,
+confirmation-card Approve double-click). Without an
+idempotency key, a retry could post the same journal entry
+twice. The key is the mechanism that makes agent retries
+safe: the service layer's idempotency check looks up
+`(org_id, idempotency_key)` in `ai_actions` before any DML,
+and a hit returns the existing result instead of posting a
+duplicate. Import-sourced entries are reserved for Phase 2+
+bank feeds and have their own deduplication strategy (by
+bank transaction ID), so import may also omit the key.
+
+**Why this is a CHECK and not a service-layer convention.**
+The Phase 1.1 architecture explicitly chose to make this a
+DB-enforced constraint rather than a service-layer rule,
+because a forgotten idempotency key in a new service
+function or a new tool definition is a silent bug that
+surfaces only under retry — the kind of bug that passes
+all the happy-path tests and then fires in production the
+first time the network flakes. A CHECK constraint rejects
+the insert at the database layer before any retry scenario
+can occur, so any new code path that forgets to carry the
+idempotency key fails immediately at the first insert, not
+at the first retry. **The schema-enforced version is
+cheaper to debug and impossible to forget.** The service
+layer still performs the idempotency *lookup* (checking
+`ai_actions` for an existing row before doing any work), but
+the schema guarantees the *key is present* whenever it is
+needed.
+
+**Interaction with the `ai_actions` idempotency slot.** The
+idempotency path has two halves that together make agent
+posts safe under retry:
+
+1. **The slot claim.** When the agent produces a dry-run
+   result, `journalEntryService.post()` inserts a row in
+   `ai_actions` with `status = 'pending'` and the
+   idempotency key, plus a `UNIQUE (org_id,
+   idempotency_key)` constraint on `ai_actions`. A second
+   attempt with the same key hits the UNIQUE constraint
+   and is routed to the existing pending row instead of
+   creating a duplicate.
+2. **The confirm path.** When the user clicks Approve, the
+   same idempotency key carries through to the final
+   `journal_entries` INSERT, and INV-IDEMPOTENCY-001
+   guarantees the key is present on the row — so a future
+   forensic query "show me every agent-posted entry and
+   its idempotency key" returns a non-null column on every
+   row.
+
+**Interaction with the service layer.** The Zod schema
+`PostJournalEntryInputSchema` in
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+validates this rule with a `.refine()` at the service
+boundary (`source === 'agent'` implies
+`idempotency_key !== undefined`), and
+`journalEntryService.post()` performs the
+`ai_actions` idempotency lookup before any DML. **The
+database CHECK is the authoritative enforcement** — even
+if Zod and the service function both regressed, the CHECK
+would reject the insert.
+
+**No dedicated integration test — implicit coverage.**
+INV-IDEMPOTENCY-001 is exercised implicitly by every
+Phase 1.1 integration test (all of which use
+`source = 'manual'` and do not trigger the rule) and by
+`tests/unit/journalEntrySchema.test.ts` (which tests the
+Zod refine). The first dedicated integration test for the
+agent path lands in Phase 1.2 alongside the first real
+agent-posted entry, and Phase 1.2 exit criterion #4
+("Idempotency works: submit the same approval twice, the
+second call returns the existing result") is the mechanical
+proof that the end-to-end path is correct.
+
+**Phase 2 evolution.** The rule is permanent. Phase 2 adds
+more source values for other agents (AP Agent, AR Agent,
+Reconciliation Agent), and the CHECK rule broadens to "any
+agent source requires an idempotency key." The schema
+shape does not change; the source enum gains values.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_entries` section (named CHECKs list) and
+`ai_actions` section (idempotency-slot interaction);
+`docs/03_architecture/request_lifecycle.md` agent path and
+confirmation commit path (idempotency lookup step);
+`docs/03_architecture/phase_plan.md` Phase 1.2 exit
+criterion 4 ("Idempotency works");
+`docs/04_engineering/testing_strategy.md` Phase 1.2 test
+obligations; `docs/04_engineering/conventions.md` agent
+retry safety pattern.
+
+---
+
+### INV-RLS-001 — Cross-org data is never visible outside the org
+
+**Invariant.** A user authenticated as a member of org A
+cannot read any row, from any tenant-scoped table, that
+belongs to org B — unless the user also has a
+`memberships` row for org B. This is the single
+architectural invariant that makes the multi-tenant family
+office platform safe: one user's view of the database is
+scoped to the orgs they have membership in, and no leak
+across the tenant boundary is possible through any user-
+scoped query.
+
+**Why this is a rollup rather than a single SQL snippet.**
+Unlike the other Layer 1 invariants in this file —
+each of which is enforced by a single CHECK or trigger with
+a fixed location — INV-RLS-001 is the *collective effect*
+of every RLS policy in the schema. The rule is enforced by
+roughly twenty `CREATE POLICY` statements across every
+tenant-scoped table, plus two `SECURITY DEFINER` helper
+functions (`user_has_org_access` and `user_is_controller`)
+that centralize the membership-check logic. The full SQL
+lives in `docs/02_specs/data_model.md` Part 2 — this leaf
+names the invariant and points at its enforcement, it does
+not duplicate the RLS policy SQL.
+
+**Enforcement mechanism.** Every tenant-scoped table has
+RLS enabled via `ALTER TABLE <t> ENABLE ROW LEVEL
+SECURITY`, and every such table has at least a SELECT
+policy whose `USING` clause calls
+`user_has_org_access(target_org_id)`. The helper function
+is defined as:
+
+```sql
+CREATE OR REPLACE FUNCTION public.user_has_org_access(target_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships
+    WHERE user_id = auth.uid() AND org_id = target_org_id
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_has_org_access(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_org_access(uuid) TO authenticated;
+```
+
+The function is `STABLE` so the planner can inline and
+memoize its result within a single statement. It is
+`SECURITY DEFINER` so it can read `public.memberships`
+without recursively invoking the `memberships_select`
+policy. It sets `search_path = ''` so a malicious role
+cannot shadow `public.memberships` with a local temp
+table. The `REVOKE` from `PUBLIC` and explicit `GRANT` to
+`authenticated` ensure only logged-in users can call the
+function. See `docs/02_specs/data_model.md` Part 2 for the
+full policy body and the per-table RLS specifics.
+
+**Why the service-role client bypasses RLS — and why that
+is not a bug.** The service-role client
+(`src/db/adminClient.ts`) uses Supabase's service-role key
+and bypasses RLS entirely. `auth.uid()` inside a
+service-role query returns `NULL`, so
+`user_has_org_access()` returns `false` — but the service
+role bypasses policy evaluation, so the query runs
+regardless. This is intentional: the service layer is
+authoritative and must be able to write across RLS
+boundaries (e.g., writing an `audit_log` row for an action
+a user took, or loading a referenced journal entry during
+the reversal mirror check). **The enforcement for
+service-role mutations is the service layer itself, not
+RLS** — specifically, `withInvariants()` runs the
+`canUserPerformAction` check (INV-AUTH-001) before any
+mutating service function runs, and the check loads the
+caller's memberships from `ctx.caller.org_ids` and rejects
+calls that target an org the caller is not a member of.
+RLS is defense-in-depth for reads that go through the
+user-scoped client; service-layer authorization is the
+primary enforcement for writes. See INV-AUTH-001 for the
+full service-layer enforcement story.
+
+**Category A floor test.**
+`tests/integration/crossOrgRlsIsolation.test.ts` creates
+two orgs with disjoint user memberships, posts journal
+entries in each, and asserts that a user-scoped client
+authenticated as a member of org A cannot SELECT rows from
+`journal_entries`, `journal_lines`, `chart_of_accounts`,
+`audit_log`, `ai_actions`, or any other tenant-scoped
+table where those rows belong to org B. The test runs
+through the user-scoped client (not the service-role
+client) because that is the path RLS protects. It is the
+mechanical proof that the RLS policies collectively enforce
+cross-org isolation and that no table with an `org_id`
+column was missed when RLS was enabled in the Phase 1.1
+initial migration. See
+`docs/04_engineering/testing_strategy.md` for the full
+Category A floor table.
+
+**Interaction with other invariants.** INV-RLS-001 is the
+foundation that other invariants depend on for tenant
+scoping: INV-AUTH-001 (Layer 2) loads the caller's org
+memberships to make authorization decisions;
+INV-REVERSAL-001 (Layer 2) checks same-org when loading a
+referenced entry for the mirror check; INV-AUDIT-001
+(Layer 2) stamps every audit row with the caller's org.
+Every layer-2 invariant that operates on an org-scoped
+entity assumes the org boundary is real, and INV-RLS-001 is
+what makes it real at the database level.
+
+**Phase 2 evolution.** The rule is permanent. Phase 2 adds
+new tenant-scoped tables (bills populated by the AP Agent,
+bank transactions from Flinks, reconciliation batches)
+and each new table gets its own RLS policies that follow
+the same pattern — SELECT via `user_has_org_access(org_id)`,
+INSERT/UPDATE/DELETE per the table's access model. The
+collective invariant does not change; the set of policies
+that enforce it grows. A Phase 2 table that ships without
+RLS is a hard failure regardless of other Phase 2 exit
+criteria.
+
+**Referenced by:** `docs/02_specs/data_model.md` Part 2
+(full RLS policy SQL and per-table specifics);
+`docs/03_architecture/request_lifecycle.md` manual path
+(RLS defense-in-depth note);
+`docs/03_architecture/phase_plan.md` Phase 1.1 "What was
+built" bullet and Phase 1.3 exit criterion 13 ("Cross-org
+accidental visibility check");
+`docs/04_engineering/testing_strategy.md` Category A floor
+table; `docs/04_engineering/conventions.md` two-client
+pattern (service-role vs user-scoped).
+
+---
+
+### INV-REVERSAL-002 — Reversal entries require a non-empty reason
+
+**Invariant.** A journal entry that reverses another (has
+`reverses_journal_entry_id IS NOT NULL`) must have a
+non-empty `reversal_reason`. The reason captures *why* the
+reversal was posted — "vendor misclassified," "duplicate
+of entry #12345," "wrong amount, FX rate corrected" — and
+is required as a schema fact, not as a service-layer
+convention. A reversal without a reason is not a legal
+reversal. This is the Layer 1 complement to
+INV-REVERSAL-001 (the service-layer mirror check): the
+mirror rule guarantees that a reversal swaps the original's
+debits and credits; the reason rule guarantees that the
+ledger always knows why the reversal exists.
+
+**Enforcement.** `CONSTRAINT
+reversal_reason_required_when_reversing CHECK
+(reverses_journal_entry_id IS NULL OR (reversal_reason IS
+NOT NULL AND length(trim(reversal_reason)) > 0))` on
+`journal_entries`, defined in
+`supabase/migrations/20240102000000_add_reversal_reason.sql`:
+
+```sql
+ALTER TABLE journal_entries
+  ADD COLUMN reversal_reason text;
+
+ALTER TABLE journal_entries
+  ADD CONSTRAINT reversal_reason_required_when_reversing
+  CHECK (
+    reverses_journal_entry_id IS NULL
+    OR (reversal_reason IS NOT NULL AND length(trim(reversal_reason)) > 0)
+  );
+```
+
+**Why `length(trim(...)) > 0` instead of `IS NOT NULL`.**
+A simple `IS NOT NULL` check would allow the reversal
+reason to be the empty string, a single space, or a tab
+character. Those values pass `NOT NULL` but are
+semantically blank — they capture no story, and an auditor
+asking "why was this reversal posted?" would get a
+technically-present but practically-empty answer. The
+`length(trim(reversal_reason)) > 0` form trims whitespace
+before checking length, so any whitespace-only value is
+rejected. The rule enforces "a human has typed something
+meaningful into the reason field," not just "a value is
+present."
+
+**Why this rule belongs on `journal_entries` and not
+`audit_log`.** The `reversal_reason` column lives on
+`journal_entries`, not on `audit_log`. The full rationale
+for this placement is documented in
+`docs/02_specs/data_model.md` `journal_entries` section
+and in `docs/07_governance/adr/0001-reversal-semantics.md`
+(the ADR seed). The short version: the reversal reason is
+a property of the reversal entry itself (it describes the
+entry, not the mutation that created it), queries for
+"show me every reversal and why" become a single-table
+self-join rather than a multi-table join through
+`audit_log`, and the rule "every reversal explains itself"
+is a ledger rule belonging in the same enforcement layer
+as "every reversal mirrors the original" — the database,
+not the log. Putting it on `audit_log` would have made the
+rule a service-layer convention that a forgotten call
+could silently skip.
+
+**Why this is a CHECK and not only a service-layer
+validation.** The service layer has three checks for the
+reversal reason, in layered order:
+
+1. **The UI form level.** The manual reversal form in
+   `src/components/canvas/ReversalForm.tsx` makes
+   `reversal_reason` a required field with a minimum
+   character count, so the form cannot be submitted
+   blank.
+2. **The service layer.** `validateReversalMirror()` in
+   `src/services/accounting/journalEntryService.ts`
+   (INV-REVERSAL-001, step 1) rejects empty or
+   whitespace-only reasons before the database transaction
+   begins, returning a clean
+   `ServiceError('REVERSAL_NOT_MIRROR', ...)`.
+3. **The database.** This CHECK constraint.
+
+The three layers exist because a future agent path (the
+Phase 1.2 `reverseJournalEntry` tool) bypasses the form,
+and a future bug or regression in the service layer would
+bypass the service-level check. The database CHECK is the
+last line of defense. **An auditor asking "why was this
+posted?" must always get an answer**, and the only way to
+guarantee that in a system that has three distinct write
+paths is to enforce the rule at the one layer every path
+has to pass through.
+
+**Interaction with INV-REVERSAL-001.** INV-REVERSAL-001 is
+the Layer 2 service-layer check that verifies a reversal's
+lines mirror the original with debits and credits swapped.
+INV-REVERSAL-002 is the Layer 1 database CHECK that
+verifies a reversal has a non-empty reason. Both apply to
+the same `journal_entries` row when
+`reverses_journal_entry_id IS NOT NULL`. Both must be
+satisfied for the reversal to post. See INV-REVERSAL-001
+(in the Layer 2 section below) for the mirror check
+algorithm and the cross-org defense; this leaf covers only
+the reason rule.
+
+**No dedicated integration test — covered by
+reversalMirror.test.ts.** The Category A floor test
+`tests/integration/reversalMirror.test.ts` exercises
+INV-REVERSAL-001 directly, and every assertion it makes
+against `validateReversalMirror()` also catches the
+service-layer portion of INV-REVERSAL-002 (step 1 of the
+mirror check algorithm rejects empty reasons). A dedicated
+"try to insert a reversal with empty reversal_reason
+through direct DML" test is not on the Phase 1.1 floor
+because it would require bypassing the service layer
+entirely, and the Phase 1.1 system has no code path that
+does so. The test lands in Phase 1.2 alongside the
+`reverseJournalEntry` agent tool, whose path provides the
+first realistic way to exercise the database CHECK
+independent of the service-layer check.
+
+**Phase 2 evolution.** The rule is permanent. Phase 2 adds
+the agent path (`reverseJournalEntry` tool), and the
+service-layer check runs on that path the same way it runs
+on the manual form path. The database CHECK is unchanged.
+Phase 2 also adds partial reversal support, and the
+reason rule still applies — a partial reversal must still
+carry a reason, because an auditor asking "why did you
+reverse half of entry X?" still needs an answer.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_entries` section (named CHECKs list and placement
+rationale for `reversal_reason`);
+`docs/03_architecture/ui_architecture.md` Reversal UI
+section; `docs/03_architecture/phase_plan.md` Phase 1.1
+"What was built" bullet (manual reversal path);
+`docs/04_engineering/testing_strategy.md` Category A floor
+table (INV-REVERSAL-001 covers the service-layer portion);
+`docs/07_governance/adr/0001-reversal-semantics.md` ADR
+placement rationale.
+
+---
+
+### Transaction Isolation (READ COMMITTED + targeted row locks)
+
+**This is not an invariant.** Transaction isolation is a
+discipline that supports Layer 1 invariants rather than a
+rule of its own. It appears in this layer because it
+determines the concurrency semantics under which the Layer
+1 enforcement mechanisms operate, and two invariants —
+INV-LEDGER-001 (deferred balance constraint) and
+INV-LEDGER-002 (period-lock trigger) — have behavior that
+cannot be reasoned about without knowing the isolation
+level. The section lives at the end of Layer 1 so a reader
+encounters the invariants it supports before meeting the
+discipline that enables them.
+
+**The rule.** Phase 1.1 mutating service functions run
+under Postgres's default `READ COMMITTED` isolation level.
+The service layer does not elevate transactions to
+`REPEATABLE READ` or `SERIALIZABLE`. Concurrency
+protection against race conditions is provided by targeted
+row-level locks (`SELECT ... FOR UPDATE`) at the specific
+read-then-write points where write skew would otherwise
+occur.
+
+**The two row-lock points in Phase 1.1.**
+
+1. **Period lock** (INV-LEDGER-002). The
+   `trg_enforce_period_not_locked` trigger takes
+   `SELECT fp.is_locked FROM fiscal_periods fp WHERE ...
+   FOR UPDATE` on the referenced period row before
+   reading `is_locked`. This serializes the trigger
+   against any concurrent `periodService.lock()`
+   transaction attempting to `UPDATE fiscal_periods SET
+   is_locked = true` on the same row. Without the row
+   lock, the trigger could read `is_locked = false`,
+   proceed, and commit into a period that a concurrent
+   transaction locked between the read and the commit.
+2. **The deferred balance constraint** (INV-LEDGER-001)
+   does *not* take a row lock. It runs inside the
+   caller's transaction at `COMMIT` and aggregates
+   `journal_lines` for the parent entry, which the
+   caller inserted earlier in the same transaction. Under
+   `READ COMMITTED`, the aggregate query sees the
+   caller's own writes and the committed state of other
+   transactions. There is no race pattern for this
+   constraint because one journal entry's lines are
+   inserted by one transaction — multiple transactions
+   cannot collaborate on a single entry. The constraint
+   trigger fires N times for N lines (once per row), and
+   each invocation produces the same aggregate result
+   because each sees the fully-populated set of lines
+   for the parent entry. See the INV-LEDGER-001 leaf for
+   the full discussion of why the N invocations are
+   correct.
+
+**Why not `SERIALIZABLE` — three reasons.**
+
+1. **The one race pattern that matters is already
+   handled.** The period-lock race is the only
+   concurrent-write pattern in Phase 1.1 where a
+   read-then-write from one transaction could interleave
+   with a write from another transaction to produce an
+   incorrect outcome. The `SELECT ... FOR UPDATE` row
+   lock on `fiscal_periods` closes the race precisely.
+   `SERIALIZABLE` would close the same race through
+   predicate locking, at higher cost. Row locks are
+   cheap; predicate locks are not.
+2. **The deferred balance constraint is already
+   transaction-scoped.** The debit-equals-credit rule
+   operates on rows that one transaction inserted, and
+   the aggregate check runs inside that same
+   transaction. Elevating isolation would not change its
+   semantics — there is nothing to serialize against,
+   because concurrent transactions do not share rows
+   inside a single journal entry.
+3. **`SERIALIZABLE` produces retryable errors that the
+   service layer would need to handle.** Postgres's
+   Serializable Snapshot Isolation (SSI) uses predicate
+   locking and raises `could not serialize access due to
+   read/write dependencies` errors when it detects a
+   potentially non-serializable transaction order. These
+   errors are not deterministic — the same workload can
+   produce serialization failures on one run and succeed
+   on the next, depending on transaction timing and
+   predicate-lock overlap. A Phase 1.1 service layer
+   elevated to `SERIALIZABLE` would need retry logic on
+   every mutating call, which is operational complexity
+   with no benefit for Phase 1.1 traffic (a solo founder
+   posting a few entries per day). The cost is paid on
+   every call; the benefit is captured by the row lock
+   for free.
+
+**The rule stated one more time, because it is load-
+bearing.** Phase 1.1 service functions run under `READ
+COMMITTED`. The period-lock trigger uses
+`SELECT ... FOR UPDATE` for its one race-sensitive read.
+The deferred balance constraint runs at `COMMIT` without
+any lock because the constraint is transaction-scoped and
+cannot race. No other read-then-write pattern exists in
+the Phase 1.1 mutating service functions. **Do not elevate
+isolation for the whole transaction when a row lock on a
+single row is the correct scope.**
+
+**Phase 2 revisit.** Phase 2 introduces the AP Agent with
+concurrent bill ingestion, which creates new
+read-then-write patterns that do not exist in Phase 1.1:
+
+- **Vendor rule lookup before posting.** The AP Agent
+  reads a `vendor_rules` row to determine the default
+  account mapping, then posts a journal entry that uses
+  that mapping. A concurrent controller updating the
+  vendor rule between the read and the post could cause
+  the AP Agent to post under stale rules. The fix is a
+  row lock on `vendor_rules` during the read, the same
+  pattern as the period lock.
+- **Intercompany batch assignment.** When the AP Agent
+  posts a bill that turns out to be intercompany, it
+  must assign a shared `intercompany_batch_id` across two
+  journal entries in two different orgs. The read-then-
+  write pattern for "allocate the next batch ID"
+  requires either a row lock on a counter table or a
+  database sequence.
+- **Reconciliation matching.** When the AP Agent matches
+  a bank transaction to a bill, the match must be
+  serialized against other matches to prevent two
+  transactions from matching the same bank row. Row lock
+  on `bank_transactions`.
+
+**Default position for Phase 2 remains `READ COMMITTED`
+plus targeted row locks** — the discipline does not
+change; the set of row-lock points grows. A Phase 2
+feature that proposes elevating isolation for the whole
+transaction needs to justify why a row lock is
+insufficient, and the justification has to name the
+specific race pattern the row lock cannot close. Without
+that justification, the answer is "add a row lock at the
+specific read point."
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`fiscal_periods` section (lock mechanism paragraph);
+`docs/03_architecture/request_lifecycle.md` manual path
+and confirmation commit path (transaction boundaries);
+`docs/03_architecture/phase_plan.md` Phase 2 AP Agent
+scope notes; `docs/04_engineering/conventions.md`
+transaction isolation rule.
+
+---
+
 ## Layer 2 — Operational Truth (Services Decide)
 
 Layer 2 is where the rules become policy. Every invariant in this
