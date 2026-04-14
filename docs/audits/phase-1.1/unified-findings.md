@@ -477,10 +477,6 @@ This is the first comprehensive audit of The Bridge codebase. There is no prior 
 
 ---
 
-## Scanner Blind Spots
-
-*To be populated after retrospective validation.*
-
 ---
 
 ## Synthesis Summary
