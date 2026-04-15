@@ -75,7 +75,9 @@ const localeSchema = z
 
 const phoneCountryCodeSchema = z
   .string()
-  .regex(/^\+[0-9]{1,3}$/, 'phone country code must be "+" followed by 1-3 digits');
+  .regex(/^\+[0-9]{1,3}$/, 'phone country code must be "+" followed by 1-3 digits')
+  .nullable()
+  .optional();
 
 const isoDateSchema = z
   .string()
@@ -97,7 +99,7 @@ const mutableFields = {
   website: z.string().url('website must be a valid URL').nullable().optional(),
   email: z.string().email('email must be a valid address').nullable().optional(),
   phone: z.string().nullable().optional(),
-  phoneCountryCode: phoneCountryCodeSchema.nullable().optional(),
+  phoneCountryCode: phoneCountryCodeSchema,
   timeZone: timeZoneSchema,
   defaultLocale: localeSchema,
   defaultReportBasis: reportBasisSchema,
@@ -138,6 +140,12 @@ export type OrgProfileBase = z.infer<typeof orgProfileBaseSchema>;
 //   fiscalYearStartMonth, timeZone, defaultLocale,
 //   defaultReportBasis, accountingFramework.
 // Other mutable fields accept undefined → DB default.
+//
+// .strict() rejects unknown fields. Both create and update use
+// .strict() for symmetry — typos in payload field names should
+// fail loudly rather than silently no-op. Adding a new field
+// requires editing this schema, matching the "schema change, not
+// silent write" rule already adopted for externalIds.
 
 export const createOrgProfileSchema = z.object({
   name: mutableFields.name,
@@ -166,7 +174,7 @@ export const createOrgProfileSchema = z.object({
   logoStoragePath: mutableFields.logoStoragePath,
   baseCurrency: immutableCreateFields.baseCurrency,
   fiscalYearStartMonth: immutableCreateFields.fiscalYearStartMonth,
-});
+}).strict();
 export type CreateOrgProfileInput = z.infer<typeof createOrgProfileSchema>;
 
 // --- Update patch schema ---
@@ -189,7 +197,7 @@ export const updateOrgProfilePatchSchema = z
     website: mutableFields.website,
     email: mutableFields.email,
     phone: mutableFields.phone,
-    phoneCountryCode: mutableFields.phoneCountryCode.nullable().optional(),
+    phoneCountryCode: mutableFields.phoneCountryCode,
     timeZone: mutableFields.timeZone.optional(),
     defaultLocale: mutableFields.defaultLocale.optional(),
     defaultReportBasis: mutableFields.defaultReportBasis.optional(),

@@ -25,7 +25,21 @@ export type ServiceErrorCode =
   | 'PERIOD_GENERATION_FAILED'
   // Reads
   | 'NOT_FOUND'
-  | 'READ_FAILED';
+  | 'READ_FAILED'
+  // Org profile (Phase 1.5A)
+  | 'ORG_NOT_FOUND'
+  | 'ORG_IMMUTABLE_FIELD'
+  | 'INDUSTRY_NOT_FOUND'
+  | 'PARENT_ORG_NOT_FOUND'
+  | 'PARENT_ORG_IS_SELF'
+  | 'EXTERNAL_IDS_MALFORMED'
+  | 'NO_COA_TEMPLATE_FOR_INDUSTRY'
+  | 'ORG_UPDATE_FAILED'
+  // Org addresses (Phase 1.5A)
+  | 'ADDRESS_NOT_FOUND'
+  | 'ADDRESS_TYPE_IMMUTABLE'
+  | 'ADDRESS_VALIDATION_FAILED'
+  | 'ADDRESS_WRITE_FAILED';
 
 export class ServiceError extends Error {
   constructor(

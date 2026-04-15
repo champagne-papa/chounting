@@ -18,7 +18,13 @@ export type ActionName =
   | 'period.lock'
   | 'org.create'
   | 'audit_log.read'
-  | 'ai_actions.read';
+  | 'ai_actions.read'
+  // Phase 1.5A — org profile + addresses (controller-only)
+  | 'org.profile_updated'
+  | 'org.address_added'
+  | 'org.address_updated'
+  | 'org.address_removed'
+  | 'org.address_primary_changed';
 
 export type UserRole = 'executive' | 'controller' | 'ap_specialist';
 
@@ -37,6 +43,12 @@ const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<ActionName>> = {
     'org.create',
     'audit_log.read',
     'ai_actions.read',
+    // Phase 1.5A — controller-only profile + address mutations
+    'org.profile_updated',
+    'org.address_added',
+    'org.address_updated',
+    'org.address_removed',
+    'org.address_primary_changed',
   ]),
   ap_specialist: new Set<ActionName>([
     'journal_entry.post',

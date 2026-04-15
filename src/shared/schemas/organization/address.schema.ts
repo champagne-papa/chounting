@@ -92,9 +92,13 @@ function regionRefine(
 export const addAddressSchema = addressBaseShape.superRefine(regionRefine);
 export type AddAddressInput = z.infer<typeof addAddressSchema>;
 
-// Input shape for addressService.updateAddress — partial patch,
-// but address_type is immutable (enforced by the service layer via
-// ADDRESS_TYPE_IMMUTABLE). Omit addressType from the patchable set.
+// Input shape for addressService.updateAddress — partial patch.
+// address_type is immutable: omit() strips it from the patch shape,
+// but Zod omit() silently discards rather than rejecting an
+// addressType key in the raw input. The service must check the raw
+// input pre-parse and throw ServiceError('ADDRESS_TYPE_IMMUTABLE')
+// if addressType is present, so the caller learns their patch was
+// rejected rather than silently no-op'd. Defense in depth.
 const addressPatchShape = addressBaseShape.omit({ addressType: true }).partial();
 
 export const updateAddressPatchSchema = addressPatchShape.superRefine(
