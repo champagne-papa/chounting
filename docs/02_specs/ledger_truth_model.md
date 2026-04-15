@@ -1751,6 +1751,513 @@ when writes go through adminClient";
 
 ---
 
+### INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
+
+**Invariant.** No path in the Phase 1.1 codebase calls a mutating
+service function directly without first passing through the
+`withInvariants()` wrapper. The wrapper is not optional
+decoration — it is the enforcement point for INV-AUTH-001's four
+pre-flight checks, and bypassing it would silently skip caller
+verification, org-access checking, and role-based authorization.
+Every mutating API route handler applies the wrapper at the call
+site via the pattern
+`await withInvariants(service.fn, { action: 'action.name' })(input, ctx)`.
+
+**Why this is a Layer 2 invariant rather than a Layer 1
+constraint.** The rule "every mutation passes through a
+pre-flight middleware" cannot be expressed in the database — the
+database has no concept of "a TypeScript function wrapper." It
+also cannot be a TypeScript type-level constraint, because
+`journalEntryService.post` is a plain async function that can
+be imported and called from any file that imports the service
+module. The enforcement is therefore **code-level discipline**:
+the pattern is uniform across every API route handler in
+`src/app/api/`, and code review rejects any new handler that
+imports a service function but does not wrap it.
+
+**Enforcement.** Three layered mechanisms make this rule hold
+in practice, none of which are runtime assertions but all of
+which catch violations:
+
+1. **The service modules export unwrapped functions by
+   convention.** `src/services/accounting/journalEntryService.ts`
+   exports `{ post, list, get }` as plain functions. There is
+   no wrapped export to "accidentally" use. A caller importing
+   `journalEntryService.post` gets the raw function and must
+   wrap it explicitly to use it correctly — or the wrapping
+   never happens and the authorization checks never run. This
+   is deliberate: a wrapped export would hide the wrap, and
+   would make it possible for a new handler to use the wrapped
+   version without seeing `withInvariants` in its imports,
+   which would obscure the enforcement path.
+2. **The API route handler convention.** Every mutating route
+   handler in `src/app/api/` imports both the service module
+   and `withInvariants` from
+   `@/services/middleware/withInvariants`, and applies the
+   wrapper inline at the call site. The reference
+   implementation is
+   `src/app/api/orgs/[orgId]/journal-entries/route.ts`:
+
+```typescript
+import { withInvariants } from '@/services/middleware/withInvariants';
+import { journalEntryService } from '@/services/accounting/journalEntryService';
+
+export async function POST(req: Request, { params }: { params: Promise<{ orgId: string }> }) {
+  // ...build ctx, parse input...
+  const result = await withInvariants(
+    journalEntryService.post,
+    { action: 'journal_entry.post' }
+  )(parsed, ctx);
+  // ...return response...
+}
+```
+
+   Every new mutating endpoint follows the same three-line
+   wrapping pattern. The uniformity is load-bearing — a
+   reviewer scanning a new route handler can verify "yes,
+   `withInvariants` is present with the right action" in under
+   a second.
+3. **Code review rejects bare service calls.** A PR that
+   introduces `await journalEntryService.post(input, ctx)`
+   without the wrapper is rejected on review. This is not an
+   automated check — there is no lint rule today that enforces
+   it. Phase 1.2 may add such a lint rule (candidate: an
+   ESLint restricted-syntax rule that forbids direct calls to
+   `services/**.post` and similar mutating exports). Phase 1.1
+   relies on code review and the fact that only one developer
+   is writing this code.
+
+**Asymmetry with read functions.** Read functions (`list`,
+`get`) are **not** wrapped in `withInvariants`. They are called
+directly by the route handler and handle authorization inline
+via `if (!ctx.caller.org_ids.includes(input.org_id)) { throw new
+ServiceError('ORG_ACCESS_DENIED', ...); }`. This is a
+deliberate Phase 1.1 choice: read functions have a simpler
+authorization model ("caller must be a member of the requested
+org") than writes ("caller must be a member AND have a role
+that permits the specific action"), and the inline check is
+cheaper than a full `withInvariants` pass. The asymmetry is
+not a bug — it is the architectural shape of Layer 2 — and the
+INV-SERVICE-001 rule **only applies to mutating service
+functions**. Reads have their own discipline (inline
+`org_ids.includes` check) which is not separately invariant-
+numbered.
+
+**What breaks if this rule is violated.** A mutating service
+function called without `withInvariants`:
+
+- Skips the JWT verification check → an unauthenticated request
+  could reach a mutation.
+- Skips the org-access check → a caller could write to an org
+  they are not a member of.
+- Skips the role-based authorization check → an `executive`
+  could post a journal entry (which the role is not permitted
+  to do).
+- Skips the trace_id propagation → the mutation runs without
+  a pino logger context, making it hard to correlate with
+  other logs from the same request.
+
+The database Layer 1 checks (CHECK constraints, triggers, RLS
+from the user-scoped client) catch *some* of these failures —
+but RLS is bypassed by `adminClient` which the service layer
+uses, so the RLS fallback does not protect this path. Layer 2
+must catch it, and Layer 2 catching it depends on `withInvariants`
+being applied. INV-SERVICE-001 is the rule that guarantees the
+application happens.
+
+**Phase 2 evolution.** Phase 2 introduces additional service
+functions (AP Agent, reconciliation, bank feed ingestion),
+and the rule applies to every new mutating function the same
+way. Phase 2 also introduces agent-initiated tool calls that
+invoke services through a different entry point than an API
+route handler — the orchestrator layer. The orchestrator
+applies `withInvariants` itself when invoking a service
+function, maintaining the rule across both entry paths
+(HTTP route and agent tool call). Phase 2 is also the
+earliest point at which an automated lint rule becomes
+valuable, because the number of service functions grows
+beyond what code review can reliably catch.
+
+**Referenced by:** INV-AUTH-001 (the four pre-flight checks
+that `withInvariants` runs);
+`docs/03_architecture/system_overview.md` (Layer 2 service
+layer description);
+`docs/03_architecture/request_lifecycle.md` manual path
+(withInvariants wrap step); `docs/04_engineering/conventions.md`
+service function authoring pattern;
+`docs/04_engineering/testing_strategy.md` Layer 2 test
+obligations (every new mutating service function must have a
+unit test that exercises the `withInvariants` wrapping path).
+
+---
+
+### INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
+
+**Invariant.** Every database read and write issued by a Phase
+1.1 service function goes through `adminClient()` (the
+service-role Supabase client). No service function imports or
+uses `userClient` (the anon-key-plus-JWT client). The two
+clients exist for different purposes: `userClient` is for
+Next.js server components and any read path where RLS
+enforcement is desired as defense-in-depth; `adminClient` is
+for the service layer, which is authoritative and must be
+able to write across RLS boundaries. This rule is the mechanical
+implementation of the two-client discipline documented in
+`docs/02_specs/data_model.md` Part 2 "The Two-Client Rule."
+
+**Why the service layer bypasses RLS.** The service layer
+writes rows that RLS would reject if it were enforced. Two
+concrete examples:
+
+- **Writing `audit_log` rows.** The `audit_log_select` RLS
+  policy allows org members to *read* audit rows for their
+  orgs. There is no INSERT policy because no user-scoped
+  client should ever write to the audit log — writes come
+  from `recordMutation()` via `adminClient`, which bypasses
+  RLS. Without `adminClient`, the audit write would be
+  rejected with "new row violates RLS policy" even though
+  the caller is authorized for the underlying mutation.
+- **Loading a referenced entry in `validateReversalMirror`.**
+  The reversal mirror check loads the *original* entry's
+  lines to compare against the proposed reversal's lines.
+  Under the user-scoped client, this SELECT succeeds (the
+  reverser is an org member, so RLS allows it), but the
+  inline org-id check in
+  `validateReversalMirror` is more explicit and produces a
+  cleaner `ServiceError('REVERSAL_CROSS_ORG')` error when
+  the caller tries to reference an entry from a different
+  org. The service-role path gives the service full control
+  over what "not found" vs "cross-org" vs "legitimate read"
+  means at the typed-error level, which would be harder
+  to distinguish if RLS were silently returning empty
+  results.
+
+The general principle: RLS is a blunt instrument that
+returns "zero rows" when access is denied, which forces the
+service layer to interpret "zero rows" as either "legitimate
+empty result" or "access denied." That ambiguity is a
+source of bugs. Using `adminClient` + explicit service-layer
+authorization (INV-AUTH-001) is cleaner — the service layer
+knows exactly why a read returned nothing, because it did
+the authorization itself.
+
+**Enforcement.** Two layered mechanisms, same shape as
+INV-SERVICE-001:
+
+1. **Convention in imports.** Every service file in
+   `src/services/**` imports from `@/db/adminClient`, never
+   from `@/db/userClient`. The reference pattern:
+
+```typescript
+import { adminClient } from '@/db/adminClient';
+// ...
+async function post(input, ctx) {
+  const db = adminClient();
+  // all DB operations via `db`
+}
+```
+
+2. **Code review.** A PR that imports `userClient` into
+   `src/services/**` is rejected on review. As with
+   INV-SERVICE-001, this is not automated today; Phase 1.2
+   may add a lint rule forbidding `userClient` imports
+   under the `services/` directory.
+
+**Interaction with INV-AUTH-001 and INV-RLS-001.** The three
+invariants work together:
+
+- **INV-RLS-001** (Layer 1) is the database-level defense.
+  It catches cross-org reads through any user-scoped client.
+- **INV-AUTH-001** (Layer 2) is the service-layer defense.
+  It catches unauthorized mutations at the wrapper level,
+  before any DB call is issued.
+- **INV-SERVICE-002** (this rule) is the architectural
+  decision to use the service-role client inside the service
+  layer, which shifts the authorization responsibility from
+  RLS to INV-AUTH-001.
+
+Without INV-AUTH-001, using `adminClient` would be unsafe —
+there would be no check preventing a caller from writing to
+an org they don't belong to. Without INV-SERVICE-002, the
+service layer would inherit RLS's ambiguous zero-rows-means-
+either-empty-or-denied behavior, which would force defensive
+coding patterns throughout the service layer that the current
+design avoids. Both rules are necessary for the current Layer
+2 shape to hold.
+
+**Why not just run the service layer through `userClient`?**
+Two reasons. First, the `audit_log` write would fail, as
+described above — there is no INSERT policy for `audit_log`.
+The service layer would need a dedicated RLS exception for
+audit writes, which would be a narrow carve-out that
+complicates the RLS story. Second, the service-role client
+is already the only path that can write `events` (Phase 2),
+because `events` has no INSERT policy for any non-admin
+role. Converging on `adminClient` in Phase 1.1 makes the
+Phase 2 event-writing path mechanical — no migration needed,
+no new client wiring, just start calling `db.from('events')
+.insert(...)` inside existing service functions. The Phase
+1.1 convergence pays a Phase 2 dividend.
+
+**What breaks if this rule is violated.** A service function
+that uses `userClient` instead of `adminClient`:
+
+- Cannot write to `audit_log` — the write fails with "new
+  row violates RLS policy," and the `recordMutation()` helper
+  throws `AUDIT_WRITE_FAILED`, rolling back the entire
+  transaction.
+- Cannot read a referenced entry across an org boundary
+  cleanly — RLS silently returns empty, and the service
+  function must distinguish "not found" from "access denied"
+  without any signal from the database.
+- Cannot call the two RPC functions `get_profit_and_loss`
+  and `get_trial_balance` — these are granted `EXECUTE` to
+  `service_role` only, not to `authenticated`, so a
+  `userClient` call would fail with "permission denied for
+  function."
+
+**Phase 2 evolution.** The rule is permanent. Phase 2 adds
+agent-initiated service calls via the orchestrator, and the
+orchestrator uses `adminClient` via the service functions it
+invokes. Phase 2 also adds the events-table write path, which
+is adminClient-only by construction (no `authenticated` INSERT
+policy on `events`). No new exceptions to the rule are
+anticipated.
+
+**Referenced by:** `docs/02_specs/data_model.md` Part 2 "The
+Two-Client Rule"; INV-AUTH-001 and INV-RLS-001 (the two rules
+that together make INV-SERVICE-002 safe);
+`docs/03_architecture/system_overview.md` (service layer
+client discipline);
+`docs/04_engineering/conventions.md` service function
+authoring pattern;
+`docs/04_engineering/testing_strategy.md` service test
+patterns (tests call service functions directly with a
+service-role client, matching the production path).
+
+---
+
+### INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
+
+**Invariant.** Every monetary value that crosses the service
+boundary — as an input to a service function, as an output,
+as a field inside a Zod-validated payload — is a branded
+`MoneyAmount` string, never a JavaScript `number`. The same
+rule applies to FX rates, which use the separate `FxRate`
+branded string. JavaScript `Number` values for money or FX
+rates never reach the service body, never appear in service
+function signatures, and never leave the service module
+boundary on the way back to the API response.
+
+**Why this rule exists.** JavaScript `Number` is an IEEE 754
+double-precision float. It cannot represent `0.1 + 0.2`
+exactly — the result is `0.30000000000000004`, not `0.3`.
+For money, this is a correctness failure: a journal entry
+that balances exactly in the database can become unbalanced
+after a round-trip through JavaScript arithmetic, and a P&L
+report that sums thousands of entries accumulates
+last-place errors that compound into visible discrepancies.
+The Phase 1.1 architecture rules JavaScript `Number` out of
+the money path entirely. Arithmetic on money values happens
+in one of two places:
+
+1. **Postgres `numeric(20,4)`** — the authoritative store.
+2. **`decimal.js`** — inside the
+   `src/shared/schemas/accounting/money.schema.ts` module,
+   which is the only file permitted to import `decimal.js`.
+
+The service layer never does `a + b` where `a` and `b` are
+money; it calls `addMoney(a, b)` which delegates to
+`decimal.js`, which produces a result with Postgres-matching
+semantics.
+
+**Enforcement.** Two layered mechanisms:
+
+1. **Zod boundary validation.** Every money field at every
+   service-boundary Zod schema is `MoneyAmountSchema` —
+   defined in
+   `src/shared/schemas/accounting/money.schema.ts`:
+
+```typescript
+export type MoneyAmount = string & { __brand: 'MoneyAmount' };
+export type FxRate = string & { __brand: 'FxRate' };
+
+export const MoneyAmountSchema = z
+  .string()
+  .regex(
+    /^-?\d{1,16}(\.\d{1,4})?$/,
+    'Must be a valid amount (up to 4 decimal places)',
+  )
+  .transform((v) => v as MoneyAmount);
+
+export const FxRateSchema = z
+  .string()
+  .regex(
+    /^-?\d{1,12}(\.\d{1,8})?$/,
+    'Must be a valid rate (up to 8 decimal places)',
+  )
+  .transform((v) => v as FxRate);
+```
+
+   The regex validates at most 4 decimal places for
+   `MoneyAmount` (matching Postgres `numeric(20,4)`) and at
+   most 8 for `FxRate` (matching `numeric(20,8)`). The
+   `.transform()` brands the validated string as
+   `MoneyAmount` or `FxRate`. A call that passes a JavaScript
+   number for a money field fails Zod validation at the
+   boundary and produces a clean `z.ZodError` naming the
+   offending field.
+
+2. **TypeScript branded types.** `MoneyAmount` and `FxRate`
+   are declared as `string & { __brand: 'MoneyAmount' }` and
+   `string & { __brand: 'FxRate' }`. The brand is a phantom
+   type — it exists only at compile time and has no runtime
+   representation. At compile time, TypeScript distinguishes
+   `MoneyAmount` from `string`, so a developer cannot pass
+   a plain `string` where `MoneyAmount` is expected, and
+   cannot construct a `MoneyAmount` without going through
+   the Zod schema or the `toMoneyAmount()` coercion helper.
+   This catches drift at type-check time — if a new service
+   function accidentally types a parameter as `string`
+   instead of `MoneyAmount`, a call site that passes an
+   actual `MoneyAmount` succeeds (because `MoneyAmount
+   extends string`), but a call site that accidentally
+   passes a `number` fails with a type error.
+
+**The arithmetic helpers.** `money.schema.ts` exports six
+helpers that operate on branded money values:
+
+```typescript
+export function addMoney(a: MoneyAmount, b: MoneyAmount): MoneyAmount;
+export function multiplyMoneyByRate(amount: MoneyAmount, rate: FxRate): MoneyAmount;
+export function eqMoney(a: MoneyAmount, b: MoneyAmount): boolean;
+export function eqRate(a: FxRate, b: FxRate): boolean;
+export function zeroMoney(): MoneyAmount;
+export function oneRate(): FxRate;
+```
+
+Every service function that needs to compute on money uses
+these helpers. `addMoney` uses `decimal.js` addition and
+returns a `numeric(20,4)`-compatible result.
+`multiplyMoneyByRate` uses `Decimal.ROUND_HALF_UP` to match
+Postgres's `ROUND()` semantics, which is what INV-MONEY-003
+(the database CHECK for `amount_cad = ROUND(amount_original *
+fx_rate, 4)`) requires. `eqMoney` and `eqRate` use
+`Decimal.eq()` rather than JavaScript `===`, so string
+representations that are numerically equal but
+lexicographically different (e.g. `'1.0000'` vs `'1'`) are
+correctly treated as equal.
+
+**Coercion from the database driver.** The Supabase driver
+serializes Postgres `numeric` columns to JSON in a way that
+is not stable across versions — sometimes as strings,
+sometimes as JavaScript numbers. The service layer handles
+this via `toMoneyAmount(value: string | number): MoneyAmount`
+and `toFxRate(value: string | number): FxRate`, which wrap
+the value in `new Decimal(value)` and return
+`Decimal.toFixed(4)` or `Decimal.toFixed(8)` respectively.
+Every service function that reads money from the database
+applies `toMoneyAmount` to the raw column value before
+using it — see `journalEntryService.get` for the reference
+implementation, which coerces `debit_amount`, `credit_amount`,
+`amount_original`, `amount_cad`, and `fx_rate` on every
+line row returned from a SELECT.
+
+**`decimal.js` is confined to one file.** The service layer
+as a whole imports `decimal.js` exactly once: in
+`src/shared/schemas/accounting/money.schema.ts`. Every other
+file that needs to do money arithmetic calls the exported
+helpers. This confinement is deliberate — it means any
+change to money arithmetic semantics (rounding mode,
+precision, handling of negative zero, etc.) happens in one
+place and automatically propagates to every service
+function. A code review finding `import Decimal from
+'decimal.js'` anywhere outside `money.schema.ts` is a
+rejected PR.
+
+**Interaction with INV-MONEY-002 and INV-MONEY-003.** The
+two Layer 1 money CHECKs enforce the database-level
+consistency:
+
+- INV-MONEY-002: `amount_original = debit_amount + credit_amount`
+- INV-MONEY-003: `amount_cad = ROUND(amount_original * fx_rate, 4)`
+
+Both rules assume Postgres `numeric` semantics. For the
+service layer's pre-flight Zod refines (which check the same
+equations *before* the database write, producing cleaner
+errors) to agree with the database, the service layer's
+arithmetic must match Postgres. `decimal.js` with
+`ROUND_HALF_UP` matches Postgres `ROUND()` semantics
+exactly. JavaScript `Number` arithmetic does not. The
+service layer's conformance to the database CHECKs therefore
+depends on INV-MONEY-001 being true — if a service function
+accidentally computed `amount_cad` as
+`Number(amount_original) * Number(fx_rate)`, the result
+would differ from the database's `ROUND(amount_original *
+fx_rate, 4)` in the last place on any non-trivial FX rate,
+and the INSERT would fail the CHECK with a mismatch the
+service layer could not reproduce under `decimal.js`.
+INV-MONEY-001 is the foundation that makes INV-MONEY-002
+and INV-MONEY-003 enforceable at the service layer at all.
+
+**What breaks if this rule is violated.** A service function
+that uses `Number` arithmetic on money values:
+
+- Cannot correctly pre-validate the INV-MONEY-002 and
+  INV-MONEY-003 CHECKs, because JS arithmetic drifts from
+  Postgres `numeric` in the last place.
+- Produces P&L sums that drift from the database
+  aggregate — a service-layer sum of 1000 journal lines
+  can differ from the Postgres `SUM(amount_cad)` by tens
+  of cents, which looks like "the report is wrong."
+- Introduces silent precision loss when passing money
+  through JSON serialization — a string like `"123.4567"`
+  round-trips exactly, but `Number("123.4567")` may
+  serialize back as `"123.4567"` *or* `"123.4566999999..."`
+  depending on the path.
+
+**No dedicated integration test — exercised by every money-
+touching test.** INV-MONEY-001 is not on the Category A floor
+as a standalone test. It is enforced by the Zod schemas at
+every service call site (every integration test that posts
+a journal entry exercises `MoneyAmountSchema` implicitly),
+and by the unit tests in `tests/unit/moneySchema.test.ts`
+which cover `addMoney`, `multiplyMoneyByRate`,
+`toMoneyAmount`, and `toFxRate` against boundary cases
+(4-decimal-place precision, 8-decimal-place precision,
+rounding-mode edge cases). The combined effect is that
+every mutation path through the service layer is
+money-typed end to end.
+
+**Phase 2 evolution.** The rule is permanent and becomes
+more important in Phase 2 when real multi-currency bill
+ingestion begins. Phase 2 introduces the first service
+functions that compute money values with non-trivial
+`fx_rate` (USD, EUR, GBP bills from intercompany vendors),
+and the precision match between `multiplyMoneyByRate` and
+Postgres `ROUND()` is what lets those bills post without
+CHECK violations. A Phase 2 regression that accidentally
+passed FX rates through `Number` would surface as an
+entire category of bills failing to post. INV-MONEY-001
+is the compile-time and boundary-time defense against
+that failure mode.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`journal_lines` section (named CHECKs list for MONEY-002
+and MONEY-003, both of which cite MONEY-001 as the
+service-layer precondition);
+`docs/03_architecture/request_lifecycle.md` manual path
+and confirmation commit path (money validation step);
+`docs/03_architecture/phase_plan.md` Phase 1.1 "What was
+built" bullet (money-as-string discipline);
+`docs/04_engineering/testing_strategy.md`
+`moneySchema.test.ts` unit test coverage;
+`docs/04_engineering/conventions.md` money-as-string
+pattern with the `decimal.js`-confinement rule; PLAN.md §3a
+(seed material for the rationale).
+
+---
+
 ### INV-REVERSAL-001 — Reversal lines must mirror the original
 
 **Invariant.** A journal entry that reverses another (has
@@ -1857,6 +2364,250 @@ section (service-layer enforcement note);
 bullet; `docs/04_engineering/testing_strategy.md` Category A floor
 table; `docs/07_governance/adr/0001-reversal-semantics.md` (ADR
 for reversal design).
+
+---
+
+### INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
+
+**Invariant.** Every service function that writes to a
+tenant-scoped table also writes a row to `audit_log` inside
+the same database transaction. The audit row captures *who*
+did *what* to *which entity*, with a `trace_id` tying the
+audit row to the pino log entries for the same request. If
+the mutation transaction rolls back (for any reason — CHECK
+violation, trigger exception, service-layer error), the audit
+row rolls back with it. If the mutation commits, the audit
+row is guaranteed to be present. "Guaranteed" is literal: the
+rule is *transactional*, not *eventual*.
+
+**Why transactional and not asynchronous.** A Phase 2
+architecture would emit an event to the `events` table and
+let a projection worker build `audit_log` asynchronously.
+Phase 1.1 does not have the events table writing any rows
+yet (Simplification 2 — see
+`docs/03_architecture/phase_simplifications.md`), so the
+audit path is synchronous: the service function calls
+`recordMutation()` inside its own transaction, and the
+audit row commits atomically with the mutation. This is
+**Simplification 1** from the phase_simplifications document
+— the explicit decision to write audit synchronously until
+the event stream can take over.
+
+The tradeoff: a synchronous audit write adds one row to
+every mutation transaction. At Phase 1.1 traffic (solo
+founder, few mutations per day), this is free. Phase 2
+introduces higher volumes and the projection pattern
+becomes valuable because it lets the audit write happen
+off the critical path. The rule shape in Phase 1.1 is
+"synchronous inside the transaction"; the Phase 2 shape
+will be "eventual via projection from events." Both are
+*implementations* of the same invariant "every mutation
+produces an audit record." The difference is only in *when*
+the audit row becomes visible.
+
+**Enforcement.** `recordMutation()` at
+`src/services/audit/recordMutation.ts`. The helper is called
+by every mutating service function from inside its
+transaction, passing the service's active `SupabaseClient`
+(the service-role client) so the audit row participates in
+the same transaction as the mutation:
+
+```typescript
+export async function recordMutation(
+  db: SupabaseClient,
+  ctx: ServiceContext,
+  entry: AuditEntry,
+): Promise<void> {
+  const { error } = await db.from('audit_log').insert({
+    org_id: entry.org_id,
+    user_id: ctx.caller.user_id,
+    trace_id: ctx.trace_id,
+    action: entry.action,
+    entity_type: entry.entity_type,
+    entity_id: entry.entity_id ?? null,
+    before_state: entry.before_state ?? null,
+    after_state_id: entry.after_state_id ?? null,
+    tool_name: entry.tool_name ?? null,
+    idempotency_key: entry.idempotency_key ?? null,
+  });
+
+  if (error) {
+    throw new Error(`[AUDIT_WRITE_FAILED] ${error.message}`);
+  }
+}
+```
+
+The helper accepts a `SupabaseClient` argument rather than
+creating its own via `adminClient()`. This is load-bearing:
+the caller passes the same client (and therefore the same
+transaction context) that is performing the mutation, so the
+audit INSERT runs inside the same transaction as the
+preceding data INSERTs. If the transaction rolls back, both
+the data writes and the audit writes disappear together.
+There is no window in which the data exists without its
+audit row, and no window in which an audit row exists for
+a mutation that did not happen.
+
+**Why a plain `Error`, not a `ServiceError`.** A failure in
+`recordMutation` throws `new Error('[AUDIT_WRITE_FAILED] ...')`
+— a plain `Error` with a bracketed code prefix, not a typed
+`ServiceError`. This is intentional. An audit write failure
+is not a caller-facing error; it is an *internal integrity
+failure* of the service layer itself. The calling service
+function catches the error (or lets it propagate), and the
+outer transaction rolls back. The caller receives a generic
+500 Internal Server Error from the API route handler, not
+a specific typed code. The reason is that an audit write
+failing means something is wrong at a level below what the
+caller can usefully act on — the service layer itself is
+broken — and exposing that as a structured error code would
+invite callers to build retry logic around it, which is
+not the right response. The right response is "roll back,
+log loudly, page the on-call." The `AUDIT_WRITE_FAILED`
+prefix makes the failure greppable in logs and in stack
+traces, which is the Phase 1.1 observability need.
+
+**The pattern in practice.**
+`journalEntryService.post()` calls `recordMutation` after
+the journal_entries INSERT and the journal_lines INSERT
+complete, but before any return from the function (which is
+the implicit COMMIT point for the transaction started by
+the Supabase client's first write). The shape is:
+
+```typescript
+async function post(input, ctx) {
+  // ... Zod parse, period-lock pre-flight, reversal mirror ...
+  const db = adminClient();
+  // INSERT journal_entries
+  // INSERT journal_lines
+  await recordMutation(db, ctx, {
+    org_id: parsed.org_id,
+    action: isReversal ? 'journal_entry.reverse' : 'journal_entry.post',
+    entity_type: 'journal_entry',
+    entity_id: entry.journal_entry_id,
+  });
+  return { journal_entry_id, entry_number };
+}
+```
+
+Every new mutating service function added to
+`src/services/` follows this pattern: after the last data
+mutation, before any return, call `recordMutation` with
+the action name and the entity ID. Forgetting to call
+`recordMutation` is caught by code review (same discipline
+as INV-SERVICE-001 and INV-SERVICE-002).
+
+**Interaction with INV-AUTH-001.** The audit row carries
+`user_id` from `ctx.caller.user_id` — which is populated
+only if the caller is verified (INV-AUTH-001 pre-flight
+step 2). If a mutation somehow reached `recordMutation`
+with an unverified caller, the audit row would carry a
+NULL or bogus `user_id`. INV-AUTH-001 prevents this by
+ensuring the `verified` flag must be true before any
+business logic runs; the `recordMutation` call is inside
+the business logic, so it inherits the verified-caller
+guarantee. The two rules chain: AUTH-001 guarantees
+`user_id` is real, AUDIT-001 guarantees that real
+`user_id` is recorded on every mutation.
+
+**Interaction with INV-SERVICE-002.** `recordMutation`
+takes a `SupabaseClient` argument rather than instantiating
+its own, which means it participates in whatever
+transaction the caller has open — necessarily the
+service-role client's transaction, because INV-SERVICE-002
+requires service functions to use `adminClient`. If a
+service function somehow passed a `userClient` instance
+to `recordMutation`, the audit INSERT would fail with
+"new row violates RLS policy" (because there is no INSERT
+policy on `audit_log`), the caller would receive
+`AUDIT_WRITE_FAILED`, and the transaction would roll back.
+This is another example of INV-SERVICE-002 being a
+prerequisite for other Layer 2 invariants to hold.
+
+**What breaks if this rule is violated.** A service
+function that mutates data without calling
+`recordMutation`:
+
+- Produces a mutation with no audit trail — an auditor
+  asking "who posted this entry and when?" cannot
+  answer from `audit_log` alone. The AI Action Review
+  queue (Phase 1.2) depends on `audit_log` rows being
+  present for every agent-initiated entry; missing rows
+  mean the queue shows fewer entries than were actually
+  posted.
+- Misses the `trace_id` correlation — pino log entries
+  for the request cannot be tied back to a specific
+  mutation by grepping `audit_log`, so forensic
+  investigation has to rely on timestamp matching
+  alone.
+- Defeats the "single place to ask 'what happened?'"
+  promise that the audit log is supposed to carry.
+
+**No dedicated integration test — implicit coverage.**
+INV-AUDIT-001 is exercised implicitly by every integration
+test that posts a journal entry: each test asserts
+(directly or indirectly) that the audit row exists
+after a successful post, and no audit row exists after a
+rollback. The Category A floor test
+`tests/integration/unbalancedJournalEntry.test.ts`
+implicitly exercises the rollback path — when the
+deferred balance constraint fails at COMMIT, both the
+journal_lines INSERTs and the audit_log INSERT roll
+back together, and the test asserts zero rows in both
+tables afterward. A dedicated "audit row is present
+when mutation succeeds, absent when mutation rolls back"
+unit test is a Phase 1.2 test obligation for the agent
+path where audit guarantees become user-facing (the
+AI Action Review queue depends on them).
+
+**Phase 2 evolution — the projection shift.** Phase 2
+introduces the events table as the source of truth
+for mutations, and `audit_log` becomes a projection
+derived from the event stream via a background worker.
+The synchronous `recordMutation` call inside the
+service function goes away; it is replaced by an event
+emission (still inside the transaction, still
+synchronous from the service function's perspective)
+and a projection worker that reads the event stream
+and builds `audit_log` rows asynchronously. The
+**invariant** "every mutation produces an audit record"
+is unchanged; the **mechanism** shifts from "write
+audit row in the same transaction" to "emit event in
+the same transaction, project to audit_log
+asynchronously." The Phase 2 shape has two failure
+modes that Phase 1.1 does not:
+
+- The projection worker could fall behind, so the
+  audit row is present in `events` but not yet in
+  `audit_log` — forensic queries must check both.
+- The projection worker could crash and miss events —
+  Phase 2 adds a reconciliation job that replays events
+  from a checkpoint to catch up.
+
+Phase 1.1's synchronous shape has neither problem
+because the audit row and the mutation are the same
+transaction. The tradeoff is that Phase 1.1 cannot
+scale audit writes independently of mutation writes —
+a slow `audit_log` insert slows every mutation. At
+Phase 1.1 traffic this is invisible; Phase 2 makes it
+matter.
+
+**Referenced by:** `docs/02_specs/data_model.md`
+`audit_log` section (Phase 1 synchronous write note,
+"Simplification 1");
+`docs/03_architecture/phase_simplifications.md`
+Simplification 1 ("audit_log written synchronously in
+Phase 1, projection from events in Phase 2");
+`docs/03_architecture/request_lifecycle.md` manual path
+(recordMutation step in the service body);
+`docs/03_architecture/phase_plan.md` Phase 2 "What
+lights up" bullet (projection worker);
+`docs/04_engineering/testing_strategy.md` Phase 1.2
+test obligations (audit row presence on successful
+post, audit row absence on rollback);
+Structured Error Contracts section (the
+`AUDIT_WRITE_FAILED` sentinel and why it is not a
+typed `ServiceError`).
 
 ---
 
