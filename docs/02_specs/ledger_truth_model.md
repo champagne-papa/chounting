@@ -2611,7 +2611,1203 @@ typed `ServiceError`).
 
 ---
 
-**End of calibration sample.** The remaining 14 INV-IDs, Layer 3,
-Layer 4, Transaction Isolation, Service Communication Rules, and
-Structured Error Contracts sections will be added in a follow-up
-pass after review.
+## Layer 3 — Temporal Truth (Events as Source of Truth)
+
+Layer 3 is where mutations become history. Every Phase 2 service
+function that writes to a tenant-scoped table will also emit an
+event to the `events` table inside the same transaction, and the
+`events` table will be the **source of truth** from which
+`audit_log` and other projections are derived asynchronously.
+Layer 3 is the layer that makes "what happened?" answerable from a
+single ordered log, independent of any projection's current state.
+
+**Scope in Phase 1.1 — a reserved seat, not an active layer.**
+Phase 1.1 does not write to the `events` table. No service
+function, no trigger, no migration populates it. The `events` table
+exists, its schema is defined in
+`supabase/migrations/20240101000000_initial_schema.sql`, and its
+append-only triggers are installed (see INV-LEDGER-003 for the full
+physical enforcement) — but the layer's **role** as "source of
+truth" is a Phase 2 obligation, not a Phase 1.1 enforcement point.
+This is the explicit split the Authority Gradient table captures
+with the INV-LEDGER-003 row: *"enforcement exists at Layer 1 today;
+the Layer 3 role of 'events as source of truth' is a Phase 2
+obligation."*
+
+**Why the layer has no INV-IDs in Phase 1.1.** A Phase 1.1
+invariant appears in this file if and only if it has a
+corresponding enforcement point in code today (the Scope note at
+the top of this file). The only rule that *could* be a Layer 3
+invariant in Phase 1.1 is "the events table is append-only," and
+that rule is already enforced at Layer 1 by
+INV-LEDGER-003's triggers and REVOKE statements. Listing it a
+second time under Layer 3 would duplicate the enforcement point
+and create two places to update when Phase 2 lights up the table.
+The discipline is: the append-only rule lives at Layer 1 (where it
+is enforced today); the "source of truth" role lives at Layer 3
+(where it becomes active in Phase 2). Neither rule gets a Layer 3
+INV-ID in Phase 1.1 because no Phase 1.1 code path exercises the
+Layer 3 role.
+
+**What Phase 2 turns on.** When the events table begins receiving
+writes, the following changes happen together and must be reasoned
+about as a single architectural shift:
+
+1. **Service functions emit events inside their mutation
+   transactions.** The shape is: open transaction → issue data
+   INSERTs → `INSERT INTO events (...)` with the payload → commit.
+   The event emission is synchronous with the mutation; the
+   projection from events to `audit_log` is asynchronous (see
+   below). This is Simplification 1 *reversing* into its Phase 2
+   shape, per
+   `docs/03_architecture/phase_simplifications.md`.
+2. **`audit_log` becomes a projection, not a direct write.** The
+   synchronous `recordMutation()` call inside every service
+   function (INV-AUDIT-001 in its Phase 1.1 form) is removed. A
+   background projection worker reads the event stream, parses
+   each event, and inserts the corresponding `audit_log` row. The
+   invariant "every mutation produces an audit record" is
+   unchanged; the mechanism shifts from same-transaction INSERT to
+   eventual-via-projection. The shift is documented in
+   INV-AUDIT-001's "Phase 2 evolution — the projection shift"
+   section.
+3. **`events` becomes replayable.** Because the table is
+   append-only (INV-LEDGER-003) and carries enough payload per row
+   to reconstruct the mutation, a projection worker that gets
+   behind, crashes, or is rewritten can replay events from a
+   checkpoint and rebuild `audit_log` from scratch. This is the
+   property that makes the events table trustworthy as a source of
+   truth: the downstream projections are disposable and
+   recomputable, but the events themselves are permanent.
+4. **Forensic queries shift from `audit_log` to `events`.** An
+   auditor asking "what happened on this date?" in Phase 1.1
+   queries `audit_log` directly (the single source of truth for
+   mutation history). In Phase 2, the same question first queries
+   `events` (which is authoritative), then falls through to
+   `audit_log` (which is a projection, potentially lagging) only
+   for queries where projection freshness is acceptable.
+
+**What Phase 2 does not change.** Layer 3 becoming active does not
+affect Layer 1 or Layer 2 enforcement. The database CHECK
+constraints, triggers, and RLS policies at Layer 1 are unchanged.
+The service-layer invariants at Layer 2 — authorization,
+client discipline, money typing, reversal mirror, audit guarantee
+— are unchanged in their *meaning*. Only the mechanism by which
+"every mutation produces an audit record" is implemented changes.
+The gradient is permanent; the implementation evolves.
+
+**The single Phase 1.1 rule that lives partially at Layer 3.**
+INV-LEDGER-003 ("the events table is append-only") is the one
+invariant whose **Layer 3 role** becomes observable in Phase 2
+while its **Layer 1 enforcement** is already in place today. The
+leaf lives under Layer 1 in this file because the enforcement is
+mechanical, and the leaf's "Phase 2 evolution" section explains
+how the same unchanged rule lights up at Layer 3 when events begin
+carrying real content. A reader following the cross-reference from
+the Authority Gradient table's Layer 3 row to this section finds
+the "role vs enforcement" split explained here and the detailed
+trigger and REVOKE enforcement explained in INV-LEDGER-003.
+
+**Referenced by:** `docs/03_architecture/phase_simplifications.md`
+(Simplifications 1 and 2 describe the Phase 1.1 → Phase 2 shift
+for audit and events); `docs/03_architecture/phase_plan.md` Phase 2
+"What lights up" bullet; INV-LEDGER-003 (Layer 1 leaf, append-only
+enforcement); INV-AUDIT-001 (Layer 2 leaf, Phase 2 projection
+shift).
+
+---
+
+## Layer 4 — Cognitive Truth (Agents Propose)
+
+Layer 4 is where agents live. It is the layer at which an AI
+assistant reads a natural-language input (a bill image, a user
+message, a tool output) and proposes a structured action — a
+journal entry to post, a reconciliation match to confirm, a vendor
+rule to apply. Layer 4 is the entry point of the authority
+gradient: *agents propose, services decide, the database enforces*.
+
+**Why Layer 4 has no INV-IDs.** The committed Authority Gradient
+section already states the rule: *"Agents are allowed to be wrong.
+That is the entire point of the confirmation-first model: an agent
+proposes, a human confirms, the service executes, the database
+verifies. If the agent is wrong, the error is caught before it
+touches the ledger. Putting enforcement invariants at Layer 4
+would mean trusting agents to be correct, which would undermine
+the gradient."*
+
+This is not a gap in the documentation. It is the architectural
+decision that makes the gradient work. **Layer 4 has no
+enforcement invariants because enforcement at Layer 4 is
+categorically the wrong shape.** An "invariant the agent enforces"
+would be a rule that fails silently when the agent is wrong,
+because there is no lower layer able to catch the failure — the
+agent's output is already the lowest-level claim in its layer's
+frame of reference. The authority gradient resolves this by
+inverting the frame: the agent's output is the *highest*-level
+claim in the system's frame of reference, and every lower layer
+gets to reject it.
+
+**What lives at Layer 4 instead — discipline, not enforcement.**
+Layer 4 carries load-bearing discipline even without INV-IDs. The
+discipline is "rules the agent must follow to produce proposals
+that Layer 3/2/1 can safely act on." These rules are enforced by
+prompt engineering, by the tool schema, and by the
+confirmation-first UI flow — not by runtime assertions, because an
+assertion at Layer 4 would be the assertion that "the agent got it
+right," which is exactly what the gradient refuses to trust. The
+Phase 1.1 / Phase 1.2 Layer 4 discipline is:
+
+1. **Confirmation-first.** No agent-proposed mutation executes
+   without explicit human confirmation. The agent produces a
+   dry-run proposal; the proposal is rendered as a
+   `ProposedEntryCard` (Phase 1.2) in the chat UI; the user clicks
+   Approve; only then does the service layer execute the mutation.
+   This is the structural rule that makes Layer 4 safe: a wrong
+   proposal is caught before it becomes a write, because the human
+   sees it first. The rule is enforced by the UI and by the agent
+   prompt, not by any runtime invariant — an agent that bypasses
+   the confirmation card would be caught by code review (the tool
+   schema has no "execute immediately" path), not by the system
+   at runtime.
+2. **Structured-response contracts.** Every agent tool call
+   returns a Zod-validated structured object, not free-form text.
+   The tool schema is defined in `src/shared/schemas/` and the
+   agent's response is validated against the schema before the
+   service layer processes it. A tool call that returns invalid
+   JSON, missing fields, or the wrong shape is rejected with a
+   Zod error and the agent is re-prompted (Phase 1.2 agent loop).
+   This prevents "the agent claimed a mutation succeeded but
+   didn't actually structure its response correctly" from being a
+   silent failure.
+3. **Anti-hallucination rules.** The agent prompt explicitly
+   forbids fabricating account IDs, vendor IDs, org IDs, or any
+   other UUID that must already exist in the database. The agent
+   is required to call a read tool (e.g. `listAccounts`) to obtain
+   real UUIDs before constructing a mutation proposal. A proposal
+   that references a non-existent UUID fails at the service layer
+   (RLS returns zero rows, INV-SERVICE-002's read path throws
+   `NOT_FOUND` or the inline authorization check throws
+   `ORG_ACCESS_DENIED`). The Layer 4 discipline catches the
+   failure one level higher by refusing to *construct* such a
+   proposal in the first place.
+4. **Idempotency key carried through.** Agent-sourced proposals
+   carry an `idempotency_key` from the first call through to the
+   confirm-commit path, so a retry (network flake, confirmation
+   double-click, orchestrator restart) hits the idempotency
+   check in INV-IDEMPOTENCY-001 and returns the existing result
+   instead of posting a duplicate. The Layer 4 discipline is "the
+   agent must generate the key once at the proposal boundary and
+   propagate it unchanged through the confirmation." The runtime
+   enforcement is INV-IDEMPOTENCY-001 at Layer 1 (CHECK
+   constraint) and the `ai_actions` slot lookup at Layer 2.
+5. **No service logic in prompts.** The agent's system prompt
+   describes *what actions are available* and *how to use the
+   tools*, not *how the service functions work internally*. A
+   prompt that included "journalEntryService.post validates that
+   debits equal credits and that the fiscal period is open" would
+   couple the agent to service internals, and a future change to
+   those internals would require updating the prompt in lockstep.
+   The Phase 1.1 discipline is that agents see tool signatures
+   and tool descriptions, not service bodies. This is what the
+   Layer 2 "Not in prompts" property in the committed intro is
+   pointing at.
+
+**Why discipline without enforcement is load-bearing.** A reader
+might ask: "if these are rules the agent must follow and there are
+no runtime assertions, what stops a regressed prompt from
+bypassing them?" The answer is that every rule above is backed by
+a *lower-layer* enforcement, not by a Layer 4 assertion:
+
+- Confirmation-first is backed by the Phase 1.2 UI flow (the
+  ProposedEntryCard component has no "execute immediately" path)
+  and by INV-IDEMPOTENCY-001 + the `ai_actions` slot (which would
+  reject a direct-write retry even if the UI somehow bypassed
+  confirmation).
+- Structured-response contracts are backed by Zod validation at
+  the service boundary (INV-MONEY-001 for money, the per-service
+  Zod schemas for everything else) and by the TypeScript type
+  system for static checks.
+- Anti-hallucination is backed by INV-SERVICE-002 (reads fail
+  with `NOT_FOUND` or `ORG_ACCESS_DENIED` for non-existent or
+  cross-org references), by INV-AUTH-001 (the org-access pre-flight
+  check rejects cross-org writes), and by INV-RLS-001 (the
+  database RLS policies catch cross-org reads through user-scoped
+  clients).
+- Idempotency key carried through is backed by
+  INV-IDEMPOTENCY-001 (the Layer 1 CHECK constraint) and by the
+  service-layer slot lookup in `ai_actions`.
+- "No service logic in prompts" is backed by code review and by
+  the Phase 1.2 test obligation that prompt text not reference
+  service internals. It is the one Layer 4 discipline that is
+  *not* backed by a runtime invariant, and that is because the
+  rule is about prompt authoring, not about runtime behavior.
+
+The pattern is consistent: Layer 4 discipline is the
+*shape* a correctly-behaving agent must take, and lower layers are
+the *mechanism* that catches agents that drift from the shape.
+Layer 4 is the layer that tells the agent what to do; Layers 1–3
+are the layers that verify the agent did it.
+
+**Phase 2 — Layer 4 evolution.** Phase 2 introduces additional
+agents (AP Agent, AR Agent, Reconciliation Agent), each with its
+own tool schema and its own confirmation UI flow. The five
+disciplines above apply to every agent identically. Phase 2 also
+formalizes the proposal-to-execution contract via the
+`docs/09_briefs/phase-2/interaction_model_extraction.md` brief,
+which extracts the Phase 1.2 UI-coupled confirmation pattern into
+a set of reusable API primitives. The Layer 4 discipline is
+**permanent across phases**; what changes is the number of agents
+running in the layer and the sophistication of the confirmation
+interfaces.
+
+**Referenced by:** Authority Gradient section (the "Why Layer 4
+has no enforcement invariants" paragraph); INV-IDEMPOTENCY-001
+(agent retry safety); INV-SERVICE-002 (read-path authorization for
+anti-hallucination catching); INV-AUTH-001 (org-access pre-flight
+for cross-org write catching);
+`docs/03_architecture/ui_architecture.md` (ProposedEntryCard and
+confirmation UI); `docs/09_briefs/phase-2/interaction_model_extraction.md`
+(Phase 2 interaction primitives extraction brief); `docs/00_product/product_vision.md`
+(the Thesis section naming agents as proposers).
+
+---
+
+## Service Communication Rules
+
+Service Communication Rules is a set of five disciplines that
+govern how information crosses the service boundary — between the
+API route handler and the service layer, between service functions
+that call each other, and between the agent orchestrator and the
+services it invokes. These rules are not Layer 2 invariants
+(which are rules about *what the service enforces*); they are
+rules about *how information is shaped on its way in and out of
+the service*. They live in this section rather than nested inside
+Layer 2 because they cut across every Layer 2 invariant and
+define the shape that makes those invariants expressible.
+
+**Source.** The five rules are extracted from PLAN.md §15
+("Service Communication Rules") during the Phase 1.1 closeout
+restructure. Each rule has a direct implementation in the Phase
+1.1 codebase, verified during the extraction.
+
+### Rule 1 — Typed Input Schemas Only
+
+**Rule.** Every service function accepts its input as a
+Zod-parsed, branded TypeScript type. Raw JSON, untyped objects,
+and `any` are never allowed at the service boundary. The Zod
+schema lives in `src/shared/schemas/` — not inline in the service
+file — so the same schema can be imported by the API route
+handler for pre-parse validation and by the test harness for
+input construction.
+
+**Why.** A service function that accepts `any` (or a raw
+`Record<string, unknown>`) has no structural guarantee about
+what's in its input. Every field access becomes a runtime
+question: is this field present? Is it the expected type? Is it
+the expected shape? The Zod parse at the service boundary
+collapses all those questions into one: either the input matches
+the schema and all fields are typed correctly, or the parse
+throws and the service function is never called. The service
+body is free to use every field without defensive checks.
+
+**Implementation.** `src/shared/schemas/accounting/journalEntry.schema.ts`
+defines `PostJournalEntryInputSchema` and `ReversalInputSchema`;
+`src/shared/schemas/accounting/money.schema.ts` defines
+`MoneyAmountSchema` and `FxRateSchema` (the branded-string money
+types from INV-MONEY-001). The journal entry service's `post`
+function calls `.parse(input)` at its first line:
+
+```typescript
+const parsed = isReversal
+  ? ReversalInputSchema.parse(input)
+  : PostJournalEntryInputSchema.parse(input);
+```
+
+From that point forward, `parsed` is fully typed and `parsed.lines`
+is a `JournalLineInput[]` (not `unknown[]`), so the subsequent
+`.map((line) => ...)` is type-checked at compile time.
+
+**Interaction with Layer 2 invariants.** This rule is the
+prerequisite for INV-MONEY-001 (money at the service boundary is
+string-typed) — the branded `MoneyAmount` type only exists because
+Zod transforms the input from a plain string to a branded string
+at parse time. Without Zod at the boundary, the branding would
+be purely cosmetic and any caller could construct an unbranded
+string. The rule also enables the pre-flight refines that catch
+INV-LEDGER-001, INV-LEDGER-004, INV-LEDGER-005, INV-MONEY-002, and
+INV-MONEY-003 violations *before* the database sees them.
+
+**What breaks without this rule.** A service function that accepts
+an untyped input must either (a) perform every field access with
+a runtime check (brittle, duplicated, drift-prone) or (b) trust
+the caller to have validated (which fails the moment any caller
+forgets to validate). The Zod-at-boundary pattern is the single
+point where runtime shape checking happens, and every service
+body assumes its work.
+
+---
+
+### Rule 2 — Validation at Both Ends
+
+**Rule.** Every value that crosses the service boundary is
+validated on the way in (by the caller, before the call) **and**
+on the way out (by the service, at the boundary). The two
+validations are not duplicative — they catch different failure
+modes at different layers. The caller's validation produces a
+fast user-facing error for a malformed input; the service's
+validation produces a defensive error for a well-formed input
+that still violates a schema refinement.
+
+**Why.** A single-sided validation leaves a gap. If only the
+caller validates, a service function called programmatically
+(from a test, from a future orchestrator, from a bug-fix script)
+bypasses the check and the service body assumes shape it may not
+have. If only the service validates, the caller loses the
+ability to produce a fast, field-specific error message to the
+user — the service's typed error is correct but arrives too late
+and at the wrong level of detail.
+
+**Implementation.** The pattern has two concrete forms:
+
+1. **Route handler parses with Zod, service re-parses.** The API
+   route handler in
+   `src/app/api/orgs/[orgId]/journal-entries/route.ts` calls
+   `PostJournalEntryInputSchema.parse(json)` before invoking the
+   service. The service function *also* calls `.parse(input)` as
+   its first line (see Rule 1). A test that calls
+   `journalEntryService.post` directly (bypassing the route
+   handler) still gets the Zod validation because the service
+   re-parses. A route handler that forgets to parse (would not
+   currently pass code review) still has the service re-parse as
+   a backstop.
+2. **Zod refines at both sides.** The journal entry schemas
+   include `.refine()` calls that validate business rules (debits
+   equal credits, lines are XOR debit/credit, amount_original
+   matches debit + credit, amount_cad matches FX conversion).
+   These refines run at both parse points — route handler and
+   service — and either side catching a violation produces the
+   same `z.ZodError`.
+
+**Interaction with Layer 2 invariants.** Rule 2 is what makes
+INV-MONEY-002 and INV-MONEY-003 enforceable at the service layer
+(the Zod refine catches the mismatch before the database CHECK
+would) while still leaving the database CHECK as the
+authoritative enforcement (the "one enforcement point per rule"
+discipline). The service-layer refine is the ergonomic error;
+the database CHECK is the rule.
+
+**What breaks without this rule.** A regression in the route
+handler's parse call (e.g. a new endpoint that forgets to
+validate) would propagate an untyped input to the service body,
+where every field access would be a runtime gamble. The service's
+re-parse is the defense against this class of regression.
+
+---
+
+### Rule 3 — Idempotency on Every Mutating Command
+
+**Rule.** Every mutating command that can be retried carries an
+idempotency key, and the service layer uses the key to
+short-circuit duplicate work. The key is `(org_id,
+idempotency_key)` — scoped to an org so two orgs can use the same
+logical key without collision. The service function looks up the
+key in `ai_actions` before issuing any DML and returns the
+existing result on a hit.
+
+**Why.** Any retry-capable client (agent orchestrator, network
+layer, user double-click) can issue the same logical request
+twice. Without an idempotency key, a retry posts a duplicate
+entry. With an idempotency key, a retry is safe by construction:
+the second call looks up the slot, finds the first call's
+result, and returns it. The client cannot tell the difference
+between "your request was processed" and "your request was
+processed ten seconds ago and you're seeing the cached result,"
+which is exactly the property idempotency provides.
+
+**Implementation.** Three layered mechanisms make the rule hold:
+
+1. **Schema enforcement (Layer 1).** INV-IDEMPOTENCY-001 is the
+   Layer 1 CHECK constraint `idempotency_required_for_agent` that
+   requires `idempotency_key IS NOT NULL` whenever `source =
+   'agent'`. A service function that forgets to set the key on
+   an agent-sourced entry hits the CHECK at INSERT time.
+2. **Service-layer slot lookup (Layer 2).** The `ai_actions`
+   table has a `UNIQUE (org_id, idempotency_key)` constraint. A
+   service function that is the target of an idempotent command
+   (journal entry post via agent, Phase 2 AP Agent operations,
+   etc.) inserts an `ai_actions` row with `status = 'pending'`
+   as the first write of the transaction. A second call with the
+   same key hits the UNIQUE constraint, catches the error,
+   reads the existing row, and returns the existing result
+   rather than re-executing the mutation.
+3. **Key propagation (Layer 4 discipline).** The agent generates
+   the key once when constructing the proposal and propagates
+   it unchanged through the confirmation flow. This is the Layer
+   4 discipline from the previous section; the lower layers are
+   the mechanism that catches drift.
+
+**Interaction with INV-IDEMPOTENCY-001 and INV-AUDIT-001.**
+INV-IDEMPOTENCY-001 guarantees the key is present on agent rows;
+Rule 3 is the procedural discipline that says the key must be
+used (looked up, checked against `ai_actions`) before mutation.
+INV-AUDIT-001 guarantees the `audit_log` row carries the
+`idempotency_key`, so a forensic query "show me every agent
+mutation and whether it was a retry" can be answered from
+`audit_log` alone.
+
+**What breaks without this rule.** An agent-sourced journal
+entry posted twice produces two journal entries in the ledger,
+both with the same logical meaning, both valid under
+INV-LEDGER-001 (each balances internally), but together producing
+a double-counted P&L impact. A user reviewing the ledger sees
+two entries and cannot tell which is the "real" one. This is
+exactly the failure mode Phase 1.1 exit criterion #4
+("Idempotency works: submit the same approval twice, the second
+call returns the existing result") is mechanical proof against.
+
+---
+
+### Rule 4 — No Free-Form Data at the Boundary
+
+**Rule.** Every value crossing the service boundary is one of:
+(a) a UUID that already exists in the database, (b) a validated
+amount (branded `MoneyAmount` or `FxRate` string), (c) an
+enumerated value from a known enum, or (d) an ISO-format date
+string. Free-form text, untyped objects, and "some string the
+user typed" are never allowed as field values in a schema where
+the service takes meaningful action on the value.
+
+**Why.** A free-form value at the boundary forces the service
+body to interpret the value, which means the service has to
+handle "what if the user typed something weird?" paths — empty
+strings, whitespace-only, injection attempts, mismatched
+conventions. Every such path is a place the service can get it
+wrong and a place a test has to cover. Constraining the
+boundary to typed-and-enumerated values collapses the space of
+possible inputs to exactly the set the service knows how to
+handle.
+
+**Implementation.** The five allowed shapes at the service
+boundary in Phase 1.1:
+
+1. **UUIDs from the database.** `org_id`, `fiscal_period_id`,
+   `account_id`, `tax_code_id`, `journal_entry_id`,
+   `reverses_journal_entry_id`, `user_id`. Each is a
+   `z.string().uuid()` at the schema boundary and each must
+   reference an existing row (RLS and the service-layer checks
+   catch dangling references). The client is expected to obtain
+   these UUIDs from a read call (list, get) before constructing
+   the mutation.
+2. **Validated amounts.** `debit_amount`, `credit_amount`,
+   `amount_original`, `amount_cad` are `MoneyAmountSchema`
+   (string, regex `^-?\d{1,16}(\.\d{1,4})?$`, branded);
+   `fx_rate` is `FxRateSchema` (string, regex
+   `^-?\d{1,12}(\.\d{1,8})?$`, branded). INV-MONEY-001 documents
+   the branding and the decimal.js confinement rule.
+3. **Enumerated values.** `source` is `'manual' | 'agent' |
+   'import'`; `entry_type` is `'regular' | 'reversing'`
+   (derived, not client-supplied); `account_type` is the six-
+   value CoA type enum; `role` is `'controller' | 'ap_specialist'
+   | 'executive'`. Every enumerated field is a
+   `z.enum([...])` at the schema boundary.
+4. **ISO date strings.** `entry_date` is
+   `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` — a
+   YYYY-MM-DD string, not a `Date` object, not a timestamp. The
+   format is picked so the string can be used directly in
+   Postgres `date` column inserts without timezone conversion.
+5. **Trace IDs.** `trace_id` is `z.string().uuid()` generated by
+   `buildServiceContext()` — the client never provides a
+   trace_id; the middleware creates it at the request entry
+   point.
+
+The **exceptions** — fields that are free-form text — are
+strictly limited to values that the service layer never
+programmatically interprets:
+
+- `description` on a journal entry (human-readable, displayed on
+  the entry, never parsed by code)
+- `reference` on a journal entry (human-readable, same posture)
+- `reversal_reason` on a journal entry (human-readable,
+  displayed to auditors, never parsed — the only rule is
+  INV-REVERSAL-002's non-empty check)
+- Organization name, chart of accounts `account_name`
+  (human-readable, displayed in UI)
+
+Each free-form field is validated for length and non-nullness
+where the rule applies, but the service layer never branches on
+*content*. A `description` can say anything the user wants; the
+service stores it verbatim.
+
+**Interaction with Layer 2 invariants.** Rule 4 is the general
+form of INV-MONEY-001 (money values at the boundary are branded)
+and the foundation of INV-AUTH-001's org-access check (the
+`org_id` in the input is a typed UUID, so the check is "does this
+typed UUID appear in the caller's typed UUID list?" rather than
+"does this unknown string parse as a valid reference?"). The rule
+also makes INV-SERVICE-001's "every mutating service function is
+wrapped in withInvariants" enforceable at compile time — because
+the service function's input type is known, the wrapper's generic
+signature can be type-checked, and a regression that broke the
+type flow would be caught by `pnpm typecheck` before it became a
+runtime bug.
+
+**What breaks without this rule.** A service function that
+accepts a free-form `accountName: string` for a journal line
+would need to look up the account by name, handle "not found,"
+handle "ambiguous — two accounts with the same name," handle
+typos, and would still be wrong if two orgs had accounts with
+the same name. Passing `account_id: UUID` instead collapses all
+those paths to "the UUID is either a valid reference or it
+isn't," and the check is one RLS query. Every free-form field
+avoided is a class of bugs avoided.
+
+---
+
+### Rule 5 — Trace ID on Every Call
+
+**Rule.** Every service call carries a `trace_id` through
+`ServiceContext`, and every log entry (pino), every audit row,
+and every structured error includes the trace_id for
+correlation. The trace_id is generated once at the request
+entry point (`buildServiceContext()` in
+`src/services/middleware/serviceContext.ts`) and propagates
+unchanged through every service function the request touches.
+
+**Why.** A production system under load has many concurrent
+requests, each emitting many log entries, each potentially
+crossing multiple service boundaries. Without a trace_id, a
+forensic query "show me every log entry for the request that
+posted entry #12345" is impossible — timestamps alone cannot
+correlate entries across concurrent requests. With a trace_id,
+the query is `grep trace_id=abc-123 pino.log`, and the result is
+the complete timeline of the request.
+
+**Implementation.** Three mechanisms carry the trace_id through
+the system:
+
+1. **`ServiceContext.trace_id` is mandatory.** The
+   `ServiceContext` type in
+   `src/services/middleware/serviceContext.ts` declares
+   `trace_id: string` as a required field. A service function
+   cannot be called without a context, and the context cannot
+   be constructed without a trace_id. `withInvariants` enforces
+   the presence check at pre-flight as INV-AUTH-001's Invariant 1
+   / 2 (throws `MISSING_CONTEXT` or `MISSING_TRACE_ID` if absent).
+2. **The pino logger factory binds the trace_id at construction
+   time.** Every service function that logs does so via
+   `loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id })`,
+   which returns a pino child logger with both fields
+   pre-bound. Every subsequent log call from that service
+   automatically includes the trace_id in its structured
+   output, without the caller having to pass it explicitly.
+3. **The audit_log row carries the trace_id as a column.**
+   INV-AUDIT-001's `recordMutation()` helper writes
+   `trace_id: ctx.trace_id` into every row. A forensic query
+   "show me what this request did to the ledger" starts at
+   `audit_log` and joins to `pino.log` by trace_id.
+
+**Interaction with INV-AUTH-001 and INV-AUDIT-001.**
+INV-AUTH-001's Invariant 1 / 2 (ServiceContext shape and
+trace_id presence) are what enforce Rule 5 at runtime.
+INV-AUDIT-001's `recordMutation` signature requires the context
+to be passed in, which propagates the trace_id into the audit
+row without the service function having to think about it. The
+two Layer 2 invariants together make Rule 5 mechanically
+true: a service call without a trace_id is rejected by
+`withInvariants`, and a mutation without a trace_id in its
+audit row is not possible because the row is built from the
+same context object that withInvariants validated.
+
+**What breaks without this rule.** A production incident ("the
+ledger shows a posting that shouldn't exist — where did it
+come from?") becomes a guessing game without trace correlation.
+With trace_id, the incident response is: find the audit row,
+grep pino by its trace_id, see every log entry for the
+request that produced it, including any warnings or debug
+output the service emitted along the way. This is the
+observability floor Phase 1.1 stands on, and it is the minimum
+discipline the `audit_log`-as-Phase-2-projection shift (see
+INV-AUDIT-001's Phase 2 evolution) depends on for the
+projection worker to correlate events back to their source
+requests.
+
+**Referenced by:** INV-AUTH-001 (pre-flight trace_id check);
+INV-AUDIT-001 (audit row carries trace_id); INV-SERVICE-001
+(every mutating service call goes through withInvariants, which
+validates trace_id); `docs/03_architecture/request_lifecycle.md`
+(request entry point generates trace_id);
+`docs/04_engineering/conventions.md` (logger factory pattern).
+
+---
+
+## Structured Error Contracts
+
+Structured Error Contracts is the section that closes the
+"structured errors flow up" half of the authority gradient. Every
+error that a service function can produce has a stable typed code,
+a defined meaning, a known caller-action, and a mapped HTTP
+status. This section is the catalog of those codes.
+
+**Two classes of error, one code namespace.** Phase 1.1 has two
+error classes and one reserved-but-unclassed sentinel:
+
+1. **`ServiceError`** — defined in
+   `src/services/errors/ServiceError.ts`. Constructor:
+   `new ServiceError(code, message, details?)`. The `code` is a
+   value from the `ServiceErrorCode` union type (19 codes in
+   Phase 1.1). The class extends `Error` and sets `name =
+   'ServiceError'`. The message is prefixed with `[CODE]` so
+   stack traces and log dumps show the code inline.
+2. **`InvariantViolationError`** — defined in
+   `src/services/middleware/errors.ts`. **`InvariantViolationError`
+   is a subclass of `ServiceError`**, not a parallel class. The
+   constructor takes the same `ServiceErrorCode` values (it
+   reuses the 19-code union) and differs only in `this.name =
+   'InvariantViolationError'`. A catch block on `ServiceError`
+   catches both; a catch block on `InvariantViolationError`
+   catches only the throws from `withInvariants`. The subclass
+   exists so tests can assert the specific throw site (middleware
+   vs service body) and so logs can filter by class name.
+3. **`AUDIT_WRITE_FAILED` sentinel** — thrown by
+   `recordMutation()` as a **plain `Error`** with message
+   `"[AUDIT_WRITE_FAILED] <postgres error>"`. This is **not** a
+   `ServiceError` and **not** a `ServiceErrorCode` value. The
+   rationale for its exclusion from the type system is documented
+   in INV-AUDIT-001's "Why a plain `Error`, not a `ServiceError`"
+   section: an audit write failure is an internal integrity
+   failure of the service layer itself, not a caller-facing
+   error, and exposing it as a typed code would invite callers to
+   build retry logic around it. The sentinel exists so the
+   failure is greppable in logs while being structurally outside
+   the typed error API.
+
+**HTTP status mapping.** Every `ServiceErrorCode` maps to an HTTP
+status code via `src/app/api/_helpers/serviceErrorToStatus.ts`,
+which is the single authoritative translation layer. The mapping:
+
+| HTTP status | Codes |
+|---|---|
+| **401** | `UNAUTHENTICATED` |
+| **403** | `PERMISSION_DENIED`, `ORG_ACCESS_DENIED`, `UNVERIFIED_CALLER` |
+| **404** | `NOT_FOUND` |
+| **422** | `UNBALANCED`, `PERIOD_LOCKED`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`, `REVERSAL_NOT_MIRROR` |
+| **500** | `MISSING_CONTEXT`, `MISSING_TRACE_ID`, `MISSING_CALLER`, `POST_FAILED`, `READ_FAILED`, `ORG_CREATE_FAILED`, `TEMPLATE_NOT_FOUND`, `COA_LOAD_FAILED`, `PERIOD_GENERATION_FAILED` |
+
+The `AUDIT_WRITE_FAILED` sentinel produces a 500 via the API
+route handler's generic `instanceof ServiceError` → else → 500
+default path, because it is a plain `Error` and falls through to
+the default.
+
+**Code catalog.** The 19 `ServiceErrorCode` values plus the
+`AUDIT_WRITE_FAILED` sentinel, organized by category.
+
+### Auth / Access (4 codes)
+
+#### `UNAUTHENTICATED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `buildServiceContext()` in
+  `src/services/middleware/serviceContext.ts`, at the earliest
+  entry point into the service layer (before `withInvariants`
+  runs).
+- **Meaning:** The request has no valid Supabase Auth JWT — the
+  caller is not logged in at all.
+- **Caller action:** Redirect to login. This is an API-level
+  failure at the authentication boundary, not an authorization
+  failure at the service boundary.
+- **HTTP status:** 401 Unauthorized
+- **Phase 2 evolution:** None. Authentication is and will remain
+  the responsibility of Supabase Auth.
+
+#### `PERMISSION_DENIED`
+
+- **Class:** `InvariantViolationError` (subclass of `ServiceError`)
+- **Thrown by:** `withInvariants()` in
+  `src/services/middleware/withInvariants.ts`, Invariant 4
+  (role-based authorization). Fires when
+  `canUserPerformAction(ctx, action, orgId)` returns
+  `{ permitted: false, reason }`.
+- **Meaning:** The caller is authenticated and has access to the
+  target org, but their role does not permit the specific action
+  being requested (e.g. an `executive` attempting
+  `journal_entry.post`, which is controller-only and
+  ap_specialist-only).
+- **Caller action:** Surface the `reason` field to the user and
+  explain which role would be needed. Do not retry.
+- **HTTP status:** 403 Forbidden
+- **Phase 2 evolution:** Phase 2 adds confidence-based routing
+  (`ProposedEntryCard.routing_path`) — low-confidence proposals
+  require controller approval even from a normally-permitted
+  `ap_specialist`. The code and meaning stay the same; the
+  `canUserPerformAction` signature extends with an optional
+  `confidence` parameter.
+
+#### `ORG_ACCESS_DENIED`
+
+- **Class:** `InvariantViolationError` *or* `ServiceError`,
+  depending on the throw site.
+- **Thrown by:** **six distinct sites** — (1) `withInvariants()`
+  Invariant 3 for the write path (as
+  `InvariantViolationError`); (2) `journalEntryService.list()`
+  inline check (as `ServiceError`); (3)
+  `chartOfAccountsService.list()` inline check; (4)
+  `periodService.listOpen()` inline check; (5)
+  `reportService.profitAndLoss()` inline check; (6)
+  `reportService.trialBalance()` inline check. All five read-path
+  sites use the same pattern:
+  `if (!ctx.caller.org_ids.includes(input.org_id)) { throw new
+  ServiceError('ORG_ACCESS_DENIED', ...); }`.
+- **Meaning:** The caller is authenticated but does not have a
+  membership in the `org_id` they are trying to access. The read
+  path uses this code directly; the write path reaches it through
+  `withInvariants` as `InvariantViolationError`, which means a
+  catch block filtering on `ServiceError` still catches both.
+- **Why multiple throw sites:** Reads handle authorization
+  inline because they do not go through `withInvariants` (see
+  INV-SERVICE-001's asymmetry-with-read-functions note). Writes
+  get the check from `withInvariants`. Both paths converge on the
+  same code so a caller can handle "cross-org access attempt"
+  without branching on whether it came from a read or a write.
+- **Caller action:** Surface "you don't have access to that
+  organization" to the user. This usually indicates a stale
+  browser session or a bookmarked URL for an org the user has
+  since left.
+- **HTTP status:** 403 Forbidden
+- **Phase 2 evolution:** None — the rule shape is permanent.
+  Phase 2 adds more tenant-scoped read functions, each following
+  the same inline-check pattern.
+
+#### `UNVERIFIED_CALLER`
+
+- **Class:** `InvariantViolationError`
+- **Thrown by:** `withInvariants()` Invariant 2.
+- **Meaning:** The `ServiceContext.caller.verified` flag is
+  false. The caller provided a `user_id` but
+  `buildServiceContext()` did not successfully validate the JWT.
+  This is a programming error (an API route handler constructing
+  a context with an unverified caller) rather than a user error.
+- **Caller action:** Log loudly and return 403. A real user
+  should never see this — if they do, it indicates a bug in the
+  context construction path.
+- **HTTP status:** 403 Forbidden
+- **Phase 2 evolution:** None. The verified-not-claimed discipline
+  is permanent.
+
+### Context validation (3 codes)
+
+#### `MISSING_CONTEXT`
+
+- **Class:** `InvariantViolationError`
+- **Thrown by:** `withInvariants()` Invariant 1, first check.
+  Fires when `ctx` is null or undefined.
+- **Meaning:** The API route handler called the wrapped service
+  function without a context argument. This is always a bug —
+  route handlers must call `await buildServiceContext(req)` and
+  pass the result as `ctx`.
+- **Caller action:** Log loudly and return 500. Users should
+  never see this error.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** None.
+
+#### `MISSING_TRACE_ID`
+
+- **Class:** `InvariantViolationError`
+- **Thrown by:** `withInvariants()` Invariant 1, second check.
+  Fires when `ctx.trace_id` is falsy.
+- **Meaning:** A context was passed but has no `trace_id`. This
+  is always a bug — `buildServiceContext()` generates a UUID
+  trace_id unconditionally, so the only way to reach this is to
+  construct a context object manually without calling the
+  builder.
+- **Caller action:** Log loudly and return 500.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** None. Rule 5 (Trace ID on Every Call) is
+  permanent.
+
+#### `MISSING_CALLER`
+
+- **Class:** `InvariantViolationError`
+- **Thrown by:** `withInvariants()` Invariant 1, third check.
+  Fires when `ctx.caller` is missing or `ctx.caller.user_id` is
+  falsy.
+- **Meaning:** A context was passed with a trace_id but no
+  caller. This is always a bug — `buildServiceContext()`
+  populates `caller` from the validated JWT, so an empty caller
+  means the context was constructed manually and incompletely.
+- **Caller action:** Log loudly and return 500.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** None.
+
+### Journal posting (3 codes)
+
+#### `UNBALANCED`
+
+- **Class:** `ServiceError` (defined in the enum)
+- **Thrown by:** **no Phase 1.1 service function currently throws
+  this code.** It is reserved in the `ServiceErrorCode` union
+  but not used. The service layer deliberately does not
+  pre-check debit-equals-credit balance (per the "one enforcement
+  point per rule" discipline in
+  `docs/03_architecture/phase_simplifications.md`); the Zod
+  schema's `.refine()` catches unbalanced input at the boundary,
+  and the Layer 1 deferred constraint trigger catches it at
+  `COMMIT`. When the trigger fires, `journalEntryService.post()`
+  wraps the resulting `check_violation` as `POST_FAILED`, not
+  `UNBALANCED`.
+- **Meaning:** Reserved for a future path that wants to surface
+  the specific balance-failure code instead of the generic
+  `POST_FAILED`. No such path exists in Phase 1.1.
+- **Caller action:** N/A in Phase 1.1.
+- **HTTP status:** 422 Unprocessable Entity (mapped in
+  `serviceErrorToStatus.ts` in anticipation of future use)
+- **Phase 2 evolution:** May be wired up by a Phase 2 AP Agent
+  path that wants to distinguish "your bill had a tax-code
+  misconfiguration that produced unbalanced input" from the
+  generic post failure. The code is reserved for this use.
+
+#### `PERIOD_LOCKED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `journalEntryService.post()` pre-flight check,
+  after reading `fiscal_periods.is_locked`.
+- **Meaning:** The caller is trying to post a journal entry to a
+  fiscal period that has been locked (closed). Locked periods are
+  immutable history; corrections must be posted as reversals to
+  a currently-open period (see INV-REVERSAL-001).
+- **Caller action:** Surface "this period is closed, post the
+  correction to an open period instead" to the user. The UI
+  should not show locked periods in the period-selection
+  dropdown (see `periodService.listOpen`), so a user reaching
+  this error usually means they tried to post via API or via a
+  stale UI.
+- **HTTP status:** 422 Unprocessable Entity
+- **Phase 2 evolution:** None. The rule and the code are
+  permanent.
+
+#### `POST_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `journalEntryService.post()`, multiple catch
+  sites: (1) fiscal period lookup failure ("Fiscal period not
+  found"), (2) journal_entries INSERT failure, (3) journal_lines
+  INSERT failure. Each catch wraps the underlying Supabase/Postgres
+  error as `POST_FAILED` with the original error message as the
+  `message` field.
+- **Meaning:** The mutation transaction failed at the database
+  layer for a reason other than a known typed failure. Common
+  underlying causes: CHECK constraint violation (including the
+  deferred balance trigger, which fires at COMMIT and produces
+  `check_violation`), RLS rejection from the admin client (rare),
+  or transient database error.
+- **Caller action:** Log the full error (the inner Supabase error
+  has the details), surface "could not post the entry" to the
+  user, and prompt them to check the entry and retry.
+- **HTTP status:** 500 Internal Server Error (the code is a
+  generic server-side failure wrapper)
+- **Phase 2 evolution:** Phase 2 may split some underlying causes
+  into more specific codes (e.g. `UNBALANCED` if the trigger's
+  `check_violation` is detected as a balance failure
+  specifically). The generic code remains as the fallback.
+
+### Reversals (3 codes)
+
+#### `REVERSAL_CROSS_ORG`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `validateReversalMirror()` in
+  `src/services/accounting/journalEntryService.ts`, step 2 of
+  the mirror check algorithm.
+- **Meaning:** The caller is trying to reverse a journal entry
+  that belongs to a different org than the reversal's own
+  `org_id`. Even if the caller somehow holds the UUID of the
+  target entry, the cross-org check rejects the reversal.
+- **Caller action:** Surface "you cannot reverse an entry from
+  a different organization" to the user. Reaching this error
+  through normal UI flow is impossible — the reversal UI only
+  surfaces entries from the current org. Reaching it via API
+  usually indicates an attempted privilege escalation.
+- **HTTP status:** 422 Unprocessable Entity
+- **Phase 2 evolution:** None. The cross-org defense is
+  permanent.
+
+#### `REVERSAL_PARTIAL_NOT_SUPPORTED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `validateReversalMirror()`, step 3 (line count
+  mismatch).
+- **Meaning:** The reversal's `lines` count does not match the
+  original entry's lines count. Phase 1.1 does not support
+  partial reversals — a reversal must mirror **all** lines of
+  the original or be rejected.
+- **Caller action:** Surface "partial reversals are not
+  supported; the reversal must include every line of the
+  original entry" to the user.
+- **HTTP status:** 422 Unprocessable Entity
+- **Phase 2 evolution:** Phase 2 introduces partial reversal
+  support (reverse only some lines of a multi-line entry). When
+  that support lands, this code is retired and the mirror check
+  algorithm extends to allow line-count mismatches as long as
+  each reversed line still mirrors a specific original line.
+
+#### `REVERSAL_NOT_MIRROR`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `validateReversalMirror()`, at **four distinct
+  guard points**: (1) empty/whitespace-only reversal_reason
+  (step 5 in the committed INV-REVERSAL-001 leaf — note the
+  committed leaf numbers the steps differently from the source
+  code, which uses the order "reason check first, load, same-org,
+  line count, mirror match"; the committed leaf uses "steps 1–5"
+  where reason-check is step 1, but the source file implements
+  reason-check before everything else because it's the cheapest
+  validation); (2) referenced entry not found; (3) could not
+  load original lines; (4) a specific line in the reversal does
+  not mirror any line in the original.
+- **Meaning:** The reversal input does not validly mirror the
+  original entry. The error's `message` field distinguishes the
+  four underlying conditions; the code is a catch-all for
+  "something about the mirror check failed."
+- **Caller action:** Surface the specific message to the user.
+  Each of the four underlying conditions corresponds to a
+  user-correctable input problem: add a reason, verify the
+  original entry exists, retry if transient, or fix the line
+  that doesn't mirror.
+- **HTTP status:** 422 Unprocessable Entity
+- **Phase 2 evolution:** Partial reversal support (see
+  `REVERSAL_PARTIAL_NOT_SUPPORTED`) may split this code into
+  more specific variants. The catch-all shape is a Phase 1.1
+  simplification.
+
+### Org / CoA (4 codes)
+
+#### `ORG_CREATE_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()`, the first
+  catch site after the `organizations` INSERT.
+- **Meaning:** The `organizations` table INSERT failed for a
+  reason other than a typed failure. The underlying Supabase
+  error is the `message` field.
+- **Caller action:** Log the full error and surface "could not
+  create the organization" to the user. Usually indicates a
+  database connectivity issue or a uniqueness conflict on the
+  org name.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** None.
+
+#### `TEMPLATE_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()`, after the
+  template SELECT returns zero rows for the requested industry.
+- **Meaning:** The CoA template for the requested industry
+  (holding_company, real_estate, healthcare, hospitality, trading,
+  or restaurant) does not exist in
+  `chart_of_accounts_templates`. This is a server
+  misconfiguration — the seed data should include a template
+  for every industry — not a user-facing error. The `message`
+  field is the missing industry name itself.
+- **Caller action:** Log the missing industry and return 500.
+  The user should retry after support fixes the seed data.
+- **HTTP status:** 500 Internal Server Error (not 404, because
+  this is a server misconfiguration, not a resource the user
+  was asking for)
+- **Phase 2 evolution:** None. Phase 2 may add more industries,
+  each requiring a new template row in the seed data.
+
+#### `COA_LOAD_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()`, the catch
+  site after the `chart_of_accounts` batch INSERT.
+- **Meaning:** The batch INSERT of CoA rows (one per template
+  account) failed. Usually indicates a schema mismatch between
+  the template and the destination table, or a RLS rejection
+  (unlikely, since the service uses `adminClient`).
+- **Caller action:** Log the full error and return 500. The
+  org row and CoA rows should be atomically created or not at
+  all; a partial state indicates a bug in the service function's
+  transaction handling.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** None.
+
+#### `PERIOD_GENERATION_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()`, the catch
+  site after the `fiscal_periods` INSERT.
+- **Meaning:** The batch INSERT of 12 auto-generated monthly
+  fiscal periods failed. The underlying
+  `generateMonthlyFiscalPeriods()` utility is a pure function
+  that cannot fail; failures at this point are database-level
+  (schema mismatch, constraint violation, RLS rejection).
+- **Caller action:** Log the full error and return 500.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** Phase 2 may add per-org configuration
+  for fiscal period generation (non-monthly periods, custom
+  start dates). The code stays the same.
+
+### Reads (2 codes)
+
+#### `NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `journalEntryService.get()`, when the
+  `maybeSingle()` query returns no row. The query uses
+  `.in('org_id', ctx.caller.org_ids)` as an inline
+  authorization filter, so **both** "entry genuinely does not
+  exist" **and** "entry exists but caller lacks access to its
+  org" produce the same zero-rows result and the same
+  `NOT_FOUND` error.
+- **Meaning:** The requested journal entry is not visible to
+  the caller. The ambiguity between "doesn't exist" and
+  "can't see it" is **deliberate** — the `get` path specifically
+  does not distinguish them, to avoid leaking existence across
+  org boundaries. The committed `journalEntryService.get` has
+  an explicit comment to this effect: *"If the caller doesn't
+  have access to the entry's org, the query returns zero rows
+  and we throw NOT_FOUND (don't leak existence)."*
+- **Why not `ORG_ACCESS_DENIED`:** The other read functions
+  (`list`-family) throw `ORG_ACCESS_DENIED` on cross-org access
+  because they take an explicit `org_id` in their input and the
+  caller has already named the org they want. The `get` path
+  takes an entity UUID and the org is derived from the entity —
+  so "caller cannot see this entity" is indistinguishable from
+  "this entity does not exist" from the caller's perspective.
+  The deliberate ambiguity protects against existence-leak
+  enumeration attacks.
+- **Caller action:** Surface "not found" to the user. Do not
+  attempt to infer whether the entity exists — the API
+  deliberately refuses to tell you.
+- **HTTP status:** 404 Not Found
+- **Phase 2 evolution:** Phase 2 read functions for other
+  entities (bills, bank transactions, reconciliation batches)
+  will likely adopt the same `get`-path pattern: single-entity
+  lookups use `NOT_FOUND` with the deliberate dual meaning;
+  list-family functions use `ORG_ACCESS_DENIED` when an explicit
+  org is named.
+
+#### `READ_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** Multiple read functions: `journalEntryService.list()`
+  (four throw sites — entries query, lines query, reversing
+  entries query, and the final error wrap),
+  `journalEntryService.get()` (one site, for underlying query
+  errors other than "not found"), `reportService.profitAndLoss()`
+  (one site, wrapping the `get_profit_and_loss` RPC error),
+  `reportService.trialBalance()` (one site, wrapping the
+  `get_trial_balance` RPC error), `periodService.listOpen()`
+  (one site), and `taxCodeService.listShared()` (one site). Not
+  thrown by `chartOfAccountsService.list()` or `.get()`, which
+  re-throw raw Supabase errors (a Phase 1.2 cleanup item for
+  consistency).
+- **Meaning:** A read query failed at the database layer for a
+  reason other than a typed failure. The underlying Supabase
+  error is wrapped as the `message` field.
+- **Caller action:** Log the full error and surface "could not
+  load [resource]" to the user. Prompt them to retry. Reaching
+  this error usually indicates a transient database issue or a
+  schema/query mismatch after a migration.
+- **HTTP status:** 500 Internal Server Error
+- **Phase 2 evolution:** Phase 2 may split this into
+  more specific codes (e.g. `RPC_FAILED` for the reporting RPC
+  functions, `SCHEMA_MISMATCH` for driver-level type failures).
+  The generic wrapper remains as the fallback.
+
+### Audit integrity sentinel (not a `ServiceErrorCode`)
+
+#### `AUDIT_WRITE_FAILED`
+
+- **Class:** plain `Error` (not `ServiceError`, not any
+  subclass).
+- **Thrown by:** `recordMutation()` in
+  `src/services/audit/recordMutation.ts`. The throw shape is
+  `throw new Error(\`[AUDIT_WRITE_FAILED] \${error.message}\`)`.
+- **Meaning:** The synchronous `audit_log` INSERT inside a
+  service function's mutation transaction failed. Because the
+  INSERT runs inside the same transaction as the preceding data
+  writes (see INV-AUDIT-001), throwing rolls back the entire
+  transaction — both the audit row and the data writes disappear
+  together.
+- **Why a plain `Error`, not a `ServiceError`:** See INV-AUDIT-001's
+  "Why a plain `Error`, not a `ServiceError`" section for the
+  full rationale. The short version: an audit write failure is
+  an **internal integrity failure** of the service layer itself,
+  not a caller-facing error. Exposing it as a typed
+  `ServiceErrorCode` would invite callers to build retry logic
+  around it, which is the wrong response. The right response is
+  "roll back, log loudly, page the on-call." The bracketed
+  `[AUDIT_WRITE_FAILED]` prefix makes the failure greppable in
+  logs and in stack traces while keeping it structurally outside
+  the typed error API.
+- **Caller action:** The error propagates out of the service
+  function, the API route handler's generic
+  `catch` block catches it (it does not match `instanceof
+  ServiceError`), and returns 500. The caller sees a generic
+  server error. Operations should alert on the
+  `[AUDIT_WRITE_FAILED]` prefix in the pino logs.
+- **HTTP status:** 500 Internal Server Error (via the API route
+  handler's default-case error handling)
+- **Phase 2 evolution:** In Phase 2, `recordMutation()` is
+  replaced by an event emission (see INV-AUDIT-001's "Phase 2
+  evolution — the projection shift" section). The sentinel goes
+  away when the synchronous audit write goes away — Phase 2 has
+  no equivalent sentinel because event emission is just an
+  INSERT into `events`, and failure there produces a normal
+  transaction rollback handled by the service function's own
+  error wrapping (e.g. `POST_FAILED`).
+
+---
+
+## Summary — The 17 Phase 1.1 Invariants
+
+For reference, the complete list of Phase 1.1 invariants, in the
+order they appear in this file:
+
+**Layer 1 — Physical Truth (11 invariants):**
+
+1. INV-LEDGER-001 — Debit = credit per journal entry
+2. INV-LEDGER-002 — Posting to a locked period is rejected
+3. INV-LEDGER-003 — The events table is append-only
+4. INV-LEDGER-006 — Journal line amounts are non-negative
+5. INV-LEDGER-004 — A journal line is debit XOR credit
+6. INV-LEDGER-005 — A journal line is never all-zero
+7. INV-MONEY-002 — Original amount matches base amount
+8. INV-MONEY-003 — CAD amount matches FX-converted original
+9. INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key
+10. INV-RLS-001 — Cross-org data is never visible outside the org
+11. INV-REVERSAL-002 — Reversal entries require a non-empty reason
+
+Plus the **Transaction Isolation** discipline subsection at the
+end of Layer 1, documenting the `READ COMMITTED` + targeted row
+locks strategy and the three read-then-write patterns in Phase
+1.1.
+
+**Layer 2 — Operational Truth (6 invariants):**
+
+12. INV-AUTH-001 — Every mutating service call is authorized
+13. INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
+14. INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
+15. INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
+16. INV-REVERSAL-001 — Reversal lines must mirror the original
+17. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
+
+**Layer 3 — Temporal Truth:** zero INV-IDs in Phase 1.1. The
+Layer 1 enforcement of "events are append-only" (INV-LEDGER-003)
+lives at Layer 1 because it is enforced there today; the Layer 3
+**role** of "events as source of truth" is a Phase 2 obligation
+and has no active invariant in Phase 1.1.
+
+**Layer 4 — Cognitive Truth:** zero INV-IDs **by design**. Agents
+propose; lower layers catch mistakes. Layer 4 discipline
+(confirmation-first, structured-response contracts,
+anti-hallucination, idempotency key propagation, no service logic
+in prompts) is load-bearing but backed by lower-layer enforcement,
+not by Layer 4 assertions.
+
+**Cross-cutting sections:** Service Communication Rules (five
+rules extracted from PLAN.md §15) and Structured Error Contracts
+(19 ServiceError codes + 1 AUDIT_WRITE_FAILED sentinel) document
+the boundary discipline and the error taxonomy that apply across
+all layers.
