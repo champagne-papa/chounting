@@ -740,3 +740,61 @@ Categories:
   of the Phase 1.1 brief didn't land in PLAN.md during Phase 1.1.
   Deferred to Phase 1.2 as architecture-authoring work. Not part of
   Document Sync scope.
+
+- 2026-04-14 NOTE   Docs restructure completed (commits 3 through 5,
+  Phase 1.1 closeout). What changed structurally: the flat
+  PLAN.md-as-canonical layout was replaced with a 9-folder
+  structure under docs/. PLAN.md v0.5.6 archived at
+  docs/99_archive/PLAN_v0.5.6.md (commit 5.7); content migrated
+  and expanded into the new structure across commits 3, 4a, 4b,
+  and 5.
+
+  New canonical files (post-restructure):
+
+  - docs/02_specs/ledger_truth_model.md (3,813 lines) — the
+    rules. 17 INV-IDs across Layer 1 (11) and Layer 2 (6) with
+    full leaves, Phase 2 evolution notes, and interactions.
+    Single source of truth for "what is legal in the ledger and
+    who stops what is illegal."
+  - docs/02_specs/data_model.md — the schema (table-by-table
+    reference).
+  - docs/02_specs/invariants.md (139 lines) — contributor-
+    facing INV-ID rollup index with cross-layer pairings table.
+  - docs/02_specs/glossary.md (387 lines) — vocabulary
+    reference, alphabetical with letter index.
+  - docs/02_specs/open_questions.md (331 lines) — unresolved
+    questions plus formalization candidates.
+  - docs/06_audit/control_matrix.md (269 lines) — auditor-
+    facing evidence table mapping each INV-ID to its tests and
+    code enforcement mechanism.
+
+  Load-bearing decisions made along the way:
+
+  - The 17-INV framing as the canonical structure for Phase 1.1
+    rules (extracted from PLAN.md Invariants 1-6 plus several
+    §15/§3a/§10c/§4h details that PLAN.md had not formalized
+    as numbered invariants).
+  - Bidirectional reachability check (Waypoint F): every
+    documented INV has at least one annotation site in code,
+    every annotated INV-ID in code has a corresponding leaf.
+    17/17 with empty symmetric diff as of commit 65bcfe0.
+    Reproducible verification command in invariants.md.
+  - Paired-invariants vocabulary (E.1): "primary / defense in
+    depth / collective / structural / call site / wrap site /
+    permission source / export contract." Established the rule
+    that only paired invariants may cross-reference across
+    layers.
+  - The spec-without-enforcement rule (02_specs/README.md):
+    no INV-ID appears in 02_specs/ unless its enforcement
+    exists in code today. Aspirational rules live in
+    docs/09_briefs/phase-2/.
+  - Discipline-vs-invariant distinction (E.3): two enforcement
+    sites (unique_entry_number_per_org_period UNIQUE constraint
+    and journal_entry_attachments RLS policy) annotated as
+    discipline backstops without INV-IDs, with the
+    non-promotion rationale documented at the migration site.
+
+  Why this entry exists: returning contributors who knew the
+  project pre-restructure need a discoverable note about what
+  changed and when. CLAUDE.md "When in doubt" section points
+  here as the canonical "what moved where" reference.
