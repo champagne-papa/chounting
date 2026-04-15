@@ -1403,10 +1403,14 @@ row-level locks (`SELECT ... FOR UPDATE`) at the specific
 read-then-write points where write skew would otherwise
 occur.
 
-**The two row-lock points in Phase 1.1.**
+**The three read-then-write points in Phase 1.1, and how each
+is protected.** Phase 1.1 has three places where a service
+function or trigger reads a value and then writes based on
+what it read. Each gets a different protection strategy, and
+the differences are deliberate.
 
-1. **Period lock** (INV-LEDGER-002). The
-   `trg_enforce_period_not_locked` trigger takes
+1. **Period lock** (INV-LEDGER-002) — protected by a row lock.
+   The `trg_enforce_period_not_locked` trigger takes
    `SELECT fp.is_locked FROM fiscal_periods fp WHERE ...
    FOR UPDATE` on the referenced period row before
    reading `is_locked`. This serializes the trigger
@@ -1416,11 +1420,11 @@ occur.
    lock, the trigger could read `is_locked = false`,
    proceed, and commit into a period that a concurrent
    transaction locked between the read and the commit.
-2. **The deferred balance constraint** (INV-LEDGER-001)
-   does *not* take a row lock. It runs inside the
-   caller's transaction at `COMMIT` and aggregates
-   `journal_lines` for the parent entry, which the
-   caller inserted earlier in the same transaction. Under
+2. **The deferred balance constraint** (INV-LEDGER-001) —
+   no lock needed because the pattern is transaction-scoped.
+   It runs inside the caller's transaction at `COMMIT` and
+   aggregates `journal_lines` for the parent entry, which
+   the caller inserted earlier in the same transaction. Under
    `READ COMMITTED`, the aggregate query sees the
    caller's own writes and the committed state of other
    transactions. There is no race pattern for this
@@ -1433,6 +1437,37 @@ occur.
    for the parent entry. See the INV-LEDGER-001 leaf for
    the full discussion of why the N invocations are
    correct.
+3. **Entry number allocation** in `journalEntryService.post()`
+   — no lock, relying on the UNIQUE constraint as the
+   collision detector. The service function computes the
+   next entry number with
+   `SELECT entry_number FROM journal_entries WHERE org_id = ?
+   AND fiscal_period_id = ? ORDER BY entry_number DESC LIMIT 1`,
+   then inserts the new entry with `entry_number = MAX + 1`.
+   The source file carries an explicit comment at this read:
+   `// Compute entry_number (MAX + 1, no FOR UPDATE in Phase 1.1)`.
+   Under concurrent posts to the same (org, period) pair, two
+   transactions could both read the same `MAX` and both try
+   to insert `MAX + 1`. The second transaction would then
+   violate the `unique_entry_number_per_org_period` UNIQUE
+   constraint (INSERT failure) and roll back. At Phase 1.1
+   traffic (a solo founder posting a few entries per day),
+   this race is effectively nonexistent — no two posts
+   overlap in wall-clock time — so the UNIQUE constraint is
+   the retroactive safety net rather than the primary
+   protection. **Phase 1.2 revisits this** if agent-driven
+   posting introduces burstiness that makes the race
+   meaningful; the fix would be a `FOR UPDATE` row lock on
+   a per-period counter row or an advisory lock on `(org_id,
+   fiscal_period_id)`. Phase 1.1 accepts the exposure because
+   the traffic profile makes it a theoretical rather than
+   operational concern, and because a failed UNIQUE INSERT
+   produces a clean transaction rollback with no data
+   corruption — the service layer catches the error and
+   surfaces it as `ServiceError('POST_FAILED', ...)`, and the
+   caller retries. This is a deliberate "accept the failure
+   mode because it is rare and self-correcting" choice, not
+   an oversight.
 
 **Why not `SERIALIZABLE` — three reasons.**
 
@@ -1477,10 +1512,14 @@ COMMITTED`. The period-lock trigger uses
 `SELECT ... FOR UPDATE` for its one race-sensitive read.
 The deferred balance constraint runs at `COMMIT` without
 any lock because the constraint is transaction-scoped and
-cannot race. No other read-then-write pattern exists in
-the Phase 1.1 mutating service functions. **Do not elevate
-isolation for the whole transaction when a row lock on a
-single row is the correct scope.**
+cannot race. The entry-number allocation runs without a
+lock and leans on the `unique_entry_number_per_org_period`
+UNIQUE constraint as a retroactive collision detector,
+which is acceptable at Phase 1.1 traffic but is the one
+pattern to revisit first if burstiness changes. **Do not
+elevate isolation for the whole transaction when a row
+lock (or, in the entry-number case, a well-chosen UNIQUE
+constraint) on a single row is the correct scope.**
 
 **Phase 2 revisit.** Phase 2 introduces the AP Agent with
 concurrent bill ingestion, which creates new
@@ -1582,10 +1621,21 @@ checks passing.
 
 **Enforcement.** `withInvariants()` at
 `src/services/middleware/withInvariants.ts`. The wrapper is a
-higher-order function: every service function in `src/services/`
-is exported as `withInvariants(fn, { action })` so that calling
-the function runs four pre-flight invariants before the function
-body:
+higher-order function that takes a raw service function and
+returns a wrapped version that runs four pre-flight invariants
+before the function body. Mutating service functions in
+`src/services/` are exported **unwrapped**; the API route
+handler applies the wrapper at the call site, using the pattern
+`await withInvariants(service.fn, { action: 'action.name' })(input, ctx)`.
+This is why every mutating API route handler imports both the
+service module and the `withInvariants` middleware — the wrap
+happens at the boundary where the request enters the service
+layer. Read functions (`list`, `get`) do **not** go through
+`withInvariants`; they handle authorization inline via
+`ctx.caller.org_ids.includes(input.org_id)` because they have
+no `{ action }` mapping in the role matrix and their
+authorization model is simpler ("caller must be a member of
+the requested org"). The wrapper's four pre-flight checks are:
 
 ```typescript
 export function withInvariants<I, O>(
