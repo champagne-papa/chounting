@@ -183,7 +183,11 @@ CREATE POLICY industries_select ON industries
 COMMENT ON TABLE industries IS
   'NAICS-light industry classification. Seeded only; no writes at runtime. Bridge column default_coa_template_industry maps rows back to the org_industry enum for CoA template loading until that enum is fully retired.';
 
--- Seed — ~27 entries spanning NAICS 2-digit sectors + family-office
+-- naics_code is intentionally NULL on every seeded row in 1.5A.
+-- Populating the 2-digit codes is a follow-up seed-update
+-- migration tracked as a post-1.5A obligation (see §18).
+
+-- Seed — 28 entries spanning NAICS 2-digit sectors + family-office
 -- relevant subdivisions. Every row that maps to an existing
 -- chart_of_accounts_templates.industry value MUST populate
 -- default_coa_template_industry so org creation continues to find a
@@ -717,7 +721,7 @@ type Industry = {
 ```
 
 The service filters `is_active = true`, sorts by `(sort_order,
-display_name)`, and returns the whole list — Phase 1.5A has ~27
+display_name)`, and returns the whole list — Phase 1.5A has 28
 entries, no pagination needed. The `default_coa_template_industry`
 bridge is **not** exposed to clients; it is a backfill/loading
 detail, not user-facing data.
@@ -1436,56 +1440,62 @@ reads.
 **Deferral target.** Phase 1.6 or Phase 2, whichever lands first
 after conditions are met.
 
-### OQ-06 — Primary-address demotion audit granularity
+### OQ-06 — Primary-address demotion audit granularity — RESOLVED (2026-04-15)
 
 **Description.** When `setPrimaryAddress` promotes a new primary,
 the previous primary is auto-demoted. Current brief emits two
 audit rows (one per affected address). Alternative: one audit row
 with both addresses in `before_state`.
 
-**Current-best-guess answer.** Two rows, matching the "one row
-per entity mutation" invariant. Cleaner for downstream audit
-queries.
+**Resolution (2026-04-15).** Two audit rows, one per affected
+address. Matches the "one row per entity mutation" invariant and
+keeps downstream audit queries clean.
 
-**Deferral target.** Decide during 1.5A implementation.
+**Original rationale.** Two rows, matching the "one row per
+entity mutation" invariant. Cleaner for downstream audit queries.
 
-### OQ-07 — Read service functions and `withInvariants()`
+### OQ-07 — Read service functions and `withInvariants()` — RESOLVED (2026-04-15)
 
 **Description.** Should read-only service functions (e.g.,
 `getOrgProfile`, `listAddresses`) be wrapped by `withInvariants()`
 for uniform trace_id plumbing?
 
-**Current-best-guess answer.** No — matches Phase 1.1 pattern
+**Resolution (2026-04-15).** No. Read-only functions are not
+`withInvariants()`-wrapped. Matches existing Phase 1.1 pattern
+(`listChartOfAccounts`); reads rely on RLS for authorization.
+Revisit in Phase 1.2 if agent tool patterns suggest otherwise.
+
+**Original rationale.** No — matches Phase 1.1 pattern
 (`listChartOfAccounts` is not wrapped). Reads rely on RLS for
 authorization; the service middleware is for mutations.
 
-**Deferral target.** Decide during 1.5A implementation; revisit in
-Phase 1.2 when agent tools (which are all reads-then-mutations)
-land and may change the preferred pattern.
-
-### OQ-08 — Region name aliases
+### OQ-08 — Region name aliases — RESOLVED (2026-04-15)
 
 **Description.** Should `region` validation accept both two-letter
 codes (`BC`) and full names (`British Columbia`)?
 
-**Current-best-guess answer.** Two-letter codes only. Phase 1.5A
+**Resolution (2026-04-15).** Two-letter codes only. Test CB-02
+asserts rejection of `"British Columbia"`. UI handles
+display-time prettification.
+
+**Original rationale.** Two-letter codes only. Phase 1.5A
 Category A test #7 asserts rejection of `"British Columbia"`. UI
 can do display-time prettification.
 
-**Deferral target.** Decide during 1.5A implementation.
-
-### OQ-09 — Family office CoA template default
+### OQ-09 — Family office CoA template default — RESOLVED (2026-04-15)
 
 **Description.** The `family_office` industries seed row has
 `default_coa_template_industry = 'holding_company'` as a
 provisional bridge. Should family offices use the holding-company
 CoA, or wait for a dedicated template?
 
-**Current-best-guess answer.** Use the holding-company template
-for now. Revisit when a dedicated family-office CoA is authored
-(no fixed phase target — orthogonal work).
+**Resolution (2026-04-15).** Bridge `family_office` to
+`holding_company` CoA provisionally. Orthogonal follow-up: author
+a dedicated family-office CoA template, then update the bridge.
 
-**Deferral target.** Orthogonal; no phase tag.
+**Original rationale.** Use the holding-company template for now.
+Revisit when a dedicated family-office CoA is authored (no fixed
+phase target — orthogonal work).
 
 ### OQ-10 — Accountant-firm-as-org pattern (1.5B input)
 
@@ -1632,6 +1642,9 @@ Explicit out-of-scope list to prevent scope creep:
 - **No `onboarding_status` enum** — Phase 2.
 - **No `organization_tax_registrations` table** — Phase 2, see §15 OQ-01.
 - **No journal line dimensions** — Phase 2, see §15 OQ-02.
+- **No `industries.naics_code` population** — the column is
+  seeded NULL in 1.5A. Populating the 2-digit NAICS codes is a
+  follow-up seed-update migration tracked as a post-1.5A obligation.
 
 ---
 

@@ -798,3 +798,19 @@ Categories:
   project pre-restructure need a discoverable note about what
   changed and when. CLAUDE.md "When in doubt" section points
   here as the canonical "what moved where" reference.
+
+## Phase 1.5A
+
+- 2026-04-15 NOTE   Session start: Phase 1.5A execution begins
+  against approved brief at docs/09_briefs/phase-1.5/brief.md
+  (approval commit ec6cc51). Four OQs resolved inline in brief
+  §15: OQ-06 (two audit rows for primary-address demotion),
+  OQ-07 (read-only service functions are not
+  withInvariants()-wrapped), OQ-08 (region accepts two-letter
+  codes only; "British Columbia" rejected), OQ-09 (family_office
+  bridges to holding_company CoA provisionally). Execution order:
+  four migrations (108, 109, 110, 111) with pnpm db:reset between
+  each; Zod schemas under src/shared/schemas/organization/;
+  service code (orgService extension + new addressService); eight
+  API routes; types regeneration; ten Category A+B tests;
+  exit-criteria matrix closeout.

@@ -211,7 +211,7 @@ functions via `adminClient`.
 
 *Added in Phase 1.5A (`20240108000000_seed_industries.sql`).*
 
-A NAICS-light industry classification lookup table (~27 seeded
+A NAICS-light industry classification lookup table (28 seeded
 entries) that replaces the `org_industry` enum dependency on
 `organizations`. The `org_industry` enum itself remains in the
 schema because `chart_of_accounts_templates.industry` still uses
@@ -233,7 +233,7 @@ CREATE TABLE industries (
 );
 ```
 
-**Seed coverage.** 27 rows spanning NAICS 2-digit sectors plus
+**Seed coverage.** 28 rows spanning NAICS 2-digit sectors plus
 family-office-relevant subdivisions (holding companies,
 investment funds, family offices, real estate operating / REIT /
 development, professional services, etc.). Every industry value
