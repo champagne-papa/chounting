@@ -1268,6 +1268,17 @@ No report aggregates across it. The column is purely a schema
 reservation, enforced with a single self-reference CHECK and a
 partial index for future lookups.
 
+**Known limitation (Phase 2 obligation).** The
+`org_parent_is_not_self` CHECK only catches direct
+self-reference (`parent_org_id = org_id`). A multi-org cycle
+(A → B → A, A → B → C → A) is NOT prevented by the schema. This
+is acceptable in 1.5A because nothing writes to `parent_org_id`.
+Before Phase 2 consolidation features write to the column, cycle
+detection must land — either a recursive trigger (walk the parent
+chain on INSERT/UPDATE, reject on cycle) or app-layer validation
+in the service that will own parent-setting. Tracked in
+`docs/09_briefs/phase-1.2/obligations.md`.
+
 ### 13.4 What Phase 2 will need
 
 See §15 OQ-03 for the consolidation hierarchy open questions Phase

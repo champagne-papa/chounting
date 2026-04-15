@@ -142,6 +142,24 @@ restructure.
 
 ---
 
+## Phase 2 obligations carried forward by Phase 1.5A
+
+These are Phase 2 items surfaced during Phase 1.5A that must be
+discharged before the related 1.5A reserved-seat column becomes
+write-active.
+
+- **Cycle detection on `organizations.parent_org_id`** — before
+  consolidation features write to the column. The
+  `org_parent_is_not_self` CHECK only catches direct
+  self-reference (`parent_org_id = org_id`); a multi-org cycle
+  (A → B → A) is not prevented by the schema. Options: recursive
+  trigger that walks the parent chain on INSERT/UPDATE and rejects
+  on cycle, or app-layer validation in the service that will own
+  parent-setting. Tracked in
+  `docs/09_briefs/phase-1.5/brief.md` §13.3.
+
+---
+
 ## Phase 2+ deferrals (NOT Phase 1.2 obligations)
 
 These were explicitly deferred past Phase 1.2:
