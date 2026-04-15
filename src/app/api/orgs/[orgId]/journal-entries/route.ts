@@ -39,6 +39,12 @@ export async function POST(
     }
 
     const ctx = await buildServiceContext(req);
+    // INV-SERVICE-001 wrap site: this is the Phase 1.1 reference implementation of the
+    // SERVICE-001 pattern — every mutating service function is invoked through withInvariants()
+    // at the route handler boundary. The pattern is paired with the "SERVICE-001 export contract"
+    // annotation at the top of journalEntryService.ts (module exports unwrapped; route handler
+    // wraps at the call site). Skipping this wrap would silently bypass all four INV-AUTH-001
+    // pre-flight checks (context shape, caller verification, org-access, role authorization).
     const result = await withInvariants(
       journalEntryService.post,
       { action: 'journal_entry.post' }

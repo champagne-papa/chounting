@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import Decimal from 'decimal.js';
 
+// INV-MONEY-001 (collective — combined enforcement): money at the service boundary is
+// string-typed, never JavaScript Number. Enforced collectively by four mechanisms in this file:
+// (1) branded types MoneyAmount/FxRate prevent accidental Number assignment at compile time,
+// (2) Zod schemas validate the string shape at runtime boundaries, (3) arithmetic helpers
+// (addMoney, multiplyMoneyByRate, eqMoney, eqRate) use decimal.js exclusively, and
+// (4) decimal.js is imported only in this file — no other file imports it, confining IEEE 754
+// precision loss risk to this boundary. See the INV-MONEY-001 leaf in
+// docs/02_specs/ledger_truth_model.md for the Postgres numeric(20,4) matching rationale.
+
 // --- Branded types (PLAN.md §3a) ---
 
 export type MoneyAmount = string & { __brand: 'MoneyAmount' };

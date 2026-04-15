@@ -1,4 +1,5 @@
 // src/services/middleware/withInvariants.ts
+// INV-AUTH-001 (primary): every mutating service call is authorized before the function body runs.
 // The universal service wrapper. Every service function in src/services/
 // is invoked through this. Performs pre-flight checks before the function
 // body runs:

@@ -77,6 +77,20 @@ const balancedMessage = {
   message: 'Sum of debits must equal sum of credits (exact).',
 };
 
+// INV-IDEMPOTENCY-001 (service-layer pre-flight pairing): this refinement is the Zod
+// boundary complement to the database CONSTRAINT idempotency_required_for_agent in
+// 20240101000000_initial_schema.sql. Together they enforce "agent-sourced entries require
+// an idempotency key" at two layers: Zod at the service boundary (fast ergonomic error),
+// CHECK at the database (authoritative enforcement).
+//
+// Phase 1.1 reachability note: this refine is currently dead code at runtime. Both
+// PostJournalEntryInputSchema and ReversalInputSchema include a sibling refine that rejects
+// `source === 'agent'` outright ("source: 'agent' is not implemented in Phase 1.1"), so an
+// input that would trigger the idempotency check is rejected by the earlier sibling refine
+// first. Phase 1.2 removes the sibling gate when the agent path lands, at which point this
+// refine begins firing in production and the bidirectional pairing with the database CHECK
+// becomes observable. The annotation is placed now because the site is correct now; the
+// runtime reachability follows in Phase 1.2.
 function idempotencyRefinement(
   entry: { source: string; idempotency_key?: string },
 ): boolean {

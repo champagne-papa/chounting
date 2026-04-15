@@ -1829,19 +1829,47 @@ export async function POST(req: Request, { params }: { params: Promise<{ orgId: 
 
 **Asymmetry with read functions.** Read functions (`list`,
 `get`) are **not** wrapped in `withInvariants`. They are called
-directly by the route handler and handle authorization inline
-via `if (!ctx.caller.org_ids.includes(input.org_id)) { throw new
-ServiceError('ORG_ACCESS_DENIED', ...); }`. This is a
-deliberate Phase 1.1 choice: read functions have a simpler
-authorization model ("caller must be a member of the requested
-org") than writes ("caller must be a member AND have a role
-that permits the specific action"), and the inline check is
-cheaper than a full `withInvariants` pass. The asymmetry is
-not a bug — it is the architectural shape of Layer 2 — and the
-INV-SERVICE-001 rule **only applies to mutating service
-functions**. Reads have their own discipline (inline
-`org_ids.includes` check) which is not separately invariant-
-numbered.
+directly by the route handler and handle authorization inline,
+but the inline form splits into two sub-patterns depending on
+whether the caller names the target org explicitly or implicitly:
+
+1. **List-family pattern (`.includes` with `ORG_ACCESS_DENIED`).**
+   Functions that take an explicit `org_id` in their input —
+   `journalEntryService.list`, `periodService.listOpen`,
+   `chartOfAccountsService.list` — check membership inline with
+   `if (!ctx.caller.org_ids.includes(input.org_id)) { throw new
+   ServiceError('ORG_ACCESS_DENIED', ...); }` and throw a clean
+   typed error when the caller does not have access. The caller
+   has already named the org they want, so "you cannot access
+   org X" is a meaningful response.
+
+2. **Get-family pattern (`.in` query-side with `NOT_FOUND`).**
+   Functions that take an entity UUID and derive the org from the
+   entity — specifically `journalEntryService.get` — filter at the
+   query level with
+   `.eq('journal_entry_id', input.journal_entry_id).in('org_id',
+   ctx.caller.org_ids)`, and throw `NOT_FOUND` on zero rows. The
+   deliberate ambiguity between "does not exist" and "caller
+   cannot see it" prevents existence-leak enumeration attacks.
+   See the `NOT_FOUND` entry in the Structured Error Contracts
+   section below for the full dual-meaning rationale.
+
+The two sub-patterns use different mechanisms (inline `.includes`
+vs query-side `.in`) and different error codes
+(`ORG_ACCESS_DENIED` vs `NOT_FOUND`) because they solve different
+problems: list-family functions serve "show me everything in this
+org," where denial is informational; get-family functions serve
+"show me this specific thing," where denial must not leak
+existence. Both are deliberate Phase 1.1 choices: read functions
+have a simpler authorization model ("caller must be a member of
+the requested org") than writes ("caller must be a member AND
+have a role that permits the specific action"), and the inline
+checks are cheaper than a full `withInvariants` pass. The
+asymmetry between reads and writes is not a bug — it is the
+architectural shape of Layer 2 — and the INV-SERVICE-001 rule
+**only applies to mutating service functions**. Reads have their
+own discipline (the two sub-patterns above) which is not
+separately invariant-numbered.
 
 **What breaks if this rule is violated.** A mutating service
 function called without `withInvariants`:

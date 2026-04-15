@@ -1,4 +1,5 @@
 // src/services/audit/recordMutation.ts
+// INV-AUDIT-001 (primary enforcement): every mutating service call writes an audit_log row in the same transaction.
 // Synchronous audit log writer (Simplification 1).
 // Called inside the same database transaction as the mutation it records.
 // In Phase 2 this role moves to the events table; for now audit_log is

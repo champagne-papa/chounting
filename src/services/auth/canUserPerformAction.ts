@@ -1,4 +1,5 @@
 // src/services/auth/canUserPerformAction.ts
+// INV-AUTH-001 (permission source): the role-action matrix below is the authoritative Phase 1.1 permission source. Called by withInvariants() pre-flight Invariant 4.
 // Authorization check: given a caller's role in an org, can they perform
 // a specific action? Called by withInvariants() as a pre-flight gate.
 //

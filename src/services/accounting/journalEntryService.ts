@@ -1,4 +1,14 @@
 // src/services/accounting/journalEntryService.ts
+// INV-SERVICE-001 export contract (structural): this module exports post/list/get as unwrapped
+// plain functions. The `post` function is a mutating service function and MUST be invoked through
+// withInvariants() at the call site — see the POST handler in
+// src/app/api/orgs/[orgId]/journal-entries/route.ts for the wrap site (INV-SERVICE-001 wrap site).
+// INV-SERVICE-002 adminClient discipline (structural): every database access in this file goes through
+// adminClient() from '@/db/adminClient'. No userClient import, no direct supabase-js client
+// construction. See the INV-SERVICE-002 leaf in docs/02_specs/ledger_truth_model.md for the
+// two-client rationale (service-role bypasses RLS; service-layer authorization is the primary
+// enforcement for writes).
+//
 // Law 2: All journal entries are created by journalEntryService.post() only.
 // No other function in the codebase may insert into journal_entries or
 // journal_lines. See PLAN.md Invariant 2.
@@ -141,7 +151,11 @@ async function post(
     throw new ServiceError('POST_FAILED', linesErr.message);
   }
 
-  // --- Audit log (Simplification 1: synchronous write) ---
+  // --- INV-AUDIT-001 call site — Audit log (Simplification 1: synchronous write) ---
+  // Runs inside the caller's transaction (same `db` client) so the audit row commits
+  // atomically with the journal_entries + journal_lines writes above. See the INV-AUDIT-001
+  // leaf in docs/02_specs/ledger_truth_model.md for why same-transaction dispatch is the
+  // enforcement mechanism (Simplification 1; replaced by the events projection in Phase 2).
   await recordMutation(db, ctx, {
     org_id: parsed.org_id,
     action: isReversal ? 'journal_entry.reverse' : 'journal_entry.post',
@@ -159,6 +173,14 @@ async function post(
 
 // --- Reversal mirror validation (ADR-001 §1, PLAN.md §15e Layer 2) ---
 
+// INV-REVERSAL-001 (primary enforcement): reversal lines must mirror the original with
+// debit_amount and credit_amount swapped, all other fields (account_id, currency,
+// amount_original, amount_cad, fx_rate) identical. Five-step algorithm: (1) non-empty reason
+// (also INV-REVERSAL-002's service-layer pre-flight), (2) load referenced entry, (3) same-org
+// check, (4) line count match (no partial reversals in Phase 1.1), (5) per-line mirror match
+// with debit/credit swap. Throws REVERSAL_NOT_MIRROR / REVERSAL_CROSS_ORG /
+// REVERSAL_PARTIAL_NOT_SUPPORTED before any DML. See the INV-REVERSAL-001 leaf in
+// docs/02_specs/ledger_truth_model.md for the full algorithm and Phase 1.1 no-partial rationale.
 async function validateReversalMirror(
   db: ReturnType<typeof adminClient>,
   input: ReversalInput,
