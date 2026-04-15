@@ -72,17 +72,53 @@ scopes to a row here. In the Phase 1.1 authority gradient,
 `organizations` defines the tenancy boundary that RLS policies
 enforce via `user_has_org_access(org_id)` helper function calls.
 
+**Phase 1.5A extended this table** with ~20 additional columns
+covering the organization business profile (legal structure, CRA
+Business Number, GST/HST registration, accounting framework,
+reporting basis, locale/timezone, status, MFA requirement, books
+start date, typed-key external-ids bag, parent-org self-FK). The
+column list below reflects the post-1.5A state; the Phase 1.5A
+migration (`20240109000000_extend_organizations.sql`) is the
+source of truth for what lands in-phase. The legacy `industry`
+enum column remains in place alongside the new `industry_id` FK
+during the two-step migration — see
+`docs/09_briefs/phase-1.5/brief.md` §8 for the rollback-safety
+rationale.
+
 ```sql
 CREATE TABLE organizations (
-  org_id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name                text NOT NULL,
-  legal_name          text,
-  industry            org_industry NOT NULL,
-  functional_currency char(3) NOT NULL DEFAULT 'CAD',
-  fiscal_year_start_month smallint NOT NULL DEFAULT 1
+  org_id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                         text NOT NULL,
+  legal_name                   text,
+  industry                     org_industry NOT NULL,              -- legacy, to be dropped post-1.5A cutover
+  industry_id                  uuid NOT NULL REFERENCES industries(industry_id),
+  functional_currency          char(3) NOT NULL DEFAULT 'CAD',
+  fiscal_year_start_month      smallint NOT NULL DEFAULT 1
     CHECK (fiscal_year_start_month BETWEEN 1 AND 12),
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  created_by          uuid REFERENCES auth.users(id)
+  -- Phase 1.5A additions
+  logo_storage_path            text,
+  business_structure           business_structure NOT NULL,
+  business_registration_number text,
+  tax_registration_number      text,
+  gst_registration_date        date,
+  accounting_framework         accounting_framework NOT NULL DEFAULT 'aspe',
+  description                  text,
+  website                      text,
+  email                        text,
+  phone                        text,
+  phone_country_code           text,
+  time_zone                    text NOT NULL DEFAULT 'America/Vancouver',
+  default_locale               text NOT NULL DEFAULT 'en',
+  default_report_basis         report_basis NOT NULL DEFAULT 'accrual',
+  default_payment_terms_days   integer NOT NULL DEFAULT 30,
+  multi_currency_enabled       boolean NOT NULL DEFAULT false,
+  status                       org_status NOT NULL DEFAULT 'active',
+  mfa_required                 boolean NOT NULL DEFAULT false,
+  books_start_date             date,
+  external_ids                 jsonb NOT NULL DEFAULT '{}'::jsonb,
+  parent_org_id                uuid REFERENCES organizations(org_id),
+  created_at                   timestamptz NOT NULL DEFAULT now(),
+  created_by                   uuid REFERENCES auth.users(id)
 );
 ```
 
@@ -94,17 +130,214 @@ base currency — the currency it reports in. Multi-currency
 transactions convert to this currency via `journal_lines.amount_cad`
 (see the `line_amount_cad_matches_fx` CHECK in the `journal_lines`
 section). Phase 1.1 hard-codes all orgs to CAD; Phase 2 opens this
-up.
+up. Surfaced in the 1.5A profile API as `base_currency` (alias);
+the column name stays `functional_currency` to avoid migration
+churn. Immutable post-creation in the service layer — a patch that
+includes `functional_currency` is rejected with
+`ORG_IMMUTABLE_FIELD`.
 
-**`industry`** drives Chart of Accounts template selection at org
-creation. The industry enum includes healthcare, real_estate,
+**`legal_name`** vs `name`. `name` is the operating/display name
+(used in UI chrome, org switcher, email subjects). `legal_name`
+is the CRA-filing name. UI falls back to `name` when `legal_name`
+is null. Both mutable via `updateOrgProfile`.
+
+**`industry`** (legacy) drives Chart of Accounts template selection
+at org creation via the `industries.default_coa_template_industry`
+bridge. The industry enum includes healthcare, real_estate,
 hospitality, trading, restaurant, and holding_company. Phase 1.1
 seeds templates for two of these (`holding_company` and
-`real_estate`) — see the seed block at the end of the migration.
+`real_estate`) — see the seed block at the end of the initial
+migration. Phase 1.5A adds the `industry_id` FK as the replacement;
+the legacy enum column is dropped in a follow-up migration after
+app cutover (see `docs/09_briefs/phase-1.5/brief.md` §8).
 
-**No named CHECKs, no triggers, no INV cross-references.** Indexes:
-none — reads are by `org_id` primary key, no secondary index
-needed.
+**`industry_id`** is the post-1.5A classification column, FK to
+`industries(industry_id)`. Populated on every row by the 1.5A
+backfill (migration 109 step 1); NOT NULL enforced at the end of
+the same migration. Mutable via `updateOrgProfile`.
+
+**`default_report_basis`** is a **reporting-view default**, not a
+ledger mode. The ledger is always accrual-native (see
+`docs/09_briefs/phase-1.5/brief.md` §10). Phase 1.5A adds the
+column; Phase 2 reporting wires it into the report-view selector.
+
+**`external_ids`** is a `jsonb` bag for integration identifiers
+(Stripe, Xero, Flinks, CRA, Zoho) with a Zod-validated typed-key
+contract — see `src/shared/schemas/organization/externalIds.schema.ts`.
+Unknown keys are permitted; known keys must match their declared
+type.
+
+**`parent_org_id`** is a reserved seat for the consolidation
+hierarchy. Zero behavior in 1.5A — the column exists, the self-FK
+is installed, the `org_parent_is_not_self` CHECK prevents
+self-reference, but no service function reads it. Phase 2
+consolidation work uses this column.
+
+**Named CHECK constraints on this table (all added in Phase 1.5A):**
+
+- `org_default_payment_terms_nonneg` —
+  `default_payment_terms_days >= 0`. Local consistency. No INV.
+- `org_parent_is_not_self` —
+  `parent_org_id IS NULL OR parent_org_id <> org_id`. Prevents
+  self-parent cycles at the minimum case. No INV.
+- `org_country_phone_code_shape` —
+  `phone_country_code IS NULL OR phone_country_code ~ '^\+[0-9]{1,3}$'`.
+  Rejects malformed phone country codes. No INV.
+- `org_external_ids_is_object` —
+  `jsonb_typeof(external_ids) = 'object'`. Ensures the column
+  holds a JSON object, not an array/scalar/null. Matches the Zod
+  shape at the service boundary. No INV.
+
+**Indexes (post-1.5A):**
+
+- `idx_organizations_industry` on `(industry_id)` — supports
+  industry-filtered org lookups and rollup joins.
+- `idx_organizations_parent_org` on `(parent_org_id) WHERE
+  parent_org_id IS NOT NULL` — partial index for Phase 2
+  consolidation hierarchy walks.
+- `idx_organizations_status` on `(status) WHERE status <> 'active'`
+  — partial index for admin surfaces that query non-active orgs
+  (suspended, archived, closed).
+
+**RLS.** Unchanged by 1.5A — the single SELECT policy
+(`organizations_select` via `user_has_org_access(org_id)`) still
+applies. New columns are visible through row-scoped RLS; no
+column-level policy exists. Mutations still go through service
+functions via `adminClient`.
+
+---
+
+### `industries`
+
+*Added in Phase 1.5A (`20240108000000_seed_industries.sql`).*
+
+A NAICS-light industry classification lookup table (~27 seeded
+entries) that replaces the `org_industry` enum dependency on
+`organizations`. The `org_industry` enum itself remains in the
+schema because `chart_of_accounts_templates.industry` still uses
+it; the bridge column `default_coa_template_industry` maps
+`industries` rows back to the legacy enum for CoA template
+loading during org creation.
+
+```sql
+CREATE TABLE industries (
+  industry_id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  naics_code                     text,
+  slug                           text UNIQUE NOT NULL,
+  display_name                   text NOT NULL,
+  parent_industry_id             uuid REFERENCES industries(industry_id),
+  default_coa_template_industry  org_industry,
+  is_active                      boolean NOT NULL DEFAULT true,
+  sort_order                     integer NOT NULL DEFAULT 0,
+  created_at                     timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**Seed coverage.** 27 rows spanning NAICS 2-digit sectors plus
+family-office-relevant subdivisions (holding companies,
+investment funds, family offices, real estate operating / REIT /
+development, professional services, etc.). Every industry value
+currently populated on a `chart_of_accounts_templates` row has at
+least one `industries` row with `default_coa_template_industry`
+populated — this is the mechanical precondition that makes the
+Phase 1.5A `industry_id` backfill succeed. See
+`docs/09_briefs/phase-1.5/brief.md` §9 for the verification query
+and §15 OQ-05 for the eventual enum-column-drop follow-up.
+
+**Self-referential FK.** `parent_industry_id` permits a
+sector → subsector hierarchy (e.g., real_estate_operating →
+real_estate). Phase 1.5A populates both roots and subsectors flat
+in the seed; future rollup queries can walk the hierarchy.
+
+**RLS exception.** `industries_select ON industries FOR SELECT TO
+authenticated USING (true)` — same posture as
+`chart_of_accounts_templates`. Any authenticated user reads any
+row; no INSERT/UPDATE/DELETE policies (seed-only; modifying
+requires a migration).
+
+**Indexes:**
+
+- `idx_industries_slug` on `(slug)` — supports slug-based lookup
+  from seed helpers and backfill queries.
+- `idx_industries_parent` on `(parent_industry_id)` — supports
+  hierarchy walks.
+
+**No named CHECKs, no triggers, no INV cross-references.**
+
+---
+
+### `organization_addresses`
+
+*Added in Phase 1.5A (`20240110000000_organization_addresses.sql`).*
+
+One-to-many addresses per organization, typed by purpose. Every
+org can carry up to four "primary" addresses — one of each
+`address_type` (`mailing`, `physical`, `registered`,
+`payment_stub`) — plus any number of non-primary addresses.
+
+```sql
+CREATE TABLE organization_addresses (
+  address_id    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id        uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  address_type  address_type NOT NULL,
+  line1         text NOT NULL,
+  line2         text,
+  city          text,
+  region        text,
+  postal_code   text,
+  country       char(2) NOT NULL,
+  attention     text,
+  is_primary    boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  created_by    uuid REFERENCES auth.users(id)
+);
+```
+
+**Named CHECK constraints:**
+
+- `addr_country_shape` — `country ~ '^[A-Z]{2}$'`. Enforces
+  upper-case ISO 3166-1 alpha-2 at the DB layer, matching the Zod
+  shape at the service boundary. No INV.
+- `addr_line1_not_blank` — `length(trim(line1)) > 0`. Rejects
+  whitespace-only `line1` values. No INV.
+
+**Named UNIQUE constraints:**
+
+- `idx_org_addr_primary` — partial unique index on `(org_id,
+  address_type) WHERE is_primary = true`. Enforces at most one
+  primary per `(org_id, address_type)` pair. Permits zero
+  primaries per type. No INV.
+
+**Region validation.** `region` is free `text` at the DB layer;
+validation happens in Zod at the service boundary
+(`src/shared/schemas/organization/address.schema.ts`). For
+`country='CA'`, `region` must be one of the 13 province/territory
+ISO 3166-2 codes. For `country='US'`, state codes. Other
+countries: free text accepted. See
+`docs/09_briefs/phase-1.5/brief.md` §14.
+
+**Service layer.** `addressService.addAddress`, `updateAddress`,
+`removeAddress`, `setPrimaryAddress` — all controller-only via
+`canUserPerformAction`, all `withInvariants()`-wrapped, all
+audit-logged with `before_state` per
+`docs/09_briefs/phase-1.5/brief.md` §12. `addAddress(..., {
+is_primary: true })` and `updateAddress` with `is_primary: true`
+both run an auto-demote transaction that clears any existing
+primary for the `(org_id, address_type)` pair before the insert
+or update succeeds.
+
+**RLS.** SELECT/INSERT via `user_has_org_access(org_id)`,
+UPDATE/DELETE via `user_is_controller(org_id)`. The service layer
+tightens INSERT to controller-only as defense-in-depth. See
+Part 2 for the full policy SQL.
+
+**Indexes:**
+
+- `idx_org_addr_primary` — partial unique (see above).
+- `idx_org_addr_org` on `(org_id, address_type)` — supports
+  list-by-org and list-by-type queries.
+
+**No triggers, no INV cross-references.**
 
 ---
 
@@ -368,6 +601,8 @@ CREATE TABLE journal_entries (
   description               text NOT NULL,
   reference                 text,
   source                    journal_entry_source NOT NULL,  -- 'manual' | 'agent' | 'import'
+  source_system             text NOT NULL,                  -- added by migration 111 (Phase 1.5A)
+  source_external_id        text,                           -- added by migration 111 (Phase 1.5A)
   entry_type                entry_type NOT NULL DEFAULT 'regular',  -- added by migration 005
   intercompany_batch_id     uuid,                           -- reserved for Phase 2
   reverses_journal_entry_id uuid REFERENCES journal_entries(journal_entry_id),
@@ -386,6 +621,9 @@ CREATE TABLE journal_entries (
 **Named UNIQUE constraint on this table:**
 
 - `unique_entry_number_per_org_period` — `UNIQUE (org_id, fiscal_period_id, entry_number)`. Added by migration `20240104000000_add_entry_number.sql`. Enforces sequential entry numbering within each (org, period) pair for audit traceability — auditors expect to see entry numbers 1, 2, 3... within a period with no gaps. `journalEntryService.post()` populates `entry_number` by computing `MAX(entry_number) + 1` within the target (org, period) scope at post time. Local consistency constraint with no INV attribution — the audit-traceability rule is enforced by this UNIQUE alone, not by any INV.
+- `idx_je_source_external` — partial unique index on `(org_id, source_system, source_external_id) WHERE source_external_id IS NOT NULL`. Added by migration `20240111000000_journal_entries_source_tracking.sql` (Phase 1.5A). Prevents double-ingestion of the same external transaction when Phase 2 integrations (Flinks, Plaid, Stripe, Xero migration, CSV imports) reconcile back to the ledger. Entries with `source_external_id IS NULL` (every Phase 1.1 row, every manual entry) are skipped by the partial index and may occur in any quantity. See `docs/09_briefs/phase-1.5/brief.md` §4.4 for the rationale.
+
+**On `source_system` vs `source` (added in Phase 1.5A).** The coarse `source` enum (`manual | agent | import`) classifies who originated the entry. The new `source_system` text column carries the granular integration identifier (`manual`, `agent`, `flinks`, `plaid`, `stripe`, `xero_migration`, `csv_import`, etc.). Free text rather than an enum because new integrations land frequently and enum migrations are load-bearing. Constraint `source_system_not_blank` (`length(trim(source_system)) > 0`) rejects empty values. The backfill for existing rows writes `source_system = source::text`, preserving coarse-grained semantics.
 
 **`entry_type` enum (added by migration 005).** The `entry_type` enum has four values: `'regular'` (the default — ordinary business transactions), `'adjusting'` (period-end adjustments), `'closing'` (year-end closing entries), and `'reversing'` (reversal entries with `reverses_journal_entry_id` populated). Phase 1.1 posts all entries with `entry_type = 'regular'` by default and sets `entry_type = 'reversing'` automatically when `reverses_journal_entry_id` is populated. Adjusting and closing workflows are Phase 2+ scope.
 
@@ -1103,6 +1341,14 @@ Performance Conventions.
 | `events` | `idx_events_trace` | Trace-based event query (Phase 2) |
 | `events` | `idx_events_type_recorded` | Event-type filtering (Phase 2) |
 | `journal_entry_attachments` | `idx_je_attachments_entry` | Attachments for a journal entry (Phase 2) |
+| `organizations` | `idx_organizations_industry` | Industry-filtered org lookups (Phase 1.5A) |
+| `organizations` | `idx_organizations_parent_org` (partial) | Consolidation hierarchy walks (reserved, Phase 2) |
+| `organizations` | `idx_organizations_status` (partial) | Non-active org admin queries |
+| `industries` | `idx_industries_slug` | Slug-based lookup from seed helpers |
+| `industries` | `idx_industries_parent` | Industry hierarchy walks |
+| `organization_addresses` | `idx_org_addr_primary` (partial unique) | Enforce one primary per (org_id, address_type) |
+| `organization_addresses` | `idx_org_addr_org` | List addresses by org and type |
+| `journal_entries` | `idx_je_source_external` (partial unique) | Prevent double-ingestion from external systems (Phase 1.5A) |
 
 **Partial indexes** (`idx_je_org_intercompany` and `idx_je_reverses`)
 cover only rows where the indexed column is non-NULL. This keeps
@@ -1343,6 +1589,12 @@ no unprotected table. (The attachments table is enabled from its
 own migration `20240106000000_add_attachments.sql` rather than
 the initial schema, but the effect is identical.)
 
+**Phase 1.5A additions.** The new tables `industries` and
+`organization_addresses` enable RLS inside their own migrations
+(`20240108000000_seed_industries.sql` and
+`20240110000000_organization_addresses.sql` respectively). No
+change to existing table RLS state.
+
 ---
 
 ## Per-Table Policies
@@ -1407,6 +1659,47 @@ reasoning (the org creation flow needs to read templates before
 the user has an `org_id` to scope to). There is no
 INSERT/UPDATE/DELETE policy because templates are seed-only and
 modifying them requires a migration.
+
+### `industries`
+
+*Added in Phase 1.5A (`20240108000000_seed_industries.sql`).*
+
+```sql
+CREATE POLICY industries_select ON industries
+  FOR SELECT TO authenticated USING (true);
+```
+
+**Deviation from standard pattern.** No org scoping — any
+authenticated user reads any row. Same posture as
+`chart_of_accounts_templates` and for the same reason: a user
+picks an industry during org creation, before any membership row
+exists to scope by. No INSERT/UPDATE/DELETE policy because the
+table is seed-only; modifying requires a migration.
+
+### `organization_addresses`
+
+*Added in Phase 1.5A (`20240110000000_organization_addresses.sql`).*
+
+```sql
+CREATE POLICY org_addr_select ON organization_addresses
+  FOR SELECT USING (user_has_org_access(org_id));
+CREATE POLICY org_addr_insert ON organization_addresses
+  FOR INSERT WITH CHECK (user_has_org_access(org_id));
+CREATE POLICY org_addr_update ON organization_addresses
+  FOR UPDATE USING (user_is_controller(org_id));
+CREATE POLICY org_addr_delete ON organization_addresses
+  FOR DELETE USING (user_is_controller(org_id));
+```
+
+**Deviation from standard pattern.** SELECT/INSERT use
+`user_has_org_access` (any member of the org can see addresses
+and — at the RLS layer — insert them). UPDATE/DELETE are scoped
+to `user_is_controller`. The service layer tightens INSERT to
+controller-only as defense-in-depth (see
+`docs/09_briefs/phase-1.5/brief.md` §5.2); the RLS INSERT policy
+remains the looser of the two authorization layers so an
+accidental service-layer weakening does not collapse authorization
+to "any authenticated user."
 
 ### `fiscal_periods`
 
@@ -1859,6 +2152,13 @@ exists so a reader can find the deviations at a glance:
 
 - **`chart_of_accounts_templates`** — global SELECT for authenticated
   users (no org scoping); seed-only, no writes.
+- **`industries`** (Phase 1.5A) — global SELECT for authenticated
+  users (no org scoping); seed-only, no writes. Same posture as
+  `chart_of_accounts_templates`.
+- **`organization_addresses`** (Phase 1.5A) — `user_has_org_access`
+  for SELECT/INSERT, `user_is_controller` for UPDATE/DELETE. The
+  service layer further restricts INSERT to controllers as
+  defense-in-depth.
 - **`memberships`** — user-scoped SELECT (own rows) plus
   controller-scoped SELECT (all rows in the org); no policies for
   writes.
