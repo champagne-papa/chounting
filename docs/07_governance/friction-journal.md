@@ -845,3 +845,15 @@ Categories:
   relationships. Fix: manual two-query join in TypeScript. This is
   a known PostgREST limitation for cross-table embeds with
   ambiguous FK paths.
+- 2026-04-15 WRONG  Three bugs found in invitationService during
+  closeout review. (1) Dead INSERT created a bogus 'invited'
+  membership for the inviter (silently failed due to UNIQUE).
+  Deleted — membership created on accept, not invite. (2) Dead
+  existing-member check: two queries assigned and never read, no
+  USER_ALREADY_MEMBER thrown. Replaced with admin.listUsers()
+  email lookup + active membership check. (3) acceptInvitation
+  audit row missing before_state despite being an UPDATE (pending
+  → accepted). Added invitation as before_state. Lesson: code
+  with silent-failure error handling needs special review — two
+  of three bugs were hidden because errors were caught and
+  swallowed, so tests passed on the happy path.

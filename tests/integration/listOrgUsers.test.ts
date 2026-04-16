@@ -21,14 +21,14 @@ describe('CA-24: listOrgUsers returns active/suspended, excludes removed', () =>
 
     expect(result.users.length).toBeGreaterThanOrEqual(2);
 
-    const statuses = result.users.map((u: { status: string }) => u.status);
+    const statuses = result.users.map((u: Record<string, unknown>) => u.status as string);
     expect(statuses).not.toContain('removed');
     expect(statuses).not.toContain('invited');
 
     const controller = result.users.find(
-      (u: { user_id: string }) => u.user_id === SEED.USER_CONTROLLER,
-    ) as { user_profiles: Record<string, unknown> } | undefined;
+      (u: Record<string, unknown>) => u.user_id === SEED.USER_CONTROLLER,
+    );
     expect(controller).toBeTruthy();
-    expect(controller!.user_profiles).toBeTruthy();
+    expect((controller as Record<string, unknown>).user_profiles).toBeTruthy();
   });
 });

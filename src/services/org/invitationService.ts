@@ -26,29 +26,23 @@ export const invitationService = {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
-    const { data: existingMember } = await db
-      .from('memberships')
-      .select('membership_id')
-      .eq('org_id', input.org_id)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    // Check by joining on email via auth.users
-    const { data: allMembers } = await db
-      .from('memberships')
-      .select('user_id, status')
-      .eq('org_id', input.org_id)
-      .eq('status', 'active');
-
-    if (allMembers && allMembers.length > 0) {
-      // Check if any active member has this email
-      for (const m of allMembers) {
-        const { data: authUser } = await db
-          .from('user_profiles')
-          .select('user_id')
-          .eq('user_id', m.user_id)
-          .maybeSingle();
-        // We need to check auth.users for the email — use admin API
+    // Check if the invitee is already an active member of this org.
+    // Look up the user by email via Supabase admin API, then check
+    // for an active membership in the target org.
+    const { data: { users: matchingUsers } } = await db.auth.admin.listUsers();
+    const inviteeAuth = (matchingUsers ?? []).find(
+      (u: { email?: string }) => u.email?.toLowerCase() === email,
+    );
+    if (inviteeAuth) {
+      const { data: activeMembership } = await db
+        .from('memberships')
+        .select('membership_id')
+        .eq('user_id', inviteeAuth.id)
+        .eq('org_id', input.org_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (activeMembership) {
+        throw new ServiceError('USER_ALREADY_MEMBER', `${email} is already an active member of this org`);
       }
     }
 
@@ -84,25 +78,8 @@ export const invitationService = {
       throw new ServiceError('INVITATION_WRITE_FAILED', invErr.message);
     }
 
-    // Create invited membership
-    const { error: memErr } = await db.from('memberships').insert({
-      user_id: ctx.caller.user_id,
-      org_id: input.org_id,
-      role: input.role,
-      status: 'invited',
-      invited_via: invitationId,
-    });
-
-    // Note: the invited membership's user_id is temporarily the
-    // inviter's — it gets reassigned on acceptance. Actually, the
-    // membership for the invitee cannot be created yet because the
-    // invitee may not have an auth account. We'll create it on accept.
-    // Remove the premature insert above.
-    if (memErr) {
-      // Expected to fail for duplicate (user_id, org_id) if inviter
-      // is already a member. The invited membership is created during
-      // acceptInvitation instead.
-    }
+    // The invitee's membership is created during acceptInvitation,
+    // not here — the invitee may not have an auth account yet.
 
     await recordMutation(db, ctx, {
       org_id: input.org_id,
@@ -191,6 +168,7 @@ export const invitationService = {
       action: 'user.invitation_accepted',
       entity_type: 'org_invitation',
       entity_id: invitationId,
+      before_state: invitation as Record<string, unknown>,
     });
 
     log.info({ org_id: invitation.org_id, invitation_id: invitationId, user_id: ctx.caller.user_id }, 'Invitation accepted');

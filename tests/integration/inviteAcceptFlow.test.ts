@@ -106,4 +106,30 @@ describe('CA-16/17: invite → accept flow', () => {
       invitationService.acceptInvitation({ token: 'no-colon-here' }, ctx),
     ).rejects.toThrow(/INVITATION_INVALID_OR_EXPIRED/);
   });
+
+  it('rejects inviting an email that is already an active member', async () => {
+    await expect(
+      invitationService.inviteUser(
+        { org_id: SEED.ORG_HOLDING, email: 'controller@thebridge.local', role: 'ap_specialist' },
+        controllerCtx,
+      ),
+    ).rejects.toThrow(/USER_ALREADY_MEMBER/);
+  });
+
+  it('acceptInvitation audit row carries before_state (pending invitation)', async () => {
+    // The first accept test (CA-16) already accepted savedToken.
+    // Check the audit row it produced — it should carry before_state
+    // with status = 'pending'.
+    const { data: auditRows } = await db
+      .from('audit_log')
+      .select('*')
+      .eq('trace_id', traceId)
+      .eq('action', 'user.invitation_accepted');
+
+    expect(auditRows!.length).toBeGreaterThanOrEqual(1);
+    const row = auditRows![0];
+    expect(row.before_state).toBeTruthy();
+    expect((row.before_state as Record<string, unknown>).status).toBe('pending');
+    expect((row.before_state as Record<string, unknown>).invitation_id).toBe(savedInvitationId);
+  });
 });
