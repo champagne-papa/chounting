@@ -163,7 +163,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           idempotency_key: string | null
-          org_id: string
+          org_id: string | null
           session_id: string | null
           tool_name: string | null
           trace_id: string
@@ -178,7 +178,7 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           idempotency_key?: string | null
-          org_id: string
+          org_id?: string | null
           session_id?: string | null
           tool_name?: string | null
           trace_id: string
@@ -193,7 +193,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           idempotency_key?: string | null
-          org_id?: string
+          org_id?: string | null
           session_id?: string | null
           tool_name?: string | null
           trace_id?: string
@@ -1004,28 +1004,106 @@ export type Database = {
       memberships: {
         Row: {
           created_at: string
+          invited_via: string | null
+          is_org_owner: boolean
           membership_id: string
           org_id: string
+          removed_at: string | null
+          removed_by: string | null
           role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["membership_status"]
+          suspended_at: string | null
+          suspended_by: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          invited_via?: string | null
+          is_org_owner?: boolean
           membership_id?: string
           org_id: string
+          removed_at?: string | null
+          removed_by?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          invited_via?: string | null
+          is_org_owner?: boolean
           membership_id?: string
           org_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          suspended_at?: string | null
+          suspended_by?: string | null
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "memberships_invited_via_fkey"
+            columns: ["invited_via"]
+            isOneToOne: false
+            referencedRelation: "org_invitations"
+            referencedColumns: ["invitation_id"]
+          },
+          {
             foreignKeyName: "memberships_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      org_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          created_at: string
+          expires_at: string
+          invitation_id: string
+          invited_by_user_id: string
+          invited_email: string
+          org_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["invitation_status"]
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          invitation_id?: string
+          invited_by_user_id: string
+          invited_email: string
+          org_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          invitation_id?: string
+          invited_by_user_id?: string
+          invited_email?: string
+          org_id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invitations_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1276,6 +1354,48 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          avatar_storage_path: string | null
+          created_at: string
+          display_name: string | null
+          first_name: string | null
+          last_login_at: string | null
+          last_name: string | null
+          phone: string | null
+          phone_country_code: string | null
+          preferred_locale: string | null
+          preferred_timezone: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_storage_path?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          last_login_at?: string | null
+          last_name?: string | null
+          phone?: string | null
+          phone_country_code?: string | null
+          preferred_locale?: string | null
+          preferred_timezone?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_storage_path?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          last_login_at?: string | null
+          last_name?: string | null
+          phone?: string | null
+          phone_country_code?: string | null
+          preferred_locale?: string | null
+          preferred_timezone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       vendor_rules: {
         Row: {
           approved_at: string | null
@@ -1448,7 +1568,9 @@ export type Database = {
         | "other"
       confidence_level: "high" | "medium" | "low" | "novel"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
+      invitation_status: "pending" | "accepted" | "expired" | "revoked"
       journal_entry_source: "manual" | "agent" | "import"
+      membership_status: "active" | "invited" | "suspended" | "removed"
       org_industry:
         | "healthcare"
         | "real_estate"

@@ -41,20 +41,28 @@ SELECT
 FROM chart_of_accounts_templates
 WHERE industry = 'real_estate';
 
--- 4. Memberships
+-- 4. Memberships (Phase 1.5B: status + is_org_owner)
 -- Executive: access to BOTH orgs
-INSERT INTO memberships (user_id, org_id, role) VALUES
-  ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'executive'),
-  ('00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'executive');
+INSERT INTO memberships (user_id, org_id, role, status) VALUES
+  ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'executive', 'active'),
+  ('00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'executive', 'active');
 
--- Controller: access to BOTH orgs
-INSERT INTO memberships (user_id, org_id, role) VALUES
-  ('00000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'controller'),
-  ('00000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'controller');
+-- Controller: access to BOTH orgs, is_org_owner for each
+INSERT INTO memberships (user_id, org_id, role, status, is_org_owner) VALUES
+  ('00000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'controller', 'active', true),
+  ('00000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'controller', 'active', true);
 
 -- AP Specialist: access to ONLY the Real Estate org (proves the role-aware switcher)
-INSERT INTO memberships (user_id, org_id, role) VALUES
-  ('00000000-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'ap_specialist');
+INSERT INTO memberships (user_id, org_id, role, status) VALUES
+  ('00000000-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'ap_specialist', 'active');
+
+-- 4b. User profiles for seed users (Phase 1.5B)
+INSERT INTO user_profiles (user_id, first_name, last_name, display_name)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'Exec', 'User', 'Executive User'),
+  ('00000000-0000-0000-0000-000000000002', 'Controller', 'User', 'Controller User'),
+  ('00000000-0000-0000-0000-000000000003', 'AP', 'Specialist', 'AP Specialist')
+ON CONFLICT (user_id) DO NOTHING;
 
 -- 5. One open fiscal period per org (current calendar year)
 INSERT INTO fiscal_periods (org_id, name, start_date, end_date, is_locked) VALUES
