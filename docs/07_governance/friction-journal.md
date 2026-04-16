@@ -832,3 +832,16 @@ Categories:
   (last_login_at on sign-in only), OQ-04 (audit_log.org_id
   nullable for auth events), OQ-05 (bcryptjs, no native build),
   OQ-06 (lazy expiration at query time).
+- 2026-04-15 WRONG  CA-25 test initially asserted /unique|duplicate/
+  but hit the membership_owner_must_be_controller CHECK first because
+  test set is_org_owner=true on an executive (not a controller).
+  Fix: set role=controller first, then test the partial unique.
+  Lesson: when testing a partial unique index, ensure ALL other
+  constraints (CHECKs, FKs) pass first so the index is the failure
+  point, not a preceding constraint.
+- 2026-04-15 WRONG  listOrgUsers PostgREST embed
+  memberships→user_profiles failed because PostgREST couldn't
+  infer the join when both tables share user_id with multiple FK
+  relationships. Fix: manual two-query join in TypeScript. This is
+  a known PostgREST limitation for cross-table embeds with
+  ambiguous FK paths.
