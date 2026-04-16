@@ -616,6 +616,56 @@ export type Database = {
           },
         ]
       }
+      industries: {
+        Row: {
+          created_at: string
+          default_coa_template_industry:
+            | Database["public"]["Enums"]["org_industry"]
+            | null
+          display_name: string
+          industry_id: string
+          is_active: boolean
+          naics_code: string | null
+          parent_industry_id: string | null
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          default_coa_template_industry?:
+            | Database["public"]["Enums"]["org_industry"]
+            | null
+          display_name: string
+          industry_id?: string
+          is_active?: boolean
+          naics_code?: string | null
+          parent_industry_id?: string | null
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          default_coa_template_industry?:
+            | Database["public"]["Enums"]["org_industry"]
+            | null
+          display_name?: string
+          industry_id?: string
+          is_active?: boolean
+          naics_code?: string | null
+          parent_industry_id?: string | null
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "industries_parent_industry_id_fkey"
+            columns: ["parent_industry_id"]
+            isOneToOne: false
+            referencedRelation: "industries"
+            referencedColumns: ["industry_id"]
+          },
+        ]
+      }
       intercompany_relationships: {
         Row: {
           created_at: string
@@ -776,7 +826,7 @@ export type Database = {
           created_by: string | null
           description: string
           entry_date: string
-          entry_number: number | null
+          entry_number: number
           entry_type: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id: string
           idempotency_key: string | null
@@ -787,13 +837,15 @@ export type Database = {
           reversal_reason: string | null
           reverses_journal_entry_id: string | null
           source: Database["public"]["Enums"]["journal_entry_source"]
+          source_external_id: string | null
+          source_system: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           description: string
           entry_date: string
-          entry_number?: number | null
+          entry_number: number
           entry_type?: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id: string
           idempotency_key?: string | null
@@ -804,13 +856,15 @@ export type Database = {
           reversal_reason?: string | null
           reverses_journal_entry_id?: string | null
           source: Database["public"]["Enums"]["journal_entry_source"]
+          source_external_id?: string | null
+          source_system: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           description?: string
           entry_date?: string
-          entry_number?: number | null
+          entry_number?: number
           entry_type?: Database["public"]["Enums"]["entry_type"]
           fiscal_period_id?: string
           idempotency_key?: string | null
@@ -821,6 +875,8 @@ export type Database = {
           reversal_reason?: string | null
           reverses_journal_entry_id?: string | null
           source?: Database["public"]["Enums"]["journal_entry_source"]
+          source_external_id?: string | null
+          source_system?: string
         }
         Relationships: [
           {
@@ -977,38 +1033,175 @@ export type Database = {
           },
         ]
       }
-      organizations: {
+      organization_addresses: {
         Row: {
+          address_id: string
+          address_type: Database["public"]["Enums"]["address_type"]
+          attention: string | null
+          city: string | null
+          country: string
           created_at: string
           created_by: string | null
-          fiscal_year_start_month: number
-          functional_currency: string
-          industry: Database["public"]["Enums"]["org_industry"]
-          legal_name: string | null
-          name: string
+          is_primary: boolean
+          line1: string
+          line2: string | null
           org_id: string
+          postal_code: string | null
+          region: string | null
         }
         Insert: {
+          address_id?: string
+          address_type: Database["public"]["Enums"]["address_type"]
+          attention?: string | null
+          city?: string | null
+          country: string
           created_at?: string
           created_by?: string | null
-          fiscal_year_start_month?: number
-          functional_currency?: string
-          industry: Database["public"]["Enums"]["org_industry"]
-          legal_name?: string | null
-          name: string
-          org_id?: string
+          is_primary?: boolean
+          line1: string
+          line2?: string | null
+          org_id: string
+          postal_code?: string | null
+          region?: string | null
         }
         Update: {
+          address_id?: string
+          address_type?: Database["public"]["Enums"]["address_type"]
+          attention?: string | null
+          city?: string | null
+          country?: string
           created_at?: string
           created_by?: string | null
+          is_primary?: boolean
+          line1?: string
+          line2?: string | null
+          org_id?: string
+          postal_code?: string | null
+          region?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_addresses_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          accounting_framework: Database["public"]["Enums"]["accounting_framework"]
+          books_start_date: string | null
+          business_registration_number: string | null
+          business_structure: Database["public"]["Enums"]["business_structure"]
+          created_at: string
+          created_by: string | null
+          default_locale: string
+          default_payment_terms_days: number
+          default_report_basis: Database["public"]["Enums"]["report_basis"]
+          description: string | null
+          email: string | null
+          external_ids: Json
+          fiscal_year_start_month: number
+          functional_currency: string
+          gst_registration_date: string | null
+          industry: Database["public"]["Enums"]["org_industry"]
+          industry_id: string
+          legal_name: string | null
+          logo_storage_path: string | null
+          mfa_required: boolean
+          multi_currency_enabled: boolean
+          name: string
+          org_id: string
+          parent_org_id: string | null
+          phone: string | null
+          phone_country_code: string | null
+          status: Database["public"]["Enums"]["org_status"]
+          tax_registration_number: string | null
+          time_zone: string
+          website: string | null
+        }
+        Insert: {
+          accounting_framework?: Database["public"]["Enums"]["accounting_framework"]
+          books_start_date?: string | null
+          business_registration_number?: string | null
+          business_structure: Database["public"]["Enums"]["business_structure"]
+          created_at?: string
+          created_by?: string | null
+          default_locale?: string
+          default_payment_terms_days?: number
+          default_report_basis?: Database["public"]["Enums"]["report_basis"]
+          description?: string | null
+          email?: string | null
+          external_ids?: Json
           fiscal_year_start_month?: number
           functional_currency?: string
-          industry?: Database["public"]["Enums"]["org_industry"]
+          gst_registration_date?: string | null
+          industry: Database["public"]["Enums"]["org_industry"]
+          industry_id: string
           legal_name?: string | null
+          logo_storage_path?: string | null
+          mfa_required?: boolean
+          multi_currency_enabled?: boolean
+          name: string
+          org_id?: string
+          parent_org_id?: string | null
+          phone?: string | null
+          phone_country_code?: string | null
+          status?: Database["public"]["Enums"]["org_status"]
+          tax_registration_number?: string | null
+          time_zone?: string
+          website?: string | null
+        }
+        Update: {
+          accounting_framework?: Database["public"]["Enums"]["accounting_framework"]
+          books_start_date?: string | null
+          business_registration_number?: string | null
+          business_structure?: Database["public"]["Enums"]["business_structure"]
+          created_at?: string
+          created_by?: string | null
+          default_locale?: string
+          default_payment_terms_days?: number
+          default_report_basis?: Database["public"]["Enums"]["report_basis"]
+          description?: string | null
+          email?: string | null
+          external_ids?: Json
+          fiscal_year_start_month?: number
+          functional_currency?: string
+          gst_registration_date?: string | null
+          industry?: Database["public"]["Enums"]["org_industry"]
+          industry_id?: string
+          legal_name?: string | null
+          logo_storage_path?: string | null
+          mfa_required?: boolean
+          multi_currency_enabled?: boolean
           name?: string
           org_id?: string
+          parent_org_id?: string | null
+          phone?: string | null
+          phone_country_code?: string | null
+          status?: Database["public"]["Enums"]["org_status"]
+          tax_registration_number?: string | null
+          time_zone?: string
+          website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_industry_id_fkey"
+            columns: ["industry_id"]
+            isOneToOne: false
+            referencedRelation: "industries"
+            referencedColumns: ["industry_id"]
+          },
+          {
+            foreignKeyName: "organizations_parent_org_id_fkey"
+            columns: ["parent_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -1197,26 +1390,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      test_post_balanced_entry: {
+      get_profit_and_loss: {
         Args: {
           p_org_id: string
           p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_amount: number
         }
-        Returns: string
+        Returns: {
+          account_type: string
+          debit_total_cad: number
+          credit_total_cad: number
+        }[]
       }
-      test_post_unbalanced_entry: {
+      get_trial_balance: {
         Args: {
           p_org_id: string
           p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_debit_amount: number
-          p_credit_amount: number
         }
-        Returns: string
+        Returns: {
+          account_id: string
+          account_code: string
+          account_name: string
+          account_type: string
+          debit_total_cad: number
+          credit_total_cad: number
+        }[]
       }
       user_has_org_access: {
         Args: {
@@ -1233,6 +1430,8 @@ export type Database = {
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
+      accounting_framework: "aspe" | "ifrs" | "us_gaap" | "other"
+      address_type: "mailing" | "physical" | "registered" | "payment_stub"
       ai_action_status:
         | "pending"
         | "confirmed"
@@ -1240,6 +1439,13 @@ export type Database = {
         | "auto_posted"
         | "stale"
       autonomy_tier: "always_confirm" | "notify_auto" | "silent"
+      business_structure:
+        | "sole_prop"
+        | "partnership"
+        | "corporation"
+        | "trust"
+        | "non_profit"
+        | "other"
       confidence_level: "high" | "medium" | "low" | "novel"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
       journal_entry_source: "manual" | "agent" | "import"
@@ -1250,6 +1456,8 @@ export type Database = {
         | "trading"
         | "restaurant"
         | "holding_company"
+      org_status: "active" | "trial" | "suspended" | "archived" | "closed"
+      report_basis: "accrual" | "cash"
       user_role: "executive" | "controller" | "ap_specialist"
     }
     CompositeTypes: {

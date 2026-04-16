@@ -4,12 +4,27 @@ BEGIN;
 DELETE FROM organizations
 WHERE name IN ('Bridge Holding Co (DEV)', 'Bridge Real Estate Entity (DEV)');
 
--- 2. Create the two orgs with fixed UUIDs
-INSERT INTO organizations (org_id, name, legal_name, industry, functional_currency, fiscal_year_start_month) VALUES
+-- 2. Create the two orgs with fixed UUIDs.
+--    Phase 1.5A: industry_id (FK to industries) and business_structure
+--    are NOT NULL. industry_id is looked up by slug from the seeded
+--    industries table. The legacy industry enum column remains
+--    populated during the two-step migration cutover.
+INSERT INTO organizations (
+  org_id, name, legal_name, industry, industry_id, business_structure,
+  functional_currency, fiscal_year_start_month
+) VALUES
   ('11111111-1111-1111-1111-111111111111',
-   'Bridge Holding Co (DEV)', 'Bridge Holding Company Inc.', 'holding_company', 'CAD', 1),
+   'Bridge Holding Co (DEV)', 'Bridge Holding Company Inc.',
+   'holding_company',
+   (SELECT industry_id FROM industries WHERE slug = 'holding_company'),
+   'corporation',
+   'CAD', 1),
   ('22222222-2222-2222-2222-222222222222',
-   'Bridge Real Estate Entity (DEV)', 'Bridge Real Estate Holdings Ltd.', 'real_estate', 'CAD', 1);
+   'Bridge Real Estate Entity (DEV)', 'Bridge Real Estate Holdings Ltd.',
+   'real_estate',
+   (SELECT industry_id FROM industries WHERE slug = 'real_estate_operating'),
+   'corporation',
+   'CAD', 1);
 
 -- 3. Load CoA from templates into each org
 INSERT INTO chart_of_accounts (org_id, account_code, account_name, account_type, is_intercompany_capable)

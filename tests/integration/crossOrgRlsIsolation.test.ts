@@ -13,6 +13,8 @@ const TEST_IDS = {
   audit_real_estate: '99990003-0000-0000-0000-000000000002',
   ai_holding: '99990004-0000-0000-0000-000000000001',
   ai_real_estate: '99990004-0000-0000-0000-000000000002',
+  addr_holding: '99990005-0000-0000-0000-000000000001',
+  addr_real_estate: '99990005-0000-0000-0000-000000000002',
 } as const;
 
 describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
@@ -76,6 +78,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         entry_date: '2026-01-01',
         description: 'TEST RLS Holding',
         source: 'manual',
+        source_system: 'manual',
         entry_number: (maxHolding?.entry_number ?? 0) + 1,
       },
       {
@@ -85,6 +88,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         entry_date: '2026-01-01',
         description: 'TEST RLS Real Estate',
         source: 'manual',
+        source_system: 'manual',
         entry_number: (maxRE?.entry_number ?? 0) + 1,
       },
     ]);
@@ -132,6 +136,25 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     ]);
     if (aiErr) throw new Error(`Failed to insert ai_actions: ${aiErr.message}`);
 
+    // organization_addresses (Phase 1.5A — CA-10)
+    const { error: addrErr } = await db.from('organization_addresses').insert([
+      {
+        address_id: TEST_IDS.addr_holding,
+        org_id: SEED.ORG_HOLDING,
+        address_type: 'mailing',
+        line1: 'TEST RLS Addr Holding',
+        country: 'CA',
+      },
+      {
+        address_id: TEST_IDS.addr_real_estate,
+        org_id: SEED.ORG_REAL_ESTATE,
+        address_type: 'mailing',
+        line1: 'TEST RLS Addr RE',
+        country: 'CA',
+      },
+    ]);
+    if (addrErr) throw new Error(`Failed to insert organization_addresses: ${addrErr.message}`);
+
     apClient = await userClientFor('ap@thebridge.local', 'DevSeed!ApSpec#1');
   });
 
@@ -147,17 +170,21 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     await db.from('journal_entries').delete().in(
       'journal_entry_id', [TEST_IDS.je_holding, TEST_IDS.je_real_estate],
     );
+    await db.from('organization_addresses').delete().in(
+      'address_id', [TEST_IDS.addr_holding, TEST_IDS.addr_real_estate],
+    );
     await db.from('vendors').delete().in(
       'vendor_id', [TEST_IDS.vendor_holding, TEST_IDS.vendor_real_estate],
     );
   });
 
   // --- Parameterized RLS isolation tests ---
-  // Six tenant-scoped tables, each tested for cross-org read blocking
+  // Seven tenant-scoped tables, each tested for cross-org read blocking
   // and same-org read access. journal_lines and journal_entry_attachments
   // excluded — both are tenant-scoped via parent-table RLS inheritance
   // (journal_entries.org_id), so their isolation is transitively verified
   // by the journal_entries test here.
+  // Phase 1.5A: added organization_addresses to the parameterized set.
 
   describe.each([
     'chart_of_accounts',
@@ -166,6 +193,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     'vendors',
     'audit_log',
     'ai_actions',
+    'organization_addresses',
   ] as const)('RLS isolates %s across orgs', (tableName) => {
     it('AP Specialist cannot read holding company rows', async () => {
       const { data, error } = await apClient

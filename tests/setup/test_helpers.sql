@@ -19,8 +19,8 @@ BEGIN
     FROM journal_entries
     WHERE org_id = p_org_id AND fiscal_period_id = p_period_id;
 
-  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, entry_number)
-  VALUES (p_org_id, p_period_id, current_date, 'TEST UNBALANCED', 'manual', v_next_entry_number)
+  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, source_system, entry_number)
+  VALUES (p_org_id, p_period_id, current_date, 'TEST UNBALANCED', 'manual', 'manual', v_next_entry_number)
   RETURNING journal_entry_id INTO v_entry_id;
 
   INSERT INTO journal_lines (journal_entry_id, account_id, debit_amount, amount_original, amount_cad)
@@ -50,8 +50,8 @@ BEGIN
     FROM journal_entries
     WHERE org_id = p_org_id AND fiscal_period_id = p_period_id;
 
-  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, entry_number)
-  VALUES (p_org_id, p_period_id, current_date, 'TEST BALANCED', 'manual', v_next_entry_number)
+  INSERT INTO journal_entries (org_id, fiscal_period_id, entry_date, description, source, source_system, entry_number)
+  VALUES (p_org_id, p_period_id, current_date, 'TEST BALANCED', 'manual', 'manual', v_next_entry_number)
   RETURNING journal_entry_id INTO v_entry_id;
 
   INSERT INTO journal_lines (journal_entry_id, account_id, debit_amount, amount_original, amount_cad)

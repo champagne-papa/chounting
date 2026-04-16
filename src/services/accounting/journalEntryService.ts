@@ -108,6 +108,7 @@ async function post(
       description: parsed.description,
       reference: parsed.reference ?? null,
       source: parsed.source,
+      source_system: parsed.source,
       reverses_journal_entry_id:
         isReversal && 'reverses_journal_entry_id' in parsed
           ? (parsed as ReversalInput).reverses_journal_entry_id
