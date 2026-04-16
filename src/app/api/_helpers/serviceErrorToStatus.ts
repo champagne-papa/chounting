@@ -23,7 +23,14 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
 
     // Not found
     case 'NOT_FOUND':
+    case 'ORG_NOT_FOUND':
+    case 'ADDRESS_NOT_FOUND':
       return 404;
+
+    // Bad request (malformed or semantically invalid input)
+    case 'EXTERNAL_IDS_MALFORMED':
+    case 'ADDRESS_VALIDATION_FAILED':
+      return 400;
 
     // Business rule rejections (request is valid but can't be processed)
     case 'UNBALANCED':
@@ -31,6 +38,12 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'REVERSAL_CROSS_ORG':
     case 'REVERSAL_PARTIAL_NOT_SUPPORTED':
     case 'REVERSAL_NOT_MIRROR':
+    case 'ORG_IMMUTABLE_FIELD':
+    case 'INDUSTRY_NOT_FOUND':
+    case 'PARENT_ORG_NOT_FOUND':
+    case 'PARENT_ORG_IS_SELF':
+    case 'NO_COA_TEMPLATE_FOR_INDUSTRY':
+    case 'ADDRESS_TYPE_IMMUTABLE':
       return 422;
 
     // Server errors (unexpected failures)
@@ -43,6 +56,8 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'TEMPLATE_NOT_FOUND':
     case 'COA_LOAD_FAILED':
     case 'PERIOD_GENERATION_FAILED':
+    case 'ORG_UPDATE_FAILED':
+    case 'ADDRESS_WRITE_FAILED':
     default:
       return 500;
   }
