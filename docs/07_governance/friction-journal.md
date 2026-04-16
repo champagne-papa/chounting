@@ -814,3 +814,14 @@ Categories:
   service code (orgService extension + new addressService); eight
   API routes; types regeneration; ten Category A+B tests;
   exit-criteria matrix closeout.
+- 2026-04-15 WRONG  Migration 111 added source_system NOT NULL
+  without DEFAULT, breaking every existing test and the seed
+  script that directly inserts journal_entries rows. Phase 1.1's
+  test_helpers.sql and crossOrgRlsIsolation.test.ts needed
+  source_system: 'manual' added to their INSERT calls.
+  journalEntryService.post() also needed source_system: parsed.source.
+  dev.sql needed industry_id + business_structure added to the
+  organizations INSERT. Fix was mechanical but should have been
+  caught before running the existing suite — future additive
+  NOT NULL columns with no DEFAULT should include a "what breaks"
+  grep checklist in the brief.
