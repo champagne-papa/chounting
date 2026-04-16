@@ -1,4 +1,25 @@
-# Where I am as of 2026-04-15 (Phase 1.5A in flight)
+# Where I am as of 2026-04-15 (Phase 1.5B in flight)
+
+## Phase 1.5B — Users, Invitations, and MFA Enforcement (in flight)
+
+Execution brief at `docs/09_briefs/phase-1.5/1.5B-brief.md`.
+Second of three sub-phases (1.5A complete, 1.5B this brief, 1.5C
+permissions refactor).
+
+**1.5B scope:** `user_profiles` table (auto-created on first login),
+`org_invitations` table (hashed-token invitation flow, 7-day
+expiry), `memberships` lifecycle extension (`status` column:
+active/invited/suspended/removed + `is_org_owner` partial unique),
+MFA enforcement middleware (redirect to TOTP enrollment when org
+requires MFA), login/logout audit events, 12 new API routes, 4 new
+ActionName permission keys, 10 new audit action keys, 13 Category A
+floor tests.
+
+**1.5B out-of-scope:** email delivery for invitations, avatar upload
+UI, ownership transfer, MFA recovery codes, expired invitation
+cleanup cron.
+
+---
 
 ## Phase 1.5A — Organization Profile Expansion (complete, 2026-04-15)
 

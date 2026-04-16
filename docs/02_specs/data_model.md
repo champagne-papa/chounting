@@ -341,6 +341,100 @@ Part 2 for the full policy SQL.
 
 ---
 
+### `user_profiles`
+
+*Added in Phase 1.5B (`20240112000000_user_profiles.sql`).*
+
+Application-owned user profile. Supabase Auth owns identity (email,
+password, MFA); this table owns display info, preferences, and
+login tracking. Auto-created on first login via
+`userProfileService.getOrCreateProfile()`.
+
+```sql
+CREATE TABLE user_profiles (
+  user_id               uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name            text,
+  last_name             text,
+  display_name          text,
+  avatar_storage_path   text,
+  phone                 text,
+  phone_country_code    text,
+  preferred_locale      text,
+  preferred_timezone    text,
+  last_login_at         timestamptz,
+  created_at            timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**`display_name` fallback** is handled by the service layer, not
+the DB: `display_name ?? (first_name + ' ' + last_name).trim()
+?? email`.
+
+**Named CHECK constraints:**
+
+- `profile_phone_country_code_shape` — same regex as
+  `org_country_phone_code_shape` on `organizations`.
+
+**RLS.** Users see their own profile (`user_id = auth.uid()`).
+Controllers see profiles of all members in their orgs (via a join
+to `memberships` with `user_is_controller`). No INSERT/UPDATE/DELETE
+policies — mutations go through `userProfileService` via
+`adminClient`.
+
+---
+
+### `org_invitations`
+
+*Added in Phase 1.5B (`20240114000000_org_invitations.sql`).*
+
+Invitation-based org membership onboarding. A controller invites
+a user by email; the service generates a crypto token, stores only
+the bcrypt hash, and returns the plaintext for out-of-band sharing.
+The invitee accepts by providing the plaintext, which the service
+bcrypt-compares against stored hashes. Email delivery is Phase 2
+(SMTP not configured in 1.5B).
+
+```sql
+CREATE TABLE org_invitations (
+  invitation_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id               uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  invited_email        text NOT NULL,
+  invited_by_user_id   uuid NOT NULL REFERENCES auth.users(id),
+  role                 user_role NOT NULL,
+  token_hash           text NOT NULL,
+  expires_at           timestamptz NOT NULL DEFAULT (now() + interval '7 days'),
+  accepted_at          timestamptz,
+  accepted_by_user_id  uuid REFERENCES auth.users(id),
+  status               invitation_status NOT NULL DEFAULT 'pending',
+  created_at           timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**Named CHECK constraints:**
+
+- `invitation_email_lowercase` — `invited_email =
+  lower(invited_email)`. Prevents mixed-case duplicates.
+- `invitation_accepted_consistency` — accepted invitations must
+  carry `accepted_at` and `accepted_by_user_id`.
+
+**Named UNIQUE constraints:**
+
+- `idx_invitation_pending_email` — partial unique on `(org_id,
+  invited_email) WHERE status = 'pending'`. Only one pending invite
+  per email per org.
+
+**RLS.** Controller-only SELECT via `user_is_controller(org_id)`.
+No write policies — mutations go through `invitationService` via
+`adminClient`.
+
+**Indexes:**
+
+- `idx_invitation_pending_email` — partial unique (see above).
+- `idx_invitations_org_status` on `(org_id, status)` — supports
+  list-pending-invitations query.
+
+---
+
 ### `memberships`
 
 The user-to-org mapping. A user has a `role` within each org they
@@ -348,16 +442,47 @@ belong to, and a user can belong to multiple orgs. The `UNIQUE
 (user_id, org_id)` constraint ensures exactly one role per user per
 org.
 
+**Phase 1.5B extended this table** with `status` (membership
+lifecycle), `is_org_owner` (partial unique, one per org),
+`invited_via` (FK to `org_invitations`), and suspend/remove
+tracking columns. The column list below reflects the post-1.5B
+state.
+
 ```sql
 CREATE TABLE memberships (
   membership_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id        uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
   role          user_role NOT NULL,
+  status        membership_status NOT NULL DEFAULT 'active',
+  invited_via   uuid REFERENCES org_invitations(invitation_id),
+  is_org_owner  boolean NOT NULL DEFAULT false,
+  suspended_at  timestamptz,
+  suspended_by  uuid REFERENCES auth.users(id),
+  removed_at    timestamptz,
+  removed_by    uuid REFERENCES auth.users(id),
   created_at    timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, org_id)
 );
 ```
+
+**`status`** is the `membership_status` enum: `active`, `invited`,
+`suspended`, `removed`. The `removed` status is a soft-remove —
+the row stays for audit trail. RLS helpers
+`user_has_org_access()` and `user_is_controller()` both filter
+`AND status = 'active'`, making suspended and removed users
+invisible to operational queries without touching any RLS policy
+SQL. Service-layer queries (`buildServiceContext`,
+`canUserPerformAction`, `getMembership`, `listForUser`) also
+filter to `status = 'active'`.
+
+**`is_org_owner`** — exactly one membership per org can be the
+owner. Enforced by a partial unique index
+`idx_memberships_org_owner ON memberships (org_id) WHERE
+is_org_owner = true`. The org owner cannot be suspended, removed,
+or have their role changed away from controller. These are
+service-layer guards, not DB constraints (except for
+`membership_owner_must_be_controller` CHECK).
 
 **`role`** is the `user_role` enum: `executive`, `controller`, or
 `ap_specialist`. Each role has different permissions — see
@@ -367,11 +492,15 @@ tenant-write policies that require elevated permissions (e.g.,
 `fiscal_periods_insert`).
 
 **`ON DELETE CASCADE` on both `user_id` and `org_id`.** The cascade
-behavior is load-bearing for seed script reliability: when a test
-tears down by deleting an auth user or an organization, the
-membership rows clean up automatically. Without the cascade, seed
-cleanup would leave orphaned `memberships` rows that violate the
-foreign key on the next test run.
+behavior is load-bearing for seed script reliability.
+
+**Named CHECK constraints (Phase 1.5B):**
+
+- `membership_owner_must_be_controller` —
+  `NOT is_org_owner OR role = 'controller'`. An org owner must
+  have `role = 'controller'`. Prevents the race where
+  `changeUserRole` demotes an owner without first transferring
+  ownership.
 
 **Indexes:**
 
@@ -379,9 +508,9 @@ foreign key on the next test run.
   `user_has_org_access()` helper function lookups during RLS
   evaluation.
 - `idx_memberships_org` on `(org_id)` — supports membership list
-  queries (e.g., "list all users in this org").
-
-**No named CHECKs, no triggers, no INV cross-references.**
+  queries.
+- `idx_memberships_org_owner` on `(org_id) WHERE is_org_owner =
+  true` (Phase 1.5B) — partial unique, at most one owner per org.
 
 ---
 
@@ -1349,6 +1478,9 @@ Performance Conventions.
 | `organization_addresses` | `idx_org_addr_primary` (partial unique) | Enforce one primary per (org_id, address_type) |
 | `organization_addresses` | `idx_org_addr_org` | List addresses by org and type |
 | `journal_entries` | `idx_je_source_external` (partial unique) | Prevent double-ingestion from external systems (Phase 1.5A) |
+| `memberships` | `idx_memberships_org_owner` (partial unique) | One org owner per org (Phase 1.5B) |
+| `org_invitations` | `idx_invitation_pending_email` (partial unique) | One pending invitation per email per org (Phase 1.5B) |
+| `org_invitations` | `idx_invitations_org_status` | List pending invitations by org (Phase 1.5B) |
 
 **Partial indexes** (`idx_je_org_intercompany` and `idx_je_reverses`)
 cover only rows where the indexed column is non-NULL. This keeps
@@ -1700,6 +1832,42 @@ controller-only as defense-in-depth (see
 remains the looser of the two authorization layers so an
 accidental service-layer weakening does not collapse authorization
 to "any authenticated user."
+
+### `user_profiles`
+
+*Added in Phase 1.5B (`20240112000000_user_profiles.sql`).*
+
+```sql
+CREATE POLICY user_profiles_select_own ON user_profiles
+  FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY user_profiles_select_org ON user_profiles
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM memberships m
+      WHERE m.user_id = user_profiles.user_id
+        AND user_is_controller(m.org_id)
+    )
+  );
+```
+
+**Deviation from standard pattern.** Two SELECT policies: users
+see their own profile row (user-scoped), and controllers see
+profiles of users in their orgs (for the org user-list view). No
+INSERT/UPDATE/DELETE policies — mutations go through
+`userProfileService` via `adminClient`.
+
+### `org_invitations`
+
+*Added in Phase 1.5B (`20240114000000_org_invitations.sql`).*
+
+```sql
+CREATE POLICY org_invitations_select ON org_invitations
+  FOR SELECT USING (user_is_controller(org_id));
+```
+
+**Deviation from standard pattern.** Controller-only SELECT — only
+controllers see invitations for their orgs. No write policies —
+mutations go through `invitationService` via `adminClient`.
 
 ### `fiscal_periods`
 
@@ -2159,6 +2327,11 @@ exists so a reader can find the deviations at a glance:
   for SELECT/INSERT, `user_is_controller` for UPDATE/DELETE. The
   service layer further restricts INSERT to controllers as
   defense-in-depth.
+- **`user_profiles`** (Phase 1.5B) — user-scoped SELECT
+  (`user_id = auth.uid()`) plus controller-scoped SELECT (for
+  users in the controller's orgs). No write policies.
+- **`org_invitations`** (Phase 1.5B) — controller-only SELECT via
+  `user_is_controller(org_id)`. No write policies.
 - **`memberships`** — user-scoped SELECT (own rows) plus
   controller-scoped SELECT (all rows in the org); no policies for
   writes.

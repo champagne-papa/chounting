@@ -825,3 +825,10 @@ Categories:
   caught before running the existing suite — future additive
   NOT NULL columns with no DEFAULT should include a "what breaks"
   grep checklist in the brief.
+- 2026-04-15 NOTE   Phase 1.5B execution session start. Brief
+  approved at docs/09_briefs/phase-1.5/1.5B-brief.md. Six OQs
+  resolved: OQ-01 (ownership transfer deferred), OQ-02 (token
+  format {invitation_id}:{random} — O(1) PK lookup), OQ-03
+  (last_login_at on sign-in only), OQ-04 (audit_log.org_id
+  nullable for auth events), OQ-05 (bcryptjs, no native build),
+  OQ-06 (lazy expiration at query time).
