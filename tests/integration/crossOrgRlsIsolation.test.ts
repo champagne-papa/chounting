@@ -178,6 +178,34 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     );
   });
 
+  // --- Phase 1.5C: permissions catalog RLS ---
+  describe('RLS on permission catalog tables', () => {
+    it('CA-37: permissions table readable by any authenticated user', async () => {
+      const { data, error } = await apClient
+        .from('permissions')
+        .select('permission_key');
+      expect(error).toBeNull();
+      expect(data!.length).toBe(16);
+    });
+
+    it('CA-37: role_permissions readable by any authenticated user', async () => {
+      const { data, error } = await apClient
+        .from('role_permissions')
+        .select('role_id, permission_key');
+      expect(error).toBeNull();
+      expect(data!.length).toBe(22);
+    });
+
+    it('CA-37: roles shows system roles to any authenticated user', async () => {
+      const { data, error } = await apClient
+        .from('roles')
+        .select('role_key, is_system')
+        .eq('is_system', true);
+      expect(error).toBeNull();
+      expect(data!.length).toBe(3);
+    });
+  });
+
   // --- Phase 1.5B: user_profiles cross-org isolation ---
   // user_profiles uses user-scoped + controller-scoped RLS, not org-scoped.
   // AP Specialist in RE org should NOT see holding-company controller's profile
