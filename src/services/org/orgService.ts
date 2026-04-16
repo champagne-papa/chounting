@@ -192,10 +192,17 @@ export const orgService = {
     }
 
     // 5. Auto-create the calling user's membership as 'controller' + org owner.
+    //    Cutover window: write both role (legacy enum) and role_id (new FK).
+    const { data: controllerRole } = await db
+      .from('roles')
+      .select('role_id')
+      .eq('role_key', 'controller')
+      .single();
     await db.from('memberships').insert({
       user_id: ctx.caller.user_id,
       org_id: org.org_id,
       role: 'controller',
+      role_id: controllerRole!.role_id,
       status: 'active',
       is_org_owner: true,
     });

@@ -60,9 +60,20 @@ export const membershipService = {
       throw new ServiceError('OWNER_ROLE_CHANGE_DENIED', 'Cannot change org owner role away from controller. Transfer ownership first.');
     }
 
+    // Cutover window: write both role (legacy enum) and role_id (new FK).
+    const { data: newRoleRow, error: roleErr } = await db
+      .from('roles')
+      .select('role_id')
+      .eq('role_key', input.new_role)
+      .eq('is_system', true)
+      .single();
+    if (roleErr || !newRoleRow) {
+      throw new ServiceError('MEMBERSHIP_NOT_FOUND', `No system role found for role_key=${input.new_role}`);
+    }
+
     const { error } = await db
       .from('memberships')
-      .update({ role: input.new_role })
+      .update({ role: input.new_role, role_id: newRoleRow.role_id })
       .eq('membership_id', membership.membership_id);
 
     if (error) throw new ServiceError('MEMBERSHIP_NOT_FOUND', error.message);

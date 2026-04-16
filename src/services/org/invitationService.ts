@@ -147,12 +147,24 @@ export const invitationService = {
     }
 
     // Create active membership for the acceptor.
+    // Cutover window: write both role (legacy enum) and role_id (new FK).
+    const { data: roleRow } = await db
+      .from('roles')
+      .select('role_id')
+      .eq('role_key', invitation.role)
+      .eq('is_system', true)
+      .single();
+    if (!roleRow) {
+      throw new ServiceError('INVITATION_WRITE_FAILED', `No system role found for role_key=${invitation.role}`);
+    }
+
     const { data: membership, error: memErr } = await db
       .from('memberships')
       .insert({
         user_id: ctx.caller.user_id,
         org_id: invitation.org_id,
         role: invitation.role,
+        role_id: roleRow.role_id,
         status: 'active',
         invited_via: invitationId,
       })

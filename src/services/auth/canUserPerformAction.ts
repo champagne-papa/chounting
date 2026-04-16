@@ -1,40 +1,42 @@
 // src/services/auth/canUserPerformAction.ts
-// INV-AUTH-001 (permission source): the role-action matrix below is the authoritative Phase 1.1 permission source. Called by withInvariants() pre-flight Invariant 4.
-// Authorization check: given a caller's role in an org, can they perform
-// a specific action? Called by withInvariants() as a pre-flight gate.
+// INV-AUTH-001 (permission source): the permissions table + role_permissions
+// join are the authoritative permission source as of Phase 1.5C. Called by
+// withInvariants() pre-flight Invariant 4.
 //
-// Role hierarchy (Phase 1.1):
-//   controller    — full access (all actions)
-//   ap_specialist — post journal entries, read chart of accounts
-//   executive     — read-only across the board
+// Phase 1.5C rewrite: replaced the ROLE_PERMISSIONS TypeScript map with
+// a two-query SQL lookup against role_permissions. Same signature, same
+// behavior, same return type. Every existing withInvariants call site
+// works unchanged.
+//
+// Convention: ACTION_NAMES is the runtime constant array that the
+// ActionName type derives from. A parity test (CA-27) asserts
+// set-equality between ACTION_NAMES and the permissions table.
+// Adding a new permission requires updating ACTION_NAMES AND seeding
+// a permissions row in a migration.
 
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { adminClient } from '@/db/adminClient';
 
-export type ActionName =
-  | 'journal_entry.post'
-  | 'chart_of_accounts.read'
-  | 'chart_of_accounts.write'
-  | 'period.lock'
-  | 'org.create'
-  | 'audit_log.read'
-  | 'ai_actions.read'
-  // Phase 1.5A — org profile + addresses (controller-only).
-  // Imperative-verb namespace = PERMISSION to perform.
-  // Past-tense audit action column values ('org.profile_updated',
-  // 'org.address_added', etc.) are a DIFFERENT namespace —
-  // recorded in audit_log.action by the service layer after a
-  // mutation succeeds. Do not merge the two.
-  | 'org.profile.update'
-  | 'org.address.create'
-  | 'org.address.update'
-  | 'org.address.delete'
-  | 'org.address.set_primary'
-  // Phase 1.5B — users + invitations (controller-only)
-  | 'user.invite'
-  | 'user.role.change'
-  | 'user.suspend'
-  | 'user.remove';
+export const ACTION_NAMES = [
+  'journal_entry.post',
+  'chart_of_accounts.read',
+  'chart_of_accounts.write',
+  'period.lock',
+  'org.create',
+  'audit_log.read',
+  'ai_actions.read',
+  'org.profile.update',
+  'org.address.create',
+  'org.address.update',
+  'org.address.delete',
+  'org.address.set_primary',
+  'user.invite',
+  'user.role.change',
+  'user.suspend',
+  'user.remove',
+] as const;
+
+export type ActionName = typeof ACTION_NAMES[number];
 
 export type UserRole = 'executive' | 'controller' | 'ap_specialist';
 
@@ -43,82 +45,53 @@ export interface AuthorizationResult {
   reason: string;
 }
 
-// Which actions each role is allowed to perform.
-const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<ActionName>> = {
-  controller: new Set<ActionName>([
-    'journal_entry.post',
-    'chart_of_accounts.read',
-    'chart_of_accounts.write',
-    'period.lock',
-    'org.create',
-    'audit_log.read',
-    'ai_actions.read',
-    // Phase 1.5A — controller-only profile + address mutations
-    'org.profile.update',
-    'org.address.create',
-    'org.address.update',
-    'org.address.delete',
-    'org.address.set_primary',
-    // Phase 1.5B
-    'user.invite',
-    'user.role.change',
-    'user.suspend',
-    'user.remove',
-  ]),
-  ap_specialist: new Set<ActionName>([
-    'journal_entry.post',
-    'chart_of_accounts.read',
-    'ai_actions.read',
-  ]),
-  executive: new Set<ActionName>([
-    'chart_of_accounts.read',
-    'audit_log.read',
-    'ai_actions.read',
-  ]),
-};
-
-/**
- * Checks whether the caller in the given ServiceContext is permitted to
- * perform `action` against `orgId`. Looks up the caller's role in the
- * memberships table, then checks the static permission map.
- *
- * Returns a typed result — never throws for a "not permitted" case.
- * The caller (withInvariants) decides whether to throw.
- */
 export async function canUserPerformAction(
   ctx: ServiceContext,
   action: ActionName,
   orgId: string,
 ): Promise<AuthorizationResult> {
+  // Adjustment 2: short-circuit when the org isn't in the caller's
+  // active membership set. ctx.caller.org_ids is populated by
+  // buildServiceContext from memberships WHERE status = 'active'.
+  if (ctx.caller.org_ids && !ctx.caller.org_ids.includes(orgId)) {
+    return { permitted: false, reason: `User has no membership in org_id=${orgId}` };
+  }
+
   const db = adminClient();
 
-  const { data: membership, error } = await db
+  // Query 1: look up the caller's active membership to get role_id.
+  const { data: membership, error: memErr } = await db
     .from('memberships')
-    .select('role')
+    .select('role_id')
     .eq('user_id', ctx.caller.user_id)
     .eq('org_id', orgId)
     .eq('status', 'active')
     .maybeSingle();
 
-  if (error) {
-    return { permitted: false, reason: `Membership lookup failed: ${error.message}` };
+  if (memErr) {
+    return { permitted: false, reason: `Membership lookup failed: ${memErr.message}` };
   }
 
   if (!membership) {
     return { permitted: false, reason: `No membership for user in org_id=${orgId}` };
   }
 
-  const role = membership.role as UserRole;
-  const allowedActions = ROLE_PERMISSIONS[role];
+  // Query 2: check if the role has the requested permission.
+  const { data: perm, error: permErr } = await db
+    .from('role_permissions')
+    .select('permission_key')
+    .eq('role_id', membership.role_id)
+    .eq('permission_key', action)
+    .maybeSingle();
 
-  if (!allowedActions) {
-    return { permitted: false, reason: `Unknown role: ${role}` };
+  if (permErr) {
+    return { permitted: false, reason: `Permission lookup failed: ${permErr.message}` };
   }
 
-  if (!allowedActions.has(action)) {
+  if (!perm) {
     return {
       permitted: false,
-      reason: `Role '${role}' is not permitted to perform '${action}'`,
+      reason: `Role does not have permission '${action}'`,
     };
   }
 

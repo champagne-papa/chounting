@@ -1011,6 +1011,7 @@ export type Database = {
           removed_at: string | null
           removed_by: string | null
           role: Database["public"]["Enums"]["user_role"]
+          role_id: string
           status: Database["public"]["Enums"]["membership_status"]
           suspended_at: string | null
           suspended_by: string | null
@@ -1025,6 +1026,7 @@ export type Database = {
           removed_at?: string | null
           removed_by?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          role_id: string
           status?: Database["public"]["Enums"]["membership_status"]
           suspended_at?: string | null
           suspended_by?: string | null
@@ -1039,6 +1041,7 @@ export type Database = {
           removed_at?: string | null
           removed_by?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          role_id?: string
           status?: Database["public"]["Enums"]["membership_status"]
           suspended_at?: string | null
           suspended_by?: string | null
@@ -1058,6 +1061,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "memberships_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["role_id"]
           },
         ]
       }
@@ -1316,6 +1326,107 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_name: string
+          permission_key: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          permission_key: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          permission_key?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          granted_at: string
+          permission_key: string
+          role_id: string
+        }
+        Insert: {
+          granted_at?: string
+          permission_key: string
+          role_id: string
+        }
+        Update: {
+          granted_at?: string
+          permission_key?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["permission_key"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["role_id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          is_system: boolean
+          org_id: string | null
+          role_id: string
+          role_key: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          is_system?: boolean
+          org_id?: string | null
+          role_id?: string
+          role_key: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          is_system?: boolean
+          org_id?: string | null
+          role_id?: string
+          role_key?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       tax_codes: {
         Row: {
           code: string
@@ -1535,9 +1646,37 @@ export type Database = {
           credit_total_cad: number
         }[]
       }
+      test_post_balanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_amount: number
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_debit_amount: number
+          p_credit_amount: number
+        }
+        Returns: string
+      }
       user_has_org_access: {
         Args: {
           target_org_id: string
+        }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: {
+          target_org_id: string
+          target_permission_key: string
         }
         Returns: boolean
       }

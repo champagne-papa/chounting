@@ -9,6 +9,7 @@ export interface Membership {
   user_id: string;
   org_id: string;
   role: UserRole;
+  role_id: string;
 }
 
 /**
@@ -24,7 +25,7 @@ export async function getMembership(
 
   const { data, error } = await db
     .from('memberships')
-    .select('user_id, org_id, role')
+    .select('user_id, org_id, role, role_id')
     .eq('user_id', userId)
     .eq('org_id', orgId)
     .eq('status', 'active')
@@ -36,5 +37,6 @@ export async function getMembership(
     user_id: data.user_id,
     org_id: data.org_id,
     role: data.role as UserRole,
+    role_id: data.role_id as string,
   };
 }

@@ -41,20 +41,20 @@ SELECT
 FROM chart_of_accounts_templates
 WHERE industry = 'real_estate';
 
--- 4. Memberships (Phase 1.5B: status + is_org_owner)
+-- 4. Memberships (Phase 1.5B: status + is_org_owner, Phase 1.5C: role_id)
 -- Executive: access to BOTH orgs
-INSERT INTO memberships (user_id, org_id, role, status) VALUES
-  ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'executive', 'active'),
-  ('00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'executive', 'active');
+INSERT INTO memberships (user_id, org_id, role, role_id, status) VALUES
+  ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'executive', (SELECT role_id FROM roles WHERE role_key = 'executive'), 'active'),
+  ('00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'executive', (SELECT role_id FROM roles WHERE role_key = 'executive'), 'active');
 
 -- Controller: access to BOTH orgs, is_org_owner for each
-INSERT INTO memberships (user_id, org_id, role, status, is_org_owner) VALUES
-  ('00000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'controller', 'active', true),
-  ('00000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'controller', 'active', true);
+INSERT INTO memberships (user_id, org_id, role, role_id, status, is_org_owner) VALUES
+  ('00000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'controller', (SELECT role_id FROM roles WHERE role_key = 'controller'), 'active', true),
+  ('00000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'controller', (SELECT role_id FROM roles WHERE role_key = 'controller'), 'active', true);
 
 -- AP Specialist: access to ONLY the Real Estate org (proves the role-aware switcher)
-INSERT INTO memberships (user_id, org_id, role, status) VALUES
-  ('00000000-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'ap_specialist', 'active');
+INSERT INTO memberships (user_id, org_id, role, role_id, status) VALUES
+  ('00000000-0000-0000-0000-000000000003', '22222222-2222-2222-2222-222222222222', 'ap_specialist', (SELECT role_id FROM roles WHERE role_key = 'ap_specialist'), 'active');
 
 -- 4b. User profiles for seed users (Phase 1.5B)
 INSERT INTO user_profiles (user_id, first_name, last_name, display_name)
