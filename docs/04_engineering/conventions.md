@@ -82,6 +82,90 @@ Day 1 requirement, not an afterthought.
 
 ---
 
+## Phase 1.5A Conventions (established 2026-04-15)
+
+These conventions were established during Phase 1.5A execution and
+are load-bearing going forward. Deviating from any of them requires
+an ADR before the code.
+
+### Permission Keys vs Audit Action Keys
+
+Two distinct string namespaces that must not be merged:
+
+- **Permission keys** (used in `canUserPerformAction` ActionName
+  type and `withInvariants({ action })` calls): **imperative
+  verbs**, dot-separated. Examples: `org.profile.update`,
+  `org.address.create`, `journal_entry.post`, `period.lock`.
+  These answer "what may the caller do?"
+
+- **Audit action keys** (written to `audit_log.action` by
+  `recordMutation`): **past-tense verbs**. Examples:
+  `org.profile_updated`, `org.address_added`,
+  `org.address_removed`. These answer "what happened?"
+
+Phase 1.1 established this split implicitly; Phase 1.5A made it
+explicit after catching a collision where both namespaces used the
+same past-tense strings.
+
+### API Boundary Casing
+
+Schemas under `src/shared/schemas/organization/` use **camelCase**
+field names on the API boundary. The service layer maps camelCase →
+snake_case DB columns via dedicated helper functions
+(`profilePatchToDbColumns`, `addressInputToDbColumns`).
+
+The only non-1:1 mapping is `baseCurrency` → `functional_currency`.
+
+The earlier `src/shared/schemas/accounting/` schemas predate this
+convention and use snake_case directly. Do not mix conventions
+within a subdirectory; do match the existing convention when adding
+to an existing subdirectory.
+
+### Audit `before_state` Convention
+
+- **Inserts**: `before_state = null` (explicitly passed as
+  `before_state: undefined` in the service call so the absence is
+  deliberate, not accidental). The row did not exist before.
+- **Updates and deletes**: `before_state` = full pre-mutation
+  entity row as `jsonb`. Consumers reconstruct field-level diffs
+  by comparing `before_state` to the current row.
+
+This convention means the presence/absence of `before_state`
+distinguishes "created" from "mutated" when reading the audit log.
+
+### Zod Schema Strictness
+
+Both create schemas and update-patch schemas use `.strict()`.
+Typos in payload field names fail loudly with "Unrecognized key"
+rather than being silently ignored. Adding a new field requires
+editing the schema — matching the "schema change, not silent
+write" rule also used by `externalIds.schema.ts` passthrough.
+
+### Migration Review Cadence
+
+Stop after each migration for review before writing the next.
+Phase 1.5A's four-migration sequence used this cadence and caught
+two issues early (seed count drift, ActionName collision) that
+would have been harder to untangle in a larger commit.
+
+### NOT NULL Column Blast Radius
+
+When a brief adds a `NOT NULL` column **without a DEFAULT** to an
+existing table, include a "blast radius" section listing every
+file that inserts into that table. Generate the list with:
+
+```bash
+grep -rn "INSERT INTO <table>" --include="*.ts" --include="*.sql" src/ tests/
+```
+
+Phase 1.5A's `source_system NOT NULL` on `journal_entries` broke
+four files (`journalEntryService.ts`, `crossOrgRlsIsolation.test.ts`,
+both SQL test helpers, plus `dev.sql`). All fixes were mechanical
+but should have been pre-identified in the brief. See
+`docs/07_governance/friction-journal.md` entry 2026-04-15.
+
+---
+
 ## Appendix: Worked Example — Posting a Journal Entry
 
 This worked example demonstrates the entire Phase 1 stack end-to-end
