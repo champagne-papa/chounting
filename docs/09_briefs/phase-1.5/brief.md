@@ -1188,6 +1188,14 @@ service writes the **full pre-mutation entity row** to
 field-level diffs by comparing `before_state` against either the
 current entity state or a subsequent audit row's `before_state`.
 
+**Inserts carry null `before_state` by convention.** For action
+keys that represent creation (`org.address_added`), `before_state`
+is `NULL` — the row did not exist before. This is the
+distinguishing signal between "created" and "mutated" audit rows
+when reading the log. The service layer passes `before_state:
+undefined` explicitly on insert audit calls so the absence is
+deliberate rather than accidental; the DB column writes as `NULL`.
+
 ### 12.2 Why coarse action keys
 
 An alternative design writes one audit row per changed field

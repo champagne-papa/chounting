@@ -5,9 +5,16 @@
 // withInvariants() with a controller-only ActionName.
 // INV-SERVICE-002 adminClient discipline: all DB access via adminClient.
 //
-// Phase 1.5A — controller-only address mutations on
-// organization_addresses. Audit-logged with full before_state
-// per brief §12.
+// Phase 1.5A — address mutations on organization_addresses.
+// Audit-logged with full before_state per brief §12.
+//
+// Authorization posture: these functions do NOT enforce
+// permissions themselves. Per INV-SERVICE-001 the controller-only
+// gate lives in the route handler that wraps each call with
+// withInvariants(..., { action: 'org.address.create' })
+// (or .update / .delete / .set_primary). The wrapper runs
+// canUserPerformAction against ROLE_PERMISSIONS before the
+// function body executes; the service file is permission-agnostic.
 //
 // "Auto-demote" pattern: addAddress and updateAddress with
 // is_primary = true demote any existing primary for the same
@@ -91,11 +98,14 @@ async function demoteCurrentPrimary(
 
 export const addressService = {
   /**
-   * Adds an address to an org. Controller-only via
-   * canUserPerformAction('org.address_added'). If is_primary=true,
-   * any existing primary for the same (org_id, address_type) pair
-   * is auto-demoted in the same transaction (logical) so the
-   * partial unique index doesn't reject.
+   * Adds an address to an org. Controller-only when invoked through
+   * the API route (route handler wraps with
+   * withInvariants(..., { action: 'org.address.create' })).
+   * This function does not enforce permissions; the wrapper does.
+   *
+   * If isPrimary=true, any existing primary for the same
+   * (org_id, address_type) pair is auto-demoted (logical
+   * transaction) so the partial unique index does not reject.
    */
   async addAddress(
     input: { org_id: string } & AddAddressInput,
@@ -139,11 +149,15 @@ export const addressService = {
 
     // Audit: one row for the insert; if a previous primary was
     // demoted, emit a second row for that change too (per OQ-06).
+    // before_state = null is explicit: the row did not exist before
+    // this insert. Inserts have null before_state by convention;
+    // updates and deletes carry the full pre-mutation row.
     await recordMutation(db, ctx, {
       org_id,
       action: 'org.address_added',
       entity_type: 'organization_address',
       entity_id: inserted.address_id,
+      before_state: undefined,
     });
 
     if (demoted) {

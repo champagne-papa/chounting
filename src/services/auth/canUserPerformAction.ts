@@ -19,12 +19,17 @@ export type ActionName =
   | 'org.create'
   | 'audit_log.read'
   | 'ai_actions.read'
-  // Phase 1.5A — org profile + addresses (controller-only)
-  | 'org.profile_updated'
-  | 'org.address_added'
-  | 'org.address_updated'
-  | 'org.address_removed'
-  | 'org.address_primary_changed';
+  // Phase 1.5A — org profile + addresses (controller-only).
+  // Imperative-verb namespace = PERMISSION to perform.
+  // Past-tense audit action column values ('org.profile_updated',
+  // 'org.address_added', etc.) are a DIFFERENT namespace —
+  // recorded in audit_log.action by the service layer after a
+  // mutation succeeds. Do not merge the two.
+  | 'org.profile.update'
+  | 'org.address.create'
+  | 'org.address.update'
+  | 'org.address.delete'
+  | 'org.address.set_primary';
 
 export type UserRole = 'executive' | 'controller' | 'ap_specialist';
 
@@ -44,11 +49,11 @@ const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<ActionName>> = {
     'audit_log.read',
     'ai_actions.read',
     // Phase 1.5A — controller-only profile + address mutations
-    'org.profile_updated',
-    'org.address_added',
-    'org.address_updated',
-    'org.address_removed',
-    'org.address_primary_changed',
+    'org.profile.update',
+    'org.address.create',
+    'org.address.update',
+    'org.address.delete',
+    'org.address.set_primary',
   ]),
   ap_specialist: new Set<ActionName>([
     'journal_entry.post',

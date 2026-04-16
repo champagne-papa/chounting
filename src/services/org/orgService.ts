@@ -115,18 +115,12 @@ export const orgService = {
       );
     }
 
-    // 2. parent_org_id sanity (FK enforces existence; we add the
-    //    not-self check pre-flight for a cleaner error message than
-    //    the org_parent_is_not_self CHECK would give).
-    if (parsed.parentOrgId && parsed.parentOrgId === parsed.industryId) {
-      // (industryId is uuid-shaped but not an org id; the real
-      // not-self check fires after we have the new org_id, but
-      // since we don't yet have org_id at insert time, the only
-      // way parentOrgId could equal the new org_id is if the
-      // caller pre-allocated one — which we don't permit. Skipping.)
-    }
+    // parent_org_id self-reference is impossible at create time
+    // (the new org_id is DB-generated). The org_parent_is_not_self
+    // CHECK catches the impossible case if it ever arises via
+    // some future flow. No pre-flight check needed here.
 
-    // 3. Assemble the insert row from the parsed input + bridge.
+    // 2. Assemble the insert row from the parsed input + bridge.
     const baseRow = profilePatchToDbColumns({
       name: parsed.name,
       legalName: parsed.legalName ?? null,
