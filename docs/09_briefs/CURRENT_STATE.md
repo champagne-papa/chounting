@@ -1,30 +1,32 @@
 # Where I am as of 2026-04-15 (Phase 1.5A in flight)
 
-## Phase 1.5A — Organization Profile Expansion (in flight)
+## Phase 1.5A — Organization Profile Expansion (complete, 2026-04-15)
 
-Execution brief drafted at `docs/09_briefs/phase-1.5/brief.md`.
+21 exit criteria MET, 109 tests across 20 files, 4 migrations,
+8 API endpoints. Exit criteria matrix at
+`docs/09_briefs/phase-1.5/exit-criteria-matrix.md`.
+
+Execution brief at `docs/09_briefs/phase-1.5/brief.md`.
 This sub-phase (first of three — 1.5A additive org schema,
 1.5B users/invites/MFA, 1.5C permissions refactor) precedes
 Phase 1.2 agent integration because the agent design depends on
 the expanded org profile, typed `external_ids`, and granular
 `source_system` tracking on journal entries.
 
-**1.5A scope:** additive organizations columns, new `industries`
-lookup table (NAICS-light, 27 seed entries), new
-`organization_addresses` table (one-to-many, typed by purpose),
-two-step `industry_id` migration (add + backfill + NOT NULL now;
-drop legacy enum column later), `journal_entries.source_system`
-+ `source_external_id` for integration reconciliation,
-`orgService.updateOrgProfile` + `addressService` + new audit
-action keys with full `before_state` snapshots.
+**1.5A shipped:** 4 migrations (industries lookup + 28-row seed,
+organizations extension with two-step `industry_id` backfill,
+`organization_addresses` with partial-unique primary index,
+`journal_entries` source tracking with partial-unique triple
+index), 3 Zod schemas, 6 service functions, 8 API routes, 12
+new error codes, 5 new ActionName values. Conventions established:
+imperative-verb permission keys vs past-tense audit action keys;
+camelCase API boundary with snake_case DB mapping; null
+`before_state` for insert audit rows.
 
-**1.5A out-of-scope:** MFA enforcement logic, reporting behavior
-changes, user/invite system, UI work, the
-`organizations.industry` legacy enum drop.
-
-**Ten Category A floor tests** (five existing + five new) must
-pass at exit. See brief §16 and §17 for the exit matrix and test
-catalog.
+**1.5A out-of-scope (deferred):** MFA enforcement logic, reporting
+behavior changes, user/invite system, UI work,
+`organizations.industry` legacy enum column drop, NAICS code
+population, onboarding state machine.
 
 ## Phase 1.1 is functionally complete.
 
