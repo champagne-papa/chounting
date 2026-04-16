@@ -1,23 +1,29 @@
-# Where I am as of 2026-04-15 (Phase 1.5C in flight)
+# Where I am as of 2026-04-16 (Phase 1.5 complete)
 
-## Phase 1.5C — Permissions Refactor (in flight)
+## Phase 1.5 — Complete (2026-04-16)
+
+All three sub-phases shipped:
+- **1.5A** (org profile): 4 migrations, 25 new tests
+- **1.5B** (users/invites/MFA): 4 migrations, 27 new tests
+- **1.5C** (permissions refactor): 2 migrations, 26 new tests
+
+Grand total: 10 migrations (108–117), 162 tests across 36 files,
+0 failures. Exit criteria matrices at:
+- `docs/09_briefs/phase-1.5/exit-criteria-matrix.md` (1.5A)
+- `docs/09_briefs/phase-1.5/1.5B-exit-criteria-matrix.md`
+- `docs/09_briefs/phase-1.5/1.5C-exit-criteria-matrix.md`
+
+---
+
+## Phase 1.5C — Permissions Refactor (complete, 2026-04-16)
 
 Execution brief at `docs/09_briefs/phase-1.5/1.5C-brief.md`.
-Third and final sub-phase of the 1.5 split (1.5A complete, 1.5B
-complete, 1.5C this brief).
-
-**1.5C scope:** replace the `ROLE_PERMISSIONS` TypeScript map with
-table-driven `roles`, `permissions`, `role_permissions` tables
-(seeded, hybrid model — system roles only). Add `role_id` to
-`memberships` via two-step backfill (same discipline as 1.5A
-`industry_id`). Rewrite `canUserPerformAction` from map lookup to
-SQL query. Add `user_has_permission()` SQL helper (do NOT rewrite
-existing RLS policies). Hand-maintained `ActionName` union with
-parity test. 12 Category A floor tests. No UI.
-
-**1.5C out-of-scope:** `memberships.role` column drop,
-`user_role` enum drop, existing RLS policy rewrite, org-custom
-roles, module feature gating, ownership transfer, UI.
+12 exit criteria MET, 162 tests across 36 files. Replaced
+`ROLE_PERMISSIONS` TypeScript map with table-driven `roles`,
+`permissions`, `role_permissions` (seeded, hybrid model). Added
+`memberships.role_id` via two-step backfill. Rewrote
+`canUserPerformAction` to SQL lookup. Added `user_has_permission()`
+SQL helper. `ACTION_NAMES` runtime constant with parity test.
 
 ---
 
