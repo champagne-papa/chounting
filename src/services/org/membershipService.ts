@@ -220,12 +220,33 @@ export const membershipService = {
     const db = adminClient();
     const { data, error } = await db
       .from('memberships')
-      .select('membership_id, user_id, org_id, role, status, is_org_owner, created_at, user_profiles(first_name, last_name, display_name, avatar_storage_path, preferred_locale, preferred_timezone, last_login_at)')
+      .select('membership_id, user_id, org_id, role, status, is_org_owner, created_at')
       .eq('org_id', input.org_id)
       .in('status', ['active', 'suspended'])
       .order('created_at');
 
     if (error) throw new ServiceError('READ_FAILED', error.message);
-    return { users: data ?? [] };
+
+    // Join user_profiles separately — PostgREST FK inference requires
+    // both tables to share a column name, which memberships.user_id and
+    // user_profiles.user_id do, but the supabase-js client doesn't
+    // always infer cross-table embeds correctly when there are multiple
+    // FKs from the same column. Manual join is more reliable.
+    const userIds = (data ?? []).map((m: { user_id: string }) => m.user_id);
+    const { data: profiles } = await db
+      .from('user_profiles')
+      .select('user_id, first_name, last_name, display_name, avatar_storage_path, preferred_locale, preferred_timezone, last_login_at')
+      .in('user_id', userIds);
+
+    const profileMap = new Map(
+      (profiles ?? []).map((p: { user_id: string }) => [p.user_id, p]),
+    );
+
+    const users = (data ?? []).map((m: Record<string, unknown>) => ({
+      ...m,
+      user_profiles: profileMap.get(m.user_id as string) ?? null,
+    }));
+
+    return { users };
   },
 };
