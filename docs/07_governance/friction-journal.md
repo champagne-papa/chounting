@@ -866,3 +866,12 @@ Categories:
   regression gate not a new test file — 11 new tests + 1 gate.
   OQ-01 (role column drop) and OQ-02 (org_invitations.role
   migration) deferred to Phase 1.6/Phase 2.
+- 2026-04-15 WRONG  Migration 116 initially included user_has_permission()
+  SQL helper alongside the permission catalog tables. Function body
+  references memberships.role_id which doesn't exist until migration
+  117. Postgres SQL-language function validation rejects column
+  references at CREATE FUNCTION time. Relocated to 117. Lesson: SQL
+  helper functions with cross-migration column dependencies must land
+  in (or after) the migration that adds the dependency. Migration 113
+  got this right by bundling the RLS helper rewrites with the
+  memberships.status column addition.
