@@ -1,0 +1,15 @@
+-- =============================================================
+-- 20240115000000_enable_mfa_totp.sql
+-- Phase 1.5B: placeholder migration documenting config.toml TOTP
+-- enablement. No SQL changes — the actual change is in
+-- supabase/config.toml:
+--
+--   [auth.mfa.totp]
+--   enroll_enabled = true
+--   verify_enabled = true
+--
+-- This migration exists so the sequence is contiguous and the
+-- change is discoverable via `supabase migration list`.
+--
+-- See docs/09_briefs/phase-1.5/1.5B-brief.md §4.4 and §9.
+-- =============================================================
