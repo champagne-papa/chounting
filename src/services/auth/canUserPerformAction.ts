@@ -29,7 +29,12 @@ export type ActionName =
   | 'org.address.create'
   | 'org.address.update'
   | 'org.address.delete'
-  | 'org.address.set_primary';
+  | 'org.address.set_primary'
+  // Phase 1.5B — users + invitations (controller-only)
+  | 'user.invite'
+  | 'user.role.change'
+  | 'user.suspend'
+  | 'user.remove';
 
 export type UserRole = 'executive' | 'controller' | 'ap_specialist';
 
@@ -54,6 +59,11 @@ const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<ActionName>> = {
     'org.address.update',
     'org.address.delete',
     'org.address.set_primary',
+    // Phase 1.5B
+    'user.invite',
+    'user.role.change',
+    'user.suspend',
+    'user.remove',
   ]),
   ap_specialist: new Set<ActionName>([
     'journal_entry.post',
@@ -87,6 +97,7 @@ export async function canUserPerformAction(
     .select('role')
     .eq('user_id', ctx.caller.user_id)
     .eq('org_id', orgId)
+    .eq('status', 'active')
     .maybeSingle();
 
   if (error) {

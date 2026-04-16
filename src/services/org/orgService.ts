@@ -191,11 +191,13 @@ export const orgService = {
       throw new ServiceError('COA_LOAD_FAILED', insertErr.message);
     }
 
-    // 5. Auto-create the calling user's membership as 'controller'.
+    // 5. Auto-create the calling user's membership as 'controller' + org owner.
     await db.from('memberships').insert({
       user_id: ctx.caller.user_id,
       org_id: org.org_id,
       role: 'controller',
+      status: 'active',
+      is_org_owner: true,
     });
 
     // 6. Auto-generate 12 monthly fiscal periods for the current FY.

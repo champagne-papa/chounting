@@ -25,6 +25,9 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'NOT_FOUND':
     case 'ORG_NOT_FOUND':
     case 'ADDRESS_NOT_FOUND':
+    case 'PROFILE_NOT_FOUND':
+    case 'INVITATION_NOT_FOUND':
+    case 'MEMBERSHIP_NOT_FOUND':
       return 404;
 
     // Bad request (malformed or semantically invalid input)
@@ -44,6 +47,14 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'PARENT_ORG_IS_SELF':
     case 'NO_COA_TEMPLATE_FOR_INDUSTRY':
     case 'ADDRESS_TYPE_IMMUTABLE':
+    case 'USER_ALREADY_MEMBER':
+    case 'INVITATION_ALREADY_PENDING':
+    case 'INVITATION_INVALID_OR_EXPIRED':
+    case 'OWNER_CANNOT_BE_SUSPENDED':
+    case 'OWNER_CANNOT_BE_REMOVED':
+    case 'OWNER_ROLE_CHANGE_DENIED':
+    case 'MEMBERSHIP_ALREADY_SUSPENDED':
+    case 'MEMBERSHIP_NOT_SUSPENDED':
       return 422;
 
     // Server errors (unexpected failures)
@@ -58,6 +69,8 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'PERIOD_GENERATION_FAILED':
     case 'ORG_UPDATE_FAILED':
     case 'ADDRESS_WRITE_FAILED':
+    case 'PROFILE_UPDATE_FAILED':
+    case 'INVITATION_WRITE_FAILED':
     default:
       return 500;
   }

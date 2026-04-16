@@ -27,6 +27,7 @@ export async function getMembership(
     .select('user_id, org_id, role')
     .eq('user_id', userId)
     .eq('org_id', orgId)
+    .eq('status', 'active')
     .maybeSingle();
 
   if (error || !data) return null;

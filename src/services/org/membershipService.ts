@@ -1,15 +1,22 @@
 // src/services/org/membershipService.ts
-// Membership CRUD operations for orgs.
-// Phase 1.1: list memberships for a user. Richer operations in Phase 1.2+.
+//
+// INV-SERVICE-001 export contract: plain unwrapped functions.
+// Mutating functions wrapped at the route layer via withInvariants.
+// Authorization: route handler specifies the ActionName; this file
+// does not enforce permissions. See docs/04_engineering/conventions.md
+// Phase 1.5A Conventions for the permission-key namespace split.
+//
+// Phase 1.5B extensions: changeUserRole, suspendUser, reactivateUser,
+// removeUser, listOrgUsers. is_org_owner protection rules enforced
+// here (not in DB CHECKs, except membership_owner_must_be_controller).
 
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
+import { ServiceError } from '@/services/errors/ServiceError';
+import { recordMutation } from '@/services/audit/recordMutation';
 
 export const membershipService = {
-  /**
-   * Lists all org memberships for the caller.
-   */
   async listForUser(
     input: { user_id: string },
     ctx: ServiceContext,
@@ -19,14 +26,206 @@ export const membershipService = {
 
     const { data, error } = await db
       .from('memberships')
-      .select('org_id, role, organizations(name)')
-      .eq('user_id', input.user_id);
+      .select('org_id, role, is_org_owner, organizations(name)')
+      .eq('user_id', input.user_id)
+      .eq('status', 'active');
 
     if (error) {
-      log.error({ error }, 'Failed to list memberships');
-      throw error;
+      log.error({ error }, 'Failed to list memberships for user');
+      return [];
+    }
+    return data ?? [];
+  },
+
+  async changeUserRole(
+    input: { org_id: string; user_id: string; new_role: string },
+    ctx: ServiceContext,
+  ) {
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    const { data: membership } = await db
+      .from('memberships')
+      .select('*')
+      .eq('org_id', input.org_id)
+      .eq('user_id', input.user_id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ServiceError('MEMBERSHIP_NOT_FOUND', `No active membership for user_id=${input.user_id} in org_id=${input.org_id}`);
     }
 
-    return data ?? [];
+    if (membership.is_org_owner && input.new_role !== 'controller') {
+      throw new ServiceError('OWNER_ROLE_CHANGE_DENIED', 'Cannot change org owner role away from controller. Transfer ownership first.');
+    }
+
+    const { error } = await db
+      .from('memberships')
+      .update({ role: input.new_role })
+      .eq('membership_id', membership.membership_id);
+
+    if (error) throw new ServiceError('MEMBERSHIP_NOT_FOUND', error.message);
+
+    await recordMutation(db, ctx, {
+      org_id: input.org_id,
+      action: 'user.role_changed',
+      entity_type: 'membership',
+      entity_id: membership.membership_id as string,
+      before_state: membership as Record<string, unknown>,
+    });
+
+    log.info({ org_id: input.org_id, user_id: input.user_id, new_role: input.new_role }, 'User role changed');
+    return { membership_id: membership.membership_id as string };
+  },
+
+  async suspendUser(
+    input: { org_id: string; user_id: string },
+    ctx: ServiceContext,
+  ) {
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    const { data: membership } = await db
+      .from('memberships')
+      .select('*')
+      .eq('org_id', input.org_id)
+      .eq('user_id', input.user_id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ServiceError('MEMBERSHIP_NOT_FOUND', `No active membership for user_id=${input.user_id}`);
+    }
+
+    if (membership.is_org_owner) {
+      throw new ServiceError('OWNER_CANNOT_BE_SUSPENDED', 'Cannot suspend the org owner');
+    }
+
+    const { error } = await db
+      .from('memberships')
+      .update({
+        status: 'suspended',
+        suspended_at: new Date().toISOString(),
+        suspended_by: ctx.caller.user_id,
+      })
+      .eq('membership_id', membership.membership_id);
+
+    if (error) throw new ServiceError('MEMBERSHIP_NOT_FOUND', error.message);
+
+    await recordMutation(db, ctx, {
+      org_id: input.org_id,
+      action: 'user.suspended',
+      entity_type: 'membership',
+      entity_id: membership.membership_id as string,
+      before_state: membership as Record<string, unknown>,
+    });
+
+    log.info({ org_id: input.org_id, user_id: input.user_id }, 'User suspended');
+    return { membership_id: membership.membership_id as string };
+  },
+
+  async reactivateUser(
+    input: { org_id: string; user_id: string },
+    ctx: ServiceContext,
+  ) {
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    const { data: membership } = await db
+      .from('memberships')
+      .select('*')
+      .eq('org_id', input.org_id)
+      .eq('user_id', input.user_id)
+      .eq('status', 'suspended')
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ServiceError('MEMBERSHIP_NOT_SUSPENDED', `No suspended membership for user_id=${input.user_id}`);
+    }
+
+    const { error } = await db
+      .from('memberships')
+      .update({
+        status: 'active',
+        suspended_at: null,
+        suspended_by: null,
+      })
+      .eq('membership_id', membership.membership_id);
+
+    if (error) throw new ServiceError('MEMBERSHIP_NOT_FOUND', error.message);
+
+    await recordMutation(db, ctx, {
+      org_id: input.org_id,
+      action: 'user.reactivated',
+      entity_type: 'membership',
+      entity_id: membership.membership_id as string,
+      before_state: membership as Record<string, unknown>,
+    });
+
+    log.info({ org_id: input.org_id, user_id: input.user_id }, 'User reactivated');
+    return { membership_id: membership.membership_id as string };
+  },
+
+  async removeUser(
+    input: { org_id: string; user_id: string },
+    ctx: ServiceContext,
+  ) {
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    const { data: membership } = await db
+      .from('memberships')
+      .select('*')
+      .eq('org_id', input.org_id)
+      .eq('user_id', input.user_id)
+      .in('status', ['active', 'suspended'])
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ServiceError('MEMBERSHIP_NOT_FOUND', `No active/suspended membership for user_id=${input.user_id}`);
+    }
+
+    if (membership.is_org_owner) {
+      throw new ServiceError('OWNER_CANNOT_BE_REMOVED', 'Cannot remove the org owner. Transfer ownership first.');
+    }
+
+    const { error } = await db
+      .from('memberships')
+      .update({
+        status: 'removed',
+        removed_at: new Date().toISOString(),
+        removed_by: ctx.caller.user_id,
+      })
+      .eq('membership_id', membership.membership_id);
+
+    if (error) throw new ServiceError('MEMBERSHIP_NOT_FOUND', error.message);
+
+    await recordMutation(db, ctx, {
+      org_id: input.org_id,
+      action: 'user.removed',
+      entity_type: 'membership',
+      entity_id: membership.membership_id as string,
+      before_state: membership as Record<string, unknown>,
+    });
+
+    log.info({ org_id: input.org_id, user_id: input.user_id }, 'User removed');
+    return { membership_id: membership.membership_id as string };
+  },
+
+  async listOrgUsers(
+    input: { org_id: string },
+    _ctx: ServiceContext,
+  ) {
+    const db = adminClient();
+    const { data, error } = await db
+      .from('memberships')
+      .select('membership_id, user_id, org_id, role, status, is_org_owner, created_at, user_profiles(first_name, last_name, display_name, avatar_storage_path, preferred_locale, preferred_timezone, last_login_at)')
+      .eq('org_id', input.org_id)
+      .in('status', ['active', 'suspended'])
+      .order('created_at');
+
+    if (error) throw new ServiceError('READ_FAILED', error.message);
+    return { users: data ?? [] };
   },
 };

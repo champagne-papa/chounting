@@ -58,7 +58,8 @@ export async function buildServiceContext(_req: Request): Promise<ServiceContext
   const { data: memberships } = await supabase
     .from('memberships')
     .select('org_id')
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .eq('status', 'active');
 
   const trace_id = crypto.randomUUID();
 
