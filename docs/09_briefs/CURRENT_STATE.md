@@ -1,6 +1,27 @@
-# Where I am as of 2026-04-15 (Phase 1.5B in flight)
+# Where I am as of 2026-04-15 (Phase 1.5C in flight)
 
-## Phase 1.5B — Users, Invitations, and MFA Enforcement (in flight)
+## Phase 1.5C — Permissions Refactor (in flight)
+
+Execution brief at `docs/09_briefs/phase-1.5/1.5C-brief.md`.
+Third and final sub-phase of the 1.5 split (1.5A complete, 1.5B
+complete, 1.5C this brief).
+
+**1.5C scope:** replace the `ROLE_PERMISSIONS` TypeScript map with
+table-driven `roles`, `permissions`, `role_permissions` tables
+(seeded, hybrid model — system roles only). Add `role_id` to
+`memberships` via two-step backfill (same discipline as 1.5A
+`industry_id`). Rewrite `canUserPerformAction` from map lookup to
+SQL query. Add `user_has_permission()` SQL helper (do NOT rewrite
+existing RLS policies). Hand-maintained `ActionName` union with
+parity test. 12 Category A floor tests. No UI.
+
+**1.5C out-of-scope:** `memberships.role` column drop,
+`user_role` enum drop, existing RLS policy rewrite, org-custom
+roles, module feature gating, ownership transfer, UI.
+
+---
+
+## Phase 1.5B — Users, Invitations, and MFA Enforcement (complete, 2026-04-15)
 
 Execution brief at `docs/09_briefs/phase-1.5/1.5B-brief.md`.
 Second of three sub-phases (1.5A complete, 1.5B this brief, 1.5C

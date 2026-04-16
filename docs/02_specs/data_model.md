@@ -435,6 +435,95 @@ No write policies — mutations go through `invitationService` via
 
 ---
 
+### `roles`
+
+*Added in Phase 1.5C (`20240116000000_permission_catalog.sql`).*
+
+System roles and future org-custom roles. Seeded with three system
+rows matching the `user_role` enum values (`controller`,
+`ap_specialist`, `executive`). The `is_system` flag is forward-compat
+for Phase 2 org-custom roles.
+
+```sql
+CREATE TABLE roles (
+  role_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  role_key      text UNIQUE NOT NULL,
+  display_name  text NOT NULL,
+  description   text,
+  is_system     boolean NOT NULL DEFAULT true,
+  org_id        uuid REFERENCES organizations(org_id),
+  sort_order    integer NOT NULL DEFAULT 0,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**Named CHECK constraints:**
+
+- `role_system_org_consistency` — `(is_system = true AND org_id IS
+  NULL) OR (is_system = false AND org_id IS NOT NULL)`. System
+  roles are global; custom roles are always org-scoped.
+
+**RLS.** `roles_select FOR SELECT TO authenticated USING
+(is_system = true OR user_has_org_access(org_id))` — same
+nullable-org exception pattern as `tax_codes`.
+
+**Indexes:**
+
+- `idx_roles_org` on `(org_id) WHERE org_id IS NOT NULL` — for
+  Phase 2 org-custom role queries.
+
+---
+
+### `permissions`
+
+*Added in Phase 1.5C (`20240116000000_permission_catalog.sql`).*
+
+The permission catalog — one row per `ActionName` value. Seeded
+with 16 entries matching the TypeScript `ActionName` union. A
+parity test asserts set-equality between the TS union and this
+table.
+
+```sql
+CREATE TABLE permissions (
+  permission_key  text PRIMARY KEY,
+  display_name    text NOT NULL,
+  description     text,
+  category        text NOT NULL,
+  sort_order      integer NOT NULL DEFAULT 0,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**RLS.** `permissions_select FOR SELECT TO authenticated USING
+(true)` — global reference data, same posture as `industries` and
+`chart_of_accounts_templates`. No write policies (seed-only).
+
+---
+
+### `role_permissions`
+
+*Added in Phase 1.5C (`20240116000000_permission_catalog.sql`).*
+
+Join table mapping roles to permissions. The three system roles are
+seeded with permission counts matching the Phase 1.1/1.5B
+`ROLE_PERMISSIONS` TypeScript map: controller = 16 (all),
+ap_specialist = 3, executive = 3.
+
+```sql
+CREATE TABLE role_permissions (
+  role_id         uuid NOT NULL REFERENCES roles(role_id) ON DELETE CASCADE,
+  permission_key  text NOT NULL REFERENCES permissions(permission_key) ON DELETE CASCADE,
+  granted_at      timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (role_id, permission_key)
+);
+```
+
+**RLS.** `role_permissions_select FOR SELECT TO authenticated USING
+(true)` — reference data, same posture as `permissions`. No write
+policies in 1.5C.
+
+---
+
 ### `memberships`
 
 The user-to-org mapping. A user has a `role` within each org they
@@ -453,7 +542,8 @@ CREATE TABLE memberships (
   membership_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id        uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
-  role          user_role NOT NULL,
+  role          user_role NOT NULL,                              -- legacy, kept during cutover
+  role_id       uuid NOT NULL REFERENCES roles(role_id),         -- Phase 1.5C
   status        membership_status NOT NULL DEFAULT 'active',
   invited_via   uuid REFERENCES org_invitations(invitation_id),
   is_org_owner  boolean NOT NULL DEFAULT false,
@@ -465,6 +555,15 @@ CREATE TABLE memberships (
   UNIQUE (user_id, org_id)
 );
 ```
+
+**`role_id`** (Phase 1.5C) is the FK to the `roles` table,
+backfilled from the legacy `role` enum via `roles.role_key`. During
+the cutover window, both `role` and `role_id` are populated on
+every insert/update. `canUserPerformAction` reads `role_id` (via
+`role_permissions` join); display-layer code reads `role` until
+the legacy column is dropped. See
+`docs/09_briefs/phase-1.5/1.5C-brief.md` §4.2 for the backfill
+details.
 
 **`status`** is the `membership_status` enum: `active`, `invited`,
 `suspended`, `removed`. The `removed` status is a soft-remove —
@@ -1481,6 +1580,8 @@ Performance Conventions.
 | `memberships` | `idx_memberships_org_owner` (partial unique) | One org owner per org (Phase 1.5B) |
 | `org_invitations` | `idx_invitation_pending_email` (partial unique) | One pending invitation per email per org (Phase 1.5B) |
 | `org_invitations` | `idx_invitations_org_status` | List pending invitations by org (Phase 1.5B) |
+| `roles` | `idx_roles_org` (partial) | Org-custom role queries (Phase 1.5C, Phase 2) |
+| `memberships` | `idx_memberships_role_id` | Permission lookup via role_permissions join (Phase 1.5C) |
 
 **Partial indexes** (`idx_je_org_intercompany` and `idx_je_reverses`)
 cover only rows where the indexed column is non-NULL. This keeps
@@ -1642,6 +1743,46 @@ membership in the target org. Used as the tenant-scoping predicate
 in policies that require elevated permissions (locking a fiscal
 period, managing vendor rules, viewing all AI actions rather than
 just one's own).
+
+### `user_has_permission(target_org_id uuid, target_permission_key text) → boolean`
+
+*Added in Phase 1.5C (`20240116000000_permission_catalog.sql`).*
+
+```sql
+CREATE OR REPLACE FUNCTION public.user_has_permission(
+  target_org_id uuid,
+  target_permission_key text
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.memberships m
+    JOIN public.role_permissions rp ON rp.role_id = m.role_id
+    WHERE m.user_id = auth.uid()
+      AND m.org_id = target_org_id
+      AND m.status = 'active'
+      AND rp.permission_key = target_permission_key
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.user_has_permission(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_permission(uuid, text) TO authenticated;
+```
+
+Returns `true` if the calling user has an active membership in the
+target org whose role includes the specified permission. Joins
+`memberships` → `role_permissions` via `role_id`. Available for
+use in new RLS policies that want permission-based (rather than
+role-based) gating. **Existing policies are not rewritten in
+1.5C** — `user_is_controller` calls stay. Phase 2 migrates
+policies opportunistically.
+
+Same `SECURITY DEFINER` + `REVOKE/GRANT` posture as the other two
+helpers.
 
 ---
 
@@ -2332,6 +2473,13 @@ exists so a reader can find the deviations at a glance:
   users in the controller's orgs). No write policies.
 - **`org_invitations`** (Phase 1.5B) — controller-only SELECT via
   `user_is_controller(org_id)`. No write policies.
+- **`roles`** (Phase 1.5C) — `is_system = true OR
+  user_has_org_access(org_id)`. Same nullable-org pattern as
+  `tax_codes`. No write policies.
+- **`permissions`** (Phase 1.5C) — global SELECT for authenticated
+  users. Same posture as `industries`. No write policies.
+- **`role_permissions`** (Phase 1.5C) — global SELECT for
+  authenticated users. No write policies.
 - **`memberships`** — user-scoped SELECT (own rows) plus
   controller-scoped SELECT (all rows in the org); no policies for
   writes.

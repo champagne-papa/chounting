@@ -148,6 +148,20 @@ Phase 1.5A's four-migration sequence used this cadence and caught
 two issues early (seed count drift, ActionName collision) that
 would have been harder to untangle in a larger commit.
 
+### Error-Handling Review Rule
+
+Every `catch` block, every `if (error)` branch, and every
+assigned-but-unused error variable in new service code must either
+(a) throw, (b) `log.error` with context, or (c) carry a code
+comment explaining why the error is safe to swallow. Silent error
+absorption is a review-fail.
+
+Codified from the three `invitationService` bugs found in the
+Phase 1.5B closeout review — two of the three bugs were hidden
+because errors were caught and swallowed, so tests passed on the
+happy path. See `docs/07_governance/friction-journal.md` entry
+2026-04-15 (invitationService bugs) for the full incident.
+
 ### NOT NULL Column Blast Radius
 
 When a brief adds a `NOT NULL` column **without a DEFAULT** to an

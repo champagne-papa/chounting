@@ -857,3 +857,12 @@ Categories:
   with silent-failure error handling needs special review — two
   of three bugs were hidden because errors were caught and
   swallowed, so tests passed on the happy path.
+- 2026-04-15 NOTE   Phase 1.5C execution session start. Brief
+  approved at docs/09_briefs/phase-1.5/1.5C-brief.md. Three
+  adjustments applied during execution: (1) ACTION_NAMES runtime
+  constant array derives ActionName type — parity test imports it
+  instead of duplicating, (2) canUserPerformAction short-circuits
+  on ctx.caller.org_ids miss before DB query, (3) CA-36 is a
+  regression gate not a new test file — 11 new tests + 1 gate.
+  OQ-01 (role column drop) and OQ-02 (org_invitations.role
+  migration) deferred to Phase 1.6/Phase 2.
