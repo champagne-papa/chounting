@@ -1,4 +1,15 @@
-# Where I am as of 2026-04-16 (Phase 1.5 complete; Agent Autonomy Design Sprint documented)
+# Where I am as of 2026-04-16 (Phase 1.2 in flight)
+
+## Phase 1.2 — The Double Entry Agent (in flight)
+
+Execution brief at `docs/09_briefs/phase-1.2/brief.md`. The Double
+Entry Agent end-to-end: conversational journal entries, onboarding
+flow, ProposedEntryCard with policy-outcome language (ADR-0002),
+canvas context injection, form-escape surfaces for profile/org/
+invite management. 9 tools, 3 persona prompts, 27 exit criteria
+(19 from phase_plan.md + 8 new for onboarding/forms/migration).
+
+---
 
 ## Agent Autonomy Design Sprint — Documented (2026-04-16)
 

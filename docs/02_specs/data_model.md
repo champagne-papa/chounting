@@ -1397,7 +1397,8 @@ here via the service-role client.
 
 ### `agent_sessions`
 
-*Phase 2+ reserved — terse treatment.*
+*Active in Phase 1.2 (extended by migration
+`20240118000000_agent_session_wiring.sql`).*
 
 ```sql
 CREATE TABLE agent_sessions (
@@ -1407,17 +1408,35 @@ CREATE TABLE agent_sessions (
   locale            text NOT NULL DEFAULT 'en',
   started_at        timestamptz NOT NULL DEFAULT now(),
   last_activity_at  timestamptz NOT NULL DEFAULT now(),
-  state             jsonb NOT NULL DEFAULT '{}'::jsonb
+  state             jsonb NOT NULL DEFAULT '{}'::jsonb,
+  conversation      jsonb NOT NULL DEFAULT '[]'::jsonb  -- Phase 1.2
 );
 ```
 
-**Phase 1.1 status:** empty. Populated in Phase 1.2 by the agent
-orchestrator when a user starts a conversation. Org switch closes
-the current session and creates a new one — see
-`docs/09_briefs/phase-1.2/agent_architecture.md` AgentSession
-Persistence section. **Indexes:** `idx_agent_sessions_user_org` on
-`(user_id, org_id)`, `idx_agent_sessions_last_activity` on
-`(last_activity_at)`.
+**`conversation`** (Phase 1.2) stores the full chat transcript as
+an ordered JSON array. Each element is a turn:
+`{ role: 'user'|'assistant', content: string|object[],
+timestamp: string, trace_id?: string, tool_calls?: object[],
+canvas_directive?: CanvasDirective }`. The orchestrator appends
+turns after each exchange.
+
+**TTL:** 30 days (Q15). Sessions older than 30 days are cleaned up
+by a manual SQL script in Phase 1.2; Phase 2 promotes to pg-boss.
+
+**Org switch behavior:** switching orgs closes the current session
+(it persists for audit trail) and creates a new one. Chat history
+resets.
+
+**Indexes:**
+
+- `idx_agent_sessions_user_org` on `(user_id, org_id)` (Phase 1.1)
+- `idx_agent_sessions_last_activity` on `(last_activity_at)` (Phase 1.1)
+- `idx_agent_sessions_active` on `(user_id, org_id,
+  last_activity_at DESC)` (Phase 1.2) — supports the orchestrator's
+  "load most recent session for this user+org" lookup.
+
+See `docs/09_briefs/phase-1.2/brief.md` §9 for the full session
+persistence spec.
 
 ---
 

@@ -943,3 +943,18 @@ Categories:
   INV-IDs registered. Phase 1.2 implementation is unblocked.
   The Phase 1.2 brief will be reconciled against ADR-0002
   (confidence display superseded) during execution.
+- 2026-04-16 NOTE   Phase 1.2 execution brief writing session
+  started. Starting model: Claude Sonnet (claude-sonnet-4-20250514).
+  All Q11–Q17 and Q23–Q26 defaults accepted by founder. Scope
+  decisions A–G locked. Design-sprint artifacts (Phases A–D)
+  committed at 4ccc48d. Phase 1.5 complete; 162 tests green.
+- 2026-04-16 WRONG  Product vision doc did not receive the thesis
+  extension during the A–D sprint. The "control surface" reframe
+  landed in agent_autonomy_model.md §2 and the friction journal
+  but not in docs/00_product/product_vision.md where the quotable
+  one-line thesis statement lives. Fix: product_vision.md Thesis
+  section extended with a ### Thesis extension — the control
+  surface subsection; Source line updated with sprint provenance.
+  Lesson: when a thesis extension lands in specs, the vision doc
+  is where the quotable one-liner belongs — specs extend the
+  reasoning, the vision carries the quotable line.

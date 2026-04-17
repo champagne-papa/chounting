@@ -7,6 +7,10 @@ Source: extracted from PLAN.md "The Product," "Who This Is For,"
 "Non-Negotiable Constraints," and "Locked-In Stack" sections during
 Phase 1.1 closeout restructure. The Thesis section below was added
 during the commit-4b prelude based on external architectural review.
+The thesis was extended with a companion framing line during the
+agent autonomy design sprint of 2026-04-16; see the "Thesis
+extension" subsection below and `docs/07_governance/friction-
+journal.md` for the sprint entry.
 
 ---
 
@@ -84,6 +88,41 @@ API-level primitives so the system can run headless, with any
 interface (UI, CLI, another agent, a script) driving it. See
 `docs/09_briefs/phase-2/interaction_model_extraction.md` for the
 Phase 2 extraction plan.
+
+### Thesis extension — the control surface
+
+The agent autonomy design sprint of 2026-04-16 extended the thesis
+above with a companion framing line that sharpens the interface
+half without changing the engine half:
+
+> **The product is not the AI. The product is the control surface
+> over the AI.**
+
+The agent is a managed actor in a trust system. The control
+surface — the autonomy model, the limits, the promotion
+ceremonies, the demotion paths, the audit artifacts — is the
+product. The LLM underneath is an implementation detail that
+could be replaced; the governance layer is what the controller
+trusts and the auditor audits.
+
+The shift this extension names is from "AI as a feature" to
+"AI as a managed workforce." A bookkeeper has a signing limit.
+A new employee earns autonomy on routine tasks after
+demonstrating competence; certain tasks stay under controller
+oversight regardless of tenure. The agent inherits the same
+model: trust is scoped per rule, revocable at any time, earned
+per-task, and never uncappable on sensitive classes. The
+governance layer that implements this is documented in
+`docs/02_specs/agent_autonomy_model.md` §2 (Authority Gradient
+Extended), §4 (The Agent Ladder), and §6 (System vs. Policy
+boundary).
+
+This extension does not contradict or replace the original
+thesis. Both thesis statements hold simultaneously: the system
+is a deterministic engine with a probabilistic interface
+(architecture), and the product is the control surface over
+that interface (positioning). The first statement names what the
+system is; the second names what the product is.
 
 ---
 
