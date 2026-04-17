@@ -1404,7 +1404,7 @@ here via the service-role client.
 CREATE TABLE agent_sessions (
   session_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  org_id            uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  org_id            uuid REFERENCES organizations(org_id) ON DELETE CASCADE,  -- nullable for onboarding
   locale            text NOT NULL DEFAULT 'en',
   started_at        timestamptz NOT NULL DEFAULT now(),
   last_activity_at  timestamptz NOT NULL DEFAULT now(),

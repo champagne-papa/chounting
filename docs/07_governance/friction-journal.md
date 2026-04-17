@@ -958,3 +958,33 @@ Categories:
   Lesson: when a thesis extension lands in specs, the vision doc
   is where the quotable one-liner belongs — specs extend the
   reasoning, the vision carries the quotable line.
+- 2026-04-16 NOTE   Phase 1.2 brief patch session — closing 9
+  review gaps identified during founder review. Gaps cover:
+  orchestrator retry message structure, tool input schemas,
+  structured-response enforcement mechanism, agent_sessions RLS,
+  onboarding state machine, confirm payload source, ActionName
+  verification, dry_run scope, Four Questions template mapping.
+- 2026-04-16 NOTE   Phase 1.2 brief patch session complete. Nine
+  gaps closed:
+  Gap 1 (§5.2): orchestrator retry message shape (tool_result with
+  is_error:true + Zod errors), session loading precedence (3-step),
+  conversation truncation (full history, no window in 1.2).
+  Gap 2 (§6.1): tool input schemas — each tool now has a cited Zod
+  schema or inline definition + typed rejection branches.
+  Gap 3 (§6.2): respondToUser tool as 10th tool — tool-based
+  structured-response enforcement. Tool count 9→10.
+  Gap 4 (§9.4): agent_sessions RLS verified — SELECT-only policy
+  exists from migration 001. No changes needed in 118.
+  Gap 5 (§11.5): onboarding state machine — OnboardingState shape
+  in agent_sessions.state, resume behavior, invited-user detection,
+  completion trigger.
+  Gap 6 (§13.3): confirm payload source — reads ai_actions.tool_input
+  (verified column name). No session_id in request body.
+  Gap 7 (§16): user.profile.update ActionName missing — added as new
+  required ActionName for all three roles.
+  Gap 8 (§6.5): dry_run scope — ledger-mutating tools only. ADR-0007
+  pending. updateUserProfile/createOrganization/updateOrgProfile
+  exempt.
+  Gap 9 (§10.3): Four Questions template_id mapping — 6 template IDs
+  for ProposedEntryCard rendering, i18n-required in all 3 locales.
+  Brief grew from 1037 to 1364 lines. No new gaps discovered.

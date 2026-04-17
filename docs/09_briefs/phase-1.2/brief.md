@@ -139,6 +139,10 @@ Phase 1.1 (migration 001). This migration extends them for the
 ```sql
 BEGIN;
 
+-- Issue 3: make org_id nullable for onboarding sessions that
+-- exist before the user has created/joined an org.
+ALTER TABLE agent_sessions ALTER COLUMN org_id DROP NOT NULL;
+
 -- agent_sessions.conversation: store the chat transcript as
 -- ordered JSONB array. Each element:
 -- { role: 'user'|'assistant', content: string|object[],
@@ -207,7 +211,7 @@ COMMIT;
 
 export async function handleUserMessage(input: {
   user_id: string;
-  org_id: string;
+  org_id: string | null;    // null during onboarding before org exists
   locale: 'en' | 'fr-CA' | 'zh-Hant';
   message: string;
   session_id?: string;
@@ -230,30 +234,86 @@ export type StructuredResponse = {
 
 ### 5.2 Main loop
 
-1. `loadOrCreateSession(input)` — loads or creates an
-   `agent_sessions` row. Org switch = new session (exit criterion
-   #6).
-2. `orgContextManager.load(input.org_id)` — loads the per-org
+<!-- gap 1 patch — resolve 3 orchestrator ambiguities -->
+
+1. **`loadOrCreateSession(input)`** — loads or creates an
+   `agent_sessions` row. Org switch = new session (EC-6).
+   Precedence:
+   - If `input.session_id` is provided → load by `session_id`.
+     If found AND `last_activity_at >= now() - 30 days` AND
+     `(user_id, org_id)` match the request → use it. If found
+     but expired → `AGENT_SESSION_EXPIRED`. If not found →
+     `AGENT_SESSION_NOT_FOUND`.
+   - If `input.session_id` is absent → look up most recent
+     session for `(user_id, org_id)` (or `(user_id, org_id IS
+     NULL)` during onboarding) with
+     `last_activity_at >= now() - interval '30 days'` ordered
+     by `last_activity_at DESC LIMIT 1`. Use it if found.
+   - If nothing matches → create new session with empty
+     `conversation` and `state = '{}'`.
+
+2. **`orgContextManager.load(input.org_id)`** — loads the per-org
    snapshot (§8).
-3. `getPersonaForUser(input.user_id, input.org_id)` — looks up
-   the user's role via `getMembership`, maps to persona.
-4. `buildSystemPrompt(persona, orgContext, input.locale,
-   input.canvas_context)` — constructs the full system prompt
-   (§7).
-5. `callClaude(params, traceLogger)` — calls the Anthropic API
-   with model `claude-sonnet-4-20250514` (decision G). Batch mode
-   (Q14).
-6. **Tool-call validation retry loop** (Q13): max 2 retries. If
+
+3. **`getPersonaForUser(input.user_id, input.org_id)`** — looks
+   up the user's role via `getMembership`, maps to persona.
+
+4. **`buildSystemPrompt(persona, orgContext, input.locale,
+   input.canvas_context)`** — constructs the full system prompt
+   (§7). Includes onboarding suffix if
+   `session.state.onboarding.in_onboarding === true` (§11.5).
+
+5. **Conversation truncation: full history (day-one behavior).**
+   Send the entire `conversation` array to Claude on every call.
+   No truncation, no rolling window, no summarization in 1.2.
+   The 30-day TTL (Q15) provides implicit size management. If
+   conversations exceed 200 turns during Phase 1.3, that is a
+   signal to implement a rolling window in Phase 2 (see §19
+   OQ-02).
+
+6. **`callClaude(params, traceLogger)`** — calls the Anthropic
+   API with model `claude-sonnet-4-20250514` (decision G). Batch
+   mode (Q14). The `messages` array is the full `conversation`
+   plus the current user message.
+
+7. **Tool-call validation retry loop** (Q13): max 2 retries. If
    `response.stop_reason === 'tool_use'`, validate the tool input
-   via Zod. On validation failure, feed the error back to Claude
-   as a clarification message and retry. After 2 failures, surface
-   a clarification question to the user.
-7. `executeTool(validated, ctx)` — executes the tool via the
-   corresponding service function through `withInvariants`.
-8. `persistSession(session, response)` — appends the exchange to
-   `agent_sessions.conversation`.
-9. `extractResponse(response)` — extracts the structured response
-   + canvas directive + proposed entry card (if any).
+   via Zod.
+
+   **On validation failure:** feed the error back to Claude as
+   a `tool_result` content block with `is_error: true`. The
+   content is the Zod error messages rendered to plain English
+   (not a `template_id` — this is a model-to-model message,
+   not user-facing). Constructed by:
+   ```typescript
+   {
+     type: 'tool_result',
+     tool_use_id: toolUse.id,
+     is_error: true,
+     content: `Validation failed: ${zodError.issues
+       .map(i => `${i.path.join('.')}: ${i.message}`)
+       .join('; ')}`,
+   }
+   ```
+   The orchestrator appends this as the next message and calls
+   Claude again. After 2 failures, the orchestrator surfaces a
+   user-facing clarification question via the `respondToUser`
+   tool (§6.2) with a template that names the failing fields.
+
+8. **`executeTool(validated, ctx)`** — executes the tool via the
+   corresponding service function. Ledger-mutating tools
+   (`postJournalEntry`, `reverseJournalEntry`) go through
+   `withInvariants`. Non-ledger mutations go through
+   `withInvariants` where the ActionName requires it (see §16).
+   Read-only tools call the service directly.
+
+9. **`persistSession(session, response)`** — appends the exchange
+   to `agent_sessions.conversation` and updates
+   `last_activity_at`.
+
+10. **`extractResponse(response)`** — extracts the `respondToUser`
+    tool call (§6.2) as the structured response + canvas
+    directive + proposed entry card (if any).
 
 ### 5.3 Trace propagation
 
@@ -297,29 +357,99 @@ Exit criterion #6 verifies this.
 
 ### 6.1 Tool definitions
 
+<!-- gap 2 patch — tool input schemas -->
+<!-- gap 3 patch — respondToUser as 10th tool -->
+<!-- gap 8 patch — dry_run column updated per §6.5 -->
+
 Every tool is defined as a Zod schema converted to JSON Schema
 via `zod-to-json-schema`. The JSON Schema is passed to the
-Anthropic API as the tool's `input_schema`. Every mutating tool
-has `dry_run: boolean`.
+Anthropic API as the tool's `input_schema`.
 
-| Tool name | Type | Persona whitelist | Service function |
-|---|---|---|---|
-| `updateUserProfile` | Mutating | All three | `userProfileService.updateProfile` |
-| `createOrganization` | Mutating | Controller | `orgService.createOrgWithTemplate` |
-| `updateOrgProfile` | Mutating | Controller | `orgService.updateOrgProfile` |
-| `listIndustries` | Read-only | All three | `orgService.listIndustries` |
-| `listChartOfAccounts` | Read-only | All three | `chartOfAccountsService.list` |
-| `checkPeriod` | Read-only | All three | `periodService.isOpen` |
-| `listJournalEntries` | Read-only | All three | `journalEntryService.list` |
-| `postJournalEntry` | Mutating | Controller, AP | `journalEntryService.post` |
-| `reverseJournalEntry` | Mutating | Controller, AP | `journalEntryService.post` (with `reverses_journal_entry_id`) |
+| Tool name | Type | dry_run | Persona whitelist | Service function |
+|---|---|---|---|---|
+| `updateUserProfile` | Mutating | N/A (§6.5) | All three | `userProfileService.updateProfile` |
+| `createOrganization` | Mutating | N/A (§6.5) | Controller | `orgService.createOrgWithTemplate` |
+| `updateOrgProfile` | Mutating | N/A (§6.5) | Controller | `orgService.updateOrgProfile` |
+| `listIndustries` | Read-only | N/A | All three | `orgService.listIndustries` |
+| `listChartOfAccounts` | Read-only | N/A | All three | `chartOfAccountsService.list` |
+| `checkPeriod` | Read-only | N/A | All three | `periodService.isOpen` |
+| `listJournalEntries` | Read-only | N/A | All three | `journalEntryService.list` |
+| `postJournalEntry` | Mutating | **Required** | Controller, AP | `journalEntryService.post` |
+| `reverseJournalEntry` | Mutating | **Required** | Controller, AP | `journalEntryService.post` |
+| `respondToUser` | Structural | N/A | All three | (orchestrator-internal, not a service) |
 
-**9 tools total.** The onboarding tools (`updateUserProfile`,
+**10 tools total.** The onboarding tools (`updateUserProfile`,
 `createOrganization`, `updateOrgProfile`, `listIndustries`) are
 used during the conversational onboarding flow and remain
-available afterward.
+available afterward. `respondToUser` is the structured-response
+enforcement tool (§6.2).
 
-### 6.2 Structured-response enforcement
+#### Tool input schemas
+
+**`updateUserProfile`** — input:
+`src/shared/schemas/user/profile.schema.ts`
+`updateUserProfilePatchSchema`. No `dry_run`. Rejection branches:
+`PROFILE_NOT_FOUND`, `PROFILE_UPDATE_FAILED`.
+
+**`createOrganization`** — inline Zod (new file
+`src/agent/tools/schemas/createOrganization.schema.ts`):
+```typescript
+z.object({
+  name: z.string().min(1),
+  legalName: z.string().optional(),
+  industryId: z.string().uuid(),
+  fiscalYearStartMonth: z.number().int().min(1).max(12),
+  baseCurrency: z.string().length(3).regex(/^[A-Z]{3}$/),
+  businessStructure: businessStructureSchema,
+  timeZone: z.string().min(1),
+  defaultLocale: z.string().min(1),
+}).strict()
+```
+No `dry_run`. Rejection branches: `ORG_CREATE_FAILED`,
+`INDUSTRY_NOT_FOUND`, `NO_COA_TEMPLATE_FOR_INDUSTRY`,
+`TEMPLATE_NOT_FOUND`.
+
+**`updateOrgProfile`** — input:
+`src/shared/schemas/organization/profile.schema.ts`
+`updateOrgProfilePatchSchema`. No `dry_run`. Rejection branches:
+`ORG_NOT_FOUND`, `ORG_IMMUTABLE_FIELD`, `INDUSTRY_NOT_FOUND`,
+`PARENT_ORG_NOT_FOUND`, `PARENT_ORG_IS_SELF`,
+`EXTERNAL_IDS_MALFORMED`, `ORG_UPDATE_FAILED`.
+
+**`listIndustries`** — empty object schema `z.object({})`.
+
+**`listChartOfAccounts`** — `z.object({ org_id: z.string().uuid(),
+include_inactive: z.boolean().optional() }).strict()`.
+
+**`checkPeriod`** — `z.object({ org_id: z.string().uuid(),
+entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).strict()`.
+
+**`listJournalEntries`** — `z.object({ org_id: z.string().uuid(),
+limit: z.number().int().positive().default(20),
+offset: z.number().int().nonnegative().default(0) }).strict()`.
+
+**`postJournalEntry`** — input:
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+`PostJournalEntryInputSchema` (extended in 1.2 to accept
+`source = 'agent'` + `dry_run` + `idempotency_key`).
+`dry_run: boolean` **required**. Rejection branches:
+`UNBALANCED`, `PERIOD_LOCKED`, `POST_FAILED`,
+`REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`,
+`REVERSAL_NOT_MIRROR`.
+
+**`reverseJournalEntry`** — same schema as `postJournalEntry`
+with `reverses_journal_entry_id` populated and
+`reversal_reason` required. `dry_run: boolean` **required**.
+Same rejection branches as `postJournalEntry`.
+
+**`respondToUser`** — `z.object({ template_id: z.string(),
+params: z.record(z.string(), z.unknown()),
+canvas_directive: canvasDirectiveSchema.optional() }).strict()`.
+See §6.2 for enforcement mechanics.
+
+### 6.2 Structured-response enforcement (via `respondToUser` tool)
+
+<!-- gap 3 patch — tool-based structured response mechanism -->
 
 Every agent response must conform to `StructuredResponse`:
 
@@ -331,10 +461,35 @@ type StructuredResponse = {
 };
 ```
 
-The orchestrator validates this at parse time. If Claude returns
-free-form English instead of a structured response, the
-orchestrator rejects and retries (counting against the Q13 retry
-budget). Exit criterion #17 verifies this on 3 responses.
+**Enforcement mechanism: the `respondToUser` tool.**
+
+1. `respondToUser` is a tool in every persona's whitelist. Its
+   input schema accepts `{ template_id, params,
+   canvas_directive? }`.
+2. The system prompt instructs Claude: **the final step of every
+   turn MUST be a call to `respondToUser`.** No text after the
+   last `tool_use` block is user-facing.
+3. The orchestrator **ignores** any text content blocks in
+   Claude's final response. It extracts the `respondToUser`
+   `tool_use` block and uses its arguments as the structured
+   response.
+4. If Claude's final `stop_reason` is `end_turn` without a
+   preceding `respondToUser` call, the orchestrator retries once
+   with a clarification message: "You must end your turn with a
+   call to respondToUser. Use template_id and params to format
+   your response." This retry does NOT count against the Q13
+   tool-validation budget (it is a structural retry, not a
+   content retry).
+5. If the second attempt also lacks `respondToUser`, the
+   orchestrator surfaces a generic error template:
+   `{ template_id: 'agent.error.structured_response_missing',
+   params: {} }` and logs
+   `AGENT_STRUCTURED_RESPONSE_INVALID`.
+
+Exit criterion #17 verifies this on 3 responses: inspect the raw
+Anthropic API response envelope and confirm the user-facing text
+is extracted from a `respondToUser` tool_use, not from a text
+content block.
 
 ### 6.3 Anti-hallucination rules (CLAUDE.md Rule 4)
 
@@ -358,14 +513,43 @@ Exit criterion #13 is the adversarial test for rule #1.
 
 ### 6.4 Per-persona tool whitelist
 
-| Persona | Mutating tools | Read-only tools |
-|---|---|---|
-| **Controller** | `updateUserProfile`, `createOrganization`, `updateOrgProfile`, `postJournalEntry`, `reverseJournalEntry` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` |
-| **AP Specialist** | `updateUserProfile`, `postJournalEntry`, `reverseJournalEntry` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` |
-| **Executive** | `updateUserProfile` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` |
+| Persona | Mutating tools | Read-only tools | Structural |
+|---|---|---|---|
+| **Controller** | `updateUserProfile`, `createOrganization`, `updateOrgProfile`, `postJournalEntry`, `reverseJournalEntry` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` | `respondToUser` |
+| **AP Specialist** | `updateUserProfile`, `postJournalEntry`, `reverseJournalEntry` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` | `respondToUser` |
+| **Executive** | `updateUserProfile` | `listIndustries`, `listChartOfAccounts`, `checkPeriod`, `listJournalEntries` | `respondToUser` |
 
 The Executive cannot call `postJournalEntry` or
-`reverseJournalEntry` (Q16). Exit criterion #18.
+`reverseJournalEntry` (Q16). Exit criterion #18. All three
+personas include `respondToUser` (§6.2).
+
+### 6.5 dry_run scope
+
+<!-- gap 8 patch — resolve updateUserProfile + dry_run conflict -->
+
+> **Rule:** `dry_run` applies to **ledger-mutating tools only**.
+> Non-ledger mutations (profile updates, org profile updates,
+> org creation) post immediately on tool call — the confirmation
+> surface is the user's own next conversational turn, not a
+> ProposedEntryCard.
+>
+> **Tools WITH dry_run:** `postJournalEntry`,
+> `reverseJournalEntry`.
+>
+> **Tools WITHOUT dry_run:** `updateUserProfile`,
+> `createOrganization`, `updateOrgProfile`.
+>
+> **Rationale:** CLAUDE.md Rule 4 item 2 exists to prevent
+> accidental ledger writes. Non-ledger mutations have their own
+> audit trail (`before_state` in `audit_log`) and are reversible
+> via a second call. The ProposedEntryCard abstraction was
+> designed for ledger entries specifically — a profile edit does
+> not produce a debit/credit delta to display.
+>
+> **ADR obligation:** this exemption should be formalized as
+> ADR-0007 ("dry_run scope: ledger-only") in a future session.
+> The rule is consistent with the original intent of CLAUDE.md
+> Rule 4 as confirmed during the design sprint.
 
 ---
 
@@ -448,7 +632,7 @@ Migration 118 adds the `conversation` column.
 agent_sessions (
   session_id        uuid PK,
   user_id           uuid NOT NULL FK auth.users(id),
-  org_id            uuid NOT NULL FK organizations(org_id),
+  org_id            uuid FK organizations(org_id),  -- NULLABLE for onboarding
   locale            text NOT NULL DEFAULT 'en',
   started_at        timestamptz NOT NULL DEFAULT now(),
   last_activity_at  timestamptz NOT NULL DEFAULT now(),
@@ -456,6 +640,18 @@ agent_sessions (
   conversation      jsonb NOT NULL DEFAULT '[]'  -- NEW in 1.2
 );
 ```
+
+> **Issue 3 resolution: `org_id` is nullable.** Onboarding
+> sessions exist before the user has created or joined an org.
+> The welcome page creates an agent session with `org_id = NULL`;
+> once the user creates an org (onboarding step 2) or the session
+> loads an existing membership, `org_id` is updated to the org's
+> UUID. The Phase 1.1 schema has `org_id NOT NULL` — migration
+> 118 must `ALTER COLUMN org_id DROP NOT NULL` on
+> `agent_sessions`. The `user_has_org_access(org_id)` RLS helper
+> returns false for NULL org_id, but `agent_sessions` uses a
+> user-scoped policy (`user_id = auth.uid()`), not org-scoped, so
+> the nullability does not affect RLS enforcement.
 
 ### 9.2 Conversation shape
 
@@ -484,6 +680,35 @@ WHERE last_activity_at < now() - interval '30 days';
 ```
 
 Phase 2 promotes this to a pg-boss scheduled job.
+
+### 9.4 Row-Level Security
+
+<!-- gap 4 patch — agent_sessions RLS verification -->
+
+RLS is already enabled and has one policy from Phase 1.1 migration
+001:
+
+```sql
+ALTER TABLE agent_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_sessions_select ON agent_sessions
+  FOR SELECT USING (user_id = auth.uid());
+```
+
+**Deviation from standard pattern.** User-scoped only — not
+org-scoped. A user sees only their own sessions, and even
+controllers do not see other users' sessions. Sessions contain
+conversation state that is considered user-private.
+
+No INSERT/UPDATE/DELETE policies — all writes go through
+`adminClient` via the orchestrator. The absence of write policies
+combined with RLS being enabled means a `userClient` INSERT would
+fail with "new row violates RLS policy" — defense in depth
+against accidental client-side session writes.
+
+**No changes in migration 118.** The existing RLS policy covers
+the 1.2 use case. The orchestrator writes via `adminClient`
+(bypasses RLS); the chat panel reads via `userClient` (respects
+the SELECT policy).
 
 ---
 
@@ -565,6 +790,35 @@ The `confidence_score` field exists on the type for internal
 logging and Logic Receipt storage but is **never rendered** in any
 UI component. This is the ADR-0002 migration.
 
+### 10.3 Four Questions rendering contract
+
+<!-- gap 9 patch — template_id mapping for ProposedEntryCard -->
+
+Per `docs/02_specs/intent_model.md` §5, every confirmation surface
+renders the Four Questions in order, in the same visual position.
+The ProposedEntryCard is a confirmation surface.
+
+| # | Question | Template ID | Rendered from |
+|---|---|---|---|
+| 1 | What changed? | `proposed_entry.what_changed` | The `lines` array rendered as a debit/credit table — a structured table component, not a single string |
+| 2 | Why? | `proposed_entry.why.rule_matched` OR `proposed_entry.why.novel_pattern` | `matched_rule_label` if set → "Matched rule: {label}". Else "Novel pattern — the agent has not seen this before." |
+| 3 | Track record? | `proposed_entry.track_record.no_rule` | In 1.2 every mutation is Always Confirm with no learned rules populated. Renders as "N/A for this proposal." Phase 2 populates this from `historical_match_count`. |
+| 4 | What if I reject? | `proposed_entry.if_rejected.journal_entry` OR `proposed_entry.if_rejected.reversal` | Static copy per `transaction_type`: journal_entry → "The entry will not be posted. You can edit and resubmit." reversal → "The original entry remains on the ledger." |
+
+Plus the policy outcome from §10.1:
+
+| Field | Template ID | Rendered from |
+|---|---|---|
+| Required action | `proposed_entry.policy.approve_required` | `policy_outcome.reason_template_id` — in 1.2 always "Requires your approval" because all rules are Always Confirm (rung 1) |
+
+All six template IDs must be added to `messages/en.json`,
+`messages/fr-CA.json`, and `messages/zh-Hant.json` during
+execution per `docs/04_engineering/conventions.md` i18n rules.
+
+The visual layout renders these top-to-bottom in this exact order
+on every ProposedEntryCard, regardless of persona. The Approve and
+Reject buttons sit below question 4.
+
 ---
 
 ## 11. The Onboarding Flow
@@ -622,6 +876,47 @@ When onboarding completes (all required fields populated + org
 exists), the welcome page redirects to the main app layout. The
 onboarding suffix is removed from the system prompt on the next
 message.
+
+### 11.5 Onboarding state tracking and resume behavior
+
+<!-- gap 5 patch — onboarding state machine -->
+
+**(a) Where is the current step stored?** The existing
+`agent_sessions.state` JSONB column (reserved since Phase 1.1).
+Shape:
+
+```typescript
+type OnboardingState = {
+  in_onboarding: boolean;
+  current_step: 1 | 2 | 3 | 4;
+  completed_steps: number[];
+  invited_user: boolean;
+};
+```
+
+State lives under `agent_sessions.state.onboarding`. The
+orchestrator reads it at the start of each turn and injects step
+context into the system prompt suffix.
+
+**(b) Resume behavior.** If a user abandons onboarding and returns
+later (same session still within 30-day TTL): the orchestrator
+reads `state.onboarding.current_step`, injects "User was on step
+{N}, pick up where they left off" into the onboarding suffix, and
+the agent resumes from that step. If the session expired (> 30
+days): create new session, start from step 1.
+
+**(c) Invited-user detection (OQ-03 default).** The welcome page
+reads the user's memberships at page load. If the user has ≥ 1
+active membership, set `state.onboarding.invited_user = true` and
+`state.onboarding.completed_steps = [2, 3]` (org and industry
+already exist). The shortened flow runs steps 1 and 4 only. If
+the user has zero memberships, run all four steps.
+
+**(d) Completion trigger.** When step 4 completes (the user
+responds to the first-task invitation), the orchestrator sets
+`state.onboarding.in_onboarding = false`. The next message no
+longer includes the onboarding suffix in the system prompt, and
+the welcome page redirects to the main app layout.
 
 ---
 
@@ -727,23 +1022,46 @@ Returns `AgentResponse` (§5.1). The route:
 
 ### 13.3 `/api/agent/confirm`
 
+<!-- gap 6 patch — resolve confirm payload source -->
+
 Accepts:
 ```typescript
 {
   org_id: string;
   idempotency_key: string;
-  session_id: string;
 }
 ```
 
-The confirm route:
-1. Looks up the `ai_actions` row by `(org_id, idempotency_key)`.
-2. If already confirmed → returns the existing result (idempotency,
-   exit criterion #4).
-3. If pending → calls `journalEntryService.post` with `dry_run:
-   false` and the same input from the dry-run.
-4. Updates `ai_actions.status` to `'confirmed'`.
-5. Returns the posted journal entry.
+Note: no `session_id` in the request body — the confirm route
+looks up the ai_actions row by the idempotency key alone.
+
+The confirm route reads the original tool input from the existing
+`ai_actions.tool_input` JSONB column (column name verified in
+`supabase/migrations/20240101000000_initial_schema.sql` line 515
+— the column is `tool_input jsonb`, not `input_payload`).
+
+Steps:
+1. Looks up the `ai_actions` row by `(org_id, idempotency_key)`
+   via the existing UNIQUE constraint.
+2. If not found → 404 `NOT_FOUND`.
+3. If `status = 'confirmed'` → return the existing result
+   (idempotency, exit criterion #4). Return includes
+   `journal_entry_id` from the existing row.
+4. If `status = 'stale'` → 422 `AGENT_TOOL_VALIDATION_FAILED`
+   with reason "This proposal is stale and cannot be confirmed."
+5. If `status = 'pending'` → read `tool_input`, parse through
+   `PostJournalEntryInputSchema`, set `dry_run: false`, call
+   `journalEntryService.post` via `withInvariants`.
+6. On success: update `ai_actions.status` to `'confirmed'`,
+   `confirmed_at = now()`, `confirming_user_id = ctx.caller.
+   user_id`, `journal_entry_id` to the posted entry's ID.
+7. Return the posted journal entry.
+
+**The dry-run orchestrator flow** (§5.2 step 8) must write the
+full validated tool input to `ai_actions.tool_input` when
+creating the pending row. This is the contract: dry-run writes
+the input, confirm reads it back and replays with `dry_run:
+false`.
 
 ### 13.4 Existing routes reused
 
@@ -838,16 +1156,47 @@ layout (§11.2).
 
 ## 16. Permission Keys and Audit Action Keys
 
-### New ActionName values (imperative, existing roles)
+<!-- gap 7 patch — verify ActionName union, add per-tool mapping -->
 
-No new ActionName values are required. The agent tools call
-existing service functions through existing `withInvariants`
-wrappers with existing ActionName values:
-- `postJournalEntry` tool → `journal_entry.post`
-- `reverseJournalEntry` tool → `journal_entry.post`
-- `createOrganization` tool → `org.create`
-- `updateOrgProfile` tool → `org.profile.update`
-- `updateUserProfile` tool → no org-scoped action (own-profile)
+### ActionName verification
+
+The current `ACTION_NAMES` array in
+`src/services/auth/canUserPerformAction.ts` has 16 entries. The
+following ActionNames are used by 1.2 tools. Every mutating tool
+that goes through `withInvariants` needs an ActionName; read-only
+tools do not go through `withInvariants` and do not need one.
+
+| Tool | Goes through `withInvariants`? | ActionName used |
+|---|---|---|
+| `updateUserProfile` | **Yes** — own-profile-only | **(NEW) `user.profile.update`** — must be added to `ACTION_NAMES` |
+| `createOrganization` | **Yes** via route | `org.create` (exists) |
+| `updateOrgProfile` | **Yes** via route | `org.profile.update` (exists) |
+| `listIndustries` | No (read-only) | — |
+| `listChartOfAccounts` | No (read-only) | — |
+| `checkPeriod` | No (read-only) | — |
+| `listJournalEntries` | No (read-only) | — |
+| `postJournalEntry` | **Yes** via route | `journal_entry.post` (exists) |
+| `reverseJournalEntry` | **Yes** via route | `journal_entry.post` (exists) |
+| `respondToUser` | No (orchestrator-internal) | — |
+
+### New ActionName value required
+
+**`user.profile.update`** — must be added to the `ACTION_NAMES`
+array and the `ROLE_PERMISSIONS` for all three roles (every user
+can update their own profile). Added to `permissions` table seed
+and `role_permissions` for all three roles.
+
+Note: `updateUserProfile` is own-profile-only — the route reads
+`user_id` from `ctx.caller.user_id`, not from the tool input. The
+tool input carries no `org_id`, so `withInvariants` Invariant 3
+(org-access check) and Invariant 4 (role check via
+`canUserPerformAction`) both skip — Invariant 4 only fires when
+`opts.action` is set AND `input.org_id` is a non-empty string.
+This is the same behavior as `org.create` for new-org creation
+where the org doesn't exist yet. The ActionName must still exist
+in the `ACTION_NAMES` array for TypeScript type safety, and is
+added to `ROLE_PERMISSIONS` for all three roles (every user can
+edit their own profile regardless of role).
 
 ### New audit_log.action values (past-tense)
 
