@@ -17,6 +17,19 @@ already recorded.
   1.1 invariants with full leaves, Phase 2 evolution notes, and
   interactions. Single source of truth for "what is legal in the
   ledger and who stops what is illegal."
+- **`docs/02_specs/agent_autonomy_model.md`** — the agent
+  autonomy policy. Agent Ladder (three rungs), limit model (four
+  dimensions), System vs. Policy boundary, policy decision tree.
+  The companion to `ledger_truth_model.md` — that file governs
+  the ledger, this file governs the agent.
+- **`docs/02_specs/intent_model.md`** — the canonical `Intent`
+  discriminated union (Navigation / Mutation / Query),
+  `ProposedMutation` shape, Four Questions grammar, Logic
+  Receipts specification.
+- **`docs/02_specs/mutation_lifecycle.md`** — the six states a
+  mutation passes through from proposal to finalization, with
+  the Needs Attention prioritization state and the 24-hour
+  reversible window.
 - **`docs/02_specs/data_model.md`** — the schema (table-by-table
   reference).
 - **`docs/02_specs/invariants.md`** — the INV-ID rollup index.
@@ -27,12 +40,20 @@ already recorded.
 - **`docs/02_specs/open_questions.md`** — unresolved questions and
   formalization candidates. The replacement for what PLAN.md §18
   used to be.
+- **`docs/03_architecture/agent_interface.md`** — the durable,
+  phase-agnostic interface patterns for the agent: one voice,
+  typed tools, structured outputs, persona discipline, onboarding
+  flow. Companion to the phase-specific
+  `docs/09_briefs/phase-1.2/agent_architecture.md`.
 - **`docs/06_audit/control_matrix.md`** — auditor-facing evidence
   table mapping each INV-ID to its tests and code enforcement
   mechanism.
 - **`docs/07_governance/adr/`** — Architecture Decision Records.
-  ADR-001 (`0001-reversal-semantics.md`) is currently the only one.
-  ADRs are written in anger, not preemptively.
+  Six ADRs to date: ADR-0001 (reversal semantics), ADR-0002
+  (confidence as policy input), ADR-0003 (one-voice agent
+  architecture), ADR-0004 (ghost rows visual contract), ADR-0005
+  (three-path entry + intent schema), ADR-0006 (agent persona
+  unnamed). ADRs are written in anger, not preemptively.
 - **`docs/07_governance/friction-journal.md`** — the war diary.
   Decisions made with rationale, incidents and their fixes. The
   right home for "why is this thing this way?" questions when the

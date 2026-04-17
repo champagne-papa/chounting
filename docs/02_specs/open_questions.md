@@ -205,6 +205,88 @@ basic CSV export is required by end of Phase 1.2.**
 
 **Blocks:** Phase 1.2 vs Phase 2 scope decision for export.
 
+### Q23 — Promotion criteria: globally fixed or org-configurable?
+
+The Agent Ladder promotion defaults are ≥15 matches, ≥95% approval
+rate, within a 30-day window. These are opinionated defaults chosen
+to keep the initial system simple. Open question: should these
+thresholds be org-configurable (with owner authorization), or fixed
+at the system level across all orgs?
+
+**Proposed default (design sprint):** fixed at the system level for
+v1. Log every promotion decision; adjust the defaults after
+observing real promotion behavior across several orgs. Org-level
+configuration is a Phase 2 decision informed by data.
+
+**Confirm fixed-at-system-level, or specify org-configurable from
+v1.**
+
+**Blocks:** agent_autonomy_model.md final content.
+
+### Q24 — Limit change authorization: who?
+
+Amount limits (per-transaction, per-day aggregate, per-rule) are
+the policy lever that controls how much the agent can act on
+without human approval. Who can change them?
+
+Three options: (a) controller-direct — any controller can change
+limits; (b) controller-proposes / owner-approves — a controller
+proposes the change, the owner confirms before it takes effect;
+(c) owner-only — only the owner can change limits.
+
+**Proposed default (design sprint):** option (b),
+controller-proposes / owner-approves. The friction is the feature —
+limit changes are security-sensitive in a family-office context and
+the extra approval step is low-cost at this user count. Reconsider
+after 6 months of real use.
+
+**Confirm (b), or specify (a) or (c).**
+
+**Blocks:** agent_autonomy_model.md final content; Phase 1.2 UI
+for the Agent Policies canvas.
+
+### Q25 — Agent persona and voice
+
+The agent has one voice to the user across all interactions (chat,
+onboarding, proposed-mutation-card reasoning text). The design
+sprint settled on a "senior bookkeeper" voice — neutral,
+professional, slightly understated, no name, no personality
+gimmicks. Open question: is the persona truly unnamed, or does it
+carry a neutral product-aligned name ("The Bridge," "Bridge," or
+similar)?
+
+**Proposed default (design sprint):** unnamed. The agent is
+referred to in UI copy as "the agent" or "your bookkeeper-style
+agent" — no proper name, no anthropomorphization. This preserves
+the trust framing: the product is a control surface, not a
+personality.
+
+**Confirm unnamed, or specify a name to use in Phase 1.2 UI
+copy.**
+
+**Blocks:** Phase 1.2 UI copy work (chat empty state, onboarding
+flow text, proposed-mutation-card language).
+
+### Q26 — Active vs passive promotion prompting
+
+When a rule meets promotion criteria, how does the system surface
+it to the controller? Two options: (a) passive — a banner in the
+Agency Health view ("3 rules eligible for promotion"), discovered
+on review; (b) active — the agent raises the prompt in chat
+("I've handled Amazon invoices correctly 15 times — want to
+promote?").
+
+**Proposed default (design sprint):** passive (option a) for v1.
+Active prompts risk polluting the chat transcript with housekeeping
+requests; the Agency Health view lets the controller grant autonomy
+deliberately in a calm review moment rather than reactively.
+Flagged as tunable after real-use observation.
+
+**Confirm passive (a), or specify active (b) or a hybrid.**
+
+**Blocks:** agent_autonomy_model.md user-facing surface section;
+Phase 2 Agency Health canvas view brief.
+
 ---
 
 ## Section 3 — Open questions surfaced during Phase 1.1 closeout

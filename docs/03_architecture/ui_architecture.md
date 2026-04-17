@@ -285,3 +285,226 @@ prevents a tampered reversal form from posting a non-mirror.
 `journalEntryService.post` call with `reverses_journal_entry_id`
 pre-populated from conversation context. The Phase 1.1 deliverable
 is the manual form path only.
+
+---
+
+## Canvas ↔ Chat State Model
+
+The canvas and chat panels maintain **separate state timelines**.
+The canvas has a navigation history stack (back/forward); the
+chat has a conversation transcript. The two are connected by
+context injection, not by shared history.
+
+**Inbound (canvas → chat).** The existing brief
+`docs/09_briefs/phase-1.2/canvas_context_injection.md` specifies
+the inbound half: canvas state is injected into the system prompt
+as subordinate context every turn. The subordinate-framing rule
+and the over-anchoring test are specified there; this section
+does not restate them.
+
+**Outbound (chat → canvas).** When an agent response or a palette
+action produces a new `CanvasDirective`, the following rules
+apply:
+
+1. The directive is pushed onto the **canvas navigation history
+   stack**, not the chat transcript. The canvas back button
+   navigates this stack.
+2. The chat transcript remains a **pure conversation log**.
+   Navigation events are not recorded as chat turns. A user
+   scrolling back through chat history sees messages, not page
+   transitions.
+3. When chat pushes a canvas change, the chat message renders an
+   **inline bookmark pill** (e.g., "↗ AWS spend detail") so the
+   user can re-trigger that view later. The pill is a
+   convenience — it fires the same `CanvasDirective` again,
+   pushing a new entry onto the canvas stack.
+4. The canvas back button **never** navigates the chat
+   transcript. A user who navigates canvas-back from view C to
+   view B sees their chat history unchanged — the conversation
+   is still at the same scroll position, with the same messages
+   visible.
+
+**The separation rule.** Chat is the conversation. Canvas is the
+workspace. They share context (via injection) but they do not
+share history. This prevents the disorienting behavior where
+"going back" in the canvas un-says something the agent said.
+
+---
+
+## The Three-Path Entry Model
+
+Every user action that produces work for the system enters through
+one of three paths. All three converge on `Intent` objects (see
+`docs/02_specs/intent_model.md`). No path has bespoke routing.
+
+### Path 1: Mainframe
+
+The collapsed icon rail on the far left. Direct-launch icons for
+common canvas views. Produces **Navigation intents only** — the
+Mainframe is a navigation surface, not a mutation surface. Every
+Mainframe click fires a `CanvasDirective` pushed onto the canvas
+stack.
+
+### Path 2: Chat
+
+The AI agent panel. The user types a natural-language message;
+the agent interprets it and produces **any of the three intent
+types**: navigation ("show me the CoA"), mutation ("post this
+journal entry"), or query ("what's my cash position?"). Chat is
+the most expressive path — it can do anything the other two can,
+plus handle ambiguity.
+
+### Path 3: Command Palette
+
+A keyboard-invoked overlay (Cmd+K / Ctrl+K). Three sub-layers:
+
+- **Navigation sub-layer:** fuzzy-match canvas targets.
+  "Chart of Accounts" → navigation intent.
+- **Action sub-layer:** scoped mutation commands.
+  "New journal entry" → mutation intent with form pre-fill.
+- **Query sub-layer:** quick lookups.
+  "AWS spend Q4" → query intent with transient result.
+
+The palette routes based on prefix/context — it does not call the
+LLM for every keystroke. Simple navigation and action commands
+are handled by a deterministic prefix router; only genuinely
+ambiguous inputs fall through to the agent.
+
+### The No-Modes Rule
+
+No basic-vs-advanced toggle. No "simple mode" vs "power mode."
+Features appear when they are needed (progressive revelation
+through use). A user who has never used the palette discovers it
+through a keyboard shortcut hint; a user who has never used bulk
+operations sees the multi-select affordance only when they select
+a second row. Mode-switching software dies — the single UI
+adapts to the user's behavior.
+
+---
+
+## Confirmation-First Mutation as UI Contract
+
+Every mutation path — agent-initiated or manual, one-off or bulk,
+form submission or chat-originated — flows through a confirmation
+surface before any ledger write. The confirmation surface uses
+the Four Questions grammar from
+`docs/02_specs/intent_model.md` §5:
+
+1. What changed?
+2. Why?
+3. Track record?
+4. What if I reject?
+
+This contract applies to:
+
+- ProposedEntryCard (agent-proposed journal entries)
+- Manual journal entry form submission
+- Bulk approve dialog (multiple mutations approved at once)
+- Reversal form submission
+- Period close confirmation
+- Promotion ceremonies (agent rule promotion)
+- Limit change confirmation (controller proposes, owner approves)
+
+No mutation surface is exempt. The Four Questions grammar is a
+product-wide UI contract, not a component decision.
+
+---
+
+## Agent Voice Standard
+
+The agent is unnamed (Q25 default in
+`docs/02_specs/open_questions.md`). UI copy refers to "the agent"
+or, when persona context matters, "your bookkeeper-style agent."
+No proper name. No personality flourishes.
+
+**Voice principles:**
+
+- **Neutral and professional.** Tone closer to a senior
+  bookkeeper answering a question than to an assistant trying
+  to be helpful.
+- **Understated.** The agent does not celebrate its own actions
+  ("Great news! I posted the entry!") or apologize effusively
+  ("I'm so sorry, I couldn't find that vendor").
+- **Concrete.** Never filler phrases: "I'd be happy to help,"
+  "That's a great question," "Let me look into that for you."
+  These are trust liabilities in accounting software.
+- **No emoji.** No exclamation marks in agent output. No
+  anthropomorphic phrasing ("I think," "I feel," "I believe").
+  The agent is a tool. The voice signals this by not being a
+  character.
+
+**Error behavior.** When the agent cannot do something, it says
+plainly what it cannot do and why, then offers the alternative:
+"I can't post to March — that period is locked. You can post to
+April instead, or ask a controller to reopen March."
+
+The persona's job is to **not leak personality.** Personality is
+a trust liability in accounting software. See
+`docs/03_architecture/agent_interface.md` for the full persona
+specification.
+
+---
+
+## Ghost Rows Visual Contract
+
+When an agent-proposed entry appears in a ledger view before
+posting (the "Pending" or "Needs Attention" lifecycle state from
+`docs/02_specs/mutation_lifecycle.md`), it uses **four
+independent visual signals** (defense in depth — if CSS fails to
+load one signal, the others still distinguish ghost rows from
+posted rows):
+
+1. **Italic text.** All text in the row is italicized.
+2. **Muted/lower-contrast color.** Row text uses a lower-opacity
+   variant of the standard text color.
+3. **Persistent left-border stripe** in a reserved color (neutral
+   gray, not semantic red/green/yellow — draft status is not an
+   error, warning, or success).
+4. **Inline "Draft" pill.** A small label adjacent to the row's
+   primary identifier.
+
+**Schema-level exclusion.** Ghost rows are excluded from all
+exports and all reports via schema-level filtering, not UI
+filtering. A report that includes draft rows is a **bug**, not a
+configuration choice. The filtering predicate is part of the
+report query (e.g., `WHERE lifecycle_state = 'finalized'`), not
+a front-end toggle.
+
+**The animation contract.** The transition from draft to posted
+is a discrete UI event with a one-time satisfying animation —
+the ghost row "solidifies" (opacity and font-weight transition
+from muted/italic to normal over ~300ms). This is the single
+place motion is permitted in ledger views. All other ledger view
+interactions are instant (no loading spinners on row actions, no
+animated table re-sorts).
+
+---
+
+## Rejected Patterns
+
+Patterns considered during the design sprint and explicitly
+killed. Documented here so future contributors do not re-propose
+them without re-evaluating the rationale.
+
+- **Node-and-edge cash flow diagrams.** Don't reconcile, don't
+  tie back to journal entries, unreadable at real transaction
+  volume.
+- **Flying nodes / spatial clustering of transactions.**
+  Unserious for controllers; accountants want confidence, not
+  choreography.
+- **Multi-cursor from text editors.** Superseded by multi-select
+  + scoped Cmd+K; same result without teaching a novel
+  interaction pattern.
+- **Figma-style real-time multiplayer presence.** Phase 3+ at
+  earliest; simple row-level lock + "edited by X" is enough for
+  v1. The user count (~100 across ~50 orgs) does not justify
+  the complexity.
+- **Mode toggles (basic vs advanced).** Use progressive
+  revelation through use instead. Mode-switching software dies
+  — users get stuck in one mode and never discover the other.
+- **Spatial reconciliation with confidence tethers as primary
+  UI.** Reconciliation ships as list + keyboard + AI-suggested
+  matches first. Spatial is progressive enhancement conditional
+  on the list form proving insufficient in use. Shipping spatial
+  first is premature optimization of a surface that may never
+  need it.

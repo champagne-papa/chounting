@@ -1,4 +1,29 @@
-# Where I am as of 2026-04-16 (Phase 1.5 complete)
+# Where I am as of 2026-04-16 (Phase 1.5 complete; Agent Autonomy Design Sprint documented)
+
+## Agent Autonomy Design Sprint — Documented (2026-04-16)
+
+Multi-round design review with two external CTOs produced the
+trust model, three-path entry architecture, and canonical Intent
+Schema for The Bridge. Four-phase documentation sprint captured
+the outcomes:
+
+- **Phase A** — friction-journal entry + Q23–Q26 registered in
+  `open_questions.md` (defaults accepted).
+- **Phase B** — three new specs (`agent_autonomy_model.md`,
+  `intent_model.md`, `mutation_lifecycle.md`), extension of
+  `ui_architecture.md`, and new `agent_interface.md`.
+- **Phase C** — ADRs 0002 through 0006 (confidence as policy
+  input, one-voice architecture, ghost rows visual contract,
+  three-path intent schema, agent persona unnamed).
+- **Phase D** — nine Phase 2 brief stubs capturing deferred
+  patterns, CLAUDE.md navigation updated, cross-reference sweep.
+
+Phase 1.2 implementation work is now unblocked. The Phase 1.2
+brief at `docs/09_briefs/phase-1.2/agent_architecture.md` will
+be reconciled against ADR-0002 (confidence display) during
+Phase 1.2 execution.
+
+---
 
 ## Phase 1.5 — Complete (2026-04-16)
 

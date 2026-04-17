@@ -95,6 +95,11 @@ not delete it.
 | # | Title | Status | Date |
 |---|---|---|---|
 | [ADR-0001](./0001-reversal-semantics.md) | Reversal Entry Semantics | Accepted | 2026-04-11 |
+| [ADR-0002](./0002-confidence-as-policy-input.md) | Confidence as Policy Input, Not UI Hint | Accepted | 2026-04-16 |
+| [ADR-0003](./0003-one-voice-agent-architecture.md) | One-Voice Agent Architecture (No User-Facing Sub-Agents) | Accepted | 2026-04-16 |
+| [ADR-0004](./0004-ghost-rows-visual-contract.md) | Ghost Rows Visual Contract (Four-Signal Defense in Depth) | Accepted | 2026-04-16 |
+| [ADR-0005](./0005-three-path-intent-schema.md) | Three-Path Entry Model with Canonical Intent Schema | Accepted | 2026-04-16 |
+| [ADR-0006](./0006-agent-persona-unnamed.md) | Agent Persona: Senior Bookkeeper, Unnamed | Accepted | 2026-04-16 |
 
 ## Related files
 

@@ -875,3 +875,71 @@ Categories:
   in (or after) the migration that adds the dependency. Migration 113
   got this right by bundling the RLS helper rewrites with the
   memberships.status column addition.
+
+## Agent Autonomy Design Sprint
+
+- 2026-04-16 NOTE   Agent autonomy model and UI/UX architecture
+  design sprint completed. Multi-round review between the founder,
+  External CTO A, and External CTO B. Format: iterated CTO
+  feedback converging on a shared trust model and three-path
+  entry architecture. Phase 1.2 implementation work was paused
+  for the duration; Phase 1.5 had completed (2026-04-16) and
+  Phase 1.2 was next on deck when the sprint began.
+
+  Substantive decisions reached:
+
+  - Product thesis extended: "The product is not the AI. The
+    product is the control surface over the AI." This sharpens
+    the interface half of the thesis without changing the engine
+    half. The agent is a managed actor in a trust system.
+  - Trust model: Agent Ladder with three rungs (probationary /
+    auto-with-notification / silent auto). Dollar-based limits
+    modeled on real accounting role delegation (AP-specialist
+    limit analogy). Schema-enforced hard ceilings for
+    transaction classes that can never auto-post regardless of
+    rung: intercompany, period-end adjustments, equity,
+    reversals, locked periods, first-time vendors above a floor.
+  - Confidence scores are a policy input, not a UI hint. Raw
+    confidence is never displayed to users — only the policy
+    outcome with a legible reason.
+  - One voice to the user, many tools under the hood. No
+    user-facing sub-agent hierarchy; internal orchestration
+    stays internal.
+  - Three-path entry (Mainframe / chat / command palette)
+    unified by a canonical Intent Schema. No path grows bespoke
+    routing.
+  - ProposedMutation is the canonical object for every
+    ledger-touching change. Every confirmation surface renders
+    from one; every audit record stores one.
+  - Canvas ↔ chat relationship: canvas state flows into chat as
+    context every turn, but canvas navigation history and chat
+    transcript remain separate timelines. Phase 1.2
+    canvas_context_injection work is the inbound side; this
+    sprint confirmed the model.
+  - Ghost Rows visual contract: four independent signals (italic
+    + muted + left-stripe + "Draft" pill). Schema excludes from
+    exports and reports.
+  - Logic Receipts as the immutable audit artifact. No raw LLM
+    reasoning stored or displayed, ever.
+
+  What follows: this capture phase (Phase A) registers four new
+  open questions (Q23–Q26) in open_questions.md and records this
+  friction-journal entry. A follow-on documentation sprint
+  (Phase B) will draft three new specs in docs/02_specs/
+  (agent_autonomy_model.md, intent_model.md,
+  mutation_lifecycle.md), extend docs/03_architecture/
+  ui_architecture.md, create docs/03_architecture/
+  agent_architecture.md, draft ADR-002 through ADR-006, and stub
+  nine Phase 2 briefs under docs/09_briefs/phase-2/. Phase 1.2
+  implementation is unblocked when the Phase B specs land.
+- 2026-04-16 NOTE   Agent Autonomy Design Sprint documentation
+  complete. Four-phase sprint delivered: Phase A (1 friction
+  entry, 4 open questions Q23–Q26), Phase B (3 new specs, 1
+  extension, 1 new architecture doc — ~1,739 lines), Phase C
+  (5 new ADRs 0002–0006 — ~998 lines), Phase D (9 Phase 2
+  brief stubs, 4 index updates, final cross-reference sweep).
+  Spec-without-enforcement discipline held end-to-end:
+  invariants.md still shows 17 Phase 1.1 invariants; no new
+  INV-IDs registered. Phase 1.2 implementation is unblocked.
+  The Phase 1.2 brief will be reconciled against ADR-0002
+  (confidence display superseded) during execution.
