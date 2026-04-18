@@ -21,6 +21,7 @@
     "test:no-hardcoded-urls": "! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.103.0",
@@ -33,7 +34,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.72.1",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
