@@ -988,3 +988,39 @@ Categories:
   Gap 9 (§10.3): Four Questions template_id mapping — 6 template IDs
   for ProposedEntryCard rendering, i18n-required in all 3 locales.
   Brief grew from 1037 to 1364 lines. No new gaps discovered.
+- 2026-04-18 NOTE   Phase 1.2 Session 1 sub-brief drafting session
+  started. Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]).
+  Master brief frozen at SHA aae547a. Session 1 scope: schema +
+  deps + types housekeeping only — migrations 118 (agent_session
+  wiring + user.profile.update permission seed) and 119 (journal
+  entry form fixes placeholder), two new dependencies
+  (@anthropic-ai/sdk, zod-to-json-schema), one new ActionName,
+  ProposedEntryCard type migration per ADR-0002, types.ts regen.
+  No Anthropic API calls, no agent code, no new tests. Founder
+  pre-resolved the permission-pattern question: 1.5C adds
+  ActionNames via migration (not seed) with CA-27 parity test
+  enforcement. Session 1 folds the permission seed into migration
+  118 matching the 1.5C precedent (migration 116 combined schema
+  + initial catalog).
+- 2026-04-18 NOTE   Phase 1.2 Session 1 sub-brief drafting session
+  complete. Artifacts: (1) session-1-brief.md (443 lines, within
+  the 250–450 target), (2) CURRENT_STATE.md updated to note
+  Session 1 ready to execute and Phase 1.2 decomposed into ~8
+  sessions, (3) this entry. Two discoveries surfaced during
+  drafting that extended the founder prompt's scope:
+  (a) CA-28 (permissionCatalogSeed.test.ts) hardcodes the
+  catalog to 16 permissions and specific 3-item role lists — it
+  breaks when user.profile.update is added, even though CA-27
+  (permissionParity.test.ts) is dynamic and passes automatically.
+  Sub-brief Work Item 5.4(b) now covers updating four CA-28
+  assertions (16→17 total, controller 16→17, ap_specialist list
+  3→4, executive list 3→4). This is not "adding tests" — it is
+  maintaining the parity invariant CA-28 encodes.
+  (b) role_permissions uses (role_id, permission_key) as its
+  composite PK, not a permission_id FK. The founder prompt's
+  S1-6 verification SQL had permission_id; corrected to
+  permission_key in the sub-brief. Ordering note: commits 2 and
+  3 are coupled — intermediate state (DB has 17 permissions,
+  ACTION_NAMES has 16, CA-28 expects 16) fails tests, so the
+  two commits must land together in the same push. Flagged
+  explicitly in §10 commit plan.

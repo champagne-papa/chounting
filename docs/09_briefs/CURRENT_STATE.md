@@ -1,13 +1,34 @@
-# Where I am as of 2026-04-16 (Phase 1.2 in flight)
+# Where I am as of 2026-04-18 (Phase 1.2 Session 1 ready to execute)
 
-## Phase 1.2 — The Double Entry Agent (in flight)
+## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
-Execution brief at `docs/09_briefs/phase-1.2/brief.md`. The Double
-Entry Agent end-to-end: conversational journal entries, onboarding
-flow, ProposedEntryCard with policy-outcome language (ADR-0002),
-canvas context injection, form-escape surfaces for profile/org/
-invite management. 9 tools, 3 persona prompts, 27 exit criteria
-(19 from phase_plan.md + 8 new for onboarding/forms/migration).
+Master execution brief at `docs/09_briefs/phase-1.2/brief.md`
+(frozen at SHA aae547a). Per founder decision, Phase 1.2 is
+decomposed into ~8 execution sessions. The master brief is the
+architecture document and is never modified during execution; each
+session gets a focused sub-brief citing specific master-brief
+sections.
+
+The Double Entry Agent end-to-end: conversational journal entries,
+onboarding flow, ProposedEntryCard with policy-outcome language
+(ADR-0002), canvas context injection, form-escape surfaces for
+profile/org/invite management. 10 tools (respondToUser added per
+§6.2), 3 persona prompts, 27 exit criteria (19 from phase_plan.md
++ 8 new for onboarding/forms/migration).
+
+### Session 1 — Ready to execute (2026-04-18)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-1-brief.md`.
+Foundational, API-free groundwork: migrations 118 (agent_session
+wiring + user.profile.update permission seed) and 119 (journal
+entry form placeholder), two new dependencies
+(`@anthropic-ai/sdk`, `zod-to-json-schema`), ACTION_NAMES +
+CA-28 updates, ProposedEntryCard type migration to the ADR-0002
+shape (component shim only — Session 7 rewrites the render),
+`src/db/types.ts` regen. 12 S1 exit criteria, no new tests, no
+agent code. Target commit cadence: 4 commits.
+
+Sessions 2–8 sub-briefs land as each predecessor session closes out.
 
 ---
 
