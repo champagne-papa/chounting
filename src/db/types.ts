@@ -36,27 +36,30 @@ export type Database = {
     Tables: {
       agent_sessions: {
         Row: {
+          conversation: Json
           last_activity_at: string
           locale: string
-          org_id: string
+          org_id: string | null
           session_id: string
           started_at: string
           state: Json
           user_id: string
         }
         Insert: {
+          conversation?: Json
           last_activity_at?: string
           locale?: string
-          org_id: string
+          org_id?: string | null
           session_id?: string
           started_at?: string
           state?: Json
           user_id: string
         }
         Update: {
+          conversation?: Json
           last_activity_at?: string
           locale?: string
-          org_id?: string
+          org_id?: string | null
           session_id?: string
           started_at?: string
           state?: Json
@@ -1645,27 +1648,6 @@ export type Database = {
           debit_total_cad: number
           credit_total_cad: number
         }[]
-      }
-      test_post_balanced_entry: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_amount: number
-        }
-        Returns: string
-      }
-      test_post_unbalanced_entry: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_debit_amount: number
-          p_credit_amount: number
-        }
-        Returns: string
       }
       user_has_org_access: {
         Args: {
