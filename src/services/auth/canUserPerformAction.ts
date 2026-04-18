@@ -34,6 +34,7 @@ export const ACTION_NAMES = [
   'user.role.change',
   'user.suspend',
   'user.remove',
+  'user.profile.update',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];

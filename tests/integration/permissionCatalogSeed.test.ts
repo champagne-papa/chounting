@@ -14,30 +14,30 @@ describe('CA-28: permission catalog seed integrity', () => {
     expect(keys).toEqual(['ap_specialist', 'controller', 'executive']);
   });
 
-  it('16 permissions exist', async () => {
+  it('17 permissions exist', async () => {
     const { data } = await db.from('permissions').select('permission_key');
-    expect(data).toHaveLength(16);
+    expect(data).toHaveLength(17);
   });
 
-  it('controller has all 16 permissions', async () => {
+  it('controller has all 17 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'controller').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(16);
+    expect(perms).toHaveLength(17);
   });
 
-  it('ap_specialist has exactly 3 permissions', async () => {
+  it('ap_specialist has exactly 4 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'ap_specialist').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(3);
+    expect(perms).toHaveLength(4);
     const keys = (perms ?? []).map((p: { permission_key: string }) => p.permission_key).sort();
-    expect(keys).toEqual(['ai_actions.read', 'chart_of_accounts.read', 'journal_entry.post']);
+    expect(keys).toEqual(['ai_actions.read', 'chart_of_accounts.read', 'journal_entry.post', 'user.profile.update']);
   });
 
-  it('executive has exactly 3 permissions', async () => {
+  it('executive has exactly 4 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'executive').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(3);
+    expect(perms).toHaveLength(4);
     const keys = (perms ?? []).map((p: { permission_key: string }) => p.permission_key).sort();
-    expect(keys).toEqual(['ai_actions.read', 'audit_log.read', 'chart_of_accounts.read']);
+    expect(keys).toEqual(['ai_actions.read', 'audit_log.read', 'chart_of_accounts.read', 'user.profile.update']);
   });
 });
