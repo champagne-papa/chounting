@@ -1024,3 +1024,66 @@ Categories:
   ACTION_NAMES has 16, CA-28 expects 16) fails tests, so the
   two commits must land together in the same push. Flagged
   explicitly in §10 commit plan.
+- 2026-04-18 NOTE   Phase 1.2 Session 1 execution session —
+  starting. Starting SHA: 4a62faf. Starting model: Claude Opus
+  4.7 (claude-opus-4-7[1m]). Completion target: all 12 S1 exit
+  criteria (S1-1 through S1-12) pass after the four-commit
+  cadence defined in sub-brief §10. Sub-brief at
+  docs/09_briefs/phase-1.2/session-1-brief.md is the spec; this
+  session produces code, migrations, and test edits. Master
+  brief frozen at aae547a.
+- 2026-04-18 WRONG  Session 1 sub-brief §5.4(b) named CA-28 as
+  the only test needing count updates, but CA-37 in
+  crossOrgRlsIsolation.test.ts also hardcodes permissions and
+  role_permissions counts (16→17 permissions, 22→25 role grants
+  — same invariant as CA-28, tested through the RLS surface
+  rather than the admin surface). Caught correctly by the full
+  pnpm test step at commit 4, not by the commit-2 verification
+  (which only ran CA-27 and CA-28 explicitly). WSL Claude
+  stopped and flagged per sub-brief §7 rather than powering
+  through; founder chose Option 1 (amend commit 3 to cover both
+  CA-28 and CA-37). Amended commit: 9894603 → 3b034b8.
+  Lesson for Session 2+ sub-brief drafting: when a migration
+  changes permissions or role_permissions row counts, the
+  sub-brief must include a grep verification step:
+  `grep -rn 'toHaveLength\|toBe' tests/ | grep -E 'permissions|role_permissions'`.
+  This is a zero-cost check that catches the full set of
+  catalog-count dependencies, not just the ones the sub-brief
+  author happened to remember. Candidate for a conventions.md
+  addition under "Phase 1.5A Conventions / Permission Keys" so
+  every future drafter sees it.
+- 2026-04-18 NOTE   Kong gateway / auth container ordering quirk
+  surfaced during Session 1 execution. After pnpm db:reset
+  (which restarts db, auth, storage, realtime containers) Kong
+  was not refreshing its upstream resolution to the restarted
+  auth container — the admin auth API calls for seed user
+  creation returned "An invalid response was received from the
+  upstream server" via the gateway even though the auth
+  container logs showed it was healthy and serving requests on
+  port 9999. Workaround: `docker restart supabase_kong_chounting`
+  before running `pnpm db:seed:all`. The symptom appeared only
+  after the second back-to-back db:reset in a single session
+  (commit 4's db:reset; commit 2's earlier db:reset was followed
+  only by targeted CA-27/CA-28 tests, which don't hit auth).
+  The first baseline `pnpm test` (pre-commit-1) passed because
+  the DB was pre-seeded from the prior session. Worth preserving
+  as a workflow note: after every `pnpm db:reset`, run
+  `docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all`
+  — or, preferably, a `pnpm db:reset:clean` script that folds
+  the Kong refresh + seed into one command. The underlying
+  cause is not investigated here; likely Kong DNS caching or
+  upstream health-check interval. Phase 2 DevEx work.
+- 2026-04-18 NOTE   Phase 1.2 Session 1 execution complete. All
+  12 S1 exit criteria pass. 4 commits on top of 4a62faf:
+  44ecb4f (deps), 21169ea (migration 118 + types regen),
+  3b034b8 (ACTION_NAMES + CA-28 + CA-37 parity — amended from
+  9894603 after the CA-37 gap was flagged), and commit 4 (this
+  commit: migration 119 + ProposedEntryCard type + shim +
+  friction journal entries). Pinned versions:
+  @anthropic-ai/sdk 0.90.0, zod-to-json-schema 3.25.2. Starting
+  model: Claude Opus 4.7 (claude-opus-4-7[1m]) — unchanged
+  throughout. Full regression: 36 test files, 162 tests, 0
+  failures. Master brief still frozen at aae547a. No new open
+  questions beyond the CA-37 sub-brief-drafting-workflow note
+  above. Session decomposition discipline held: no Session 2+
+  scope leaked in.

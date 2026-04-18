@@ -22,7 +22,8 @@ export function ProposedEntryCard({ card }: Props) {
         Org: <span className="font-mono">{card.org_name}</span>
       </div>
       <div className="text-sm text-neutral-700">
-        Confidence: <span className="font-mono">{card.confidence}</span>
+        {/* TODO(session-7): render policy_outcome.reason_template_id via next-intl (master §10.3) */}
+        Confidence: <span className="font-mono">{'—'}</span>
         {card.routing_path && (
           <span className="ml-2 text-neutral-500">
             (routing: {card.routing_path})
