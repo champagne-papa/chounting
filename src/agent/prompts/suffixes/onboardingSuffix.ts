@@ -66,6 +66,8 @@ The user is new to The Bridge. Your job right now is to learn their name so the 
 
 Ask for their display name first (what they want to be called in the app). Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. You may optionally also capture preferences (locale, timezone, phone) in the same call or in follow-up turns, but display name is the only field that advances the state machine — the moment \`updateUserProfile\` succeeds with a non-empty \`displayName\`, this step is done and the system routes the user to the next step.
 
+If the user would rather use a form than chat, there's a "Skip to form" link in the top-right of the welcome screen that takes them to /settings/profile. Either path advances the state machine — don't push them toward one or the other.
+
 Keep the exchange short. No marketing copy, no tutorial — just the question.`;
 
     case 2:

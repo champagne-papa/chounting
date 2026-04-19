@@ -2726,3 +2726,35 @@ Categories:
   sweeping these in; they will be called out again in the
   Session 6 closeout entry so the founder's Phase 2 triage
   doesn't lose them.
+- 2026-04-19 NOTE   Session 6 browser-verification deferral.
+  The Playwright plugin was installed mid-session
+  (`~/.claude/plugins/installed_plugins.json` shows
+  `playwright@claude-plugins-official` registered at
+  2026-04-19T18:38:35) but its MCP tools did not hot-load
+  into the running Claude Code session — MCP plugins
+  register at session start. WSL Claude could not drive a
+  browser; founder's environment also lacked browser tooling.
+  Option B chosen: close Commit 2+3 on backend verification
+  (supabase-js-authenticated preview-method state branching,
+  pre-fill data reads, authz checks) + structural code
+  review; defer visual/interactive UX verification to
+  Commit 4's skip-link flow. After Commit 4's prose edit
+  lands and `pnpm typecheck && pnpm test` is green, **the
+  next session should** (1) restart Claude Code so Playwright
+  tools register, (2) verify the tool prefix appears in the
+  deferred-tool list, (3) run the combined retroactive
+  browser pass covering Commit 2+3's visual checks
+  (UserProfileEditor pre-fill + save-button cycling,
+  OrgProfileEditor controller render + immutable-fields
+  card, OrgUsersView table + invite-form token display,
+  EmailMismatchView copy, AcceptCTA POST) plus Commit 4's
+  skip-link visibility + click-navigation, (4) generate a
+  fresh invitation token (the one from this session was
+  consumed by the verification script), (5) treat any
+  surfaced issue as a Session 6 amendment commit — small
+  scope, no sub-brief amendment unless structural. **If the
+  plugin still fails to load after restart:** debug it
+  separately; do NOT block Commit 5 on it. Backend +
+  structural review already cleared the commit gates. A
+  one-line "Playwright-verified post-hoc" note lands in the
+  next journal entry when verification completes.

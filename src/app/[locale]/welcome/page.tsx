@@ -104,8 +104,24 @@ export default async function WelcomePage({ params }: PageProps) {
     ? `/${locale}/${activeMemberships[0].org_id}`
     : undefined;
 
+  // Phase 1.2 Session 6 §6.8 — skip-link to the form-based profile
+  // surface. Visible at step 1 only per Pre-decision 3 (step 2/3
+  // have no form-escape — org creation is conversational-only;
+  // step 4 is not skippable). The link is a sibling to the chat
+  // panel, not inside it — AgentChatPanel stays untouched (Session
+  // 7 rewrite seam).
+  const showSkipLink = initialState.current_step === 1;
+
   return (
     <div className="fixed inset-0 flex bg-white">
+      {showSkipLink && (
+        <a
+          href={`/${locale}/settings/profile`}
+          className="fixed top-4 right-4 z-10 text-sm text-neutral-600 hover:text-neutral-900 underline underline-offset-4 decoration-neutral-300"
+        >
+          Skip to form
+        </a>
+      )}
       <div className="flex-1 max-w-2xl mx-auto flex flex-col">
         <AgentChatPanel
           orgId={null}
