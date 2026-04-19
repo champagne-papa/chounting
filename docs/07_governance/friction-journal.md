@@ -1087,3 +1087,43 @@ Categories:
   questions beyond the CA-37 sub-brief-drafting-workflow note
   above. Session decomposition discipline held: no Session 2+
   scope leaked in.
+- 2026-04-18 NOTE   Phase 1.2 Session 2 sub-brief drafting session
+  started. Starting SHA: 82247cb. Starting model: Claude Opus 4.7
+  (claude-opus-4-7[1m]). Master brief still frozen at aae547a;
+  Session 1 complete. Session 2 scope: orchestrator skeleton + 10
+  tool schemas + respondToUser enforcement + mocked callClaude
+  with deterministic Anthropic Messages fixtures, all against
+  pure TypeScript (no Next.js route wiring yet, no real API
+  calls). Two founder-confirmed observations to codify during
+  drafting: (1) mock fixture shapes must be typed literals citing
+  the SDK type so Session 4's real-API swap is mechanical;
+  (2) trace_id propagation gets a dedicated work item + CA-47
+  test covering log output + service-layer-via-tool-path +
+  ai_actions.trace_id as the three assertable surfaces.
+- 2026-04-18 NOTE   Phase 1.2 Session 2 sub-brief drafting session
+  complete. Artifacts: (1) session-2-brief.md (642 lines, within
+  the 400–650 target after two compression passes — the first
+  draft came in at 733, trimmed by compressing §5.2 schema
+  blocks into a table + single-line Zod citations for the six
+  new schemas, compressing §5.3 type block to cite master §5.1,
+  and compressing §5.4 callClaude body from a full code block to
+  signature + queue-pattern description); (2) CURRENT_STATE.md
+  updated noting Session 1 complete + Session 2 ready;
+  (3) this entry. Four SDK-type observations worth preserving
+  from the required-reading pass on
+  node_modules/@anthropic-ai/sdk/resources/messages/messages.d.ts
+  (v0.90.0): Message has a required container field (Container |
+  null) that must be present in fixture literals; ToolUseBlock
+  has a required caller field (DirectCaller | ServerToolCaller |
+  ServerToolCaller20260120) that fixtures set to
+  { type: 'direct' }; Usage has many required fields (cache_*,
+  inference_geo, server_tool_use, service_tier) that fixtures
+  either populate or null-fill via the shared makeMessage helper;
+  the return type is Anthropic.Messages.Message (not a simplified
+  wrapper), which is load-bearing for Session 4's mechanical
+  swap. These are captured in sub-brief §5.4 fixture guidance.
+  No new open questions surfaced during drafting. No master-brief
+  inconsistencies found. Session 2 is unambiguous enough that
+  execution should hit the same zero-drift discipline as Session
+  1 with no stop-and-flag moments — though that will only be
+  known post-execution.

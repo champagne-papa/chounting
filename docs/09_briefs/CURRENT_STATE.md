@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-18 (Phase 1.2 Session 1 ready to execute)
+# Where I am as of 2026-04-18 (Phase 1.2 Session 2 ready to execute)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -16,19 +16,33 @@ profile/org/invite management. 10 tools (respondToUser added per
 §6.2), 3 persona prompts, 27 exit criteria (19 from phase_plan.md
 + 8 new for onboarding/forms/migration).
 
-### Session 1 — Ready to execute (2026-04-18)
+### Session 1 — Complete (2026-04-18)
 
 Sub-brief at `docs/09_briefs/phase-1.2/session-1-brief.md`.
-Foundational, API-free groundwork: migrations 118 (agent_session
-wiring + user.profile.update permission seed) and 119 (journal
-entry form placeholder), two new dependencies
-(`@anthropic-ai/sdk`, `zod-to-json-schema`), ACTION_NAMES +
-CA-28 updates, ProposedEntryCard type migration to the ADR-0002
-shape (component shim only — Session 7 rewrites the render),
-`src/db/types.ts` regen. 12 S1 exit criteria, no new tests, no
-agent code. Target commit cadence: 4 commits.
+Execution landed as commits 44ecb4f → 21169ea → 3b034b8 →
+6e18169 on top of 4a62faf. All 12 S1 exit criteria pass.
+Two lessons captured: CA-37 sub-brief gap (now addressed by
+the "Permission Catalog Count Drift" convention in
+`docs/04_engineering/conventions.md`) and the Kong ↔ auth
+container restart quirk (now wrapped by the
+`pnpm db:reset:clean` script). Devex pickups landed as 82247cb.
 
-Sessions 2–8 sub-briefs land as each predecessor session closes out.
+### Session 2 — Ready to execute (2026-04-18)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-2-brief.md`.
+Orchestrator skeleton + 10 tool schemas + respondToUser
+enforcement + mocked callClaude with deterministic Anthropic
+Messages fixtures. Pure TypeScript — no Next.js route wiring
+yet, no real Anthropic API calls, still API-free and local-only.
+Establishes: orchestrator file layout, trace_id propagation
+discipline, tool schema registration pattern, session
+load/create precedence, respondToUser enforcement, and the
+test-fixture shape for mocked Anthropic responses that
+Sessions 3+ will continue using. 15 S2 exit criteria,
+~9 new Category A tests (CA-39 through CA-47), 4-commit
+cadence. Every commit stays green (no intentional red interval).
+
+Sessions 3–8 sub-briefs land as each predecessor session closes out.
 
 ---
 
