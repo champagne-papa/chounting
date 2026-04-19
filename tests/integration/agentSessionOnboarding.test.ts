@@ -8,11 +8,16 @@ import { loadOrCreateSession } from '@/agent/orchestrator/loadOrCreateSession';
 import { adminClient } from '@/db/adminClient';
 import { SEED } from '../setup/testDb';
 import { loggerWith } from '@/shared/logger/pino';
+import { makeTestContext } from '../setup/makeTestContext';
 
 const TEST_USER = SEED.USER_AP_SPECIALIST;
 
 describe('CA-46: onboarding session (org_id null)', () => {
-  const log = loggerWith({ trace_id: 'test-ca-46' });
+  const ctx = makeTestContext({
+    user_id: TEST_USER,
+    org_ids: [SEED.ORG_REAL_ESTATE],
+  });
+  const log = loggerWith({ trace_id: ctx.trace_id });
 
   beforeEach(async () => {
     await adminClient()
@@ -20,6 +25,7 @@ describe('CA-46: onboarding session (org_id null)', () => {
       .delete()
       .eq('user_id', TEST_USER)
       .is('org_id', null);
+    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   afterEach(async () => {
@@ -28,11 +34,13 @@ describe('CA-46: onboarding session (org_id null)', () => {
       .delete()
       .eq('user_id', TEST_USER)
       .is('org_id', null);
+    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   it('creates a session with org_id IS NULL for onboarding', async () => {
     const created = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: null, locale: 'en' },
+      ctx,
       log,
     );
     expect(created.org_id).toBeNull();
@@ -43,10 +51,12 @@ describe('CA-46: onboarding session (org_id null)', () => {
   it('fallback finds the existing onboarding session', async () => {
     const first = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: null, locale: 'en' },
+      ctx,
       log,
     );
     const second = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: null, locale: 'en' },
+      ctx,
       log,
     );
     expect(second.session_id).toBe(first.session_id);

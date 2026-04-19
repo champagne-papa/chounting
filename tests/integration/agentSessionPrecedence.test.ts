@@ -7,28 +7,37 @@ import { loadOrCreateSession } from '@/agent/orchestrator/loadOrCreateSession';
 import { adminClient } from '@/db/adminClient';
 import { SEED } from '../setup/testDb';
 import { loggerWith } from '@/shared/logger/pino';
+import { makeTestContext } from '../setup/makeTestContext';
 
 const TEST_USER = SEED.USER_CONTROLLER;
 const TEST_ORG = SEED.ORG_HOLDING;
 
 describe('CA-45: session load/create precedence', () => {
-  const log = loggerWith({ trace_id: 'test-ca-45' });
+  const ctx = makeTestContext({
+    user_id: TEST_USER,
+    org_ids: [TEST_ORG],
+  });
+  const log = loggerWith({ trace_id: ctx.trace_id });
 
   beforeEach(async () => {
     await adminClient().from('agent_sessions').delete().eq('user_id', TEST_USER);
+    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   afterEach(async () => {
     await adminClient().from('agent_sessions').delete().eq('user_id', TEST_USER);
+    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   it('branch 1: session_id hit returns the existing row', async () => {
     const first = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en' },
+      ctx,
       log,
     );
     const second = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en', session_id: first.session_id },
+      ctx,
       log,
     );
     expect(second.session_id).toBe(first.session_id);
@@ -37,10 +46,12 @@ describe('CA-45: session load/create precedence', () => {
   it('branch 2: fallback by (user_id, org_id) returns the most recent', async () => {
     const first = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en' },
+      ctx,
       log,
     );
     const second = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en' },
+      ctx,
       log,
     );
     expect(second.session_id).toBe(first.session_id);
@@ -49,6 +60,7 @@ describe('CA-45: session load/create precedence', () => {
   it('branch 3: no match creates a new session', async () => {
     const created = await loadOrCreateSession(
       { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en' },
+      ctx,
       log,
     );
     expect(created.session_id).toBeDefined();
@@ -63,6 +75,7 @@ describe('CA-45: session load/create precedence', () => {
     await expect(
       loadOrCreateSession(
         { user_id: TEST_USER, org_id: TEST_ORG, locale: 'en', session_id: fakeId },
+        ctx,
         log,
       ),
     ).rejects.toThrow(/AGENT_SESSION_NOT_FOUND|not found/i);

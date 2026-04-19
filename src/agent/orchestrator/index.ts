@@ -26,10 +26,25 @@ import { adminClient } from '@/db/adminClient';
 import { getMembership } from '@/services/auth/getMembership';
 import type { UserRole } from '@/services/auth/canUserPerformAction';
 import { callClaude } from './callClaude';
-import { loadOrCreateSession } from './loadOrCreateSession';
+import { loadOrCreateSession, type AgentSessionRow } from './loadOrCreateSession';
 import { toolsForPersona, type Persona } from './toolsForPersona';
 import { buildSystemPrompt } from './buildSystemPrompt';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
+import { recordMutation } from '@/services/audit/recordMutation';
+import { withInvariants } from '@/services/middleware/withInvariants';
+import { userProfileService } from '@/services/user/userProfileService';
+import { orgService } from '@/services/org/orgService';
+import { chartOfAccountsService } from '@/services/accounting/chartOfAccountsService';
+import { periodService } from '@/services/accounting/periodService';
+import { journalEntryService } from '@/services/accounting/journalEntryService';
+import type { UpdateUserProfilePatch } from '@/shared/schemas/user/profile.schema';
+import type {
+  CreateOrgProfileInput,
+  UpdateOrgProfilePatch,
+} from '@/shared/schemas/organization/profile.schema';
+import type { ListChartOfAccountsInput } from '@/agent/tools/schemas/listChartOfAccounts.schema';
+import type { CheckPeriodInput } from '@/agent/tools/schemas/checkPeriod.schema';
+import type { ListJournalEntriesInput } from '@/agent/tools/schemas/listJournalEntries.schema';
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
@@ -77,7 +92,9 @@ export async function handleUserMessage(
     throw new ServiceError('AGENT_UNAVAILABLE', 'Anthropic API key not configured');
   }
 
-  // Step 1: session
+  // Step 1: session. ctx is threaded in per Clarification E so
+  // branch-3's agent.session_created / agent.session_org_switched
+  // audit emits have a valid ServiceContext.
   const session = await loadOrCreateSession(
     {
       user_id: input.user_id,
@@ -85,8 +102,32 @@ export async function handleUserMessage(
       locale: input.locale,
       session_id: input.session_id,
     },
+    ctx,
     log,
   );
+
+  // Function-scoped adminClient (Clarification D implementation
+  // note) for the agent.message_processed audit emit below.
+  const db = adminClient();
+  const emitMessageProcessedAudit = async (): Promise<void> => {
+    // Clarification D: skip when session.org_id is null
+    // (onboarding). Clarification F: try/catch prevents a thrown
+    // audit error from poisoning the user-facing request.
+    if (session.org_id === null) return;
+    try {
+      await recordMutation(db, ctx, {
+        org_id: session.org_id,
+        action: 'agent.message_processed',
+        entity_type: 'agent_session',
+        entity_id: session.session_id,
+      });
+    } catch (err) {
+      log.error(
+        { err: String(err), action: 'agent.message_processed' },
+        'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
+      );
+    }
+  };
 
   // Step 3: persona (simplified for Session 2 — no org means controller
   // for onboarding flow scaffolding; Session 5 refines).
@@ -179,7 +220,7 @@ export async function handleUserMessage(
       }
 
       try {
-        const output = await executeTool(tu.name, parsed.data, ctx, session.session_id, log);
+        const output = await executeTool(tu.name, parsed.data, ctx, session, log);
         toolResults.push({
           type: 'tool_result',
           tool_use_id: tu.id,
@@ -204,6 +245,7 @@ export async function handleUserMessage(
       if (validationRetries > Q13_MAX_VALIDATION_RETRIES) {
         log.warn({ retries: validationRetries }, 'Q13 budget exhausted — surfacing clarification');
         await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
+        await emitMessageProcessedAudit();
         return {
           session_id: session.session_id,
           response: {
@@ -230,6 +272,7 @@ export async function handleUserMessage(
         { template_id: parsedRespond.template_id, had_tool_calls: otherTools.length > 0 },
         'handleUserMessage: response extracted',
       );
+      await emitMessageProcessedAudit();
       return {
         session_id: session.session_id,
         response: {
@@ -262,6 +305,7 @@ export async function handleUserMessage(
         'structural retry budget exhausted — returning fallback template',
       );
       await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
+      await emitMessageProcessedAudit();
       return {
         session_id: session.session_id,
         response: {
@@ -302,59 +346,165 @@ async function executeTool(
   toolName: string,
   validatedInput: unknown,
   ctx: ServiceContext,
-  sessionId: string,
+  session: AgentSessionRow,
   log: Logger,
 ): Promise<unknown> {
-  // Ledger-mutating tools with dry_run=true write ai_actions
-  // (master §5.8 trace_id propagation; §6.5 dry_run scope).
-  if (toolName === 'postJournalEntry' || toolName === 'reverseJournalEntry') {
-    const input = validatedInput as {
-      org_id: string;
-      dry_run?: boolean;
-      idempotency_key?: string;
-    };
-    if (input.dry_run === true) {
-      if (!input.idempotency_key) {
-        throw new Error('idempotency_key required on agent-sourced dry_run');
-      }
-      const db = adminClient();
-      const { data, error } = await db
-        .from('ai_actions')
-        .insert({
-          org_id: input.org_id,
-          user_id: ctx.caller.user_id,
-          session_id: sessionId,
-          trace_id: ctx.trace_id,
-          tool_name: toolName,
-          tool_input: input,
-          status: 'pending',
-          idempotency_key: input.idempotency_key,
-        })
-        .select('ai_action_id')
-        .single();
-      if (error || !data) {
-        log.error({ err: error?.message }, 'ai_actions insert failed');
-        throw new Error(`ai_actions insert failed: ${error?.message ?? 'unknown'}`);
-      }
-      log.info(
-        { ai_action_id: data.ai_action_id, tool_name: toolName },
-        'ai_actions row written (dry-run)',
-      );
-      return {
-        dry_run_entry_id: data.ai_action_id,
-        status: 'proposed',
-      };
-    }
-    // dry_run=false path — Session 4 wires the real journalEntryService.post
-    throw new Error(`${toolName} with dry_run=false not yet wired (Session 4)`);
-  }
+  // db at function scope per Clarification D implementation note.
+  // Used by the ai_actions insert (dry_run branch) and by the
+  // agent.tool_executed audit emit below. adminClient() is a
+  // module-level singleton; cheap to call once per invocation.
+  const db = adminClient();
 
-  // Session 2 stubs for remaining tools. Session 4 wires real
-  // service calls for updateUserProfile/createOrganization/
-  // updateOrgProfile; the read-only tools (list*, checkPeriod)
-  // likewise get real implementations in Session 4 or beyond.
-  log.debug({ tool_name: toolName }, 'executeTool: session-2 stub');
-  return { tool: toolName, status: 'session-2-stub' };
+  try {
+    // Ledger-mutating tools with dry_run=true write ai_actions
+    // (master §5.8 trace_id propagation; §6.5 dry_run scope).
+    if (toolName === 'postJournalEntry' || toolName === 'reverseJournalEntry') {
+      const input = validatedInput as {
+        org_id: string;
+        dry_run?: boolean;
+        idempotency_key?: string;
+      };
+      if (input.dry_run === true) {
+        if (!input.idempotency_key) {
+          throw new Error('idempotency_key required on agent-sourced dry_run');
+        }
+        const { data, error } = await db
+          .from('ai_actions')
+          .insert({
+            org_id: input.org_id,
+            user_id: ctx.caller.user_id,
+            session_id: session.session_id,
+            trace_id: ctx.trace_id,
+            tool_name: toolName,
+            tool_input: input,
+            status: 'pending',
+            idempotency_key: input.idempotency_key,
+          })
+          .select('ai_action_id')
+          .single();
+        if (error || !data) {
+          log.error({ err: error?.message }, 'ai_actions insert failed');
+          throw new Error(`ai_actions insert failed: ${error?.message ?? 'unknown'}`);
+        }
+        log.info(
+          { ai_action_id: data.ai_action_id, tool_name: toolName },
+          'ai_actions row written (dry-run)',
+        );
+        return {
+          dry_run_entry_id: data.ai_action_id,
+          status: 'proposed',
+        };
+      }
+      // dry_run=false is replayed by /api/agent/confirm (master §13.3).
+      // The orchestrator never posts directly; the confirm route
+      // reads ai_actions.tool_input and replays with dry_run:false.
+      throw new Error(`${toolName} with dry_run=false is not invoked via the orchestrator — use /api/agent/confirm (master §13.3)`);
+    }
+
+    // Non-ledger mutating tools — wrapped with withInvariants per
+    // sub-brief §6.5 table.
+    if (toolName === 'updateUserProfile') {
+      // Own-profile-only: user_id comes from ctx.caller, not from
+      // tool input. The tool schema is the patch only.
+      return await withInvariants(
+        userProfileService.updateProfile,
+        { action: 'user.profile.update' },
+      )(
+        {
+          user_id: ctx.caller.user_id,
+          patch: validatedInput as UpdateUserProfilePatch,
+        },
+        ctx,
+      );
+    }
+
+    if (toolName === 'createOrganization') {
+      // Onboarding tool — org doesn't exist yet. withInvariants
+      // Invariant 3 (org-access) and Invariant 4 (role) both skip
+      // because input.org_id is undefined (CreateOrgProfileInput
+      // has no org_id field).
+      return await withInvariants(
+        orgService.createOrgWithTemplate,
+        { action: 'org.create' },
+      )(validatedInput as CreateOrgProfileInput, ctx);
+    }
+
+    if (toolName === 'updateOrgProfile') {
+      // Patch-only tool input — orchestrator supplies org_id from
+      // session.org_id. If the agent calls updateOrgProfile during
+      // onboarding (session.org_id === null) we reject rather than
+      // guessing which org to target.
+      if (session.org_id === null) {
+        throw new Error(
+          'updateOrgProfile called without an active org (onboarding session)',
+        );
+      }
+      return await withInvariants(
+        orgService.updateOrgProfile,
+        { action: 'org.profile.update' },
+      )(
+        {
+          org_id: session.org_id,
+          patch: validatedInput as UpdateOrgProfilePatch,
+        },
+        ctx,
+      );
+    }
+
+    // Read-only tools — no withInvariants wrap; each service
+    // performs its own org-access check via ctx.caller.org_ids.
+    if (toolName === 'listIndustries') {
+      return await orgService.listIndustries({}, ctx);
+    }
+
+    if (toolName === 'listChartOfAccounts') {
+      const input = validatedInput as ListChartOfAccountsInput;
+      return await chartOfAccountsService.list({ org_id: input.org_id }, ctx);
+    }
+
+    if (toolName === 'checkPeriod') {
+      const input = validatedInput as CheckPeriodInput;
+      return await periodService.isOpen(
+        { org_id: input.org_id, entry_date: input.entry_date },
+        ctx,
+      );
+    }
+
+    if (toolName === 'listJournalEntries') {
+      const input = validatedInput as ListJournalEntriesInput;
+      return await journalEntryService.list({ org_id: input.org_id }, ctx);
+    }
+
+    // Unknown tool — shouldn't reach here (buildSystemPrompt + the
+    // toolByName lookup in handleUserMessage gate this), but fail
+    // loudly if it does.
+    throw new Error(`executeTool: unhandled tool ${toolName}`);
+  } finally {
+    // Clarification D: skip the agent.tool_executed audit emit
+    // when session.org_id is null (onboarding); the call site
+    // services like orgService.createOrgWithTemplate already
+    // capture their own provenance via withInvariants-driven
+    // audit rows. Clarification F: try/catch prevents a thrown
+    // audit error from poisoning the user-facing request — the
+    // emit is outside a service transaction, so atomicity is
+    // not guaranteed until Phase 2's events-table migration.
+    if (session.org_id !== null) {
+      try {
+        await recordMutation(db, ctx, {
+          org_id: session.org_id,
+          action: 'agent.tool_executed',
+          entity_type: 'agent_session',
+          entity_id: session.session_id,
+          tool_name: toolName,
+        });
+      } catch (err) {
+        log.error(
+          { err: String(err), action: 'agent.tool_executed', tool_name: toolName },
+          'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
+        );
+      }
+    }
+  }
 }
 
 async function persistSession(

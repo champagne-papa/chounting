@@ -13,9 +13,11 @@
 // No other function in the codebase may insert into journal_entries or
 // journal_lines. See PLAN.md Invariant 2.
 //
-// Phase 1.1 supports manual entries and reversals only.
-// Agent source (dry_run, idempotency) deferred to Phase 1.2 — rejected
-// by the Zod schemas at the boundary, not in this service body.
+// Phase 1.2+ supports manual entries, reversals, and agent-sourced
+// entries with dry_run + idempotency_key. The agent confirm route
+// (src/app/api/agent/confirm/route.ts) replays the stored tool_input
+// with dry_run: false — this service's post function handles both
+// paths identically at the transaction layer.
 
 import {
   PostJournalEntryInputSchema,

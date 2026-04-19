@@ -1,12 +1,16 @@
 // src/agent/orchestrator/loadOrCreateSession.ts
-// Phase 1.2 Session 2 — session precedence per master §5.2
-// step 1. Uses adminClient (INV-SERVICE-002). RLS enforcement
-// for reads is the user-scoped SELECT policy from migration 001
-// (Session 1 verified — no RLS changes in 118).
+// Phase 1.2 Session 4 — session precedence per master §5.2
+// step 1, extended with org-switch detection + agent.* audit
+// emits on branch-3 INSERT (master §16). Uses adminClient
+// (INV-SERVICE-002). RLS enforcement for reads is the user-
+// scoped SELECT policy from migration 001 (Session 1 verified;
+// no RLS changes in 118).
 
 import type { Logger } from 'pino';
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { recordMutation } from '@/services/audit/recordMutation';
+import type { ServiceContext } from '@/services/middleware/serviceContext';
 
 const TTL_DAYS = 30;
 
@@ -39,6 +43,7 @@ export interface AgentSessionRow {
  */
 export async function loadOrCreateSession(
   input: LoadOrCreateSessionInput,
+  ctx: ServiceContext,
   log: Logger,
 ): Promise<AgentSessionRow> {
   const db = adminClient();
@@ -91,7 +96,26 @@ export async function loadOrCreateSession(
     return toRow(fallback);
   }
 
-  // Branch 3: create new
+  // Branch 3: create new. Before INSERT, detect whether this is
+  // an org-switch by looking for the user's most-recent session
+  // across any org (Clarification E). If found, the new session's
+  // creation emits agent.session_org_switched with before_state
+  // capturing the previous org_id; otherwise agent.session_created.
+  const { data: priorSession } = await db
+    .from('agent_sessions')
+    .select('session_id, org_id')
+    .eq('user_id', input.user_id)
+    .gte('last_activity_at', ttlCutoff)
+    .order('last_activity_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const previousOrgId: string | null = priorSession
+    ? ((priorSession.org_id as string | null) ?? null)
+    : null;
+  const isOrgSwitch =
+    priorSession !== null && previousOrgId !== input.org_id;
+
   const { data: created, error: createError } = await db
     .from('agent_sessions')
     .insert({
@@ -112,6 +136,44 @@ export async function loadOrCreateSession(
     );
   }
   log.debug({ session_id: created.session_id }, 'loadOrCreateSession: new session created');
+
+  // Audit emit — Clarification D (skip when new session's
+  // org_id is null; onboarding provenance recovered later on
+  // the first agent.session_org_switched event). Clarification
+  // F (try/catch wrap: this call is not inside a service tx,
+  // so a thrown audit error would poison the user-facing
+  // request. Phase 2 events-table migration restores atomicity.)
+  if (input.org_id !== null) {
+    try {
+      if (isOrgSwitch) {
+        await recordMutation(db, ctx, {
+          org_id: input.org_id,
+          action: 'agent.session_org_switched',
+          entity_type: 'agent_session',
+          entity_id: created.session_id,
+          before_state: { previous_org_id: previousOrgId },
+        });
+      } else {
+        await recordMutation(db, ctx, {
+          org_id: input.org_id,
+          action: 'agent.session_created',
+          entity_type: 'agent_session',
+          entity_id: created.session_id,
+        });
+      }
+    } catch (err) {
+      log.error(
+        {
+          err: String(err),
+          action: isOrgSwitch
+            ? 'agent.session_org_switched'
+            : 'agent.session_created',
+        },
+        'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
+      );
+    }
+  }
+
   return toRow(created);
 }
 
