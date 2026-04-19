@@ -411,10 +411,48 @@ export async function handleUserMessage(
             )
           : undefined;
 
+      // Session 5.1 / Bug 1: build a protocol-valid persisted
+      // conversation. Anthropic's API requires every tool_use
+      // block in an assistant message to be immediately followed
+      // by a matching tool_result in the next user message. The
+      // orchestrator-internal respondToUser tool_use has no
+      // matching tool_result (it's consumed here, not executed
+      // via executeTool), so persisting Claude's raw response
+      // with respondToUser intact produces an invalid message
+      // sequence on Turn 2. Fix: strip respondToUser from the
+      // persisted content; if Claude bundled non-respondToUser
+      // tool_uses in this same turn (e.g., listIndustries +
+      // respondToUser), persist them as a full assistant→user
+      // exchange (tool_use + tool_result pair) so the sequence
+      // stays valid, then terminate with a text placeholder.
+      const filteredFinalContent = resp.content.filter(
+        (b) => !(b.type === 'tool_use' && b.name === 'respondToUser'),
+      );
+      if (otherTools.length > 0) {
+        messages.push({ role: 'assistant', content: filteredFinalContent });
+        messages.push({ role: 'user', content: toolResults });
+      }
+      // Terminating assistant turn: a minimal text block noting
+      // which template_id was delivered. Claude on Turn 2 sees
+      // this as context for the previous turn's outcome; it's
+      // never re-consumed as an instruction. Keeping the content
+      // short minimizes token drag on subsequent turns.
+      const terminatingContent: Anthropic.Messages.ContentBlock[] = [
+        {
+          type: 'text',
+          text: `[responded with template_id=${parsedRespond.template_id}]`,
+          citations: null,
+        },
+      ];
+      const responseForPersist: Anthropic.Messages.Message = {
+        ...resp,
+        content: terminatingContent,
+      };
+
       await persistSession(
         session.session_id,
         messages,
-        resp,
+        responseForPersist,
         ctx.trace_id,
         log,
         newState,
