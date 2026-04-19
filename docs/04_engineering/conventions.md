@@ -145,6 +145,34 @@ executor correctly stopped and flagged rather than silently
 extending scope. See `docs/07_governance/friction-journal.md`
 entry 2026-04-18 (CA-37 sub-brief gap).
 
+### Cited-Code Verification
+
+When a sub-brief cites an existing Zod schema, service function,
+or other module as "used verbatim" or "cite this schema," the
+drafter MUST grep the cited file for self-referential placeholders
+that signal pending migration:
+
+```bash
+grep -nE 'Phase 1\.1|Phase 1\.2|not implemented|TODO|DEPRECATED' <cited-file>
+```
+
+Hits signal that the cited code may not currently behave as the
+sub-brief assumes. Each hit is either a pending migration the
+session must perform (remove the guard, update the comment) or an
+inherited assumption that will fail the session's first test run.
+
+Codified from Phase 1.2 Session 2 (2026-04-18):
+`PostJournalEntryInputSchema` and `ReversalInputSchema` carried
+four `.refine()` guards rejecting `source='agent'` and
+`dry_run=true` with messages "not implemented in Phase 1.1." The
+schema file's own comment block at lines 86–93 explicitly named
+Phase 1.2 as the migration window — but the sub-brief cited both
+schemas as "verbatim, no new Zod" without the grep that would have
+caught it. Cost one stop-and-flag mid-execution; grep takes five
+seconds at drafting time. See
+`docs/07_governance/friction-journal.md` entry 2026-04-18 (Phase
+1.1 agent-path guard removal).
+
 ### API Boundary Casing
 
 Schemas under `src/shared/schemas/organization/` use **camelCase**
