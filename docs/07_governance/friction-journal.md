@@ -1297,6 +1297,59 @@ Categories:
   name. Candidate lesson for the batched-conventions catalog:
   "prompt content is for Claude's reasoning, not audit trail —
   keep UUIDs out unless the model needs them to call a tool."
+- 2026-04-18 NOTE   Phase 1.2 Session 4 sub-brief drafting session
+  started. Starting SHA: 6cdba6e. Starting model: Claude Opus 4.7
+  (claude-opus-4-7[1m]). Master brief frozen at aae547a; Sessions
+  1–3 complete, regression baseline 191/191. Session 4 scope: the
+  first paid-API session — real Anthropic client swap,
+  OrgContextManager full implementation per master §8, two new
+  API routes (/api/agent/{message,confirm}), confirm-route state
+  machine with idempotency protection (master §13.3), four new
+  audit_log.action values, executeTool dispatch for all remaining
+  tool stubs, real-API error classification. Mandatory Cited-Code
+  Verification grep surfaced 8 Session 4 forward-pointers in
+  src/agent/* (checklist for §5 work items) and one drift
+  candidate: journalEntryService.ts:16-17 header comment says
+  "Agent source (dry_run, idempotency) deferred to Phase 1.2 —
+  rejected" but Session 2's refine removal made the agent path
+  accepted. Header comment drifted from code. Small fix, worth
+  capturing as a Session 4 housekeeping item (single-line comment
+  update). Also noted: canvasDirectiveSchema's
+  ProposedEntryCardSchema placeholder TODO tags Session 7, not
+  Session 4 — drafting prompt's mention was slightly off.
+- 2026-04-18 NOTE   Phase 1.2 Session 4 sub-brief drafting session
+  complete. Artifacts: (1) session-4-brief.md (654 lines, within
+  500–750 target); (2) CURRENT_STATE.md updated noting Session 3
+  complete + Session 4 ready; (3) this entry. Five founder
+  pre-decisions codified in sub-brief §4: (1) OrgContext
+  injection prose uses names not UUIDs — carries Session 3's
+  commit-2 lesson forward verbatim; (2) error classification is
+  a dedicated work item with per-class ServiceError mapping and
+  retry behavior (401/429/5xx/network/malformed); (3)
+  /api/agent/confirm implements the full state machine from
+  master §13.3 with an added defensive fifth branch for reserved
+  future statuses; (4) paid API minimized to one smoke test
+  (CA-66) that skips when ANTHROPIC_API_KEY unset;
+  (5) ANTHROPIC_API_KEY provisioning is a founder prerequisite,
+  not an executor action. Eleven work items enumerated
+  (§6.1–§6.11) covering OrgContextManager + injection prose +
+  real callClaude + error classification + executeTool dispatch
+  + two routes + four audit writes + serviceErrorToStatus +
+  journalEntryService header-comment drift fix (discovered
+  during drafting grep) + mandatory pre-execution grep. 16 S4
+  exit criteria + 14 new CA tests (CA-53–66). Six-commit plan
+  with commit-2 founder review gate. Two observations worth
+  preserving for the batched-conventions catalog: (a) the
+  drift-candidate fix in §6.10 is a new sub-pattern — "stale-
+  file-header drift caught by the Cited-Code Verification grep,"
+  candidate extension to Cited-Code Verification saying the
+  grep catches source-provenance drift not just refine guards;
+  one datapoint only, not codifying. (b) the confirm-route's
+  fifth branch (defensive catch-all for unexpected statuses) is
+  session-authored glue, not a master-brief divergence — worth
+  noting that master specifications sometimes enumerate only
+  expected branches and session authorship adds defensive
+  catch-alls without unfreezing master.
 - 2026-04-18 NOTE   Phase 1.2 Session 3 execution complete. All
   10 S3 exit criteria pass. 4 commits on top of 1562d3c:
   98791f8 (persona prompts + suffixes + OrgContext stub),

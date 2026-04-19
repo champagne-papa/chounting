@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-18 (Phase 1.2 Session 3 ready to execute)
+# Where I am as of 2026-04-18 (Phase 1.2 Session 4 ready to execute)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -37,25 +37,37 @@ criteria pass. Two lessons captured: the schema-refine gap
 `docs/04_engineering/conventions.md`) and the Map key-type
 narrowing quirk. Devex pickup landed as d20c767.
 
-### Session 3 — Ready to execute (2026-04-18)
+### Session 3 — Complete (2026-04-18)
 
 Sub-brief at `docs/09_briefs/phase-1.2/session-3-brief.md`.
-System prompts (three persona prompts + locale/canvas/onboarding
-suffixes) + `buildSystemPrompt` composition + i18n template
-additions covering every `template_id` Session 2's fixtures
-reference plus the Four Questions keys from master §10.3. Also
-closes a Session 2 spec divergence: the structural-retry-
-exhaustion path currently `throws` but master §6.2 item 5
-specifies returning a template response; Session 3 fixes this
-and inverts CA-43. Pure strings + a string-composition function
-+ JSON additions — no real API calls, no new tools, no new
-migrations, no UI. 10 S3 exit criteria, 5 new CA tests
-(CA-48–52) + 1 inverted (CA-43), 4-commit cadence with a
-commit-2 founder review gate for Session-3-authored prose
-(identity-block templates, tool-enumeration glue, locale
-directive strings).
+Execution landed as commits 98791f8 → 1f4d8cf → 5e05d91 →
+6cdba6e on top of readiness anchor 1562d3c. All 10 S3 exit
+criteria pass. Commit-2 founder review gate produced one polish
+(UUIDs dropped from identity block) and captured one structural
+observation (the `_sharedSections.ts` + `_identityAndTools.ts`
+refactor). Four candidate-future-convention lessons staged in
+the friction journal, none codified — batching per founder
+discipline.
 
-Sessions 4–8 sub-briefs land as each predecessor session closes out.
+### Session 4 — Ready to execute (2026-04-18)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-4-brief.md`.
+**First paid-API session.** Scope: swap mocked callClaude for
+real Anthropic client (preserve fixture branch for tests),
+implement OrgContextManager per master §8, wire two new API
+routes (/api/agent/message + /api/agent/confirm with full state
+machine), complete executeTool dispatch for all 10 tools, add
+four audit_log.action values, classify real-API error modes
+(401/429/5xx/timeout/malformed) with per-class retry behavior.
+16 S4 exit criteria, 14 new CA tests (CA-53–66; CA-66 is a
+skippable smoke test that hits real Claude once), 6-commit
+cadence. Commit-2 founder review gate for OrgContext injection
+prose. Pre-decision 1 carries the Session 3 "UUIDs out of
+prompts" lesson forward verbatim. ANTHROPIC_API_KEY must be
+in .env.local before execution (provisioning is a founder
+action; non-smoke tests still run if absent).
+
+Sessions 5–8 sub-briefs land as each predecessor session closes out.
 
 ---
 
