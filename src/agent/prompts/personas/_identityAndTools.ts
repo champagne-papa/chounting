@@ -11,7 +11,7 @@
 //   - tool.description strings — already in git since 0bee609
 //   - toolsForPersona(persona) — already in git since 3539223
 
-import type { OrgContext } from '@/agent/prompts/orgContext';
+import type { OrgContext } from '@/agent/memory/orgContextManager';
 import { toolsForPersona, type Persona } from '@/agent/orchestrator/toolsForPersona';
 
 export interface IdentityInput {

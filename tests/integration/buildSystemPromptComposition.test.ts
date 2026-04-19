@@ -8,12 +8,13 @@
 import { describe, it, expect } from 'vitest';
 import { buildSystemPrompt } from '@/agent/orchestrator/buildSystemPrompt';
 import { SEED } from '../setup/testDb';
+import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
 describe('CA-48: buildSystemPrompt composition', () => {
   it('composes identity + tools + rules + contract + voice + locale for controller', () => {
     const prompt = buildSystemPrompt({
       persona: 'controller',
-      orgContext: { org_id: SEED.ORG_HOLDING, org_name: 'Acme Holdings' },
+      orgContext: makeOrgContextFixture(),
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
     });

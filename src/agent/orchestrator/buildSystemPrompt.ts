@@ -13,7 +13,7 @@
 // already has the slot.
 
 import type { CanvasContext } from '@/shared/types/canvasContext';
-import type { OrgContext } from '@/agent/prompts/orgContext';
+import type { OrgContext } from '@/agent/memory/orgContextManager';
 import type { Persona } from './toolsForPersona';
 import { controllerPersonaPrompt } from '@/agent/prompts/personas/controller';
 import { apSpecialistPersonaPrompt } from '@/agent/prompts/personas/ap_specialist';

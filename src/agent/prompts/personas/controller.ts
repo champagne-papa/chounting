@@ -2,7 +2,7 @@
 // Phase 1.2 Session 3 — Controller persona prompt. Assembly per
 // sub-brief §6.1 source-citation table.
 
-import type { OrgContext } from '@/agent/prompts/orgContext';
+import type { OrgContext } from '@/agent/memory/orgContextManager';
 import { identityBlock, availableToolsSection } from './_identityAndTools';
 import {
   ANTI_HALLUCINATION_RULES,

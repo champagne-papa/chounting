@@ -1400,3 +1400,105 @@ Categories:
   decomposition discipline held: no Session 3+ scope leaked
   in. No new open questions beyond the sub-brief-drafting
   lesson above.
+- 2026-04-18 NOTE   Phase 1.2 Session 4 execution session —
+  starting. Starting SHA: ec86a63 (Session 4 readiness anchor,
+  matches sub-brief freeze). Starting model: Claude Opus 4.7
+  (claude-opus-4-7[1m]). Master brief frozen at aae547a.
+  Completion target: all 16 S4 exit criteria (S4-1 through
+  S4-16) pass after the six-commit cadence in sub-brief §11.
+  Commit 2 has a founder review gate for the OrgContext
+  injection prose authored against master §8 + Pre-decision 1
+  (names not UUIDs). ANTHROPIC_API_KEY: present in .env.local
+  (108 chars, sk-ant- prefix) — CA-66 will run the real-API
+  smoke test, not skip. Sub-brief at
+  docs/09_briefs/phase-1.2/session-4-brief.md is the spec.
+  Six execution-prompt clarifications extend the sub-brief
+  (A–F) based on a fresh-pass re-read that surfaced two
+  concrete gaps and a pre-existing caveat:
+
+  - Clarification A — explicit import-retarget list for §6.1
+    (5 files importing OrgContext from the Session 3 stub
+    location, verified by pre-drafting grep).
+  - Clarification B — CA-54 uses BOTH positive (org_name,
+    industry_display_name, functional_currency, controller
+    display_name substrings) and negative (zero v4 UUID regex
+    hits) assertions.
+  - Clarification C — CA-66 failure interpretation: pass /
+    skip-unset / fail-with-AGENT_UNAVAILABLE are three
+    distinct outcomes, only the first two are Session 4
+    pass-states and the third is key-side not code-side.
+  - Clarification D — null-org audit emission uniform skip
+    rule. §6.8 specifies four agent.* audit emits but three of
+    them (session_created, message_processed, tool_executed)
+    fire in contexts where session.org_id can be null during
+    onboarding per master §9.1. audit_log.org_id is uuid NOT
+    NULL (initial schema line 486, unchanged by migration 118).
+    recordMutation's AuditEntry.org_id is a required string.
+    Uniform rule: skip the emit when session.org_id is null,
+    wrapped in try/catch that logs but does not rethrow (per
+    Clarification F). Provenance recovered on first
+    session_org_switched when user creates their first org.
+  - Clarification E — org-switch detection logic + transition
+    matrix + CA-65 expansion + test ripple. §6.8 row 4
+    described the trigger parenthetically but not the code;
+    branch-2 filter silently misses org-switch today. New
+    detection query before branch 3 INSERT. loadOrCreateSession
+    signature extends to (input, ctx, log). Ripple: 6 existing
+    test call sites (CA-45 × 4, CA-46 × 2) need ctx threaded
+    via makeTestContext at describe scope. Commit 4 ordering:
+    signature + test ripple FIRST (typecheck), then executeTool
+    dispatch, then audit emits, then §6.10 housekeeping.
+    CA-65 grows to two it-blocks in one file (org_A→org_B and
+    null→org_X).
+  - Clarification F — tx-atomicity caveat (non-blocking).
+    recordMutation's header asserts same-transaction-as-mutation
+    per INV-AUDIT-001 but Session 4's three new emit sites
+    (loadOrCreateSession, handleUserMessage, executeTool) are
+    not inside a transaction. Pre-existing architectural gap
+    inherited from master §16. Session 4 applies try/catch
+    mitigation only; Phase 2 events-table migration restores
+    tx-atomicity. Session close adds one paragraph to the
+    closeout entry naming the gap.
+
+  Brainstorming/pressure-test cycle before this prompt: fresh-
+  pass caught the null-org NOT NULL conflict (Clarification D);
+  WSL Claude's pressure test tightened per-tool matrix → uniform
+  skip rule and surfaced the tx-atomicity caveat; founder added
+  the try/catch mitigation and caught the 6-call-site test
+  ripple before Commit 4. Four improvements from two reviewers
+  over three cycles. Stopping point judged correct — diminishing
+  returns beyond this.
+- 2026-04-18 WRONG  Session 4 commit 1 pre-check surfaced a
+  material correction to Clarification D's premise. The
+  Clarification cited audit_log.org_id as uuid NOT NULL
+  (20240101000000_initial_schema.sql:486) but migration 113
+  (20240113000000_extend_memberships.sql:137, Phase 1.5B,
+  2026-04-15) altered that column via ALTER TABLE audit_log
+  ALTER COLUMN org_id DROP NOT NULL. The constraint has been
+  gone for three days. Both the fresh-pass re-read and the
+  pressure test missed the migration. Corroborating evidence:
+  userProfileService.updateProfile:115 writes
+  org_id: undefined as unknown as string for user.profile_updated
+  audit rows — a type cast that only works at runtime because
+  the DB column is nullable. CA-15 (userProfileAudit.test.ts)
+  already passes in the 191/191 baseline, confirming nullable
+  writes work end-to-end. Implications: Clarification D's skip
+  rule is no-op-safe rather than load-bearing; AuditEntry.org_id
+  type is stale (string, should be string | null); Session 4
+  could emit agent.* events during onboarding with null org_id
+  for richer audit coverage. Chose Option A (ship per
+  Clarification D verbatim; defer type cleanup to a dedicated
+  session). Rationale: Option C's drive-by type fix would ripple
+  to every mutating service function in the codebase and deserves
+  its own review cycle. Skip rule is behaviorally safe either way
+  and has been reviewed + approved. Candidate for a future
+  convention catalog entry (sixth staged): "When a DB column's
+  NOT NULL constraint is altered by a later migration, the
+  TypeScript type at the insert boundary must also be updated —
+  verify migration lineage, not just the initial schema." Also
+  noted during pre-check: CA-45 has 6 loadOrCreateSession calls
+  (4 it-blocks) and CA-46 has 3 calls (2 it-blocks) — 9 total,
+  not the "6" stated in Clarification E's test-ripple section.
+  The approach (threading ctx via makeTestContext at describe
+  scope) is unchanged; only the expected-count number for the
+  pre-commit-4 grep shifts from 7 to 10.

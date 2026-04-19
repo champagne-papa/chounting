@@ -9,10 +9,11 @@ import { describe, it, expect } from 'vitest';
 import { buildSystemPrompt } from '@/agent/orchestrator/buildSystemPrompt';
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import { SEED } from '../setup/testDb';
+import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
 const BASE_INPUT = {
   persona: 'controller' as const,
-  orgContext: { org_id: SEED.ORG_HOLDING, org_name: 'Acme Holdings' },
+  orgContext: makeOrgContextFixture(),
   locale: 'en' as const,
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
 };
