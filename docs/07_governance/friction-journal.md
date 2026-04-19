@@ -2265,3 +2265,170 @@ Categories:
   stuck at PROFILE_NOT_FOUND).
 
   Approximate session time: ~35 minutes.
+- 2026-04-19 NOTE   Phase 1.2 EC-20 smoke test — combined
+  closeout (all three runs + browser scenarios). **Gate PASSED.**
+
+  EC-20 is Phase 1.2's manual-gate exit criterion for the
+  onboarding flow (master brief §20 row EC-20, amplified by
+  Session 5 sub-brief §8 to cover fresh + invited flows plus
+  three browser-interactive redirect scenarios). The test ran
+  in three autonomous phases across Sessions 5 / 5.1 / 5.2 plus
+  a single founder-driven browser pass. This entry consolidates
+  the full story so Session 8's exit-criteria reconciliation can
+  cite EC-20 as closed without reconstructing from scattered
+  closeout entries and /tmp/smoketest-findings.md.
+
+  The three autonomous runs progressed as follows. **Run 1**
+  (original, HEAD 4487e19, 226/226 fixtures green) got User A
+  through Turn 1 successfully but failed on Turn 2 with
+  Anthropic API 400 "tool_use ids were found without tool_result
+  blocks immediately after," surfacing what became Bug 1 below.
+  In the same Turn 1 response, Claude emitted an invented
+  template_id (`onboarding.profile.ask_display_name`) that
+  didn't exist in any locale file — Bug 2. The test blocked;
+  Session 5.1 was scheduled to fix both.
+
+  **Run 2** (post-Session-5.1, HEAD 6a588f8, 233/233 fixtures)
+  validated both Session 5.1 fixes end-to-end against real
+  Claude. User A completed onboarding in 3 turns with
+  `onboarding_complete: true`. Zero invalid template_ids across
+  the run. But the run surfaced two new findings. User B's
+  shortened flow got stuck at step 1 because
+  `userProfileService.updateProfile` threw `PROFILE_NOT_FOUND`
+  on every call — Phase 1.5B's design assumed the sign-in
+  callback's `getOrCreateProfile` creates the row first, but
+  the admin-created smoke user had no `user_profiles` row
+  (Bug 3). And User A's final `state.onboarding.completed_steps`
+  was `[2, 3]` — step 1 never completed because Turn 2's
+  updateUserProfile hit the same PROFILE_NOT_FOUND and got
+  absorbed into a tool_validation_failed template, yet the
+  state-machine advance rule permitted current_step to jump
+  from 1 to 4 via createOrganization's atomic 2+3 completion,
+  and the step-4 completion detector didn't verify step 1 had
+  actually completed (Bug 4). User A "finished" onboarding with
+  `display_name` still null.
+
+  **Run 3** (post-Session-5.2, HEAD 3f02b17, 238/238 fixtures)
+  validated both Session 5.2 fixes. Fresh `pnpm db:reset:clean`
+  plus new smoke-user creation (User A id
+  `fa6ed596-98ce-44fd-83c1-fdd080e5c2c4`, User B id
+  `bd2d7700-09a1-4f36-a260-ff86bfecbfc9`). User A completed in
+  3 turns; User B completed in 2 turns. Final
+  `state.onboarding` for both: `{ in_onboarding: false,
+  current_step: 4, completed_steps: [1, 2, 3], invited_user:
+  {false,true} }`. Both `user_profiles` rows materialized via
+  Fix 1's upsert-insert branch (log lines "User profile
+  upserted" with `auto_created: true`). Zero invalid
+  template_ids across both users. Zero spurious step-4 guard
+  firings — neither user's `onboarding_complete` flipped
+  prematurely. Acme Smoke Inc org created for User A with CoA
+  (16 accounts) + 12 fiscal periods.
+
+  The four bugs, consolidated:
+
+  | # | Bug | Surfaced | Fixed | Commit | Verified |
+  |---|-----|----------|-------|--------|----------|
+  | 1 | Multi-turn protocol violation (respondToUser tool_use persisted without matching tool_result) | Run 1 | Session 5.1 | 9b1af3d | Runs 2 + 3 |
+  | 2 | Template_id invention (system prompt didn't enumerate valid keys) | Run 1 | Session 5.1 | 887d5ea | Runs 2 + 3 (0 invalid IDs across 5+ real turns) |
+  | 3 | PROFILE_NOT_FOUND on bypass-sign-in paths (fixture tests all pre-seed profile rows) | Run 2 | Session 5.2 | e0a4435 | Run 3 (both users upserted cleanly) |
+  | 4 | Step-4 completion without step 1 (state machine under-constrained; user could finish nameless) | Run 2 (semantic) | Session 5.2 | f69fe75 | Run 3 (`completed_steps: [1,2,3]` in both final states) |
+
+  Bugs 1 and 2 would have shipped as hard failures (Bug 1
+  breaks every multi-turn agent conversation; Bug 2 breaks UI
+  render via next-intl). Bugs 3 and 4 would have been
+  production-latent — the sign-in trigger path kept them
+  invisible until any future flow bypassed sign-in. All four
+  are now regression-guarded by fixture tests
+  (`agentConversationProtocolInvariant`,
+  `agentTemplateIdSetClosure`, the CA-15 upsert-branch it-block,
+  `onboardingStep4GuardNoStep1`).
+
+  The three browser scenarios ran against `pnpm dev` at HEAD
+  3f02b17. **Scenario 3** signed the executive seed user in
+  via `/en/sign-in`; `resolveSignInDestination` routed directly
+  to `/en/11111111-1111-1111-1111-111111111111` (Bridge Holding
+  Co DEV) without passing through `/welcome`. Chart of Accounts
+  rendered. One redirect hop confirmed in devtools. PASS.
+  **Scenario 4**: still signed in as executive, manually
+  navigated to `/en/welcome`. The server-component
+  defense-in-depth guard in
+  `src/app/[locale]/welcome/page.tsx` (the
+  "memberships + display_name present → redirect to first org"
+  branch) fired, routing back to `/en/<org-id>/`. Welcome chat
+  chrome never rendered. PASS. **Scenario 5**: opened an
+  incognito window with no session cookies, navigated to
+  `/en/welcome`. The same page's `if (!user)
+  redirect('/sign-in')` guard fired. Sign-in form rendered at
+  `/en/sign-in`. Welcome chrome never rendered. PASS.
+
+  One production-readiness gap surfaced during the browser
+  pass: the currently-shipped `SplitScreenLayout` top nav
+  contains only the `OrgSwitcher` — there is no avatar
+  dropdown, no sign-out affordance. A signed-in user has no
+  in-app path to sign out. Scenario 5 required an incognito
+  window to simulate the unauthenticated state. This is **not a
+  Session 5 regression** — Session 5's scope was the welcome
+  page and sign-in redirect, not post-sign-in shell chrome.
+  It's within Session 7's already-declared scope ("avatar
+  dropdown + Mainframe Activity icon" per the master §14.6
+  roadmap). Captured here so Session 7's sub-brief picks it up
+  as a concrete named requirement rather than a nice-to-have.
+
+  Viewport check: split-screen layout rendered cleanly at a
+  normal laptop viewport. Chart of Accounts table readable,
+  agent stub panel narrow but functional, left rail icons
+  visible. Agent empty state shows "Phase 1.1 — agent
+  activates in Phase 1.2" subtitle — placeholder for Session
+  7's AgentChatPanel rewrite. Per Session 5's "ugly is fine,
+  broken is not" acceptance bar, passes. Session 7 polish
+  observations: active-state indicator on the left rail is
+  subtle, the `← → 1 / 1` pagination chrome above the Chart of
+  Accounts card implies pagination behavior that doesn't exist
+  yet, and the empty-state subtitle needs final copy.
+
+  Cumulative Anthropic API cost across the three runs:
+  approximately $0.35 (roughly $0.003 Run 1 — turn 2 aborted
+  immediately, $0.15 Run 2, $0.10 Run 3). Pino doesn't capture
+  `Anthropic.Messages.usage` from response objects, so figures
+  are estimates based on prompt size and turn counts. Browser
+  scenarios produced zero agent API traffic (auth-redirect
+  flows only). Well within EC-20's implicit cost budget.
+
+  Convention candidate update: **#9 Mock-vs-Protocol Invariant
+  Gap is now at two datapoints.** Datapoint 1 (Bug 1): fixture
+  `callClaude` doesn't enforce Anthropic's
+  `tool_use` → `tool_result` protocol rule; real API does.
+  Datapoint 2 (Bug 3): fixture tests all pre-seed
+  user_profiles rows; real admin-created-user path has none.
+  The class is the same — fixture tests validate happy paths
+  given their preconditions but don't exercise paths where
+  preconditions are absent. One more datapoint qualifies for
+  codification. Watch for it through Session 6 execution and
+  subsequent smoke runs.
+
+  Session 5.1's incidental observation (Claude emits the
+  reserved completion template_id before step 4 occasionally)
+  surfaced again in Run 3. The orchestrator's two-condition
+  guard correctly blocked. This is **not a convention candidate
+  on its own** — layered defense between probabilistic prompt
+  compliance and deterministic machine guards is generic
+  engineering discipline, not a novel pattern. Fold the
+  prompt-tightening work into Session 7 alongside the
+  params-shape gap where rendered template output first becomes
+  visible for manual UX evaluation.
+
+  Smoke-test users (User A, User B) and the "Acme Smoke Inc"
+  org remain in the dev DB from Run 3. `pnpm db:reset:clean`
+  wipes them whenever desired. `/tmp/smoketest-findings.md`
+  remains as a historical artifact. No code or test changes in
+  this closeout — the EC-20 story is already captured in
+  Sessions 5, 5.1, 5.2 commits; this entry is the single
+  authoritative narrative for Session 8.
+
+  **EC-20 gate: PASSED.** Eleven distinct improvements across
+  Sessions 1–5 + 5.1 + 5.2 before code shipped or during
+  execution. The drafting → pressure-test → execute → smoke
+  cycle paid out fully: four bugs caught that all 238 fixture
+  tests would have missed, two of them shipping-blockers.
+
+  Approximate documentation time: ~25 minutes.
