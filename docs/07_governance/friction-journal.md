@@ -2758,3 +2758,125 @@ Categories:
   structural review already cleared the commit gates. A
   one-line "Playwright-verified post-hoc" note lands in the
   next journal entry when verification completes.
+- 2026-04-19 NOTE   Phase 1.2 Session 6 execution complete.
+  All 12 S6 exit criteria pass. 288/288 tests green (238
+  baseline + 50 new across 9 new test files — CA-74 through
+  CA-82; CA-82 added above the 8-test floor per Option A
+  scope delta). Five feature commits landed on top of
+  14b948b: 2d4c0b8 (canvas directive types + schema +
+  dispatch stubs), c34b9f3 (canvas components), 6aef5c8
+  (route pages + invitation accept + preview service),
+  e9ffa9e (skip-link + prose update), plus this Commit 5
+  (tests + doc cleanup + closeout). No migrations, no new
+  ActionNames, no new ServiceError codes, no new deps, no
+  orchestrator changes. Covers EC-21, EC-23, EC-24, EC-25,
+  EC-26.
+
+  **Convention #8 third application and refinement.** Two
+  drafting-time applications (numeric claims + master §12.2
+  field-list diff) already on record at session start; the
+  pre-execution code-grep was application #3 and produced
+  the only catch of the session — sub-brief §6.5 and
+  Pre-decision 4 referenced a `invitationService.getByToken`
+  method that did not exist in shipped code. Convention #8
+  as codified lists four verification categories (numeric
+  claims, literal values, list elements, structural
+  references) but does not name "identity assertions"
+  — claims that a named method / route / schema field /
+  constant exists. The drafting passes ran category-faithful
+  greps and missed the identity claim. **Refinement captured
+  for single-commit codification at Session 7 drafting
+  start:** add "Identity assertions — grep the named symbol
+  at the cited location before claiming it exists" as the
+  fifth verification category. Out of band from Session 6
+  execution to avoid amending a convention mid-session.
+
+  **Option A scope delta.** One new read-only service method
+  (`previewInvitationByToken`, ~40 LOC) landed as a
+  scope-consistent exception to the sub-brief's "no new
+  service functions" claim. The method is pure read logic,
+  no audit row, no mutation; admin client justified by the
+  token-bearer auth pattern already used by acceptInvitation.
+  Master §20 EC-26 requires 5 distinguishable states on the
+  accept page; the existing acceptInvitation merges four
+  failure cases into a single INVITATION_INVALID_OR_EXPIRED
+  code, and org_invitations RLS is controller-only for
+  SELECT — so the state branching could not be driven
+  without a new read primitive. The "no new service
+  functions" claim was interpreted as a scope-signal ("don't
+  do Phase 1.5A work"), not an absolute rule. A read-only
+  preview supporting Session 6's own UI surface is
+  scope-consistent. CA-82 (7 it-blocks) pins the method's
+  state-determination behavior.
+
+  **Commit 2+3 founder review gate — outcome.** Commit 2
+  (canvas components) accepted structurally without
+  revision. Hands-on UX review folded into Commit 3's
+  review gate since Commit 3's route pages make each
+  component reachable by clean URL. Mid-session the
+  Playwright plugin was installed but its MCP tools did
+  not hot-load into the running Claude Code session. WSL
+  Claude had Bash / Read / Write / Edit only — no browser
+  automation. Option B chosen: close the combined gate on
+  backend verification (supabase-js-authenticated preview-
+  method state branching, pre-fill data reads, authz
+  checks via getMembership + orgService) + structural code
+  review. Visual/interactive UX verification deferred to a
+  post-restart Playwright pass (captured separately in
+  the 2026-04-19 "Session 6 browser-verification
+  deferral" entry earlier in this journal).
+
+  One observation captured for Session 7 polish backlog:
+  no UI for invitation resend when the user misses the
+  one-time token display window. invitationService.
+  resendInvitation exists but has no UI. Naturally paired
+  with master §22's deferred "Pending invitations list"
+  (Phase 2 scope).
+
+  **Commit 4 founder review gate — outcome.** Step-1
+  onboardingSuffix prose change approved without tweaks.
+  Design choices landed as proposed: "Skip to form" link
+  named in the prose, "/settings/profile" destination path
+  named literally, explicit neutrality guidance ("Either
+  path advances the state machine — don't push them toward
+  one or the other") prevents Claude from evangelizing
+  either path. Step 2/3/4 prose unchanged; step 2's "isn't
+  wired in for you right now" phrasing stays per
+  Pre-decision 3's permanence note.
+
+  **Split-file commit hygiene.** Throughout execution,
+  four-then-six uncommitted files from two parallel work
+  streams sat in the working tree: (i) session-start Phase
+  2 planning artifacts (docs/02_specs/open_questions.md
+  Q27-Q31 additions + docs/09_briefs/phase-2/
+  agent_architecture_proposal.md); (ii) mid-session skills
+  migration (CLAUDE.md rewrite 250→78 lines + docs/INDEX.md
+  new + package.json agent:floor / agent:validate scripts +
+  a friction-journal entry). All six remain uncommitted at
+  Session 6 close. My commits used explicit `git add <path>`
+  per file throughout; the friction-journal specifically
+  needed a temporary-revert-and-restore pattern (save
+  working state to /tmp, git checkout HEAD, append only my
+  new entry, commit, restore working state from /tmp) twice
+  during this session so the skills-migration entry stayed
+  out of my Commit 4 and Commit 5. Flagging here for the
+  founder's separate triage — these six items should commit
+  together as a "Phase 2 planning + skills migration
+  pre-Session-7" chore.
+
+  **Mock-vs-Protocol Invariant Gap convention candidate —
+  no new datapoint.** Session 6 added no orchestrator tests
+  and produced no mock-vs-protocol divergence. Still at 2
+  datapoints as of the EC-20 closeout. Watching.
+
+  **Phase 1.2 progress.** Sessions 1 / 2 / 3 / 4 / 4.5 /
+  5 / 5.1 / 5.2 / 6 complete; EC-20 closeout passed. Seven
+  of ~eight Phase 1.2 sessions shipped. Session 7 is the
+  UI-integration session (AgentChatPanel rewrite,
+  ProposedEntryCard migration to ADR-0002, ContextualCanvas
+  click handlers, SplitScreenLayout onboarding mode, avatar
+  dropdown + sign-out affordance from EC-20 closeout's
+  production-readiness gap, params-shape gap, canvas
+  schema tightening). Session 8 is verification + Phase
+  1.2 closeout (27 exit criteria matrix, master §21 CA-*
+  reconciliation, 20-real-entries gate, adversarial test).

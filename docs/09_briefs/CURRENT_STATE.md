@@ -125,25 +125,32 @@ production-readiness gap documented for Session 7 (no
 sign-out affordance in current shell). Mock-vs-Protocol
 Invariant Gap convention candidate at 2 datapoints.
 
-### Session 6 — Ready to execute (2026-04-19)
+### Session 6 — Complete (2026-04-19)
 
-Sub-brief at `docs/09_briefs/phase-1.2/session-6-brief.md`.
-Scope: master §12 form-escape surfaces (user profile editor,
-org profile editor, org users list with inline invite,
-invitation accept page) + master §15 canvas directive
-extensions (five new types: user_profile, org_profile,
-org_users, invite_user, welcome) + ContextualCanvas dispatch +
-onboarding skip-link wiring + one stale `/admin/orgs` doc
-cleanup. All Phase 1.5A/B API backends exist; Session 6 is
-pure UI + type/schema + dispatch. 12 S6 exit criteria, 8 new
-CA tests (CA-74 through CA-81), 5-commit cadence with two
-review gates (Commit 2 for canvas component UX, Commit 4 for
-onboardingSuffix prose update). Eight founder pre-decisions.
-No migrations, no new ActionNames, no new ServiceError codes,
-no new deps, no orchestrator changes. Covers EC-21, EC-23,
-EC-24, EC-25, EC-26. Convention #8 Spec-to-Implementation
-Verification (first-ever codification, commit b24a8d6)
-applied to this sub-brief's drafting.
+Sub-brief at `docs/09_briefs/phase-1.2/session-6-brief.md`
+(frozen at 14b948b after six pre-execution revisions).
+Execution landed as commits 2d4c0b8 → c34b9f3 → 6aef5c8 →
+e9ffa9e → (Commit 5) on top of 14b948b. All 12 S6 exit
+criteria pass. 288/288 tests green (238 baseline + 50 new
+across CA-74 through CA-82 — 9 test files; CA-82 added above
+the 8-test floor). Convention #8 applied on a third pass
+(pre-execution code-grep) and produced one catch: the
+sub-brief at §6.5 claimed `invitationService.getByToken`
+existed; it did not. Founder-approved Option A landed a
+~40-line read-only `previewInvitationByToken` method on the
+existing invitationService — a scope-consistent exception to
+the sub-brief's "no new service functions" claim. Two
+founder review gates applied: Commit 2+3 combined review
+closed on backend verification + structural code review
+(visual/interactive UX verification deferred to a
+post-restart Playwright pass after the mid-session plugin
+install); Commit 4 review gate closed on the onboardingSuffix
+step-1 prose change without tweaks. Convention #8 refinement
+(add "identity assertions" as a fifth verification category)
+captured for single-commit codification at Session 7
+drafting start. Covers EC-21, EC-23, EC-24, EC-25, EC-26.
+
+### Session 7 — Ready to draft next
 
 Sessions 7–8 sub-briefs land as each predecessor session closes out.
 

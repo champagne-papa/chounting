@@ -194,7 +194,16 @@ the agent.
 | `/[locale]/[orgId]/agent/actions` | 1.2 | AI Action Review queue |
 | `/[locale]/[orgId]/reports/pl` | 1.1 | Basic P&L (read-only) |
 | `/[locale]/consolidated/dashboard` | Stub in 1.1 | Role-gated |
-| `/admin/orgs` | 1.1 | Org creation with industry CoA template selection |
+| `/[locale]/[orgId]/` | 1.2 | Post-auth main-app destination (Session 5 `resolveSignInDestination` + master §14.5). Replaces the old `/admin/orgs` claim in this table. |
+| `/[locale]/settings/profile` | 1.2 | User profile editor (Session 6 §12.1 form-escape) |
+| `/[locale]/[orgId]/settings/org` | 1.2 | Org profile editor, controller-only (Session 6 §12.2) |
+| `/[locale]/invitations/accept` | 1.2 | Invitation accept page, 5-state branching (Session 6 §12.5) |
+
+> `/[locale]/admin/orgs/` still exists as a Phase 1.1 historical
+> directory (see `src/app/[locale]/admin/orgs/`). It is no longer
+> the post-auth destination; the routing-table row above reflects
+> the landed behavior. The legacy directory is left in place — code
+> removal is out of Session 6 scope.
 
 ---
 
