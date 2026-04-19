@@ -246,6 +246,81 @@ but should have been pre-identified in the brief. See
 
 ---
 
+## Phase 1.2 Conventions (established 2026-04-19)
+
+### Spec-to-Implementation Verification
+
+When drafting a sub-brief, every numeric claim, literal value,
+list element, or structural reference that cites authoritative
+source material (master brief, Phase 1.5 decision records,
+ADRs, migration files, locale files, prior sub-briefs) MUST be
+verified by grep or file read against the cited source BEFORE
+the sub-brief freezes.
+
+Examples of the pattern (drawn from the three datapoints that
+codified this convention):
+
+- **Numeric claims** ("test count", "file count", "row count")
+  — run the relevant `find | wc -l` or `grep -c` against the
+  authoritative source.
+- **Literal values** (state shapes, enum values, constant
+  strings) — grep the authoritative source for the literal.
+- **List elements** (`completed_steps`, valid template_ids,
+  exit criteria ordering) — read both sides and diff.
+- **Structural references** (master §X.Y cited in sub-brief
+  §Z.W) — read both sections and confirm the claim holds.
+
+The cost is 5–10 minutes of grep-verification per sub-brief;
+the payoff is avoiding mid-execution drift where the executor
+has to reconcile contradictions. Apply to every sub-brief from
+this point forward.
+
+**Three codifying datapoints** (from Sessions 4–5 execution and
+drafting):
+
+1. Session 4 test-ripple count: Clarification E's sub-brief
+   text stated 6 `loadOrCreateSession` call sites (CA-45 × 4 +
+   CA-46 × 2); the actual count via grep was 9 (CA-45 × 6 +
+   CA-46 × 3). The founder's pre-execution final pass caught
+   it; execution used the corrected number. Caught at the
+   boundary between drafting and execution — one turn's notice.
+
+2. Session 5 sub-brief revision: the draft text in §6.7 said
+   invited-user `completed_steps` initialized to `[1, 2, 3]`;
+   master brief §11.5(c) specifies `[2, 3]`. Caught during the
+   founder's review round before freeze. The drafter's
+   narrative logic for the invited-user flow was correct
+   throughout; only the numeric initial state drifted.
+
+3. Session 5 execution Bug 1 (§6.3 internal contradiction):
+   the sub-brief simultaneously stated "onboardingSuffix
+   returns empty for null" and "the old behavior (generic
+   onboarding suffix) still fires" under the defense-in-depth
+   guard — contradictory if both route through the same
+   function. Caught at the Commit 1 founder review gate during
+   execution. Resolved by splitting into two exports
+   (`onboardingSuffix` for step-aware; `genericOnboardingSuffix`
+   for the legacy fallback).
+
+Class: "narratively correct, contractually wrong against the
+cited source." The drafter's overall reasoning was right in
+each case; a specific value or a specific reference drifted.
+Automation-by-grep is cheaper than detection-by-close-reading.
+
+**Relationship to Cited-Code Verification** (Phase 1.5A
+convention above): Cited-Code Verification catches drift
+between shipped source files and sub-brief prose that cites
+them as "used verbatim" or "existing behavior." Spec-to-
+Implementation Verification catches drift between
+authoritative source material (master brief, master decisions,
+prior sub-briefs) and the sub-brief being drafted. The two are
+complementary — one guards the source-of-truth → implementation
+direction, the other guards the source-of-truth → sub-brief
+direction. Both apply during drafting; neither supersedes the
+other.
+
+---
+
 ## Appendix: Worked Example — Posting a Journal Entry
 
 This worked example demonstrates the entire Phase 1 stack end-to-end
