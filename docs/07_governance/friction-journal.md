@@ -1256,6 +1256,71 @@ Categories:
   returning it; resolved via §6.7 fix. Twelve total template_ids
   enumerated in §6.5 for locale additions (five agent.* + seven
   proposed_entry.*). No other open questions surfaced.
+- 2026-04-18 NOTE   Phase 1.2 Session 3 execution session —
+  starting. Starting SHA: 1562d3c (Session 3 readiness anchor).
+  Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]). Completion
+  target: all 10 S3 exit criteria (S3-1 through S3-10) pass after
+  the four-commit cadence in sub-brief §11. Commit 2 has a
+  founder review gate for Session-3-authored prose (three Identity
+  block templates + three locale directive strings + any authored
+  canvas suffix prose). Two founder pre-decisions resolved during
+  review: (a) canvas_context_injection.md carries a verbatim
+  framing block; Session 3 translates Handlebars to TS template-
+  literal conditionals in commit 1; (b) CA-51 is a fresh test
+  at tests/unit/i18nLocaleParity.test.ts. Sub-brief at
+  docs/09_briefs/phase-1.2/session-3-brief.md is the spec.
+  Master brief frozen at aae547a.
+- 2026-04-18 NOTE   Session 3 commit 2 introduced two internal
+  helper modules under src/agent/prompts/personas/:
+  _sharedSections.ts (verbatim master-cited content: §6.3 rules,
+  §7 structured-response contract, §7 voice rules — extracted to
+  prevent drift across the three persona files) and
+  _identityAndTools.ts (identity-block template + tools
+  enumeration helper used by all three personas). Underscore
+  prefix marks them internal-only. Not named in sub-brief §10
+  stop-points file list but sound refactor — three persona
+  files (controller.ts, ap_specialist.ts, executive.ts) still
+  exist with the expected PersonaPrompt exports (S3-1 passes)
+  and no duplicated prose. DRY factor prevents master §6.3
+  drift across files. Pattern worth preserving for Session 4+:
+  executor may introduce internal-only helper modules when the
+  sub-brief's named public exports are preserved and the
+  relevant S3-* criteria still pass.
+- 2026-04-18 NOTE   Commit-2 founder review gate produced one
+  polish request: drop UUIDs (org_id, user_id) from the identity
+  block. UUIDs are token tax for Claude with zero reasoning
+  benefit — trace_id handles human-readable correlation in logs.
+  Applied: userLabel simplified to `input.user.display_name ??
+  'the user'`; normal-branch parenthetical `(org id: ${orgId})`
+  removed; onboarding branch's trailing "The user is ..."
+  sentence dropped since it read awkwardly without a display
+  name. Candidate lesson for the batched-conventions catalog:
+  "prompt content is for Claude's reasoning, not audit trail —
+  keep UUIDs out unless the model needs them to call a tool."
+- 2026-04-18 NOTE   Phase 1.2 Session 3 execution complete. All
+  10 S3 exit criteria pass. 4 commits on top of 1562d3c:
+  98791f8 (persona prompts + suffixes + OrgContext stub),
+  1f4d8cf (buildSystemPrompt + orchestrator wire-up +
+  structural-retry surface fix + CA-43 inversion — commit-2
+  founder review gate produced one polish before landing),
+  5e05d91 (12 locale keys × 3 files), and commit 4 (this
+  commit: CA-48 through CA-52 tests). Starting model: Claude
+  Opus 4.7 — unchanged throughout. Full regression: 50 test
+  files, 191 tests, 0 failures (178 baseline + 13 new its
+  across 5 new CA files; CA-49, CA-50, CA-51, CA-52 each have
+  multiple it-blocks covering main path + negative cases, which
+  the execution prompt explicitly permitted). Master brief
+  still frozen at aae547a. Three lessons worth preserving for
+  the batched-conventions catalog (all candidates, none codified
+  yet): (1) "verbatim vs skeleton+upstream" from drafting
+  discovery 1; (2) "Shipped-Code-to-Spec Verification" from
+  drafting discovery 2; (3) "UUIDs out of prompts" from
+  commit-2 polish + (4) the "internal-helper refactor deserves
+  friction-journal NOTE" pattern observed during commit-2
+  review. Batching until a third datapoint surfaces per
+  founder discipline. Session decomposition discipline held:
+  no Session 4+ scope leaked in (no OrgContextManager logic,
+  no API routes, no real Anthropic client).
 - (earlier entry preserved below)
 - 2026-04-18 NOTE   Phase 1.2 Session 2 execution complete. All
   15 S2 exit criteria pass. 4 commits on top of fc306c5:
