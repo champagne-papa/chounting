@@ -95,13 +95,17 @@ export async function loadOrgContext(orgId: string): Promise<OrgContext> {
   }));
 
   // 3. Active controllers with populated display_name.
-  //    memberships.status = 'active' filter matches the RLS
-  //    helper user_is_controller (migration 113).
-  //    Controllers with null display_name are dropped — we
-  //    only surface fully-named controllers into the prompt.
-  const { data: controllerRows, error: ctrlErr } = await db
+  //    memberships and user_profiles both reference auth.users
+  //    but have no direct FK between them, so PostgREST can't
+  //    embed user_profiles from memberships. Two queries instead:
+  //    first find the controller user_ids, then look up their
+  //    profiles. memberships.status = 'active' filter matches the
+  //    RLS helper user_is_controller (migration 113). Controllers
+  //    without a populated display_name are dropped — we only
+  //    surface fully-named controllers into the prompt.
+  const { data: controllerMemberships, error: ctrlErr } = await db
     .from('memberships')
-    .select('user_id, user_profiles:user_id(display_name)')
+    .select('user_id')
     .eq('org_id', orgId)
     .eq('role', 'controller')
     .eq('status', 'active');
@@ -109,27 +113,38 @@ export async function loadOrgContext(orgId: string): Promise<OrgContext> {
   if (ctrlErr) {
     throw new ServiceError(
       'READ_FAILED',
-      `Failed to load controllers for org ${orgId}: ${ctrlErr.message}`,
+      `Failed to load controller memberships for org ${orgId}: ${ctrlErr.message}`,
     );
   }
 
-  const controllers = (controllerRows ?? [])
-    .map((row) => {
-      // PostgREST returns a single row for a many-to-one FK
-      // relation, but Supabase's generated types model it as
-      // an array. Handle both shapes defensively.
-      const profile = Array.isArray(row.user_profiles)
-        ? row.user_profiles[0]
-        : (row.user_profiles as { display_name: string | null } | null);
-      return {
-        user_id: row.user_id as string,
-        display_name: profile?.display_name ?? null,
-      };
-    })
-    .filter(
-      (c): c is { user_id: string; display_name: string } =>
-        typeof c.display_name === 'string' && c.display_name.length > 0,
-    );
+  const controllerUserIds = (controllerMemberships ?? []).map(
+    (m) => m.user_id as string,
+  );
+
+  let controllers: OrgContext['controllers'] = [];
+  if (controllerUserIds.length > 0) {
+    const { data: profileRows, error: profileErr } = await db
+      .from('user_profiles')
+      .select('user_id, display_name')
+      .in('user_id', controllerUserIds);
+
+    if (profileErr) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `Failed to load controller profiles for org ${orgId}: ${profileErr.message}`,
+      );
+    }
+
+    controllers = (profileRows ?? [])
+      .map((p) => ({
+        user_id: p.user_id as string,
+        display_name: (p.display_name as string | null) ?? null,
+      }))
+      .filter(
+        (c): c is { user_id: string; display_name: string } =>
+          typeof c.display_name === 'string' && c.display_name.length > 0,
+      );
+  }
 
   // Industry join: same many-to-one shape handling.
   const industryRecord = Array.isArray(org.industries)

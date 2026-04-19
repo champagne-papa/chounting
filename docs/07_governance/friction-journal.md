@@ -1502,3 +1502,21 @@ Categories:
   The approach (threading ctx via makeTestContext at describe
   scope) is unchanged; only the expected-count number for the
   pre-commit-4 grep shifts from 7 to 10.
+- 2026-04-18 NOTE   Session 4 commit 2 required a mid-commit
+  query rewrite. Sub-brief §6.1 specified loadOrgContext as joining
+  memberships → user_profiles via PostgREST embedding to fetch
+  controller display names. First test run surfaced a PostgREST
+  error: "Could not find a relationship between 'memberships'
+  and 'user_id' in the schema cache." Root cause: memberships
+  and user_profiles both reference auth.users as parallel FKs,
+  and PostgREST only embeds through direct FKs between the two
+  tables. Rewrote as two sequential queries (find controller
+  user_ids from memberships filtered to role=controller +
+  status=active, then batch lookup user_profiles via .in()).
+  Behaviorally identical, same master §8 return shape. Flagged
+  during commit-2 review gate and approved. Candidate for a
+  sixth future-convention datapoint: "When a sub-brief specifies
+  a query shape that turns out to be infeasible due to schema/
+  tool constraints (PostgREST FK embedding, Supabase join
+  limits, etc.), execution rewrites and flags in the review
+  gate." One datapoint; not codifying.

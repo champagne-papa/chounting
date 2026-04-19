@@ -1,17 +1,14 @@
 // src/agent/orchestrator/index.ts
-// Phase 1.2 Session 2 — the Double Entry Agent orchestrator.
+// Phase 1.2 Session 4 — the Double Entry Agent orchestrator.
 // Master brief §5.1 signatures, §5.2 main loop.
-//
-// In Session 2 callClaude is fixture-driven. Session 4 swaps in
-// the real Anthropic client without touching this file.
 //
 // Main-loop steps (master §5.2):
 //   1. loadOrCreateSession
-//   2. orgContextManager.load       — DEFERRED to Session 4
+//   2. orgContextManager.load       — loadOrgContext (non-null org only)
 //   3. getPersonaForUser             — via getMembership
-//   4. buildSystemPrompt             — DEFERRED to Session 3 (placeholder)
+//   4. buildSystemPrompt             — injects OrgContext summary
 //   5. Conversation truncation       — full history (master §5.2 step 5)
-//   6. callClaude                    — mocked via fixture queue
+//   6. callClaude                    — real client, fixture-gated in tests
 //   7. Tool-call validation retry    — Q13 budget, max 2
 //   8. executeTool                   — inline dispatcher
 //   9. persistSession                — updates conversation + last_activity_at
@@ -32,6 +29,7 @@ import { callClaude } from './callClaude';
 import { loadOrCreateSession } from './loadOrCreateSession';
 import { toolsForPersona, type Persona } from './toolsForPersona';
 import { buildSystemPrompt } from './buildSystemPrompt';
+import { loadOrgContext } from '@/agent/memory/orgContextManager';
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
@@ -98,13 +96,15 @@ export async function handleUserMessage(
     tools.map((t) => [t.name as string, t] as const),
   );
 
-  // Step 4: system prompt via buildSystemPrompt (Session 3). Session
-  // 4 will load orgContext via OrgContextManager; Session 3 passes
-  // null so the builder's onboarding branch and skeleton identity
-  // block carry through.
+  // Steps 2 + 4: load OrgContext (master §5.2 step 2) then
+  // compose system prompt (step 4). org_id is null for
+  // onboarding sessions — buildSystemPrompt falls through to
+  // its onboarding branch automatically.
+  const orgContext =
+    input.org_id !== null ? await loadOrgContext(input.org_id) : null;
   const system = buildSystemPrompt({
     persona,
-    orgContext: null,
+    orgContext,
     locale: input.locale,
     canvasContext: input.canvas_context,
     user: { user_id: input.user_id },

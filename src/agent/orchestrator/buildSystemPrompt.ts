@@ -1,16 +1,18 @@
 // src/agent/orchestrator/buildSystemPrompt.ts
-// Phase 1.2 Session 3 — system prompt composition helper. Master
+// Phase 1.2 Session 4 — system prompt composition helper. Master
 // §7 + sub-brief §6.3 / Pre-decision 1 (signature).
 //
 // Composition order (single blank line between sections):
 //   1. Base persona prompt (identity + tools + rules + contract + voice)
-//   2. Locale directive
-//   3. Onboarding suffix (controller + null orgContext only)
-//   4. Canvas context suffix (when canvasContext present)
+//   2. Org-context summary (when orgContext is non-null)
+//   3. Locale directive
+//   4. Onboarding suffix (controller + null orgContext only)
+//   5. Canvas context suffix (when canvasContext present)
 //
-// Session 4 will inject an org-context summary between steps 1 and
-// 2 once OrgContextManager lands. The current composition order
-// already has the slot.
+// The org-context summary surfaces names (org_name, industry,
+// currency, fiscal period names, controller names) without
+// UUIDs — tool calls receive UUIDs through their input
+// arguments, not the prompt body.
 
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import type { OrgContext } from '@/agent/memory/orgContextManager';
@@ -21,6 +23,7 @@ import { executivePersonaPrompt } from '@/agent/prompts/personas/executive';
 import { localeDirective, type Locale } from '@/agent/prompts/suffixes/localeDirective';
 import { onboardingSuffix } from '@/agent/prompts/suffixes/onboardingSuffix';
 import { canvasContextSuffix } from '@/agent/prompts/suffixes/canvasContextSuffix';
+import { orgContextSummary } from '@/agent/prompts/suffixes/orgContextSummary';
 
 export interface BuildSystemPromptInput {
   persona: Persona;
@@ -32,7 +35,12 @@ export interface BuildSystemPromptInput {
 
 export function buildSystemPrompt(input: BuildSystemPromptInput): string {
   const base = basePersonaPrompt(input);
-  const sections: string[] = [base, localeDirective(input.locale)];
+  const sections: string[] = [base];
+
+  const orgSummary = orgContextSummary(input.orgContext);
+  if (orgSummary) sections.push(orgSummary);
+
+  sections.push(localeDirective(input.locale));
 
   if (input.persona === 'controller' && input.orgContext === null) {
     sections.push(onboardingSuffix());
