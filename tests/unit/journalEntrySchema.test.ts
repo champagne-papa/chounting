@@ -70,18 +70,39 @@ describe('PostJournalEntryInputSchema', () => {
     expect(() => PostJournalEntryInputSchema.parse(withReversal)).toThrow();
   });
 
-  it('rejects agent source in Phase 1.1', () => {
+  // Phase 1.2 migration (Session 2): the Phase 1.1 'not implemented'
+  // reject guards on source='agent' and dry_run=true have been
+  // removed. The sibling idempotencyRefinement is now runtime-
+  // reachable and pairs bidirectionally with the database CHECK
+  // constraint idempotency_required_for_agent (migration 001).
+
+  it('accepts agent source with idempotency_key', () => {
+    const agentEntry = {
+      ...baseEntry,
+      source: 'agent' as const,
+      idempotency_key: '00000000-0000-0000-0000-00000000a001',
+    };
+    const result = PostJournalEntryInputSchema.parse(agentEntry);
+    expect(result.source).toBe('agent');
+    expect(result.idempotency_key).toBe('00000000-0000-0000-0000-00000000a001');
+  });
+
+  it('rejects agent source without idempotency_key', () => {
     const agentEntry = { ...baseEntry, source: 'agent' as const };
     expect(() => PostJournalEntryInputSchema.parse(agentEntry)).toThrow(
-      /agent/i,
+      /idempotency_key is required/i,
     );
   });
 
-  it('rejects dry_run in Phase 1.1', () => {
-    const dryRun = { ...baseEntry, dry_run: true };
-    expect(() => PostJournalEntryInputSchema.parse(dryRun)).toThrow(
-      /dry_run/i,
-    );
+  it('accepts dry_run: true', () => {
+    const dryRun = {
+      ...baseEntry,
+      source: 'agent' as const,
+      idempotency_key: '00000000-0000-0000-0000-00000000a002',
+      dry_run: true,
+    };
+    const result = PostJournalEntryInputSchema.parse(dryRun);
+    expect(result.dry_run).toBe(true);
   });
 });
 

@@ -1127,3 +1127,72 @@ Categories:
   execution should hit the same zero-drift discipline as Session
   1 with no stop-and-flag moments — though that will only be
   known post-execution.
+- 2026-04-18 NOTE   Phase 1.2 Session 2 execution session —
+  starting. Starting SHA: fc306c5 (the Session 2 readiness
+  commit). Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]).
+  Completion target: all 15 S2 exit criteria (S2-1 through S2-15)
+  pass after the four-commit cadence defined in sub-brief §10.
+  Two founder pre-decisions: canvasDirectiveSchema lands at
+  src/shared/schemas/canvas/canvasDirective.schema.ts (new
+  subfolder); toolsForPersona avoids raw count comments.
+  Sub-brief at docs/09_briefs/phase-1.2/session-2-brief.md is
+  the spec; this session writes real agent code against the
+  mocked Anthropic client. Master brief frozen at aae547a.
+- 2026-04-18 WRONG  Discovered during commit 3 pre-execution
+  reading: the PostJournalEntryInputSchema and
+  ReversalInputSchema carry four .refine() blocks (two per
+  schema) that reject source='agent' and dry_run=true with
+  messages "not implemented in Phase 1.1.". These are Phase 1.1
+  placeholder guards with a self-documenting comment at
+  lines 86–93 of journalEntry.schema.ts noting their intended
+  removal in Phase 1.2. The sub-brief §5.2 cited both schemas
+  as "verbatim, no new Zod" which was incomplete — it didn't
+  flag that the existing schemas gate the exact inputs Session
+  2 feeds through Fixture C and CA-47's postJournalEntry
+  dry-run path. WSL Claude stopped and flagged per Session 1
+  precedent rather than powering through; founder chose
+  Option 3 (fold into commit 4 alongside the tests). Commit 4
+  removes the four .refine() blocks and inverts the two unit
+  tests in journalEntrySchema.test.ts (agent-source rejection
+  → "accepts agent source with idempotency_key" +
+  "rejects agent source without idempotency_key";
+  dry_run rejection → "accepts dry_run: true"). The sibling
+  idempotencyRefinement now becomes runtime-reachable as the
+  file's own comment predicted, bidirectionally paired with
+  the database CHECK constraint idempotency_required_for_agent
+  from migration 001. Lesson for Session 3+ sub-brief drafting:
+  when a sub-brief cites an existing Zod schema, the drafter
+  must grep the schema file for .refine() clauses whose message
+  text contains "Phase 1" or "not implemented" or similar
+  self-referential placeholders. These are pending migrations
+  the cited schema still carries. Candidate for a
+  conventions.md addition alongside the Permission Catalog
+  Count Drift convention from Session 1 (suggested section
+  name: "Cited-Code Verification" or "Inherited-Assumption
+  Checks") — holding off on the commit until Session 2
+  close-out to batch with any further lessons.
+- 2026-04-18 NOTE   Phase 1.2 Session 2 execution complete. All
+  15 S2 exit criteria pass. 4 commits on top of fc306c5:
+  0bee609 (ServiceError codes + 10 tool schemas +
+  canvasDirectiveSchema), ea2f09e (orchestrator skeleton +
+  mocked callClaude + fixtures + test factory), 3539223
+  (persona whitelist + session load/create + trace_id
+  propagation), and commit 4 (this commit: Phase 1.1 agent-path
+  guard removal + unit test inversions + CA-39 through CA-47
+  integration tests + friction journal close-out). Starting
+  model: Claude Opus 4.7 — unchanged throughout. Full
+  regression: 45 test files, 178 tests, 0 failures (162
+  baseline + 16 new: 9 CA-* files contributing 15 it-blocks +
+  1 net from unit test inversion). Master brief still frozen
+  at aae547a. Two discoveries worth preserving for future
+  sessions: (1) the Phase 1.1 guard-removal sub-brief gap
+  captured above — a new class of drafter oversight alongside
+  CA-37-style count-drift gaps; (2) the Map key-type narrowing
+  around tool-name lookups (orchestrator/index.ts line 141 in
+  the first draft failed typecheck because `as const` on
+  `.name` narrowed the Map key to literal tool names while
+  Anthropic's ToolUseBlock.name is just string; fixed with
+  `Map<string, (typeof tools)[number]>`). Session
+  decomposition discipline held: no Session 3+ scope leaked
+  in. No new open questions beyond the sub-brief-drafting
+  lesson above.

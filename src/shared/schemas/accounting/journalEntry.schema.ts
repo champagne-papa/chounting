@@ -122,15 +122,7 @@ export const PostJournalEntryInputSchema = JournalEntryBaseSchema
     reversal_reason: z.undefined().optional(),
   })
   .refine(balancedRefinement, balancedMessage)
-  .refine(idempotencyRefinement, idempotencyMessage)
-  .refine(
-    (entry) => entry.source !== 'agent',
-    { message: 'source: "agent" is not implemented in Phase 1.1.' },
-  )
-  .refine(
-    (entry) => entry.dry_run !== true,
-    { message: 'dry_run: true is not implemented in Phase 1.1.' },
-  );
+  .refine(idempotencyRefinement, idempotencyMessage);
 
 // --- Reversal form: reversal fields required ---
 
@@ -140,15 +132,7 @@ export const ReversalInputSchema = JournalEntryBaseSchema
     reversal_reason: z.string().min(1),
   })
   .refine(balancedRefinement, balancedMessage)
-  .refine(idempotencyRefinement, idempotencyMessage)
-  .refine(
-    (entry) => entry.source !== 'agent',
-    { message: 'source: "agent" is not implemented in Phase 1.1.' },
-  )
-  .refine(
-    (entry) => entry.dry_run !== true,
-    { message: 'dry_run: true is not implemented in Phase 1.1.' },
-  );
+  .refine(idempotencyRefinement, idempotencyMessage);
 
 // --- Exported types ---
 
