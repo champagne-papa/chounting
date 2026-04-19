@@ -86,7 +86,26 @@ Industry selection is embedded in \`createOrganization\` (see step 2). If the st
 
 ${completed}`;
 
-    case 4:
+    case 4: {
+      // Session 5.2: step 4 branches on whether step 1 has
+      // actually completed. The advance rule can legally
+      // produce current_step === 4 with completed_steps missing
+      // 1 (e.g., step 1 failed mid-session and step 2+3 atomic
+      // advance jumped here). The orchestrator's completion
+      // detector also guards on completed_steps.includes(1), but
+      // the prose branch makes the recovery path explicit so the
+      // agent doesn't keep emitting first_task.navigate against
+      // a blocked completion.
+      const step1Done = onboarding.completed_steps.includes(1);
+      if (!step1Done) {
+        return `## Onboarding — Step 4 (blocked: profile incomplete)
+
+The state machine has reached step 4 but step 1 (profile) has not completed — the user's \`display_name\` is still unset. ${completed}
+
+Before you can invite the user to a first task, call \`updateUserProfile\` with a valid \`displayName\` (ask the user for it if you haven't already). The system will mark step 1 complete the moment the call succeeds with a non-empty \`displayName\`, and the step-4 first-task invitation will become available on the next turn.
+
+Do NOT emit \`template_id: "agent.onboarding.first_task.navigate"\` right now — the completion signal is guarded at the orchestrator and will NOT flip the onboarding flag while step 1 is outstanding. Keep your turn focused on collecting the display name.`;
+      }
       return `## Onboarding — Step 4 of 4: First task
 
 Everything is set up. ${completed}
@@ -98,5 +117,6 @@ Invite the user to try a first real task. Offer two options in plain language:
 Wait for the user to pick one. When they commit to either option (or name a different first task — anything concrete), respond with the \`respondToUser\` tool using \`template_id: "agent.onboarding.first_task.navigate"\`. This is the explicit completion signal — the system will flip the onboarding flag and route the user into the main app. Do NOT use this template_id for any other turn or message; it is reserved for the moment the user commits to a first task.
 
 If the user is still deciding or asks a clarifying question, respond with a regular template_id (the ones you'd use in normal operation) and stay at step 4 — the completion signal only fires when they pick a task.`;
+    }
   }
 }

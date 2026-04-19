@@ -384,11 +384,24 @@ export async function handleUserMessage(
       // Any other template_id at step 4 leaves the state
       // unchanged — the agent is still talking about the task
       // choice, not committing.
+      //
+      // Session 5.2: additional guard requires completed_steps
+      // to include 1. The state-advance rule in state.ts can
+      // legally produce current_step === 4 without step 1 in
+      // completed_steps (e.g., step 1 failed silently and step
+      // 2+3 atomic advance jumped current_step from 1 to 4).
+      // Allowing completion in that case produces a "finished"
+      // onboarding with display_name still null. The guard
+      // forces the agent back to updateUserProfile first; the
+      // extended onboardingSuffix at step 4 (also Session 5.2)
+      // directs the agent to the profile step when the guard
+      // would block.
       let onboardingComplete = false;
       if (
         currentOnboarding !== null &&
         currentOnboarding.in_onboarding &&
         currentOnboarding.current_step === 4 &&
+        currentOnboarding.completed_steps.includes(1) &&
         parsedRespond.template_id === STEP_4_COMPLETION_TEMPLATE_ID
       ) {
         currentOnboarding = markOnboardingComplete(currentOnboarding);
@@ -396,6 +409,24 @@ export async function handleUserMessage(
         log.info(
           { template_id: parsedRespond.template_id },
           'onboarding step 4 completed — in_onboarding flipped',
+        );
+      } else if (
+        currentOnboarding !== null &&
+        currentOnboarding.in_onboarding &&
+        currentOnboarding.current_step === 4 &&
+        !currentOnboarding.completed_steps.includes(1) &&
+        parsedRespond.template_id === STEP_4_COMPLETION_TEMPLATE_ID
+      ) {
+        // Log the blocked completion so it's visible in logs.
+        // Agent emitted the completion signal, but step 1 never
+        // completed — state machine is in a recoverable state
+        // (current_step === 4 but display_name never set).
+        log.warn(
+          {
+            template_id: parsedRespond.template_id,
+            completed_steps: currentOnboarding.completed_steps,
+          },
+          'step-4 completion blocked — step 1 not in completed_steps (display_name not set)',
         );
       }
 
