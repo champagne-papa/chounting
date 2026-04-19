@@ -1,0 +1,71 @@
+// src/app/api/agent/message/route.ts
+// Phase 1.2 Session 4 — POST /api/agent/message per master §13.2
+// and sub-brief §6.6. Routes the user's chat message into the
+// orchestrator and returns the AgentResponse.
+//
+// No withInvariants wrap at the route layer: the orchestrator
+// authorizes via its persona whitelist + the service functions'
+// own withInvariants wrapping (inside executeTool). The route's
+// job is body validation, context construction, and error
+// translation.
+
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { handleUserMessage } from '@/agent/orchestrator';
+import { buildServiceContext } from '@/services/middleware/serviceContext';
+import { ServiceError } from '@/services/errors/ServiceError';
+import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
+import { canvasContextSchema } from '@/shared/schemas/canvas/canvasContext.schema';
+import type { CanvasContext } from '@/shared/types/canvasContext';
+
+const agentMessageRequestSchema = z
+  .object({
+    org_id: z.string().uuid().nullable(),
+    message: z.string().min(1),
+    locale: z.enum(['en', 'fr-CA', 'zh-Hant']).optional(),
+    session_id: z.string().uuid().optional(),
+    canvas_context: canvasContextSchema.optional(),
+  })
+  .strict();
+
+export async function POST(req: Request) {
+  try {
+    const json = await req.json();
+    const parsed = agentMessageRequestSchema.parse(json);
+
+    const ctx = await buildServiceContext(req);
+
+    const response = await handleUserMessage(
+      {
+        user_id: ctx.caller.user_id,
+        org_id: parsed.org_id,
+        locale: parsed.locale ?? ctx.locale ?? 'en',
+        message: parsed.message,
+        session_id: parsed.session_id,
+        // canvasDirectiveSchema.card is z.unknown() until Session
+        // 7 tightens it to ProposedEntryCardSchema (circular-import
+        // risk). Cast at the boundary; the TS type has card as
+        // ProposedEntryCard. Orchestrator consumers treat it as
+        // pass-through reference material only.
+        canvas_context: parsed.canvas_context as CanvasContext | undefined,
+      },
+      ctx,
+    );
+
+    return NextResponse.json(response, { status: 200 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: err.issues },
+        { status: 400 },
+      );
+    }
+    if (err instanceof ServiceError) {
+      return NextResponse.json(
+        { error: err.code, message: err.message },
+        { status: serviceErrorToStatus(err.code) },
+      );
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

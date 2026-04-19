@@ -28,7 +28,16 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'PROFILE_NOT_FOUND':
     case 'INVITATION_NOT_FOUND':
     case 'MEMBERSHIP_NOT_FOUND':
+    case 'AGENT_SESSION_NOT_FOUND':
       return 404;
+
+    // Gone (resource expired)
+    case 'AGENT_SESSION_EXPIRED':
+      return 410;
+
+    // Service unavailable (external dependency)
+    case 'AGENT_UNAVAILABLE':
+      return 503;
 
     // Bad request (malformed or semantically invalid input)
     case 'EXTERNAL_IDS_MALFORMED':
@@ -55,6 +64,9 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'OWNER_ROLE_CHANGE_DENIED':
     case 'MEMBERSHIP_ALREADY_SUSPENDED':
     case 'MEMBERSHIP_NOT_SUSPENDED':
+    case 'AGENT_TOOL_VALIDATION_FAILED':
+    case 'AGENT_STRUCTURED_RESPONSE_INVALID':
+    case 'ONBOARDING_INCOMPLETE':
       return 422;
 
     // Server errors (unexpected failures)
