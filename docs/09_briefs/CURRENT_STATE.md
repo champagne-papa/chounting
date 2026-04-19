@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-18 (Phase 1.2 Session 2 ready to execute)
+# Where I am as of 2026-04-18 (Phase 1.2 Session 3 ready to execute)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -27,22 +27,35 @@ the "Permission Catalog Count Drift" convention in
 container restart quirk (now wrapped by the
 `pnpm db:reset:clean` script). Devex pickups landed as 82247cb.
 
-### Session 2 — Ready to execute (2026-04-18)
+### Session 2 — Complete (2026-04-18)
 
 Sub-brief at `docs/09_briefs/phase-1.2/session-2-brief.md`.
-Orchestrator skeleton + 10 tool schemas + respondToUser
-enforcement + mocked callClaude with deterministic Anthropic
-Messages fixtures. Pure TypeScript — no Next.js route wiring
-yet, no real Anthropic API calls, still API-free and local-only.
-Establishes: orchestrator file layout, trace_id propagation
-discipline, tool schema registration pattern, session
-load/create precedence, respondToUser enforcement, and the
-test-fixture shape for mocked Anthropic responses that
-Sessions 3+ will continue using. 15 S2 exit criteria,
-~9 new Category A tests (CA-39 through CA-47), 4-commit
-cadence. Every commit stays green (no intentional red interval).
+Execution landed as commits 0bee609 → ea2f09e → 3539223 →
+65d563b on top of readiness anchor fc306c5. All 15 S2 exit
+criteria pass. Two lessons captured: the schema-refine gap
+(now addressed by the "Cited-Code Verification" convention in
+`docs/04_engineering/conventions.md`) and the Map key-type
+narrowing quirk. Devex pickup landed as d20c767.
 
-Sessions 3–8 sub-briefs land as each predecessor session closes out.
+### Session 3 — Ready to execute (2026-04-18)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-3-brief.md`.
+System prompts (three persona prompts + locale/canvas/onboarding
+suffixes) + `buildSystemPrompt` composition + i18n template
+additions covering every `template_id` Session 2's fixtures
+reference plus the Four Questions keys from master §10.3. Also
+closes a Session 2 spec divergence: the structural-retry-
+exhaustion path currently `throws` but master §6.2 item 5
+specifies returning a template response; Session 3 fixes this
+and inverts CA-43. Pure strings + a string-composition function
++ JSON additions — no real API calls, no new tools, no new
+migrations, no UI. 10 S3 exit criteria, 5 new CA tests
+(CA-48–52) + 1 inverted (CA-43), 4-commit cadence with a
+commit-2 founder review gate for Session-3-authored prose
+(identity-block templates, tool-enumeration glue, locale
+directive strings).
+
+Sessions 4–8 sub-briefs land as each predecessor session closes out.
 
 ---
 

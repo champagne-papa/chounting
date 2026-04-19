@@ -1171,6 +1171,92 @@ Categories:
   name: "Cited-Code Verification" or "Inherited-Assumption
   Checks") — holding off on the commit until Session 2
   close-out to batch with any further lessons.
+- 2026-04-18 NOTE   Phase 1.2 Session 3 sub-brief drafting session
+  started. Starting SHA: d20c767. Starting model: Claude Opus 4.7
+  (claude-opus-4-7[1m]). Master brief frozen at aae547a; Sessions 1
+  and 2 complete with 178/178 regression baseline. Session 3 scope:
+  system prompts (three persona prompts + locale/canvas/onboarding
+  suffixes), buildSystemPrompt composition helper, and i18n template
+  additions to messages/{en,fr-CA,zh-Hant}.json covering every
+  template_id already referenced by Session 2's fixtures and the
+  orchestrator's fallback paths, plus the Four Questions keys from
+  master §10.3. Pure strings + a string-composition function + JSON
+  additions — no new logic, no new tools, no real API calls. Four
+  founder pre-decisions to codify: (1) buildSystemPrompt signature
+  Option B (deferred-extensible OrgContext stub); (2) locale is a
+  live parameter now; (3) canvas suffix covers only the current
+  CanvasDirective union members (no Session 6 speculation);
+  (4) onboarding suffix instructs Claude without encoding the
+  Session 5 state machine. Cited-Code Verification is a live
+  convention now — this is its first use outside the retrospective
+  lesson where it was coined.
+- 2026-04-18 WRONG  Drafting discovery 1: master §7 is a six-section
+  structural skeleton, not fully verbatim prompt text. Verbatim
+  content: §6.3 anti-hallucination rules, §7 section 4
+  (structured-response contract line), §7 section 5 (voice rules),
+  §7.1 onboarding suffix, §7 section 6 canvas suffix (via
+  canvas_context_injection.md). Not verbatim (must be
+  session-authored): the Identity block (parameterized by orgName,
+  persona, user display_name at runtime) and the Available-tools
+  enumeration (generated from toolsForPersona output). Stopped
+  and flagged per drafting prompt's "STOP before making up
+  content" rule. Founder chose Option 2 (§7 is sufficient as
+  skeleton + citation chain; Session 3 authors the Identity block
+  templates and assembly glue with a commit-2 review gate). Master
+  brief stays frozen at aae547a. Sub-brief §6.1 documents each
+  section of each persona prompt with an explicit source-citation
+  table distinguishing verbatim-cited from session-authored. This
+  distinction — "verbatim" vs "skeleton + upstream" — is a class
+  of drafter oversight not yet codified in conventions.md.
+  Candidate for a future convention addition after a third
+  datapoint surfaces.
+- 2026-04-18 WRONG  Drafting discovery 2: spec divergence between
+  master §6.2 item 5 (line 483–487) and Session 2's shipped
+  orchestrator. Master specifies that on structural-retry
+  exhaustion the orchestrator "surfaces a generic error template:
+  { template_id: 'agent.error.structured_response_missing',
+  params: {} } and logs AGENT_STRUCTURED_RESPONSE_INVALID." Session
+  2's orchestrator throws new ServiceError instead of returning
+  the template response. CA-43 locked in the divergence by
+  asserting the throw. The agent.error.structured_response_missing
+  template_id is referenced by master but never actually produced
+  by the running code. Flagged during the Cited-Code Verification
+  grep for locale additions. Founder chose Option 1 (fix + add
+  template_id to locales + invert CA-43). The fix is ~8 lines in
+  src/agent/orchestrator/index.ts (throw block becomes a
+  persistSession + return-template block); log line is preserved.
+  Folded into Session 3's commit 2 (orchestrator wire-up commit).
+  This is a subtler cousin of the Cited-Code Verification lesson:
+  "sub-brief touched code that diverged from spec; existing tests
+  locked in the divergence; grep of message text against spec
+  catches it." Not yet codifying as a convention — batching
+  pattern until a third datapoint surfaces ("Shipped-Code-to-Spec
+  Verification" is the working name).
+- 2026-04-18 NOTE   Drafting observation (not blocking Session 3):
+  master §21's CA-* test catalog drifted from Session 2's actual
+  shipped tests. §21 lists CA-39 as agentIdempotency.test.ts,
+  CA-40 as agentToolRetry.test.ts, etc. — completely different
+  scopes and names than Session 2 shipped (agentOrchestratorHappyPath
+  through agentTracePropagation). This affects Session 8's exit-
+  criteria verification because §21 maps CA-* to EC-*. Founder has
+  noted this for Session 8 planning; explicitly out-of-scope for
+  Session 3. Expected resolution: a master brief patch session
+  before Session 8 kicks off, reconciling §21 with the actual
+  shipped names.
+- 2026-04-18 NOTE   Phase 1.2 Session 3 sub-brief drafting session
+  complete. Artifacts: (1) session-3-brief.md (503 lines, within
+  300–550 target); (2) CURRENT_STATE.md updated noting Session 2
+  complete + Session 3 ready; (3) this entry + the two WRONG
+  entries above. Five founder pre-decisions codified in sub-brief
+  §4 (four original + Pre-decision 5 added after discovery 1
+  resolution). Cited-Code Verification grep confirmed four
+  fixture/orchestrator template_ids, not five — the founder's
+  fifth (agent.error.structured_response_missing) was not grep-
+  surfaced because Session 2's orchestrator throws rather than
+  returning it; resolved via §6.7 fix. Twelve total template_ids
+  enumerated in §6.5 for locale additions (five agent.* + seven
+  proposed_entry.*). No other open questions surfaced.
+- (earlier entry preserved below)
 - 2026-04-18 NOTE   Phase 1.2 Session 2 execution complete. All
   15 S2 exit criteria pass. 4 commits on top of fc306c5:
   0bee609 (ServiceError codes + 10 tool schemas +
