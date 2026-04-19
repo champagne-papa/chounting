@@ -93,6 +93,18 @@ export const userProfileService = {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
+    // Session 5.2: upsert shape. The Phase 1.5B design assumed
+    // sign-in's getOrCreateProfile always runs before any
+    // updateProfile call, but the EC-20 smoke test caught a
+    // bypass-sign-in path (admin-created users via
+    // auth.admin.createUser) that doesn't fire getOrCreateProfile
+    // and leaves no user_profiles row. Converting to upsert
+    // removes the ordering dependency: the row is materialized
+    // on first updateProfile call if absent. The SELECT
+    // beforehand captures `before` for the audit row per Phase
+    // 1.5A convention (before_state populated on UPDATE, null
+    // on INSERT).
+
     const { data: before, error: beforeErr } = await db
       .from('user_profiles')
       .select('*')
@@ -100,30 +112,49 @@ export const userProfileService = {
       .maybeSingle();
 
     if (beforeErr) throw new ServiceError('PROFILE_UPDATE_FAILED', beforeErr.message);
-    if (!before) throw new ServiceError('PROFILE_NOT_FOUND', `user_id=${input.user_id}`);
 
     const dbPatch = profilePatchToDbColumns(parsedPatch);
 
-    const { error: updateErr } = await db
+    // ON CONFLICT (user_id) DO UPDATE is atomic at the DB layer,
+    // so the SELECT-then-UPSERT race window (another session
+    // inserting between our SELECT and our UPSERT) is benign for
+    // correctness — the second writer's UPSERT becomes an UPDATE.
+    // The audit's before_state may be slightly stale in that
+    // narrow window (we'd report null when a concurrent insert
+    // happened), but single-user flows are unlikely to race and
+    // the audit fidelity hit is acceptable.
+    const { error: upsertErr } = await db
       .from('user_profiles')
-      .update(dbPatch)
-      .eq('user_id', input.user_id);
+      .upsert(
+        { user_id: input.user_id, ...dbPatch },
+        { onConflict: 'user_id' },
+      );
 
-    if (updateErr) throw new ServiceError('PROFILE_UPDATE_FAILED', updateErr.message);
+    if (upsertErr) throw new ServiceError('PROFILE_UPDATE_FAILED', upsertErr.message);
 
     // user.profile_updated is a user event, not an org event —
     // the profile is not scoped to any specific org. audit_log
     // .org_id has been nullable since migration 113 (Phase 1.5B);
     // AuditEntry.org_id is string | null as of Session 4.5.
+    // before_state is null on the upsert-insert path (Phase
+    // 1.5A convention: null before_state distinguishes "created"
+    // from "mutated" when reading the audit log).
     await recordMutation(db, ctx, {
       org_id: null,
       action: 'user.profile_updated',
       entity_type: 'user_profile',
       entity_id: input.user_id,
-      before_state: before as Record<string, unknown>,
+      before_state: before ? (before as Record<string, unknown>) : undefined,
     });
 
-    log.info({ user_id: input.user_id, fields_changed: Object.keys(dbPatch) }, 'User profile updated');
+    log.info(
+      {
+        user_id: input.user_id,
+        fields_changed: Object.keys(dbPatch),
+        auto_created: !before,
+      },
+      'User profile upserted',
+    );
     return { user_id: input.user_id, fields_changed: Object.keys(dbPatch) };
   },
 };
