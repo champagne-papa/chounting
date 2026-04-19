@@ -1962,3 +1962,169 @@ Categories:
   Approximate session time: ~60 minutes (including the commit-1
   review gate pause, the CA-49 test-preservation fix, the
   CA-69 createOrganization input-schema fix, and this entry).
+- 2026-04-19 NOTE   Phase 1.2 Session 5.1 — smoke-test-surfaced
+  bug fixes. Starting SHA: 4487e19 (Session 5 closeout).
+  Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]). Scope:
+  two bugs caught by the autonomous EC-20 smoke (Session 5 + 5,
+  running Turn 2 of a User-A conversation against real Anthropic
+  API): (1) orchestrator persists a trailing respondToUser
+  tool_use block in session.conversation, causing every
+  multi-turn conversation to fail on Turn 2 with Anthropic's
+  400 "tool_use ids were found without tool_result blocks
+  immediately after" — this is a Session-2-era defect fixture
+  tests couldn't catch; (2) Claude invents template_ids not in
+  locale files (smoke test saw `onboarding.profile.ask_display_name`
+  which doesn't exist in messages/*.json) — the system prompt
+  tells Claude the contract but doesn't enumerate valid keys,
+  which is a Session-3-era gap. Both bugs block product behavior;
+  bug (1) blocks every multi-turn conversation, bug (2) causes
+  runtime i18n render failures. Baseline 226/226. Smoke-test
+  scripts at scripts/_smoketest-*.ts deleted per Session 5.1
+  prompt (served their purpose; not product code). Pre-execution
+  grep for template_id references in src/agent/ came back clean
+  — the three that the source code explicitly references
+  (agent.error.tool_validation_failed,
+  agent.error.structured_response_missing,
+  agent.onboarding.first_task.navigate) are all present in all
+  three locale files. Two keys in the agent.* namespace
+  (agent.emptyState, agent.suggestedPromptsHeading) are UI
+  strings rendered by AgentChatPanel / SuggestedPrompts — not
+  response templates; will be excluded from the valid-response
+  list.
+- 2026-04-19 NOTE   Phase 1.2 Session 5.1 execution complete.
+  Two commits on top of 4487e19: 9b1af3d (Bug 1:
+  message-protocol invariant in persistSession success path),
+  887d5ea (Bug 2: enumerate valid template_ids in system
+  prompt). Starting model: Claude Opus 4.7 — unchanged. Full
+  regression: 69 test files, 233 tests, 0 failures (226
+  baseline + 2 protocol-invariant + 5 template-id set closure
+  it-blocks). Typecheck clean. Master brief frozen at aae547a.
+  Session 5 sub-brief frozen at 9c22e07. Session 5 feature
+  commits unchanged.
+
+  Bug 1 (message-protocol violation) details:
+  - Surface: every multi-turn agent conversation against real
+    Claude fails on Turn 2 with Anthropic 400
+    "tool_use ids were found without tool_result blocks
+    immediately after."
+  - Root cause: persistSession wrote resp.content verbatim,
+    including trailing respondToUser tool_use blocks.
+    respondToUser is orchestrator-internal (consumed by
+    handleUserMessage, not executed via executeTool) so has
+    no matching tool_result. Anthropic's protocol rejects the
+    sequence on Turn 2 when the conversation is replayed.
+  - Secondary: if Claude bundled a non-respondToUser tool_use
+    alongside respondToUser in one turn (e.g., listIndustries +
+    respondToUser), the success path also failed to persist the
+    tool_use+tool_result pair — the toolResults accumulated in
+    memory weren't pushed to messages.
+  - Fix: success path (around line 439) filters respondToUser
+    from resp.content, pushes the {assistant filtered content,
+    user toolResults} pair into messages when otherTools.length
+    > 0, and terminates with a text placeholder
+    "[responded with template_id=X]" so the sequence is protocol-
+    valid.
+  - Regression test: agentConversationProtocolInvariant.test.ts
+    asserts (a) no respondToUser tool_use blocks in the persisted
+    conversation; (b) every non-respondToUser tool_use has a
+    matching tool_result in the immediately-following user
+    message. Verified test FAILS against pre-fix code via git
+    stash.
+  - NOT fixed: Q13 exhaustion (line 347) and structural-retry
+    exhaustion (line 468) persistSession calls have the same
+    latent issue if the failing resp contained tool_uses. Left
+    alone per the Session 5.1 prompt's recommendation — those
+    paths return error templates telling the user to rephrase,
+    so continuation is rare. Flag for future session if
+    empirically hit.
+
+  Bug 2 (template_id invention) details:
+  - Surface: smoke test observed Claude emitting
+    `onboarding.profile.ask_display_name`, which doesn't exist
+    in any locale file. next-intl would throw "missing
+    translation" at UI render.
+  - Root cause: the STRUCTURED_RESPONSE_CONTRACT says "every
+    template_id must exist in the locale files" but doesn't
+    enumerate which keys are valid. Claude invents
+    semantically reasonable keys.
+  - Fix: new module src/agent/prompts/validTemplateIds.ts
+    exports VALID_RESPONSE_TEMPLATE_IDS (13 allowlisted keys)
+    + UI_ONLY_AGENT_KEYS (2 UI-only agent.* keys). A new
+    VALID_TEMPLATE_IDS prompt section, wired into all three
+    personas via _sharedSections.ts, enumerates the allowlist
+    grouped by namespace with explicit "Do NOT invent new keys"
+    instruction.
+  - Regression test: agentTemplateIdSetClosure.test.ts enforces
+    set equality between the two exported lists and the actual
+    en.json agent.* + proposed_entry.* keys. Five it-blocks
+    cover subset, exhaustiveness, disjointness, and section
+    rendering.
+
+  CA-67 assertion update: the step-1/2/3 "not to contain
+  agent.onboarding.first_task.navigate" negative checks used
+  to look at the full prompt output. After Session 5.1's
+  VALID_TEMPLATE_IDS section, that template_id appears in
+  every prompt as part of the enumerated allowlist. Retargeted
+  the negative assertion to "Do NOT use this template_id for
+  any other turn" — the step-4-specific reservation guardrail,
+  which only exists in the step-4 onboarding suffix. Same
+  semantic check; different anchor string.
+
+  Pre-existing test-isolation flake observed: on the first full
+  test run after Bug 2 landed, CA-54 and CA-15 reported
+  failures. Re-running the suite cleared both. Root cause is
+  userProfileAudit's afterAll modifies SEED.USER_CONTROLLER's
+  display_name temporarily, and if another test querying that
+  user runs in parallel (or reads mid-window), there's a
+  transient state mismatch. Pre-existing issue, NOT caused by
+  Session 5.1. Worth tracking but out of scope here. Test
+  isolation via trace_id cleanup is Session 5.1 pattern
+  already in place — this is a different leak vector.
+
+  Execution-time observations (no new convention candidates
+  needed for these two — the class of finding is already
+  captured by staged candidates):
+
+  (1) Params-shape gap (Session 5.1 deferred). The prompt now
+  enumerates valid template_ids but doesn't specify which
+  params each template expects (e.g., agent.greeting.welcome
+  needs {user_name}, agent.accounts.listed needs {count}).
+  Smoke test saw Claude emit params:{} where the template
+  expected structured params. Symptom: the rendered string has
+  literal "{user_name}" text where a name should be. Not a
+  crash, but a visible UI defect. Flag for a future session —
+  likely folded into Session 7's UI rewrite where rendered
+  output becomes visible to the founder during testing.
+
+  (2) Model deprecation warning still firing on every call:
+  'claude-sonnet-4-20250514' deprecated June 15, 2026. Not
+  urgent (~8 weeks), but a future session's migration task.
+
+  Staging the Session 5.1 convention candidate:
+
+  (9) Mock-vs-Protocol Invariant Gap — fixture-based agent
+  tests (CA-39 through CA-73) exercise the orchestrator's
+  Zod validation + state machine + response extraction, but
+  cannot catch Anthropic API protocol violations because the
+  mocked callClaude doesn't enforce the tool_use →
+  tool_result pairing rule. The smoke test is the only
+  venue that catches these. One datapoint (Bug 1). Not
+  codifying yet per founder batching discipline. Future
+  instances: e.g., conversation-length limits, model-specific
+  shape requirements, streaming constraints — any
+  protocol-level rule fixtures don't model.
+
+  Nine candidate-future-conventions staged now (eight from
+  pre-Session-5.1 + this new one). None codified per founder
+  batching discipline. The "Spec-to-Implementation
+  Verification" candidate (datapoint #3 as of Session 5 close)
+  remains convention-ready; founder stated it would be
+  codified during Session 6 drafting.
+
+  Smoke test scripts at scripts/_smoketest-create-users.ts and
+  _smoketest-userA-full.ts were deleted at session start per
+  the Session 5.1 prompt. Findings file at
+  /tmp/smoketest-findings.md still exists (not committed;
+  served its purpose as input to Session 5.1).
+
+  Approximate session time: ~50 minutes.
