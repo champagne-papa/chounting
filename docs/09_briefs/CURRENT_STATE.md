@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-19 (Phase 1.2 Session 7 ready to execute)
+# Where I am as of 2026-04-19 (Phase 1.2 Session 7 shipped; Session 7.1 next)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -150,16 +150,60 @@ step-1 prose change without tweaks. Convention #8 refinement
 captured for single-commit codification at Session 7
 drafting start. Covers EC-21, EC-23, EC-24, EC-25, EC-26.
 
-### Session 7 — Sub-brief frozen, ready for execution kickoff
+### Session 7 — Complete (2026-04-19)
 
 Sub-brief at `docs/09_briefs/phase-1.2/session-7-brief.md`
-(frozen at ba9599a). Ships the production chat UI + supporting
-infrastructure — 5 feature commits (params-shape enumeration,
-ProposedEntryCard real render, AgentChatPanel production rewrite,
-shell polish, canvas context click handlers + EC-19 tests) + 1
-docs closeout, with a pre-declared split-point at end of Commit 3
-(Session 7.1 fallback). Session 8 (verification + closeout)
-sub-brief lands at Session 7 closeout.
+(frozen at ba9599a). Three feature commits landed same calendar
+day as kickoff on top of anchor ba9599a (sub-brief freeze SHA,
+per the Session 6 convention):
+
+- **Commit 1** (6904a2f) — params-shape enumeration + locale
+  keys + orchestrator-boundary validation. 15 new tests
+  (agentTemplateParamsClosure). 303/303.
+- **Commit 2** (3abbc7a) — ProposedEntryCard real render +
+  schema tightening + /api/agent/reject endpoint + migration
+  120 (ai_action_status += 'edited'; rejection_reason →
+  resolution_reason). Confirm Branch 2 entry_number enrichment
+  per the five-design-question pass. 28 new tests. 331/331.
+- **Commit 3** (9be396c) — ProductionChat rewrite (three error
+  UI treatments, mount-time conversation fetch, empty-state
+  SuggestedPrompts) + /api/agent/conversation GET endpoint
+  (hydrate / reconstruct / empty three-branch) + migration 121
+  (agent_sessions.turns JSONB additive) + Pre-decision 11b
+  orchestrator patch (onboarding-complete org_id update). 13
+  new tests. 344/344.
+
+Pre-declared split-point fired as planned: **Commits 4-5
+deferred to Session 7.1.** Decision was taken at the Commit 3
+design pass when Pre-decision 14 (conversation-resume shape)
+pushed Commit 3 budget from ~1.25 day to ~1.5 day; founder
+pre-declared the split to simplify decision overhead at
+end-of-Commit-3, letting Commit 6 focus cleanly on closeout.
+(Retrospective note: the pre-declaration's value isn't proven-
+by-firing but by-simplification — day-clock compressed so all
+three feature commits landed day 1, but the split was already
+baked in.)
+
+Commit 6 (closeout) landed at the SHA anchoring Session 7.1.
+Pre-decision 14 derivation, Session 7 retrospective (four
+patterns), Session 7.1 handoff, and Session 8 handoff all logged
+in `docs/07_governance/friction-journal.md` under the Phase 1.2
+Session 7 heading.
+
+### Session 7.1 — Sub-brief needed, ready to draft
+
+Carried forward from Session 7's pre-declared split. Scope:
+Commits 4+5 from Session 7 original sub-brief — shell polish
+(avatar dropdown + Activity icon + placeholder review-queue
+page) and canvas context click handlers + EC-19 tests. Plus
+three carryovers from Commit 3's non-blocking observations:
+currentUserRole prop wiring on SplitScreenLayout, canvas
+navigation on Approve (ProposedEntryCard `onNavigate`), and
+SplitScreenLayout state lift (Pre-decision 9 shape).
+
+Estimate ~1 day. Anchor SHA: Session 7 Commit 6 SHA. Full
+scope + carryovers + EC coverage detail in the Session 7.1
+handoff entry in the friction journal.
 
 ---
 

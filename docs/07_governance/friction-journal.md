@@ -3008,3 +3008,418 @@ Categories:
   per the Session 6 pattern — diff review, test-pass
   verification, Convention #8 identity-assertion spot-check.
   Starting Commit 1.
+
+- 2026-04-19 NOTE   Commit 1 landed at 6904a2f. Params-shape
+  enumeration — `VALID_RESPONSE_TEMPLATE_IDS` (flat array)
+  became `TEMPLATE_ID_PARAMS` (object mapping each template_id
+  to a `.strict()` Zod schema). Helper
+  `validateParamsAgainstTemplate(template_id, params)` returns a
+  discriminated result; orchestrator boundary calls it on
+  respondToUser input, exhausted budget emits
+  `agent.error.tool_validation_failed` as a normal turn. 21 new
+  locale entries (2 response templates × 3 locales + 7 UI-only
+  suggestion keys × 3 locales). New agentTemplateParamsClosure
+  test (15 it-blocks) enforces bidirectional parity between
+  schema `.shape` keys and `en.json` `{placeholder}` tokens.
+  303/303 green.
+
+- 2026-04-19 NOTE   Commit 2 landed at 3abbc7a. Five design
+  questions surfaced in the design pass (confirm-endpoint
+  asymmetry, CardResolution shape, reject endpoint 5-branch
+  machine, migration 120 scope, two small schema choices);
+  founder approved all five with three refinements (Branch 2
+  SELECT failure fallback, strict-idempotent reason-insensitive
+  replay, 409 body includes currentStatus). Implementation
+  delivered: ProposedEntryCardSchema (.strict() on card/line/
+  policy_outcome, z.literal('approve') on required_action,
+  loose reason_params with orchestrator doing strict per-
+  template validation). Migration 120 additive (ADD VALUE
+  'edited' + RENAME rejection_reason → resolution_reason;
+  blast radius 1 code file, 3 type references, all resolved).
+  New /api/agent/reject endpoint — 5 branches mirroring confirm
+  (not found → 404; status matches outcome → 200 idempotent,
+  first reason wins; terminal-but-different → 409 CONFLICT
+  with currentStatus body; pending → 200 write; stale → 422).
+  Confirm Branch 2 extended with secondary SELECT on
+  `journal_entries.entry_number`, fallback degradation on error
+  preserves the success signal. ProposedEntryCard real render
+  with Four Questions layout, two-step inline reject textarea,
+  Approve/Reject/Edit per-card isSubmitting state, safeTranslate
+  fallback on reason_template_id miss. 331/331 green (+28:
+  12 schema acceptance + 12 reject endpoint + 4 extended
+  CA-74).
+
+- 2026-04-19 NOTE   Commit 3 landed at 9be396c. Largest commit
+  of Session 7; main payload was conversation-resume
+  infrastructure. Design pass surfaced a material gap in
+  Pre-decision 8's premise — the persisted conversation shape
+  is Anthropic-format messages that the Session 5.1 terminating-
+  text rewrite strips of everything except template_id baked
+  into an unstructured string. Derivation recorded separately
+  as Pre-decision 14 (below). Delivered: migration 121
+  (agent_sessions.turns JSONB additive, pure column add); new
+  src/shared/types/chatTurn.ts (ChatTurn + CardResolution +
+  PersistedTurn subsets); new /api/agent/conversation GET
+  endpoint (three-branch: hydrate-from-turns, reconstruct-from-
+  Anthropic-messages-on-empty-turns fallback with logged
+  warning, empty-session); orchestrator extends with userTurn
+  captured at entry + dual-write at all three persistSession
+  call sites; AgentChatPanel rewrite with ProductionChat
+  subcomponent (mount-time fetch, three error UI treatments,
+  empty-state SuggestedPrompts wired to send, per-turn
+  ProposedEntryCard with onCardResolved optimistic ack synth
+  + CardResolvedBadge); Pre-decision 11b patch at
+  onboardingComplete branch (first-active-membership lookup +
+  agent_sessions.org_id update). 2 new test files (9
+  conversationLoadEndpoint + 4 suggestedPromptsOneClickFire).
+  344/344 green (+13). Option B fallback verified firing and
+  logging `conversation-load: pre-migration-121 session,
+  falling back to reconstruction` in the reconstruction test
+  output.
+
+### Pre-decision 14 derivation — conversation-resume shape
+
+Material gap surfaced at the Commit 3 design pass.
+Pre-decision 8 ("Conversation resumes on AgentChatPanel
+mount") assumed the persisted conversation carried enough
+structured data to reconstruct the client-facing ChatTurn array
+— template_id, params, card, canvas_directive. Direct read of
+`src/agent/orchestrator/index.ts:544-550` showed otherwise: the
+Session 5.1 terminating-text rewrite persists only
+``[responded with template_id=${template_id}]`` as an
+unstructured text block, dropping params + canvas_directive +
+card. Without a persistence refactor, refresh renders on a
+production-chat session would lose params ("Entry #
+has been posted to the ledger") and lose cards entirely.
+
+Options evaluated (executor surfaced the gap, founder and
+executor converged on the decision):
+
+- **Option A full** — new migration + new `turns` JSONB column
+  on `agent_sessions`. Clean separation of concerns. Costs one
+  migration.
+- **Option A narrowed** (founder's initial lean) — reshape the
+  existing `conversation` JSONB to `{messages, turns}`. Avoids
+  a new migration; costs reader-pollution at three callsites
+  that currently read `conversation` as an array.
+- **Option B only** — reconstruct from Anthropic messages +
+  ai_actions join on load. Degraded render for historical turns
+  (empty params, no cards). Scope shortcut.
+- **Option C** — drop Pre-decision 8 entirely. AgentChatPanel
+  always mounts empty. Negative scope; rolls back a founder-
+  approved design decision by implementation shortcut.
+
+Decision: **Option A+** (new migration, new column). Executor's
+reasoning: the reader-pollution cost of in-place reshape was
+underweighted in the initial lean — three existing readers of
+`agent_sessions.conversation` would need `Array.isArray`
+shape-detection forever, small pollution that accumulates.
+Migration 121 as a scoped exception is identically justified to
+Pre-decision 3's exception for migration 120 (Agent-Ladder
+correctness) — correctness-driven, one ALTER, additive, grep-
+verified zero breaking consumers. The "no migrations" Session 7
+discipline is about avoiding speculative schema work, not
+forbidding necessary schema work. Founder accepted the
+push-back and ratified Option A+. Option B became the
+backward-compat fallback for pre-migration-121 rows (Phase 1.2
+rows are test data; real onboarding transcripts post-migration
+get the proper shape).
+
+Execution: migration 121 shipped one ALTER ADD COLUMN turns
+jsonb NOT NULL DEFAULT '[]'::jsonb inside a BEGIN/COMMIT
+wrapper, matching migration 118's convention. Orchestrator's
+three persistSession callers compute `[...existingTurns,
+userTurn, assistantTurn]` and pass it as the new `newTurns`
+parameter. The conversation-load endpoint's three-branch logic
+(hydrate when `turns.length > 0`, reconstruct-with-warning
+when `conversation.length > 0 && turns.length === 0`,
+empty-session otherwise) was covered by 9 new tests including
+an explicit pre-migration-121 fallback case verifying the
+warning log fires.
+
+Sub-brief at ba9599a stays frozen — Pre-decision 14 lives
+here in the friction journal rather than as a sub-brief
+amendment. Session 8 handoff references it for retrospective
+codification.
+
+### Session 7 retrospective
+
+Four patterns worth naming explicitly.
+
+**1. Day-clock compression — calibration question, not win.**
+
+Sub-brief estimated 3 days across Commits 1-5; actual execution
+landed Commits 1-3 (the full chat+card+prompt trinity plus
+conversation-resume infrastructure) on day 1 — 2026-04-19. The
+earlier Commit 3 review gate report framed this as "Session 7
+is wrapping up in one calendar day," which reads as celebration.
+It shouldn't. The compression deserves a calibration question.
+
+Founder-proposed hypothesis (to test against future sessions):
+**Commits 1-3 had design complexity matching the estimate, but
+execution complexity substantially less than estimated, because
+the sub-brief's design work pre-resolved most of the open
+questions before execution started.** Specifically:
+
+- The Phase 2 Q&A brainstorm (2026-04-19, pre-execution design
+  sprint) produced Pre-decisions 1-13 covering card rendering
+  (inline), error UI shape (three treatments),
+  card-resolution-as-server-derived-read-only, onboarding
+  session org_id update (11b), welcome page compatibility (12),
+  etc. When execution started, most design decisions were
+  already locked.
+- The design-pass-at-commit-kickoff pattern (Commit 2's five-
+  nuance discussion + Commit 3's Pre-decision 14 discovery)
+  caught remaining gaps early, preventing mid-implementation
+  re-architecture.
+- Founder review gates at commit boundaries surfaced
+  refinements at punctuation points rather than in-flight, so
+  no commit required re-work.
+
+If this hypothesis holds, execution-time estimates should read
+as "1 day execution + X days equivalent of sub-brief drafting
+upfront." Phase 1.3+ might want to measure sub-brief drafting
+time separately as a calibration input. Otherwise the
+split-point discipline (Pre-decision 2's "past day 2"
+threshold) becomes a never-fires constraint — a constraint
+that never binds isn't doing any work.
+
+Separately for the record: the pre-declared split-point was
+correct regardless of actual timing. The declaration assumed
+linear time ("Commit 3 budget rose to ~1.5 day, pushing end
+of Commit 3 past day 2"); when time compressed, the split
+stayed baked in. The value of pre-declaration isn't
+proven-by-firing — it's proven by simplification. Commit 6
+focused cleanly on closeout rather than "should we squeeze
+one more commit" judgment calls. That's the real benefit.
+
+Single datapoint from Session 7; codification needs two more.
+Sessions 7.1 and 8 are the next calibration checks.
+
+**2. Pre-decision discovery at layer-transition boundaries —
+convention candidate.**
+
+Session 7 produced two pre-decisions discovered after sub-brief
+freeze:
+
+- **Pre-decision 11b** (sub-brief drafting, grep-pass
+  verification): orchestrator's onboarding-complete branch
+  doesn't have the target org_id in scope; it must be queried
+  from memberships. Gap between "onboarding complete" (state-
+  machine layer) and "agent_sessions.org_id keyed on (user,
+  org)" (schema layer).
+- **Pre-decision 14** (Commit 3 design pass): persisted
+  conversation shape is Anthropic-format messages; client-
+  facing ChatTurn shape needs structured params + card +
+  canvas_directive. Gap between "conversation resume" (UX
+  layer) and "Session 5.1 terminating-text persistence"
+  (orchestrator layer).
+
+Both gaps surface at **layer-transition boundaries**. When a
+decision upstream (onboarding-complete UX, conversation-resume
+UX) meets a layer downstream (session persistence, orchestrator
+state), assumptions from the upper layer often don't match
+reality at the lower layer. The layer-transition is where the
+drift lives.
+
+Proposed discipline for future sub-briefs + design passes: when
+a pre-decision commits to behavior that traverses two or more
+layers of the stack, explicitly verify the downstream layer
+holds the state the upper-layer behavior requires. Grep for the
+specific fields or columns before declaring the pre-decision
+done.
+
+Two datapoints; codification threshold is two. Candidate for
+Convention #9, to be ratified at Session 8 retrospective (name
+to be finalized then).
+
+**3. Mutual hallucination-flag discipline held.**
+
+The two-way anti-hallucination protocol established earlier in
+the Phase-1.2 execution (Session 5.1 / EC-20 closeout era) held
+across all three Commit design passes + review gates. No false
+inferences fired. Two specific instances where the discipline
+paid out in-session:
+
+- Commit 2 design pass: executor surfaced five design nuances
+  (the asymmetry plus four others). Founder verified all five
+  by direct code read + grep before approving, producing three
+  surgical refinements. The extra nuances got disciplined
+  approvals rather than getting waved through.
+- Commit 3 review gate: founder flagged
+  `memberships.status` as possibly non-existent; verified
+  via migration 113 read; founder explicitly retracted the
+  flag ("I called this a 'blocking issue' before verifying.
+  Spot-checks should verify before raising flags, not after")
+  and named the verify-before-flag discipline as the correct
+  sequence. The retraction itself demonstrates the discipline
+  working.
+
+No codification needed — the pattern is working organically.
+Worth preserving the examples for future session recalibration.
+
+**4. Schema-as-tightening as bonus discipline.**
+
+`ProposedEntryCardSchema.lines.min(2)` tightened an implicit
+invariant (double-entry requires at least 2 lines) from
+"enforced by manual care at the TS-type layer" to "enforced at
+the Zod boundary." The TS type at `proposedEntryCard.ts:24`
+declared `lines: ProposedEntryLine[]` without a minimum; the
+Zod mirror made the minimum explicit at validation time.
+
+Similar small tightenings live alongside in Commit 2 schemas:
+
+- `z.literal('approve')` on `policy_outcome.required_action`
+  (TS type is the single-value union `'approve'`; Zod mirror
+  makes drift-on-enum-add loud).
+- `z.string().min(1).optional()` on the reject-endpoint
+  `reason` (empty-string is a client-contract violation; Zod
+  rejects at 400 rather than silently accepting).
+
+Discipline to preserve: **when writing a Zod schema mirror of
+a TS type, ask which implicit invariants in the code's usage
+can be made explicit in the schema.** The Zod boundary is the
+cheapest place to turn "this shouldn't happen" into "this
+cannot parse."
+
+Not yet a convention — pattern is uncontroversial and likely
+already de-facto standard. Worth naming so future schema work
+runs the check explicitly.
+
+### Session 7.1 handoff
+
+Status: sub-brief needed, ready to draft.
+
+Anchor SHA: Commit 6 SHA (recorded at draft time).
+
+Scope — Commits 4+5 from Session 7's original sub-brief at
+ba9599a, carried forward via Pre-decision 2's split-point
+pre-declaration:
+
+- **Commit 4 (original)** — shell polish: avatar dropdown with
+  Profile / Org settings (controller-only) / Team / Sign out
+  items; Mainframe rail Activity icon navigating to
+  `/<locale>/<orgId>/agent/actions`; ~15 LOC placeholder
+  `page.tsx` at that route so the icon doesn't 404.
+  `avatarDropdownMenuBehavior.test.ts` (controller sees 4
+  items, non-controller 3, sign-out fires Supabase + router
+  push). Estimate ~0.5 day.
+- **Commit 5 (original)** — canvas context click handlers:
+  `JournalEntryListView` row click sets `selectedEntity`;
+  `ChartOfAccountsView` row click adds selection-only onClick;
+  pure `reduceSelection` reducer honoring Pre-decision 10's
+  type-compatibility rule; `SplitScreenLayout` state lift for
+  `selectedEntity` + `setSelectedEntity`; `AgentChatPanel`
+  `send()` builds `canvas_context` from props and includes
+  in request body. Two new test files:
+  `canvasContextReducer.test.ts` (~6 it-blocks) +
+  `apiAgentMessageCanvasContextPassthrough.test.ts`. Plus
+  three EC-19 manual scenarios (under-anchored / over-
+  anchored / clarification). Estimate ~0.5 day.
+
+Total estimate ~1 day.
+
+Three carryovers from Commit 3's non-blocking observations that
+Session 7.1 should close:
+
+- **currentUserRole prop wiring on SplitScreenLayout.**
+  AgentChatPanel accepts `currentUserRole?: UserRole` but
+  SplitScreenLayout doesn't thread the real value — defaults
+  to 'controller'. Read membership.role from the
+  authenticated user's current-org membership and pass it
+  through so SuggestedPrompts shows the right persona chips.
+- **Canvas navigation on Approve.** ProposedEntryCard's
+  `onNavigate` callback is currently not wired. Commit 5's
+  SplitScreenLayout state lift is the natural home — wire
+  `onNavigate` from ProductionChat so the journal-entry view
+  auto-opens on Approve and the prefilled form opens on Edit.
+- **SplitScreenLayout state lift (Pre-decision 9).** The
+  useState-based `selectedEntity` + canvas-directive state is
+  what Commit 5 delivers; Commit 4's avatar-dropdown Team
+  button also consumes this via an `onTeamClick` callback
+  (fires `setDirective({ type: 'org_users', orgId })`).
+  Commits 4 and 5 have a unidirectional coupling — Commit 4's
+  dropdown consumes Commit 5's state setter — so order
+  matters if both are implemented in a single session.
+
+EC coverage: EC-19 (canvas context client + agent) is the
+primary gate; EC-19a (automated client-side) + EC-19b (manual
+agent-side) split per the Session 7 sub-brief. EC-8's
+placeholder landing at Session 7.1 enables Session 8's real
+queue page.
+
+Sub-brief drafting should apply Convention #8 identity-
+assertion discipline throughout, matching Session 7 sub-brief's
+pattern at ba9599a.
+
+### Session 8 handoff
+
+Status: sub-brief needed, schedule after Session 7.1 closes.
+
+Anchor SHA: Session 7.1 closeout SHA.
+
+Scope — verification + closeout for Phase 1.2:
+
+- **Functional AI Action Review queue page** — replaces
+  Session 7.1's Commit 4 placeholder at
+  `src/app/[locale]/[orgId]/agent/actions/page.tsx`. Query
+  `ai_actions` for the current org; render rows with `status`
+  + `created_at` + `idempotency_key` + cross-link to the
+  journal entry when `status ∈ {'confirmed', 'auto_posted'}`.
+  ~80–120 LOC plus any needed `ai_actions` query service.
+  Required for EC-8 ("the 20 Phase 1.2 agent entries all
+  appear correctly in the AI Action Review queue"). Role-gate
+  on `ai_actions.read` permission (all three roles hold it
+  per migration 116).
+- **27-EC matrix reconciliation** — full pass across the 27
+  exit criteria (19 from `phase_plan.md` + 8 new for
+  onboarding/forms/migration). EC-19 row-breaks into EC-19a
+  (automated client) + EC-19b (manual agent) per Session
+  7.1's Commit 5 spec. Unnumbered shipping items (avatar
+  dropdown / Activity icon / placeholder-then-real queue
+  page) listed for bookkeeping completeness.
+- **EC-2** — 20 real Phase 1.2 agent entries produced through
+  the conversational flow. Manual gate; one of the two
+  production-readiness proofs for Phase 1.2 shipping.
+- **EC-11** — cost-per-entry dashboard / observation.
+  Anthropic API spend per successful journal entry. Phase 1.3
+  calibration input.
+- **EC-13** — adversarial anti-hallucination test. Prompts the
+  agent with deliberately wrong context (non-existent
+  accounts, impossible dates, reversed-sign amounts) and
+  verifies the agent refuses rather than inventing. Paid-API
+  session.
+- **EC-19 manual scenarios** (specification in Session 7.1's
+  Commit 5) — (a) under-anchored, (b) over-anchored, (c)
+  clarification. Logged in friction journal per
+  `canvas_context_injection.md §Over-Anchoring Test`.
+- **Session 5 `/admin/orgs` reference reconciliation** — two
+  references in the Session 5 sub-brief to `/admin/orgs` as a
+  post-onboarding landing page that doesn't exist in the
+  shipped codebase. Reconcile: either ship a minimal
+  `/admin/orgs` route, or strike the references and update
+  `resolveCompletionHref` in `AgentChatPanel.OnboardingChat` to
+  match actual behavior.
+- **Phase 1.2 closeout retrospective** — patterns, calibration
+  data, process insights. Written as the Phase 1.2 counterpart
+  to `docs/07_governance/retrospectives/phase-1.1-
+  retrospective.md`. Includes the day-clock calibration
+  hypothesis from Session 7's retrospective (above) — by
+  Session 8 there will be two more datapoints (Session 7.1
+  + 8 itself).
+
+Estimate: variable. Depends on the 20-entry gate result (EC-2)
+and whether the adversarial test (EC-13) surfaces prompt-
+engineering work. Typical Phase 1.1 closeout was ~3 days;
+Phase 1.2 likely similar or longer given the agent surface
+area.
+
+Outstanding candidate-convention from Session 7 retrospective
+that Session 8 should ratify or demote:
+
+- **"Material gaps surface at layer-transition boundaries"**
+  (Pre-decisions 11b + 14 datapoints). Two datapoints = at
+  codification threshold. Session 8 retrospective is the
+  codification opportunity; if a third datapoint surfaces in
+  Session 7.1 or Session 8 itself, the codification is
+  overdetermined.
