@@ -34,8 +34,12 @@ describe('CA-67: onboardingSuffix step-aware prose', () => {
     expect(prompt).toContain('## Onboarding — Step 1 of 4: Profile');
     expect(prompt).toContain('updateUserProfile');
     expect(prompt).toContain('displayName');
-    // Step 1 prose must NOT mention the step-4 completion template_id
-    expect(prompt).not.toContain('agent.onboarding.first_task.navigate');
+    // Step 1 prose must NOT contain the step-4 completion
+    // reservation guardrail. The template_id itself appears in
+    // the shared VALID_TEMPLATE_IDS list (added Session 5.1),
+    // so the target assertion is on the step-4-specific
+    // "Do NOT use this template_id for any other turn" language.
+    expect(prompt).not.toContain('Do NOT use this template_id for any other turn');
   });
 
   it('step 2 names createOrganization + listIndustries and the atomic 2+3 advance', () => {
@@ -47,7 +51,7 @@ describe('CA-67: onboardingSuffix step-aware prose', () => {
     expect(prompt).toContain('createOrganization');
     expect(prompt).toContain('listIndustries');
     expect(prompt).toContain('steps 2 AND 3 together');
-    expect(prompt).not.toContain('agent.onboarding.first_task.navigate');
+    expect(prompt).not.toContain('Do NOT use this template_id for any other turn');
   });
 
   it('step 3 treats the state as a defensive error condition', () => {
@@ -91,6 +95,10 @@ describe('CA-67: onboardingSuffix step-aware prose', () => {
       },
     });
     expect(prompt).not.toContain('## Onboarding');
-    expect(prompt).not.toContain('agent.onboarding.first_task.navigate');
+    // The template_id itself appears in the shared
+    // VALID_TEMPLATE_IDS list; assert on the step-4-specific
+    // reservation guardrail instead (absent when no onboarding
+    // suffix fires).
+    expect(prompt).not.toContain('Do NOT use this template_id for any other turn');
   });
 });

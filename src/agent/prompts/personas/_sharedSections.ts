@@ -5,9 +5,18 @@
 //   - Structured-response contract: verbatim from master §7 section 4
 //   - Voice rules: verbatim from master §7 section 5 / ADR-0006
 //
-// No session authorship in this file — every string is a direct
-// quote. Extracting to a shared module prevents drift between
-// the three persona files.
+// Session 5.1 adds:
+//   - VALID_TEMPLATE_IDS: the enumerated allowlist of template_ids
+//     the agent may emit via respondToUser. The system prompt
+//     previously said "every template_id must exist in the locale
+//     files" but did not list them; Claude invented reasonable-
+//     looking but non-existent keys. This section closes that gap.
+//
+// No session authorship in the verbatim sections — every string is
+// a direct quote. The VALID_TEMPLATE_IDS section is session-authored
+// glue (it enumerates existing keys, not new content).
+
+import { validTemplateIdsSection } from '@/agent/prompts/validTemplateIds';
 
 export const ANTI_HALLUCINATION_RULES = `## Rules (non-negotiable)
 
@@ -21,6 +30,8 @@ export const ANTI_HALLUCINATION_RULES = `## Rules (non-negotiable)
 export const STRUCTURED_RESPONSE_CONTRACT = `## Response contract
 
 Your responses must be \`{template_id, params}\`. Do not output English prose. Every \`template_id\` must exist in the locale files.`;
+
+export const VALID_TEMPLATE_IDS = validTemplateIdsSection();
 
 export const VOICE_RULES = `## Voice
 
