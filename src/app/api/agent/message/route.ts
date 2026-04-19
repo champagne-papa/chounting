@@ -17,6 +17,7 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
 import { canvasContextSchema } from '@/shared/schemas/canvas/canvasContext.schema';
 import type { CanvasContext } from '@/shared/types/canvasContext';
+import { onboardingStateSchema } from '@/agent/onboarding/state';
 
 const agentMessageRequestSchema = z
   .object({
@@ -25,6 +26,12 @@ const agentMessageRequestSchema = z
     locale: z.enum(['en', 'fr-CA', 'zh-Hant']).optional(),
     session_id: z.string().uuid().optional(),
     canvas_context: canvasContextSchema.optional(),
+    // Session 5 / sub-brief §6.6: the welcome page passes the
+    // computed initial OnboardingState on the first turn of a
+    // fresh onboarding session. The orchestrator merges it into
+    // session.state only when session.state is empty. Subsequent
+    // turns rely on the persisted state.
+    initial_onboarding: onboardingStateSchema.optional(),
   })
   .strict();
 
@@ -48,6 +55,7 @@ export async function POST(req: Request) {
         // ProposedEntryCard. Orchestrator consumers treat it as
         // pass-through reference material only.
         canvas_context: parsed.canvas_context as CanvasContext | undefined,
+        initial_onboarding: parsed.initial_onboarding,
       },
       ctx,
     );

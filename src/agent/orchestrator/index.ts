@@ -1,18 +1,27 @@
 // src/agent/orchestrator/index.ts
-// Phase 1.2 Session 4 — the Double Entry Agent orchestrator.
+// Phase 1.2 Session 5 — the Double Entry Agent orchestrator.
 // Master brief §5.1 signatures, §5.2 main loop.
 //
 // Main-loop steps (master §5.2):
 //   1. loadOrCreateSession
 //   2. orgContextManager.load       — loadOrgContext (non-null org only)
 //   3. getPersonaForUser             — via getMembership
-//   4. buildSystemPrompt             — injects OrgContext summary
+//   4. buildSystemPrompt             — injects OrgContext + onboarding suffixes
 //   5. Conversation truncation       — full history (master §5.2 step 5)
 //   6. callClaude                    — real client, fixture-gated in tests
 //   7. Tool-call validation retry    — Q13 budget, max 2
-//   8. executeTool                   — inline dispatcher
-//   9. persistSession                — updates conversation + last_activity_at
-//  10. extractResponse               — respondToUser tool_use
+//   8. executeTool                   — inline dispatcher; onboarding step
+//                                      transitions detected at the call site
+//                                      (updateUserProfile → step 1,
+//                                       createOrganization → atomic 2+3)
+//   9. persistSession                — conversation + last_activity_at;
+//                                      state is persisted ONLY on the success
+//                                      path (failure paths don't advance the
+//                                      onboarding state machine)
+//  10. extractResponse               — respondToUser tool_use; the
+//                                      agent.onboarding.first_task.navigate
+//                                      template_id flips in_onboarding=false
+//                                      and sets AgentResponse.onboarding_complete
 
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Logger } from 'pino';
@@ -30,6 +39,13 @@ import { loadOrCreateSession, type AgentSessionRow } from './loadOrCreateSession
 import { toolsForPersona, type Persona } from './toolsForPersona';
 import { buildSystemPrompt } from './buildSystemPrompt';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
+import {
+  type OnboardingState,
+  readOnboardingState,
+  writeOnboardingState,
+  advanceOnboardingState,
+  markOnboardingComplete,
+} from '@/agent/onboarding/state';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { userProfileService } from '@/services/user/userProfileService';
@@ -57,6 +73,15 @@ export interface HandleUserMessageInput {
   message: string;
   session_id?: string;
   canvas_context?: CanvasContext;
+  /**
+   * Session 5 / sub-brief §6.6: the welcome page computes an
+   * initial OnboardingState server-side and passes it in on the
+   * first turn of a fresh onboarding session. The orchestrator
+   * merges it into session.state only when session.state has no
+   * existing `onboarding` key (first turn). Subsequent turns
+   * rely on the persisted state and ignore this field.
+   */
+  initial_onboarding?: OnboardingState;
 }
 
 export interface StructuredResponse {
@@ -70,7 +95,19 @@ export interface AgentResponse {
   canvas_directive?: CanvasDirective;
   proposed_entry_card?: ProposedEntryCard;
   trace_id: string;
+  /**
+   * Session 5 / sub-brief §6.5 + Pre-decision 4: set to true on
+   * the single turn when the respondToUser template_id
+   * `agent.onboarding.first_task.navigate` flipped
+   * in_onboarding=false. The welcome page observes this flag and
+   * calls router.push to the main app layout. Unset on all other
+   * turns (including normal onboarding turns and non-onboarding
+   * traffic).
+   */
+  onboarding_complete?: boolean;
 }
+
+const STEP_4_COMPLETION_TEMPLATE_ID = 'agent.onboarding.first_task.navigate';
 
 export async function handleUserMessage(
   input: HandleUserMessageInput,
@@ -105,6 +142,26 @@ export async function handleUserMessage(
     ctx,
     log,
   );
+
+  // Read onboarding state at turn start. On a fresh session
+  // (empty state JSONB) with initial_onboarding provided, merge
+  // in so the first turn has the right state. Subsequent turns
+  // rely on the persisted state (initial_onboarding ignored).
+  let currentOnboarding: OnboardingState | null = readOnboardingState(
+    (session.state as Record<string, unknown>) ?? {},
+  );
+  if (currentOnboarding === null && input.initial_onboarding !== undefined) {
+    const isFreshState =
+      !session.state ||
+      Object.keys(session.state as Record<string, unknown>).length === 0;
+    if (isFreshState) {
+      currentOnboarding = input.initial_onboarding;
+      log.debug(
+        { current_step: currentOnboarding.current_step },
+        'handleUserMessage: initial_onboarding seeded on fresh session',
+      );
+    }
+  }
 
   // Function-scoped adminClient (Clarification D implementation
   // note) for the agent.message_processed audit emit below.
@@ -149,6 +206,7 @@ export async function handleUserMessage(
     locale: input.locale,
     canvasContext: input.canvas_context,
     user: { user_id: input.user_id },
+    onboarding: currentOnboarding,
   });
 
   // Step 5: full conversation history (master §5.2 step 5 — no
@@ -226,6 +284,47 @@ export async function handleUserMessage(
           tool_use_id: tu.id,
           content: JSON.stringify(output),
         });
+        // Onboarding step transitions (sub-brief §6.4 item 3).
+        // Detected at the orchestrator call site — the tool has
+        // just succeeded, and the validated input tells us what
+        // to check. updateUserProfile with a non-empty displayName
+        // completes step 1 (Pre-decision 5). createOrganization
+        // succeeding atomically completes steps 2 AND 3.
+        if (currentOnboarding !== null && currentOnboarding.in_onboarding) {
+          let newlyCompleted: number[] | null = null;
+          if (tu.name === 'updateUserProfile') {
+            const patch = parsed.data as { displayName?: unknown };
+            if (typeof patch.displayName === 'string' && patch.displayName.length > 0) {
+              newlyCompleted = [1];
+            }
+          } else if (tu.name === 'createOrganization') {
+            newlyCompleted = [2, 3];
+          }
+          if (newlyCompleted !== null) {
+            const advanced = advanceOnboardingState(currentOnboarding, newlyCompleted);
+            if (advanced.ok) {
+              currentOnboarding = advanced.state;
+              log.info(
+                {
+                  newly_completed: newlyCompleted,
+                  current_step: currentOnboarding.current_step,
+                  completed_steps: currentOnboarding.completed_steps,
+                },
+                'onboarding state advanced',
+              );
+            } else {
+              log.error(
+                {
+                  reason: advanced.reason,
+                  tool_name: tu.name,
+                  newly_completed: newlyCompleted,
+                  completed_steps: currentOnboarding.completed_steps,
+                },
+                'onboarding advance blocked — state machine already terminal (upstream bug)',
+              );
+            }
+          }
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         log.error({ tool_name: tu.name, err: msg }, 'tool execution failed');
@@ -244,7 +343,18 @@ export async function handleUserMessage(
       validationRetries += 1;
       if (validationRetries > Q13_MAX_VALIDATION_RETRIES) {
         log.warn({ retries: validationRetries }, 'Q13 budget exhausted — surfacing clarification');
-        await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
+        // Sub-brief §6.4 item 5: failure paths persist conversation
+        // but NOT state changes. A failed turn should not advance
+        // the onboarding state machine. Pass `undefined` for the
+        // new state parameter so persistSession omits the column.
+        await persistSession(
+          session.session_id,
+          messages,
+          resp,
+          ctx.trace_id,
+          log,
+          undefined,
+        );
         await emitMessageProcessedAudit();
         return {
           session_id: session.session_id,
@@ -262,18 +372,59 @@ export async function handleUserMessage(
 
     // No validation errors. If respondToUser present, we're done.
     if (respondBlock) {
-      await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
       const parsedRespond = (respondBlock.input as {
         template_id: string;
         params: Record<string, unknown>;
         canvas_directive?: CanvasDirective;
       });
+
+      // Step-4 completion detection (sub-brief §6.4 item 4 +
+      // Pre-decision 8). The agent signals "onboarding done"
+      // by using this specific template_id at current_step === 4.
+      // Any other template_id at step 4 leaves the state
+      // unchanged — the agent is still talking about the task
+      // choice, not committing.
+      let onboardingComplete = false;
+      if (
+        currentOnboarding !== null &&
+        currentOnboarding.in_onboarding &&
+        currentOnboarding.current_step === 4 &&
+        parsedRespond.template_id === STEP_4_COMPLETION_TEMPLATE_ID
+      ) {
+        currentOnboarding = markOnboardingComplete(currentOnboarding);
+        onboardingComplete = true;
+        log.info(
+          { template_id: parsedRespond.template_id },
+          'onboarding step 4 completed — in_onboarding flipped',
+        );
+      }
+
+      // Sub-brief §6.4 item 5: persist state only on the success
+      // path. currentOnboarding is null for non-onboarding sessions;
+      // otherwise, write the (possibly advanced / completed) state
+      // into session.state.onboarding.
+      const newState: Record<string, unknown> | undefined =
+        currentOnboarding !== null
+          ? writeOnboardingState(
+              (session.state as Record<string, unknown>) ?? {},
+              currentOnboarding,
+            )
+          : undefined;
+
+      await persistSession(
+        session.session_id,
+        messages,
+        resp,
+        ctx.trace_id,
+        log,
+        newState,
+      );
       log.info(
         { template_id: parsedRespond.template_id, had_tool_calls: otherTools.length > 0 },
         'handleUserMessage: response extracted',
       );
       await emitMessageProcessedAudit();
-      return {
+      const response: AgentResponse = {
         session_id: session.session_id,
         response: {
           template_id: parsedRespond.template_id,
@@ -282,6 +433,10 @@ export async function handleUserMessage(
         canvas_directive: parsedRespond.canvas_directive,
         trace_id: ctx.trace_id,
       };
+      if (onboardingComplete) {
+        response.onboarding_complete = true;
+      }
+      return response;
     }
 
     // No respondToUser. If tool calls succeeded, feed results back and continue.
@@ -304,7 +459,16 @@ export async function handleUserMessage(
         { code: 'AGENT_STRUCTURED_RESPONSE_INVALID' },
         'structural retry budget exhausted — returning fallback template',
       );
-      await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
+      // Sub-brief §6.4 item 5: failure path — conversation
+      // persists, onboarding state does not. Pass `undefined`.
+      await persistSession(
+        session.session_id,
+        messages,
+        resp,
+        ctx.trace_id,
+        log,
+        undefined,
+      );
       await emitMessageProcessedAudit();
       return {
         session_id: session.session_id,
@@ -329,11 +493,14 @@ export async function handleUserMessage(
 // -----------------------------------------------------------------
 
 async function resolvePersona(user_id: string, org_id: string | null): Promise<Persona> {
-  // Onboarding path: no org yet — the user will become a controller
-  // of the org they create (master decision A). Session 5 refines
-  // the onboarding persona flow end-to-end; Session 2's stub is
-  // sufficient for orchestrator tests that don't exercise the
-  // persona-pre-org case.
+  // Onboarding path (master decision A, brief §3): an onboarding
+  // user has no org membership yet and will become a controller
+  // of the org they create via createOrganization. Returning
+  // 'controller' here matches the tool whitelist the onboarding
+  // flow requires (updateUserProfile, createOrganization,
+  // updateOrgProfile, listIndustries, respondToUser). Session 5
+  // Pre-decision 6 confirms this stub is correct — kept as-is
+  // with this comment as the durable reasoning.
   if (org_id === null) return 'controller';
   const m = await getMembership(user_id, org_id);
   if (!m) {
@@ -513,6 +680,7 @@ async function persistSession(
   lastResponse: Anthropic.Messages.Message,
   trace_id: string,
   log: Logger,
+  state?: Record<string, unknown>,
 ): Promise<void> {
   const db = adminClient();
   // Record the assistant turn so the session transcript reflects
@@ -521,12 +689,21 @@ async function persistSession(
     ...messages,
     { role: 'assistant' as const, content: lastResponse.content },
   ];
+  // Sub-brief §6.4 item 5: the `state` parameter is passed from
+  // the success path only. Failure paths (Q13 exhaustion,
+  // structural-retry exhaustion) pass `undefined` so the column
+  // is omitted from the UPDATE and the state machine does not
+  // advance on a failed turn.
+  const updatePayload: Record<string, unknown> = {
+    conversation,
+    last_activity_at: new Date().toISOString(),
+  };
+  if (state !== undefined) {
+    updatePayload.state = state;
+  }
   const { error } = await db
     .from('agent_sessions')
-    .update({
-      conversation,
-      last_activity_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('session_id', sessionId);
   if (error) {
     log.error({ err: error.message, session_id: sessionId, trace_id }, 'persistSession failed');
