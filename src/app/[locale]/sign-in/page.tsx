@@ -1,5 +1,11 @@
 // src/app/[locale]/sign-in/page.tsx
 // Supabase Auth sign-in page.
+//
+// Phase 1.2 Session 5: post-auth redirect branches per
+// sub-brief §6.8. After signInWithPassword succeeds, query the
+// user's active memberships + user_profiles.display_name via
+// the browser client (RLS scopes both to the caller), then call
+// resolveSignInDestination to compute the target path.
 
 'use client';
 
@@ -7,6 +13,7 @@ import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { useTranslations } from 'next-intl';
+import { resolveSignInDestination } from '@/services/auth/resolveSignInDestination';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -28,18 +35,40 @@ export default function SignInPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setSubmitting(false);
-
-    if (authError) {
-      setError(authError.message);
-    } else {
-router.push(`/${locale}/admin/orgs`);  
+    if (authError || !authData.user) {
+      setSubmitting(false);
+      setError(authError?.message ?? 'Sign-in failed');
+      return;
     }
+
+    // Session 5 §6.8: query memberships + display_name to decide
+    // between the main-app path and /welcome. Ordered by
+    // created_at so existing users land on their earliest org.
+    const [{ data: memberships }, { data: profile }] = await Promise.all([
+      supabase
+        .from('memberships')
+        .select('org_id, status')
+        .eq('user_id', authData.user.id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', authData.user.id)
+        .maybeSingle(),
+    ]);
+
+    const destination = resolveSignInDestination(
+      locale,
+      memberships ?? [],
+      profile?.display_name ?? null,
+    );
+    setSubmitting(false);
+    router.push(destination);
   }
 
   return (
