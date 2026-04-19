@@ -287,6 +287,165 @@ Flagged as tunable after real-use observation.
 **Blocks:** agent_autonomy_model.md user-facing surface section;
 Phase 2 Agency Health canvas view brief.
 
+### Q27 — CLAUDE.md §4 amendment for Tier 2 stateless sub-agents
+
+The Phase 2+ layered-tiers proposal (ADR-0007 draft target)
+introduces stateless sub-agent stages that produce typed output
+consumed by the Tier 1 committing agent. CLAUDE.md §4 item 3 reads
+"No agent may reference an account code, vendor name, or amount
+it has not first retrieved from the database in the current
+session." The rule as written does not distinguish between
+stateful conversational agents and stateless pipeline stages. A
+Tier 2 stage that extracts an amount from an OCR'd invoice is, by
+the plain reading of §4, violating the rule — the amount was not
+retrieved from the database.
+
+Two resolution options:
+
+- **(a) Add a clarifying sub-bullet to CLAUDE.md §4** stating that
+  the rule applies to the committing Tier 1 agent's session, and
+  that Tier 2 stateless stages produce tool-like outputs
+  re-verified by Tier 1 at the commit boundary.
+- **(b) Exception clause in ADR-0007** explicitly superseding §4
+  for Tier 2 sub-agent calls, with the re-verification contract
+  (Q28) as the compensating control.
+
+**Decide during Phase 2 scoping, after Phase 1.3 triage.**
+
+**Blocks:** ADR-0007 drafting.
+
+**Source:** Phase 2 agent architecture review, 2026-04-19.
+
+### Q28 — Re-verification matrix for the Tier 2 → Tier 1 boundary
+
+The Tier 2 safety contract requires "re-verification at the
+commit boundary" for every data field whose semantic correctness
+affects the ledger. "Re-verification" as prose is insufficient; a
+concrete field-level matrix is needed before any Tier 2 system
+codes. The matrix specifies, for each field on a Tier-2-produced
+`ProposedMutation`:
+
+- **Source** — which Tier 2 stage produced the value, and via
+  what mechanism (LLM extraction, DB lookup, deterministic
+  transform).
+- **Re-verification method at Tier 1** — how the committing agent
+  validates the value (re-call a read tool and compare, require
+  human confirmation on the card, check against a seeded table,
+  accept if structural pass-through).
+- **Failure mode** — what happens if re-verification fails
+  (reject the mutation, queue for human review, raise a
+  `ServiceError`).
+
+Illustrative sketch (not authoritative):
+
+| Field | Source | Re-verification at Tier 1 | Failure mode |
+|---|---|---|---|
+| `amount` | LLM from document | Human confirms on ProposedEntryCard | User edit before approve |
+| `vendor_id` | Matcher stage | Re-call `getVendor(id)`; verify org scope | Reject if not found |
+| `account_code` | Account-suggest stage | Must exist in `listChartOfAccounts(org_id)` | Reject if absent |
+| `entry_date` | Document | Re-call `checkPeriod(entry_date)` before commit | Period-locked → reject |
+| `tax_code_id` | Document | Must exist in seeded `tax_codes` | Reject if absent |
+
+**Produce the authoritative matrix in
+`docs/02_specs/agent_architecture_policy.md` before any Tier 2
+system codes.**
+
+**Blocks:** ADR-0007 drafting; first Tier 2 system (AP Agent)
+implementation.
+
+**Source:** Phase 2 agent architecture review, 2026-04-19.
+
+### Q29 — Tier 2 boundary enforcement mechanism
+
+The Tier 2 safety contract states "No direct writes. Tier 2
+stages never call mutating services or insert into tables."
+Today this would be a convention. The existing
+`no-unwrapped-service-mutation` build-time lint prevents a
+related class of error (mutating service functions called
+without `withInvariants()`). An analogous mechanical rule is
+needed to prevent Tier 2 module paths from importing mutating
+service entry points.
+
+Proposed sketch:
+
+- **Scope:** files under `src/agent/pipelines/**/*` (or the
+  chosen Tier 2 path) cannot import
+  `journalEntryService.post`, `chartOfAccountsService.create`,
+  or any other mutating service function.
+- **Enforcement:** ESLint rule or grep-fail CI check, depending
+  on which gives crisper error messages.
+- **Mutating set derivation:** from the
+  `no-unwrapped-service-mutation` rule's allowlist, so adding a
+  new mutating service function automatically extends the Tier 2
+  prohibition.
+
+**Produce the concrete lint design in
+`docs/02_specs/agent_architecture_policy.md` alongside the
+re-verification matrix (Q28).**
+
+**Blocks:** first Tier 2 system (AP Agent) implementation;
+ADR-0007 governance-artifacts section.
+
+**Source:** Phase 2 agent architecture review, 2026-04-19.
+
+### Q30 — Logic Receipt reproducibility under Tier 2 pipelines
+
+`intent_model.md` §6 rule 4 requires Logic Receipts to be
+byte-for-byte reproducible given the same rule version, input
+features, and historical context. The existing
+`ProposedMutation.justification` fields (`rule_id`,
+`input_features`, `historical_match_count`, `confidence_score`,
+`source_transactions`, `user_utterance`) capture Tier 1's inputs
+at the moment the mutation was proposed. They do not capture
+per-stage input/output under a Tier 2 pipeline.
+
+Two options:
+
+- **(a) Extend `ProposedMutation.justification` with a
+  `pipeline_trace: PipelineStageRecord[]` field.** Each stage
+  record carries `stage_name`, `input_hash`, `output_hash`,
+  `model`, `timestamp`. Per-stage reproducibility is preserved;
+  Logic Receipts continue to satisfy the byte-for-byte rule.
+- **(b) Accept that Tier 2 Logic Receipts lose step-level
+  reproducibility.** Document the limitation: auditors see "this
+  was produced by Tier 2 pipeline X at version Y" but cannot
+  replay stages deterministically.
+
+**Author's preference: (a). The cost is one field addition; the
+benefit is that Logic Receipt reproducibility survives the Tier 2
+introduction. Confirm during ADR-0007 drafting.**
+
+**Blocks:** ADR-0007 drafting; `ProposedMutation` Zod schema
+extension (if (a) is chosen, the extension lands with Tier 2's
+first system).
+
+**Source:** Phase 2 agent architecture review, 2026-04-19.
+
+### Q31 — LLM-planned orchestration prohibition for Tier 2
+
+The Tier 2 safety contract illustrates deterministic TypeScript
+orchestration between pipeline stages but does not codify it as
+a rule. Without an explicit prohibition, a future author can
+argue "my LLM coordinator is just a typed function" and
+introduce the exact pattern the three-tier policy is designed to
+prevent — LLM-planned stage sequencing, dynamic tool dispatch, or
+multi-agent chat handoffs disguised as typed orchestration.
+
+Proposed rule, to be added verbatim to ADR-0007's safety
+contract:
+
+> Orchestration between Tier 2 stages MUST be deterministic
+> TypeScript. LLM-planned orchestration is prohibited. A stage's
+> role is to produce a typed output from a typed input; a stage
+> does not decide which stage runs next. The orchestrator module
+> is a plain function that calls stages in a fixed sequence.
+
+**Confirm verbatim in ADR-0007, or propose alternative wording.**
+
+**Blocks:** ADR-0007 drafting.
+
+**Source:** Phase 2 agent architecture review, 2026-04-19.
+
 ---
 
 ## Section 3 — Open questions surfaced during Phase 1.1 closeout
@@ -351,6 +510,65 @@ HTTP code.
 
 **Source:** friction-journal entry 2026-04-12 ("Phase 1.3
 obligation: globalSetup currently hardcodes...").
+
+### Q32 — Reversal mirror check step order: ADR-0001 vs leaf vs code
+
+The reversal mirror check has three governance surfaces that
+disagree about the *numbering* of the five steps, although all
+three agree on the *set* of checks and all describe the check as
+running before the `BEGIN` transaction.
+
+- **`docs/07_governance/adr/0001-reversal-semantics.md` (lines
+  113-127).** Enumerates five steps with **`reversal_reason`
+  non-empty as Step 5**: (1) load referenced entry, (2) same-org,
+  (3) line count match, (4) per-line mirror with debit/credit
+  swap, (5) reason non-empty.
+- **`docs/02_specs/ledger_truth_model.md` INV-REVERSAL-001 leaf
+  (lines 2314-2348).** Enumerates five steps with
+  **`reversal_reason` non-empty as Step 1**: (1) reason
+  non-empty, (2) load referenced entry, (3) same-org, (4) line
+  count match, (5) per-line mirror with debit/credit swap.
+- **`src/services/accounting/journalEntryService.ts`.** The
+  header block comment (lines 186-192) describes the execution
+  order as **reason-first** (matches the leaf). The inline step
+  labels inside the function body (lines 198-243) use ADR-0001's
+  logical numbering (reason = Step 5) so that a reader scanning
+  the function body sees `// Step 5: reversal_reason` execute
+  before `// Step 1: load the referenced entry`, contradicting
+  the function's own header comment.
+
+The code **executes** reason-first. The leaf documents
+reason-first. The function's header comment documents
+reason-first. The ADR and the function's inline step labels
+document reason-last. Two of the three governance surfaces agree
+with the code; ADR-0001 and the inline labels are the outliers.
+
+**Likely origin:** ADR-0001 is dated 2026-04-11, before Phase
+1.1 execution. The leaf was written during the 2026-04 docs
+restructure after the implementation landed, reflecting the
+cheap-first execution order adopted during Phase 1.1 execution.
+The code inherited the ADR's design-time numbering in the inline
+comments even after the execution order was reordered.
+
+**Recommendation:** update ADR-0001 with a post-implementation
+note matching the leaf's execution order (the ADR's own "Notes
+for future ADR writers" §2 anticipates exactly this situation —
+"Capture the history when the decision moves during the same
+cycle"), and renumber the inline step labels inside
+`validateReversalMirror()` so they match the function's own
+header comment (reason-first). No code behavior change; purely
+documentation + comment reconciliation.
+
+**Why not a new ADR:** ADR-0001 already has the "placement
+rationale and history" pattern for mid-cycle corrections. An
+in-place amendment preserves decision continuity; a superseding
+ADR for a comment-ordering correction would be ceremony.
+
+**Blocks:** ADR-0001 amendment (one paragraph addition) +
+`src/services/accounting/journalEntryService.ts` inline comment
+renumbering (five line edits, no code change).
+
+**Source:** Skills migration session, 2026-04-19.
 
 ---
 
