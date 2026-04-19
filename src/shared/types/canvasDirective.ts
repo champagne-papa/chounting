@@ -16,6 +16,13 @@ export type CanvasDirective =
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'none' }
 
+  // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation:
+  | { type: 'user_profile' }
+  | { type: 'org_profile'; orgId: string }
+  | { type: 'org_users'; orgId: string }
+  | { type: 'invite_user'; orgId: string }
+  | { type: 'welcome' }
+
   // Phase 2+ stubs — directive type defined now, canvas component is a
   // "Coming Soon" placeholder until the phase that builds it:
   | { type: 'ap_queue'; orgId: string }

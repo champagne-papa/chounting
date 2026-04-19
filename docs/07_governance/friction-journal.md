@@ -2629,3 +2629,100 @@ Categories:
   begin.
 
   Approximate revision time: ~20 minutes.
+- 2026-04-19 NOTE   Phase 1.2 Session 6 execution session
+  started. Starting SHA: 14b948b (sub-brief pre-freeze
+  revisions). Starting model: Claude Opus 4.7. Scope: master
+  §12's five form-escape surfaces + master §15's five canvas
+  directive extensions + ContextualCanvas dispatch + onboarding
+  skip-link + stale /admin/orgs doc cleanup at
+  ui_architecture.md:197. EC-* gates to cover: EC-21, EC-23,
+  EC-24, EC-25, EC-26. Regression baseline 238/238 green at
+  session start.
+
+  Planned commit cadence: 5 commits on top of 14b948b.
+  (1) canvas directive types + schema + dispatch stubs;
+  (2) canvas components [founder review gate]; (3) route
+  pages + invitation accept page (see Option A below);
+  (4) onboarding skip-link + suffix prose [founder review
+  gate]; (5) CA-74 through CA-81 + CA-82 + doc cleanup +
+  closeout. Convention #8 applied on third pass (pre-
+  execution code-grep, narrower than drafting-time passes).
+
+  **Convention #8 catch at pre-execution verification.** The
+  pre-code grep surfaced a sub-brief claim that did not match
+  shipped reality: sub-brief §6.5 and Pre-decision 4 both
+  referenced `invitationService.getByToken` as existing.
+  Grep returned zero matches — no `getByToken`, no
+  `previewInvitation`, no read-by-token preview method
+  anywhere in src/services/. The only read-by-token logic is
+  inside `acceptInvitation` (mutating, merges four failure
+  modes into a single `INVITATION_INVALID_OR_EXPIRED` code),
+  which cannot drive 5-state distinguishable branching on the
+  accept page.
+
+  Underlying constraints that blocked a no-new-code path:
+  (1) org_invitations RLS is `user_is_controller(org_id)` for
+  SELECT (migration 20240114) — invitees cannot read their
+  own invitation via a Next.js server-component
+  `createServerClient` call; (2) the existing acceptInvitation
+  collapses malformed-token / not-found / wrong-hash / expired
+  / email-mismatch all into one error code, ruling out
+  speculative-POST-and-interpret-error as a workaround;
+  (3) master §20 EC-26 requires five distinguishable states.
+
+  Four options were presented to founder: (A) add a read-only
+  previewInvitationByToken method on invitationService;
+  (B) ship 3-state accept page in Session 6 + sub-brief
+  amendment + defer to Session 7; (C) defer accept page
+  entirely to Session 7; (D) direct adminClient() use in
+  page.tsx (violates Law 1). Founder selected Option A:
+  Session 6 adds one new service method (~30 LOC, pure read
+  logic, no audit, no new ServiceError codes, no new
+  migrations). The sub-brief's "no new service functions"
+  claim was interpreted as a scope-signal ("don't do Phase
+  1.5A work"), not an absolute rule. A read-only preview
+  supporting Session 6's own UI surface is scope-consistent.
+
+  Service method signature: `previewInvitationByToken(token)`
+  returns `{ state: 'pending' | 'invalid' | 'expired' |
+  'already_accepted', invitedEmail?, orgId? }`. The
+  email_mismatch state is NOT produced by the service — it's
+  derived by the page.tsx caller by comparing
+  `state === 'pending' && invitedEmail !== caller.email`.
+  Cleaner separation: service returns invitation facts; page
+  handles auth-identity comparison. Test delta: CA-82 added
+  above the 8-test floor as a dedicated preview-method unit
+  test (7 it-blocks). Test count floor for Session 6 becomes
+  9, target ~247 green.
+
+  **Convention #8 refinement surfaced by this catch.** The
+  codified convention lists four verification categories
+  (numeric claims, literal values, list elements, structural
+  references) but does not explicitly name *identity
+  assertions* — claims that a named method / route / schema
+  field / constant exists in shipped code. The sub-brief
+  drafting passes ran category-faithful grep-diffs against
+  master §12.2 and master §15 (list elements + literal
+  values) but did NOT grep-verify the single identity claim
+  "invitationService.getByToken (existing)" in §6.5. Proposed
+  fifth category: "Identity assertions — grep the named
+  symbol at the cited location before claiming it exists."
+  Captured here for a single-commit convention-content
+  refinement at the start of Session 7 drafting, out of band
+  from Session 6 execution (amending a convention mid-session
+  creates its own drift). Two applications of Convention #8
+  are already on record; the catch here is a third
+  application that produced the refinement signal.
+
+  **Uncommitted-at-start files flagged.** `git status --short`
+  surfaced two uncommitted items unrelated to Session 6
+  scope: (i) `docs/02_specs/open_questions.md` modified with
+  Q27-Q31 (Phase 2 layered-tiers agent architecture open
+  questions — ADR-0007 blockers); (ii) `docs/09_briefs/
+  phase-2/agent_architecture_proposal.md` (new, CTO-reviewed
+  Phase 2 layered-tiers proposal). Both are Phase 2 planning
+  artifacts that will be addressed separately by founder.
+  Session 6 commits use explicit `git add <path>` to avoid
+  sweeping these in; they will be called out again in the
+  Session 6 closeout entry so the founder's Phase 2 triage
+  doesn't lose them.

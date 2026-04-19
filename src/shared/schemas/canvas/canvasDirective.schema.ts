@@ -53,6 +53,13 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   }).strict(),
   z.object({ type: z.literal('none') }).strict(),
 
+  // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation
+  z.object({ type: z.literal('user_profile') }).strict(),
+  z.object({ type: z.literal('org_profile'), orgId: uuid }).strict(),
+  z.object({ type: z.literal('org_users'), orgId: uuid }).strict(),
+  z.object({ type: z.literal('invite_user'), orgId: uuid }).strict(),
+  z.object({ type: z.literal('welcome') }).strict(),
+
   // Phase 2+ stubs
   z.object({ type: z.literal('ap_queue'), orgId: uuid }).strict(),
   z.object({

@@ -60,6 +60,16 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the reversal form';
     case 'none':
       return 'no canvas view';
+    case 'user_profile':
+      return 'the user profile editor';
+    case 'org_profile':
+      return 'the organization profile editor';
+    case 'org_users':
+      return 'the organization users list';
+    case 'invite_user':
+      return 'the invite user form';
+    case 'welcome':
+      return 'the welcome / onboarding view';
     case 'ap_queue':
       return 'the AP queue';
     case 'vendor_detail':

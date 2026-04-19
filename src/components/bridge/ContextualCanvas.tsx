@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import type { CanvasDirective, CanvasNavigateFn } from '@/shared/types/canvasDirective';
 import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
@@ -20,6 +21,23 @@ import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView
 interface Props {
   directive: CanvasDirective;
   onDirectiveChange: (d: CanvasDirective) => void;
+}
+
+// WelcomeNavigator: the `welcome` directive is a route-level
+// navigation hint (not a canvas-state). The welcome page handles
+// its own render under a different layout; pushing to it from
+// inside the canvas would leave stale canvas history behind. We
+// fire router.push as a side effect the moment this component
+// mounts and render a ComingSoonPlaceholder during the brief
+// navigation window.
+function WelcomeNavigator() {
+  const router = useRouter();
+  const params = useParams<{ locale?: string }>();
+  const locale = params?.locale ?? 'en';
+  useEffect(() => {
+    router.push(`/${locale}/welcome`);
+  }, [router, locale]);
+  return <ComingSoonPlaceholder directiveType="welcome" />;
 }
 
 export function ContextualCanvas({ directive, onDirectiveChange }: Props) {
@@ -106,6 +124,17 @@ function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
           Use the Mainframe rail on the left to choose a view.
         </div>
       );
+
+    // Phase 1.2 Session 6 — form-escape surfaces. Components land
+    // in Commit 2; Commit 1 stubs the dispatch to ComingSoonPlaceholder
+    // so the switch is exhaustive in TypeScript from the first commit.
+    case 'user_profile':
+    case 'org_profile':
+    case 'org_users':
+    case 'invite_user':
+      return <ComingSoonPlaceholder directiveType={d.type} />;
+    case 'welcome':
+      return <WelcomeNavigator />;
 
     // Phase 2+ directive types — render placeholder
     case 'ai_action_review_queue':
