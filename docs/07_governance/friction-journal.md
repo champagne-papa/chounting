@@ -2128,3 +2128,140 @@ Categories:
   served its purpose as input to Session 5.1).
 
   Approximate session time: ~50 minutes.
+- 2026-04-19 NOTE   Phase 1.2 Session 5.2 — PROFILE_NOT_FOUND +
+  step-4 completion guard. Starting SHA: 6a588f8 (Session 5.1
+  closeout). Starting model: Claude Opus 4.7. Scope: two
+  mechanical fixes surfaced by the EC-20 smoke re-run:
+  (1) userProfileService.updateProfile throws PROFILE_NOT_FOUND
+  when the user_profiles row doesn't exist — fine in production
+  where sign-in's getOrCreateProfile creates the row first, but
+  fragile: admin-created users hit a dead-end and any silent
+  failure of the sign-in trigger would also break
+  updateUserProfile. Fix: convert to upsert (ON CONFLICT DO
+  UPDATE) so the ordering dependency goes away. (2) The
+  onboarding state machine allows step-4 completion without
+  step 1 ever completing — the advance rule's math permits
+  jumping from step 1 to step 4 (via createOrganization's
+  atomic 2+3) leaving completed_steps = [2, 3]. User "completes
+  onboarding" with display_name null. Fix: add
+  completed_steps.includes(1) guard to the step-4 completion
+  detector, plus tighten the onboardingSuffix step-4 prose to
+  branch when step 1 is missing so the agent retries rather
+  than treating the session as done. Baseline 233/233.
+  Pre-execution grep clean: PROFILE_NOT_FOUND used by both
+  updateProfile (being removed) and getProfile (unchanged);
+  zero pre-existing completed_steps.includes code guards.
+- 2026-04-19 NOTE   Phase 1.2 Session 5.2 execution complete.
+  Two commits on 6a588f8: e0a4435 (Fix 1: updateProfile upsert),
+  f69fe75 (Fix 2: step-4 completion guard + suffix tightening).
+  Full regression: 70 test files, 238 tests, 0 failures (233
+  baseline + 1 new it-block in CA-15 for the upsert-insert
+  branch + 4 new it-blocks in onboardingStep4GuardNoStep1 for
+  the step-4 guard and suffix prose). Typecheck clean. Master
+  brief frozen at aae547a. Session 5 sub-brief frozen at
+  9c22e07. Session 5 / 5.1 feature commits unchanged.
+
+  Fix 1 (userProfileService.updateProfile upsert):
+  - Replaced the SELECT-then-throw-PROFILE_NOT_FOUND shape with
+    SELECT (for audit before-state) followed by UPSERT via
+    supabase-js's .upsert({...}, { onConflict: 'user_id' }).
+  - Atomic at the DB layer (ON CONFLICT DO UPDATE), so the
+    SELECT→UPSERT race window is benign for correctness. Audit
+    fidelity in the narrow race window (concurrent insert
+    between our SELECT and our UPSERT) may report
+    before_state: null when a concurrent inserted existed;
+    single-user flows make this vanishingly rare; noted in the
+    service comment.
+  - Audit action stays `user.profile_updated` in both branches
+    (the semantic verb — the caller didn't know whether the row
+    existed). before_state: populated on UPDATE, null on
+    INSERT per Phase 1.5A convention.
+  - `auto_created: boolean` added to the log line so operators
+    can distinguish the two branches.
+  - PROFILE_NOT_FOUND stays in ServiceError.ts — getProfile
+    still uses it.
+  - CA-15 (userProfileAudit.test.ts) gains a second describe
+    block for the upsert-insert branch: pre-delete seed profile
+    row for USER_AP_SPECIALIST, call updateProfile, confirm the
+    row materializes and audit has before_state: null. AfterAll
+    restores the seed profile so downstream tests stay green.
+
+  Fix 2 (step-4 completion guard):
+  - handleUserMessage's step-4 completion branch now also
+    checks currentOnboarding.completed_steps.includes(1) before
+    flipping in_onboarding=false. An else-if branch logs a
+    `warn` on the blocked path so state-machine drift is
+    visible in logs.
+  - onboardingSuffix's step-4 case now branches on
+    completed_steps.includes(1). Normal path (step 1 done)
+    emits the unchanged first-task invitation prose. Recovery
+    path (step 1 missing) emits a new section titled "Step 4
+    (blocked: profile incomplete)" that directs the agent back
+    to updateUserProfile and explicitly tells it NOT to emit
+    the completion template_id while step 1 is pending.
+  - Four-it-block regression test covers: guard blocks
+    completion on [2,3] state; positive control on [1,2,3]
+    state; suffix emits recovery prose on [2,3]; suffix emits
+    normal prose on [1,2,3].
+
+  Prose authorship observation: the Fix 2 suffix tightening
+  adds authored conditional prose within the already-review-
+  gated step-4 section. The Session 5.2 prompt flagged a
+  potential stop condition ("if the drafter judges a review
+  gate is warranted, flag and wait"). Executor's judgment: the
+  new branch is defensive and small (~7 short lines),
+  structurally parallel to the existing prose, uses the same
+  voice and discipline (no emoji, no introductions, explicit
+  instruction to NOT emit the completion template_id). On
+  balance, closer to "minor tightening of existing reviewed
+  section" than "new authored content." No review gate
+  invoked; flagging for founder awareness at session close.
+  If the founder wants to tighten wording (e.g., soften the
+  "blocked" phrasing, adjust the technical language), a small
+  revision session applies.
+
+  Mock-vs-Protocol Invariant Gap candidate — second datapoint:
+  the PROFILE_NOT_FOUND surfacing was a production-invariant
+  failure (the Phase 1.5B design contract "sign-in creates the
+  row before updateProfile runs" is not enforced by any test;
+  fixtures all seed the profile row explicitly). This adds a
+  second instance to the candidate (Session 5.1 Bug 1 was the
+  first — Anthropic protocol rule). The class: fixture tests
+  exercise code paths assuming their preconditions are met;
+  smoke tests catch precondition-violation paths that fixtures
+  cannot model. Two datapoints; one more and it'll be at the
+  codification bar.
+
+  State-machine-under-constrained observation (narrow, no
+  convention candidate yet): the advance rule in state.ts is
+  correct (math is well-defined, worked examples in the sub-
+  brief all evaluate correctly), but it doesn't enforce
+  sequential step completion. current_step === 4 with
+  completed_steps = [2, 3] is legal per the rule. The
+  state-machine spec in master §11.5 doesn't require sequential
+  completion either — completed_steps is the set of done steps,
+  not a strictly-ordered sequence. Session 5.2's step-4 guard
+  is the first place that enforces "step 1 must precede step 4
+  completion" — the state machine itself remains permissive,
+  which is appropriate because the step-advance rule needs to
+  handle the atomic 2+3 advance cleanly. The guard at the
+  completion-detection site is the right place for the
+  ordering constraint. Future sessions adding new steps should
+  similarly guard at completion rather than constraining the
+  advance rule.
+
+  Nine candidate-future-conventions staged (unchanged from
+  Session 5.1 close; the Mock-vs-Protocol Invariant Gap grew
+  to two datapoints but stays staged per batching discipline).
+  None codified. Spec-to-Implementation Verification (three
+  datapoints as of Session 5 close) remains convention-ready
+  for Session 6 drafting codification.
+
+  EC-20 closeout status: the combined findings journal entry
+  for the full EC-20 smoke test still awaits founder's browser
+  pass (scenarios 3, 4, 5). Autonomous portion is now
+  validated post-Fix-1 and post-Fix-2; re-run after Session
+  5.2 would show User B completing onboarding cleanly (previously
+  stuck at PROFILE_NOT_FOUND).
+
+  Approximate session time: ~35 minutes.
