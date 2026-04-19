@@ -18,6 +18,7 @@
     "db:seed": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f src/db/seed/dev.sql",
     "db:seed:auth": "dotenv -e .env.local -- tsx scripts/seed-auth-users.ts",
     "db:seed:all": "pnpm db:seed:auth && pnpm db:seed",
+    "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all",
     "test:no-hardcoded-urls": "! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/"
   },
   "dependencies": {

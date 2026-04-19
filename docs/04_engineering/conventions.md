@@ -107,6 +107,44 @@ Phase 1.1 established this split implicitly; Phase 1.5A made it
 explicit after catching a collision where both namespaces used the
 same past-tense strings.
 
+### Permission Catalog Count Drift
+
+When a migration adds, removes, or reshapes rows in `permissions`
+or `role_permissions`, the sub-brief MUST include a grep
+verification step before execution:
+
+```bash
+grep -rn 'toHaveLength\|toBe(' tests/ | grep -E 'permissions|role_permissions'
+```
+
+Every hit is a hardcoded count that will fail when the catalog
+changes. The parity invariant is checked at multiple layers:
+
+- **CA-27** (`permissionParity.test.ts`) — dynamic set-equality
+  between `ACTION_NAMES` and the `permissions` table. Requires no
+  edit when the catalog changes; passes automatically once both
+  sides carry the new key.
+- **CA-28** (`permissionCatalogSeed.test.ts`) — hardcoded counts
+  and role-grant lists via the admin client. Breaks on catalog
+  change.
+- **CA-37** (`crossOrgRlsIsolation.test.ts`) — hardcoded counts
+  via the RLS surface (authenticated-user client). Breaks on
+  catalog change.
+
+Update all hardcoded counts in the same commit as the
+`ACTION_NAMES` addition. The intermediate state between "migration
+applied, DB has N+1 rows" and "`ACTION_NAMES` + CA-28 + CA-37
+updated" fails tests; splitting the fix across commits leaves a
+red intermediate that must either be squashed or kept in a single
+atomic push.
+
+Codified from Phase 1.2 Session 1 (2026-04-18) where the sub-brief
+named only CA-28. The full `pnpm test` at commit 4 surfaced
+CA-37's two hardcoded assertions (`toBe(16)` and `toBe(22)`);
+executor correctly stopped and flagged rather than silently
+extending scope. See `docs/07_governance/friction-journal.md`
+entry 2026-04-18 (CA-37 sub-brief gap).
+
 ### API Boundary Casing
 
 Schemas under `src/shared/schemas/organization/` use **camelCase**
