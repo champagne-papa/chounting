@@ -64,6 +64,17 @@ function getClient(): Anthropic {
   return __client;
 }
 
+/**
+ * Test-only setter for the Anthropic client. Pass a stub with a
+ * `messages.create` method that returns or throws whatever the
+ * test needs. Pass `null` to reset back to lazy construction of
+ * the real client. Used by CA-55–CA-59 to exercise the production-
+ * path classifier without hitting the real API.
+ */
+export function __setClientForTests(client: Anthropic | null): void {
+  __client = client;
+}
+
 export async function callClaude(
   params: Anthropic.Messages.MessageCreateParams,
   log: Logger,

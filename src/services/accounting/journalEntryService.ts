@@ -101,6 +101,11 @@ async function post(
   const entryType = isReversal ? 'reversing' : 'regular';
 
   // --- Insert journal entry ---
+  // idempotency_key is required when source='agent' per
+  // INV-IDEMPOTENCY-001 (DB CHECK `idempotency_required_for_agent`
+  // on journal_entries). The Zod schema enforces this at the
+  // boundary; the service writes the column through so the DB
+  // constraint is satisfied.
   const { data: entry, error: entryErr } = await db
     .from('journal_entries')
     .insert({
@@ -111,6 +116,7 @@ async function post(
       reference: parsed.reference ?? null,
       source: parsed.source,
       source_system: parsed.source,
+      idempotency_key: parsed.idempotency_key ?? null,
       reverses_journal_entry_id:
         isReversal && 'reverses_journal_entry_id' in parsed
           ? (parsed as ReversalInput).reverses_journal_entry_id
