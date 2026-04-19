@@ -31,6 +31,7 @@ import type { UserRole } from '@/services/auth/canUserPerformAction';
 import { callClaude } from './callClaude';
 import { loadOrCreateSession } from './loadOrCreateSession';
 import { toolsForPersona, type Persona } from './toolsForPersona';
+import { buildSystemPrompt } from './buildSystemPrompt';
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
@@ -97,8 +98,17 @@ export async function handleUserMessage(
     tools.map((t) => [t.name as string, t] as const),
   );
 
-  // Step 4: system prompt placeholder — Session 3 replaces this.
-  const system = 'You are an accounting agent. End every turn with a call to respondToUser carrying a template_id and params.';
+  // Step 4: system prompt via buildSystemPrompt (Session 3). Session
+  // 4 will load orgContext via OrgContextManager; Session 3 passes
+  // null so the builder's onboarding branch and skeleton identity
+  // block carry through.
+  const system = buildSystemPrompt({
+    persona,
+    orgContext: null,
+    locale: input.locale,
+    canvasContext: input.canvas_context,
+    user: { user_id: input.user_id },
+  });
 
   // Step 5: full conversation history (master §5.2 step 5 — no
   // truncation, no rolling window in Phase 1.2).
@@ -240,12 +250,26 @@ export async function handleUserMessage(
 
     // No tool calls at all AND no respondToUser → structural failure.
     // §6.2: structural retry budget is independent of Q13.
+    // Master §6.2 item 5: on structural-retry exhaustion the
+    // orchestrator "surfaces a generic error template
+    // { template_id: 'agent.error.structured_response_missing',
+    // params: {} } and logs AGENT_STRUCTURED_RESPONSE_INVALID."
+    // Session 3 closes the Session 2 divergence (throw → return
+    // template response) per sub-brief §6.7.
     if (structuralRetries >= STRUCTURAL_MAX_RETRIES) {
-      log.error({}, 'structural retry budget exhausted');
-      throw new ServiceError(
-        'AGENT_STRUCTURED_RESPONSE_INVALID',
-        'Claude did not produce a respondToUser tool_use after retry',
+      log.error(
+        { code: 'AGENT_STRUCTURED_RESPONSE_INVALID' },
+        'structural retry budget exhausted — returning fallback template',
       );
+      await persistSession(session.session_id, messages, resp, ctx.trace_id, log);
+      return {
+        session_id: session.session_id,
+        response: {
+          template_id: 'agent.error.structured_response_missing',
+          params: {},
+        },
+        trace_id: ctx.trace_id,
+      };
     }
     structuralRetries += 1;
     messages.push({ role: 'assistant', content: resp.content });

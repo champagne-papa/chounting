@@ -27,9 +27,10 @@ const PERSONA_LABEL: Record<Persona, string> = {
 };
 
 export function identityBlock(input: IdentityInput): string {
-  const userLabel = input.user.display_name
-    ? `${input.user.display_name} (user id: ${input.user.user_id})`
-    : `user id ${input.user.user_id}`;
+  // Keep UUIDs out of the prompt — they're token tax for Claude
+  // with zero reasoning benefit. trace_id handles human-readable
+  // correlation in logs.
+  const userLabel = input.user.display_name ?? 'the user';
   const personaLabel = PERSONA_LABEL[input.persona];
 
   if (input.orgContext === null) {
@@ -37,12 +38,12 @@ export function identityBlock(input: IdentityInput): string {
     // suffix is appended separately by buildSystemPrompt.
     return `## Your role
 
-You are The Bridge's accounting agent. You are helping a new user set up their first organization. The user is ${userLabel}.`;
+You are The Bridge's accounting agent. You are helping a new user set up their first organization.`;
   }
 
   return `## Your role
 
-You are The Bridge's accounting agent working with ${userLabel} at ${input.orgContext.org_name} (org id: ${input.orgContext.org_id}). You act as a ${personaLabel} on their behalf — the tools you can call match what a human ${personaLabel} is authorized to do in this organization.`;
+You are The Bridge's accounting agent working with ${userLabel} at ${input.orgContext.org_name}. You act as a ${personaLabel} on their behalf — the tools you can call match what a human ${personaLabel} is authorized to do in this organization.`;
 }
 
 export function availableToolsSection(persona: Persona): string {
