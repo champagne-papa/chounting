@@ -86,7 +86,7 @@ export type Database = {
           journal_entry_id: string | null
           org_id: string
           prompt: string | null
-          rejection_reason: string | null
+          resolution_reason: string | null
           response_payload: Json | null
           routing_path: string | null
           session_id: string | null
@@ -107,7 +107,7 @@ export type Database = {
           journal_entry_id?: string | null
           org_id: string
           prompt?: string | null
-          rejection_reason?: string | null
+          resolution_reason?: string | null
           response_payload?: Json | null
           routing_path?: string | null
           session_id?: string | null
@@ -128,7 +128,7 @@ export type Database = {
           journal_entry_id?: string | null
           org_id?: string
           prompt?: string | null
-          rejection_reason?: string | null
+          resolution_reason?: string | null
           response_payload?: Json | null
           routing_path?: string | null
           session_id?: string | null
@@ -1679,6 +1679,7 @@ export type Database = {
         | "rejected"
         | "auto_posted"
         | "stale"
+        | "edited"
       autonomy_tier: "always_confirm" | "notify_auto" | "silent"
       business_structure:
         | "sole_prop"

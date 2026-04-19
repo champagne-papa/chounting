@@ -68,11 +68,40 @@ export async function POST(req: Request) {
     }
 
     // Branch 2: already confirmed — return the existing
-    // journal_entry_id (idempotent replay).
+    // journal_entry_id plus a secondary SELECT on
+    // journal_entries.entry_number so the client's
+    // `agent.entry.posted` template renders with the number
+    // even on retry-after-response-network-failure (the
+    // duplicate-exchange window named in Session 7 sub-brief
+    // Pre-decision 6). If the enrichment SELECT fails for any
+    // reason (transient DB error, ultra-rare row-deleted-
+    // post-confirm race), log and fall through with
+    // entry_number omitted — the client's render degrades to
+    // "Entry posted" without the number rather than hiding
+    // the success signal.
     if (row.status === 'confirmed') {
+      let entryNumber: number | undefined;
+      if (row.journal_entry_id) {
+        const { data: je, error: jeErr } = await db
+          .from('journal_entries')
+          .select('entry_number')
+          .eq('journal_entry_id', row.journal_entry_id)
+          .maybeSingle();
+        if (jeErr) {
+          // Intentional: don't throw — preserve the
+          // user-visible success signal.
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[confirm.branch2] entry_number enrichment failed: ${jeErr.message}`,
+          );
+        } else if (je) {
+          entryNumber = je.entry_number;
+        }
+      }
       return NextResponse.json(
         {
           journal_entry_id: row.journal_entry_id,
+          ...(entryNumber !== undefined && { entry_number: entryNumber }),
           status: 'confirmed',
           idempotent: true,
         },

@@ -8,13 +8,9 @@
 // template-based response.
 
 import { z } from 'zod';
+import { ProposedEntryCardSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
 
 const uuid = z.string().uuid();
-
-// TODO: tighten to ProposedEntryCardSchema in Session 7 once
-// circular-import risk between canvas/ and accounting/ schemas
-// is mapped. Session 2 uses z.unknown() to avoid hard coupling.
-const proposedEntryCardPlaceholder = z.unknown();
 
 export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   // Phase 1.1 directives
@@ -33,7 +29,7 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('journal_entry_list'), orgId: uuid }).strict(),
   z.object({
     type: z.literal('proposed_entry_card'),
-    card: proposedEntryCardPlaceholder,
+    card: ProposedEntryCardSchema,
   }).strict(),
   z.object({ type: z.literal('ai_action_review_queue'), orgId: uuid }).strict(),
   z.object({
