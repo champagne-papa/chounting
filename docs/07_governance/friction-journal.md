@@ -1645,3 +1645,129 @@ Categories:
   change the skip rule.
 
   Approximate session time: ~25 minutes.
+- 2026-04-18 NOTE   Phase 1.2 Session 5 sub-brief drafting session
+  started. Starting SHA: cbbfafd (Session 4.5 closeout anchor).
+  Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]). Master
+  brief frozen at aae547a; Sessions 1–4 + 4.5 complete,
+  regression baseline 209/209. Target artifacts: (1)
+  docs/09_briefs/phase-1.2/session-5-brief.md (new), (2)
+  docs/09_briefs/CURRENT_STATE.md (stale — still says "Session 4
+  ready to execute"), (3) this entry + session-close entry.
+  Session 5 scope per founder drafting prompt: master §11
+  onboarding flow implementation (state machine, welcome page
+  minimal-functional, sign-in redirect, orchestrator state
+  integration, invited-user detection). Seven founder
+  pre-decisions locked in the drafting prompt: (1) minimal
+  welcome, no Session 7 imports; (2) AgentChatPanel contract
+  `{ orgId: string | null }`; (3) invited-user detection via
+  server component; (4) step 4 completion is a state flag flip
+  (not canvas_directive — defers first canvas_directive use to
+  Session 6/7); (5) step 1 completes when display_name is set
+  (not all four §11.3 fields); (6) resolvePersona onboarding
+  stub confirmed as master decision A; (7) test delta is a
+  floor, not a cap. Mandatory pre-drafting Cited-Code
+  Verification grep clean: zero welcome-page hits in src/app/,
+  zero OnboardingState/state.onboarding hits (Session 5
+  introduces both), last_login_at used only for login-time
+  tracking (not as onboarding signal per Pre-decision 5). One
+  open drafting decision: step-4 completion signal — options
+  (a) respondToUser template_id pattern, (b) new
+  completeOnboarding tool, (c) orchestrator heuristic. Founder
+  leans toward (a). To be pressure-tested during drafting.
+- 2026-04-18 NOTE   Phase 1.2 Session 5 sub-brief drafting session
+  complete. Artifacts: (1) session-5-brief.md (705 lines — ~50
+  longer than Session 4's 654, proportional to Session 5's wider
+  scope and the Pre-decision 8 three-option pressure-test);
+  (2) CURRENT_STATE.md updated — Session 4 / 4.5 marked complete,
+  Session 5 marked ready to execute; (3) this entry. Eight
+  founder pre-decisions locked in sub-brief §4: seven from the
+  drafting prompt verbatim + one drafting-authored (Pre-decision
+  8 — step-4 completion signal is the respondToUser template_id
+  pattern `agent.onboarding.first_task.navigate`, with Options B
+  and C rejected during pressure-test). Rationale for Option A:
+  preserves the "always respondToUser at turn end" discipline
+  (master §6.2 item 2), adds no new tool (honors §6.4 whitelist
+  invariance + Session 5's no-new-tools out-of-scope constraint),
+  fully observable via existing agent.message_processed audit
+  row, needs only one new orchestrator detection branch. Option
+  B would add a persona-whitelist decision and master-brief
+  divergence. Option C has no clean programmatic trigger.
+
+  Nine work items enumerated (§6.1–§6.11; §6.11 is the mandatory
+  pre-execution grep, §6.10 is a five-line comment add): (6.1)
+  OnboardingState type + read/write helpers at
+  src/agent/onboarding/state.ts; (6.2) extended onboardingSuffix
+  — commit-1 founder review gate here for the step-aware prose;
+  (6.3) buildSystemPrompt wiring; (6.4) orchestrator state
+  read/write + three transition detectors + step-4 template_id
+  detection; (6.5) AgentResponse.onboarding_complete optional
+  field; (6.6) /api/agent/message initial_onboarding body field;
+  (6.7) welcome page (server component with client chat panel
+  embed); (6.8) sign-in redirect logic; (6.9) AgentChatPanel
+  prop contract conformance; (6.10) resolvePersona inline
+  comment citing master decision A.
+
+  Eleven S5 exit criteria + 7 new CA tests (CA-67 through CA-73,
+  with CA-67 and CA-73 permitted multi-it-block per Session 3/4
+  pattern). 5-commit cadence: (1) types + suffix + wiring —
+  founder review gate; (2) orchestrator transitions + response
+  shape; (3) welcome page + AgentChatPanel contract; (4) sign-in
+  redirect; (5) tests + locale keys.
+
+  Three observations surfaced worth preserving:
+
+  (1) Master §21 CA-46/CA-47 drift continues. Master's CA
+  catalog references onboardingNewUser.test.ts as CA-46 and
+  onboardingInvitedUser.test.ts as CA-47 — different numbers
+  and different file names than the actual shipped CA-45
+  (agentSessionPrecedence) and CA-46 (agentSessionOnboarding)
+  from Session 2. Session 5 continues CA-67+ per Session 3's
+  pattern; the reconciliation is Session 8 scope. Noted in
+  §2 "NOT delivered" list.
+
+  (2) AgentChatPanel stub conformance (Pre-decision 2) is a
+  Session 5 work item (§6.9), but the drafter did not verify
+  the current stub's actual prop signature during drafting —
+  execution's first task in commit 3 will be reading the stub
+  and confirming whether the contract `{ orgId: string | null,
+  initialOnboardingState?: OnboardingState }` requires adding
+  props or just leaves the existing shape intact. If the stub
+  already accepts these props, commit 3 is simpler; if not,
+  commit 3 adds them. Either way, Session 7's rewrite must
+  honor the contract. Flag this as an execution-time discovery
+  point, not a sub-brief ambiguity.
+
+  (3) The Session 4.5 "Session 5 to decide" flag about
+  Clarification D's skip rule was resolved in sub-brief §9
+  (What is NOT in Session 5): skip rule stays intact. Richer
+  onboarding audit coverage via null-org emits is not worth
+  loosening a pressure-tested decision mid-flow. Flagged as a
+  deferred candidate for whenever recordMutation's tx-atomicity
+  gets revisited (Phase 2 events table per INV-LEDGER-003).
+
+  Cited-Code Verification grep at session start: clean. Zero
+  welcome-page hits in src/app/, zero OnboardingState /
+  state.onboarding hits, last_login_at used only for login-time
+  tracking (not as onboarding signal per Pre-decision 5). No
+  surprises; the nine existing onboarding-related src/agent/
+  hits are all Session 3 (onboardingSuffix) + Session 4
+  (orchestrator references, persona identity block mentioning
+  "onboarding path", createOrganization/listIndustries tool
+  mentions) as expected.
+
+  No master-brief inconsistencies surfaced requiring an
+  unfreeze. The master §21 CA-* numbering drift is the closest
+  thing to an inconsistency but it's a known deferred item for
+  Session 8, not a Session 5 blocker.
+
+  Seven candidate-future-conventions staged (unchanged from
+  Session 4.5 close — no new candidates from this drafting
+  session): prompt-UUID discipline, Shipped-Code-to-Spec
+  Verification, verbatim-vs-skeleton citation distinction,
+  internal-helper refactor NOTE pattern, migration-lineage
+  verification, query-shape infeasibility handling, and the
+  narrower one-datapoint DB-CHECK ↔ INSERT column-list matching.
+
+  Approximate drafting time: ~40 minutes (including the three-
+  option step-4 pressure-test, the CURRENT_STATE surgery, and
+  this entry).

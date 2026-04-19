@@ -49,25 +49,64 @@ refactor). Four candidate-future-convention lessons staged in
 the friction journal, none codified — batching per founder
 discipline.
 
-### Session 4 — Ready to execute (2026-04-18)
+### Session 4 — Complete (2026-04-18)
 
 Sub-brief at `docs/09_briefs/phase-1.2/session-4-brief.md`.
-**First paid-API session.** Scope: swap mocked callClaude for
-real Anthropic client (preserve fixture branch for tests),
-implement OrgContextManager per master §8, wire two new API
-routes (/api/agent/message + /api/agent/confirm with full state
-machine), complete executeTool dispatch for all 10 tools, add
-four audit_log.action values, classify real-API error modes
-(401/429/5xx/timeout/malformed) with per-class retry behavior.
-16 S4 exit criteria, 14 new CA tests (CA-53–66; CA-66 is a
-skippable smoke test that hits real Claude once), 6-commit
-cadence. Commit-2 founder review gate for OrgContext injection
-prose. Pre-decision 1 carries the Session 3 "UUIDs out of
-prompts" lesson forward verbatim. ANTHROPIC_API_KEY must be
-in .env.local before execution (provisioning is a founder
-action; non-smoke tests still run if absent).
+Execution landed as commits e774577 → 96b904b → 34c8fe3 →
+b4585bb → f288da2 → da4641e → 9c6552d (6 feature + 1 docs
+closeout commit) on top of readiness anchor ec86a63. All 16 S4
+exit criteria pass. 209 tests / 60 files (191 baseline + 18
+new). **First paid-API session** — CA-66 ran against real
+Claude and passed (one paid call, ~$0.02). Four execution-time
+finds captured in the friction journal: migration-113
+pre-check halt (Clarification D premise corrected),
+PostgREST FK embedding rewrite in loadOrgContext, missing
+idempotency_key column write in journalEntryService.post
+(first session to exercise source='agent' end-to-end), and a
+pre-commit-4 test-ripple count correction. Commit-2 founder
+review gate produced one polish (bold removed from org_name
+in injection prose).
 
-Sessions 5–8 sub-briefs land as each predecessor session closes out.
+### Session 4.5 — Complete (2026-04-18)
+
+One-commit follow-up (cbbfafd) to Session 4's migration-113
+find. Changed `AuditEntry.org_id: string → string | null` in
+`recordMutation.ts` and removed the `undefined as unknown as
+string` cast from `userProfileService.updateProfile:115`. 18
+recordMutation call sites audited — 17 safe (non-null org_ids),
+1 was the hack (cleaned up). authEvents.ts bypasses
+recordMutation and was left alone (already correct). 209/209
+still green; purely additive type widening. Session 5 inherits
+the accurate type without further cleanup.
+
+### Session 5 — Ready to execute (2026-04-18)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-5-brief.md`.
+Scope: master §11 onboarding flow — state machine
+(`OnboardingState` on `agent_sessions.state.onboarding`),
+extended `onboardingSuffix` with step-aware instructions,
+`buildSystemPrompt` threading, orchestrator state-read + four
+transition handlers (step 1 on display_name set, steps 2+3 on
+createOrganization success, step 4 on respondToUser with
+`agent.onboarding.first_task.navigate` template_id), welcome
+page at `src/app/[locale]/welcome/page.tsx` (server component,
+minimal functional — Session 7 polishes), sign-in redirect
+logic, `AgentChatPanel` prop contract `{ orgId: string | null }`.
+11 S5 exit criteria, 7+ new CA tests (CA-67 through CA-73),
+5-commit cadence with commit-1 founder review gate for the
+extended onboardingSuffix prose. Eight founder pre-decisions:
+(1) minimal welcome no Session-7 imports; (2) AgentChatPanel
+contract locked; (3) invited-user detection via server
+component; (4) step-4 completion is a state flag flip (not
+canvas_directive — defers first canvas_directive use to
+Session 6/7); (5) step 1 completes when display_name is set;
+(6) resolvePersona stub confirmed as master decision A; (7)
+test delta is a floor; (8) step-4 signal is the respondToUser
+template_id pattern (drafting decision, Options B+C rejected).
+No new migrations, tools, deps, ActionNames, or ServiceError
+codes.
+
+Sessions 6–8 sub-briefs land as each predecessor session closes out.
 
 ---
 
