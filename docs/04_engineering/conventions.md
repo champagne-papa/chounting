@@ -251,14 +251,15 @@ but should have been pre-identified in the brief. See
 ### Spec-to-Implementation Verification
 
 When drafting a sub-brief, every numeric claim, literal value,
-list element, or structural reference that cites authoritative
-source material (master brief, Phase 1.5 decision records,
-ADRs, migration files, locale files, prior sub-briefs) MUST be
-verified by grep or file read against the cited source BEFORE
-the sub-brief freezes.
+list element, structural reference, or identity assertion that
+cites authoritative source material (master brief, Phase 1.5
+decision records, ADRs, migration files, locale files, prior
+sub-briefs, or shipped source code) MUST be verified by grep or
+file read against the cited source BEFORE the sub-brief
+freezes.
 
-Examples of the pattern (drawn from the three datapoints that
-codified this convention):
+Examples of the pattern (drawn from the codifying datapoints of
+this convention):
 
 - **Numeric claims** ("test count", "file count", "row count")
   — run the relevant `find | wc -l` or `grep -c` against the
@@ -269,6 +270,9 @@ codified this convention):
   exit criteria ordering) — read both sides and diff.
 - **Structural references** (master §X.Y cited in sub-brief
   §Z.W) — read both sections and confirm the claim holds.
+- **Identity assertions** (named symbols — functions, methods,
+  routes, schema fields, constants) — grep the symbol at the
+  cited location before claiming it exists.
 
 The cost is 5–10 minutes of grep-verification per sub-brief;
 the payoff is avoiding mid-execution drift where the executor
@@ -306,6 +310,17 @@ Class: "narratively correct, contractually wrong against the
 cited source." The drafter's overall reasoning was right in
 each case; a specific value or a specific reference drifted.
 Automation-by-grep is cheaper than detection-by-close-reading.
+
+**Refinement datapoint (Session 6):** the pre-execution
+code-grep caught a sub-brief claim that
+`invitationService.getByToken` existed at the cited location; it
+did not. The drafting-time verification passes had faithfully
+covered the four original categories and missed the claim
+because it was a fifth class — a named symbol asserted to exist.
+The fifth bullet (**Identity assertions**) was added to close
+that gap. Same class as the original three ("narratively
+correct, contractually wrong"); different verification move
+(grep for the symbol, not the value).
 
 **Relationship to Cited-Code Verification** (Phase 1.5A
 convention above): Cited-Code Verification catches drift

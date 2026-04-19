@@ -2966,3 +2966,23 @@ Categories:
   runs the six checks manually. Backend + structural review
   gates already closed Commits 2-4; visual/interactive
   verification remains outstanding.
+
+- 2026-04-19 NOTE   Triage-session staging observation. When
+  parallel worktree edits land against a stale HEAD — working
+  tree is an older snapshot than the committed tip — a straight
+  `git add` of the split-file-commit pattern silently reverts
+  committed tip content. The pre-Session-7 triage hit exactly
+  this: the working tree's friction-journal was a pre-Session-6-
+  closeout snapshot (2828 lines) with the mid-session skills-
+  migration entry inserted, while HEAD was the post-Session-6-
+  closeout tip (2882 lines). Diff stat showed 68 insertions plus
+  122 deletions when the plan expected insertions-only; the
+  ratio check caught it. Recovery pattern: copy working tree to
+  /tmp, `git checkout HEAD -- <file>`, splice the new content
+  against HEAD's version (anchor by preceding line + blank
+  separator), verify the diff stat is additions-only, stage.
+  Guard for the future: `git stash` before pulling / rebasing /
+  switching when parallel work is expected, then apply edits on
+  top of current HEAD, then `git stash pop`. One datapoint, not
+  yet a convention candidate — the codification threshold is
+  two.
