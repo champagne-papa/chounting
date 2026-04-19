@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run tests/integration",
+    "agent:floor": "vitest run tests/integration/unbalancedJournalEntry tests/integration/lockedPeriodRejection tests/integration/crossOrgRlsIsolation tests/integration/serviceMiddlewareAuthorization tests/integration/reversalMirror",
+    "agent:validate": "pnpm typecheck && pnpm test:no-hardcoded-urls && pnpm agent:floor",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:migrate": "supabase migration up --local",

@@ -2726,6 +2726,74 @@ Categories:
   sweeping these in; they will be called out again in the
   Session 6 closeout entry so the founder's Phase 2 triage
   doesn't lose them.
+
+- 2026-04-19 NOTE   Skills migration session. Token overhead in
+  the always-loaded `CLAUDE.md` was growing with the rulebook;
+  rules that only apply to specific code areas are now
+  on-demand under `.claude/skills/`. Five skills landed —
+  `journal-entry-rules/`, `service-architecture/`,
+  `agent-tool-authoring/`, `integration-test-rules/`,
+  `audit-scans/` — each opening with a pointer to its
+  canonical source in `docs/` and summarizing rather than
+  duplicating. `docs/INDEX.md` added as the one-line-per-file
+  map; tier-1 navigation in `CLAUDE.md` now lists only
+  `ledger_truth_model.md`, `agent_autonomy_model.md`,
+  `CURRENT_STATE.md`, and `friction-journal.md` with
+  everything else deferred to `INDEX.md`. Two pnpm scripts
+  added for the repeat workflow — `pnpm agent:floor` (runs
+  the five Category A integration tests) and
+  `pnpm agent:validate` (typecheck + no-hardcoded-URLs +
+  floor); both added to `.claude/settings.local.json` allow
+  list. `CLAUDE.md` trimmed from 250 to 78 lines (~69%
+  reduction), with sections §1–§8 relocated to the skills
+  and §9 folded into the trimmed §10 (the reserved-seat
+  events table is named in the simplification list and
+  enforcement is already at Layer 1 via the append-only
+  triggers + INV-LEDGER-003).
+
+  Two corrections landed as by-products of the trim.
+  **A1 (Two Laws citation).** Original `CLAUDE.md` §1 cited
+  INV-SERVICE-001/-002 as the source of the Two Laws; the
+  leaves actually enforce `withInvariants` wrapping and
+  `adminClient` discipline, not the Laws themselves. The Two
+  Laws are glossary-backed framing (`docs/02_specs/
+  glossary.md`). The `service-architecture/` skill sources
+  the Laws to the glossary and cites INV-SERVICE-001 /
+  INV-SERVICE-002 / INV-AUTH-001 only for their real content.
+  The root `CLAUDE.md` no longer makes any Two-Laws claim
+  directly. **B1 (phantom lint rule).** Original §2 claimed
+  a `no-unwrapped-service-mutation` build-time lint exists;
+  it does not. The leaf explicitly says "no lint rule today;
+  Phase 1.2 candidate" and the first Phase 1.1 audit already
+  flagged this as UF-002. The `service-architecture/` skill
+  states the current reality (code review enforces; lint is
+  a Phase 1.2 candidate, see UF-002) and the trimmed
+  `CLAUDE.md` drops the claim entirely.
+
+  Q32 logged as a side-effect. Checking the reversal-mirror
+  step order while drafting the `journal-entry-rules/` skill
+  surfaced a three-way disagreement between ADR-0001 (reason
+  last), `INV-REVERSAL-001` leaf + code execution +
+  `validateReversalMirror()` header comment (reason first),
+  and the function's inline step labels (reason numbered as
+  Step 5 but executed first). The code is self-consistent in
+  execution; the ADR and inline labels lag. Reported to the
+  founder per guardrail #7 and resolved as Q32 in
+  `docs/02_specs/open_questions.md` (Section 3), with the
+  recommended fix being an ADR-0001 post-implementation note
+  and a five-comment renumber in `journalEntryService.ts` —
+  both out of scope for this session and staged for separate
+  review.
+
+  Pattern note worth preserving for future skill migrations:
+  **skills point, they do not duplicate.** The Q32 drift was
+  invisible to the skill because the skill pointed to the
+  leaf rather than restating the step numbering. Had the
+  skill duplicated ADR-0001's numbering, the Q32 discrepancy
+  would have been inherited into the skill and the trim
+  would have propagated it. The "summarize and point"
+  discipline paid its first dividend during the work that
+  established it.
 - 2026-04-19 NOTE   Session 6 browser-verification deferral.
   The Playwright plugin was installed mid-session
   (`~/.claude/plugins/installed_plugins.json` shows
