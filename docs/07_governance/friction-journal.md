@@ -2948,3 +2948,21 @@ Categories:
   schema tightening). Session 8 is verification + Phase
   1.2 closeout (27 exit criteria matrix, master §21 CA-*
   reconciliation, 20-real-entries gate, adversarial test).
+
+- 2026-04-19 NOTE   Session 6 Playwright retroactive pass —
+  deferred again. MCP tools loaded after Claude Code restart
+  (tool_search returns playwright:* prefix), but the MCP server
+  defaults to `--browser chrome` and looks for
+  `/opt/google/chrome/chrome`, which is not installed in the
+  WSL environment. `npx playwright install chrome` requires
+  sudo and failed; `npx playwright install chromium` succeeded
+  but the MCP server is not configured to use it — switching
+  would require editing
+  `~/.claude/plugins/cache/claude-plugins-official/playwright/
+  unknown/.mcp.json` to pass `--browser chromium` and
+  restarting Claude Code again. Out of scope for a git-hygiene
+  session. Handoff: next attempt either installs real Chrome
+  via sudo, reconfigures the MCP to chromium + restarts, or
+  runs the six checks manually. Backend + structural review
+  gates already closed Commits 2-4; visual/interactive
+  verification remains outstanding.
