@@ -590,10 +590,26 @@ async function executeTool(
       // Invariant 3 (org-access) and Invariant 4 (role) both skip
       // because input.org_id is undefined (CreateOrgProfileInput
       // has no org_id field).
+      //
+      // The agent's tool schema (createOrganizationInputSchema, 8
+      // fields) is narrower than orgService's createOrgProfileSchema
+      // which also requires accountingFramework + defaultReportBasis.
+      // The DB columns for both have defaults ('aspe' / 'accrual'
+      // per migration 109), so merging them at the dispatch site
+      // keeps the agent's conversation light without a schema
+      // reconciliation. Session 5 is the first session to exercise
+      // this path end-to-end; the gap is the same class as Session
+      // 4's missing idempotency_key column write.
+      const toolInput = validatedInput as Record<string, unknown>;
+      const serviceInput = {
+        accountingFramework: 'aspe' as const,
+        defaultReportBasis: 'accrual' as const,
+        ...toolInput,
+      } as CreateOrgProfileInput;
       return await withInvariants(
         orgService.createOrgWithTemplate,
         { action: 'org.create' },
-      )(validatedInput as CreateOrgProfileInput, ctx);
+      )(serviceInput, ctx);
     }
 
     if (toolName === 'updateOrgProfile') {
