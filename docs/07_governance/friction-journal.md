@@ -1520,3 +1520,93 @@ Categories:
   tool constraints (PostgREST FK embedding, Supabase join
   limits, etc.), execution rewrites and flags in the review
   gate." One datapoint; not codifying.
+- 2026-04-18 NOTE   Phase 1.2 Session 4 execution complete. All
+  16 S4 exit criteria pass. 6 commits on top of ec86a63:
+  e774577 (OrgContextManager full shape + stub retirement),
+  96b904b (OrgContext injection prose + buildSystemPrompt wiring
+  — commit-2 founder review gate produced one polish: bold
+  removed from org_name in prose), 34c8fe3 (real Anthropic
+  client + error classification), b4585bb (executeTool dispatch
+  + audit emits + journalEntryService header fix), f288da2
+  (/api/agent/{message,confirm} routes + serviceErrorToStatus),
+  da4641e (CA-53 through CA-66 tests). Starting model: Claude
+  Opus 4.7 — unchanged throughout. Full regression: 60 test
+  files, 209 tests, 0 failures (191 baseline + 18 new it-blocks
+  across 10 new CA-* files: CA-53 × 2, CA-54 × 1, CA-55–59 × 6
+  in one file, CA-60 × 2, CA-61–63 × 3, CA-64 × 1, CA-65 × 2,
+  CA-66 × 1). Master brief still frozen at aae547a. Sub-brief
+  still frozen at ec86a63. ANTHROPIC_API_KEY present — CA-66
+  ran against real Claude and passed (one paid API call).
+
+  Clarification F tx-atomicity paragraph (session-close
+  obligation): recordMutation's header asserts same-transaction-
+  as-mutation per INV-AUDIT-001, but Session 4's three new
+  agent.* emit sites (loadOrCreateSession branch 3,
+  handleUserMessage's three return points, executeTool's
+  finally block) are not inside a service transaction —
+  adminClient issues statement-by-statement REST calls, so
+  the session INSERT / message persist / tool execution and
+  their audit rows are not atomic. This is pre-existing at the
+  architectural level (master §16 specifies the emits; the
+  current orchestrator has no tx wrapper). Session 4 applied
+  try/catch mitigation only — audit failures log but do not
+  throw, preventing a DB audit error from poisoning user-facing
+  requests. Phase 2's events-table migration (INV-LEDGER-003)
+  restores tx-atomicity by making events the Layer 3 truth
+  written inside the mutation transaction. No ADR needed for
+  this gap; it's tied to the pending phase evolution that the
+  recordMutation.ts header comment and the events table's
+  "reserved seat" comment both reference.
+
+  Execution-time finds worth preserving:
+
+  (1) Migration 113 pre-check discovery — captured in the
+  WRONG entry above. audit_log.org_id has been nullable since
+  Phase 1.5B (2026-04-15), which means Clarification D's skip
+  rule is no-op-safe rather than load-bearing. Option A shipped.
+
+  (2) PostgREST FK embedding rewrite (commit 2) — captured in
+  the NOTE entry above.
+
+  (3) journalEntryService.post missing idempotency_key column
+  write. The DB CHECK idempotency_required_for_agent (CLAUDE.md
+  Rule 6) requires idempotency_key when source='agent', but the
+  service's INSERT omitted the column. CA-61 (pending → confirmed)
+  surfaced this as POST_FAILED: "violates check constraint
+  idempotency_required_for_agent." One-line fix added mid-commit-6:
+  `idempotency_key: parsed.idempotency_key ?? null` in the
+  journal_entries INSERT. Pre-existing bug — Session 4 is the
+  first session to exercise source='agent' end-to-end through
+  the service layer. Candidate for a future-convention
+  datapoint: "Every DB CHECK constraint that gates a field
+  must be matched by an explicit INSERT column write in the
+  owning service; absence surfaces only at runtime when a new
+  source path is exercised." Not codifying — one datapoint.
+
+  (4) PostgREST embedding error message pattern. The error
+  "Could not find a relationship between X and Y" surfaces as
+  a Supabase-client exception, not a typecheck failure — the
+  query shape compiles fine because PostgREST embedding is
+  runtime-resolved. Worth noting for future schema-join work.
+
+  Six candidate-future-conventions staged now (up from five at
+  session start): prompt-UUID discipline, Shipped-Code-to-Spec
+  Verification, verbatim-vs-skeleton citation distinction,
+  internal-helper refactor NOTE, migration-lineage verification
+  (new from this session), query-shape infeasibility handling
+  (new from this session). None codified per founder discipline
+  — batching until a third datapoint surfaces for each.
+
+  Session decomposition discipline held: no Session 5+ scope
+  leaked in (no onboarding state machine, no form-escape
+  surfaces, no AgentChatPanel UI rewrite, no canvas directive
+  extensions, no ProposedEntryCard rewrite). The four finds
+  above are all within Session 4's natural scope — the first
+  three are gap-fills discovered during execution of a
+  spec-defined work item, the fourth is a documentation note.
+  Master §21 CA-* numbering drift still deferred to Session 8.
+
+  Approximate session time: ~2h (including the pre-commit-1
+  migration-113 halt, the commit-2 review gate, the PostgREST
+  rewrite, the test-ripple count correction from 6 to 10, and
+  the commit-6 idempotency_key fix).
