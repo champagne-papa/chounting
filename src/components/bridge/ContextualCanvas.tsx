@@ -17,6 +17,9 @@ import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailVi
 import { ReversalForm } from '@/components/canvas/ReversalForm';
 import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
+import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
+import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
+import { OrgUsersView } from '@/components/canvas/OrgUsersView';
 
 interface Props {
   directive: CanvasDirective;
@@ -125,14 +128,15 @@ function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
         </div>
       );
 
-    // Phase 1.2 Session 6 — form-escape surfaces. Components land
-    // in Commit 2; Commit 1 stubs the dispatch to ComingSoonPlaceholder
-    // so the switch is exhaustive in TypeScript from the first commit.
+    // Phase 1.2 Session 6 — form-escape surfaces.
     case 'user_profile':
+      return <UserProfileEditor />;
     case 'org_profile':
+      return <OrgProfileEditor orgId={d.orgId} />;
     case 'org_users':
+      return <OrgUsersView orgId={d.orgId} initialMode="list" />;
     case 'invite_user':
-      return <ComingSoonPlaceholder directiveType={d.type} />;
+      return <OrgUsersView orgId={d.orgId} initialMode="invite" />;
     case 'welcome':
       return <WelcomeNavigator />;
 
