@@ -260,6 +260,82 @@ export const invitationService = {
     return { invitation_id: input.invitation_id, token: compositeToken };
   },
 
+  /**
+   * Read-only preview of an invitation keyed by its composite token.
+   * Used by the /invitations/accept server component to drive its
+   * 5-state branching without mutating anything. Returns one of four
+   * states; the caller (page.tsx) derives the email_mismatch fifth
+   * state by comparing the returned `invitedEmail` against the
+   * authenticated user's email. Separating concerns this way keeps
+   * the service method reusable from contexts that don't have an
+   * auth session (e.g., server-side rendering paths that need to
+   * validate the token before attempting sign-in).
+   *
+   * No audit row — reads are not audited per Phase 1.5A convention.
+   * Admin client is justified by the token-bearer auth pattern
+   * already used in acceptInvitation: possession of a valid
+   * composite token is the authorization signal.
+   *
+   * Context: this method was added during Session 6 execution as a
+   * scope-consistent exception to the sub-brief's "no new service
+   * functions" claim. See the session-start friction-journal entry
+   * for the Convention #8 catch that produced it.
+   */
+  async previewInvitationByToken(
+    token: string,
+  ): Promise<{
+    state: 'pending' | 'invalid' | 'expired' | 'already_accepted';
+    invitedEmail?: string;
+    orgId?: string;
+  }> {
+    const db = adminClient();
+
+    const colonIdx = token.indexOf(':');
+    if (colonIdx === -1) {
+      return { state: 'invalid' };
+    }
+    const invitationId = token.substring(0, colonIdx);
+
+    const { data: invitation } = await db
+      .from('org_invitations')
+      .select('invitation_id, org_id, invited_email, status, expires_at, token_hash')
+      .eq('invitation_id', invitationId)
+      .maybeSingle();
+
+    if (!invitation) {
+      return { state: 'invalid' };
+    }
+
+    const match = await bcryptjs.compare(token, invitation.token_hash as string);
+    if (!match) {
+      return { state: 'invalid' };
+    }
+
+    if (invitation.status === 'revoked') {
+      return { state: 'invalid' };
+    }
+
+    if (invitation.status === 'accepted') {
+      return {
+        state: 'already_accepted',
+        orgId: invitation.org_id as string,
+      };
+    }
+
+    // status === 'pending' — check expiry
+    const now = new Date();
+    const expiresAt = new Date(invitation.expires_at as string);
+    if (expiresAt <= now) {
+      return { state: 'expired' };
+    }
+
+    return {
+      state: 'pending',
+      invitedEmail: invitation.invited_email as string,
+      orgId: invitation.org_id as string,
+    };
+  },
+
   async listPendingInvitations(
     input: { org_id: string },
     _ctx: ServiceContext,
