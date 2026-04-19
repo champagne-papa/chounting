@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-18 (Phase 1.2 Session 4 ready to execute)
+# Where I am as of 2026-04-19 (Phase 1.2 Session 7 ready to execute)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -150,9 +150,16 @@ step-1 prose change without tweaks. Convention #8 refinement
 captured for single-commit codification at Session 7
 drafting start. Covers EC-21, EC-23, EC-24, EC-25, EC-26.
 
-### Session 7 — Ready to draft next
+### Session 7 — Sub-brief frozen, ready for execution kickoff
 
-Sessions 7–8 sub-briefs land as each predecessor session closes out.
+Sub-brief at `docs/09_briefs/phase-1.2/session-7-brief.md`
+(frozen at ba9599a). Ships the production chat UI + supporting
+infrastructure — 5 feature commits (params-shape enumeration,
+ProposedEntryCard real render, AgentChatPanel production rewrite,
+shell polish, canvas context click handlers + EC-19 tests) + 1
+docs closeout, with a pre-declared split-point at end of Commit 3
+(Session 7.1 fallback). Session 8 (verification + closeout)
+sub-brief lands at Session 7 closeout.
 
 ---
 
