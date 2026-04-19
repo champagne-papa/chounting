@@ -17,6 +17,36 @@
   },
   "agent": {
     "emptyState": "What would you like to do?",
-    "suggestedPromptsHeading": "Try one of these"
+    "suggestedPromptsHeading": "Try one of these",
+    "greeting": {
+      "welcome": "Welcome, {user_name}."
+    },
+    "accounts": {
+      "listed": "I found {count} accounts for your organization."
+    },
+    "entry": {
+      "proposed": "Proposed entry of {amount}. Please review the details below."
+    },
+    "error": {
+      "tool_validation_failed": "I was unable to format a valid request after {retries} attempts. Please rephrase what you'd like to do.",
+      "structured_response_missing": "I had trouble formatting a response. Please try again."
+    }
+  },
+  "proposed_entry": {
+    "what_changed": "What changed?",
+    "why": {
+      "rule_matched": "Matched rule: {label}.",
+      "novel_pattern": "Novel pattern — the agent has not seen this before."
+    },
+    "track_record": {
+      "no_rule": "N/A for this proposal."
+    },
+    "if_rejected": {
+      "journal_entry": "The entry will not be posted. You can edit and resubmit.",
+      "reversal": "The original entry remains on the ledger."
+    },
+    "policy": {
+      "approve_required": "Requires your approval."
+    }
   }
 }
