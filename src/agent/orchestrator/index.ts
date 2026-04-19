@@ -29,6 +29,10 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import type { CanvasDirective } from '@/shared/types/canvasDirective';
 import type { ProposedEntryCard } from '@/shared/types/proposedEntryCard';
+import type {
+  PersistedAssistantTurn,
+  PersistedUserTurn,
+} from '@/shared/types/chatTurn';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { adminClient } from '@/db/adminClient';
@@ -217,6 +221,22 @@ export async function handleUserMessage(
     ...(session.conversation as Anthropic.Messages.MessageParam[]),
     { role: 'user', content: input.message },
   ];
+
+  // Session 7 Commit 3 (Pre-decision 14): capture the user turn
+  // once at entry so every persistSession path (success, Q13
+  // exhausted, structural retry exhausted) appends the same user
+  // turn to the structured turns array. id is a client-stable
+  // UUID; timestamp is the server-side receipt time.
+  const turnUserId = crypto.randomUUID();
+  const turnUserTimestamp = new Date().toISOString();
+  const userTurn: PersistedUserTurn = {
+    role: 'user',
+    id: turnUserId,
+    text: input.message,
+    timestamp: turnUserTimestamp,
+    status: 'sent',
+  };
+  const existingTurns = session.turns;
 
   let validationRetries = 0;
   let structuralRetries = 0;
@@ -424,6 +444,14 @@ export async function handleUserMessage(
         // but NOT state changes. A failed turn should not advance
         // the onboarding state machine. Pass `undefined` for the
         // new state parameter so persistSession omits the column.
+        const failureAssistantTurn: PersistedAssistantTurn = {
+          role: 'assistant',
+          id: crypto.randomUUID(),
+          template_id: 'agent.error.tool_validation_failed',
+          params: { retries: validationRetries },
+          timestamp: new Date().toISOString(),
+          trace_id: ctx.trace_id,
+        };
         await persistSession(
           session.session_id,
           messages,
@@ -431,6 +459,7 @@ export async function handleUserMessage(
           ctx.trace_id,
           log,
           undefined,
+          [...existingTurns, userTurn, failureAssistantTurn],
         );
         await emitMessageProcessedAudit();
         return {
@@ -553,6 +582,31 @@ export async function handleUserMessage(
         content: terminatingContent,
       };
 
+      // Build the structured assistant turn from parsedRespond.
+      // Cards live on `canvas_directive.card` when the directive's
+      // type is 'proposed_entry_card'; other directive types ride
+      // the turn as a canvas_directive_pill (master §14.2
+      // bookmark-pill UX from Commit 3).
+      const directive = parsedRespond.canvas_directive;
+      const successCard: ProposedEntryCard | undefined =
+        directive?.type === 'proposed_entry_card'
+          ? directive.card
+          : undefined;
+      const successPill: CanvasDirective | undefined =
+        directive && directive.type !== 'proposed_entry_card'
+          ? directive
+          : undefined;
+      const successAssistantTurn: PersistedAssistantTurn = {
+        role: 'assistant',
+        id: crypto.randomUUID(),
+        template_id: parsedRespond.template_id,
+        params: parsedRespond.params,
+        ...(successCard !== undefined && { card: successCard }),
+        ...(successPill !== undefined && { canvas_directive_pill: successPill }),
+        timestamp: new Date().toISOString(),
+        trace_id: ctx.trace_id,
+      };
+
       await persistSession(
         session.session_id,
         messages,
@@ -560,6 +614,7 @@ export async function handleUserMessage(
         ctx.trace_id,
         log,
         newState,
+        [...existingTurns, userTurn, successAssistantTurn],
       );
       log.info(
         { template_id: parsedRespond.template_id, had_tool_calls: otherTools.length > 0 },
@@ -576,6 +631,50 @@ export async function handleUserMessage(
         trace_id: ctx.trace_id,
       };
       if (onboardingComplete) {
+        // Pre-decision 11b: at onboarding completion, look up the
+        // user's first active membership (created either earlier
+        // in this session via createOrganization for fresh users,
+        // or pre-existing for invited users) and update
+        // agent_sessions.org_id from null to the returned org_id.
+        // The production chat's mount-time conversation fetch is
+        // keyed on (user_id, org_id), so this update is what lets
+        // the onboarding transcript survive into the production
+        // chat. Uses the function-scoped db (adminClient) already
+        // in scope for audit emits.
+        const { data: firstMembership } = await db
+          .from('memberships')
+          .select('org_id')
+          .eq('user_id', input.user_id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (firstMembership?.org_id) {
+          const { error: orgUpdateErr } = await db
+            .from('agent_sessions')
+            .update({ org_id: firstMembership.org_id })
+            .eq('session_id', session.session_id);
+          if (orgUpdateErr) {
+            log.error(
+              {
+                err: orgUpdateErr.message,
+                session_id: session.session_id,
+                org_id: firstMembership.org_id,
+              },
+              'onboarding-complete org_id update failed; conversation resume may not find the session',
+            );
+          } else {
+            log.info(
+              { session_id: session.session_id, org_id: firstMembership.org_id },
+              'onboarding-complete: session org_id updated for conversation resume',
+            );
+          }
+        } else {
+          log.warn(
+            { user_id: input.user_id, session_id: session.session_id },
+            'onboarding-complete but no active membership found — conversation resume will miss',
+          );
+        }
         response.onboarding_complete = true;
       }
       return response;
@@ -603,6 +702,14 @@ export async function handleUserMessage(
       );
       // Sub-brief §6.4 item 5: failure path — conversation
       // persists, onboarding state does not. Pass `undefined`.
+      const structuralFailureTurn: PersistedAssistantTurn = {
+        role: 'assistant',
+        id: crypto.randomUUID(),
+        template_id: 'agent.error.structured_response_missing',
+        params: {},
+        timestamp: new Date().toISOString(),
+        trace_id: ctx.trace_id,
+      };
       await persistSession(
         session.session_id,
         messages,
@@ -610,6 +717,7 @@ export async function handleUserMessage(
         ctx.trace_id,
         log,
         undefined,
+        [...existingTurns, userTurn, structuralFailureTurn],
       );
       await emitMessageProcessedAudit();
       return {
@@ -839,6 +947,7 @@ async function persistSession(
   trace_id: string,
   log: Logger,
   state?: Record<string, unknown>,
+  newTurns?: unknown[],
 ): Promise<void> {
   const db = adminClient();
   // Record the assistant turn so the session transcript reflects
@@ -852,12 +961,21 @@ async function persistSession(
   // structural-retry exhaustion) pass `undefined` so the column
   // is omitted from the UPDATE and the state machine does not
   // advance on a failed turn.
+  //
+  // Session 7 Commit 3 (Pre-decision 14): newTurns carries the
+  // full replacement for agent_sessions.turns — caller computes
+  // [...existingTurns, userTurn, assistantTurn] so every
+  // persistSession path records the exchange symmetrically with
+  // conversation. Omitted when callers have not migrated yet.
   const updatePayload: Record<string, unknown> = {
     conversation,
     last_activity_at: new Date().toISOString(),
   };
   if (state !== undefined) {
     updatePayload.state = state;
+  }
+  if (newTurns !== undefined) {
+    updatePayload.turns = newTurns;
   }
   const { error } = await db
     .from('agent_sessions')

@@ -32,6 +32,10 @@ export interface AgentSessionRow {
   last_activity_at: string;
   state: Record<string, unknown>;
   conversation: unknown[];
+  // Session 7 Commit 3 (Pre-decision 14): structured ChatTurn
+  // array for the conversation-load endpoint. Unchanged contract
+  // on `conversation` (Claude's message context).
+  turns: unknown[];
 }
 
 /**
@@ -124,6 +128,7 @@ export async function loadOrCreateSession(
       locale: input.locale,
       state: {},
       conversation: [],
+      turns: [],
     })
     .select('*')
     .single();
@@ -187,5 +192,6 @@ function toRow(raw: Record<string, unknown>): AgentSessionRow {
     last_activity_at: raw.last_activity_at as string,
     state: (raw.state as Record<string, unknown>) ?? {},
     conversation: (raw.conversation as unknown[]) ?? [],
+    turns: (raw.turns as unknown[]) ?? [],
   };
 }

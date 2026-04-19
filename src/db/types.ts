@@ -39,6 +39,7 @@ export type Database = {
           conversation: Json
           last_activity_at: string
           locale: string
+          turns: Json
           org_id: string | null
           session_id: string
           started_at: string
@@ -49,6 +50,7 @@ export type Database = {
           conversation?: Json
           last_activity_at?: string
           locale?: string
+          turns?: Json
           org_id?: string | null
           session_id?: string
           started_at?: string
@@ -59,6 +61,7 @@ export type Database = {
           conversation?: Json
           last_activity_at?: string
           locale?: string
+          turns?: Json
           org_id?: string | null
           session_id?: string
           started_at?: string
