@@ -2557,3 +2557,75 @@ Categories:
   Approximate drafting time: ~55 minutes (including 6 minutes
   of pre-work grep, the CURRENT_STATE surgery, and this
   entry).
+- 2026-04-19 NOTE   Phase 1.2 Session 6 sub-brief pre-freeze
+  revisions. Starting SHA: 0c36607. Six surgical revisions
+  applied before execution begins:
+
+  (1) `welcome` directive semantics honesty. Grepped master
+  §15; master's text is terse ("`welcome` renders the
+  onboarding layout (§11.2)") with no concrete user-facing
+  use case. Pre-decision 7's prose updated to acknowledge the
+  round-trip-for-existing-users reality openly rather than
+  calling it "useful for 'take me back to onboarding.'"
+  Session 6 wires the directive per master §15 inclusion but
+  documents its only current semantic as "navigate to /welcome
+  and let the server-component guards route appropriately."
+  Real user-facing triggers await a future session.
+
+  (2) `?forbidden=org-settings` promoted from "e.g.,"
+  suggestion to named Session 6 ↔ Session 7 contract.
+  Pre-decision 5 updated; CA-76 will assert the flag is
+  emitted.
+
+  (3) Commit 1 structure resolved to the stubs-then-components
+  shape. The "OR bundled" hedge removed. Commit 1 ships the
+  four component-backed directive types dispatching to
+  ComingSoonPlaceholder; `welcome` lands fully (no component
+  dependency). Commit 2 adds the components AND rewires the
+  switch.
+
+  (4) Invitation accept page state count reconciled against
+  master §20 EC-26. Master explicitly enumerates 5 states
+  (signed-out, email-match, email-mismatch, invalid, expired);
+  §12.5's text collapses invalid+expired into one user-facing
+  message but EC-26 counts them as distinct states. Sub-brief
+  was 5-state in §6.5 and CA-79 already; Pre-decision 4 had
+  internal drift (omitted signed-out, added "already
+  accepted"). Pre-decision 4 rewritten to list the master-
+  EC-26 5 states exactly. "Already accepted" handled via the
+  existing invitationService idempotency, not as a sixth
+  state.
+
+  (5) Pre-decision 3 gains a permanence note: the step-2
+  onboardingSuffix phrasing "isn't wired in for you right now"
+  is a permanent architectural choice per master §12, NOT a
+  Session-7 deferral. No org-creation form-escape surface
+  exists or is planned. Future sessions should not treat the
+  phrasing as a TODO.
+
+  (6) OrgProfileEditor field list diff-verified against master
+  §12.2 per Convention #8. Result: the sub-brief's 12 fields
+  match master §12.2's 12 fields with naming-shorthand
+  differences only (master uses prose shortcuts like
+  "industry" / "timezone" / "locale" / "reportBasis"; sub-brief
+  uses the actual camelCase schema names `industryId` /
+  `timeZone` / `defaultLocale` / `defaultReportBasis` per
+  Phase 1.5A convention). No fields missing, no fields added.
+  §6.3 gained a small diff-verification note recording this.
+
+  Sub-brief grew 701 → 758 lines (+57 lines, all clarifying
+  prose — no new scope, no new work items, no new tests, no
+  new pre-decisions). Still within the 600–900 target.
+
+  Convention #8 applied a second time (first application was
+  during the Session 6 drafting session itself; this is the
+  second pass). The §12.2 field-list grep-diff closed in
+  ~90 seconds and surfaced zero substantive gaps — exactly
+  what the convention is designed to confirm.
+
+  Nine candidate-future-conventions staged; one codified
+  (Convention #8, two applications now on record). Session 6
+  readiness anchor moves to the next commit. Execution can
+  begin.
+
+  Approximate revision time: ~20 minutes.

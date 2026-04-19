@@ -169,40 +169,67 @@ acknowledge the skip-link is now available. **Founder review
 gate applies at Commit 4** for the onboardingSuffix prose
 changes.
 
+**Note: the step-2 phrasing "isn't wired in for you right now"
+is a permanent architectural choice, not a Session-7 deferral.**
+Master §12 lists no org-creation form-escape surface — the org
+profile editor at §12.2 is explicitly post-creation-only. The
+agent chat IS the org-creation path; `createOrganization` is
+the only org-creation affordance in Phase 1.2. Future sessions
+should not treat the step-2 "isn't wired in" phrasing as a
+TODO. If that ever changes, it requires a master-brief
+amendment adding a new §12 surface.
+
 ### Pre-decision 4 — Invitation accept page is a server component for the 5-state branching
 
 `src/app/[locale]/invitations/accept/page.tsx` is a server
-component that:
-1. Parses `token` from `searchParams`.
-2. Reads the authenticated user via `@supabase/ssr`.
-3. If unauthenticated → `redirect('/[locale]/sign-in?returnTo=...')`.
-4. Looks up the invitation via `invitationService.getByToken`
-   (exists from 1.5B).
-5. Branches to the five states server-side:
-   - Invitation not found → error page
-   - Invitation expired → error page
-   - Email mismatch → error page with sign-out suggestion
-   - Email match, not-yet-accepted → CTA button "Accept
-     invitation" that posts to `/api/invitations/accept`
-   - Email match, already accepted → redirect to the org
+component that processes `token` from `searchParams` and
+branches to **five states per master §20 EC-26** (signed-out,
+email-match-pending, email-mismatch, invalid, expired):
 
-A small client component handles the Accept button's submit +
-redirect on success. Rest is server-rendered. Rationale: the
-state branching is authoritative and cookie-authenticated;
-server component renders correctly on first paint with no
-client-side flash.
+1. **Signed-out** — `redirect('/[locale]/sign-in?returnTo=/[locale]/invitations/accept?token=...')`.
+2. **Signed in, email matches, pending** — render the Accept
+   CTA. A small client component handles the POST to
+   `/api/invitations/accept` and the redirect on success.
+3. **Signed in, email mismatches** — error page with
+   sign-out suggestion.
+4. **Invalid token** — error page ("This invitation is no
+   longer valid").
+5. **Expired token** — error page ("This invitation has
+   expired").
+
+Invalid and expired are treated as distinct states per master
+§20 EC-26's explicit enumeration, even though master §12.5's
+text collapses them into a single user-facing message. CA-79
+tests both via separate it-blocks to match the EC-26 contract;
+the error screens MAY share the same message copy in Session 6
+since master §12.5 doesn't differentiate (Session 7 may
+differentiate if UX research warrants).
+
+The "email match, already accepted" case is not listed as a
+distinct branching state in master. The existing
+`invitationService.accept` from Phase 1.5B handles re-posts
+idempotently (UNIQUE constraint on the underlying relation);
+the revisit-after-acceptance case either succeeds idempotently
+and redirects to the org or surfaces
+`INVITATION_INVALID_OR_EXPIRED` which routes to state 4. Either
+behavior is acceptable; Session 6 does not add a sixth state.
+
+Rest is server-rendered. Rationale: the state branching is
+authoritative and cookie-authenticated; server component
+renders correctly on first paint with no client-side flash.
 
 ### Pre-decision 5 — OrgProfileEditor authorization: server-component redirect for non-controllers
 
 The org profile editor's route page at
 `/[locale]/[orgId]/settings/org` is a server component that
 checks the caller's role via `getMembership(user_id, orgId)`.
-If role is not `'controller'`, `redirect('/[locale]/[orgId]/')`
-with a query flag the destination can surface as a toast (e.g.,
-`?forbidden=org-settings`). Toast rendering is Session 7
-polish — Session 6 only needs the redirect to work; the
-destination page's toast handling can be a no-op pending the
-Session 7 UI work.
+If role is not `'controller'`,
+`redirect('/[locale]/[orgId]/?forbidden=org-settings')` —
+the query flag `?forbidden=org-settings` is a named Session 6
+↔ Session 7 contract. Session 6 owns emitting the flag;
+Session 7 owns rendering a toast against the key. CA-76
+asserts the flag is emitted on non-controller redirect; toast
+behavior on the destination is no-op until Session 7 wires it.
 
 Rationale: server-component redirect is the same pattern used
 by the Session 5 welcome page's defense-in-depth guards.
@@ -247,10 +274,26 @@ Phase 2+ stubs). Matching Zod variants added to
 The `welcome` directive is a navigation hint rather than a new
 component. `ContextualCanvas` handles it by calling
 `router.push('/[locale]/welcome')` — the welcome page handles
-its own state. Useful for "take me back to onboarding" from
-within the main app shell. For Session 6 scope, the directive
-is wired; the user-facing trigger comes from Session 7's
-avatar dropdown + Mainframe Activity nav.
+its own state.
+
+**Master §15 on `welcome` is terse:** the full authoritative
+text is "`welcome` renders the onboarding layout (§11.2)." No
+concrete user-facing use case is specified. Session 6 wires
+the directive per master §15 inclusion, but the directive's
+only current semantic is "navigate to `/welcome` and let the
+server-component guards route appropriately":
+- Authenticated existing user (memberships + display_name) →
+  defense-in-depth redirect from the welcome page bounces them
+  back to their org. Round-trip no-op.
+- Authenticated onboarding-needed user → welcome page renders.
+- Unauthenticated user → redirect to sign-in.
+
+Real user-facing triggers for this directive (e.g., a "take a
+tour" or "profile refresher" feature) await a future session.
+Wiring it now costs one dispatch case plus the type/schema
+variant; removing it would require a master-brief amendment.
+Session 6 accepts the round-trip-for-existing-users reality
+openly rather than pretending it's a feature.
 
 ### Pre-decision 8 — Stale `/admin/orgs` cleanup is a Session 6 work item, not a separate commit
 
@@ -367,6 +410,18 @@ Fields per master §12.2: `name`, `legalName`, `industryId`
 `phone`, `timeZone`, `defaultLocale`, `defaultReportBasis`,
 `accountingFramework`. Pre-fill from
 `orgService.getOrgProfile`.
+
+**Field-list diff-verification vs master §12.2 (Convention #8
+applied):** the sub-brief's 12 fields match master §12.2's 12
+fields with naming-shorthand differences only. Master uses
+shorthand nouns in its prose ("industry", "timezone", "locale",
+"reportBasis"); the sub-brief uses the actual camelCase API-
+boundary field names from `updateOrgProfilePatchSchema`
+(`industryId`, `timeZone`, `defaultLocale`, `defaultReportBasis`)
+per Phase 1.5A convention. No fields missing; no fields added.
+This diff is a naming-precision improvement, not a scope
+change — the schema itself is the source of truth, and the
+sub-brief references the real field names.
 
 Save via `PATCH /api/orgs/[orgId]/profile`. Same button-state +
 validation pattern as §6.2. `baseCurrency` and
@@ -657,14 +712,16 @@ new canvas components' UX. Commit 4 has a founder review gate
 for the onboardingSuffix prose update. Every commit leaves
 `pnpm typecheck && pnpm test` green.
 
-- **Commit 1** — `feat(phase-1.2): canvas directive extensions (types + schema + ContextualCanvas dispatch)`
+- **Commit 1** — `feat(phase-1.2): canvas directive extensions (types + schema + ContextualCanvas dispatch stubs)`
   Files: updated `canvasDirective.ts`, updated
   `canvasDirective.schema.ts`, updated `ContextualCanvas.tsx`.
-  Components referenced in the dispatch switch are imported
-  from lazy imports or wrapped in fallback
-  `ComingSoonPlaceholder` until Commit 2 adds them — OR commits
-  1 and 2 are bundled if the typecheck dependency is awkward.
-  Execution decides based on how the import graph compiles.
+  The dispatch switch for the four new component-backed
+  directive types (`user_profile`, `org_profile`, `org_users`,
+  `invite_user`) renders `ComingSoonPlaceholder` pending
+  Commit 2; the `welcome` directive case lands fully in Commit
+  1 (it uses `router.push`, no component dependency). Commit 2
+  adds the components AND rewires the dispatch switch to route
+  to them.
 
 - **Commit 2** — `feat(phase-1.2): canvas components — UserProfileEditor, OrgProfileEditor, OrgUsersView`
   **FOUNDER REVIEW GATE** for the three new components' UX:
