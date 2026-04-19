@@ -1771,3 +1771,89 @@ Categories:
   Approximate drafting time: ~40 minutes (including the three-
   option step-4 pressure-test, the CURRENT_STATE surgery, and
   this entry).
+- 2026-04-18 NOTE   Phase 1.2 Session 5 sub-brief revision session
+  started. Starting SHA: 1ea60dc (Session 5 drafting anchor).
+  Starting model: Claude Opus 4.7 (claude-opus-4-7[1m]). Four
+  founder-review tightening items to apply: (1) §6.4 item 3
+  step-transition rule — advance to smallest uncompleted step
+  > N, not hardcoded 1→2/2→4; (2) §6.4 item 5 state persists
+  only on success path (failed turns don't advance the machine);
+  (3) §6.1 also exports onboardingStateSchema Zod alongside the
+  TS interface in src/agent/onboarding/state.ts; (4) §6.7
+  explicit Option B decision — invited-user welcome page uses
+  orgId={null} uniformly, richer-context question deferred.
+  Plus one minor §10 artifact-list fix (one template_id key,
+  not three). No §4 pre-decision changes, no §11 commit-plan
+  changes.
+- 2026-04-18 NOTE   Phase 1.2 Session 5 sub-brief revision session
+  complete. Four founder-review tightenings applied + one
+  drafting-bug fix surfaced during Revision 1 work. Sub-brief
+  grew 705 → 799 lines; no architectural changes, all spec
+  tightening.
+
+  Revisions applied:
+
+  (1) §6.4 item 3 — replaced hardcoded 1→2 / 2→4 transitions
+  with the smallest-uncompleted-step-greater-than-N rule. Three
+  worked examples added (fresh user step 1, fresh user step 2
+  atomic 2+3 advance, invited user step 1 → skip to 4).
+  Explicit edge-case handler: if `completed_steps` already
+  contains all of {1,2,3,4} before step-N completion, log an
+  error and don't re-advance (upstream bug; execution flags).
+
+  (2) §6.4 item 5 — state persists ONLY on the success path.
+  Failure paths (Q13 exhaustion, structural-retry exhaustion)
+  persist conversation via existing persistSession call but
+  MUST NOT persist state changes. Rationale: a failed turn
+  should be replayable without skipping a step. Concrete
+  implementation named: failure-path calls pass `state:
+  undefined`; only the success-path call passes the new state.
+
+  (3) §6.1 now exports `onboardingStateSchema` (Zod) alongside
+  the TS interface in the same file. Placement rationale
+  added: narrow agent-internal schemas live with their
+  subsystem (matches Session 4 pattern); broader boundary
+  schemas live under src/shared/schemas/. §6.6's implicit
+  schema reference now has a sourced definition.
+
+  (4) §6.7 explicit Option B decision — invited-user orgId is
+  `null` uniformly. Full rationale paragraph added: Option A
+  would load OrgContext for richer step-4 context but forces
+  orchestrator asymmetry (org-switch detection, agent.* audit
+  emits, onboarding suffix gating). Option B keeps onboarding
+  uniformly orgless; richer-context deferred. The welcome
+  page retains the invited user's firstOrgId client-side for
+  the completion router.push target.
+
+  Drafting bug surfaced (fix applied as extension of Revision
+  1): §6.7's initial-state computation had two errors the
+  drafter introduced that the founder's Revision 1 prompt used
+  the correct values for. (a) `current_step` was conditionally
+  1 or 4 based on invited-user status — wrong; master §11.1's
+  trigger only sends users to /welcome when display_name IS
+  NULL, so current_step is always 1 on arrival. Invited-user
+  shortened flow is expressed via initial `completed_steps`,
+  not initial `current_step`. (b) `completed_steps` for
+  invited users was stated as `[1, 2, 3]` — wrong; master
+  §11.5(c) specifies `[2, 3]` (profile is still needed, which
+  is why the user is in onboarding). Fixed §6.7 initial-state
+  list with explicit master citation. CA-71's initial-state
+  assertion also corrected from `completed_steps:[]` to
+  `completed_steps:[2,3]`, matching master §11.5(c). The
+  drafter's recap had this correct for the invited-user flow
+  *logic* but got the initial-state *numbers* wrong — an
+  example of "descriptively correct, numerically wrong"
+  drift. Worth noting but not a new convention-candidate —
+  it's a narrow single-datapoint class caught by the
+  founder's revision-round close reading.
+
+  Minor §10 fix: "Three new template_id keys" → "One new
+  template_id key", matching Pre-decision 8's specification
+  and §6.2's note that the suffix is English-only prompt prose
+  (not a locale-routed user-facing string).
+
+  No master-brief inconsistencies surfaced. No §4 pre-decision
+  changes. No §11 commit-plan changes. Seven candidate-future-
+  conventions staging unchanged.
+
+  Approximate revision time: ~25 minutes.

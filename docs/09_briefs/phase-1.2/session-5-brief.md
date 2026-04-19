@@ -278,8 +278,37 @@ absent or malformed (non-onboarding session). `writeOnboardingState`
 returns a new state object with `state.onboarding` populated,
 preserving any other keys in `state`.
 
-**Done when:** file exists, type + two helpers exported, unit
-coverage via integration tests in commit 5.
+Plus the Zod schema that mirrors the TS interface — same file,
+so the type + the runtime validator evolve together:
+
+```typescript
+import { z } from 'zod';
+
+export const onboardingStateSchema = z
+  .object({
+    in_onboarding: z.boolean(),
+    current_step: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
+    completed_steps: z.array(z.number().int().min(1).max(4)),
+    invited_user: z.boolean(),
+  })
+  .strict();
+```
+
+This is the schema §6.6 imports for the `/api/agent/message`
+route body validator. Keeping it alongside the type in
+`src/agent/onboarding/state.ts` (rather than in
+`src/shared/schemas/agent/`) matches the pattern Session 4 used
+for narrow agent-internal shapes — broader boundary schemas
+live under `src/shared/schemas/`, but this one is scoped to a
+single subsystem and reads more clearly next to its interface.
+
+**Done when:** file exists, type + two helpers + Zod schema
+exported, unit coverage via integration tests in commit 5.
 
 ### 6.2 Extended onboardingSuffix
 
@@ -357,13 +386,40 @@ Three additions inside `handleUserMessage`:
 
 3. **Detect transitions after executeTool** — for each tool
    execution that's relevant to onboarding, check the outcome
-   and advance state:
+   and compute the next step:
    - `updateUserProfile` returned with `display_name` set (Pre-
-     decision 5): advance `current_step` 1 → 2, add 1 to
-     `completed_steps`.
-   - `createOrganization` succeeded: advance `current_step`
-     2 → 4 (step 3 is embedded per master §11.3), add 2 and 3 to
-     `completed_steps`.
+     decision 5): step 1 completes.
+   - `createOrganization` succeeded: steps 2 AND 3 complete
+     together (step 3 is embedded per master §11.3).
+
+   **Step-advance rule** (replaces the hardcoded 1→2 / 2→4
+   pattern so the invited-user shortened flow works correctly):
+   when a step N completes, add N to `completed_steps`, then set
+   `current_step` to the smallest integer in `{1, 2, 3, 4}` that
+   is greater than N AND not in `completed_steps`. If no such
+   integer exists (all higher steps are already marked complete
+   via the invited-user initialization), set `current_step = 4`
+   as the terminal pre-completion state.
+
+   Worked examples:
+   - Fresh user at step 1 completes step 1 → `completed_steps`
+     becomes `[1]`; smallest integer > 1 not in it is `2` →
+     `current_step = 2`.
+   - Fresh user at step 2 completes step 2 + 3 atomically →
+     `completed_steps` becomes `[1, 2, 3]` (1 was already there
+     from step-1 completion); smallest > 3 not in it is `4` →
+     `current_step = 4`.
+   - Invited user at step 1 with `completed_steps = [2, 3]`
+     completes step 1 → `completed_steps` becomes `[2, 3, 1]`;
+     smallest > 1 not in it is `4` → `current_step = 4`
+     (skipping 2 and 3, which are pre-completed from
+     initialization).
+
+   **Edge case:** if `completed_steps` already contains all of
+   `{1, 2, 3, 4}` before step-N completion, something upstream
+   is broken (step completion fired on an already-terminal
+   machine). The transition handler logs an error and does not
+   re-advance — execution sees it in logs and flags.
 
 4. **Detect step-4 completion** — inspect the `respondToUser`
    block's `template_id` after the tool-use partition. If it
@@ -377,9 +433,22 @@ Three additions inside `handleUserMessage`:
    the UPDATE includes `state = $new_state`. All three write
    sites above go through this single path.
 
+   **State is persisted ONLY on the success path** —
+   respondToUser present, no validation errors. Failure paths
+   (Q13 exhaustion, structural-retry exhaustion) persist
+   conversation via the existing `persistSession` call but MUST
+   NOT persist state changes. Rationale: a failed turn should
+   be replayable without skipping a step. If `updateUserProfile`
+   validation fails twice and hits Q13 exhaustion, `current_step`
+   stays at 1; the user's next message is still a step-1 turn.
+   Concrete implementation: the two failure-path `persistSession`
+   calls pass `state: undefined` (or omit the parameter); only
+   the success-path call passes the new state.
+
 **Done when:** handleUserMessage reads state, advances on tool
-outcomes, detects step-4 completion, and `AgentResponse` exposes
-`onboarding_complete`.
+outcomes using the smallest-uncompleted-step rule, detects
+step-4 completion, persists state only on the success path, and
+`AgentResponse` exposes `onboarding_complete`.
 
 ### 6.5 AgentResponse shape extension
 
@@ -443,13 +512,17 @@ Server-component flow:
 2. Query `memberships` filtered to the caller's user_id + status
    = 'active'. Count.
 3. Query `user_profiles.display_name` for the caller.
-4. Compute initial `OnboardingState`:
+4. Compute initial `OnboardingState` per master §11.5(c):
    - `in_onboarding: true`
-   - `current_step`: 1 if display_name is null, 4 if invited user
-     (display_name exists already in this path per master §11.1
-     — shortened flow skips to step 4)
-   - `completed_steps`: `[]` for full flow, `[1, 2, 3]` for
-     invited users (profile + org + industry already done)
+   - `current_step: 1` — always. Master §11.1's trigger only
+     routes users to `/welcome` when `display_name IS NULL`, so
+     both fresh and invited users need step 1 (profile). The
+     advance rule in §6.4 item 3 handles the invited-user
+     shortened flow by skipping steps 2+3 on step-1 completion.
+   - `completed_steps`: `[]` for fresh user (zero memberships),
+     `[2, 3]` for invited user (org + industry already exist;
+     profile is still needed via step 1). Matches master
+     §11.5(c) verbatim.
    - `invited_user`: true if ≥ 1 active membership, else false
 5. Render a minimal layout — no Mainframe rail, no canvas — with
    `<AgentChatPanel orgId={null} initialOnboardingState={...} />`
@@ -461,6 +534,27 @@ component's first POST to `/api/agent/message` includes this
 value as `initial_onboarding` (passed through per §6.6).
 Subsequent messages rely on the persisted session state and do
 not re-send the initial state.
+
+**Invited-user orgId in Session 5: null.** Both fresh and
+invited users land on the welcome page with
+`<AgentChatPanel orgId={null} ... />`. Option A (passing the
+invited user's first-membership `org_id`) would load OrgContext
+and give step 4 richer conversational context — "Want to see
+the CoA for {org_name}?" vs "Want to see your CoA?" — but it
+forces the orchestrator to treat onboarding and non-onboarding
+sessions asymmetrically (org-switch detection would fire,
+`agent.*` audit emits would fire at normal cadence, onboarding
+suffix gating would depend on `state.onboarding` rather than
+`org_id === null`). Session 5 takes the simpler Option B:
+onboarding is uniformly orgless regardless of invited-user
+status. Step 4's conversational menu works without
+`OrgContext`. The richer-context question is deferred to a
+later session where the trade-off can be made against live
+usage data. The welcome page still has the membership list
+client-side (for the invited-user case the firstOrgId is
+known), so the completion `router.push` at onboarding-complete
+has the target org available without needing the orchestrator
+to know it.
 
 **Layout constraint:** the welcome page does NOT wrap in
 `SplitScreenLayout` (Session 7 scope per master §14.4). It uses
@@ -586,7 +680,7 @@ add sub-assertions or additional it-blocks per Pre-decision 7.
 | CA-68 | `tests/integration/onboardingStep1Transition.test.ts` | Start session with `state.onboarding = { in_onboarding:true, current_step:1, completed_steps:[], invited_user:false }`. Seed a fixture that calls `updateUserProfile({displayName:'Test Name'})`. After handleUserMessage: reload session; `state.onboarding.current_step === 2`, `completed_steps` contains `1`. |
 | CA-69 | `tests/integration/onboardingStep2And3Transition.test.ts` | Start at step 2. Fixture calls `createOrganization` with valid input. After handleUserMessage: reload session; `current_step === 4`, `completed_steps` contains `1, 2, 3`. |
 | CA-70 | `tests/integration/onboardingStep4Completion.test.ts` | Start at step 4. Fixture returns `respondToUser` with `template_id: 'agent.onboarding.first_task.navigate'`. After handleUserMessage: returned `AgentResponse.onboarding_complete === true`; reload session; `state.onboarding.in_onboarding === false`. Second fixture: `respondToUser` with a different template_id at step 4 → `onboarding_complete` stays unset, `in_onboarding` stays true. |
-| CA-71 | `tests/integration/onboardingInvitedUser.test.ts` | Compute initial OnboardingState as the welcome page would: user with one active membership + null display_name → `{current_step:1, completed_steps:[], invited_user:true}`. Then assert that when step 1 completes, the agent advances directly to step 4 (not step 2), reflecting the shortened flow. `completed_steps` after step-1 completion: `[1, 2, 3]`. |
+| CA-71 | `tests/integration/onboardingInvitedUser.test.ts` | Compute initial OnboardingState as the welcome page would: user with one active membership + null display_name → `{current_step:1, completed_steps:[2,3], invited_user:true}` per master §11.5(c). Then assert that when step 1 completes, the advance rule (§6.4 item 3) moves `current_step` directly to `4` (smallest int > 1 not in `{2,3,1}`), reflecting the shortened flow. `completed_steps` after step-1 completion is order-independent `{1, 2, 3}` — use a set-equality assertion (`expect(new Set(s)).toEqual(new Set([1,2,3]))`) rather than array-order to avoid coupling the test to the advance-rule's append order. |
 | CA-72 | `tests/integration/onboardingResumeBehavior.test.ts` | Create an onboarding session at step 2, don't complete. Simulate a second message turn (same session_id, within TTL). buildSystemPrompt's generated prompt on the second turn contains step-2 language (resume from current_step). Two it-blocks: (a) within TTL — resume; (b) beyond TTL — new session, step 1 fresh. |
 | CA-73 | `tests/integration/onboardingSignInRedirect.test.ts` | Two it-blocks in one file. (1) User with zero active memberships → sign-in post-auth logic routes to `/welcome`. (2) User with active membership + populated display_name → routes to `/admin/orgs`. Tests the redirect decision function (a pure function extracted from the sign-in page), not the browser flow. |
 
@@ -641,12 +735,12 @@ The execution session produces:
 - Updated `src/components/agent/AgentChatPanel.tsx` (prop
   contract conformance)
 - Updated `src/app/[locale]/sign-in/page.tsx` (redirect logic)
-- Three new template_id keys in `messages/en.json`,
-  `messages/fr-CA.json`, `messages/zh-Hant.json`
-  (`agent.onboarding.first_task.navigate` + any step-aware
-  prompt strings if the suffix uses locale-routed text — the
-  suffix is English-only per Session 3 convention, so likely
-  one new key only)
+- One new template_id key (`agent.onboarding.first_task.navigate`)
+  added to all three locale files (`messages/en.json`,
+  `messages/fr-CA.json`, `messages/zh-Hant.json`) per Pre-decision
+  8. The `onboardingSuffix` itself is English-only per Session 3
+  convention (prompt prose, not user-facing strings), so no
+  locale-routed prompt keys are added.
 - 7+ new test files (`tests/integration/*.test.ts`)
 - Updated `docs/07_governance/friction-journal.md`
   (session-close entry)
