@@ -1857,3 +1857,108 @@ Categories:
   conventions staging unchanged.
 
   Approximate revision time: ~25 minutes.
+- 2026-04-18 NOTE   Phase 1.2 Session 5 execution session —
+  starting. Starting SHA: 9c22e07 (Session 5 sub-brief
+  revision anchor; sub-brief at
+  docs/09_briefs/phase-1.2/session-5-brief.md is frozen and
+  authoritative). Starting model: Claude Opus 4.7
+  (claude-opus-4-7[1m]). Master brief frozen at aae547a.
+  Regression baseline: 209/209. Target test count at
+  session close: ~218 (209 + 7 CA-67–73 floor, more if
+  sub-assertions surface per Pre-decision 7). Five-commit
+  cadence with commit-1 founder review gate for the
+  extended onboardingSuffix prose. Eight founder
+  pre-decisions in sub-brief §4 are authoritative. Mandatory
+  §6.11 Cited-Code Verification grep: clean. Nine hits in
+  src/agent/ for onboarding-related text (all Session 3/4
+  expected: onboardingSuffix, orgContextSummary, persona
+  files, orchestrator, toolsForPersona, listIndustries,
+  createOrganization); zero hits in src/app/ (Session 5
+  creates /welcome and the sign-in redirect). Zero hits for
+  state.onboarding / OnboardingState (Session 5 introduces
+  both). `last_login_at` used only for its natural
+  login-time tracking in userProfileService + membership
+  listing — NOT as an onboarding signal per Pre-decision 5
+  (Session 5 uses display_name).
+- 2026-04-19 NOTE   Phase 1.2 Session 5 execution complete. All
+  11 S5 exit criteria pass. 5 commits on top of 9c22e07:
+  be72229 (OnboardingState + extended suffix + buildSystemPrompt
+  wiring — commit-1 founder review gate produced one polish:
+  "isn't available yet" → "isn't wired in for you right now" on
+  step 2's skip handler), 6297b57 (orchestrator state
+  transitions + AgentResponse.onboarding_complete), 246ee25
+  (welcome page + AgentChatPanel prop contract), f09b73f
+  (sign-in redirect logic), 2b644f6 (CA-67 through CA-73 tests).
+  Starting model: Claude Opus 4.7 — unchanged throughout. Full
+  regression: 67 test files, 226 tests, 0 failures (209 baseline
+  + 17 new it-blocks across 7 new CA files — CA-67 × 5, CA-68 ×
+  1, CA-69 × 1, CA-70 × 2, CA-71 × 2, CA-72 × 2, CA-73 × 4).
+  Target test count was ~218; actual 226 via sub-assertions per
+  Pre-decision 7. Master brief frozen at aae547a. Sub-brief
+  frozen at 9c22e07.
+
+  Two execution-time finds worth preserving:
+
+  (1) Sub-brief §6.3 internal contradiction — captured at
+  Commit 1 review gate. "onboardingSuffix returns empty for null"
+  (§6.3 first statement) and "the old behavior (generic
+  onboarding suffix) still fires" under the guard (§6.3 second
+  statement) are contradictory if both route through the same
+  function. Resolved by splitting: onboardingSuffix(state)
+  returns empty for null (step-aware path), new
+  genericOnboardingSuffix() preserves Session 3's static block
+  verbatim. buildSystemPrompt's defense-in-depth guard calls
+  the generic variant as fallback. CA-49 stays green, Session 3
+  behavior preserved. Datapoint #3 for the "narratively correct,
+  contractually wrong" drift pattern — first was Session 4's
+  test-ripple count correction, second was the invited-user
+  initial state [1,2,3] vs master §11.5(c)'s [2,3] during
+  Session 5 sub-brief revision. Founder flagged three datapoints
+  as the convention-proposal bar; candidate will be staged after
+  Session 5 close per founder discipline.
+
+  (2) orgService.createOrgWithTemplate input-schema mismatch —
+  surfaced by CA-69 on first end-to-end exercise of the
+  createOrganization agent dispatch. Agent tool's
+  createOrganizationInputSchema (8 fields) is narrower than
+  orgService's createOrgProfileSchema which also requires
+  accountingFramework + defaultReportBasis. Fix: executeTool's
+  createOrganization dispatch merges 'aspe' / 'accrual' defaults
+  (matching the DB column defaults from migration 109) before
+  calling the service. Same class as Session 4's missing
+  idempotency_key column write — a pre-existing gap exposed
+  only when a new session first exercises an end-to-end path.
+  Narrow single-datapoint class; not a new convention candidate.
+
+  No master-brief inconsistencies surfaced requiring an
+  unfreeze. Clarification D skip rule stayed intact per §9 of
+  the sub-brief (Session 5 explicitly declined to loosen for
+  richer onboarding audit coverage — Phase 2 events-table
+  revisit remains the right venue). resolvePersona onboarding
+  stub confirmed as master decision A with the durable inline
+  comment per Pre-decision 6.
+
+  No Anthropic API calls during execution — CA-67 through
+  CA-73 are all fixture-driven (no CA-66-style real-API smoke).
+  Cost: zero.
+
+  Candidate-future-conventions: eight staged now (seven from
+  Session 4.5 close + one proposed after Session 5: the
+  "narratively correct, contractually wrong" drift pattern,
+  with three datapoints accumulated). None codified per founder
+  batching discipline.
+
+  Session decomposition discipline held: no Session 6+ scope
+  leaked in (no form-escape surfaces, no Skip link
+  implementation, no canvas directive extensions, no
+  AgentChatPanel rewrite beyond the minimal prop-contract
+  conformance + onboarding-mode branch). The AgentChatPanel
+  change does add a new OnboardingChat subcomponent that
+  Session 7's rewrite will consolidate — scoped to render the
+  minimal welcome flow without importing any Session 7
+  components (SuggestedPrompts is skipped in onboarding mode
+  per Pre-decision 1's spirit).
+
+  Approximate session time: ~60 minutes (including the commit-1
+  review gate pause, the CA-49 test-preservation fix, the
+  CA-69 createOrganization input-schema fix, and this entry).
