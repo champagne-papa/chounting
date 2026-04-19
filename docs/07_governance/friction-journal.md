@@ -1610,3 +1610,38 @@ Categories:
   migration-113 halt, the commit-2 review gate, the PostgREST
   rewrite, the test-ripple count correction from 6 to 10, and
   the commit-6 idempotency_key fix).
+- 2026-04-18 NOTE   Phase 1.2 Session 4.5 — AuditEntry nullable
+  cleanup. Single-commit follow-up to Session 4's migration-113
+  find. Scope: change AuditEntry.org_id from string to
+  string | null in src/services/audit/recordMutation.ts; remove
+  the `undefined as unknown as string` cast at
+  userProfileService.updateProfile:115 in favor of
+  `org_id: null`; audit every other recordMutation call site
+  for null-correctness. Audit result: 18 recordMutation call
+  sites across 8 files — 17 pass non-null org_ids (safe), 1 is
+  the hack (cleanup target). authEvents.ts's login/logout
+  writes bypass recordMutation and insert directly with
+  `org_id: null` — that code is already correct; refactoring it
+  to use recordMutation would have been scope creep, left
+  alone. No test additions, no new service functions. 209/209
+  still green. Type change is purely additive (widens the
+  accepted input set), so existing non-null callers continue to
+  typecheck. Starting model: Claude Opus 4.7 — continuous with
+  Session 4. Starting SHA: 9c6552d. One commit lands this.
+
+  Clarification D skip-rule reconsideration (surfaced for
+  Session 5, not changed here): now that audit_log.org_id is
+  known to accept null, Session 4's three agent.* emit sites
+  (loadOrCreateSession branch 3, handleUserMessage's three
+  return points, executeTool's finally block) could emit with
+  null org_id during onboarding instead of skipping. This
+  would give richer audit coverage for the onboarding flow
+  Session 5 is building. The trade-off is modest — skipping
+  loses nothing critical (provenance recovers on first
+  session_org_switched), but the explicit emits make
+  onboarding-time agent behavior visible in audit_log for
+  debugging. Flag for Session 5 to decide as part of its
+  onboarding-state-machine design; Session 4.5 does not
+  change the skip rule.
+
+  Approximate session time: ~25 minutes.

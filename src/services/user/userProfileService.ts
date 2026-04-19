@@ -111,8 +111,12 @@ export const userProfileService = {
 
     if (updateErr) throw new ServiceError('PROFILE_UPDATE_FAILED', updateErr.message);
 
+    // user.profile_updated is a user event, not an org event —
+    // the profile is not scoped to any specific org. audit_log
+    // .org_id has been nullable since migration 113 (Phase 1.5B);
+    // AuditEntry.org_id is string | null as of Session 4.5.
     await recordMutation(db, ctx, {
-      org_id: undefined as unknown as string,
+      org_id: null,
       action: 'user.profile_updated',
       entity_type: 'user_profile',
       entity_id: input.user_id,

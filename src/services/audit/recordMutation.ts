@@ -9,7 +9,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 
 export interface AuditEntry {
-  org_id: string;
+  // org_id is nullable per migration 113 (2026-04-15) —
+  // login/logout and user-profile-update audit rows legitimately
+  // carry null org_id because they are user events, not org
+  // events. Prior to this type update, callers without an org
+  // context cast undefined through `unknown as string` to
+  // satisfy the type; the hack only worked because Supabase-js
+  // silently drops undefined JSON fields. Typing the field
+  // correctly lets callers pass null explicitly.
+  org_id: string | null;
   action: string;
   entity_type: string;
   entity_id?: string;
