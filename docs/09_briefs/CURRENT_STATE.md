@@ -79,34 +79,73 @@ recordMutation and was left alone (already correct). 209/209
 still green; purely additive type widening. Session 5 inherits
 the accurate type without further cleanup.
 
-### Session 5 — Ready to execute (2026-04-18)
+### Session 5 — Complete (2026-04-18)
 
-Sub-brief at `docs/09_briefs/phase-1.2/session-5-brief.md`.
-Scope: master §11 onboarding flow — state machine
-(`OnboardingState` on `agent_sessions.state.onboarding`),
-extended `onboardingSuffix` with step-aware instructions,
-`buildSystemPrompt` threading, orchestrator state-read + four
-transition handlers (step 1 on display_name set, steps 2+3 on
-createOrganization success, step 4 on respondToUser with
-`agent.onboarding.first_task.navigate` template_id), welcome
-page at `src/app/[locale]/welcome/page.tsx` (server component,
-minimal functional — Session 7 polishes), sign-in redirect
-logic, `AgentChatPanel` prop contract `{ orgId: string | null }`.
-11 S5 exit criteria, 7+ new CA tests (CA-67 through CA-73),
-5-commit cadence with commit-1 founder review gate for the
-extended onboardingSuffix prose. Eight founder pre-decisions:
-(1) minimal welcome no Session-7 imports; (2) AgentChatPanel
-contract locked; (3) invited-user detection via server
-component; (4) step-4 completion is a state flag flip (not
-canvas_directive — defers first canvas_directive use to
-Session 6/7); (5) step 1 completes when display_name is set;
-(6) resolvePersona stub confirmed as master decision A; (7)
-test delta is a floor; (8) step-4 signal is the respondToUser
-template_id pattern (drafting decision, Options B+C rejected).
-No new migrations, tools, deps, ActionNames, or ServiceError
-codes.
+Sub-brief at `docs/09_briefs/phase-1.2/session-5-brief.md`
+(frozen at 9c22e07). Execution landed as commits be72229 →
+6297b57 → 246ee25 → f09b73f → 2b644f6 → 4487e19 (5 feature +
+1 docs closeout) on top of 9c22e07. All 11 S5 exit criteria
+pass. 226/226 tests (209 baseline + 17 new it-blocks across 7
+CA files). Commit-1 founder review gate produced one polish
+(step 2 "isn't available yet" → "isn't wired in for you right
+now"). Delivered: master §11 onboarding flow — state machine,
+extended onboardingSuffix, welcome page, sign-in redirect,
+AgentChatPanel prop contract.
 
-Sessions 6–8 sub-briefs land as each predecessor session closes out.
+### Session 5.1 — Complete (2026-04-19)
+
+Three commits (9b1af3d, 887d5ea, 6a588f8) fixing the two
+shipping-blocker bugs surfaced by the first EC-20 smoke run
+against real Claude. Bug 1: multi-turn protocol violation
+(persistSession wrote `respondToUser` tool_use verbatim,
+violating Anthropic's tool_use → tool_result rule). Bug 2:
+template_id invention (system prompt didn't enumerate valid
+keys). Two regression tests added
+(agentConversationProtocolInvariant, agentTemplateIdSetClosure).
+233/233 tests green.
+
+### Session 5.2 — Complete (2026-04-19)
+
+Three commits (e0a4435, f69fe75, 3f02b17) fixing the two
+production-latent bugs surfaced by the post-Session-5.1 smoke
+re-run. Bug 3: PROFILE_NOT_FOUND on bypass-sign-in paths
+(userProfileService.updateProfile became upsert-shaped). Bug
+4: state machine allowed step-4 completion without step 1
+completing (orchestrator guard + onboardingSuffix step-4
+prose branch now require completed_steps.includes(1)). Two
+regression tests added. 238/238 tests green.
+
+### EC-20 — Combined closeout PASSED (2026-04-19, 90e9dbb)
+
+Single-commit consolidated journal entry covering all three
+autonomous smoke runs + three founder-driven browser
+scenarios. Four bugs surfaced and fixed across Sessions 5 /
+5.1 / 5.2. All browser scenarios (3, 4, 5) pass. One
+production-readiness gap documented for Session 7 (no
+sign-out affordance in current shell). Mock-vs-Protocol
+Invariant Gap convention candidate at 2 datapoints.
+
+### Session 6 — Ready to execute (2026-04-19)
+
+Sub-brief at `docs/09_briefs/phase-1.2/session-6-brief.md`.
+Scope: master §12 form-escape surfaces (user profile editor,
+org profile editor, org users list with inline invite,
+invitation accept page) + master §15 canvas directive
+extensions (five new types: user_profile, org_profile,
+org_users, invite_user, welcome) + ContextualCanvas dispatch +
+onboarding skip-link wiring + one stale `/admin/orgs` doc
+cleanup. All Phase 1.5A/B API backends exist; Session 6 is
+pure UI + type/schema + dispatch. 12 S6 exit criteria, 8 new
+CA tests (CA-74 through CA-81), 5-commit cadence with two
+review gates (Commit 2 for canvas component UX, Commit 4 for
+onboardingSuffix prose update). Eight founder pre-decisions.
+No migrations, no new ActionNames, no new ServiceError codes,
+no new deps, no orchestrator changes. Covers EC-21, EC-23,
+EC-24, EC-25, EC-26. Convention #8 Spec-to-Implementation
+Verification (first-ever codification, commit b24a8d6)
+applied to this sub-brief's drafting.
+
+Sessions 7–8 sub-briefs land as each predecessor session closes out.
 
 ---
 

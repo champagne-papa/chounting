@@ -2432,3 +2432,128 @@ Categories:
   tests would have missed, two of them shipping-blockers.
 
   Approximate documentation time: ~25 minutes.
+- 2026-04-19 NOTE   Phase 1.2 Session 6 sub-brief drafting
+  session started. Starting SHA: 90e9dbb (EC-20 combined
+  closeout). Starting model: Claude Opus 4.7. Scope: master
+  §12 (five form-escape surfaces: user profile editor, org
+  profile editor, org users list, invitation accept page,
+  invite user flow) + master §15 (five canvas directive
+  extensions: user_profile, org_profile, org_users,
+  invite_user, welcome). EC-* gates to cover: EC-21, EC-23,
+  EC-24, EC-25, EC-26. Master brief frozen at aae547a.
+  Regression baseline 238/238.
+
+  **First codification from the candidate-convention backlog.**
+  Convention #8 "Spec-to-Implementation Verification" codified
+  as the first commit of this drafting session (b24a8d6),
+  BEFORE drafting pre-work starts. Positioned in
+  docs/04_engineering/conventions.md under a new "Phase 1.2
+  Conventions" block parallel to the existing Phase 1.5A
+  block. Applies to this sub-brief's preparation: every
+  numeric claim, literal value, list element, or structural
+  reference citing master brief / Phase 1.5 / ADRs / migrations
+  / locale files / prior sub-briefs MUST be grep-verified
+  before freeze. Nine candidates remain staged; one codified.
+
+  Session 6 drafting pre-work (per Convention #8) will run:
+  (1) grep docs/ for stale /admin/orgs references; (2) verify
+  canvas directive types against master §15 and existing
+  src/shared/types/canvasDirective.ts declarations;
+  (3) grep src/ for Phase 1.5B form-escape groundwork to
+  identify build/stub/net-new surface; (4) OnboardingChat seam
+  check (Session 7 consolidation target — don't touch);
+  (5) EC-20 closeout commit presence check. Results feed the
+  sub-brief structure and commit plan.
+- 2026-04-19 NOTE   Phase 1.2 Session 6 sub-brief drafting
+  session complete. Artifacts: (1) session-6-brief.md (701
+  lines — within the 600–900 target, ~100 shorter than Session
+  5's 799 reflecting Session 6's tighter scope since all
+  backends are built); (2) CURRENT_STATE.md updated —
+  Sessions 5, 5.1, 5.2 marked complete with commit hashes, EC-20
+  closeout noted, Session 6 marked ready to execute; (3) this
+  entry. Eight founder pre-decisions locked in sub-brief §4.
+
+  Pre-work findings (per Convention #8 Spec-to-Implementation
+  Verification applied to this sub-brief's drafting):
+
+  (1) /admin/orgs grep surfaced 15 total hits across docs/.
+  Classified: 6 archive (leave), 3 Phase 1.1 historical (leave
+  — `/admin/orgs` was Phase 1.1's org-creation page), 1
+  actively stale in active spec
+  (`docs/03_architecture/ui_architecture.md:197` routing table
+  — Session 6 §6.9 cleans it), 2 stale in the Session 5
+  sub-brief itself (frozen at 9c22e07, flagged for Session 8
+  reconciliation not Session 6 cleanup), 3 hits in the drafting
+  grep's own journal entry context (self-referential, no
+  action).
+
+  (2) Canvas directive types grep against master §15:
+  src/shared/types/canvasDirective.ts has Phase 1.1 built
+  types + Phase 2+ stubs; none of the five new Session 6 types
+  (user_profile, org_profile, org_users, invite_user, welcome)
+  currently exist. All net-new additions. No overlaps.
+
+  (3) Phase 1.5A/B groundwork grep: all five backend services
+  exist (userProfileService with upsert, orgService,
+  invitationService, membershipService), all five API routes
+  exist (`/api/auth/me` PATCH, `/api/orgs/[orgId]/profile` PATCH,
+  `/api/orgs/[orgId]/invitations` POST,
+  `/api/orgs/[orgId]/users` GET, `/api/invitations/accept`
+  POST). Session 6 writes zero service code. Pure UI + wiring.
+
+  (4) OnboardingChat seam check: the mode-branch in
+  AgentChatPanel.tsx (Session 5's `initialOnboardingState`
+  prop triggers the OnboardingChat subcomponent) is Session 7
+  consolidation target. Session 6 sub-brief §9 explicitly
+  marks AgentChatPanel.tsx as NOT-modified. Skip-link lives in
+  the welcome page layout (a sibling element to the chat
+  panel), not inside the panel itself.
+
+  (5) EC-20 closeout commit (90e9dbb) present and verified in
+  friction journal line 2268. Gate PASSED prior to Session 6
+  drafting.
+
+  Three structural observations from drafting worth preserving:
+
+  (a) Convention #8's first application: the grep verification
+  took ~6 minutes across the five checks. Finding the actively
+  stale `ui_architecture.md:197` reference BEFORE drafting let
+  it become a scoped work item (§6.9) rather than surfacing
+  mid-execution as a Session 8 cleanup pile. Pattern validated
+  on its first deployment: five minutes of grep saves a
+  Session 8 reconciliation entry.
+
+  (b) The canvas-component vs route-page split (Pre-decision
+  1): both consumers (agent directive + avatar dropdown) need
+  the same editor. Session 6 builds components once; route
+  pages are thin wrappers. Follows the existing Phase 1.1
+  pattern (`JournalEntryForm` lives in `src/components/canvas/`
+  and is reached via both route and canvas directive). No new
+  pattern invented; consistent with the codebase.
+
+  (c) Skip-link placement (Pre-decision 3): the Session 5
+  onboardingSuffix acknowledged forms don't exist yet. Session
+  6 wires them, and the skip link goes in the welcome page
+  LAYOUT (not in the chat transcript) to avoid polluting the
+  agent conversation with UI affordances. Only step 1 has a
+  skip target (user profile); step 2/3/4 don't because the
+  org-creation path has no form-escape in Session 6 and step 4
+  isn't a skippable step. Clean separation: the welcome page
+  is the UI shell, the chat is the conversation, and the
+  onboardingSuffix prose describes behavior for the chat.
+
+  Two review gates planned:
+  - Commit 2: three new canvas components' UX (field ordering,
+    labels, save confirmation prose, error surfaces, invite-
+    form token display, role badges).
+  - Commit 4: onboardingSuffix step-1 prose update
+    acknowledging the skip link now exists.
+
+  Nine candidate-future-conventions staged; one (Convention
+  #8) codified today. Mock-vs-Protocol Invariant Gap still at
+  2 datapoints, watching Session 6 execution for a possible
+  third.
+
+  Approximate drafting time: ~55 minutes (including 6 minutes
+  of pre-work grep, the CURRENT_STATE surgery, and this
+  entry).
