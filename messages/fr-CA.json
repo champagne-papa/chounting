@@ -25,7 +25,9 @@
       "listed": "I found {count} accounts for your organization."
     },
     "entry": {
-      "proposed": "Proposed entry of {amount}. Please review the details below."
+      "proposed": "Proposed entry of {amount}. Please review the details below.",
+      "posted": "Entry #{entry_number} has been posted to the ledger.",
+      "rejected": "Proposal rejected. The entry will not be posted."
     },
     "error": {
       "tool_validation_failed": "I was unable to format a valid request after {retries} attempts. Please rephrase what you'd like to do.",
@@ -34,6 +36,21 @@
     "onboarding": {
       "first_task": {
         "navigate": "Taking you there now."
+      }
+    },
+    "suggestions": {
+      "controller": {
+        "pl": "Show me the P&L",
+        "new_entry": "Book a new journal entry",
+        "ai_actions": "Review the agent's recent actions"
+      },
+      "ap_specialist": {
+        "queue": "Show the AP queue",
+        "incoming": "What's incoming today?"
+      },
+      "executive": {
+        "cash": "What's our cash position?",
+        "runway": "How's our runway?"
       }
     }
   },

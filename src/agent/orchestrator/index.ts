@@ -38,6 +38,8 @@ import { callClaude } from './callClaude';
 import { loadOrCreateSession, type AgentSessionRow } from './loadOrCreateSession';
 import { toolsForPersona, type Persona } from './toolsForPersona';
 import { buildSystemPrompt } from './buildSystemPrompt';
+import { respondToUserInputSchema } from '@/agent/tools/schemas/respondToUser.schema';
+import { validateParamsAgainstTemplate } from '@/agent/prompts/validTemplateIds';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
 import {
   type OnboardingState,
@@ -338,6 +340,81 @@ export async function handleUserMessage(
       }
     }
 
+    // Session 7 Commit 1: orchestrator-boundary validation for
+    // the respondToUser params. The wrapper schema enforces the
+    // outer { template_id, params, canvas_directive? } shape;
+    // validateParamsAgainstTemplate enforces the per-template
+    // params shape declared in TEMPLATE_ID_PARAMS. Either failure
+    // pushes a tool_result and rides the same Q13 retry budget
+    // as otherTools validation failures — exhaustion emits the
+    // agent.error.tool_validation_failed template as a normal
+    // turn (existing path below).
+    let respondParsed:
+      | {
+          template_id: string;
+          params: Record<string, unknown>;
+          canvas_directive?: CanvasDirective;
+        }
+      | null = null;
+    if (respondBlock) {
+      const respondShape = respondToUserInputSchema.safeParse(
+        respondBlock.input,
+      );
+      if (!respondShape.success) {
+        const issues = respondShape.error.issues
+          .map((i) => `${i.path.join('.')}: ${i.message}`)
+          .join('; ');
+        log.warn(
+          { tool_name: 'respondToUser', issues },
+          'respondToUser input failed Zod (wrapper)',
+        );
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: respondBlock.id,
+          is_error: true,
+          content: `Validation failed: ${issues}`,
+        });
+        hadValidationError = true;
+      } else {
+        const templateCheck = validateParamsAgainstTemplate(
+          respondShape.data.template_id,
+          respondShape.data.params,
+        );
+        if (!templateCheck.ok) {
+          const issues = templateCheck.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; ');
+          log.warn(
+            {
+              tool_name: 'respondToUser',
+              template_id: respondShape.data.template_id,
+              issues,
+            },
+            'respondToUser params failed template validation',
+          );
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: respondBlock.id,
+            is_error: true,
+            content: `Validation failed for template_id ${respondShape.data.template_id}: ${issues}`,
+          });
+          hadValidationError = true;
+        } else {
+          // Cast bridges the loose schema type (canvas_directive's
+          // proposed_entry_card variant uses z.unknown() placeholder
+          // until Session 7 Commit 2 replaces it with the real
+          // ProposedEntryCardSchema) to the strict CanvasDirective
+          // type used downstream. Mirrors the pattern that lived at
+          // the cast site this validation block displaces.
+          respondParsed = respondShape.data as {
+            template_id: string;
+            params: Record<string, unknown>;
+            canvas_directive?: CanvasDirective;
+          };
+        }
+      }
+    }
+
     // Q13 budget: if validation failed, retry up to MAX times
     if (hadValidationError) {
       validationRetries += 1;
@@ -371,12 +448,8 @@ export async function handleUserMessage(
     }
 
     // No validation errors. If respondToUser present, we're done.
-    if (respondBlock) {
-      const parsedRespond = (respondBlock.input as {
-        template_id: string;
-        params: Record<string, unknown>;
-        canvas_directive?: CanvasDirective;
-      });
+    if (respondBlock && respondParsed) {
+      const parsedRespond = respondParsed;
 
       // Step-4 completion detection (sub-brief §6.4 item 4 +
       // Pre-decision 8). The agent signals "onboarding done"

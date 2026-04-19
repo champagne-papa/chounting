@@ -2986,3 +2986,25 @@ Categories:
   top of current HEAD, then `git stash pop`. One datapoint, not
   yet a convention candidate — the codification threshold is
   two.
+
+## Phase 1.2 Session 7 (execution)
+
+- 2026-04-19 NOTE   Session 7 execution kickoff. Anchor SHA
+  af8b636 (docs(phase-1.2): CURRENT_STATE Session 7 kickoff
+  ready). Working tree clean. Baseline: 288/288 tests green,
+  `pnpm agent:validate` expected to pass. Sub-brief at
+  `docs/09_briefs/phase-1.2/session-7-brief.md` (frozen at
+  ba9599a), DRAFT v4 with grep-pass verification + founder
+  surgical corrections applied. Six commits planned: (1)
+  params-shape enumeration + locale keys + orchestrator-
+  boundary validation; (2) ProposedEntryCard real render +
+  schema tightening + reject endpoint + migration 120; (3)
+  AgentChatPanel production rewrite + conversation resumption
+  + error UI; (4) shell polish (avatar dropdown + Activity
+  icon + placeholder review queue page); (5) canvas context
+  click handlers + EC-19 tests; (6) docs closeout + Session 8
+  handoff. Pre-declared split-point at end of Commit 3 if
+  wall-clock past day 2. Each commit gates on a founder review
+  per the Session 6 pattern — diff review, test-pass
+  verification, Convention #8 identity-assertion spot-check.
+  Starting Commit 1.
