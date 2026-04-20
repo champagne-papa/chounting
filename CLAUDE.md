@@ -44,7 +44,9 @@ remain authoritative. Load by trigger:
 
 1. `pnpm agent:validate` passes — runs typecheck, the
    no-hardcoded-URLs grep check, and all five Category A floor
-   tests.
+   tests. `pnpm test` is the full vitest suite; `pnpm test:e2e`
+   runs the Playwright harness at `tests/e2e/` — see the
+   `tests/e2e/README.md` for setup and founder review workflow.
 2. Every doc you touched is still internally consistent: the leaf
    in `ledger_truth_model.md`, the rollup in `invariants.md`, the
    audit row in `control_matrix.md` if applicable, and

@@ -42,3 +42,9 @@ yarn-error.log*
 next-env.d.ts
 # claude code
 .claude/
+
+# playwright e2e — storageState cookies are credentials
+tests/e2e/.auth/
+# playwright reports / results
+/playwright-report/
+/test-results/
