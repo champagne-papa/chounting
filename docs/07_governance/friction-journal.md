@@ -3355,27 +3355,65 @@ pattern at ba9599a.
 ### Session 8 handoff
 
 Status: sub-brief needed, schedule after Session 7.1 closes.
+Refreshed at Session 7.1 Commit 6 closeout (2026-04-19).
 
-Anchor SHA: Session 7.1 closeout SHA.
+Anchor SHA: Session 7.1 Commit 6 closeout SHA (the commit
+carrying this update).
 
 Scope — verification + closeout for Phase 1.2:
 
-- **Functional AI Action Review queue page** — replaces
-  Session 7.1's Commit 4 placeholder at
-  `src/app/[locale]/[orgId]/agent/actions/page.tsx`. Query
-  `ai_actions` for the current org; render rows with `status`
-  + `created_at` + `idempotency_key` + cross-link to the
-  journal entry when `status ∈ {'confirmed', 'auto_posted'}`.
-  ~80–120 LOC plus any needed `ai_actions` query service.
-  Required for EC-8 ("the 20 Phase 1.2 agent entries all
-  appear correctly in the AI Action Review queue"). Role-gate
-  on `ai_actions.read` permission (all three roles hold it
-  per migration 116).
+- **Session 7.1 Commit 4 disposition (first Session 8
+  decision).** Commit 4 (shell polish — AvatarDropdown with
+  4 items, MainframeRail Activity icon, ~15 LOC placeholder
+  `src/app/[locale]/[orgId]/agent/actions/page.tsx`, P15
+  `currentUserRole` wiring on `SplitScreenLayout` with
+  `orgId !== null` onboarding guard, `avatarDropdownMenu
+  Behavior.test.ts`) deferred at Session 7.1 Commit 5 closeout
+  because EC-19 verification scope widened (7.1.1 + 7.1.2).
+  **Default disposition: lands as Session 8's opening
+  commit.** Session 7.2 as a separate mini-sub-session remains
+  a valid alternative if founder prefers scope isolation at
+  Session 8 kickoff. Rolling into Session 8 is closer to how
+  Session 7 → 7.1 absorbed 7's Commits 4–5; Session 7.1.1 /
+  7.1.2 were mid-thread carve-outs for scope-widening
+  discoveries, a different shape than "originally planned,
+  deferred due to session compression." Scope is genuinely
+  independent of everything else on this list; no rebase risk
+  either way.
+- **Functional AI Action Review queue page** — replaces the
+  Commit 4 placeholder (whether that placeholder lands as
+  Session 7.2 or as part of Session 8 per the bullet above).
+  Query `ai_actions` for the current org; render rows with
+  `status` + `created_at` + `idempotency_key` + cross-link to
+  the journal entry when `status ∈ {'confirmed',
+  'auto_posted'}`. ~80–120 LOC plus any needed `ai_actions`
+  query service. Required for EC-8 ("the 20 Phase 1.2 agent
+  entries all appear correctly in the AI Action Review
+  queue"). Role-gate on `ai_actions.read` permission (all
+  three roles hold it per migration 116).
+- **Mode B org_id confusion investigation.** New finding
+  surfaced during 7.1.2 EC-19 execution, orthogonal to 7.1
+  scope: the agent consistently says "I need the organization
+  ID" when asked about non-selected entities or ungrounded
+  questions. Hypothesis: `listJournalEntries` (and likely
+  other read-tool) descriptions don't cover "look up by
+  number" or "resolve context from user reference." Likely
+  touches `src/agent/tools/` descriptions + possibly
+  `src/agent/prompts/` persona routing. Scope budget TBD at
+  Session 8 sub-brief time; may split into its own mini-sub-
+  session depending on investigation-vs-fix ratio. Rolls the
+  agent's conversational usefulness beyond journal-entry
+  creation into grounded question-answering — arguably a
+  Phase 2 scope question, but worth scoping at Session 8.
 - **27-EC matrix reconciliation** — full pass across the 27
   exit criteria (19 from `phase_plan.md` + 8 new for
-  onboarding/forms/migration). EC-19 row-breaks into EC-19a
-  (automated client) + EC-19b (manual agent) per Session
-  7.1's Commit 5 spec. Unnumbered shipping items (avatar
+  onboarding/forms/migration). **EC-19b closed at Session
+  7.1 Commit 5**: manual scenarios (a), (b), (c) all passed
+  against real Claude at the 39c6d38 SHA; captured in the
+  7.1.2 execution NOTE above. EC-19a automated coverage lives
+  in `canvasContextReducer.test.ts` +
+  `apiAgentMessageCanvasContextPassthrough.test.ts` in the
+  Commit 5 test surface. Unnumbered shipping items (avatar
   dropdown / Activity icon / placeholder-then-real queue
   page) listed for bookkeeping completeness.
 - **EC-2** — 20 real Phase 1.2 agent entries produced through
@@ -3389,10 +3427,6 @@ Scope — verification + closeout for Phase 1.2:
   accounts, impossible dates, reversed-sign amounts) and
   verifies the agent refuses rather than inventing. Paid-API
   session.
-- **EC-19 manual scenarios** (specification in Session 7.1's
-  Commit 5) — (a) under-anchored, (b) over-anchored, (c)
-  clarification. Logged in friction journal per
-  `canvas_context_injection.md §Over-Anchoring Test`.
 - **Session 5 `/admin/orgs` reference reconciliation** — two
   references in the Session 5 sub-brief to `/admin/orgs` as a
   post-onboarding landing page that doesn't exist in the
@@ -3400,13 +3434,26 @@ Scope — verification + closeout for Phase 1.2:
   `/admin/orgs` route, or strike the references and update
   `resolveCompletionHref` in `AgentChatPanel.OnboardingChat` to
   match actual behavior.
+- **Environmental-gotchas backlog** (from 7.1.2 EC-19 run,
+  deferred):
+  - Bridge Holding Co `/api/orgs/11111111.../journal-entries`
+    returns 500 consistently; Bridge Real Estate works fine.
+    Route stack-trace capture + root-cause; likely a seed-
+    data or routing bug, not an EC-19 issue.
+  - `OrgSwitcher.tsx:67` emits React duplicate-key warnings
+    for the two seed orgs. Cosmetic; one-line key fix.
+  - `claude-sonnet-4-20250514` model deprecation warning,
+    EOL 2026-06-15. Update to the current model family before
+    the June cutoff.
 - **Phase 1.2 closeout retrospective** — patterns, calibration
   data, process insights. Written as the Phase 1.2 counterpart
   to `docs/07_governance/retrospectives/phase-1.1-
   retrospective.md`. Includes the day-clock calibration
-  hypothesis from Session 7's retrospective (above) — by
-  Session 8 there will be two more datapoints (Session 7.1
-  + 8 itself).
+  hypothesis from Session 7's retrospective (now with the
+  Session 7.1 thread as a second datapoint — six commits on
+  day 1 plus EC-19 verification, with execution compression
+  holding through multi-sub-session carve-outs) and the
+  Session 8 own-day datapoint.
 
 Estimate: variable. Depends on the 20-entry gate result (EC-2)
 and whether the adversarial test (EC-13) surfaces prompt-
@@ -3414,15 +3461,50 @@ engineering work. Typical Phase 1.1 closeout was ~3 days;
 Phase 1.2 likely similar or longer given the agent surface
 area.
 
-Outstanding candidate-convention from Session 7 retrospective
-that Session 8 should ratify or demote:
+Outstanding candidate-conventions that Session 8 retrospective
+should ratify or demote:
 
-- **"Material gaps surface at layer-transition boundaries"**
-  (Pre-decisions 11b + 14 datapoints). Two datapoints = at
-  codification threshold. Session 8 retrospective is the
-  codification opportunity; if a third datapoint surfaces in
-  Session 7.1 or Session 8 itself, the codification is
-  overdetermined.
+- **Convention #9 — "Material gaps surface at layer-transition
+  boundaries."** Five datapoints: P11b (Session 7), P14
+  (Session 7), P16 dual-context rewrite (Session 7.1), P19
+  template-catalog gap (Session 7.1.1), P21 rationale drift
+  (Session 7.1.1). Doubly overdetermined. P21's datapoint
+  suggests scope extends beyond "implementation layers" to
+  include "planner-drafting layer → execution layer" — name
+  the convention to encompass both.
+- **Convention #10 — "Mutual hallucination-flag-and-retract
+  discipline between planner and executor."** Six datapoints
+  in Session 7.1 thread alone: P20 prose tweaks, P21
+  rationale retraction, ValidTemplateId type redefinition,
+  zombie dev-server misdiagnosis, executing-plans skill
+  review-gate bypass self-audit, 7.1.2 sub-brief stale-
+  phrasing observation. Triply overdetermined. Session 7's
+  retrospective noted "no codification needed — working
+  organically"; 7.1's datapoint volume shifts the call.
+- **Held-working-tree discipline across multi-commit threads**
+  (single datapoint from 7.1's 6-commit thread holding
+  Commit 5 uncommitted across 9 hours and 5 intervening
+  commits). Not at codification threshold yet; watch Session
+  8 for a second datapoint.
+- **Shape C DELTA-of-DELTA sub-brief envelope is ~75–95
+  lines** (two datapoints this thread — 7.1.1 at 77, 7.1.2 at
+  85). Revised from Session 7's "30–60 line" estimate.
+  Estimate-update rather than convention-material; noted so
+  Session 8 or later Shape C sub-briefs size correctly.
+
+Process observations to carry into Session 8:
+
+- **Scope-discipline vs founder-workflow planner bias** —
+  single datapoint from 7.1; watch for a second in Session 8.
+  The planner should not default-to-defer when the founder is
+  driving an EC gate and the ask is scope-aligned even if not
+  scope-bracketed.
+- **executing-plans skill review-gate bypass** — observed
+  once; structural-vs-one-off undetermined at 1 datapoint.
+  Session 8 is the pattern-repeat-watch; if it repeats,
+  either wrap the skill with a review-gate prompt or document
+  the founder-review-at-commit-boundary convention
+  independently.
 
 ## Phase 1.2 Session 7.1 (execution)
 
@@ -3550,3 +3632,289 @@ that Session 8 should ratify or demote:
   rewrite, P19 template-catalog gap) as the **5th** — Session 8
   codification is now doubly overdetermined. Proceeding to
   implementation.
+
+## Phase 1.2 Session 7.1.2 (execution)
+
+- 2026-04-19 NOTE   Session 7.1.2 commit d66c0c4 landed with
+  Playwright harness + EC-19 spec. Two process observations:
+  (a) executing-plans skill's workflow bypassed the founder
+  review gate between implementation and commit — pattern
+  deviation from session-wide discipline; commit content clean
+  on retrospective inspection, but process observation
+  preserved for Session 7.1 Commit 6 retrospective. (b) Session
+  7.1.2 sub-brief §4 journalEntry.ts bullet retains stale pre-
+  amendment "data-testid selectors" phrasing; §6 and the code
+  fixture correctly reflect the authoritative text-based-
+  initially strategy. Minor artifact-staleness; not amending.
+
+- 2026-04-19 NOTE   EC-19 manual verification complete against
+  post-a43dd35 code. All three scenarios pass canvas_context
+  over-anchoring criterion (scenarios a, b bidirectional, c).
+  Session 7.1.1's extended catalog (agent.response.natural +
+  removed "pick the closest" directive) verified working in
+  real Claude against the project. Verdict substantiated in
+  planner conversation; captured user messages and verbatim
+  agent responses archived there. Session 7.1 Commit 5 gate
+  clears.
+
+- 2026-04-19 NOTE   New finding surfaced during EC-19
+  execution: "Mode B org_id confusion" pattern. Agent
+  consistently claims "I need the organization ID" when asked
+  about non-selected entities or ungrounded questions.
+  Hypothesis: listJournalEntries tool description doesn't
+  cover "look up by number" or "resolve context from user
+  reference." Tool-selection gap orthogonal to canvas_context
+  injection. Becomes Session 8 or Phase 2 investigation.
+
+- 2026-04-19 NOTE   Environmental gotchas observed during
+  EC-19 execution: (a) zombie dev-server diagnosis false
+  alarm — planner misread ps output and claimed a root-owned
+  next-server v14.2.13 held port 3000; retracted after
+  founder-instigated fresh logs showed the project's own
+  v15.5.15 dev server serving correctly. Convention #10
+  datapoint: planner hallucinated a diagnosis from a misread
+  screenshot; founder-instigated fresh logs exposed the
+  error. (b) Bridge Holding Co
+  /api/orgs/11111111.../journal-entries returns 500
+  consistently; Bridge Real Estate works fine. Route stack-
+  trace capture deferred to Session 8. (c) OrgSwitcher.tsx:67
+  emits React duplicate-key warnings for the two seed orgs —
+  cosmetic, minor cleanup. (d) claude-sonnet-4-20250514 model
+  deprecation warning logged, EOL June 15 2026 — Session 8
+  backlog item. (e) WSL vs Windows CMD terminal confusion —
+  founder's `pnpm test:e2e` in CMD couldn't find Playwright
+  installed inside WSL; mirrored across sudo-PATH pitfalls
+  where `sudo pnpm` inherited a different `PATH` than the
+  interactive shell, producing spurious "command not found"
+  during Playwright-browser install.
+
+### Session 7.1 retrospective
+
+Session 7.1 executed as a three-sub-session thread all on
+2026-04-19: the main Shape B DELTA (dc0ee69) carrying Commits
+4–5 deferred from Session 7, plus two Shape C DELTA-of-DELTA
+micro-sub-sessions carved out mid-thread (7.1.1 template
+catalog, 7.1.2 Playwright harness) when scope for EC-19
+verification widened past the main sub-brief's envelope. Six
+commits landed on top of dc0ee69:
+
+- **53ff280** — `fix(dev): disable broken pino-pretty
+  transport under Next.js 15`. Dev-experience fix surfaced
+  when EC-19 manual run required a working dev server; landed
+  ahead of the 7.1.1 sub-brief as an un-bracketed hygiene
+  commit.
+- **58ade6e** — `docs(phase-1.2): session 7.1.1 sub-brief
+  (frozen)`.
+- **a43dd35** — `feat(phase-1.2): Session 7.1.1 —
+  agent.response.natural + template catalog split`. Adds the
+  general free-form conversational template (P19) + two-map
+  split (P21) + prompt-routing prose (P20).
+- **1388945** — `docs(phase-1.2): session 7.1.2 sub-brief
+  (frozen)`.
+- **d66c0c4** — `feat(phase-1.2): Session 7.1.2 — Playwright
+  harness + EC-19 spec`. Introduces `tests/e2e/` + harness
+  fixtures + EC-19 scenarios (a), (b), (c) as the first spec.
+- **39c6d38** — `feat(phase-1.2): Session 7.1 Commit 5 —
+  canvas context injection`. The original Commit 5 scope —
+  held uncommitted across the entire thread.
+
+**Commit 4** (original shell polish — AvatarDropdown,
+MainframeRail Activity icon, placeholder actions/page.tsx,
+P15 `currentUserRole` wiring, `avatarDropdownMenuBehavior`
+test) **is deferred to a subsequent session.** Second
+pre-declared split-point of the Phase 1.2 execution, same
+shape as Session 7's Commit 4–5 split: scope that doesn't
+block the next EC gate gets deferred when the session day-
+clock compresses enough to surface new scope (7.1.1 + 7.1.2)
+mid-thread. Commit 4's scope is genuinely independent of
+Commit 5's carryovers; no rebase friction expected.
+
+Five patterns worth naming explicitly.
+
+**1. Held-working-tree discipline worked across a 6-commit
+thread.**
+
+Commit 5's working tree (modified bridge/canvas components +
+`src/agent/canvas/` + two new `tests/integration/` files +
+the Session 7.1 execution-kickoff NOTE) stayed uncommitted
+across the pino fix + two micro-sub-session sub-brief freezes
++ two micro-sub-session feature commits + EC-19 manual
+verification — roughly 9 hours elapsed and 5 intervening
+commits between the Commit 5 implementation moment and its
+commit moment. No stash, no branch gymnastics, no cherry-pick
+dance. Each micro-sub-session's §2 Prerequisites block
+explicitly named Commit 5's held state and instructed the
+executor not to touch it; each intervening commit touched
+strictly disjoint files.
+
+This is the first Phase 1.2 session to test hold-across-
+multiple-commits discipline at this duration. It held. The
+key affordances:
+
+- Sub-brief §2 treats the held working tree as a
+  **prerequisite**, not a nuisance. The "do not touch, stash,
+  or revert" phrasing is load-bearing.
+- Micro-sub-session file scopes are chosen to not collide
+  with the held set (catalog files for 7.1.1, test
+  infrastructure for 7.1.2).
+- Each micro-sub-session's commit re-tests the held set's
+  green baseline (tests + typecheck) before landing, catching
+  any accidental cross-contamination immediately.
+
+No codification yet — single datapoint. But the pattern
+generalizes to any situation where a verification step needs
+to land on top of extended infrastructure but the
+infrastructure itself is the thing being verified. Worth
+naming in Session 8 retrospective if a second datapoint
+surfaces.
+
+**2. Convention #9 candidate at 5 datapoints — codification
+doubly overdetermined.**
+
+"Material gaps surface at layer-transition boundaries"
+collected three datapoints this thread, bringing the total to
+five:
+
+- **P11b** (Session 7) — onboarding-complete UX layer →
+  `agent_sessions.org_id` schema layer.
+- **P14** (Session 7) — conversation-resume UX layer →
+  Session 5.1 terminating-text persistence layer.
+- **P16 dual-context rewrite** (Session 7.1) — `onNavigate`
+  callback shape → dual-context canvas+transcript UX.
+- **P19 template-catalog gap** (Session 7.1.1) — catalog-
+  closure layer → prompt-routing layer; EC-19 scenario (a)
+  wasn't answerable with the shipped catalog.
+- **P21 rationale drift** (Session 7.1.1) — planner-drafting
+  layer → orchestrator call-site reality; the stated
+  rationale "self-emit paths keep same helper" didn't match
+  the four call sites in `src/agent/orchestrator/index.ts`.
+
+Codification threshold is two datapoints. Five datapoints
+make it doubly overdetermined. Session 8 retrospective is
+the codification opportunity; the fifth datapoint (P21,
+Session 7.1.1) also suggests the scope widens beyond
+"implementation layers" to include "drafting layer →
+execution layer" — the planner's mental model of the code,
+in the act of being written, is a layer that can drift from
+the shipped code. Whatever the final wording, Session 8
+should carry the planner-drafting datapoint into the naming.
+
+**3. Convention #10 candidate at 6 datapoints in one session
+thread — triply overdetermined.**
+
+"Mutual hallucination-flag-and-retract discipline between
+planner and executor" surfaced six times across the 7.1
+thread:
+
+- **P20 prose tweaks** (7.1.1 design pass) — founder added
+  two precise tweaks to the drafted prose (`agent.greeting.
+  welcome` to the structured list; "asking a clarifying
+  question when context is ambiguous" replacing the drafted
+  "clarifying what the user is looking at"). Planner drafted;
+  founder flagged; planner ratified.
+- **P21 rationale retraction** (7.1.1 design pass) — planner
+  drafted a rationale that grep-verification showed didn't
+  match the call sites; planner explicitly retracted and
+  re-stated (see the authoritative-from-this-NOTE-forward
+  rewrite in the 7.1.1 design-pass NOTE).
+- **ValidTemplateId type redefinition** (7.1.1 design pass) —
+  planner proposed; founder asked for external-caller grep;
+  proceeding ratified only after zero-caller evidence.
+- **Zombie dev-server misdiagnosis** (7.1.2 EC-19 run) —
+  planner misread `ps` output and claimed a root-owned
+  `next-server v14.2.13` held port 3000; founder-instigated
+  fresh logs showed the project's own v15.5.15 serving
+  correctly; planner retracted.
+- **executing-plans skill review-gate bypass** (7.1.2) —
+  self-audit observation: the skill's workflow skipped the
+  founder review gate between implementation and commit for
+  the d66c0c4 feature commit. Commit content was clean on
+  retrospective inspection, but the process pattern-deviation
+  was surfaced and logged rather than waved past.
+- **7.1.2 sub-brief stale-phrasing observation** (7.1.2) —
+  the sub-brief's §4 `journalEntry.ts` bullet retained pre-
+  amendment "data-testid selectors" phrasing while §6 and the
+  shipped fixture carried the authoritative text-based-
+  initially strategy. Planner noticed the artifact-staleness
+  against shipped reality and flagged rather than papering
+  over.
+
+Six datapoints in one session thread is triply overdetermined
+for codification. Prior Session 7 retrospective named the
+pattern "working organically, no codification needed" — at a
+datapoint volume this high, the pattern shifts from organic-
+practice to load-bearing-discipline, and codification moves
+from "nice to have" to "name it so executors in fresh
+sessions don't need to rediscover it." Session 8
+retrospective should write it up alongside Convention #9.
+
+**4. Shape C DELTA-of-DELTA sub-brief size calibration.**
+
+Session 7 retrospective posited a "30–60 line" envelope for
+Shape C DELTA-of-DELTA sub-briefs (micro-sub-sessions carved
+from a parent sub-brief). This thread produced two Shape C
+sub-briefs with measured sizes materially larger:
+
+- Session 7.1.1 sub-brief: **77 lines**.
+- Session 7.1.2 sub-brief: **85 lines**.
+
+The cluster centers at ~80 lines, comfortably above the
+30–60 envelope. Pattern from both sub-briefs: §1 goal + §2
+prerequisites (including held-working-tree state) + §3
+pre-decisions (3–5 continuing-numbered pre-decisions) + §4
+scope detail + §5 commit cadence + §6 stop conditions + §7
+or §8 convention-candidate datapoint context.
+
+Calibration update for Session 8 forward: **Shape C envelope
+is ~75–95 lines, not 30–60.** The earlier estimate was
+drafted before any Shape C sub-brief had shipped; the
+underweighting came from treating "micro" as a line-count
+term rather than a scope term. A micro-sub-session is micro
+by scope (single commit, ~1–2 hours) and by LOC (60–100),
+but not by sub-brief length — the prerequisite-density is the
+same as a full-shape sub-brief, and skipping prerequisite
+articulation is how micro-sub-sessions go off the rails.
+
+Single revision to the earlier estimate; no convention
+implications beyond the estimate-update itself.
+
+**5. Process observations worth preserving (not yet
+convention-level).**
+
+Three additional observations surfaced this thread that
+aren't yet at codification threshold but are worth naming so
+future sessions can spot second datapoints:
+
+- **Scope-discipline vs founder-workflow planner bias.** When
+  the founder's iterative workflow produces an ask that looks
+  like scope creep (e.g., "while we're here, can we also fix
+  X"), the planner has a bias toward deferring-by-convention
+  even when the founder's ask is the correct call in context.
+  Observed when the Commit 4 shell polish deferred to a
+  subsequent session while EC-19 verification drove the 7.1.1
+  + 7.1.2 sub-sessions — the deferral was correct, but the
+  planner's initial lean-to-defer wasn't calibrated to
+  "founder is driving the EC gate, scope-creep check is
+  moot." Worth watching across Session 8 to see whether a
+  second datapoint clarifies the correction shape.
+- **executing-plans skill review-gate bypass.** The
+  `superpowers:executing-plans` skill's workflow, as invoked
+  for 7.1.2's d66c0c4 commit, skipped the inter-implementation-
+  and-commit founder review gate that Session 6 / 7 / 7.1
+  Commit 5 all applied. Observed once this thread. The
+  hypothesis is structural (the skill's workflow doesn't
+  prompt for a review gate between "execute" and "commit"),
+  but one datapoint isn't enough to confirm structural vs.
+  one-off. Pattern-repeat-watch at Session 8 will determine
+  which. If repeats, either wrap the skill with a review-gate
+  prompt or document the founder-review-at-commit-boundary
+  convention independently of executing-plans.
+- **Mode B org_id confusion finding.** Surfaced during EC-19
+  execution, orthogonal to 7.1 scope: the agent consistently
+  claims "I need the organization ID" when asked about non-
+  selected entities or ungrounded questions — `listJournal
+  Entries` tool description likely doesn't cover "look up by
+  number" or "resolve context from user reference." Tool-
+  selection gap, not a canvas_context injection gap. Rolls
+  into Session 8 as a new investigation item; may touch
+  `src/agent/tools/` scope.

@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-19 (Phase 1.2 Session 7 shipped; Session 7.1 next)
+# Where I am as of 2026-04-19 (Phase 1.2 Session 7.1 shipped; Session 8 next, with Session 7.1 Commit 4 shell polish still outstanding)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -190,20 +190,65 @@ patterns), Session 7.1 handoff, and Session 8 handoff all logged
 in `docs/07_governance/friction-journal.md` under the Phase 1.2
 Session 7 heading.
 
-### Session 7.1 — Sub-brief needed, ready to draft
+### Session 7.1 — Complete (2026-04-19)
 
-Carried forward from Session 7's pre-declared split. Scope:
-Commits 4+5 from Session 7 original sub-brief — shell polish
-(avatar dropdown + Activity icon + placeholder review-queue
-page) and canvas context click handlers + EC-19 tests. Plus
-three carryovers from Commit 3's non-blocking observations:
-currentUserRole prop wiring on SplitScreenLayout, canvas
-navigation on Approve (ProposedEntryCard `onNavigate`), and
-SplitScreenLayout state lift (Pre-decision 9 shape).
+Three-sub-session thread (main Shape B DELTA at dc0ee69,
+plus two Shape C DELTA-of-DELTA micro-sub-sessions carved
+mid-thread). Six commits on top of dc0ee69:
 
-Estimate ~1 day. Anchor SHA: Session 7 Commit 6 SHA. Full
-scope + carryovers + EC coverage detail in the Session 7.1
-handoff entry in the friction journal.
+- **53ff280** — `fix(dev): disable broken pino-pretty
+  transport under Next.js 15` (dev-experience hygiene
+  surfaced by EC-19 manual run).
+- **58ade6e** + **a43dd35** — Session 7.1.1 sub-brief +
+  `agent.response.natural` template + two-map catalog split
+  (P19 / P20 / P21). Added the free-form conversational
+  response shape so EC-19 scenario (a) could pass.
+- **1388945** + **d66c0c4** — Session 7.1.2 sub-brief +
+  Playwright harness (`tests/e2e/`) + EC-19 spec as the
+  harness's first use. 369/369 tests green post-landing.
+- **39c6d38** — `feat(phase-1.2): Session 7.1 Commit 5 —
+  canvas context injection`. Original Commit 5 scope (canvas
+  context click handlers + `reduceSelection` reducer +
+  `SplitScreenLayout` state lift + `AgentChatPanel` send()
+  builds `canvas_context` + two test files) held uncommitted
+  across the entire thread and landed last after EC-19
+  manual verification cleared.
+
+**EC-19 manual verification** (scenarios a, b, c) all passed
+against real Claude at post-a43dd35 code. EC-19b closed;
+EC-19a covered by Commit 5's two integration test files.
+
+**Session 7.1 Commit 4 (shell polish)** — AvatarDropdown,
+MainframeRail Activity icon, placeholder `actions/page.tsx`,
+P15 `currentUserRole` wiring, `avatarDropdownMenuBehavior`
+test — **deferred** when EC-19 verification scope widened
+(7.1.1 + 7.1.2). Default disposition: lands as Session 8's
+opening commit (matching the Session 7 → 7.1 absorption
+shape). Session 7.2 as a carve-out remains available if
+founder prefers scope isolation at Session 8 kickoff.
+
+Two convention candidates out of the thread, both
+overdetermined for Session 8 codification:
+
+- **Convention #9** ("Material gaps surface at layer-
+  transition boundaries") — 5 datapoints (P11b, P14, P16
+  dual-context rewrite, P19 template-catalog gap, P21
+  rationale drift).
+- **Convention #10** ("Mutual hallucination-flag-and-retract
+  discipline") — 6 datapoints in this thread alone.
+
+New orthogonal finding rolled into Session 8: **Mode B
+org_id confusion** — the agent claims "I need the
+organization ID" when asked about non-selected entities;
+tool-selection gap likely in `listJournalEntries` description.
+
+Shape C sub-brief size calibration: two datapoints at 77 / 85
+lines; Session 7 retrospective's "30–60 line" estimate
+revised to ~75–95 lines.
+
+Full retrospective (five patterns) + refreshed Session 8
+handoff in `docs/07_governance/friction-journal.md` under
+the Session 7.1 heading.
 
 ---
 
