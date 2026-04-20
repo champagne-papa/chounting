@@ -2,14 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
+import type { SelectedEntity } from '@/shared/types/canvasContext';
 import type { JournalEntryListItem } from '@/services/accounting/journalEntryService';
 
 interface Props {
   orgId: string;
   onNavigate: CanvasNavigateFn;
+  onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
-export function JournalEntryListView({ orgId, onNavigate }: Props) {
+// Budget the display_name that flows into canvasContextSuffix — a
+// 500-char verbose description would waste prompt tokens and look
+// bad in any debug printout. 50 chars matches the card UI's display
+// budget.
+const DISPLAY_NAME_DESC_MAX = 50;
+function truncateDescription(desc: string): string {
+  if (desc.length <= DISPLAY_NAME_DESC_MAX) return desc;
+  return desc.slice(0, DISPLAY_NAME_DESC_MAX - 1).trimEnd() + '…';
+}
+
+export function JournalEntryListView({
+  orgId,
+  onNavigate,
+  onSelectEntity,
+}: Props) {
   const [entries, setEntries] = useState<JournalEntryListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +93,19 @@ export function JournalEntryListView({ orgId, onNavigate }: Props) {
                 className={`border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer${
                   entry.reversed_by != null ? ' opacity-60' : ''
                 }`}
-                onClick={() =>
+                onClick={() => {
+                  onSelectEntity?.({
+                    type: 'journal_entry',
+                    id: entry.journal_entry_id,
+                    display_name: `#${entry.entry_number} — ${truncateDescription(entry.description)}`,
+                  });
                   onNavigate({
                     type: 'journal_entry',
                     orgId,
                     entryId: entry.journal_entry_id,
                     mode: 'view',
-                  })
-                }
+                  });
+                }}
               >
                 <td className="py-2 pr-4 text-right">{entry.entry_number}</td>
                 <td className="py-2 pr-4">{entry.entry_date}</td>

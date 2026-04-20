@@ -4,18 +4,24 @@
 //   2. Agent chat panel (~380px, collapsible)
 //   3. Contextual canvas (fills remaining width)
 //
-// In Phase 1.1, the chat panel is empty (no agent). The Mainframe rail
-// is the primary navigation. The canvas renders whatever the user
-// selected via the Mainframe.
+// Session 7.1 Commit 5: canvas context state lifts into this shell.
+// `selectedEntity` + `directive` assemble into the `canvasContext`
+// passed to AgentChatPanel. Every directive change routes through
+// `handleCanvasNavigate`, which runs the selection reducer
+// (Pre-decision 10's type-compatibility rule) before committing
+// the new directive — all callsites use the wrapper, none hold a
+// direct reference to setDirective.
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { MainframeRail } from './MainframeRail';
 import { AgentChatPanel } from './AgentChatPanel';
 import { ContextualCanvas } from './ContextualCanvas';
 import { OrgSwitcher } from './OrgSwitcher';
 import type { CanvasDirective } from '@/shared/types/canvasDirective';
+import type { CanvasContext, SelectedEntity } from '@/shared/types/canvasContext';
+import { reduceSelection } from '@/agent/canvas/reduceSelection';
 
 interface Props {
   orgId: string;
@@ -26,7 +32,26 @@ export function SplitScreenLayout({ orgId, initialDirective }: Props) {
   const [directive, setDirective] = useState<CanvasDirective>(
     initialDirective ?? { type: 'none' },
   );
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | undefined>(
+    undefined,
+  );
   const [chatCollapsed, setChatCollapsed] = useState(false);
+
+  const handleCanvasNavigate = useCallback((newDirective: CanvasDirective) => {
+    setSelectedEntity((prev) =>
+      reduceSelection(prev, { type: 'directive_change', new_directive: newDirective }),
+    );
+    setDirective(newDirective);
+  }, []);
+
+  const handleSelectEntity = useCallback((entity: SelectedEntity) => {
+    setSelectedEntity((prev) => reduceSelection(prev, { type: 'select', entity }));
+  }, []);
+
+  const canvasContext: CanvasContext = {
+    current_directive: directive,
+    selected_entity: selectedEntity,
+  };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-50">
@@ -39,7 +64,7 @@ export function SplitScreenLayout({ orgId, initialDirective }: Props) {
         {/* Zone 1: Mainframe rail */}
         <MainframeRail
           orgId={orgId}
-          onNavigate={setDirective}
+          onNavigate={handleCanvasNavigate}
         />
 
         {/* Zone 2: Agent chat panel */}
@@ -47,13 +72,16 @@ export function SplitScreenLayout({ orgId, initialDirective }: Props) {
           <AgentChatPanel
             orgId={orgId}
             onCollapse={() => setChatCollapsed(true)}
+            canvasContext={canvasContext}
+            onNavigate={handleCanvasNavigate}
           />
         )}
 
         {/* Zone 3: Contextual canvas */}
         <ContextualCanvas
           directive={directive}
-          onDirectiveChange={setDirective}
+          onDirectiveChange={handleCanvasNavigate}
+          onSelectEntity={handleSelectEntity}
         />
       </div>
     </div>

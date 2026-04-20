@@ -27,7 +27,12 @@ import type {
   ChatTurnAssistant,
   ChatTurnUser,
 } from '@/shared/types/chatTurn';
-import type { CanvasDirective } from '@/shared/types/canvasDirective';
+import type {
+  CanvasDirective,
+  CanvasNavigateFn,
+} from '@/shared/types/canvasDirective';
+import type { CanvasContext } from '@/shared/types/canvasContext';
+import { hasGroundingContext } from '@/agent/canvas/reduceSelection';
 
 interface Props {
   orgId: string | null;
@@ -47,6 +52,21 @@ interface Props {
    * 'controller' so the component is safe when unwired.
    */
   currentUserRole?: UserRole;
+  /**
+   * Session 7.1 Commit 5: the canvas state (current directive +
+   * optional selection) the parent shell holds, forwarded to the
+   * orchestrator on every send via `canvas_context` — but only
+   * when `hasGroundingContext` is true. Optional for welcome /
+   * onboarding-mode callsites that have no canvas shell.
+   */
+  canvasContext?: CanvasContext;
+  /**
+   * Session 7.1 Commit 5: directive-navigation callback flowed
+   * down to ProposedEntryCard so Approve/Edit can switch the
+   * canvas. Wrapped by SplitScreenLayout.handleCanvasNavigate so
+   * every directive change runs the selection reducer first.
+   */
+  onNavigate?: CanvasNavigateFn;
 }
 
 export function AgentChatPanel({
@@ -55,6 +75,8 @@ export function AgentChatPanel({
   initialOnboardingState,
   onboardingCompletionHref,
   currentUserRole = 'controller',
+  canvasContext,
+  onNavigate,
 }: Props) {
   if (initialOnboardingState) {
     return (
@@ -70,6 +92,8 @@ export function AgentChatPanel({
       orgId={orgId}
       onCollapse={onCollapse}
       currentUserRole={currentUserRole}
+      canvasContext={canvasContext}
+      onNavigate={onNavigate}
     />
   );
 }
@@ -82,10 +106,14 @@ function ProductionChat({
   orgId,
   onCollapse,
   currentUserRole,
+  canvasContext,
+  onNavigate,
 }: {
   orgId: string | null;
   onCollapse?: () => void;
   currentUserRole: UserRole;
+  canvasContext?: CanvasContext;
+  onNavigate?: CanvasNavigateFn;
 }) {
   const tHeading = useTranslations('agent');
   const tRoot = useTranslations();
@@ -167,6 +195,9 @@ function ProductionChat({
         if (sessionId !== null) {
           body.session_id = sessionId;
         }
+        if (canvasContext && hasGroundingContext(canvasContext)) {
+          body.canvas_context = canvasContext;
+        }
         const res = await fetch('/api/agent/message', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -245,7 +276,7 @@ function ProductionChat({
         setSubmitting(false);
       }
     },
-    [orgId, locale, sessionId, submitting],
+    [orgId, locale, sessionId, submitting, canvasContext],
   );
 
   const retryTurn = useCallback(
@@ -394,6 +425,7 @@ function ProductionChat({
             renderAssistantText={renderAssistantText}
             onRetry={retryTurn}
             onCardResolved={onCardResolved}
+            onNavigate={onNavigate}
           />
         ))}
       </div>
@@ -432,6 +464,7 @@ function TurnView({
   renderAssistantText,
   onRetry,
   onCardResolved,
+  onNavigate,
 }: {
   turn: ChatTurn;
   renderAssistantText: (turn: ChatTurnAssistant) => string;
@@ -443,6 +476,7 @@ function TurnView({
       | { outcome: 'rejected'; reason?: string }
       | { outcome: 'edited' },
   ) => void;
+  onNavigate?: CanvasNavigateFn;
 }) {
   if (turn.role === 'user') {
     return (
@@ -488,6 +522,7 @@ function TurnView({
         <ProposedEntryCard
           card={turn.card!}
           onResolved={(r) => onCardResolved(turn.id, r)}
+          onNavigate={onNavigate}
         />
       )}
       {hasCard && isCardResolved && (

@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import type { CanvasDirective, CanvasNavigateFn } from '@/shared/types/canvasDirective';
+import type { SelectedEntity } from '@/shared/types/canvasContext';
 import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
@@ -24,6 +25,7 @@ import { OrgUsersView } from '@/components/canvas/OrgUsersView';
 interface Props {
   directive: CanvasDirective;
   onDirectiveChange: (d: CanvasDirective) => void;
+  onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
 // WelcomeNavigator: the `welcome` directive is a route-level
@@ -43,7 +45,7 @@ function WelcomeNavigator() {
   return <ComingSoonPlaceholder directiveType="welcome" />;
 }
 
-export function ContextualCanvas({ directive, onDirectiveChange }: Props) {
+export function ContextualCanvas({ directive, onDirectiveChange, onSelectEntity }: Props) {
   const [history, setHistory] = useState<CanvasDirective[]>([directive]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
@@ -97,18 +99,28 @@ export function ContextualCanvas({ directive, onDirectiveChange }: Props) {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {renderDirective(history[historyIndex], onDirectiveChange)}
+        {renderDirective(history[historyIndex], onDirectiveChange, onSelectEntity)}
       </div>
     </main>
   );
 }
 
-function renderDirective(d: CanvasDirective, onNavigate: CanvasNavigateFn) {
+function renderDirective(
+  d: CanvasDirective,
+  onNavigate: CanvasNavigateFn,
+  onSelectEntity?: (entity: SelectedEntity) => void,
+) {
   switch (d.type) {
     case 'chart_of_accounts':
-      return <ChartOfAccountsView orgId={d.orgId} />;
+      return <ChartOfAccountsView orgId={d.orgId} onSelectEntity={onSelectEntity} />;
     case 'journal_entry_list':
-      return <JournalEntryListView orgId={d.orgId} onNavigate={onNavigate} />;
+      return (
+        <JournalEntryListView
+          orgId={d.orgId}
+          onNavigate={onNavigate}
+          onSelectEntity={onSelectEntity}
+        />
+      );
     case 'journal_entry_form':
       return <JournalEntryForm orgId={d.orgId} onNavigate={onNavigate} />;
     case 'journal_entry':

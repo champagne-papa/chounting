@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { SelectedEntity } from '@/shared/types/canvasContext';
 
 interface Account {
   account_id: string;
@@ -17,9 +18,10 @@ interface Account {
 
 interface Props {
   orgId: string;
+  onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
-export function ChartOfAccountsView({ orgId }: Props) {
+export function ChartOfAccountsView({ orgId, onSelectEntity }: Props) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +64,22 @@ export function ChartOfAccountsView({ orgId }: Props) {
         </thead>
         <tbody>
           {accounts.map((a) => (
-            <tr key={a.account_id} className="border-b border-neutral-100 hover:bg-neutral-50">
+            <tr
+              key={a.account_id}
+              className={`border-b border-neutral-100 hover:bg-neutral-50${
+                onSelectEntity ? ' cursor-pointer' : ''
+              }`}
+              onClick={
+                onSelectEntity
+                  ? () =>
+                      onSelectEntity({
+                        type: 'account',
+                        id: a.account_id,
+                        display_name: `${a.account_code} — ${a.account_name}`,
+                      })
+                  : undefined
+              }
+            >
               <td className="py-2 pr-4 font-mono">{a.account_code}</td>
               <td className="py-2 pr-4">{a.account_name}</td>
               <td className="py-2 pr-4">{a.account_type}</td>
