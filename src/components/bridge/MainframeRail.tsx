@@ -1,9 +1,16 @@
 // src/components/bridge/MainframeRail.tsx
 // The far-left icon rail. Always visible. Provides direct-launch
 // navigation for the most common canvas views.
+//
+// Session 8 Commit 1: the "AI Action Review" icon repurposes from
+// dispatching the (Phase 2+ placeholder) `ai_action_review_queue`
+// canvas directive to pushing to the new full-page route at
+// `/[locale]/[orgId]/agent/actions` (placeholder in C1, functional
+// queue in C2).
 
 'use client';
 
+import { useRouter, useParams } from 'next/navigation';
 import { ApiStatusDot } from './ApiStatusDot';
 import type { CanvasDirective } from '@/shared/types/canvasDirective';
 import { useTranslations } from 'next-intl';
@@ -23,6 +30,9 @@ const ICONS = [
 
 export function MainframeRail({ orgId, onNavigate }: Props) {
   const _t = useTranslations('nav');
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
 
   function handleClick(id: string) {
     switch (id) {
@@ -35,7 +45,7 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
       case 'trial_balance':
         return onNavigate({ type: 'report_trial_balance', orgId });
       case 'actions':
-        return onNavigate({ type: 'ai_action_review_queue', orgId });
+        return router.push(`/${locale}/${orgId}/agent/actions`);
     }
   }
 

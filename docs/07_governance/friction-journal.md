@@ -3918,3 +3918,71 @@ future sessions can spot second datapoints:
   selection gap, not a canvas_context injection gap. Rolls
   into Session 8 as a new investigation item; may touch
   `src/agent/tools/` scope.
+
+## Phase 1.2 Session 8 (execution)
+
+- 2026-04-19 NOTE   Session 8 execution kickoff. Anchor SHA
+  5e094bb (docs(phase-1.2): session 8 sub-brief (frozen)).
+  Working tree clean. Baseline: 369/369 tests green,
+  `pnpm agent:validate` passes (typecheck + no-hardcoded-URLs +
+  5 Category A floor tests, 26 tests / 5 files). Sub-brief at
+  `docs/09_briefs/phase-1.2/session-8-brief.md` — Shape A full
+  sub-brief, 1068 lines, 13 pre-decisions P28–P40. Phase 1.2
+  terminal session. 14-commit plan per §4 P28: C1 shell polish,
+  C2 AI Action Review queue, C3 OrgSwitcher status filter +
+  /admin/orgs ERRATA, C4 HoldingCo 500 pino instrumentation,
+  C5 HoldingCo root-cause fix, [M] model migration (Q8a
+  Option B ratified — `claude-sonnet-4-20250514` → current
+  stable Sonnet; single paid-API pass), C6 EC-2, C7 EC-13,
+  C8 Mode B listJournalEntries description + persona hint
+  (placed AFTER paid-API gates per Q4), C9 Conventions #9 + #10
+  codification, C10 27-EC matrix, C11 Phase 1.2 retrospective,
+  C12 closeout. Six pre-decisions ratified at sub-brief draft
+  v1 review (including Q8a Option B and OQ-S8-2
+  `src/services/agent/` directory). Convention #9 candidate at
+  5 datapoints (P11b, P14, P16 dual-context rewrite, P19
+  template-catalog gap, P21 rationale drift) — codification
+  target C9. Convention #10 candidate at 6 datapoints (P20
+  prose tweaks, P21 rationale retraction, ValidTemplateId type
+  redefinition, zombie dev-server misdiagnosis, executing-plans
+  skill review-gate bypass, 7.1.2 sub-brief stale-phrasing) —
+  codification target C9. Six split-point triggers pre-declared
+  (§7); carve to 8.1 rather than truncate. Founder review gate
+  at C1, C2, [M], C7, C8, C9, C11 per §12 "authored content"
+  rule. Convention #8 identity-assertion grep pass applied at
+  every commit's pre-implementation step. Starting design pass
+  on C1 (shell polish — AvatarDropdown, SplitScreenLayout
+  modifications, MainframeRail Activity icon, placeholder
+  `agent/actions/page.tsx`, `avatarDropdownMenuBehavior` test).
+
+- 2026-04-20 NOTE   C1 pre-implementation grep pass surfaced three
+  drafting-layer drifts in P29: (a) MainframeRail already has an
+  "actions" icon at :21 — C1 repurposes rather than adds sixth
+  icon; (b) SplitScreenLayout.orgId is non-null typed — P29's
+  "orgId !== null guard" drops as dead code; (c) settings/profile
+  + settings/org are standalone routes outside the shell — P29's
+  "dispatch directive before router.push" drops as dead work.
+  Collectively: Convention #9 datapoint, Phase 1.2 Session 8
+  first instance. Extends Session 7.1 thread's 5-datapoint
+  sub-pattern ("planner-drafting → code-call-site reality") by a
+  6th instance; codification at C9 still holds.
+
+- 2026-04-20 NOTE   Positive observation (C1 design pass): P17's
+  "uniform selectedEntity drop across avatar dropdown items" is a
+  design property that emerges from reducer + route structure, not
+  a per-callsite code enforcement. reduceSelection's type-
+  incompatibility rule handles Team's directive_change path; full
+  navs (Profile, Org settings, Sign out) unload the shell's state
+  entirely. No explicit drop code needed on any of the four
+  items. Worth preserving as a design insight for Phase 2.
+
+- 2026-04-20 NOTE   Post-C1 dead-code tracking: after C1 lands, the
+  `ai_action_review_queue` variant in the CanvasDirective union
+  (`src/shared/types/canvasDirective.ts:13`) has no UI dispatcher —
+  MainframeRail's `actions` handler switches to router.push, and
+  ContextualCanvas's case for this directive renders
+  `ComingSoonPlaceholder`. Not removed in C1 (scope creep). Flag
+  for Session 8 retrospective and Phase 2 cleanup: "dead
+  CanvasDirective variant: ai_action_review_queue; no UI dispatcher
+  post-5e094bb + C1."
+

@@ -15,6 +15,12 @@
     "label": "Organization",
     "switchTo": "Switch to {orgName}"
   },
+  "avatarDropdown": {
+    "ariaLabel": "User menu",
+    "profile": "Profile",
+    "orgSettings": "Organization settings",
+    "team": "Team"
+  },
   "agent": {
     "emptyState": "What would you like to do?",
     "suggestedPromptsHeading": "Try one of these",
