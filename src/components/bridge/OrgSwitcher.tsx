@@ -35,6 +35,7 @@ export function OrgSwitcher({ currentOrgId }: Props) {
       supabase
         .from('memberships')
         .select('org_id, role, organizations(name)')
+        .eq('status', 'active')
     )
       .then(({ data }) => {
         if (data) {

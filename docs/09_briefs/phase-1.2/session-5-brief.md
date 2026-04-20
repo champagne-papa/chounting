@@ -797,3 +797,34 @@ every commit must leave `pnpm typecheck && pnpm test` green.
 ---
 
 *End of Phase 1.2 Session 5 Sub-Brief.*
+
+---
+
+## 2026-04-20 ERRATA (Session 8, Commit 3)
+
+The Session 5 sub-brief's references to `/admin/orgs` at :572 and :685
+described actual Phase 1.1 behavior at drafting time and were not
+placeholders. Session 5 Commit 5 landed a new `resolveSignInDestination`
+helper that routes sign-in to `/[locale]/[firstOrgId]/` (master §14.5),
+superseding the `/admin/orgs` post-auth target for the sign-in path.
+
+The Session 7.1 friction-journal handoff subsequently claimed the
+`/admin/orgs` route "doesn't exist in the shipped codebase" — this was
+factually wrong; `src/app/[locale]/admin/orgs/page.tsx` ships from the
+Phase 1.1 foundation commit (70e65ef) as a working client-side
+org-creation form.
+
+`AgentChatPanel.OnboardingChat.resolveCompletionHref`
+(AgentChatPanel.tsx:604-622) routes onboarding-complete users to
+`/[locale]/[firstOrgId]/` when a membership exists, and falls through
+to `/${locale}/admin/orgs` only in the degenerate "onboarding-
+completed-but-no-membership" edge case — a Phase 1.1 safety net that
+fires when a user finishes onboarding but has no memberships yet,
+letting them recover by creating an org manually. Session 8 preserved
+this fall-through rather than changing it to match a wrong premise;
+future sessions may reconsider if operational data shows the edge
+case fires or if the `/admin/orgs` route is deprecated in favor of
+a different recovery flow.
+
+Supersedes the :572 and :685 references as historical artifacts;
+retained for audit trail.
