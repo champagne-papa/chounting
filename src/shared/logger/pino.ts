@@ -39,10 +39,11 @@ export const logger = pino({
     ],
     censor: '[REDACTED]',
   },
-  // Pretty-print in dev only.
-  transport: env.NODE_ENV === 'development'
-    ? { target: 'pino-pretty', options: { colorize: true } }
-    : undefined,
+  // Pretty-printing disabled — pino-pretty's worker thread
+  // doesn't bundle under Next.js 15's server bundler (missing
+  // thread-stream/lib/worker.js in .next/server/vendor-chunks).
+  // Default behavior: raw JSON on stdout. See fix commit
+  // for full rationale.
 });
 
 // Helper: returns a child logger with trace_id / org_id / user_id bound.
