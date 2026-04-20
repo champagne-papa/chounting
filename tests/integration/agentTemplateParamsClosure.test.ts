@@ -1,7 +1,15 @@
 // tests/integration/agentTemplateParamsClosure.test.ts
-// Session 7 Commit 1 — bidirectional parity between each
-// TEMPLATE_ID_PARAMS schema's declared field set and the
+// Session 7 Commit 1 + Session 7.1.1 — bidirectional parity
+// between each template's declared field set and the
 // {placeholder} tokens in messages/en.json's corresponding string.
+//
+// Session 7.1.1 split TEMPLATE_ID_PARAMS into two maps —
+// AGENT_EMITTABLE_TEMPLATE_IDS (rendered in the system prompt)
+// and SERVER_EMITTED_TEMPLATE_IDS (orchestrator self-emit paths
+// only). This test iterates the union: bidirectional placeholder
+// parity must hold for every declared template_id regardless of
+// who emits it. A disjointness assertion guards map-construction
+// drift.
 //
 // Failure modes this catches:
 //   - Schema declares a field the locale string never references
@@ -10,16 +18,26 @@
 //   - Locale string has a {placeholder} the schema doesn't declare
 //     → next-intl renders the literal token (e.g. "{user_name}")
 //     in user-facing text instead of the value.
+//   - A template_id accidentally lands in both maps →
+//     map-construction drift; the split stops meaning anything.
 //
 // en.json is authoritative; fr-CA.json and zh-Hant.json are
 // English fallbacks in Phase 1.2 (cross-locale placeholder
-// parity is a Phase 2 follow-up — see sub-brief §9).
+// parity is a Phase 2 follow-up).
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { TEMPLATE_ID_PARAMS } from '@/agent/prompts/validTemplateIds';
+import {
+  AGENT_EMITTABLE_TEMPLATE_IDS,
+  SERVER_EMITTED_TEMPLATE_IDS,
+} from '@/agent/prompts/validTemplateIds';
+
+const MERGED_TEMPLATE_ID_PARAMS = {
+  ...AGENT_EMITTABLE_TEMPLATE_IDS,
+  ...SERVER_EMITTED_TEMPLATE_IDS,
+} as const;
 
 function getValueAtPath(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
@@ -40,7 +58,9 @@ function extractPlaceholders(s: string): Set<string> {
 
 function schemaShapeKeys(schema: z.ZodTypeAny): Set<string> {
   if (!(schema instanceof z.ZodObject)) {
-    throw new Error('TEMPLATE_ID_PARAMS schemas must be ZodObject instances');
+    throw new Error(
+      'AGENT_EMITTABLE_TEMPLATE_IDS / SERVER_EMITTED_TEMPLATE_IDS schemas must be ZodObject instances',
+    );
   }
   return new Set(Object.keys(schema.shape as Record<string, z.ZodTypeAny>));
 }
@@ -49,7 +69,7 @@ describe('agentTemplateParamsClosure: schema fields ↔ en.json placeholders', (
   const enPath = resolve(process.cwd(), 'messages/en.json');
   const en = JSON.parse(readFileSync(enPath, 'utf-8')) as Record<string, unknown>;
 
-  for (const [template_id, schema] of Object.entries(TEMPLATE_ID_PARAMS)) {
+  for (const [template_id, schema] of Object.entries(MERGED_TEMPLATE_ID_PARAMS)) {
     it(`${template_id}: schema field set equals en.json placeholder set`, () => {
       const value = getValueAtPath(en, template_id);
       expect(
@@ -76,4 +96,14 @@ describe('agentTemplateParamsClosure: schema fields ↔ en.json placeholders', (
       ).toEqual([]);
     });
   }
+
+  it('AGENT_EMITTABLE_TEMPLATE_IDS and SERVER_EMITTED_TEMPLATE_IDS are disjoint', () => {
+    const overlap = Object.keys(AGENT_EMITTABLE_TEMPLATE_IDS).filter(
+      (k) => k in SERVER_EMITTED_TEMPLATE_IDS,
+    );
+    expect(
+      overlap,
+      `template_ids must not appear in both maps; found in both: ${overlap.join(', ')}`,
+    ).toEqual([]);
+  });
 });

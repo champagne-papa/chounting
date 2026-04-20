@@ -33,6 +33,9 @@
       "tool_validation_failed": "I was unable to format a valid request after {retries} attempts. Please rephrase what you'd like to do.",
       "structured_response_missing": "I had trouble formatting a response. Please try again."
     },
+    "response": {
+      "natural": "{text}"
+    },
     "onboarding": {
       "first_task": {
         "navigate": "Taking you there now."

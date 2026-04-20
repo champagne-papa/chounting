@@ -3423,3 +3423,130 @@ that Session 8 should ratify or demote:
   codification opportunity; if a third datapoint surfaces in
   Session 7.1 or Session 8 itself, the codification is
   overdetermined.
+
+## Phase 1.2 Session 7.1 (execution)
+
+- 2026-04-19 NOTE   Session 7.1 execution kickoff. Anchor SHA
+  dc0ee69 (docs(phase-1.2): session 7.1 sub-brief frozen).
+  Working tree clean. Baseline: 344/344 tests green,
+  `pnpm agent:validate` passes (typecheck + no-hardcoded-URLs +
+  5 Category A floor tests). Sub-brief at
+  `docs/09_briefs/phase-1.2/session-7-1-brief.md` — Shape B
+  DELTA over ba9599a §4 for Commits 4+5 deferred per Session 7
+  Pre-decision 2's split-point pre-declaration, plus three
+  non-blocking Commit 3 carryovers (currentUserRole wiring,
+  canvas navigation on Approve/Edit, SplitScreenLayout state
+  lift). Three execution commits planned per Pre-decision 18's
+  dependency reversal: (1) **Commit 5** (ba9599a labels) —
+  canvas context click handlers, reduceSelection pure reducer
+  honoring Pre-decision 10's type-compatibility rule,
+  SplitScreenLayout state lift, AgentChatPanel send() builds
+  canvas_context from props, two new test files + three EC-19
+  manual scenarios against real Claude; (2) **Commit 4**
+  (ba9599a labels) — AvatarDropdown (4 items), MainframeRail
+  Activity icon, ~15 LOC placeholder actions/page.tsx,
+  avatarDropdownMenuBehavior test, **plus** P15 currentUserRole
+  wiring on SplitScreenLayout with `orgId !== null` onboarding
+  guard per §3 carryover disposition; (3) Commit 6 — docs
+  closeout, Session 7.1 retrospective, CURRENT_STATE update,
+  and UPDATE (not rewrite) of the existing Session 8 handoff
+  section (anchor SHA shift + Convention #9 candidate datapoint
+  count refresh — three datapoints now: P11b, P14, P16 rewrite).
+  Pre-decisions in effect: P15 (OrgSwitcher pattern + guard),
+  P16 (dual-context UX ruling; callback order is implementation
+  detail, ProposedEntryCard.tsx stays untouched), P17 (all four
+  dropdown items drop selectedEntity uniformly per P10), P18
+  (Commit 5 before Commit 4 by dependency). Each commit gates
+  on a founder review per Session 6/7 pattern — diff review,
+  test-pass verification, Convention #8 identity-assertion
+  spot-check. Starting Commit 5.
+
+## Phase 1.2 Session 7.1.1 (execution)
+
+- 2026-04-19 NOTE   Session 7.1.1 execution kickoff. Anchor SHA
+  58ade6e (docs(phase-1.2): session 7.1.1 sub-brief frozen).
+  Working-tree state: Session 7.1 Commit 5 changes held
+  uncommitted (modified bridge/canvas components +
+  `src/agent/canvas/` + two new `tests/integration/` files +
+  this friction-journal entry). Per sub-brief §2, Commit 5
+  stays uncommitted; 7.1.1 commits land on top of 58ade6e and
+  Commit 5 re-tests EC-19 against the extended catalog after.
+  Baseline: 365/365 tests green, `pnpm agent:validate` passes
+  (typecheck + no-hardcoded-URLs + 5 Category A floor tests).
+  Sub-brief at `docs/09_briefs/phase-1.2/session-7-1-1-brief.md`
+  — micro-sub-session carved out of Session 7.1 to extend the
+  template catalog so the agent has a legal response shape for
+  grounded conversational answers (EC-19 scenario (a)) and to
+  move `agent.error.*` out of agent-selectable space into an
+  orchestrator-internal map. Single feature commit planned
+  (`feat(phase-1.2): Session 7.1.1 — agent.response.natural +
+  template catalog split`) with retrospective folded into the
+  commit message per §5; process observations roll up into
+  Session 7.1 Commit 6 closeout when it lands. Three
+  pre-decisions in effect: **P19** (`agent.response.natural`
+  `{ text: string }.strict()` as the general free-form
+  conversational template; narrow per-entity templates rejected
+  as not-scalable), **P20** (prompt routing prefers structured
+  templates when shape known, falls back to
+  `agent.response.natural` for grounded conversational answers;
+  exact prose wording drafted during execution with founder
+  review at commit gate), **P21** (two-map split —
+  `AGENT_EMITTABLE_TEMPLATE_IDS` 14 entries rendered in prompt;
+  `SERVER_EMITTED_TEMPLATE_IDS` 2 entries orchestrator-internal;
+  `validateParamsAgainstTemplate` accepts both via merged
+  lookup so self-emit paths keep validating through the same
+  helper). Convention #9 candidate (material gaps surface at
+  layer-transition boundaries) picks up a **4th datapoint** at
+  7.1.1 — the template-catalog gap is a layer-transition gap
+  between catalog-closure and prompt-routing per §8, joining
+  P11b, P14, and the P16 dual-context rewrite. Overdetermined
+  for codification at Session 8 retrospective. Commit gates on
+  founder review — diff review, test-pass verification,
+  Convention #8 identity-assertion spot-check, and founder
+  sign-off on P20 exact prose wording. Post-commit: founder
+  runs EC-19 scenarios (a), (b), (c) in browser against the
+  extended catalog; if all three pass, Commit 5 commits; any
+  fail → investigate `canvasContextSuffix` or persona prompts
+  before retry. Starting design pass.
+
+- 2026-04-19 NOTE   Design-pass outcome (Session 7.1.1 pre-
+  implementation). Founder rulings on four surfaced items: (1)
+  P20 prose approved with two tweaks — add `agent.greeting.welcome`
+  to the structured enumeration and replace "clarifying what
+  the user is looking at" with "asking a clarifying question
+  when context is ambiguous" (matches EC-19 scenario (c)
+  wording); (2) scope widened — `agentTemplateIdSetClosure.test.ts`
+  joins the commit alongside `agentTemplateParamsClosure.test.ts`,
+  including a load-bearing negative assertion that no
+  `SERVER_EMITTED_TEMPLATE_IDS` key appears in
+  `validTemplateIdsSection()` rendered output; (3) P21 rationale
+  corrected — the stated reason "self-emit paths keep same
+  helper" doesn't match call-site reality (the two self-emit
+  sites at `src/agent/orchestrator/index.ts:450`, `:468`,
+  `:708`, `:726` construct assistant turns with literal
+  template_ids and do **not** invoke `validateParamsAgainstTemplate`).
+  **Corrected rationale (authoritative from this NOTE forward):**
+  "`validateParamsAgainstTemplate` accepts both maps via merged
+  lookup because (a) single API surface for any future consumer
+  validating a persisted turn, (b) defense-in-depth if a future
+  code path validates server-emitted turns before persistence.
+  Isolation of `agent.error.*` from the agent-selectable surface
+  is maintained at the prompt-renderer layer
+  (`validTemplateIdsSection` only iterates
+  `AGENT_EMITTABLE_TEMPLATE_IDS`), not at the validator layer."
+  (4) Disjointness test included:
+  `Object.keys(AGENT_EMITTABLE_TEMPLATE_IDS).filter(k => k in
+  SERVER_EMITTED_TEMPLATE_IDS)` must equal `[]`. (5) Internal
+  `ValidTemplateId` type redefinition proceeds (zero external
+  callers verified via grep; only use is at line 61 of the
+  same file). **5th Convention #9 datapoint — planner-side.**
+  The P21 rationale was drafted at sub-brief time without
+  grep-verifying how the orchestrator self-emit sites actually
+  use the validator. The surface symptom was a minor accuracy
+  gap in the rationale; the layer-transition this exposes is
+  "pre-decision drafting (planner layer) → call-site reality
+  (orchestrator layer)." Joining the four earlier datapoints
+  (P11b schema-layer, P14 persistence-layer, P16 dual-context
+  rewrite, P19 template-catalog gap) as the **5th** — Session 8
+  codification is now doubly overdetermined. Proceeding to
+  implementation.

@@ -7,27 +7,36 @@
 //     translation" at UI render time (the EC-20 smoke test bug).
 //   - Locale-has-key-agent-can't-use: dead i18n entries.
 //
-// Session 7 Commit 1 elevated VALID_RESPONSE_TEMPLATE_IDS from a
-// flat array to TEMPLATE_ID_PARAMS — a template_id → Zod schema
-// map. This test now reads the canonical set via
-// Object.keys(TEMPLATE_ID_PARAMS) so it tracks the schema map
-// directly. The derived VALID_RESPONSE_TEMPLATE_IDS export is
-// kept as a back-compat re-export but is not the source of truth.
+// Session 7 Commit 1 elevated the allowlist from a flat array
+// to TEMPLATE_ID_PARAMS (template_id → Zod schema map).
+// Session 7.1.1 split that map into AGENT_EMITTABLE_TEMPLATE_IDS
+// (agent-selectable, rendered in the system prompt) and
+// SERVER_EMITTED_TEMPLATE_IDS (orchestrator self-emit paths;
+// agent.error.*). This test now reads the canonical set via the
+// merged union so coverage continues to match every declared
+// template_id, and adds a load-bearing negative assertion: no
+// SERVER_EMITTED template_id may appear in the rendered
+// validTemplateIdsSection() prompt section — enforces P21's
+// isolation guarantee that Claude never sees agent.error.* as a
+// selectable option.
 //
 // Set equality (not subset) of agent.* + proposed_entry.* keys in
-// messages/en.json against the union of TEMPLATE_ID_PARAMS keys +
-// UI_ONLY_AGENT_KEYS.
+// messages/en.json against the union of AGENT_EMITTABLE +
+// SERVER_EMITTED + UI_ONLY_AGENT_KEYS.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  TEMPLATE_ID_PARAMS,
+  AGENT_EMITTABLE_TEMPLATE_IDS,
+  SERVER_EMITTED_TEMPLATE_IDS,
   UI_ONLY_AGENT_KEYS,
   validTemplateIdsSection,
 } from '@/agent/prompts/validTemplateIds';
 
-const VALID_TEMPLATE_IDS = Object.keys(TEMPLATE_ID_PARAMS);
+const AGENT_EMITTABLE_KEYS = Object.keys(AGENT_EMITTABLE_TEMPLATE_IDS);
+const SERVER_EMITTED_KEYS = Object.keys(SERVER_EMITTED_TEMPLATE_IDS);
+const VALID_TEMPLATE_IDS = [...AGENT_EMITTABLE_KEYS, ...SERVER_EMITTED_KEYS];
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   const out: string[] = [];
@@ -42,7 +51,7 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   return out;
 }
 
-describe('agentTemplateIdSetClosure: TEMPLATE_ID_PARAMS matches messages/en.json', () => {
+describe('agentTemplateIdSetClosure: template maps match messages/en.json', () => {
   const enPath = resolve(process.cwd(), 'messages/en.json');
   const en = JSON.parse(readFileSync(enPath, 'utf-8')) as Record<string, unknown>;
   const allKeys = flattenKeys(en);
@@ -51,11 +60,20 @@ describe('agentTemplateIdSetClosure: TEMPLATE_ID_PARAMS matches messages/en.json
   );
   const namespacedSet = new Set(namespacedKeys);
 
-  it('every TEMPLATE_ID_PARAMS key exists in messages/en.json', () => {
-    for (const key of VALID_TEMPLATE_IDS) {
+  it('every AGENT_EMITTABLE_TEMPLATE_IDS key exists in messages/en.json', () => {
+    for (const key of AGENT_EMITTABLE_KEYS) {
       expect(
         namespacedSet.has(key),
-        `${key} is a key in TEMPLATE_ID_PARAMS but missing from messages/en.json`,
+        `${key} is a key in AGENT_EMITTABLE_TEMPLATE_IDS but missing from messages/en.json`,
+      ).toBe(true);
+    }
+  });
+
+  it('every SERVER_EMITTED_TEMPLATE_IDS key exists in messages/en.json', () => {
+    for (const key of SERVER_EMITTED_KEYS) {
+      expect(
+        namespacedSet.has(key),
+        `${key} is a key in SERVER_EMITTED_TEMPLATE_IDS but missing from messages/en.json`,
       ).toBe(true);
     }
   });
@@ -77,28 +95,42 @@ describe('agentTemplateIdSetClosure: TEMPLATE_ID_PARAMS matches messages/en.json
     const unaccounted = namespacedKeys.filter((k) => !combined.has(k));
     expect(
       unaccounted,
-      `Keys in messages/en.json not listed in TEMPLATE_ID_PARAMS or UI_ONLY_AGENT_KEYS: ${unaccounted.join(', ')}`,
+      `Keys in messages/en.json not listed in AGENT_EMITTABLE / SERVER_EMITTED / UI_ONLY_AGENT_KEYS: ${unaccounted.join(', ')}`,
     ).toEqual([]);
   });
 
-  it('no overlap between TEMPLATE_ID_PARAMS keys and UI_ONLY_AGENT_KEYS', () => {
+  it('no overlap between template_id maps and UI_ONLY_AGENT_KEYS', () => {
     const ids = new Set<string>(VALID_TEMPLATE_IDS);
     for (const ui of UI_ONLY_AGENT_KEYS) {
       expect(
         ids.has(ui),
-        `${ui} appears in both TEMPLATE_ID_PARAMS and UI_ONLY_AGENT_KEYS`,
+        `${ui} appears in both a template_id map and UI_ONLY_AGENT_KEYS`,
       ).toBe(false);
     }
   });
 
-  it('validTemplateIdsSection renders each valid template_id as a bullet', () => {
+  it('validTemplateIdsSection renders every AGENT_EMITTABLE_TEMPLATE_IDS key as a bullet', () => {
     const section = validTemplateIdsSection();
-    for (const key of VALID_TEMPLATE_IDS) {
+    for (const key of AGENT_EMITTABLE_KEYS) {
       expect(section).toContain(`\`${key}\``);
     }
     // And must not leak UI-only keys into the prompt.
     for (const key of UI_ONLY_AGENT_KEYS) {
       expect(section).not.toContain(`\`${key}\``);
+    }
+  });
+
+  it('validTemplateIdsSection does NOT render any SERVER_EMITTED_TEMPLATE_IDS key (P21 isolation)', () => {
+    // Load-bearing per Session 7.1.1 P21: Claude must never see
+    // agent.error.* as a selectable option in the system prompt.
+    // Isolation lives at the prompt-renderer layer; this assertion
+    // locks the invariant into a test.
+    const section = validTemplateIdsSection();
+    for (const key of SERVER_EMITTED_KEYS) {
+      expect(
+        section,
+        `validTemplateIdsSection must NOT contain SERVER_EMITTED key ${key} (would expose server-only template to Claude)`,
+      ).not.toContain(`\`${key}\``);
     }
   });
 });
