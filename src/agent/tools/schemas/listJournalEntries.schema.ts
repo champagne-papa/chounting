@@ -4,8 +4,10 @@
 
 import { z } from 'zod';
 
+// Finding O2 (Option 3a): org_id supplied by the orchestrator
+// from session.org_id at service-call time. See
+// docs/09_briefs/phase-1.2/session-8-c6-prereq-o2-org-id-injection-plan.md
 export const listJournalEntriesInputSchema = z.object({
-  org_id: z.string().uuid(),
   limit: z.number().int().positive().default(20),
   offset: z.number().int().nonnegative().default(0),
 }).strict();

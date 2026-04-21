@@ -7,16 +7,19 @@
 // [toolCallTurn, respondAfterToolTurn].
 
 import type Anthropic from '@anthropic-ai/sdk';
-import { SEED } from '../../setup/testDb';
 import { makeMessage } from './makeMessage';
 
+// Finding O2 (Option 3a): listChartOfAccounts schema no longer
+// requires org_id; the orchestrator supplies it from
+// session.org_id at service-call time. The fixture reflects what
+// the model actually emits — an empty input object.
 export const toolCallTurn: Anthropic.Messages.Message = makeMessage(
   [
     {
       type: 'tool_use',
       id: 'toolu_list_B',
       name: 'listChartOfAccounts',
-      input: { org_id: SEED.ORG_HOLDING },
+      input: {},
       caller: { type: 'direct' },
     },
   ],

@@ -64,9 +64,7 @@ import type {
   CreateOrgProfileInput,
   UpdateOrgProfilePatch,
 } from '@/shared/schemas/organization/profile.schema';
-import type { ListChartOfAccountsInput } from '@/agent/tools/schemas/listChartOfAccounts.schema';
 import type { CheckPeriodInput } from '@/agent/tools/schemas/checkPeriod.schema';
-import type { ListJournalEntriesInput } from '@/agent/tools/schemas/listJournalEntries.schema';
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
@@ -772,15 +770,43 @@ async function executeTool(
   // module-level singleton; cheap to call once per invocation.
   const db = adminClient();
 
+  // Finding O2 (Option 3a): org-scoped tools receive org_id from
+  // session.org_id, not from the model. Read-tool schemas no
+  // longer declare org_id (Part 1 of the plan); ledger-tool
+  // schemas keep org_id because they're shared with non-agent
+  // callers, and the orchestrator overwrites whatever the model
+  // emitted. In both cases the authoritative org_id is
+  // session.org_id. Reject with a loud error if session.org_id is
+  // null for any org-scoped tool — createOrganization is the only
+  // legal null-org tool and it has no org_id field.
+  const ORG_SCOPED_TOOLS = new Set([
+    'listChartOfAccounts',
+    'checkPeriod',
+    'listJournalEntries',
+    'postJournalEntry',
+    'reverseJournalEntry',
+  ]);
+  if (ORG_SCOPED_TOOLS.has(toolName) && session.org_id === null) {
+    throw new Error(
+      `${toolName} called without an active org (session.org_id is null). ` +
+        'Only onboarding tools (createOrganization) may run with a null-org session.',
+    );
+  }
+
   try {
     // Ledger-mutating tools with dry_run=true write ai_actions
     // (master §5.8 trace_id propagation; §6.5 dry_run scope).
     if (toolName === 'postJournalEntry' || toolName === 'reverseJournalEntry') {
-      const input = validatedInput as {
-        org_id: string;
+      const rawInput = validatedInput as {
+        org_id?: string;
         dry_run?: boolean;
         idempotency_key?: string;
       };
+      // Finding O2: overwrite any model-emitted org_id with the
+      // authoritative session.org_id before the ai_actions write
+      // and the downstream service call. session.org_id is
+      // non-null here (ORG_SCOPED_TOOLS guard above).
+      const input = { ...rawInput, org_id: session.org_id as string };
       if (input.dry_run === true) {
         if (!input.idempotency_key) {
           throw new Error('idempotency_key required on agent-sourced dry_run');
@@ -890,22 +916,29 @@ async function executeTool(
       return await orgService.listIndustries({}, ctx);
     }
 
+    // Finding O2: read-tool schemas no longer carry org_id; the
+    // orchestrator supplies it from session.org_id. The
+    // ORG_SCOPED_TOOLS guard above guarantees non-null here.
+    // Service signatures accept only { org_id } today; the tool
+    // schemas' additional fields (include_inactive, limit,
+    // offset) are forward-compatible and ignored by the service
+    // as in the prior implementation.
+    const orgId = session.org_id as string;
+
     if (toolName === 'listChartOfAccounts') {
-      const input = validatedInput as ListChartOfAccountsInput;
-      return await chartOfAccountsService.list({ org_id: input.org_id }, ctx);
+      return await chartOfAccountsService.list({ org_id: orgId }, ctx);
     }
 
     if (toolName === 'checkPeriod') {
       const input = validatedInput as CheckPeriodInput;
       return await periodService.isOpen(
-        { org_id: input.org_id, entry_date: input.entry_date },
+        { org_id: orgId, entry_date: input.entry_date },
         ctx,
       );
     }
 
     if (toolName === 'listJournalEntries') {
-      const input = validatedInput as ListJournalEntriesInput;
-      return await journalEntryService.list({ org_id: input.org_id }, ctx);
+      return await journalEntryService.list({ org_id: orgId }, ctx);
     }
 
     // Unknown tool — shouldn't reach here (buildSystemPrompt + the
