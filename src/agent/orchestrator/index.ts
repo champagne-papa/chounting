@@ -29,6 +29,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import type { CanvasDirective } from '@/shared/types/canvasDirective';
 import type { ProposedEntryCard } from '@/shared/types/proposedEntryCard';
+import { ProposedEntryCardSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
 import type {
   PersistedAssistantTurn,
   PersistedUserTurn,
@@ -239,6 +240,21 @@ export async function handleUserMessage(
   let validationRetries = 0;
   let structuralRetries = 0;
 
+  // Finding O2-v2: Site 1 mints an idempotency_key for ledger tool
+  // calls pre-Zod (postJournalEntry / reverseJournalEntry). Site 2
+  // (respondToUser's ProposedEntryCard post-fill) must use the SAME
+  // key that landed in ai_actions so /api/agent/confirm's lookup
+  // by (org_id, idempotency_key) resolves. Declared at
+  // handleUserMessage scope so the value persists across main-loop
+  // iterations (model may take multiple turns between the ledger
+  // tool call and the card-bearing respondToUser). Assigned only
+  // after executeTool succeeds — if Zod or executeTool threw, the
+  // minted key was never written to ai_actions and must not be
+  // propagated to a card.
+  // See docs/09_briefs/phase-1.2/session-8-c6-prereq-o2-v2-pre-zod-injection-plan.md.
+  let lastLedgerIdempotencyKey: string | undefined;
+  const LEDGER_TOOLS = new Set(['postJournalEntry', 'reverseJournalEntry']);
+
   // Main retry loop
   while (true) {
     const resp = await callClaude(
@@ -281,7 +297,32 @@ export async function handleUserMessage(
         continue;
       }
 
-      const parsed = def.zodSchema.safeParse(tu.input);
+      // Finding O2-v2 Site 1: for ledger tools, inject authoritative
+      // org_id (session-derived) and idempotency_key (orchestrator-
+      // minted) into the model's raw input BEFORE Zod. The model
+      // has no legitimate source for either; the previous pattern
+      // (overwrite inside executeTool, post-Zod) was unreachable
+      // when the model emitted empty/invalid UUIDs because Zod
+      // rejected at this boundary. Unconditional overwrite — if
+      // the model emits a value (including empty string), it is
+      // discarded. fiscal_period_id stays model-owned; omitting
+      // it must still fail Zod so the retry loop surfaces the gap.
+      // session.org_id === null is an onboarding leak guarded by
+      // ORG_SCOPED_TOOLS inside executeTool; skip injection so Zod
+      // rejects normally and the guard fires defense-in-depth.
+      let mintedIdempotencyKey: string | undefined;
+      let toolInputForValidation: unknown = tu.input;
+      if (LEDGER_TOOLS.has(tu.name) && session.org_id !== null) {
+        const raw = (tu.input as Record<string, unknown> | null) ?? {};
+        mintedIdempotencyKey = crypto.randomUUID();
+        toolInputForValidation = {
+          ...raw,
+          org_id: session.org_id,
+          idempotency_key: mintedIdempotencyKey,
+        };
+      }
+
+      const parsed = def.zodSchema.safeParse(toolInputForValidation);
       if (!parsed.success) {
         const issues = parsed.error.issues
           .map((i) => `${i.path.join('.')}: ${i.message}`)
@@ -304,6 +345,12 @@ export async function handleUserMessage(
           tool_use_id: tu.id,
           content: JSON.stringify(output),
         });
+        // Finding O2-v2 Site 1 completion: ledger tool succeeded
+        // (ai_actions row written with the minted key). Record it
+        // for Site 2's card post-fill downstream.
+        if (LEDGER_TOOLS.has(tu.name) && mintedIdempotencyKey !== undefined) {
+          lastLedgerIdempotencyKey = mintedIdempotencyKey;
+        }
         // Onboarding step transitions (sub-brief §6.4 item 3).
         // Detected at the orchestrator call site — the tool has
         // just succeeded, and the validated input tells us what
@@ -586,10 +633,42 @@ export async function handleUserMessage(
       // the turn as a canvas_directive_pill (master §14.2
       // bookmark-pill UX from Commit 3).
       const directive = parsedRespond.canvas_directive;
-      const successCard: ProposedEntryCard | undefined =
+      const modelEmittedCard =
         directive?.type === 'proposed_entry_card'
           ? directive.card
           : undefined;
+
+      // Finding O2-v2 Site 2: post-fill the three orchestrator-owned
+      // UUIDs on the card the model emitted. Model has no legitimate
+      // source for org_id (no UUIDs in prompt), idempotency_key
+      // (minted at Site 1), or trace_id (not in prompt, not in
+      // tool_result). dry_run_entry_id stays — the model correctly
+      // echoes it from the postJournalEntry tool_result. If the
+      // model emitted a card WITHOUT a prior successful ledger call
+      // this turn, lastLedgerIdempotencyKey is undefined; throw
+      // rather than minting a fresh key that would diverge from any
+      // ai_actions row and break /api/agent/confirm.
+      let successCard: ProposedEntryCard | undefined;
+      if (modelEmittedCard !== undefined) {
+        if (lastLedgerIdempotencyKey === undefined) {
+          throw new ServiceError(
+            'AGENT_TOOL_VALIDATION_FAILED',
+            'ProposedEntryCard emitted without a prior successful ledger-tool call this turn (no idempotency_key to propagate)',
+          );
+        }
+        const filled = {
+          ...modelEmittedCard,
+          org_id: session.org_id as string,
+          idempotency_key: lastLedgerIdempotencyKey,
+          trace_id: ctx.trace_id,
+        };
+        // Defense-in-depth: assert the post-filled card is strictly
+        // valid. Any drift from the ProposedEntryCardSchema surfaces
+        // here loudly rather than shipping malformed data to the client.
+        ProposedEntryCardSchema.parse(filled);
+        successCard = filled as ProposedEntryCard;
+      }
+
       const successPill: CanvasDirective | undefined =
         directive && directive.type !== 'proposed_entry_card'
           ? directive
@@ -619,13 +698,22 @@ export async function handleUserMessage(
         'handleUserMessage: response extracted',
       );
       await emitMessageProcessedAudit();
+      // Finding O2-v2 Site 2: if the model emitted a ProposedEntryCard
+      // directive, ship the post-filled card (not the loose model
+      // emission) to the client. successCard is the strict
+      // ProposedEntryCardSchema-valid version.
+      const responseDirective: CanvasDirective | undefined =
+        successCard !== undefined
+          ? { type: 'proposed_entry_card', card: successCard }
+          : parsedRespond.canvas_directive;
+
       const response: AgentResponse = {
         session_id: session.session_id,
         response: {
           template_id: parsedRespond.template_id,
           params: parsedRespond.params,
         },
-        canvas_directive: parsedRespond.canvas_directive,
+        canvas_directive: responseDirective,
         trace_id: ctx.trace_id,
       };
       if (onboardingComplete) {
@@ -802,10 +890,17 @@ async function executeTool(
         dry_run?: boolean;
         idempotency_key?: string;
       };
-      // Finding O2: overwrite any model-emitted org_id with the
+      // Finding O2 + O2-v2: overwrite any org_id with the
       // authoritative session.org_id before the ai_actions write
-      // and the downstream service call. session.org_id is
-      // non-null here (ORG_SCOPED_TOOLS guard above).
+      // and the downstream service call. session.org_id is non-null
+      // here (ORG_SCOPED_TOOLS guard above).
+      //
+      // O2-v2 moves the primary injection pre-Zod (Site 1 in
+      // handleUserMessage's main loop), so when called from that
+      // path rawInput.org_id already equals session.org_id and this
+      // overwrite is a no-op. It stays as defense-in-depth for any
+      // future code path that calls executeTool directly (tests,
+      // replays, regressions that bypass the main-loop pre-Zod hook).
       const input = { ...rawInput, org_id: session.org_id as string };
       if (input.dry_run === true) {
         if (!input.idempotency_key) {

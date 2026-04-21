@@ -8,7 +8,13 @@
 // template-based response.
 
 import { z } from 'zod';
-import { ProposedEntryCardSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
+// Finding O2-v2: the canvas_directive.proposed_entry_card variant
+// consumes the INPUT schema (UUIDs omitted). The orchestrator post-
+// fills org_id/idempotency_key/trace_id from session/ctx before the
+// card ships, at which point it validates against the strict
+// ProposedEntryCardSchema (kept as the canonical output type for
+// client-side consumers).
+import { ProposedEntryCardInputSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
 
 const uuid = z.string().uuid();
 
@@ -29,7 +35,7 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('journal_entry_list'), orgId: uuid }).strict(),
   z.object({
     type: z.literal('proposed_entry_card'),
-    card: ProposedEntryCardSchema,
+    card: ProposedEntryCardInputSchema,
   }).strict(),
   z.object({ type: z.literal('ai_action_review_queue'), orgId: uuid }).strict(),
   z.object({

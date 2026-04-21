@@ -4,19 +4,26 @@
 // org_users, invite_user, welcome), rejects unknown fields on
 // each variant, and rejects unknown discriminator values.
 //
-// Session 7 Commit 2 extension: the proposed_entry_card variant
-// tightens from z.unknown() (Session 2 placeholder) to
-// ProposedEntryCardSchema. Added cases below verify the
-// discriminated union rejects malformed cards at the directive
-// level rather than silently accepting them.
+// Session 7 Commit 2: the proposed_entry_card variant tightened
+// from z.unknown() (Session 2 placeholder) to the full card schema.
+//
+// Session 8 C6-pre (O2-v2): the proposed_entry_card variant now
+// consumes the INPUT schema (ProposedEntryCardInputSchema), which
+// omits the three orchestrator-owned UUIDs (org_id,
+// idempotency_key, trace_id). The orchestrator post-fills those
+// three at Site 2 and the strict ProposedEntryCardSchema remains
+// the canonical shape shipping to clients.
 
 import { describe, it, expect } from 'vitest';
 import { canvasDirectiveSchema } from '@/shared/schemas/canvas/canvasDirective.schema';
 
 const validOrg = '11111111-1111-1111-1111-111111111111';
 
+// O2-v2 input shape: three UUIDs (org_id, idempotency_key,
+// trace_id) are omitted — orchestrator supplies them. dry_run_entry_id
+// stays because the model copies it from the postJournalEntry
+// tool_result.
 const validCard = {
-  org_id: validOrg,
   org_name: 'Holding Co',
   transaction_type: 'journal_entry' as const,
   entry_date: '2026-04-19',
@@ -32,9 +39,7 @@ const validCard = {
     reason_template_id: 'proposed_entry.why.rule_matched',
     reason_params: { label: 'Vendor → Expense' },
   },
-  idempotency_key: '22222222-2222-2222-2222-222222222222',
   dry_run_entry_id: '33333333-3333-3333-3333-333333333333',
-  trace_id: '44444444-4444-4444-4444-444444444444',
 };
 
 describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
@@ -96,11 +101,15 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
   });
 
   it('rejects proposed_entry_card when the nested card is missing required fields', () => {
-    const { org_id: _omit, ...cardMissingOrg } = validCard;
+    // O2-v2 note: org_id / idempotency_key / trace_id are no longer
+    // required on the INPUT schema. Pick a field that IS still
+    // required — dry_run_entry_id (model emits; orchestrator doesn't
+    // fill) — to exercise the "missing required" path.
+    const { dry_run_entry_id: _omit, ...cardMissingDryRun } = validCard;
     expect(() =>
       canvasDirectiveSchema.parse({
         type: 'proposed_entry_card',
-        card: cardMissingOrg,
+        card: cardMissingDryRun,
       }),
     ).toThrow();
   });

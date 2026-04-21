@@ -63,3 +63,19 @@ export const ProposedEntryCardSchema = z
   .strict();
 
 export type ProposedEntryCardParsed = z.infer<typeof ProposedEntryCardSchema>;
+
+// Finding O2-v2: the model cannot emit a valid org_id (no UUIDs in
+// prompt by design), idempotency_key (orchestrator-minted pre-Zod at
+// Site 1), or trace_id (orchestrator-controlled). The input schema
+// is the shape the orchestrator accepts from respondToUser's
+// canvas_directive; Site 2 post-fills the three UUID fields from
+// session/ctx before the card ships to the client (which still sees
+// the strict ProposedEntryCardSchema shape).
+// See docs/09_briefs/phase-1.2/session-8-c6-prereq-o2-v2-pre-zod-injection-plan.md.
+export const ProposedEntryCardInputSchema = ProposedEntryCardSchema.omit({
+  org_id: true,
+  idempotency_key: true,
+  trace_id: true,
+});
+
+export type ProposedEntryCardInput = z.infer<typeof ProposedEntryCardInputSchema>;

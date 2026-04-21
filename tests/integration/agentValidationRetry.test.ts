@@ -52,10 +52,15 @@ describe('CA-41: Zod validation retry (Fixture C)', () => {
 
     // The retry's successful postJournalEntry tool_use wrote an
     // ai_actions row (dry_run path). Verify it exists.
+    //
+    // Finding O2-v2 note: the idempotency_key in the ai_actions row
+    // is orchestrator-minted (Site 1 pre-Zod) and no longer matches
+    // the fixture's IDEMPOTENCY_KEY_C. Query by trace_id instead —
+    // that's deterministic from ctx.
     const { data } = await adminClient()
       .from('ai_actions')
       .select('trace_id, tool_name, status')
-      .eq('idempotency_key', IDEMPOTENCY_KEY_C)
+      .eq('trace_id', ctx.trace_id)
       .maybeSingle();
     expect(data).not.toBeNull();
     expect(data!.trace_id).toBe(ctx.trace_id);
