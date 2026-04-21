@@ -31,24 +31,26 @@ export function OrgSwitcher({ currentOrgId }: Props) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
-    Promise.resolve(
-      supabase
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
         .from('memberships')
         .select('org_id, role, organizations(name)')
         .eq('status', 'active')
-    )
-      .then(({ data }) => {
-        if (data) {
-          setOrgs(
-            data.map((m: Record<string, unknown>) => ({
-              org_id: m.org_id as string,
-              name: (m.organizations as Record<string, unknown>)?.name as string,
-              role: m.role as OrgMembership['role'],
-            })),
-          );
-        }
-      })
-      .catch(() => { /* auth session may not be available yet */ });
+        .eq('user_id', user.id);
+      if (data) {
+        setOrgs(
+          data.map((m: Record<string, unknown>) => ({
+            org_id: m.org_id as string,
+            name: (m.organizations as Record<string, unknown>)?.name as string,
+            role: m.role as OrgMembership['role'],
+          })),
+        );
+      }
+    })().catch(() => { /* auth session may not be available yet */ });
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
