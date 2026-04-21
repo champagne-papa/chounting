@@ -48,3 +48,10 @@ tests/e2e/.auth/
 # playwright reports / results
 /playwright-report/
 /test-results/
+
+# runtime log capture — the historical `pnpm dev 2>&1 | tee "logs/..."` pattern
+# was the direct cause of a Next.js watcher feedback storm (Session 8 C6-pre
+# finding; the prereq doc at docs/07_governance/ec-2-prompt-set.md now points
+# log capture at /tmp/ instead). /logs/ stays ignored as defense-in-depth in
+# case the old pattern re-appears in a future prereq.
+/logs/

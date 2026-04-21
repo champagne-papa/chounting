@@ -74,12 +74,25 @@ WHERE org_id = '<test_org_id>' AND source = 'agent'
 
 ```bash
 TS=$(date -u +%Y%m%dT%H%M%SZ)
-pnpm dev 2>&1 | tee "logs/ec-2-run-${TS}.log"
+pnpm dev 2>&1 | tee "/tmp/ec-2-run-${TS}.log"
 ```
 
+**The log file MUST live outside the project tree.** Next.js's dev-server
+file watcher respects `.gitignore` but `logs/` was not historically
+excluded; teeing into `logs/` caused a feedback loop — every `Compiled in
+Xms` stdout line got teed into `logs/`, which the watcher saw as a file
+change, which triggered a recompile, which wrote another line. This
+storm masked intermittent Fast Refresh disruption for two days of
+sign-in debugging before it was diagnosed (Session 8 C6-pre finding —
+see friction-journal for the Convention #9 meta-datapoint). `/tmp/` is
+outside the tree, outside the watcher, and cleared on reboot — good
+enough for a single EC-2 run. Re-path to `$HOME/chounting-logs/...` if
+you need the log to survive a reboot.
+
 Pino `usage` lines emitted by `callClaude.ts` (shipped in C6-α) are what
-`scripts/verify-ec-2.ts` grep+jq's for cost rollup. Do not rotate the log
-until the C6 friction-journal entry is written.
+`scripts/verify-ec-2.ts` grep+jq's for cost rollup. Pass the file via
+`--log-file=/tmp/ec-2-run-${TS}.log` (or set `EC2_LOG_FILE`). Do not
+rotate the log until the C6 friction-journal entry is written.
 
 ### 4. Budget tracker
 
