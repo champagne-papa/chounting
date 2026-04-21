@@ -28,6 +28,15 @@ const SENTINEL = 'UNREDACTED_SENSITIVE_VALUE_SHOULD_NEVER_APPEAR';
  * into a concrete dotted path by replacing each `*` segment with
  * the literal `'wild'`. Pino's wildcard matcher matches any
  * object key at that depth, so 'wild' satisfies `*.password`.
+ *
+ * TODO(phase-2+): only handles flat dotted paths and simple
+ * leading wildcards (`*.leaf`). If a future REDACT_CONFIG entry
+ * uses an exotic pino pattern — intermediate wildcard (`a.*.b`),
+ * bracket notation (`a["b.c"]`), or array index (`a[*]`) — this
+ * helper produces a path pino does not match, and the test fails
+ * with an obscure "expected [REDACTED] at path ..." message. Fix
+ * then: extend the substitution logic, or throw a defensive error
+ * at the top of this function when an unsupported shape is seen.
  */
 function concretePathFor(redactPath: string): string[] {
   return redactPath.split('.').map((seg) => (seg === '*' ? 'wild' : seg));
