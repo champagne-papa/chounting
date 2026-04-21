@@ -237,9 +237,24 @@ async function invokeWithRetry(
       );
     }
 
-    log.debug(
-      { stop_reason: resp.stop_reason },
-      'callClaude: returning real response',
+    // C6-α: emit a single log.info line carrying both usage and
+    // stop_reason. trace_id rides the child logger the caller
+    // passed in (loggerWith from the orchestrator). This line is
+    // the join key that scripts/verify-ec-2.ts greps against for
+    // per-entry cost capture — see Finding M in the Session 8
+    // friction-journal for the pre-check that surfaced the gap.
+    log.info(
+      {
+        stop_reason: resp.stop_reason,
+        usage: {
+          input_tokens: resp.usage.input_tokens,
+          output_tokens: resp.usage.output_tokens,
+          cache_read_input_tokens: resp.usage.cache_read_input_tokens ?? null,
+          cache_creation_input_tokens:
+            resp.usage.cache_creation_input_tokens ?? null,
+        },
+      },
+      'callClaude: API call complete',
     );
     return resp;
   }
