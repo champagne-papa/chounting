@@ -70,7 +70,7 @@ import type { ListJournalEntriesInput } from '@/agent/tools/schemas/listJournalE
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 
 export interface HandleUserMessageInput {
   user_id: string;
