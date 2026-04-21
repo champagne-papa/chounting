@@ -41,6 +41,55 @@ SELECT
 FROM chart_of_accounts_templates
 WHERE industry = 'real_estate';
 
+-- 3b. EC-2 (Session 8 C6) CoA extension for the Real Estate test org.
+--     The EC-2 prompt set exercises accounts not covered by the Real
+--     Estate template (AR, consulting revenue, prepaid insurance,
+--     payroll withholdings, GST/PST, equipment, etc.). These additions
+--     are dev-only and survive `pnpm db:reset:clean`. ON CONFLICT DO
+--     NOTHING keeps this section idempotent.
+--
+--     Phase 1.3+ TODO: this is a workaround. The real fix is more
+--     industry templates + a CoA customization UX. Tracked in the
+--     Session 8 C6 closeout friction-journal entry.
+INSERT INTO chart_of_accounts (org_id, account_code, account_name, account_type, is_intercompany_capable)
+VALUES
+  -- Assets
+  ('22222222-2222-2222-2222-222222222222', '1250', 'Prepaid Insurance',                    'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1260', 'GST Input Tax Credit',                 'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1600', 'Accounts Receivable',                  'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1610', 'Allowance for Doubtful Accounts',      'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1700', 'Equipment',                            'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1710', 'Accumulated Depreciation - Equipment', 'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1800', 'Software (Intangible)',                'asset',     false),
+  ('22222222-2222-2222-2222-222222222222', '1810', 'Accumulated Amortization - Software',  'asset',     false),
+  -- Liabilities
+  ('22222222-2222-2222-2222-222222222222', '2010', 'Credit Card Payable',                  'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2020', 'GST Payable',                          'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2030', 'PST Payable',                          'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2040', 'Federal Income Tax Payable',           'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2050', 'CPP Payable',                          'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2060', 'EI Payable',                           'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2400', 'Unearned Revenue',                     'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2410', 'Accrued Interest Payable',             'liability', false),
+  ('22222222-2222-2222-2222-222222222222', '2500', 'Equipment Loan Payable',               'liability', false),
+  -- Revenue
+  ('22222222-2222-2222-2222-222222222222', '4300', 'Consulting Revenue',                   'revenue',   false),
+  -- Expenses
+  ('22222222-2222-2222-2222-222222222222', '5650', 'Rent Expense',                         'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5700', 'Office Supplies Expense',              'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5710', 'Cloud/Hosting Expense',                'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5720', 'Software Subscriptions',               'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5730', 'Meals & Entertainment',                'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5740', 'Professional Fees',                    'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5750', 'Contractor Expense',                   'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5760', 'Insurance Expense',                    'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5770', 'Depreciation Expense - Equipment',     'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5780', 'Amortization Expense',                 'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5790', 'Bad Debt Expense',                     'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5800', 'Salary/Wage Expense',                  'expense',   false),
+  ('22222222-2222-2222-2222-222222222222', '5810', 'Interest Expense',                     'expense',   false)
+ON CONFLICT (org_id, account_code) DO NOTHING;
+
 -- 4. Memberships (Phase 1.5B: status + is_org_owner, Phase 1.5C: role_id)
 -- Executive: access to BOTH orgs
 INSERT INTO memberships (user_id, org_id, role, role_id, status) VALUES
