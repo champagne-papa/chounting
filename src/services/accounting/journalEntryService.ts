@@ -43,6 +43,23 @@ import { loggerWith } from '@/shared/logger/pino';
 
 type JournalEntryServiceInput = PostJournalEntryInputRaw | ReversalInputRaw;
 
+// C5 Part 2: chunk size for PostgREST `.in(col, uuids)` queries.
+// Large .in() lists are serialized into the URL query string; once the
+// total URL length exceeds ~7KB, nginx/PostgREST returns HTTP 414 URI
+// Too Long. 100 UUIDs (~3.6KB of hex) stays well under the limit with
+// headroom for the rest of the URL. Any org with ~200+ journal entries
+// used to hit this in list() before the chunked loops below. Local
+// helper, not extracted — YAGNI until a second caller appears.
+const IN_QUERY_CHUNK_SIZE = 100;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 // --- Service implementation ---
 
 async function post(
@@ -350,35 +367,47 @@ async function list(
   if (entriesError) throw new ServiceError('READ_FAILED', entriesError.message);
   if (!entries || entries.length === 0) return [];
 
-  // Step 2: Fetch lines for those entries in one round trip
+  // Step 2: Fetch lines for those entries. Chunked to stay under
+  // PostgREST's URL-length limit (C5 Part 2 — see IN_QUERY_CHUNK_SIZE
+  // doc comment). Sequential loop with early throw on any chunk
+  // failure — never aggregate partial results as if successful.
   const entryIds = entries.map((e) => e.journal_entry_id);
-  const { data: lines, error: linesError } = await db
-    .from('journal_lines')
-    .select('journal_entry_id, debit_amount, credit_amount')
-    .in('journal_entry_id', entryIds);
-  if (linesError) throw new ServiceError('READ_FAILED', linesError.message);
+  const lines: { journal_entry_id: string; debit_amount: string; credit_amount: string }[] = [];
+  for (const idChunk of chunk(entryIds, IN_QUERY_CHUNK_SIZE)) {
+    const { data: chunkLines, error: linesError } = await db
+      .from('journal_lines')
+      .select('journal_entry_id, debit_amount, credit_amount')
+      .in('journal_entry_id', idChunk);
+    if (linesError) throw new ServiceError('READ_FAILED', linesError.message);
+    if (chunkLines) lines.push(...(chunkLines as typeof lines));
+  }
 
   // Step 3: Aggregate totals per entry using branded money helpers
   const totalsByEntryId = new Map<string, { debit: MoneyAmount; credit: MoneyAmount }>();
   for (const entryId of entryIds) {
     totalsByEntryId.set(entryId, { debit: zeroMoney(), credit: zeroMoney() });
   }
-  for (const line of lines ?? []) {
+  for (const line of lines) {
     const totals = totalsByEntryId.get(line.journal_entry_id);
     if (!totals) continue;
     totals.debit = addMoney(totals.debit, toMoneyAmount(line.debit_amount));
     totals.credit = addMoney(totals.credit, toMoneyAmount(line.credit_amount));
   }
 
-  // Step 4: Find which entries have been reversed (separate query, Option Q)
-  const { data: reversingEntries, error: revError } = await db
-    .from('journal_entries')
-    .select('journal_entry_id, entry_number, reverses_journal_entry_id')
-    .in('reverses_journal_entry_id', entryIds);
-  if (revError) throw new ServiceError('READ_FAILED', revError.message);
+  // Step 4: Find which entries have been reversed (separate query, Option Q).
+  // Chunked to stay under PostgREST's URL-length limit (C5 Part 2).
+  const reversingEntries: { journal_entry_id: string; entry_number: number; reverses_journal_entry_id: string | null }[] = [];
+  for (const idChunk of chunk(entryIds, IN_QUERY_CHUNK_SIZE)) {
+    const { data: chunkRev, error: revError } = await db
+      .from('journal_entries')
+      .select('journal_entry_id, entry_number, reverses_journal_entry_id')
+      .in('reverses_journal_entry_id', idChunk);
+    if (revError) throw new ServiceError('READ_FAILED', revError.message);
+    if (chunkRev) reversingEntries.push(...(chunkRev as typeof reversingEntries));
+  }
 
   const reversedByMap = new Map<string, { entry_id: string; entry_number: number }>();
-  for (const rev of reversingEntries ?? []) {
+  for (const rev of reversingEntries) {
     if (rev.reverses_journal_entry_id) {
       reversedByMap.set(rev.reverses_journal_entry_id, {
         entry_id: rev.journal_entry_id,

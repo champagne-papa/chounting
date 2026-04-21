@@ -99,16 +99,35 @@ export async function GET(
     return NextResponse.json({ entries, count: entries.length });
   } catch (err) {
     if (err instanceof ServiceError) {
+      // C5 Part 1: C4's claim that ServiceError 500s already
+      // reach pino via the service layer was only true for
+      // .post (which log.errors on its failure paths) — it was
+      // FALSE for .list (READ_FAILED throws with no log.error).
+      // Instrument 500-class ServiceErrors here so the HoldingCo
+      // failure surfaces its code and stack. Flat err_code /
+      // err_message / err_stack fields avoid pino's reserved
+      // `err` object handling.
+      const status = serviceErrorToStatus(err.code);
+      if (status >= 500) {
+        logger.error(
+          {
+            trace_id: traceId,
+            org_id: orgId,
+            err_code: err.code,
+            err_message: err.message,
+            err_stack: err.stack,
+          },
+          'journal-entries GET 500 (ServiceError)',
+        );
+      }
       return NextResponse.json(
         { error: err.code, message: err.message },
-        { status: serviceErrorToStatus(err.code) }
+        { status },
       );
     }
-    // C4 (P31): structured log for the unknown-error 500 path so
-    // the HoldingCo-specific 500 surfaces its root cause. The
-    // ServiceError branch above already reaches pino via the
-    // service-layer loggerWith(ctx) call; only this fallthrough
-    // needed instrumentation.
+    // C4 (P31): structured log for the unknown-error 500 path.
+    // Covers non-ServiceError throws only; ServiceError 500s are
+    // now logged in the branch above (C5 Part 1).
     logger.error(
       {
         trace_id: traceId,
