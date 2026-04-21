@@ -73,9 +73,10 @@ gradient:
 
 | Layer | Role | Enforcement mechanism | Examples |
 |---|---|---|---|
-| **Layer 1 — Physical Truth** | The database enforces | Postgres CHECK constraints, triggers, RLS policies | INV-LEDGER-001 through 006, INV-MONEY-002/003, INV-IDEMPOTENCY-001, INV-REVERSAL-002, INV-RLS-001 |
+| **Layer 1a — Physical Truth, commit-time** | The database prevents at commit | Postgres CHECK constraints, BEFORE/AFTER triggers, DEFERRABLE CONSTRAINT TRIGGER, RLS policies | INV-LEDGER-001 through 006, INV-MONEY-002/003, INV-IDEMPOTENCY-001, INV-REVERSAL-002, INV-RLS-001 (all 11 Phase 1.1 Layer 1 invariants) |
+| **Layer 1b — Physical Truth, scheduled audit** | The database detects on a cadence | SQL queries under `docs/07_governance/audits/prompts/` run by a scheduled job or the audit-scans skill | (no Phase 1.1 members; Phase 2 adds INV-CHECKPOINT-001 and INV-SUBLEDGER-TIEOUT-001 — see the "Phase 2 Reserved Invariants" subsection at the end of Layer 1) |
 | **Layer 2 — Operational Truth** | Services decide | TypeScript service functions wrapped in `withInvariants()`, Zod schemas at every boundary, typed `ServiceError` codes | INV-SERVICE-001/002, INV-AUTH-001, INV-MONEY-001, INV-REVERSAL-001, INV-AUDIT-001 |
-| **Layer 3 — Temporal Truth** | Events as source of truth | Append-only event stream (`events` table with triggers) | INV-LEDGER-003 (enforcement exists at Layer 1 today; the Layer 3 role of "events as source of truth" is a Phase 2 obligation) |
+| **Layer 3 — Temporal Truth** | Events as source of truth | Append-only event stream (`events` table with triggers) | INV-LEDGER-003 (enforcement exists at Layer 1a today; the Layer 3 role of "events as source of truth" is a Phase 2 obligation) |
 | **Layer 4 — Cognitive Truth** | Agents propose | Structured-response contracts, confirmation-first model, anti-hallucination rules — no enforcement invariants at this layer by design | (none — see Layer 4 section below) |
 
 **The lower-wins rule.** When two layers would disagree, the lower
@@ -86,6 +87,28 @@ function "thought" it was doing. An agent proposing a posting to a
 locked period will have the proposal rejected by the service layer,
 and if somehow the service were bypassed, by the database trigger.
 Authority only flows *down* — no layer can override a lower layer.
+
+**Why Layer 1 has two sub-layers.** Not every physical invariant
+can be checked at commit time without breaking the write path.
+Some rules are *cross-aggregate* — "sum of this table equals sum
+of that table," "checkpoint amount equals summed history up to
+date D" — and a synchronous trigger that re-aggregates on every
+write would cost orders of magnitude more than the mutation it
+guards. **Layer 1a** is the commit-time enforcement path (CHECK
+constraints, triggers, RLS): violations are *prevented*. **Layer
+1b** is the scheduled-audit path (queries under
+`docs/07_governance/audits/prompts/`, executed by the
+audit-scans skill or a scheduled job): violations are *detected*
+on a named cadence, not prevented. Both sub-layers are physical
+— both operate on database state and are independent of
+service-layer code — but they differ in latency. A reader of the
+database between audit runs might see a transient 1b violation;
+a reader cannot see a 1a violation because the DML that would
+have caused it did not commit. The lower-wins rule holds within
+Layer 1: 1a runs first, and if 1a rejects a row, 1b is never
+reached for that row. See ADR-0008 for the full rationale, the
+three tests that classify a new invariant as 1a or 1b, and the
+design constraints each sub-layer imposes.
 
 **Why Layer 4 has no enforcement invariants.** Agents are allowed to
 be wrong. That is the entire point of the confirmation-first model:
@@ -1563,6 +1586,207 @@ and confirmation commit path (transaction boundaries);
 `docs/03_architecture/phase_plan.md` Phase 2 AP Agent
 scope notes; `docs/04_engineering/conventions.md`
 transaction isolation rule.
+
+---
+
+## Phase 2 Reserved Invariants (stubs — not yet enforced)
+
+The external CTO architecture review (2026-04-21) and the
+LedgerSMB comparison it produced surfaced three invariants that
+chounting will need before Phase 2 ships real subsidiary ledgers
+and period-close reporting. They are recorded here as **stubs**
+so that Phase 2 briefs reference stable INV-IDs rather than
+inventing the shape ad-hoc, and so the enforcement mode of each
+is decided up front rather than under deadline pressure.
+
+**None of these invariants is active in Phase 1.1.** The schema
+objects they reference (`account_checkpoint`, subsidiary-ledger
+status fields, the control-account mapping) do not yet exist.
+The stubs document the *rule* and the *planned enforcement
+mode*; implementation lands in the Phase 2 briefs where the
+supporting schema is introduced. See ADR-0008 for the 1a/1b
+classification rule, and
+`docs/07_governance/friction-journal.md` (2026-04-21 entry) for
+the review cycle that produced these stubs.
+
+### INV-CHECKPOINT-001 — Period-boundary balance consistency (Phase 2, Layer 1b)
+
+**Invariant (planned).** For every locked `fiscal_periods` row
+and every `chart_of_accounts` row belonging to the same org, a
+`account_checkpoint(org_id, account_id, as_of)` row must exist
+where `as_of` equals the period's `end_date`, and its
+`ending_balance` must equal the sum of `journal_lines.debit_amount -
+journal_lines.credit_amount` across every line whose parent
+journal entry has `org_id` = the account's org, `entry_date` ≤
+the period's `end_date`, and no reversing entry posted inside
+the period that already nets the effect. The next period's
+opening balance for the same account must equal this
+`ending_balance`.
+
+**Why this is an invariant, not a reporting artifact.** Opening
+balance for period N is definitionally the closing balance for
+period N−1. Financial statements and auditor "as-of X" queries
+depend on persisted snapshots, not on a live re-aggregation that
+sees today's journal state. A checkpoint that disagrees with its
+ledger source is not a slow report — it is a wrong book. The
+rule protects auditability across period boundaries.
+
+**Planned enforcement mode — Layer 1b (scheduled audit).** A
+synchronous trigger would have to re-aggregate the full ledger
+history for the affected account on every journal-line insert
+(O(n) per insert, where n is the account's total line count).
+That is the prohibitive-cost pattern ADR-0008 names. The
+invariant is instead enforced by an audit query under
+`docs/07_governance/audits/` (exact path TBD in the Phase 2 brief — see ADR-0008 Cross-references for the directory-layout note)
+that runs on a published cadence (at minimum after every period
+lock; the full cadence is specified in the Phase 2 brief). The
+audit query detects drift; a non-empty result set is a
+correctness failure that blocks period close from being
+considered durable.
+
+**Writing discipline at checkpoint time.** The Phase 2
+`periodService.lock()` (or equivalent) computes and writes the
+`account_checkpoint` rows inside the same transaction that flips
+`fiscal_periods.is_locked = true`. The writing itself is
+synchronous and atomic; the *verification* that the written
+values match the ledger is the Layer 1b audit. This split is
+deliberate: the write path is fast (one pass over the current
+period's deltas plus the prior checkpoint), and the audit path
+is the independent check that nothing drifted during the write
+or since.
+
+**Phase 2 home.** The leaf expands in the Phase 2 brief that
+introduces `account_checkpoint` (expected under
+`docs/09_briefs/phase-2/` — the specific brief has not been
+drafted yet). At that time, this stub is replaced with a
+full leaf following the Phase 1.1 template (enforcement block,
+interaction-with-service-layer block, transaction-isolation
+block, integration-test reference, phase-evolution block,
+referenced-by block).
+
+**Referenced by (placeholder):** Phase 2 brief for
+checkpointing; `docs/07_governance/adr/0008-layer-1-enforcement-modes.md`
+(Layer 1b classification rationale); the audit prompt at
+`docs/07_governance/audits/` (exact path TBD in the Phase 2 brief — see ADR-0008 Cross-references for the directory-layout note)
+(written when the invariant lands).
+
+### INV-SUBLEDGER-LINK-001 — Source-document to journal-entry linkage (Phase 2, Layer 1a)
+
+**Invariant (planned).** Every row in a subsidiary-ledger table
+(`bills`, `invoices`, and any future subsidiary ledger) whose
+status indicates it has been posted to the GL (`status = 'posted'`
+or the equivalent) must reference exactly one `journal_entries`
+row via a non-null FK column (`posted_journal_entry_id` or a
+named analog), and the referenced journal entry must belong to
+the same org. Conversely, every `journal_entries` row whose
+`source = 'import'` or whose posting tool identifies a
+subsidiary-ledger source must have a matching subsidiary row
+pointing back to it. The linkage is 1:1 between a posted
+subsidiary row and its originating journal entry.
+
+**Why this is a Layer 1a invariant.** The rule is evaluable on a
+single row with constant-time cost: a CHECK constraint
+(`status = 'posted' IMPLIES posted_journal_entry_id IS NOT NULL`),
+a foreign-key constraint with `ON DELETE RESTRICT`, and a trigger
+on the reverse direction (`journal_entries` from a subsidiary
+source must have a matching row). The per-row synchronous cost
+is microseconds. The rule does not require cross-aggregate
+evaluation — it is a point-to-point referential constraint — so
+it belongs in 1a per the three tests in ADR-0008.
+
+**Why this matters.** Without the row-level link, a system that
+creates a bill and a journal entry as separate service calls can
+leave one without the other when a transaction fails between
+them. The subsidiary ledger then has a "posted" row with no GL
+impact, or the GL has a row with no source document. Auditors
+asking "show me the source document for this entry" cannot get
+an answer; controllers asking "what open AP exists" miss posted
+entries that happened to lose their link. The pair is either
+both committed or neither committed — that is what 1a enforces.
+
+**Interaction with Layer 2.** The service layer in Phase 2
+enforces the same rule earlier: a `billService.post()` or
+`invoiceService.post()` function inserts the subsidiary row and
+the matching journal entry in one transaction, populates the FK
+in both directions, and returns an error if either insert fails.
+Layer 1a is the unbypassable floor — a direct DML insert from
+psql would have to set the FK columns correctly, or the
+constraint rejects the row. The two-layer pattern mirrors the
+Phase 1.1 reversal discipline (INV-REVERSAL-001 at Layer 2,
+INV-REVERSAL-002 at Layer 1a).
+
+**Phase 2 home.** The leaf expands in the Phase 2 brief that
+introduces bill posting and/or invoice posting to the GL
+(current candidates include the AP Agent brief; the specific
+brief under `docs/09_briefs/phase-2/` has not yet been drafted
+against this invariant).
+
+**Referenced by (placeholder):** Phase 2 AP Agent brief; Phase 2
+invoice-posting brief; `docs/07_governance/adr/0008-layer-1-enforcement-modes.md`
+(Layer 1a classification rationale).
+
+### INV-SUBLEDGER-TIEOUT-001 — Subsidiary-ledger control-account tie-out (Phase 2, Layer 1b)
+
+**Invariant (planned).** For every org and every control account
+in the chart of accounts (AP control account, AR control account,
+any future subsidiary-backed control account), the balance of
+the control account in the GL must equal the sum of open
+balances in the corresponding subsidiary ledger. For AP:
+`SUM(bills.amount_cad - bills.amount_paid_cad WHERE org_id = X
+AND status IN ('posted', 'partially_paid'))` must equal the GL
+balance of the AP control account for org X. For AR: analogous
+with `invoices`. The equality must hold at every closed period
+boundary and on an ongoing cadence between boundaries.
+
+**Why this is distinct from INV-SUBLEDGER-LINK-001.** Row
+linkage guarantees that every posted bill has a matching journal
+entry. Tie-out guarantees that the *aggregates* reconcile. Both
+can be needed because row linkage can hold while aggregates
+drift: a stuck reversal that did not post to the control
+account, an FX revaluation gap that updated one side but not the
+other, a reversed journal entry whose subsidiary row was not
+updated to reflect the reversal. Row linkage is necessary;
+aggregate tie-out is the check that nothing drifted at the sum
+level regardless of how correct every individual link is.
+
+**Planned enforcement mode — Layer 1b (scheduled audit).** The
+rule relates two aggregates across two tables; a synchronous
+trigger would have to re-sum both aggregates on every journal-line
+or subsidiary-row insert, which is the prohibitive-cost pattern.
+Enforcement is a scheduled audit under
+`docs/07_governance/audits/` (exact path TBD in the Phase 2 brief — see ADR-0008 Cross-references for the directory-layout note)
+that runs on a published cadence (at minimum daily, and
+mandatorily before period close; the Phase 2 brief specifies
+the full cadence). Month-end close is the ritual that turns
+detection into guarantee: a period cannot be considered closed
+until the tie-out audit returns a clean result for that period.
+
+**Why the cadence is acceptable.** The business guarantee this
+invariant provides is not "no transient drift at any wall-clock
+instant" — that would require synchronous enforcement we cannot
+afford. The guarantee is "at every close, the books reconcile."
+A drift that appears at 10am and is detected at the next audit
+run (same day, or at latest period-close) is acceptable because
+it is caught before any external artifact (financial statement,
+auditor extract, tax filing) is produced from the drifted state.
+If the cadence question is not satisfied — if a business
+workflow needs the aggregate to be correct at a specific
+wall-clock moment outside the audit cadence — the workflow must
+trigger an on-demand audit, which the `audit-scans` skill
+supports.
+
+**Phase 2 home.** The leaf expands in the Phase 2 brief that
+first introduces a subsidiary ledger posting to a control
+account. Likely first landing is the AP Agent brief where bill
+posting creates the linkage INV-SUBLEDGER-LINK-001 enforces;
+tie-out follows in the same phase because the pair is only
+meaningful together.
+
+**Referenced by (placeholder):** Phase 2 AP Agent brief; Phase 2
+invoice-posting brief; `docs/07_governance/adr/0008-layer-1-enforcement-modes.md`
+(Layer 1b classification rationale); the audit prompt at
+`docs/07_governance/audits/` (exact path TBD in the Phase 2 brief — see ADR-0008 Cross-references for the directory-layout note)
+(written when the invariant lands).
 
 ---
 
@@ -3793,7 +4017,7 @@ the default.
 For reference, the complete list of Phase 1.1 invariants, in the
 order they appear in this file:
 
-**Layer 1 — Physical Truth (11 invariants):**
+**Layer 1a — Physical Truth, commit-time (11 invariants):**
 
 1. INV-LEDGER-001 — Debit = credit per journal entry
 2. INV-LEDGER-002 — Posting to a locked period is rejected
@@ -3806,6 +4030,14 @@ order they appear in this file:
 9. INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key
 10. INV-RLS-001 — Cross-org data is never visible outside the org
 11. INV-REVERSAL-002 — Reversal entries require a non-empty reason
+
+**Layer 1b — Physical Truth, scheduled audit (zero Phase 1.1
+invariants).** The sub-layer is reserved by ADR-0008 and holds
+the three Phase 2 stubs recorded in the "Phase 2 Reserved
+Invariants" subsection at the end of Layer 1 (INV-CHECKPOINT-001,
+INV-SUBLEDGER-LINK-001, INV-SUBLEDGER-TIEOUT-001 — though
+INV-SUBLEDGER-LINK-001 is classified as Layer 1a per the
+three-test rule in ADR-0008; see the stub for the rationale).
 
 Plus the **Transaction Isolation** discipline subsection at the
 end of Layer 1, documenting the `READ COMMITTED` + targeted row

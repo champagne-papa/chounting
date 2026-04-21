@@ -50,7 +50,13 @@ The rows appear in the same order as `invariants.md` and the
 leaf's Summary section: Layer 1 first (11 invariants), then
 Layer 2 (6 invariants).
 
-### Layer 1 — Physical Truth (11 invariants)
+### Layer 1a — Physical Truth, commit-time (11 invariants)
+
+Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
+and 1b (scheduled audit detection). All 11 Phase 1.1 invariants
+below are Layer 1a. Phase 1.1 has zero Layer 1b members; Phase 2
+stubs are recorded in `docs/02_specs/ledger_truth_model.md`
+under "Phase 2 Reserved Invariants."
 
 #### INV-LEDGER-001 — Debit = credit per journal entry
 

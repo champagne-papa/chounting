@@ -982,7 +982,7 @@ Categories:
   (verified column name). No session_id in request body.
   Gap 7 (§16): user.profile.update ActionName missing — added as new
   required ActionName for all three roles.
-  Gap 8 (§6.5): dry_run scope — ledger-mutating tools only. ADR-0007
+  Gap 8 (§6.5): dry_run scope — ledger-mutating tools only. ADR-0008
   pending. updateUserProfile/createOrganization/updateOrgProfile
   exempt.
   Gap 9 (§10.3): Four Questions template_id mapping — 6 template IDs
@@ -2718,7 +2718,7 @@ Categories:
   surfaced two uncommitted items unrelated to Session 6
   scope: (i) `docs/02_specs/open_questions.md` modified with
   Q27-Q31 (Phase 2 layered-tiers agent architecture open
-  questions — ADR-0007 blockers); (ii) `docs/09_briefs/
+  questions — ADR-0008 blockers); (ii) `docs/09_briefs/
   phase-2/agent_architecture_proposal.md` (new, CTO-reviewed
   Phase 2 layered-tiers proposal). Both are Phase 2 planning
   artifacts that will be addressed separately by founder.
@@ -3986,3 +3986,822 @@ future sessions can spot second datapoints:
   CanvasDirective variant: ai_action_review_queue; no UI dispatcher
   post-5e094bb + C1."
 
+### C1 closeout — shell polish
+
+**Commit:** e05d413
+**Scope actuals:**
+- Files: 6 source (1 NEW component, 1 NEW pure helper, 2 MODIFIED
+  components, 1 NEW placeholder page) + 1 NEW test file + 3 i18n
+  locale files (4 keys each)
+- LOC: ~280 (scope floor estimate was ~80–120; overrun attributable
+  to i18n 3-locale parity + node-env testability workaround
+  pattern — pure helper extraction — not scope creep)
+- Tests: +5 (P40 estimated +1; variance comes from testing the
+  pure helper exhaustively rather than the original "controller vs
+  others + sign-out navigation" 3-block scope)
+- Final test count: 374/374
+
+**Convention #9 datapoints (material gaps at layer transitions)
+surfaced in C1:**
+
+1. Pre-implementation grep — Finding A: P29 drafted "add Activity
+   icon" without noticing MainframeRail.tsx:21 already held one
+   labeled "AI Action Review" with ✅ emoji. Drafting-layer /
+   code-layer drift.
+2. Pre-implementation grep — Finding B: P29 drafted `orgId !== null`
+   guard without checking SplitScreenLayout's actual prop type
+   (non-null string). Drafting-layer / type-layer drift.
+3. Pre-implementation grep — Finding C: P29 drafted "dispatch
+   directive + router.push" without checking that settings routes
+   render outside the shell (unmounts target component).
+   Drafting-layer / render-tree drift.
+4. UX verification — RLS policy expansion: SplitScreenLayout query
+   used (org_id + maybeSingle) without user_id filter.
+   `memberships_select` RLS policy broadens for controllers via
+   `user_is_controller` helper, returning all team rows. The query
+   layer and RLS policy layer had implicit, incompatible
+   assumptions about scope. Query-layer / RLS-layer drift.
+
+**Convention #10 datapoint (mutual hallucination-flag-and-retract):**
+
+Planner's initial diagnosis of the RLS-expansion bug hypothesized
+"possibly duplicate active+removed membership rows" (the P32 bug
+path). Diagnostic data showed 3 rows from controller RLS expansion,
+not 2 from duplicate status rows — entirely different mechanism.
+Planner retracted the hypothesis before shipping a speculative fix
+and re-analyzed against the actual RLS policy. Worth naming:
+diagnostics should precede hypothesis commitment, not confirm it.
+
+**Positive observation:**
+
+UX verification gate caught a bug that passed:
+- Convention #8 grep pass (verified OrgSwitcher pattern identity
+  but didn't cross-check pattern-divergence implications —
+  SplitScreenLayout adds `.maybeSingle()` which OrgSwitcher doesn't
+  use)
+- TypeScript typecheck (both queries are type-correct)
+- Pure-helper test pass (`avatarDropdownItems` correctly returns 4
+  for controller)
+
+The bug was at the DB → RLS → component state → prop-passing
+integration path. None of the structural checks can see it because
+no layer by itself is wrong — only their interaction. Demonstrates
+the UX gate's unique coverage of integration paths that can't be
+unit-tested without a full browser environment.
+
+Also worth naming: P17's "uniform selectedEntity drop across avatar
+dropdown items" is a design property that emerges from reducer +
+route structure (Profile/Org-settings/Sign-out full-nav unloads the
+shell; Team's `directive_change` fires `reduceSelection`'s
+type-incompatibility drop for `org_users`). No per-callsite
+enforcement code needed. Potential Phase 2 retrospective insight:
+design invariants that fall out of reducer + route structure don't
+need explicit enforcement code.
+
+**Scope delta for retrospective calibration:**
+
+LOC overrun sources (both structural, not creep):
+- i18n 3-locale parity: ~18 LOC (6 keys × 3 locales)
+- Pure-helper extraction pattern: ~28 LOC (`avatarDropdownItems.ts`)
+  for node-env test compatibility
+
+Future Shape A sub-briefs should add these to C1-shaped scope
+floors when i18n and node-env-vitest apply.
+
+### C2 closeout — AI Action Review queue functional
+
+**Commit:** 9ef45db
+**Scope actuals:**
+- 5 source files (1 NEW service, 1 REPLACES page, 1 NEW table
+  component, 0 UI modifications) + 2 NEW test files + 3 i18n
+  locale files (12 keys each)
+- LOC: ~350 (P30 floor ~200; variance from i18n 3-locale parity +
+  5 it-blocks service test + exhaustive merge/ordering coverage)
+- Tests: +9 it-blocks (P40 estimated +2 files / ~+5 it-blocks);
+  final test count 374 → 383
+
+**Convention #9 datapoints surfaced during C2 (4 total):**
+
+1. **Finding D — canUserPerformAction path YAGNI:** P30's literal
+   `canUserPerformAction(ctx, 'ai_actions.read', orgId)` was
+   over-specified for a read-gate where all three personas hold
+   the permission. Deviation to `getMembership` + null-check
+   ratified by founder ruling; Phase 2 revisits if
+   role-discriminating reads appear.
+
+2. **Finding E — FK embed vs separate-query for entry_number
+   merge:** `journalEntryService.list`'s `reversed_by` lookup is
+   the direct structural analog; C2 mirrors the two-query pattern.
+   Phase 1.1 retrospective §3 names FK-embed type-shape drift as
+   a bug class; executor applied the discipline pre-implementation.
+
+3. **ai_action_status enum expansion:** migration 20240120 added
+   `'edited'` as a fifth enum value. P30 did not enumerate all 5
+   values; pre-implementation grep surfaced `'edited'` and the
+   status-pill color scheme covers it. Minor drafting-layer gap.
+
+4. **Seed-reality vs in-code-comment drift:** the comment in
+   `orgProfileEditorAuthz.test.ts:52-54` claims "every seed user
+   has memberships on both" ORG_HOLDING and ORG_REAL_ESTATE.
+   Test-run verification showed AP specialist is on
+   ORG_REAL_ESTATE only. C2 test file documents actual seed
+   reality; the outdated comment in the Session 6 test file is
+   flagged (not fixed in this commit — docs-only fix can be
+   drive-by with a future commit or Phase 2 cleanup).
+
+**Positive observations:**
+
+- **Two-step server-side authz pattern.** The authz gate uses
+  `getMembership` (no ServiceContext needed); the service call
+  builds a minimal ServiceContext inline with
+  `caller.org_ids = [orgId]` only. Authorization runs BEFORE
+  ServiceContext construction — the context carries already-
+  verified scope, not claimed scope. Worth naming as a Phase 2-
+  facing pattern for future server-component data-fetching routes.
+- **i18n placeholder-parity pattern used again.** English strings
+  in `fr-CA.json` and `zh-Hant.json` per conventions.md §i18n.
+  Third Phase 1.2 commit using this pattern (after C1 + original
+  Session 6 form scaffolding). Worth codifying in Phase 1.2
+  retrospective §6 as a convention candidate or flag for Phase 2
+  translation-pipeline work.
+
+**Observations surfaced during UX verification (non-regressions):**
+
+- AP specialist sign-in triggers an onboarding "Let's post a
+  journal entry" flow visible in the agent chat panel. Pre-
+  existing AP-persona behavior, not a C2 regression. Flagged here
+  as a datapoint for Phase 2 scope calibration — the onboarding
+  state machine's persona-specific branches may need post-Phase-
+  1.2 attention if AP users routinely re-encounter the onboarding
+  suffix on re-sign-in.
+
+**Scope delta for retrospective calibration:**
+
+LOC overrun sources (all structural, not creep):
+- i18n 3-locale parity: ~36 LOC (12 keys × 3 locales)
+- Service test exhaustive coverage: ~40 LOC (5 it-blocks vs P30
+  estimate of 3–4)
+- Inline ServiceContext construction in page: ~8 LOC
+
+Test-block overrun (+9 vs +5 estimate) covers real failure modes:
+ordering, entry_number merge, `ORG_ACCESS_DENIED`, empty-response,
+filter-by-org, seed-reality contract, forbidden-flag contract,
+stranger-user null membership.
+
+**Process deviation (flag only, no remediation):**
+
+Executor omitted a C2 kickoff NOTE under the Session 8 execution
+heading at start of C2 design pass. Session 8 kickoff instruction
+named this as the commit-open ritual ("friction-journal NOTE
+appended to the Session 8 execution block at start of each
+commit's work"). C1 had its kickoff NOTE from the session kickoff
+itself; C2's absence is a structural gap, not an intentional
+deviation. No remediation for C2 (can't retroactively pre-date
+the NOTE); C3 forward should open with an explicit kickoff NOTE.
+
+- 2026-04-20 NOTE   C3 design pass kickoff (restored per-commit
+  NOTE discipline). Scope per P28 / P32 / P33: batched fix for
+  OrgSwitcher duplicate-key warning (one-line `.eq('status',
+  'active')` addition) + `/admin/orgs` Session 5 ERRATA appendix
+  + grep-verification that `resolveCompletionHref` currently
+  routes to `/[locale]/[firstOrgId]/`. Scope floor <30 LOC + one
+  docs block. Founder review gate: §6 names "none required (pure
+  hygiene)" — I will still pause for diff-review-only per §12's
+  optional-gate rule. Starting grep pre-checks.
+
+### C3 closeout — OrgSwitcher status filter + /admin/orgs reconciliation
+
+**Commit:** 5c6ee31
+**Scope actuals:**
+- 2 source (1 MODIFIED `OrgSwitcher.tsx` +1 LOC; 1 NEW test
+  ~65 LOC) + 1 MODIFIED docs (Session 5 ERRATA block ~28 lines)
+- Test delta: +1 it-block (P40 estimated +1; exact match)
+- Final test count: 383 → 384
+- Three files outside scope (AgentChatPanel, `/admin/orgs/page`,
+  CURRENT_STATE) verified unchanged per founder Ruling 2
+
+**Convention #9 datapoints (3 this commit):**
+
+1. **Finding G — `/admin/orgs` route exists** (drafting-layer /
+   code-reality drift propagated three session handoffs: Session 6
+   PD-8 → Session 7.1 handoff → Session 8 sub-brief §3 + P33).
+   Pre-implementation grep at C3 caught it.
+
+2. **Finding H — `resolveCompletionHref` fall-through to
+   `/admin/orgs` remains** in the degenerate edge case,
+   contradicting sub-brief §3 prereq. Half-true premise (happy
+   path matched; fall-through did not).
+
+3. **Finding I — proposed P33 ERRATA text was factually wrong.**
+   Committing it would have propagated false information.
+   Corrected ERRATA documents actual state.
+
+**Cross-commit pattern observation:**
+
+C1–C3 has now accumulated 11 Convention #9 datapoints (3+5+3,
+counting the C1 UX-gate finding and the C2 seed-reality finding
+as separate datapoints):
+
+- Intra-session drafting-layer drift: 7 datapoints (mostly C1
+  and C2 findings).
+- Cross-session drafting drift: 1 datapoint (this commit's
+  Finding G, spans Sessions 6 → 7.1 → 8).
+- Code-reality / schema-reality drift: 3 datapoints (C1 RLS
+  expansion, C2 ai_action_status enum, C2 seed-reality comment).
+
+Worth naming at C9 codification: Convention #9's datapoints have
+structurally distinct sub-categories. Single codification at C9
+with sub-categorization inside, OR two tightly-related
+conventions (#9a intra-layer, #9b cross-session-premise-
+inheritance).
+
+**Scope delta for retrospective calibration:**
+
+- LOC match to P32 floor (~1 LOC + 1 test + ERRATA block) — no
+  overrun.
+- Three design findings surfaced in design pass (G, H, I); all
+  ratified as the sub-brief premise being wrong; executor
+  correctly refused to commit the drafted ERRATA verbatim.
+- C3 is the first Session 8 commit where the sub-brief was
+  substantively wrong at the premise level rather than just
+  under-specified. Distinguish in retrospective: P29 (C1) and
+  P30 (C2) were under-specified (correct premise, missing
+  details); P33 (C3) was WRONG premise. Different failure mode,
+  different codification implications.
+
+- 2026-04-20 NOTE   C4 design pass kickoff. Scope per P28 /
+  P31: structured pino logging inside GET handler's catch
+  block at `src/app/api/orgs/[orgId]/journal-entries/route.ts`.
+  Instrumentation-only — no behavior change; the 500 continues
+  to surface, the log just makes root cause observable.
+  ~10 LOC. Review gate optional per §12; founder post-commit
+  action is to run a HoldingCo GET request and capture the
+  stack trace from dev logs for C5's design-pass gate.
+  Starting grep pre-checks.
+
+### C4 closeout — HoldingCo 500 pino stack-trace instrumentation
+
+**Commit:** 387cdb2
+**Scope actuals:**
+- 1 source file MODIFIED (`route.ts` GET handler only; POST
+  untouched) — +26 / -1 LOC
+- Test delta: 0 (P40 match — instrumentation-only, no behavior
+  change)
+- Final test count: 384/384 (held exactly)
+
+**Convention #9 datapoint (1 this commit):**
+
+1. **Finding J — TypeScript strict-mode scaffolding overhead.**
+   P31 drafted the log shape as if `trace_id` and `org_id` were
+   always in scope in the catch block, but the existing code
+   binds both inside the try block (orgId from `await params`
+   at :81, ctx.trace_id from `buildServiceContext` at :85).
+   Hoist-`let` + type-guarded unknown destructuring added ~8 LOC
+   beyond P31's ~10 LOC estimate. Not scope creep — TypeScript
+   strict mode is language-enforced, not discretionary.
+
+**Sub-category structure emerging across C1–C4:**
+
+Four distinct failure modes in sub-brief drafting accumulated
+across Session 8 so far, each a candidate Convention #9
+sub-category at C9 codification:
+
+- **Wrong premise** (P33 / C3): premise itself was factually
+  incorrect; acting on it would have committed false content.
+- **Under-specification** (P30 / C2): correct premise, missing
+  detail (e.g., P30 didn't enumerate all `ai_action_status`
+  enum values or spell out the server-component canUserPerformAction
+  path gap).
+- **Drafting/code-reality drift** (P29 / C1): correct premise
+  but specific values didn't match code reality (MainframeRail
+  icon already existed; orgId prop was non-null; settings
+  routes were outside shell).
+- **Scaffolding overhead** (P31 / C4): correct premise, correct
+  detail, but under-modeled the TypeScript-strict-mode accommodation
+  required to implement the shape.
+
+Each sub-category has distinct codification implications — C9's
+Convention #9 write-up should name at least three (scaffolding
+overhead is arguably minor enough to cluster with under-
+specification; founder-call at codification time).
+
+**Scope delta for retrospective calibration:**
+
+- LOC +8 over P31 estimate; structural, not creep.
+- No test added (P40 match).
+- Review gate was diff-only (optional per §12 — hygiene-shaped
+  change, not authored content).
+- Post-commit: waiting for founder's HoldingCo 500 repro + stack
+  trace capture before C5 design pass can open.
+
+- 2026-04-20 NOTE   C4 repro surfaced a C4-design miss. The
+  expected `'journal-entries GET 500'` pino line was absent
+  from dev stdout; two 500s still fired. Root cause: the failure
+  is a `ServiceError` (likely `READ_FAILED` thrown from
+  `journalEntryService.list`), and C4's logger.error sits in the
+  *unknown-error* branch — AFTER the ServiceError early-return.
+  Planner's C4 claim ("ServiceError branch reaches pino through
+  service-layer loggerWith(ctx)") was true for `.post` (which
+  has log.error calls on failure paths) but FALSE for `.list`
+  (no log.error on READ_FAILED). Claim was not grep-verified
+  against `.list` before ruling.
+
+- 2026-04-20 NOTE   C5 scope expanded to two parts per founder
+  ruling: **Part 1** — extend the catch-block log to also fire
+  for ServiceError with status ≥ 500 (flat `err_code`,
+  `err_message`, `err_stack` fields to avoid pino's reserved
+  `err` field; message `'journal-entries GET 500 (ServiceError)'`).
+  **Part 2** — repro-driven root-cause fix, shape TBD from the
+  expanded log's output. Executor implements Part 1, validates
+  (no behavior change; test count stays 384/384), and stands
+  down for founder re-repro. C5 will commit Part 1 + Part 2
+  together (no separate C4b trivial-instrumentation commit).
+  Finding K captured for the C5 closeout; Convention #9 / #10
+  categorization question logged for C9 codification. Starting
+  Part 1 implementation.
+
+### C5 closeout — HoldingCo 500 root-cause fix (URI-too-long from unbounded .in() queries)
+
+**Commit:** 86b1adb
+**Scope actuals:**
+- 2 files MODIFIED (route.ts Part 1 +25/-8; journalEntryService.ts
+  Part 2 +43/-14)
+- 1 file NEW (journalEntriesListChunkedIn.test.ts ~163 LOC)
+- Test delta: +1 it-block (P40 range +1 to +3; low-end match)
+- Final test count: 384 → 385
+- Suite runtime: 54s → 56s (+1.9s; dominated by 150-entry bulk seed)
+
+**Root cause:** HTTP 414 "URI too long" from PostgREST/nginx when
+`journalEntryService.list` serialized >200 UUIDs into a
+`.in('col', entryIds)` query URL. Architectural / infrastructure-
+layer bug, not seed-data edge. Any org with ~200+ entries affected;
+ORG_HOLDING crossed the threshold during Phase 1.2 dev.
+
+**Convention #9 datapoints (3 this commit, bringing Session 8
+total to 16):**
+
+1. **Finding K — Service-layer log claim was false for `.list`.**
+   Planner's C4 ruling (ServiceError branches reach pino via
+   `loggerWith`) was true for `.post` but FALSE for `.list`
+   (READ_FAILED throws silently). Claim was not grep-verified
+   against the specific function. Caught by the forcing function
+   "no pino output despite C4 in place."
+
+2. **Finding L — P31 speculation exhaustively wrong.** All three
+   P31 "likely suspects" (reversed_by map miss, NUMERIC edge,
+   null fiscal_period_id) missed. Real cause (URI length) was
+   infrastructure-layer, not data-layer. Extends Finding J's
+   "scaffolding overhead" sub-category.
+
+3. **Two-step P31 discipline observation (positive).** Instrument-
+   before-fix paid off recursively: C4 instrumentation caught
+   one wrong design claim (Finding K); C5 Part 2 chunking caught
+   another wrong design claim (P31's speculated root causes).
+   Both corrections were Phase-2-scaled bugs avoided by ~10
+   minutes of added roundtrip.
+
+**Convention #10 datapoints (1 this commit):**
+
+- Planner unverified-claim retraction mid-design. Executor's
+  "C4 pino line absent from stdout" finding was the forcing
+  function. Planner retracted the C4 ruling's "ServiceError
+  reaches pino" claim verbatim, restated with grep-verified
+  scope (true for `.post`, false for `.list`), and proceeded
+  to C5 Part 1 expansion. Retraction was caught at lowest-cost
+  point (mid-repro, before another commit).
+
+**Cross-commit pattern observation:**
+
+Session 8 Convention #9 datapoints through C5: 16 total across
+5 commits.
+
+- Intra-session drafting drift: 7 datapoints (C1 + C2 findings)
+- Cross-session premise inheritance: 1 datapoint (C3 Finding G)
+- Code-reality / schema-reality drift: 3 datapoints (C1 RLS,
+  C2 enum, C2 seed-comment)
+- Scaffolding overhead (TypeScript, infrastructure): 3 datapoints
+  (C4 Finding J, C5 Finding K, C5 Finding L)
+- Planner speculation drift: 2 datapoints (C5 Finding L
+  explicitly; C5 Finding K implicitly)
+
+The "scaffolding overhead" sub-category is now 3-deep
+(TypeScript strict-mode at C4; service-layer logging gap at
+C5 Part 1; infrastructure URI limits at C5 Part 2). Worth
+naming as its own Convention #9 sub-category at C9 codification.
+Proposed sub-category name: "Language/runtime/infrastructure
+scaffolding gaps — sub-briefs under-model concerns that are
+invisible at source-read time but visible at runtime."
+
+- 2026-04-20 NOTE   [M] model migration kickoff. Q8a Option B
+  freeze-discipline applied: master brief §5.2 step 6 literal
+  model string `'claude-sonnet-4-20250514'` intentionally NOT
+  edited (brief frozen at aae547a; reference survives as a
+  historical artifact superseded by this commit). Decision G
+  (§3 "Starting model: Claude Sonnet (latest stable)") phrasing
+  is model-agnostic, no edit needed. Convention #8 grep pre-
+  checks clean: single call site at
+  `src/agent/orchestrator/index.ts:73` (NOTE: line `:73`, not
+  `:72` — planner's line number was stale; executor caught at
+  apply time). `callClaude.ts` usage is vanilla
+  `messages.create` — no prefill, no `output_format`, no
+  fine-grained-tool-streaming beta header, no `effort` param.
+  All four documented 4.6 breaking changes absent from our
+  codebase. Target model `'claude-sonnet-4-6'` verified via
+  Anthropic migration guide web search. Optional smoke test
+  skipped per P[M] ruling — constant is one-line grep-
+  verifiable. Convention #10 datapoint captured this sequence:
+  planner's post-C5-verification message bundled C5 body + [M]
+  design pass in a way that obscured the "C5 commits first"
+  sequence step; executor caught the working-tree mix before
+  [M] commit landed.
+
+### [M] closeout — migrate to claude-sonnet-4-6
+
+**Commit:** e04c579
+**Scope actuals:**
+- 1 source file MODIFIED (`src/agent/orchestrator/index.ts:73`;
+  +1 / -1 LOC — the MODEL constant swap)
+- No test added (optional smoke skipped per P[M])
+- Test delta: 0 (P40 match — 385/385 held exactly)
+- Master brief §5.2 step 6 intentionally not edited (Q8a Option B
+  freeze-discipline applied)
+
+**Convention #9 / #10 observations:**
+
+1. **Zero design findings emerged at [M] design pass.** First
+   Session 8 commit where pre-implementation grep came up clean
+   across all checks. Two readings for the retrospective:
+   - *Selection effect:* [M] is a mechanical migration; sub-brief
+     drafters handle mechanical shapes better than feature work.
+     The shape is constrained.
+   - *Overfitting check:* planner might otherwise be pattern-
+     matching "find a finding in every commit" and inflating
+     minor observations. [M] having zero findings is a useful
+     data point AGAINST that drift — it says finding-accumulation
+     is real work, not mandatory ritual.
+
+   Both readings worth noting in Phase 1.2 retrospective §3
+   (patterns).
+
+2. **Convention #10 meta-datapoint from the commit-sequencing
+   retraction** (captured in [M] kickoff NOTE). Planner's post-
+   C5-verification message bundled C5 body + [M] design pass
+   without strict sequencing markers; executor's friction-journal
+   anchor check caught the working-tree mix before [M] commit
+   landed. Retraction cost: one message exchange. Had the mix
+   landed, remediation cost would have been a squash-rewrite of
+   [M] or an immediate fix-forward — significantly more expensive.
+
+   Candidate Phase 1.3 discipline surfaced (not ratified now):
+   planner messages instructing commits should end with explicit
+   "STANDING BY FOR <specific thing>" markers rather than
+   continuing into next-step design content in the same response.
+   Worth adding to the Phase 1.2 retrospective's §7 "What I would
+   do differently" section.
+
+3. **Line-number drift in planner ruling** (`:72` vs actual
+   `:73`). Executor trivially verified and applied the correct
+   line. Minor Convention #9 datapoint: planner reported a line
+   number without re-verifying against the file state after prior
+   edits. Low-cost catch.
+
+**Session 8 state through [M]:**
+
+- 6 commits landed (C1 + C2 + C3 + C4 + C5 + [M])
+- Test count 369 → 385 (+16 from Session 8)
+- Convention #9 datapoints: 17 across 6 commits (16 at C5 + 1
+  at [M] for line-number drift)
+- Convention #10 datapoints: 2 explicit retractions (C5
+  Finding K mid-design, [M] kickoff commit-sequencing)
+- [M] post-commit smoke is founder's next action before C6 EC-2
+  paid-API run
+
+**Post-commit smoke check — PASS (2026-04-20).**
+
+Single-turn "what's our org name" prompt round-tripped against
+real Claude on the new model. All four key indicators green:
+
+- HTTP 200 on `POST /api/agent/message` (4685ms).
+- Orchestrator successfully extracted the `respondToUser` tool
+  call — structured-response contract works on 4.6.
+- Valid `template_id: 'agent.response.natural'` returned from
+  the shipped catalog; no template-drift regression.
+- Full trace chain intact: `trace_id` + `org_id` + `user_id`
+  all populated in the pino log line.
+
+Two positive observations (not Convention #9 findings; calibration
+data):
+
+- **Latency baseline captured.** First recorded 4.6 call:
+  **4685ms** for a single-turn no-tool-call prompt. Sonnet 4
+  baseline was ~2–3s for similar prompts; the extra latency is
+  consistent with 4.6's default `effort: 'high'` behavior flagged
+  in Anthropic's migration guide. Reference data for Phase 1.3
+  cost/latency modeling. If C6 EC-2 (20 entries × ~5s = ~100s
+  of API time) feels slow, `effort='medium'` or `'low'` is the
+  first tuning lever.
+- **Structural response contract works on 4.6.** The
+  respondToUser tool-based enforcement from master §6.2 fires
+  correctly on the new model. No structured-response code
+  changes required for the migration.
+
+No SDK deprecation warnings. No 4.6 breaking changes surfaced.
+No fallback to `'claude-sonnet-4-5'` needed.
+
+**Next commit: C6 — EC-2 paid-API gate (20 real entries +
+verify-ec-2 script)**
+
+Smoke clears the gate; C6 design pass opens next. Founder
+budget acknowledgement required before C6 paid-API run begins
+(Session 8 kickoff rule for paid-API commits).
+
+- 2026-04-20 NOTE   C6 design pass gated by pre-check C6-α
+  (grep-verify `callClaude.ts` emits a single pino log line
+  containing `usage` fields + `trace_id` in the same record).
+  Rationale: the "join by trace_id" strategy in
+  `scripts/verify-ec-2.ts` depends on log lines actually
+  existing. Same class of check as Convention #8 identity
+  assertions. Ran the grep; FAIL.
+
+- 2026-04-20 NOTE   **Finding M — P34 log-structure claim was
+  false.** Pre-check C6-α revealed `callClaude.ts` does NOT
+  emit `usage` data in any log line. The only post-success log
+  (`:240-243`) is `log.debug(stop_reason)` — below production
+  threshold, and lacks the `usage` field entirely. Sub-brief
+  P34's assertion ("Pino logs from callClaude already record
+  `usage.input_tokens` + `usage.output_tokens` per call") was
+  not grep-verified at drafting time. **3rd "logging /
+  observability gap" Convention #9 datapoint in consecutive
+  commits** (Finding K at C5 Part 1, Finding L at C5 Part 2,
+  Finding M now), confirming a named anti-pattern within the
+  scaffolding-overhead sub-category: "log-shape assertion
+  without grep-verification."
+
+- 2026-04-20 NOTE   **3rd Convention #10 retraction this
+  session.** Founder self-retracted the P34 log-structure
+  claim verbatim on executor's grep evidence. First two:
+  C5 Finding K (mid-design, planner retracted service-layer
+  log claim), [M] commit-sequencing (planner retracted bundled
+  commit workflow). Convention #10 is earning its keep:
+  3 mid-session retractions caught at cheap points rather than
+  propagating into commits.
+
+- 2026-04-20 NOTE   C6-α scope carved per founder ruling:
+  standalone commit, subject
+  `chore(phase-1.2): Session 8 — add usage logging to callClaude (pre-C6 C-α gap)`.
+  Source fix = add `log.info` at `:238` with `stop_reason` +
+  `usage` (input_tokens, output_tokens, cache_read_input_tokens,
+  cache_creation_input_tokens); remove existing
+  `log.debug(stop_reason)` at `:240-243` (maintenance-trap
+  cleanup — two post-success log lines at different levels
+  covering overlapping fields is a known anti-pattern). ~12 LOC
+  added, ~4 LOC removed, net ~+8. Re-verification smoke:
+  one ~$0.02 round-trip against dev server after fix lands;
+  grep + jq the captured stdout; pass criterion = single JSON
+  record contains all four usage fields + trace_id. C6 is now
+  2 commits (C6-α + C6 proper); sub-brief didn't budget for
+  this split. Acceptable per §7 pre-check discipline. Starting
+  source fix.
+
+---
+
+## External CTO Architecture Review (2026-04-21)
+
+A multi-round exchange with an external CTO compared chounting
+against LedgerSMB (a 15+-year-old Perl/Postgres accounting ERP)
+and then against the external CTO's independent framing of
+"best standard accounting software practice." The cycle
+produced actionable refinements to the truth model, the
+architecture doc, and the Phase 2 priority ordering. This
+entry records the cycle for future reference so the next round
+of Phase 2 planning references a stable baseline.
+
+### A. What was reviewed
+
+- **The LedgerSMB base schema** (tables: `lsmb_module`,
+  `account_heading`, `account`, `journal_entry`, `journal_line`,
+  `ar`, `ap`, `gl`, `acc_trans`, `voucher`, `batch`, `yearend`,
+  payroll module, entity/contact model, fixed assets, etc.).
+  Mature, broad, mid-refactor in production for years (both
+  `acc_trans` and `journal_line` coexist).
+- **16 LedgerSMB audit queries** — one per invariant, stored as
+  markdown files with yaml frontmatter. Confirmed the enforcement
+  model: detect violations periodically, not prevent at commit.
+- **LedgerSMB reporting code** (`trial_balance__generate`,
+  `ar_ap__transaction_search`, `credit_limit__used`) plus a
+  commented-out `AP_simple_post` PL/pgSQL function labeled "first
+  attempt to mimic AA.pm, sub post_transaction." Confirmed that
+  balance is checked inside the posting function after the fact
+  (`PERFORM trans_id ... HAVING sum(amount) <> 0; IF FOUND THEN
+  RAISE EXCEPTION 'Out of balance'`), not by CHECK constraint.
+- **External CTO review writeup** of the initial comparison.
+  Endorsed chounting's core design; sharpened the framing around
+  Model A vs. Model B; corrected the "checkpointing is a
+  performance concern" characterization; introduced the
+  three-enforcement-modes taxonomy.
+
+### B. Load-bearing conclusions from the cycle
+
+1. **chounting is building Model B (modern ledger
+   infrastructure, Stripe-shape).** LedgerSMB is Model A
+   (traditional ERP). Production target is the Hybrid: Model B
+   core + Model A domain modules + reporting layer. The gap list
+   relative to LedgerSMB is not "chounting is missing rigor" —
+   it is "Model A modules have not yet been layered on the Model
+   B core." Reframing reduces the gap list from alarming to
+   planned.
+2. **Checkpointing is accounting correctness, not just
+   performance.** Opening balance for period N is definitionally
+   the closing balance for period N−1. "What did the books say
+   on date X, as seen from date Y" is an audit question that
+   requires persisted snapshots. The earlier framing ("needed at
+   scale to avoid full-table scans") underweighted this; the
+   external CTO's correction is the right frame. Recorded as
+   INV-CHECKPOINT-001 in the "Phase 2 Reserved Invariants"
+   subsection of `ledger_truth_model.md` with Layer 1b
+   classification (scheduled audit — synchronous enforcement
+   would require O(n) re-aggregation per journal-line insert).
+3. **Not every invariant can be feasibly enforced
+   synchronously.** Cross-aggregate sums, subsidiary-ledger
+   control-account tie-outs, checkpoint-vs-ledger equality,
+   bank-rec sum matching — all involve relating two aggregates
+   across tables, and a synchronous trigger is the prohibitive-
+   cost pattern. The external CTO's three-mode taxonomy
+   (commit-time / write-time higher-level / scheduled-audit) is
+   sharper than the earlier "audit-category tier" sketch.
+   Formalized as the Layer 1a / Layer 1b split in ADR-0008,
+   with the authority-gradient semantics unchanged (both
+   sub-layers are physical and independent of services; they
+   differ in latency, not in rigor).
+4. **LedgerSMB is not architecturally "wrong" — it reflects
+   older tradeoffs.** Human operators controlled every posting
+   through a restricted UI, SQL access was privileged, and
+   systems were single-tenant. The detect-after-write model was
+   sound under those assumptions. chounting solves a different
+   problem class — APIs, agents, concurrency, multi-tenant —
+   which requires prevent-at-write for the invariants that can
+   be enforced that way. The external CTO flagged this nuance,
+   and future review writeups should preserve it to avoid
+   dismissive framing of legacy systems built to different
+   assumptions.
+
+### C. One place pushed back on the external CTO
+
+The external CTO's Tier 1 ordering placed **journal taxonomy**
+(`journal_type` — Sales / Purchases / Receipts / etc.) alongside
+checkpointing, purpose tagging, and source↔JE linkage. Pushed
+back: `journal_type` is UX / report-slicing convenience, not
+load-bearing. It can land later as a derived column with zero
+migration pain, and putting it in Tier 1 reflects a
+human-operator-first mental model that agent-first systems do
+not share. Demoted to Tier 2 in the revised ordering.
+
+What was added to Tier 1 in its place: **multi-stage approval
+state machine.** Today `ai_actions.status` is a single-entry
+chain (pending → confirmed/rejected/auto_posted/stale). That
+works for one-shot agent proposals. It does not work for the
+first workflow that needs second-person approval (separation
+of duties), scheduled posting (approved-but-not-yet-posted), or
+post-amendment re-review. For an agent-first system, the state
+machine matters earlier than a journal-type label does.
+
+### D. One invariant class the external CTO underweighted
+
+Row-level source↔JE linkage ("every posted bill has a JE") was
+flagged as Tier 1, correctly. But the more load-bearing
+monthly-close invariant is the **aggregate tie-out**:
+
+> `SUM(open AP subsidiary balances) = AP control-account GL balance`
+
+Row linkage can hold while aggregates drift — a stuck reversal
+not posted to the control account, an FX revaluation gap that
+updated one side only, a partially-reversed entry whose
+subsidiary row wasn't updated. Named `INV-SUBLEDGER-TIEOUT-001`
+in the Phase 2 stubs, classified Layer 1b (scheduled audit
+before period close). Row linkage is `INV-SUBLEDGER-LINK-001`,
+Layer 1a. Both needed; separate INV-IDs so Phase 2 doesn't
+conflate them.
+
+### E. Revised Phase 2 priority ordering
+
+Incorporating the external CTO's input, the pushback on
+`journal_type`, and the aggregate-tie-out addition:
+
+1. **Checkpointing / period-boundary balances** — both
+   accounting correctness (external CTO's point) and performance.
+2. **Account purpose tagging** (`account_link`-style lookup) —
+   needed by the first agent tool that posts AR/AP; without
+   it, "the AR control account for org X" is hard-coded or
+   fragile-inferred.
+3. **Source↔JE linkage (INV-SUBLEDGER-LINK-001) + subsidiary
+   tie-out (INV-SUBLEDGER-TIEOUT-001)** — the pair, not just the
+   first. Row linkage is necessary; aggregate tie-out is the
+   month-end guarantee. Layer 1a and Layer 1b respectively.
+4. **Multi-stage approval state machine** — replaces ad-hoc
+   `ai_actions.status` with a reusable model.
+5. **Layer 1a / Layer 1b split in `ledger_truth_model.md` +
+   Model A/B paragraph in `system_overview.md`** — documentation
+   only, cheap, landed in this commit cycle (ADR-0008). Sets the
+   framework the above four items reference.
+6. Journal taxonomy (`journal_type`) — later, UX / reporting.
+7. Effective-date / accrual model — when first accrual workflow
+   arrives.
+8. Batch / voucher abstraction — when first bulk import or
+   payment-run workflow arrives.
+9. Dimensions (cost centers / projects) — customer-driven.
+10. Year-end closing model — when first org crosses a full
+    fiscal year.
+11. Currencies lookup table + FK — cheap data-integrity cleanup;
+    deferred from this cycle on the "no customer driving it"
+    principle.
+
+### F. What landed in this commit
+
+Documentation only (writing-plans ceremony deliberately skipped
+because the work is pure markdown edits):
+
+- **`docs/07_governance/adr/0008-layer-1-enforcement-modes.md`** —
+  new ADR formalizing the Layer 1a / Layer 1b split. Authority
+  gradient semantics unchanged; sub-layer distinction is about
+  evaluation latency (commit-time prevention vs. scheduled
+  detection), not about rigor. Includes the three tests for
+  classifying a new invariant as 1a or 1b, and the four
+  alternatives considered with each alternative's architectural
+  cost named.
+- **`docs/07_governance/adr/README.md`** — ADR-0008 added to the
+  index table.
+- **`docs/02_specs/ledger_truth_model.md`** — Authority Gradient
+  table split into Layer 1a and Layer 1b rows; new "Why Layer 1
+  has two sub-layers" paragraph explaining the split in prose;
+  new "Phase 2 Reserved Invariants" subsection at the end of
+  Layer 1 with three stubs (INV-CHECKPOINT-001 as 1b,
+  INV-SUBLEDGER-LINK-001 as 1a, INV-SUBLEDGER-TIEOUT-001 as
+  1b) documenting the planned rule, the enforcement-mode
+  rationale, and the Phase 2 home; summary section updated to
+  label the 11 Phase 1.1 invariants as Layer 1a and to
+  acknowledge the 1b category with zero Phase 1.1 members.
+- **`docs/03_architecture/system_overview.md`** — new "Model
+  Context — Ledger Infrastructure vs. ERP" section at the top
+  explaining Model A / Model B / Hybrid, positioning chounting
+  as Model B core on a Hybrid trajectory, and giving the
+  three-category lens (core hardening / domain modules /
+  reporting layer) for reading the Phase 2 backlog.
+- **`docs/02_specs/glossary.md`** — Layer 1 entry updated to
+  name the 1a/1b split so a glossary reader finds the
+  sub-layers without first reading `ledger_truth_model.md`.
+- **`docs/06_audit/control_matrix.md`** — Layer 1 section
+  heading updated to "Layer 1a" with a note that all 11 current
+  invariants are 1a per ADR-0008 and that Phase 1.1 has zero
+  Layer 1b members.
+- **This friction-journal entry.**
+
+### G. What was deferred
+
+- **Currencies lookup table and FK from
+  `organizations.functional_currency` / `journal_lines.currency`.**
+  External CTO Tier 3. Correct work; not tied to this cycle. No
+  customer is currently driving it — every org defaults to CAD —
+  and deferring forces better design when the first
+  multi-currency customer arrives (what historical-rate table
+  accompanies it? what ISO source?). Tracked at item 11 in the
+  revised Phase 2 ordering above.
+- **Implementation of any Phase 2 invariant.** The three stubs
+  in the truth model reserve names and enforcement modes; the
+  schema objects they reference (`account_checkpoint`,
+  subsidiary-ledger status fields, control-account mapping)
+  remain Phase 2 work. This cycle is framework-only.
+- **Multi-stage approval state machine design.** Elevated to
+  Tier 1 in the priority ordering but not designed here.
+  Requires its own brainstorming / spec cycle before
+  implementation.
+- **ADR-0008+ on the writing-plans ceremony exception.** The
+  decision to skip writing-plans for pure-doc work (no tests, no
+  code) is worth codifying as a convention or an ADR eventually,
+  but doing so here would widen scope beyond the review
+  response. Deferred as a candidate convention; current
+  discipline is "use the TDD-shaped plan skill for TDD-shaped
+  work; use direct doc edits for documentation."
+
+### H. Lessons for the next review cycle
+
+1. **Don't frame performance and correctness as separate
+   concerns when they overlap.** Checkpointing was initially
+   presented as "needed at scale to avoid full-table scans";
+   the external CTO correctly pointed out that opening balances
+   *are* the correctness concern. Framing determines priority.
+   Correctness framings get Tier 1; performance framings often
+   don't. Next review: start with the correctness framing if
+   one exists.
+2. **Audit-scan patterns deserve structural representation, not
+   metadata tags.** Earlier framing proposed tagging each
+   invariant with `enforcement_mode: synchronous | audit`;
+   ADR-0008 rejects that and takes the structural-split path.
+   The distinction is load-bearing enough that a contributor
+   skimming for "what Layer 1 invariants exist" must see the
+   mode in the section title, not as metadata inside the leaf.
+3. **Review responses should be shipped as packages.** Landing
+   these three doc updates as one commit produces a single
+   coherent response to the review; splitting into three PRs
+   would have added review overhead without content value.
+   Documentation is cheaper to ship than code, and the review
+   response benefits from being a single artifact.

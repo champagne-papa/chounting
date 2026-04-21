@@ -5,7 +5,129 @@ source code is organized. The day-one document for a new engineer.
 
 Source: extracted from PLAN.md §1 and §1a during Phase 1.1 closeout
 restructure. The docs/ tree has been updated to reflect the
-post-restructure folder structure.
+post-restructure folder structure. The "Model Context" section
+below was added 2026-04-21 following the external CTO
+architecture review (see
+`docs/07_governance/friction-journal.md` entry for that date).
+
+---
+
+## Model Context — Ledger Infrastructure vs. ERP
+
+A reader coming from a traditional accounting system will notice
+that chounting looks unusually *narrow* compared to products like
+LedgerSMB, NetSuite, SAP, or QuickBooks. That is not an accident
+of Phase 1 scope — it reflects a deliberate architectural
+positioning. Two dominant models exist for accounting software,
+and chounting is explicitly building the first of them on a
+trajectory to the third.
+
+**Model A — Traditional ERP** (LedgerSMB, NetSuite, SAP,
+Dynamics). Broad domain coverage baked into one product: AR, AP,
+payroll, fixed assets, tax modules, inventory, recurring
+transactions, cost-center dimensions, vouchers, batched
+approvals, cash reconciliation. Rigor is distributed across the
+application, the database, and operator discipline. Integrity
+properties are commonly enforced by periodic *audit queries* that
+detect violations after the fact (the `write then audit` model).
+This was a sound tradeoff when human operators controlled every
+posting through a restricted application UI, SQL access was
+privileged, and systems were single-tenant.
+
+**Model B — Modern ledger infrastructure** (Stripe Ledger, Modern
+Treasury, Square Ledger, chounting). A minimal, invariant-enforced
+core that treats the ledger as a safety-critical substrate.
+Debits-equal-credits at commit time. Immutable posted entries.
+Idempotency keys on mutating calls. Fixed-precision money.
+Structured errors. Multi-tenant by construction via RLS. Domain
+features are *not* bundled — they are expected to layer on top
+through separate modules. This is the right model when the
+posting path will be driven by APIs and AI agents rather than
+careful human operators, when concurrency matters, and when
+multi-tenancy is a first-class requirement.
+
+**Hybrid (production target) — Ledger core + domain modules +
+reporting layer.** A strict Model-B core, with Model-A-style
+domain modules layered on top, and a separate reporting layer
+(materialized views, checkpoint snapshots, scheduled audits) to
+support financial statements and period-close rituals. This is
+the shape of the production system chounting is aiming at. Phase
+1.1 ships the core; Phase 2 and later phases add the domain
+modules and reporting layer.
+
+### Where chounting sits today
+
+chounting is **Model B core, on a Hybrid trajectory.** Phase
+1.1 delivered the invariant-enforced core (see
+`docs/02_specs/ledger_truth_model.md` for the 17 invariants that
+make up the core). Every Phase 2+ brief under `docs/09_briefs/`
+adds either a domain module, a reporting-layer component, or a
+Model-B primitive chounting has not yet needed.
+
+A "missing" feature compared to Model-A systems (payroll, fixed
+assets, tax modules, recurring transactions, cost-center
+dimensions) is not a defect of the Model B core — it is a module
+that has not yet been layered on. The Model B core does not need
+to change to accommodate these modules; the core's job is to be
+the safety substrate they post through. The Phase 2+ roadmap is
+the schedule for layering them on.
+
+### How to read the Phase 2 backlog through this lens
+
+The Phase 2 backlog under `docs/09_briefs/phase-2/` (and the
+priority ordering recorded in the 2026-04-21 friction-journal
+entry) has three categories once you know which model the
+project is building to:
+
+- **Core hardening (Model B).** Work that strengthens or extends
+  the invariant-enforced core itself. Examples:
+  - Layer 1a / Layer 1b split in the truth model (ADR-0008).
+  - New invariant stubs (INV-CHECKPOINT-001,
+    INV-SUBLEDGER-LINK-001, INV-SUBLEDGER-TIEOUT-001).
+  - Multi-stage approval state machine generalizing `ai_actions.status`.
+  - Simplification 1 and 2 corrections (events-projection, pg-boss audit write).
+- **Domain modules (Model A, layered on Model B).** Work that
+  adds accounting-domain features through separate modules that
+  post through the core. Examples: account-purpose tagging, source↔JE
+  linkage, effective-date / accrual model, batch / voucher abstraction,
+  dimensions (cost centers / projects), year-end closing, journal
+  taxonomy, subsidiary ledgers for AR/AP, fixed assets, payroll,
+  recurring transactions.
+- **Reporting layer.** Work that supports financial statements,
+  period-close rituals, and audit queries. Examples:
+  `account_checkpoint` and checkpoint-based trial balance, P&L
+  and balance-sheet report services, the Layer 1b audit runner
+  that executes prompts under `docs/07_governance/audits/`.
+
+The categories overlap — checkpointing is both a reporting-layer
+component and a core-hardening invariant — but the mental
+model helps when deciding whether a new piece of work belongs in
+the ledger core or as a module that sits on top of it. **Changes
+to the ledger core bear a heavier review burden than module
+additions**, because the core's job is to be stable. A new
+domain module should not require changes to
+`ledger_truth_model.md` beyond adding a named invariant; if a
+module needs the core to change, that is a signal worth
+examining before the change is made.
+
+### Why this framing matters for contributors
+
+1. **Don't re-derive Model A features unasked.** A customer
+   asking for "something like LedgerSMB's payroll module" is
+   asking for a Model A module layered on the Model B core, not
+   for chounting to become a Model A system. The core stays
+   strict.
+2. **The scheduled-audit pattern is not a fallback; it is a
+   category.** See ADR-0008 and the Layer 1b paragraph in
+   `ledger_truth_model.md`. A Phase 2 invariant that cannot be
+   checked synchronously is a first-class audit-scan invariant,
+   not a compromise.
+3. **Gaps relative to Model A systems are expected.** A reader
+   listing "what LedgerSMB has that chounting doesn't" will
+   find a long list. Every entry on that list is either (a) a
+   domain module scheduled for Phase 2+, or (b) a reporting-layer
+   component scheduled for Phase 2+. Neither class indicates the
+   core is wrong; both indicate the core is narrow *on purpose*.
 
 ---
 

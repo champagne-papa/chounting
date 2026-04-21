@@ -194,10 +194,17 @@ lines belong to one parent journal entry; they must balance
 
 ## L
 
-**Layer 1 — Physical Truth.** The database enforces. Postgres
-CHECK constraints, triggers, RLS policies. 11 invariants in
-Phase 1.1. The layer that cannot be bypassed by a bug in any
-higher layer.
+**Layer 1 — Physical Truth.** The database enforces. Split by
+ADR-0008 into two sub-layers that differ in evaluation latency
+(not in rigor): **Layer 1a — commit-time physical** (Postgres
+CHECK constraints, triggers, RLS policies — violations are
+prevented at commit) and **Layer 1b — scheduled physical / audit
+scan** (SQL queries stored under `docs/07_governance/audits/`
+run on a published cadence — violations are detected). 11
+invariants in Phase 1.1, all Layer 1a; Phase 2 adds Layer 1b
+members (see the "Phase 2 Reserved Invariants" subsection at the
+end of Layer 1 in `ledger_truth_model.md`). The layer that
+cannot be bypassed by a bug in any higher layer.
 
 **Layer 2 — Operational Truth.** Services decide. TypeScript
 service functions wrapped in [withInvariants](#w), Zod schemas
