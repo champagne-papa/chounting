@@ -5528,12 +5528,128 @@ directions, document wins."*
   ownership.
 
 **Forward link.** Section (b)'s convention-catalog elevation
-proposal (title: *Preservation and Ambiguity Gates*) is the
-load-bearing output of this retrospective. The codification
-pass (whenever it runs) should absorb the locked language in
-section (b) verbatim; the three datapoints are documented
-here as the supporting evidence; the paired inverse is
-documented as a structural complement, not a separate
-convention. Subsection (e)'s EC-2 calibration ($1.80 full-run
-baseline, `source: "manual"` prerequisite) feeds directly
-into EC-2 full-run approval gate planning.
+proposal (title: *Preservation and Ambiguity Gates*) was the
+load-bearing output of this retrospective. Codification
+landed in commit `a610e0e` (three conventions codified
+directly by a parallel session without the ratification
+cycle — subsequently absorbed retroactively via the Governance
+Audit mechanism in `5430ea5`; see subsection (g) below).
+Subsection (e)'s EC-2 calibration ($1.80 full-run baseline,
+`source: "manual"` prerequisite) feeds directly into EC-2
+full-run approval gate planning.
+
+### (g) Codification landed — ratifications and coordination mechanism
+
+The Phase C retrospective's proposals landed in two commits
+later the same day:
+
+- **`5430ea5` docs(governance): Phase C ratifications + C9
+  codification + ratification audit mechanism.** Retrospective
+  ratifications of `a610e0e`'s three pre-ratified conventions
+  (Preservation and Ambiguity Gates, Erase-to-Clean vs.
+  Document-to-Verify, Re-verify Environmental Claims at Each
+  Gate). Prospective ratifications of Plan-Time Model-Config
+  Verification (new convention) and Call-Site Enumeration
+  (new 7th category of Spec-to-Implementation Verification).
+  Bundled C9 codification: Conventions #9 (Material Gaps
+  Surface at Layer-Transition Boundaries) and #10 (Mutual
+  Hallucination-Flag-and-Retract Discipline). Item 4
+  (tripwire semantics retune from aggregate-phase-surprises
+  to same-task-iterations) absorbed into Convention #10's
+  body. Item 6 (EC-2 spend calibration) updated at
+  `docs/07_governance/ec-2-prompt-set.md`. Item 7 (CA-65
+  attribution) softened at three citation sites after
+  Prompt 4's code was shown not to touch
+  `loadOrCreateSession.ts`. Governance Audit mechanism added
+  to `conventions.md` as the closure for the ratification-
+  bypass incident; every convention in the Phase 1.2 section
+  now has an audit-trail row naming its ratification date
+  and governance cycle.
+
+- **`918e68a` feat(coordination): Session Labeling + Session
+  Lock File conventions.** Codifies the coordination
+  mechanism scoped after four concurrent-session failures
+  accumulated during the O3 + Prompt 4 arcs on 2026-04-22.
+  Two new conventions: Session Labeling (every prompt opens
+  with a session label; every commit carries a `Session:
+  <label>` trailer) and Session Lock File
+  (`.coordination/session-lock.json` encodes the currently-
+  active session's identity and constraints; pre-commit hook
+  backstops the convention by refusing foreign-session
+  commits). Supporting tooling: `scripts/session-init.sh`,
+  `scripts/session-end.sh`, `scripts/install-hooks.sh`
+  (one-time per worktree), `.coordination/README.md`,
+  `.gitignore` update to ignore the lock file only. Two new
+  Governance Audit rows added.
+
+**Ratification-bypass retrospective.** Commit `a610e0e`
+pre-ratified three conventions by committing them directly
+to `conventions.md` without the operator's review cycle —
+structurally the most severe of the four concurrent-session
+incidents because it crossed into the governance catalog.
+The decision to retrospectively ratify (rather than revert)
+rested on the content being substantively defensible on
+review; `5430ea5`'s Governance Audit mechanism was added as
+the closure so future ratification-bypass incidents are
+detectable by construction (any commit modifying
+`conventions.md` without a corresponding audit-table row is
+a tripwire).
+
+**First activation of the coordination mechanism.** Session
+M (this session, following a brief post-`918e68a` break) is
+the first session under the mechanism codified in `918e68a`.
+Activation sequence (`install-hooks.sh` + `session-init.sh`
++ operator shell export of `COORD_SESSION=M`) ran cleanly
+on the script side. The first commit attempt (this one)
+surfaced a real gap in the mechanism's environmental-
+inheritance model:
+
+**Env-inheritance finding (first-activation bug, v1).**
+Claude Code's Bash tool spawns subprocesses that inherit
+environment from the Claude Code process itself, not from
+the operator's current shell at the moment the operator
+types `export`. In the common workflow (operator launches
+Claude Code, then exports `COORD_SESSION` in a separate
+terminal, or exports after Claude Code has already started),
+the agent's Bash subprocess sees no `COORD_SESSION`. The
+pre-commit hook's "lock exists + env unset = block" path
+then correctly fires, blocking any commit the agent attempts.
+
+Three paths forward were identified: (1) restart Claude
+Code from a shell with the export set (expensive — loses
+conversation context), (2) add the export to `~/.bashrc`
+(mechanically works but wrong semantics — session-scoped
+state doesn't belong in a profile file), (3) pass the env
+inline on the commit command (`COORD_SESSION=M git commit
+...`). Option 3 was ratified as the de facto v1 behavior.
+
+This weakens the original design's implicit semantics:
+the env-var handshake was conceived as "operator-aware-of-
+session" evidence; under option 3 it becomes "agent-labels-
+its-own-commit." The residual guarantee holds: foreign-
+session agents in parallel Claude Code sessions wouldn't
+know the correct label to set inline, so the hook still
+catches incident-#1-shape (commit interleave). What it no
+longer proves is informed-operator authorization of each
+individual commit — that's an authentication property the
+mechanism cannot provide through Claude Code's Bash tool
+architecture.
+
+Convention amendment queued: Session Lock File Convention's
+Operating Rules second bullet ("Shell setup exports
+`COORD_SESSION=<label>` in the operator's shell") will be
+amended in a follow-on commit to acknowledge the env-
+inheritance constraint and ratify option 3 as the v1
+handshake. That amendment passes through the normal
+convention-ratification cycle (draft, review, commit with
+audit row).
+
+**Prompt-engineering governance threshold** remains an open
+question deferred from the coordination-mechanism scoping.
+`bd5cd75` shipped substantive prompt-engineering content
+(new shared persona section) as a single feature commit
+rather than through the O3-style design → execution →
+ratification arc. Whether this is process gap or intentional
+distinction is unresolved. Separate scoping prompt will
+address the threshold question after this closeout and the
+convention amendment land.
