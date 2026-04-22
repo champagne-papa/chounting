@@ -378,6 +378,120 @@ incidents. First observed: 2026-04-22, Phase C of O3 — Phase C
 agent discovered 78e9f0d already at HEAD, committed 14 minutes
 earlier by a parallel session working the same plan.
 
+### Re-verify Environmental Claims at Each Gate
+
+At every gate that depends on environmental state —
+commit-time, pre-approval, phase-boundary — an agent MUST
+re-verify the relevant state immediately before the gate
+fires, regardless of what was true at plan time or at a prior
+checkpoint. This applies to working-tree cleanliness,
+test-floor state, evidence preservation, and any other
+environmental fact a commit body, approval request, or
+checkpoint assertion claims. Prior-checkpoint framing is
+context-window truth; only verification at the gate itself is
+gate-time truth.
+
+Rationale: parallel actors (the operator running concurrent
+sessions, background processes, migration workflows) can
+change the environment between gates an agent passes through;
+equally, an agent's own assumptions about its execution
+environment can be wrong from the start without any other
+actor running anything at all. Three datapoints in the O3
+execution arc demonstrated the cost of carrying or making
+environmental assumptions without gate-time verification:
+(1) working-tree drift at Phase B pre-Commit-1 (the plan's
+clean-tree preamble was untrue at execution time because
+in-progress parallel work was in the tree); (2) commit-body
+staleness at O3 Site 1 (commit `6c407e7`'s body claimed
+"Pre-O3 uncommitted Phase B Prompt 4 work remains in working
+tree untouched" — already false at commit time because the
+parallel work had been committed 14 minutes earlier);
+(3) environment-inference at Phase D D2.6 (the executor
+inferred its bash tool ran in a sandbox separate from the
+operator's WSL instance, when it was actually running on the
+same machine; the inference was corrected when the operator
+flagged the actual environment before the server-stop command
+ran). Pairs with "Check HEAD before Step 2 Plan" — same
+parallel-commit-robustness pattern at the plan-time gate;
+this convention covers commit-time, approval-time, and
+phase-boundary gates plus the agent's own pre-action
+environmental assumptions. First observed: 2026-04-22, O3
+execution arc; full analysis in
+`docs/07_governance/friction-journal.md` Phase C section (c)
+under "Plan-time-discipline family" and
+"Symmetric-application datapoints."
+
+### Preservation and Ambiguity Gates
+
+Preservation gates (check-time verifications that depend on
+named environmental state having been preserved from a prior
+point) must verify state at check time rather than reason
+from inverse-of-action, because the executor cannot bind all
+actors who could affect the state, and because reasoning
+from absence-of-recalled-action to presence-of-expected-state
+is inferentially unsound regardless of actor authority. When
+gates surface unexpected or ambiguous state, document the
+ambiguity into the analysis rather than erase it to restore
+gate-cleanliness; the ambiguity is signal, not noise.
+Remediations: (i) resume-prompt preservation claims should
+include a side-note to the operator (or a
+snapshot-at-session-start step for the executor), not just
+an instruction to the executor; (ii) cleanliness checks that
+fail should trigger investigation-and-document rather than
+clean-to-restore.
+
+Rationale: three datapoints in the O3 execution arc
+triggered codification — (1) log-absence at Phase A
+(resume-prompt-stated `~/chounting-logs/` paths not present
+at execution time); (2) working-tree drift at Phase B
+pre-Commit-1 (in-progress parallel work in the tree
+violated the plan's clean-tree assumption); (3) C11
+forensic-evidence wipe at Phase D pre-approval gate
+(operator's parallel migration workflow ran
+`pnpm db:reset:clean`, wiping `agent_sessions f27a3878...`
+rows the resume prompt assumed preserved). The pattern
+across all three: preservation assumptions stated as
+instructions to the executor cannot bind other actors, and
+inverse-of-action reasoning is unsound regardless of actor
+authority. See also "Erase-to-Clean vs. Document-to-Verify"
+for the broader meta-principle. First observed: 2026-04-22,
+O3 execution arc; full retrospective in
+`docs/07_governance/friction-journal.md` Phase C section (b).
+
+### Erase-to-Clean vs. Document-to-Verify
+
+When either the operator or the executor reaches for an
+erase-to-clean shortcut to resolve ambiguity or exonerate
+action — deleting test pollution to restore gate-cleanliness,
+inferring "no action of mine" from absence-of-recall,
+re-offering a previously-ratified decision as an open option
+— the shortcut must be overridden in favor of documenting
+the ambiguity into the analysis. The discipline applies to
+whichever side reaches first; whichever side catches it —
+whether the other actor or the actor themselves — must
+surface rather than let the shortcut stand.
+
+Rationale: three instances within a single execution arc
+(O3) demonstrate the pattern is not Claude-specific.
+(1) C6 evidence attribution: "no action of mine" framing
+applied inverse-of-action reasoning to self-exonerate
+without verifying via audit-log triangulation. (2) D2.2
+row-count cleanup: lean toward DELETEing test-pollution
+journal entries to restore gate-cleanliness, when a
+documented timestamp filter would have made them trivially
+distinguishable. (3) Playwright-options-re-offered:
+presenting a previously-ratified decision (operator drives
+browser manually) as an open choice (Claude could drive via
+Playwright) without new evidence, re-opening
+approval-granularity that was already settled. Each
+instance was caught by reciprocity from the other side;
+both sides remain susceptible. See also "Preservation and
+Ambiguity Gates" for the gate-specific application of this
+principle. First observed: 2026-04-22, O3 execution arc;
+meta-pattern analysis in
+`docs/07_governance/friction-journal.md` Phase C section (c)
+under "Meta-pattern family."
+
 ---
 
 ## Appendix: Worked Example — Posting a Journal Entry
