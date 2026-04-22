@@ -298,9 +298,16 @@ $0.03/entry estimate; forward-calibrated EC-2 full-run
 baseline is $1.80, not the inherited $0.30–$0.80).
 
 Full test suite post-O3 + Prompt 4: 412 passing + 1 failed
-(CA-65 `agentSessionOrgSwitchAudit`, Prompt-4-caused by the
-before_state audit capture, not O3). `pnpm agent:validate`
-green at the Phase D pre-flight check.
+(CA-65 `agentSessionOrgSwitchAudit`). Failure shape (extra
+audit row) is consistent with the Phase 1.5A `before_state`
+convention applied to `loadOrCreateSession.ts`; the test
+was not updated to expect two rows. Prompt 4's code does
+not touch `loadOrCreateSession.ts`; true attribution
+requires `git log --oneline -- tests/integration/agentSessionOrgSwitchAudit.test.ts`
+and `git blame src/agent/orchestrator/loadOrCreateSession.ts`
+to identify the actual landing commit. Not yet run.
+`pnpm agent:validate` green at the Phase D pre-flight
+check.
 
 Phase E convention-catalog elevation proposal: *Preservation
 and Ambiguity Gates* (three datapoints crossing the

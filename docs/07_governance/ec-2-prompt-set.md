@@ -16,8 +16,14 @@ already ratified for C6.
 - **Two chunks of ten**, entries 1–10 then 11–20.
 - **Three-minute cooldown** between chunks (observer reset + CSV spot-check).
 - **Halt-and-escalate at $3.** $3 is a ceiling; expected full-run spend is
-  $0.30–$0.80. Halt immediately if any single call exceeds $0.50 or the
-  chunk-1 running total crosses $1.50.
+  **$1.80** (calibrated 2026-04-22 from one Entry 1 retry at $0.094 in
+  commit `78e9f0d`, `agent_sessions 45c9ef23-11af-46b3-af4c-39a77384817e`;
+  expect ±30% variance on subsequent retries until further datapoints
+  accumulate). Halt immediately if any single call exceeds $0.50 or the
+  chunk-1 running total crosses $1.50. Note: chunk-1 $1.50 threshold
+  unchanged from the earlier $0.30–$0.80 expectation — a tighter safety
+  margin under the recalibrated baseline, preserved pending a second
+  calibration datapoint.
 
 ## Pass criteria (from P34, verbatim)
 

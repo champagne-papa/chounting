@@ -451,7 +451,7 @@ Datapoints (5 total, preserved for the codification):
 **Convention #10** — "Mutual hallucination-flag-and-retract discipline between
 planner and executor."
 
-Datapoints (6 total, all from the 7.1 thread):
+**Datapoints (8 total — 6 from the 7.1 thread, 2 from the Session 8 O3 arc):**
 
 1. **P20 prose tweaks** (7.1.1 design pass) — founder added two precise tweaks to
    the drafted prose; planner drafted, founder flagged, planner ratified.
@@ -470,10 +470,25 @@ Datapoints (6 total, all from the 7.1 thread):
 6. **7.1.2 sub-brief stale-phrasing observation** (7.1.2) — planner noticed the §4
    `journalEntry.ts` bullet's stale "data-testid selectors" phrasing and flagged
    rather than papering over.
+7. **Working-tree drift at Phase B pre-Commit-1** (O3 arc) — the execution plan's
+   clean-tree preamble was untrue at execution time because a parallel session had
+   in-progress Prompt 4 work in the tree; misread was resolved by explicit
+   authorship triangulation via `git log --format="%h %ai %an <%ae>"`.
+8. **Parallel commits during Phase C execution** (O3 arc) — commit `78e9f0d`
+   landed from the O3 session while a separate audit session was read-first for
+   the same Phase C scope; the `c24d69d` Check-HEAD convention fired correctly on
+   discovery.
 
 Each convention gets its own h3 section, datapoint list, and a "when to invoke"
 paragraph matching the existing Convention #8 structure. Commit scope: ~80–120
 lines of added prose in `conventions.md`. No code changes.
+
+**Landed 2026-04-22 in this commit** as "Material Gaps Surface at
+Layer-Transition Boundaries" (Convention #9) and "Mutual
+Hallucination-Flag-and-Retract Discipline" (Convention #10).
+Convention #10's datapoint list expanded from 6 to 8 with O3
+Phase B/C datapoints per Phase C ratification in
+`docs/07_governance/friction-journal.md`.
 
 ### Pre-decision 38 — 27-EC matrix at `docs/09_briefs/phase-1.2/ec-matrix.md`
 

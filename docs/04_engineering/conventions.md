@@ -278,6 +278,12 @@ this convention):
   does Y") — verify via grep against the shipped codebase, not
   against a mental model of a prior phase. Codebase state
   drifts faster than drafter memory updates.
+- **Call-site enumeration** (plans that extend a widely-called
+  API — new required field on a function signature, new prop on
+  a shared component) — enumerate call sites exhaustively via
+  `grep -rn` against the target symbol rather than by
+  naming-family pattern-matching of sibling test files or
+  co-located modules.
 
 The cost is 5–10 minutes of grep-verification per sub-brief;
 the payoff is avoiding mid-execution drift where the executor
@@ -343,6 +349,20 @@ different verification move (grep against the current codebase
 for the temporal assertion, not against drafter memory of a
 prior phase). See `docs/07_governance/friction-journal.md`
 "Phase A" section, subsection A, for the incident record.
+
+**Refinement datapoint (Phase C):** the Phase C Site 1
+execution plan's File Structure map listed 4 existing
+`buildSystemPrompt*` test files to update with a new
+`now: Date` parameter; grep at execution surfaced 7 (three
+additional files used the prop through sibling-helper
+composition rather than direct calls). 75% underestimate.
+Plan-time grep of the target symbol would have caught it.
+Same class as the prior refinements ("narratively correct,
+contractually wrong"); different verification move (grep the
+call sites of the symbol being changed, not the sibling-family
+of the test names). See `docs/07_governance/friction-journal.md`
+Phase C section (c) under "Plan-time-discipline family" ("B5
+file-structure underestimate") for the incident record.
 
 **Relationship to Cited-Code Verification** (Phase 1.5A
 convention above): Cited-Code Verification catches drift
@@ -491,6 +511,215 @@ principle. First observed: 2026-04-22, O3 execution arc;
 meta-pattern analysis in
 `docs/07_governance/friction-journal.md` Phase C section (c)
 under "Meta-pattern family."
+
+### Plan-Time Model-Config Verification
+
+Plans that include paid-API work against a specific model
+(Anthropic, OpenAI, or otherwise) MUST verify the model's
+current pricing, token-window behavior, prompt-caching
+behavior, and rate-tier eligibility at plan time rather
+than inherit from prior plans. Model configurations change
+between plans, and a plan that inherits stale configuration
+assumptions will produce accurate-looking estimates that
+quietly diverge from reality.
+
+Rationale: the Phase D execution plan's `jq` query for
+Anthropic spend extraction did not include
+`cache_creation_input_tokens` or `cache_read_input_tokens`
+fields, assuming a non-cached input pricing model.
+Sonnet 4.6 uses prompt caching. The Entry 1 retry at
+2026-04-22 happened not to use caching (fresh session; no
+cache-control markers effective on a single-turn arc), so
+no misreport occurred in practice — but the template would
+have under-reported for any cached turn. Structurally the
+same pattern as working-tree-cleanliness and
+C6-evidence-preservation: untested environmental
+assumption that fires silently until it breaks. See
+`docs/07_governance/friction-journal.md` Phase C section
+(c) under "Plan-time-discipline family" for the full
+incident record. First observed: 2026-04-22, O3 Phase D
+execution plan.
+
+### Material Gaps Surface at Layer-Transition Boundaries
+
+Gaps between abstraction layers — schema ↔ UX,
+planner-drafting ↔ execution-reality, catalog-closure ↔
+prompt-routing — are where under-specified requirements
+silently decompose into bugs. When a sub-brief cites one
+layer as a dependency of work in another, the cross-layer
+contract must be stated explicitly and verified against
+both sides, not assumed from narrative coherence on either
+side alone.
+
+Rationale: five datapoints across Sessions 7 and 7.1
+triggered codification. (1) **P11b** (Session 7):
+onboarding-complete UX layer depended on an
+`agent_sessions.org_id` schema shape that the UX layer
+didn't state and the schema layer didn't enforce,
+producing a silent null-propagation bug at session load.
+(2) **P14** (Session 7): conversation-resume UX depended
+on Session 5.1's terminating-text persistence behavior;
+the UX layer assumed a persistence contract the
+persistence layer didn't guarantee. (3) **P16 dual-context
+rewrite** (Session 7.1): the `onNavigate` callback shape
+expected by canvas-transcript UX didn't match what the
+transcript component emitted; caught at test time.
+(4) **P19 template-catalog gap** (Session 7.1.1): EC-19
+scenario (a) wasn't answerable because catalog-closure and
+prompt-routing layers each assumed the other held the
+missing template. (5) **P21 rationale drift**
+(Session 7.1.1): the planner-drafting layer asserted a
+rationale ("self-emit paths keep same helper") that didn't
+match the four call sites in
+`src/agent/orchestrator/index.ts` — the drafting layer's
+narrative was coherent but contractually wrong against the
+execution-reality layer.
+
+Remediation: when a sub-brief cites a cross-layer
+dependency, state the dependency explicitly (which symbol,
+at which layer, with what contract) and verify against
+both sides (grep the symbol, read the caller, confirm the
+contract is what both layers think it is). Narrative
+coherence on one side of a boundary is insufficient
+evidence; the other side's shape must be read and matched.
+
+See `docs/07_governance/friction-journal.md` Session 7 and
+Session 7.1 retrospectives for the full datapoint records.
+First codified: 2026-04-22, as part of the deferred
+Session 8 C9 codification (landed in the same commit as
+Convention #10 and the governance-audit mechanism).
+
+### Mutual Hallucination-Flag-and-Retract Discipline
+
+Either the planner or the executor can produce content —
+sub-brief prose, commit bodies, causal attributions,
+rationale statements — that survives internal consistency
+checks but is wrong against the shipped codebase, the
+actual execution environment, or the actual sequence of
+events. When either side catches the other, or catches
+itself, the discipline is to flag explicitly and retract
+to the correct claim rather than paper over with a
+compatible-sounding revision. The correction can come from
+either direction; neither side is exempt.
+
+Rationale: eight datapoints across Sessions 7.1 and the
+Session 8 O3 arc triggered codification. Six from the
+Session 7.1 thread: (1) **P20 prose tweaks** (7.1.1 design
+pass) — founder added two precise tweaks to drafted prose;
+planner drafted, founder flagged, planner ratified.
+(2) **P21 rationale retraction** (7.1.1 design pass) —
+planner drafted a rationale that grep-verification showed
+didn't match the call sites; planner explicitly retracted
+and re-stated. (3) **ValidTemplateId type redefinition**
+(7.1.1 design pass) — planner proposed, founder asked for
+external-caller grep, proceeded ratified only after
+zero-caller evidence. (4) **Zombie dev-server
+misdiagnosis** (7.1.2 EC-19 run) — planner misread `ps`
+output and claimed a root-owned process held port 3000;
+founder-instigated fresh logs exposed the error.
+(5) **executing-plans skill review-gate bypass** (7.1.2) —
+self-audit observation; the skill's workflow skipped the
+founder review gate between implementation and commit.
+(6) **7.1.2 sub-brief stale-phrasing observation** —
+planner noticed the §4 `journalEntry.ts` bullet's stale
+"data-testid selectors" phrasing and flagged rather than
+papering over. Two additional datapoints from the O3 arc:
+(7) **Working-tree drift at Phase B pre-Commit-1** (O3) —
+the plan's clean-tree preamble was untrue at execution
+time because a parallel session had in-progress Prompt 4
+work in the tree; misread resolved by explicit authorship
+triangulation via
+`git log --format="%h %ai %an <%ae>"`.
+(8) **Parallel commits during Phase C execution** (O3) —
+commit `78e9f0d` landed from the O3 session while a
+separate audit session was read-first for the same Phase C
+scope; the `c24d69d` Check-HEAD convention fired correctly
+on discovery.
+
+**Scope — single-track commit flow binds the executor,
+not the operator.** Single-track commit-flow discipline
+applies to the current executor's commit flow only; it
+does not prohibit the operator from committing parallel
+work during an execution. Execution plans must be robust
+to parallel operator commits landing during their run. Two
+robustness requirements follow: (a) verify environmental
+state at each commit-time gate rather than carrying state
+assumptions from prior checkpoints (see also "Re-verify
+Environmental Claims at Each Gate"); (b) write commit
+bodies that claim only what is verifiable at commit time,
+not what was true at the start of the phase. These
+requirements were derived from the two O3 datapoints (7)
+and (8) above.
+
+**Tripwire semantics (retuned 2026-04-22).** The practical
+tripwire on this discipline — when to halt and reassess
+rather than continue — had been informally applied to
+aggregate environmental surprises across a phase (N=3
+unrelated environmental surprises = halt). The O3 arc
+accumulated 4+ environmental surprises, each resolved in
+a single diagnostic round with no cumulative degradation.
+Retuned semantics: the threshold tracks iterations on the
+same task rather than phase-total surprises. A single task
+requiring more than 3 debug rounds is the degradation
+signal; a phase accumulating 4+ unrelated environmental
+surprises each resolved in one round is a noisy
+environment, not degraded execution. Provenance: retune
+derived from the O3 arc's own experience, made explicit on
+2026-04-22 per Phase C section (c) in
+`docs/07_governance/friction-journal.md`.
+
+First codified: 2026-04-22, as part of the deferred
+Session 8 C9 codification (landed in the same commit as
+Convention #9 and the governance-audit mechanism). See
+`docs/07_governance/friction-journal.md` Session 7.1
+retrospective and Phase C section for the full datapoint
+records.
+
+---
+
+## Governance Audit — Phase 1.2 Convention Ratifications
+
+Every convention in this file's Phase 1.2 section is
+ratified. "Ratified" means: the operator explicitly
+approved the convention's prose and placement before the
+commit that added it to the catalog. A ratification audit
+entry below exists for every convention in "Phase 1.2
+Conventions" — retrospectively for conventions that landed
+via `a610e0e` before the governance gap was closed,
+prospectively for conventions landing after.
+
+Going forward: any commit that adds or modifies a
+convention in this file must (a) be prompted by the
+operator, (b) run through a review cycle with the
+operator, and (c) add a corresponding audit entry below
+naming the ratification date and the governance cycle that
+approved it. Commits that modify `conventions.md` without
+adding an audit entry are ratification-bypass incidents
+and must be reverted or retroactively audited.
+
+Phase 1.5A conventions (the eight entries under "Phase
+1.5A Conventions" above) landed in the Phase 1.5A
+batch-review commit set (2026-04-15); predating this audit
+mechanism, they are not enumerated below.
+
+### Phase 1.2 Conventions — Ratification Audit
+
+| Convention | Landed in commit | Ratification date | Governance cycle |
+|---|---|---|---|
+| Spec-to-Implementation Verification | (pre-`a610e0e`) | 2026-04-19 | Session 5/6 batched pass |
+| Check HEAD before Step 2 Plan | `c24d69d` | 2026-04-22 | Phase B arc consolidation |
+| Re-verify Environmental Claims at Each Gate | `a610e0e` | 2026-04-22 (retro) | Phase C ratification pass |
+| Preservation and Ambiguity Gates | `a610e0e` | 2026-04-22 (retro) | Phase C ratification pass |
+| Erase-to-Clean vs. Document-to-Verify | `a610e0e` | 2026-04-22 (retro) | Phase C ratification pass |
+| Plan-Time Model-Config Verification | (this commit) | 2026-04-22 | Phase C ratification pass |
+| Material Gaps Surface at Layer-Transition Boundaries (C9 Convention #9) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
+| Mutual Hallucination-Flag-and-Retract Discipline (C9 Convention #10) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
+
+Retroactive-ratification entries marked "(retro)" reflect
+conventions that landed in `a610e0e` without a review
+cycle; the retroactive ratification was performed in this
+commit after review against the Phase C friction-journal
+entry.
 
 ---
 

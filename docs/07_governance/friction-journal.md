@@ -5472,10 +5472,18 @@ directions, document wins."*
   baseline, not the inherited $0.03/entry; halt thresholds
   unchanged ($3 cumulative / $0.50 single-call).**
 - **CA-65 `agentSessionOrgSwitchAudit.test.ts` still red
-  post-all-commits.** Prompt-4-caused (before_state audit
-  capture produces an audit row the test's
-  expected-count-of-1 didn't anticipate). Not O3's concern.
-  Belongs in the Prompt 4 cleanup arc.
+  post-all-commits.** Failure shape (extra audit row)
+  consistent with the Phase 1.5A `before_state` convention
+  applied to `loadOrCreateSession.ts`; the test was not
+  updated to expect two rows. Prompt 4's code does not
+  touch `loadOrCreateSession.ts`; true attribution
+  requires
+  `git log --oneline -- tests/integration/agentSessionOrgSwitchAudit.test.ts`
+  and
+  `git blame src/agent/orchestrator/loadOrCreateSession.ts`
+  to identify the actual landing commit and the cleanup
+  arc ownership. Not O3's concern either way. Investigation
+  deferred.
 
 ### (f) Open questions / indeterminate items
 
@@ -5511,9 +5519,13 @@ directions, document wins."*
   later. Status: hypothesized → directionally supported by
   one datapoint → waiting for the load-bearing scenarios in
   the wild.
-- **Prompt 4 test regression (CA-65) not yet addressed.**
-  Flagged in section (e). Status: observed, attributed to
-  Prompt 4, deferred to Prompt 4's cleanup arc.
+- **CA-65 test regression not yet addressed.** Flagged in
+  section (e). Status: observed; attribution unconfirmed
+  (initial attribution to Prompt 4 was softened in the
+  Phase C ratification pass after Prompt 4's code was
+  shown not to touch `loadOrCreateSession.ts`). Pending
+  `git log` / `git blame` investigation to identify
+  ownership.
 
 **Forward link.** Section (b)'s convention-catalog elevation
 proposal (title: *Preservation and Ambiguity Gates*) is the
