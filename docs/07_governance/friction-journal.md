@@ -5123,3 +5123,405 @@ growing the Spec-to-Implementation Verification convention
 with a seventh category for "style and structural claims
 about files the prompt asks the executor to modify." One
 datapoint is not enough; logging and waiting.
+
+## Phase C — O3 closeout (2026-04-22)
+
+### (a) Outcome summary
+
+O3 shipped two prompt-layer fixes in three commits on `staging`:
+Site 1 (temporal context injection at
+`src/agent/prompts/suffixes/temporalContext.ts`, wired as a
+prefix into `buildSystemPrompt`, commit `6c407e7`) addressing
+Bug A's date hallucination, and Site 2 (`checkPeriod` recovery
+instruction with contingency text + `postJournalEntry` temporal
+nudge, commit `78e9f0d`) addressing Bug B's null-return panic;
+Commit 3 is this entry. Entry 1 paid-API retry on
+`agent_sessions 45c9ef23-11af-46b3-af4c-39a77384817e` was
+clean — `entry_date 2026-04-01`, DR Rent / CR Cash at 2400.00
+CAD, no UUID leak, no fabricated context; Bug A observably
+fixed (agent picked 2026, not the 2025 it had chosen in both
+prior paid runs); Bug B's sub-bug-of-A hypothesis
+directionally supported by one datapoint (correct date →
+`checkPeriod` returned valid period → no recovery path
+exercised). The retrospective's load-bearing output is the
+convention-catalog elevation proposal in section (b);
+sub-category datapoints, observed architectural strengths,
+adjacent findings, and open questions follow.
+
+### (b) Convention-catalog elevation proposal
+
+**Proposed new convention:** *Preservation and Ambiguity
+Gates.*
+
+Three datapoints across the O3 execution arc trigger
+codification:
+
+1. **Log-absence (O3 execution Phase A, transcript
+   verification).** The resume prompt named
+   `~/chounting-logs/ec-2-run-20260421T201938Z.log` and
+   `~/chounting-logs/ec-2-run-20260421T232045Z.log` as
+   forensic evidence. Both were absent at execution time; the
+   `~/chounting-logs/` directory did not exist. Broad `find`
+   returned no matches anywhere. Candidate causes enumerated
+   without commitment: WSL reboot cleared `/tmp/` without
+   copy-to-longterm, resume-prompt's claimed
+   `~/chounting-logs/` path was author intent rather than
+   observed fact, or explicit cleanup by some flow not visible
+   to the executor. Phase A's Part 0c hypothesis (i-vs-ii)
+   therefore **remains untested**; contingency text was
+   applied under strict-superset logic (contingency's trigger
+   clause "returns null or otherwise indicates the period is
+   not available for posting" is a proper superset of
+   primary's "returns null", so it fires correctly under any
+   hypothesis, including the unverifiable one).
+
+2. **Working-tree drift (O3 execution Phase B,
+   pre-Commit-1).** The plan's preamble assumed a clean
+   working tree; the tree contained in-progress Prompt 4 work
+   (periodService lock/unlock + before_state audit capture)
+   that was not part of O3's scope. The misread between
+   "unexpected parallel work" and "operator's own in-progress
+   unfinished work" was corrected via explicit authorship
+   triangulation (`git log --format="%h %ai %an <%ae>"`). See
+   Phase B subsection B in this file for the Prompt 4
+   session's mirror view of the same event.
+
+3. **DB reset (O3 execution Phase D, pre-D1.3 approval
+   gate).** The resume prompt stated C6 forensic evidence
+   (session `f27a3878...` in `agent_sessions` and
+   `ai_actions`) would be preserved for C11 retrospective.
+   D1.2's verification query returned zero rows for that
+   session in both tables. Audit-log triangulation (oldest
+   row timestamped `2026-04-22 16:37:16 UTC`, no rows predate
+   that; this timestamp falls between commits `dc757c3` at
+   09:34:42 PDT and `66118ac` at 09:39:34 PDT — the exact
+   window of the operator's Prompt 4 migration-application
+   workflow) nailed the cause to a full `pnpm db:reset:clean`
+   invocation. The resume prompt's preservation constraint was
+   oriented at Claude ("DO NOT run `pnpm db:reset:clean`"); the
+   constraint bound the executor but did not and could not bind
+   the operator's own parallel feature-migration workflow.
+
+**Structural point the three datapoints surface in common:**
+resume-prompt-stated or plan-stated preservation assumptions
+about environmental state (files, working-tree contents,
+database rows) are instructions to the executor and cannot
+bind other actors — the human operator running a parallel
+session, a migration flow, a filesystem cleanup, a reboot.
+Gates that depend on state preservation must verify state
+existence at check time, not reason from inverse-of-action
+("I didn't run the forbidden command, therefore the data is
+there"). The latter is the **inverse-of-action anti-pattern**
+this convention names.
+
+**Paired inverse principle (same family, different
+direction):** *When gates surface ambiguity, document the
+ambiguity into the analysis rather than erase it to restore
+gate-cleanliness.* The O3 arc produced one active instance of
+this inverse at Phase D's D2.2 ledger-cleanliness check (3
+test-pollution rows observed; lean toward DELETE-to-clean was
+correctly overridden in favor of document-and-timestamp-filter).
+These two principles — verify-state-don't-infer-from-action,
+and document-ambiguity-don't-erase-it — are structural
+complements: both refuse the shortcut of
+treating-unverified-state-as-clean, just in opposite directions.
+
+**Proposed convention language for catalog codification**
+(phrasing locked for whoever runs the codification pass to
+absorb cleanly):
+
+> **Preservation and Ambiguity Gates.** Preservation gates
+> (check-time verifications that depend on named
+> environmental state having been preserved from a prior
+> point) must verify state at check time rather than reason
+> from inverse-of-action, because the executor cannot bind
+> all actors who could affect the state, and because
+> reasoning from absence-of-recalled-action to
+> presence-of-expected-state is inferentially unsound
+> regardless of actor authority. When gates surface
+> unexpected or ambiguous state, document the ambiguity into
+> the analysis rather than erase it to restore
+> gate-cleanliness; the ambiguity is signal, not noise.
+> Remediations: (i) resume-prompt preservation claims should
+> include a side-note to the operator (or a
+> snapshot-at-session-start step for the executor), not just
+> an instruction to the executor; (ii) cleanliness checks
+> that fail should trigger investigation-and-document rather
+> than clean-to-restore.
+
+### (c) Sub-category datapoints grouped by family
+
+**Evidence-preservation family** (convention above is the
+codified output):
+
+- **Log-absence** (see b.1).
+- **Commit-body staleness (O3 Phase B→C transition, commit
+  `6c407e7` body).** Commit message contained a claim about
+  environmental state ("Pre-O3 uncommitted Phase B Prompt 4
+  work ... remains in working tree untouched") that was
+  already false at commit time — Prompt 4 had been committed
+  by the operator ~14 minutes earlier (`66118ac` at 09:39:34
+  PDT; O3 Site 1 commit at 09:53:57 PDT). Root cause:
+  mental-model persistence from an earlier Checkpoint-2
+  framing, carried across environmental change without
+  re-verification at commit time. Sub-bullet — related
+  instance, same class: *C6 evidence attribution slip ("no
+  action of mine")* was the same pattern in a different
+  surface (reasoning over own action rather than verifying
+  evidence). Remediation: commit bodies that make
+  environmental claims (working-tree cleanliness,
+  parallel-work status, test-floor state) must be re-verified
+  immediately before commit, not carried from earlier
+  checkpoints. Prior-checkpoint framing is context-window
+  truth; only `git status + git log` immediately before
+  commit is commit-time truth.
+- **C11 forensic evidence wipe** (see b.3).
+
+**Plan-time-discipline family:**
+
+- **B5 file-structure underestimate.** Plan listed 4 existing
+  `buildSystemPrompt*.test.ts` files to update with the new
+  `now: Date` field; grep surfaced 7 (onboardingStep4GuardNoStep1,
+  orgContextInjectionNoUUIDs, onboardingSuffixStepAware were
+  not in the plan's File Structure map). 75% underestimate.
+  Root cause: planning phase relied on sibling-test
+  identification in the direct test-file-name family rather
+  than exhaustive `grep -l 'buildSystemPrompt'
+  tests/integration/*.test.ts`. Remediation: for plans that
+  extend a widely-called API, enumerate call sites
+  exhaustively via grep, not by naming-family
+  pattern-matching.
+- **Pre-Phase verification step remediation.** Plans should
+  include a Step 0 "working-tree cleanliness check" (or
+  equivalent: `git status --short` matches plan's named
+  artifacts; `git log` at HEAD matches plan's expected anchor
+  commit) as a first-class planning step, not an unstated
+  preamble assumption. Related: the `c24d69d` convention
+  already codified the HEAD-baseline check; a
+  working-tree-state check closes the parallel gap.
+- **Convention #10 single-track-discipline sub-point
+  elevation.** Two datapoints across O3 (working-tree drift
+  at Phase B start, parallel commits landing during Phase C
+  execution) establish that single-track commit-flow
+  discipline applies to the current executor's commit flow
+  only; it does not prohibit the operator from committing
+  parallel work during an execution. Execution plans must be
+  robust to parallel commits landing during their run.
+  Requirements for robustness: (a) verifying environmental
+  state at each commit time rather than carrying it from
+  prior checkpoints, (b) writing commit bodies that claim
+  only what's verifiable at commit time, not what was true at
+  the start of the phase. Two datapoints crosses the
+  abstraction threshold and warrants a named Convention #10
+  sub-point, not just a friction entry.
+- **Tripwire semantics retune.** The ratified tripwire
+  threshold (N=3 back-and-forths on execution) was initially
+  written to track aggregate environmental surprises across a
+  phase; its intent was detecting
+  cumulative-reasoning-degradation-on-one-task. The O3 arc
+  accumulated 4+ environmental surprises, each resolved in a
+  single diagnostic round with no cumulative degradation.
+  Retune: track iterations on the same task rather than
+  aggregate environmental surprises. Any single task
+  requiring more than 3 debug rounds is the degradation
+  signal; a phase accumulating 4+ unrelated environmental
+  surprises each resolved in one round is a noisy
+  environment, not degraded execution. Future plan preambles
+  should carry this retuned semantics when specifying
+  tripwire thresholds.
+- **Plan-time model-config assumption verification.** The
+  plan's Task D2.7 `jq` query for Anthropic spend extraction
+  did not include `cache_creation_input_tokens` or
+  `cache_read_input_tokens`, assuming a non-cached input
+  pricing model. Sonnet 4.6 uses prompt caching. Today's
+  retry happened not to use caching (fresh session; no
+  cache-control markers effective on a single-turn arc), so
+  no misreport occurred in practice, but the template would
+  have under-reported for any cached turn. Structurally the
+  same pattern as working-tree-cleanliness and
+  C6-evidence-preservation: untested environmental assumption
+  that fires silently until it breaks. Remediation: plan
+  templates for paid-API work must verify model-config
+  assumptions (caching, token-window behavior, rate-tier
+  eligibility) at plan time, not inherit assumptions from
+  prior plans that may pre-date model upgrades.
+
+**Meta-pattern family** (this session surfaced three
+instances of a single pattern — Claude biasing toward
+erase-to-clean over document-to-verify — plus symmetric
+instances on the operator side):
+
+- **Exonerate-via-cleanup (meta-pattern).** Three instances
+  named in the O3 arc:
+  - *C6 evidence attribution, "no action of mine" framing* —
+    inverse-of-action reasoning applied to self-exonerate
+    without verifying via audit-log triangulation. Corrected
+    mid-Checkpoint-4a by operator reciprocity on the
+    symmetric pattern.
+  - *D2.2 row-count cleanup, "clean slate is more honest for
+    analysis"* — lean toward DELETEing 3 test-pollution
+    journal entries to restore gate-cleanliness. Overridden
+    by operator on append-only-invariant +
+    documentation-is-the-gate-clearing +
+    timestamp-filter-makes-them-trivial grounds.
+  - *Playwright-option-offered-post-Ratification* — (a) vs
+    (b) presented as equivalent after (a) was previously
+    ratified, re-opening approval-granularity for no
+    new-evidence reason. Corrected by operator on
+    "options-ratified-with-reasoning-shouldn't-be-re-presented-as-open"
+    grounds.
+- **Symmetric-application datapoints** (the meta-pattern
+  applies in both directions; the session produced four
+  instances where operator-side disciplines applied to
+  Claude-side behavior or vice versa):
+  - *Memory-gap (Claude):* retained disregarded content as
+    inferential background rather than actually disregarding
+    it (the earlier wrongly-pasted Prompt 4 document).
+    Flagged by operator mid-session.
+  - *Cleanup-lean (operator):* D2.2 row-count disposition —
+    the executor's initial lean toward cleanup was corrected
+    by the operator. In a later symmetric application at C6
+    evidence attribution ("no action of mine"), the operator
+    caught the operator's own version of the same
+    inverse-of-action reasoning. The convention applies to
+    whichever side reaches for the erase-to-clean shortcut
+    first; the correction can come from either direction.
+  - *Options-re-offered (bidirectional):* both Claude-side
+    (Playwright) and operator-side (various during plan
+    review) instances; neither side exempt from the
+    discipline.
+  - *State-inferred-not-verified (operator):* bash
+    environment misread (assumed Claude bash runs in a
+    sandbox separate from the dev machine) corrected at
+    D2.6. Mirror of Claude's earlier
+    commit-body-staleness.
+
+**Codification value of the meta-pattern:** the
+three-instances-on-one-side + four symmetric-applications
+demonstrate that the discipline is a general pattern, not a
+Claude-specific failure mode. Name for the catalog:
+*"erase-to-clean vs. document-to-verify — in both
+directions, document wins."*
+
+### (d) Observed architectural strengths
+
+- **Template-driven narrational wrapper around
+  `ProposedEntryCard` renders eliminates the UUID-leak
+  surface by design.** The agent's entire free-text surface
+  for entry-proposal turns is the card's structured fields;
+  the narrational wrapper ("Proposed entry of 2,400.00 CAD.
+  Please review the details below.") is a fixed template
+  string, not free-form prose. There is no text channel for
+  UUID leakage or fabrication to escape through, regardless
+  of how the agent reasons internally. This means Site 2's
+  UUID-leak prohibition in `checkPeriod`'s recovery
+  instruction is belt-and-suspenders for the entry-proposal
+  path specifically; the structural defense is primary.
+  Worth noting distinct from test-passes because it's an
+  observable-correctness-by-design property, not a
+  correctness-verified-by-test property.
+- **Scope discipline on O3's prompt-layer-only framing held
+  cleanly through execution.** Option 3E (pulling
+  `periodService.isOpen()` refactor into O3) was rejected at
+  spec time; the temptation to pull it in never re-surfaced
+  during execution despite the structural finding that the
+  tool's null-return collapses three failure modes. OI-1
+  (deferred service-layer refactor) remains a clean Open
+  Item with explicit trigger criteria for when to revisit.
+
+### (e) Adjacent observations flagged for other arcs
+
+- **`source: "manual"` in the agent's `tool_input` for Entry
+  1** (observed in `ai_actions` for session `45c9ef23...`).
+  Agent emitted `source: "manual"` rather than
+  `source: "agent"`. Three candidate causes enumerated
+  without commitment: orchestrator overwrites `source` at
+  post-replay time, Zod default on the `postJournalEntry`
+  input schema, or a card-construction flow sets it later.
+  Not investigated in O3 scope. **Flagged as a
+  pre-EC-2-full-run prerequisite: if the orchestrator does
+  not overwrite at post-time, EC-2's pass criterion (a) ("20
+  `source='agent'` journal entries exist in the ledger from
+  session_start forward") fails by false-negative.**
+  Investigation belongs in EC-2's plan preamble, not O3's
+  closeout.
+- **Test-suite cleanup gap** (O3 execution Phase C side
+  effect). Full `pnpm test` runs during Phase B and Phase C
+  left 3 agent journal_entries rows without cleanup
+  ("Hydration approved fixture", "Branch-2 entry_number
+  test", "CA-61 idempotent replay test" at 16:55 UTC today).
+  Adjacent to the Prompt 4 test-cleanup fix at `dc757c3`.
+  Candidate for a future test-hygiene sweep; not blocking.
+- **Latency observation:** ~71s wall-clock from Entry 1 paste
+  to card render (operator-observed). With 3 Anthropic calls
+  per turn-sequence at current system-prompt size, EC-2 full
+  20-entry run projects to ~24 minutes of wall-clock activity
+  (plus per-chunk cooldowns and observation pauses per
+  `ec-2-prompt-set.md:105-109`). Material for EC-2 full-run
+  duration planning.
+- **Spend calibration:** Entry 1 retry spent $0.094 (input
+  26,266 × $3/M + output 990 × $15/M; no caching). **3× the
+  plan's $0.03/entry estimate.** The estimate inherited from
+  `ec-2-prompt-set.md`'s P34 ($0.30–$0.80 full run) was
+  written pre-O3; O3's expanded system prompt (Site 1
+  temporal block + Site 2 recovery instruction +
+  `postJournalEntry` nudge) added measurable per-turn tokens
+  × 3 turns per entry. **Forward-calibrated EC-2 full-run
+  baseline: $1.80 (20 entries × $0.09). EC-2 full-run
+  approval request should cite $1.80 as the calibrated
+  baseline, not the inherited $0.03/entry; halt thresholds
+  unchanged ($3 cumulative / $0.50 single-call).**
+- **CA-65 `agentSessionOrgSwitchAudit.test.ts` still red
+  post-all-commits.** Prompt-4-caused (before_state audit
+  capture produces an audit row the test's
+  expected-count-of-1 didn't anticipate). Not O3's concern.
+  Belongs in the Prompt 4 cleanup arc.
+
+### (f) Open questions / indeterminate items
+
+- **Phase A Part 0c hypothesis (i) vs (ii) remains
+  untested.** Transcript logs were absent at execution time;
+  hypothesis-determination could not proceed. Contingency
+  text was applied under strict-superset logic that holds
+  regardless of hypothesis. If Bug B-the-observed-behavior
+  recurs in a future paid run (year-end close hitting
+  `is_open=false` legitimately, or a re-introduction of Bug A
+  producing the same cascade), the transcript from that run
+  should be preserved and examined to determine whether the
+  agent reasons over `null` literally or invents a field
+  name. The hypothesis matters for prompt-engineering work
+  that depends on how the agent represents structured
+  tool-result absence — specifically, if a future recovery
+  instruction is written with a trigger clause narrower than
+  the current contingency (e.g., only "returns null"), that
+  narrower instruction's correctness depends on hypothesis
+  (i) being confirmed. The contingency text shipped in O3
+  sidesteps this dependency; future narrower instructions
+  would reinstate it.
+- **Bug B independence from Bug A.** One paid-API datapoint
+  today supports the sub-bug hypothesis (correct date →
+  valid period → no recovery path exercised). Not
+  conclusive. Legitimate `is_open=false` scenarios remain
+  reachable in the wild (year-end close, manually-locked
+  correction periods, future-dated entries past the org's
+  provisioned periods per OI-2/OI-3). Recovery instruction
+  shipped as defense-in-depth regardless; its load-bearing
+  validation is year-end close season or manually-locked
+  correction attempts, both of which may not surface until
+  later. Status: hypothesized → directionally supported by
+  one datapoint → waiting for the load-bearing scenarios in
+  the wild.
+- **Prompt 4 test regression (CA-65) not yet addressed.**
+  Flagged in section (e). Status: observed, attributed to
+  Prompt 4, deferred to Prompt 4's cleanup arc.
+
+**Forward link.** Section (b)'s convention-catalog elevation
+proposal (title: *Preservation and Ambiguity Gates*) is the
+load-bearing output of this retrospective. The codification
+pass (whenever it runs) should absorb the locked language in
+section (b) verbatim; the three datapoints are documented
+here as the supporting evidence; the paired inverse is
+documented as a structural complement, not a separate
+convention. Subsection (e)'s EC-2 calibration ($1.80 full-run
+baseline, `source: "manual"` prerequisite) feeds directly
+into EC-2 full-run approval gate planning.

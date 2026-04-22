@@ -250,6 +250,67 @@ Full retrospective (five patterns) + refreshed Session 8
 handoff in `docs/07_governance/friction-journal.md` under
 the Session 7.1 heading.
 
+### Session 8 C6 prereq O3 — Complete (2026-04-22)
+
+Sub-brief: spec at
+`docs/09_briefs/phase-1.2/session-8-c6-prereq-o3-agent-date-context.md`
+(5096d21); execution plan at
+`docs/09_briefs/phase-1.2/session-8-c6-prereq-o3-execution-plan.md`
+(9471a9d). Closed the two prompt-layer bugs surfaced by the
+C6 paid-API Entry 1 attempts: Bug A (date hallucination —
+agent picked April 2025 for "this month" with today=2026-04-21)
+and Bug B (`checkPeriod`-null-return panic).
+
+Two feature commits + one closeout commit on top of 9471a9d:
+
+- **6c407e7** — `fix(agent): Finding O3 Site 1 — temporal
+  context injection (Bug A fix)`. New `temporalContext.ts`
+  helper wired as a prefix into `buildSystemPrompt`; dual UTC
+  + org-local stamps emit the current date (Phase 1.2 route
+  ii — UTC-only, Phase 2 will resolve from
+  `organizations.timezone`). +6 tests (CA-84 T1–T4 with T4
+  parameterized over three personas). 7 existing
+  `buildSystemPrompt*`-related test files updated with a
+  deterministic `now: Date`.
+- **78e9f0d** — `fix(agent): Finding O3 Site 2 — checkPeriod
+  null-recovery instruction (Bug B fix, contingency text)`.
+  Contingency text applied to `checkPeriodTool.description`
+  per Phase A indeterminate fallback (transcript logs absent
+  at execution time; contingency's broader trigger is a
+  strict superset of primary's, safe under any hypothesis).
+  One-sentence temporal nudge appended to
+  `postJournalEntryTool.description`. +4 tests (T5/T6 added
+  to CA-84; CA-85 description content; CA-86 null-recovery
+  orchestrator plumbing regression).
+- **Closeout commit (this entry)** — Phase E friction-journal
+  entry documenting the O3 retrospective and the
+  *Preservation and Ambiguity Gates* convention-catalog
+  elevation proposal; this CURRENT_STATE update.
+
+Entry 1 paid-API retry: **clean**. `agent_sessions
+45c9ef23-11af-46b3-af4c-39a77384817e`. DR Rent / CR Cash at
+2400.00 CAD; `entry_date 2026-04-01` (Bug A observably fixed
+— agent picked 2026, not 2025); no UUID leak; no fabricated
+context. Bug B's sub-bug-of-A hypothesis directionally
+supported by the one clean retry (correct date → valid period
+→ no recovery path exercised). Spend: $0.094 (3× the plan's
+$0.03/entry estimate; forward-calibrated EC-2 full-run
+baseline is $1.80, not the inherited $0.30–$0.80).
+
+Full test suite post-O3 + Prompt 4: 412 passing + 1 failed
+(CA-65 `agentSessionOrgSwitchAudit`, Prompt-4-caused by the
+before_state audit capture, not O3). `pnpm agent:validate`
+green at the Phase D pre-flight check.
+
+Phase E convention-catalog elevation proposal: *Preservation
+and Ambiguity Gates* (three datapoints crossing the
+two-datapoint threshold). See friction-journal Phase C
+section (b) for the locked language. Adjacent observation
+flagged for EC-2 full-run prerequisite: `source: "manual"` in
+the agent's `tool_input` may need orchestrator
+overwrite-to-`agent` at post-time for EC-2 pass criterion
+(a) to not false-negative.
+
 ---
 
 ## Agent Autonomy Design Sprint — Documented (2026-04-16)
