@@ -3,14 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient, userClientFor, SEED } from '../setup/testDb';
 
 // Test-local UUIDs in a distinctive range. Cleaned up in afterAll.
-const TEST_TRACE_ID = '99999999-9999-9999-9999-999999999999';
+// audit_log IDs and TEST_TRACE_ID are per-run (crypto.randomUUID) because
+// INV-AUDIT-002 (migration 20240122000000) makes audit_log append-only —
+// fixed IDs would collide on PK across runs once orphan rows accumulate.
 const TEST_IDS = {
   vendor_holding: '99990001-0000-0000-0000-000000000001',
   vendor_real_estate: '99990001-0000-0000-0000-000000000002',
   je_holding: '99990002-0000-0000-0000-000000000001',
   je_real_estate: '99990002-0000-0000-0000-000000000002',
-  audit_holding: '99990003-0000-0000-0000-000000000001',
-  audit_real_estate: '99990003-0000-0000-0000-000000000002',
   ai_holding: '99990004-0000-0000-0000-000000000001',
   ai_real_estate: '99990004-0000-0000-0000-000000000002',
   addr_holding: '99990005-0000-0000-0000-000000000001',
@@ -19,9 +19,16 @@ const TEST_IDS = {
 
 describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
   let apClient: SupabaseClient;
+  let TEST_TRACE_ID: string;
+  let auditHoldingId: string;
+  let auditRealEstateId: string;
 
   beforeAll(async () => {
     const db = adminClient();
+
+    TEST_TRACE_ID = crypto.randomUUID();
+    auditHoldingId = crypto.randomUUID();
+    auditRealEstateId = crypto.randomUUID();
 
     // Get open fiscal period IDs from seed (auto-generated UUIDs)
     const { data: holdingPeriod } = await db
@@ -97,14 +104,14 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     // audit_log (no FK to journal_entries — entity_id is a plain UUID)
     const { error: auditErr } = await db.from('audit_log').insert([
       {
-        audit_log_id: TEST_IDS.audit_holding,
+        audit_log_id: auditHoldingId,
         org_id: SEED.ORG_HOLDING,
         trace_id: TEST_TRACE_ID,
         action: 'test.rls.holding',
         entity_type: 'test',
       },
       {
-        audit_log_id: TEST_IDS.audit_real_estate,
+        audit_log_id: auditRealEstateId,
         org_id: SEED.ORG_REAL_ESTATE,
         trace_id: TEST_TRACE_ID,
         action: 'test.rls.real_estate',
@@ -160,12 +167,13 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
 
   afterAll(async () => {
     const db = adminClient();
-    // Delete in safe order (ai_actions has nullable FK to journal_entries)
+    // Delete in safe order (ai_actions has nullable FK to journal_entries).
+    // NOTE: audit_log rows from this test are NOT deleted — the table is
+    // append-only per INV-AUDIT-002 (Layer 1a, migration 20240122000000).
+    // The two audit_log_ids and TEST_TRACE_ID are per-run
+    // crypto.randomUUID() values, so orphan rows are harmless across runs.
     await db.from('ai_actions').delete().in(
       'ai_action_id', [TEST_IDS.ai_holding, TEST_IDS.ai_real_estate],
-    );
-    await db.from('audit_log').delete().in(
-      'audit_log_id', [TEST_IDS.audit_holding, TEST_IDS.audit_real_estate],
     );
     await db.from('journal_entries').delete().in(
       'journal_entry_id', [TEST_IDS.je_holding, TEST_IDS.je_real_estate],
