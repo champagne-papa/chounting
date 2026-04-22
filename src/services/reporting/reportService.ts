@@ -6,7 +6,13 @@ import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
-import { toMoneyAmount, type MoneyAmount } from '@/shared/schemas/accounting/money.schema';
+import {
+  addMoney,
+  eqMoney,
+  toMoneyAmount,
+  zeroMoney,
+  type MoneyAmount,
+} from '@/shared/schemas/accounting/money.schema';
 
 // -- P&L types ---------------------------------------------------------------
 
@@ -117,6 +123,52 @@ export const reportService = {
       debit_total_cad: toMoneyAmount(row.debit_total_cad as string | number),
       credit_total_cad: toMoneyAmount(row.credit_total_cad as string | number),
     }));
+
+    // --- Trial-balance footer backstop ---
+    //
+    // Discipline backstop for INV-LEDGER-001 (Layer 1a), not an
+    // invariant itself. Non-promoted to INV-ID: the rule the
+    // codebase actually cares about is debit = credit *per journal
+    // entry*, enforced by the deferred constraint trigger at COMMIT.
+    // The trial-balance footer equality is a theorem of that rule —
+    // if every entry balances, the sum across entries also balances.
+    // A failure here does not indicate a bug in trialBalance(); it
+    // indicates the invariant was violated upstream and the
+    // violation reached the report boundary.
+    //
+    // BasicTrialBalanceView.tsx performs the same check visually
+    // (footerTotals.balanced, rendered in red on mismatch). This
+    // service-layer throw is the defense for non-UI consumers:
+    // agents calling the service directly, export jobs, external
+    // reconciliation integrations, future tests — any path that
+    // would otherwise render wrong totals as if they were correct.
+    //
+    // See the INV-LEDGER-001 leaf's "Interaction with the service
+    // layer" section in docs/02_specs/ledger_truth_model.md for
+    // the broader "one enforcement point per rule" discipline, and
+    // docs/02_specs/invariants.md "Discipline backstops (not
+    // invariants)" section for the registration of this backstop.
+    let totalDebit: MoneyAmount = zeroMoney();
+    let totalCredit: MoneyAmount = zeroMoney();
+    for (const row of rows) {
+      totalDebit = addMoney(totalDebit, row.debit_total_cad);
+      totalCredit = addMoney(totalCredit, row.credit_total_cad);
+    }
+    if (!eqMoney(totalDebit, totalCredit)) {
+      log.error(
+        {
+          org_id: input.org_id,
+          fiscal_period_id: input.fiscal_period_id ?? null,
+          total_debit: totalDebit,
+          total_credit: totalCredit,
+        },
+        'Trial balance backstop: debits != credits — INV-LEDGER-001 (Layer 1a) violated upstream',
+      );
+      throw new ServiceError(
+        'UNBALANCED',
+        `Trial balance totals do not match: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
 
     return { rows };
   },

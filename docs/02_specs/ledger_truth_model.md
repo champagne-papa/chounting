@@ -246,6 +246,15 @@ enforcement is the database trigger. See
 `docs/03_architecture/phase_simplifications.md` for the "one
 enforcement point per rule" discipline that this embodies.
 
+**Service-layer backstop (Phase 1.x).**
+`reportService.trialBalance()` also throws `UNBALANCED` as a
+discipline backstop when the aggregated footer doesn't balance —
+a theorem of this invariant that would otherwise render silently
+as wrong totals for non-UI consumers. See the Structured Error
+Contracts section's `UNBALANCED` entry for the full rationale;
+the rule enforced is unchanged and this throw is not a new
+invariant.
+
 **Transaction isolation note.** The deferred constraint runs inside
 the caller's transaction, so the isolation level of that
 transaction determines when the constraint sees other transactions'
@@ -3695,27 +3704,31 @@ the default.
 #### `UNBALANCED`
 
 - **Class:** `ServiceError` (defined in the enum)
-- **Thrown by:** **no Phase 1.1 service function currently throws
-  this code.** It is reserved in the `ServiceErrorCode` union
-  but not used. The service layer deliberately does not
-  pre-check debit-equals-credit balance (per the "one enforcement
-  point per rule" discipline in
-  `docs/03_architecture/phase_simplifications.md`); the Zod
-  schema's `.refine()` catches unbalanced input at the boundary,
-  and the Layer 1a deferred constraint trigger catches it at
-  `COMMIT`. When the trigger fires, `journalEntryService.post()`
-  wraps the resulting `check_violation` as `POST_FAILED`, not
-  `UNBALANCED`.
-- **Meaning:** Reserved for a future path that wants to surface
-  the specific balance-failure code instead of the generic
-  `POST_FAILED`. No such path exists in Phase 1.1.
-- **Caller action:** N/A in Phase 1.1.
-- **HTTP status:** 422 Unprocessable Entity (mapped in
-  `serviceErrorToStatus.ts` in anticipation of future use)
-- **Phase 2 evolution:** May be wired up by a Phase 2 AP Agent
-  path that wants to distinguish "your bill had a tax-code
-  misconfiguration that produced unbalanced input" from the
-  generic post failure. The code is reserved for this use.
+- **Thrown by:** `reportService.trialBalance()` when the sum of
+  `debit_total_cad` across returned rows does not equal the sum
+  of `credit_total_cad`.
+- **Meaning:** As of Phase 1.x, `reportService.trialBalance()`
+  throws `UNBALANCED` as a discipline backstop for
+  INV-LEDGER-001 (Layer 1a) (see that leaf's "Interaction with
+  the service layer" section). This remains a discipline
+  backstop, not a new invariant — the underlying rule is
+  INV-LEDGER-001 (debit = credit per journal entry), and if
+  that rule holds for every entry, the sum across entries also
+  holds. The throw at the report layer exists to surface
+  violations that would otherwise silently render as wrong
+  totals to non-UI consumers (agents, export jobs,
+  reconciliation integrations, tests). The equivalent UI check
+  lives in `BasicTrialBalanceView.tsx`
+  (`footerTotals.balanced`, rendered in red on mismatch).
+- **Caller action:** Treat as a data-integrity alert. A trial
+  balance should never be unbalanced in a correctly-functioning
+  system; if this fires, INV-LEDGER-001 has been violated
+  upstream and the next step is investigating which entry is
+  unbalanced, not re-rendering the report.
+- **HTTP status:** 422 Unprocessable Entity
+- **Phase 2 evolution:** None planned. The backstop is permanent;
+  it operates on read paths and does not change when the events
+  projection shift happens in Phase 2.
 
 #### `PERIOD_LOCKED`
 
