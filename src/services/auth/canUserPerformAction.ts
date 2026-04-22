@@ -22,6 +22,7 @@ export const ACTION_NAMES = [
   'chart_of_accounts.read',
   'chart_of_accounts.write',
   'period.lock',
+  'period.unlock',
   'org.create',
   'audit_log.read',
   'ai_actions.read',

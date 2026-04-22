@@ -42,7 +42,13 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     // Bad request (malformed or semantically invalid input)
     case 'EXTERNAL_IDS_MALFORMED':
     case 'ADDRESS_VALIDATION_FAILED':
+    case 'PERIOD_REASON_REQUIRED':
       return 400;
+
+    // Conflict (state mismatch — server state differs from caller expectation)
+    case 'PERIOD_ALREADY_LOCKED':
+    case 'PERIOD_NOT_LOCKED':
+      return 409;
 
     // Business rule rejections (request is valid but can't be processed)
     case 'UNBALANCED':

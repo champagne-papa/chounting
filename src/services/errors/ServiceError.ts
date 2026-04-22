@@ -14,6 +14,10 @@ export type ServiceErrorCode =
   | 'UNBALANCED'
   | 'PERIOD_LOCKED'
   | 'POST_FAILED'
+  // Period lifecycle (Phase 1.x)
+  | 'PERIOD_ALREADY_LOCKED'
+  | 'PERIOD_NOT_LOCKED'
+  | 'PERIOD_REASON_REQUIRED'
   // Reversals
   | 'REVERSAL_CROSS_ORG'
   | 'REVERSAL_PARTIAL_NOT_SUPPORTED'

@@ -34,6 +34,11 @@ export interface AuditEntry {
   after_state_id?: string;
   tool_name?: string;
   idempotency_key?: string;
+  // reason: caller-supplied rationale for the mutation. Populated
+  // by periodService.lock / periodService.unlock (Phase 1.x Phase
+  // B Prompt 4); nullable for all other mutation types, which are
+  // fully described by action + before_state + after_state.
+  reason?: string;
 }
 
 /**
@@ -65,6 +70,7 @@ export async function recordMutation(
     after_state_id: entry.after_state_id ?? null,
     tool_name: entry.tool_name ?? null,
     idempotency_key: entry.idempotency_key ?? null,
+    reason: entry.reason ?? null,
   });
 
   if (error) {

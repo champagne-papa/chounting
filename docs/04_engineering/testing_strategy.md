@@ -1,3 +1,5 @@
+<!-- TODO(freshness): Test File Layout section below is stale as of 2026-04-22; actual total is ~85 integration tests across many more files. Separate freshness pass needed. -->
+
 # Testing Strategy
 
 What to test, how to test it, and what not to test. The service layer

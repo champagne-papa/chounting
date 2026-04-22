@@ -3006,18 +3006,58 @@ across the organization and membership management surface:
 `invitationService` (create / cancel / accept),
 `userProfileService` (conditional UPSERT —
 `before_state: undefined` on the insert branch, populated on
-the update branch), and
+the update branch),
 `src/agent/orchestrator/loadOrCreateSession.ts` (session
-org-switch UPDATE). Three integration tests exercise the
-convention: `tests/integration/addressServiceAudit.test.ts`,
-`tests/integration/userProfileAudit.test.ts`, and
-`tests/integration/agentSessionOrgSwitchAudit.test.ts`. Future
-UPDATE or DELETE service methods — including
-`periodService.lock` / `unlock` when they land — follow the
-same pattern. The contributor-facing reminder lives at
+org-switch UPDATE), and `periodService.lock` /
+`periodService.unlock` (Phase 1.x Phase B Prompt 4 —
+2026-04-22). The same pattern applies to
+`periodService.lock` / `periodService.unlock`: both UPDATE
+mutations SELECT the pre-mutation `fiscal_periods` row,
+issue the UPDATE, and pass the pre-mutation row as
+`before_state` to `recordMutation` alongside the
+caller-supplied `reason`. These are also the first
+service-layer mutations to populate the new
+`audit_log.reason` column (added in migration
+20240123000000); the column is nullable because prior
+mutation types — `journal_entry.post`,
+`org.profile_updated`, address and membership writes — have
+no equivalent rationale field and are fully described by
+`action + before_state + after_state`. Four integration
+tests exercise the convention:
+`tests/integration/addressServiceAudit.test.ts`,
+`tests/integration/userProfileAudit.test.ts`,
+`tests/integration/agentSessionOrgSwitchAudit.test.ts`, and
+`tests/integration/periodLockUnlock.test.ts`. Future
+UPDATE or DELETE service methods follow the same pattern.
+The contributor-facing reminder lives at
 `docs/04_engineering/conventions.md:190` ("Audit
 `before_state` Convention"); this paragraph is the
 load-bearing spec.
+
+**Known limits — synchronous audit is not transactional
+across HTTP round-trips.** The `SELECT → UPDATE →
+audit_log INSERT` sequence in service-layer mutations is
+not a single database transaction — each supabase-js call
+is a separate PostgREST HTTP round-trip, so each runs in
+its own short-lived transaction on the server side.
+Concurrency safety for the data write itself is preserved
+by the UPDATE's implicit row-level lock plus the
+trigger-layer `SELECT ... FOR UPDATE` where applicable
+(for example, INV-LEDGER-002's `enforce_period_not_locked`
+serializes against `periodService.lock` on the
+`fiscal_periods` row). However, a crash between the data
+UPDATE and the `audit_log` INSERT would leave a
+mutation without an audit row. Phase 2 projection-based
+audit addresses this by deriving audit entries from the
+mutation event rather than writing them in a second
+round-trip: the event emission lives inside the same
+statement as the mutation, and the projection worker
+rebuilds `audit_log` from the event stream. Until the
+projection lands, the orphan-data-without-audit window is
+a known and accepted risk — failure-mode detection would
+be an `audit_log` row count lagging the mutation row
+count, which the Phase 1.x footer-balance / Category A
+checks do not currently watch for.
 
 **Phase 2 evolution of `before_state`.** When `audit_log`
 becomes a projection from the `events` stream (per this
