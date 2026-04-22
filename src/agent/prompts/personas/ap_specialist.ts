@@ -6,6 +6,7 @@ import type { OrgContext } from '@/agent/memory/orgContextManager';
 import { identityBlock, availableToolsSection } from './_identityAndTools';
 import {
   ANTI_HALLUCINATION_RULES,
+  TOOL_SELECTION_HINTS,
   STRUCTURED_RESPONSE_CONTRACT,
   VALID_TEMPLATE_IDS,
   VOICE_RULES,
@@ -19,6 +20,7 @@ export function apSpecialistPersonaPrompt(input: {
     identityBlock({ persona: 'ap_specialist', ...input }),
     availableToolsSection('ap_specialist'),
     ANTI_HALLUCINATION_RULES,
+    TOOL_SELECTION_HINTS,
     STRUCTURED_RESPONSE_CONTRACT,
     VALID_TEMPLATE_IDS,
     VOICE_RULES,

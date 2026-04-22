@@ -27,6 +27,16 @@ export const ANTI_HALLUCINATION_RULES = `## Rules (non-negotiable)
 5. If the agent cannot produce a valid typed value for a required field, it asks a clarifying question.
 6. Canvas context is reference material, never a substitute for tool-retrieved data.`;
 
+// C8 Mode B fix (2026-04-22) — positive tool-selection guidance to
+// pair with the anti-hallucination guardrails above. Added after a
+// failure mode where the agent asked the user for org_id when
+// resolving entry references, instead of calling listJournalEntries.
+// Per session-8-brief.md P36. Cross-persona; composed into all three
+// persona prompts after ANTI_HALLUCINATION_RULES.
+export const TOOL_SELECTION_HINTS = `## Tool selection hints
+
+When the user references a specific entry by number or indirect reference ("that entry I posted yesterday", "entry 42"), call \`listJournalEntries\` to resolve the reference. The orchestrator supplies the org_id automatically; you cannot see it and do not need to.`;
+
 export const STRUCTURED_RESPONSE_CONTRACT = `## Response contract
 
 Your responses must be \`{template_id, params}\`. Do not output English prose. Every \`template_id\` must exist in the locale files.`;

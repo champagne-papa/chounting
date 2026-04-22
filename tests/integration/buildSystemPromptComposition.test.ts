@@ -53,11 +53,19 @@ describe('CA-48: buildSystemPrompt composition', () => {
     expect(prompt).toContain('asks a clarifying question');
     expect(prompt).toContain('Canvas context is reference material, never a substitute for tool-retrieved data.');
 
-    // Section 4 — Structured-response contract (verbatim master §7 section 4)
+    // Section 4 — Tool selection hints (positive cross-persona guidance, C8 Mode B fix).
+    // Simple shared sections (static prose, no dynamic content) are
+    // covered by composition-presence assertions here; complex sections
+    // (positional constraints, dynamic content) get dedicated test
+    // files — see CA-84 for the temporal block pattern.
+    expect(prompt).toContain('## Tool selection hints');
+    expect(prompt).toContain('call `listJournalEntries` to resolve the reference');
+
+    // Section 5 — Structured-response contract (verbatim master §7 section 4)
     expect(prompt).toContain('## Response contract');
     expect(prompt).toContain('Your responses must be `{template_id, params}`. Do not output English prose.');
 
-    // Section 5 — Voice rules (verbatim master §7 section 5 / ADR-0006)
+    // Section 6 — Voice rules (verbatim master §7 section 5 / ADR-0006)
     expect(prompt).toContain('## Voice');
     expect(prompt).toContain('Neutral, professional, unnamed. No emoji, no exclamation marks, no filler phrases.');
 
