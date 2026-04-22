@@ -675,6 +675,141 @@ Convention #9 and the governance-audit mechanism). See
 retrospective and Phase C section for the full datapoint
 records.
 
+### Session Labeling Convention
+
+Every prompt to an executor agent opens with a session label
+naming the work arc in flight — `Session M — main ratification
+arc`, `Session O — O3 implementation`, `Session P4 — Prompt 4
+feature work`, or similar. The label persists across prompts
+within a session and appears as a Git trailer on every commit
+the session authors: `Session: <label>`.
+
+Rationale: four concurrent-session failures on 2026-04-22
+(commit interleave, DB state wipe, authorization race,
+ratification bypass — see
+`docs/07_governance/friction-journal.md` Phase B subsection A
+for the full record) and the explicit ad-hoc coordination
+behavior in commit `9aaeeec` (parallel session authoring a
+session-closeout that named four co-existing sessions on the
+branch and held its own push under three named unhold
+conditions) motivate formalizing what was already emerging as
+a convention in the wild. Without session labels, concurrent
+sessions leave no durable attribution at the commit level;
+`git blame` can't distinguish which session produced which
+commit, and post-hoc correlation requires reconstructing from
+friction-journal narrative rather than reading `git log`.
+
+Operating rules:
+- **Operator** states the label in the first prompt of each
+  new session. If the operator neglects to state one, the
+  agent asks before proceeding to Step 2.
+- **Agent** adds `Session: <label>` as a Git trailer on every
+  commit it authors, placed just before the
+  `Co-Authored-By: Claude …` trailer.
+- **Resumed sessions** (a new conversation continuing a prior
+  arc) re-initialize the lock via
+  `bash scripts/session-init.sh <label>` at the start; agents
+  read the fresh lock at Step 2 gate. A session continuing the
+  same arc uses the same label; a session starting fresh uses
+  a new label. Resumed sessions that find a stale lock follow
+  the stale-lock recovery procedure in the Session Lock File
+  Convention below.
+
+The label also serves as the audit-trail dimension in the
+Governance Audit table (each convention entry cites the
+governance cycle; session-labeled commits make that citation
+verifiable from `git log` alone).
+
+Composes with "Session Lock File Convention" (below): the
+label is the identifier, the lock is the enforcement. See
+also: "Check HEAD before Step 2 Plan" (`c24d69d`), "Re-verify
+Environmental Claims at Each Gate" (`a610e0e`), and "Mutual
+Hallucination-Flag-and-Retract Discipline" (above). First
+codified: 2026-04-22, coordination-mechanism ratification
+commit.
+
+### Session Lock File Convention
+
+Every session that will commit to the repo creates a lock file
+at `.coordination/session-lock.json` at its start and removes
+it at its end. The lock encodes the session's label, start
+timestamp, process id, optional prompt-doc path, and a
+free-form constraints list (e.g., "no `pnpm db:reset:clean`
+until 2026-04-23"). A Git pre-commit hook backs the convention
+by refusing commits whose `COORD_SESSION` environment variable
+doesn't match the active lock's label — foreign-session
+commits are blocked at commit time before they can land.
+
+Rationale: incidents on 2026-04-22 demonstrated three classes
+of coordination failure that labeling alone doesn't address.
+Commit interleave (incident #1): two sessions writing to the
+same branch can only be post-hoc detected without enforcement;
+the lock prevents the foreign session from committing until
+the lock clears. DB state wipe (incident #2): a preservation
+constraint stated in a plan doc the second session doesn't
+read is invisible to it; the lock's `constraints` field makes
+the constraint discoverable by any agent's Step 2 gate read.
+Authorization race (incident #3): a session entering a paid-
+API phase can encode a "do not commit phase-X work while this
+lock is held" constraint that the foreign session sees at
+pre-commit time.
+
+Operating rules:
+- **Session start** runs `bash scripts/session-init.sh <label>
+  [prompt_doc_path]`. The script creates the lock; if a
+  foreign lock exists, it prints the current lock and exits
+  non-zero.
+- **Shell setup** exports `COORD_SESSION=<label>` in the
+  operator's shell so the pre-commit hook recognizes the
+  session's commits.
+- **Every Step 2 gate** reads `.coordination/session-lock.json`
+  in addition to running `git log --oneline -10` per the
+  "Check HEAD" convention. If a foreign lock is active, the
+  agent stops and reports rather than proceeding.
+- **Pre-commit hook** (installed one-time per worktree via
+  `bash scripts/install-hooks.sh`) refuses commits when
+  `COORD_SESSION` doesn't match the lock's label, when the
+  lock exists but `COORD_SESSION` is unset, or when
+  `COORD_SESSION` is set but the lock file is missing.
+  Permissive-with-warning mode when the lock is absent
+  (baseline for pre-convention workflow or operator-chosen
+  opt-out).
+- **Session end** runs `bash scripts/session-end.sh` to
+  remove the lock. Operator unsets `COORD_SESSION` in the
+  shell.
+- **Stale-lock recovery** applies when the lock's
+  `started_at` is more than 6 hours old AND no process
+  matches its `pid` AND no recent commits carry a matching
+  `Session:` trailer. Manual inspection confirms staleness;
+  `rm .coordination/session-lock.json` clears it.
+
+Known v1 limitations: the pre-commit hook lives in
+`.git/hooks/pre-commit` (per-worktree, per-clone — git does
+not track hooks). Re-run `scripts/install-hooks.sh` in every
+worktree or fresh clone that will commit. `session-end.sh`
+removes the lock unconditionally in v1 — no PID-ownership
+check — so running it in the wrong session removes the
+active lock (recoverable via re-init). Multi-hook composition
+is not supported in v1; the install script backs up any
+existing pre-commit hook as `.git/hooks/pre-commit.pre-coordination`
+before overwriting.
+
+Composes with "Session Labeling Convention" (above): the
+label is the identifier, the lock is the enforcement. Also
+composes with "Check HEAD before Step 2 Plan" (`c24d69d`) by
+adding a filesystem check alongside the HEAD check; with
+"Re-verify Environmental Claims at Each Gate" (`a610e0e`) by
+giving environmental constraints a declarative home in the
+lock's `constraints` field; and with "Mutual Hallucination-
+Flag-and-Retract Discipline" by enforcing its single-track
+commit-flow requirement via commit-time refusal rather than
+relying on agent discipline alone.
+
+First codified: 2026-04-22, coordination-mechanism
+ratification commit. Supporting tooling:
+`.coordination/README.md`, `scripts/session-init.sh`,
+`scripts/session-end.sh`, `scripts/install-hooks.sh`.
+
 ---
 
 ## Governance Audit — Phase 1.2 Convention Ratifications
@@ -714,6 +849,8 @@ mechanism, they are not enumerated below.
 | Plan-Time Model-Config Verification | (this commit) | 2026-04-22 | Phase C ratification pass |
 | Material Gaps Surface at Layer-Transition Boundaries (C9 Convention #9) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
 | Mutual Hallucination-Flag-and-Retract Discipline (C9 Convention #10) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
+| Session Labeling Convention | (this commit) | 2026-04-22 | Coordination-mechanism ratification |
+| Session Lock File Convention | (this commit) | 2026-04-22 | Coordination-mechanism ratification |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review

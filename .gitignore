@@ -55,3 +55,6 @@ tests/e2e/.auth/
 # log capture at /tmp/ instead). /logs/ stays ignored as defense-in-depth in
 # case the old pattern re-appears in a future prereq.
 /logs/
+
+# Session coordination — lock file is per-session, not tracked
+.coordination/session-lock.json
