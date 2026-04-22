@@ -4969,3 +4969,157 @@ Codebase state drifts faster than drafter memory updates. See
 `docs/04_engineering/conventions.md` "Spec-to-Implementation
 Verification" section for the full list and the matching
 Refinement datapoint paragraph.
+
+## Phase B — concurrent-session coordination (2026-04-22)
+
+Phase B of the Phase 1.x execution cycle surfaced an
+operational pattern prior phases had not: two Claude Code
+sessions working the same repo under the same git identity
+without coordination. Three subsections follow — the headline
+incident, an earlier datapoint retrospectively reinterpreted,
+and one prompt-side drift that amended cleanly.
+
+### A. Parallel Claude Code sessions interleaved commits on the same branch (O3 Phase C discovery) — 2026-04-22
+
+Two Claude Code sessions ran concurrently on the same
+workstation, on branch `staging`, authoring commits as the
+same git identity (`champagne-papa`). One executed the O3
+prompt-engineering workstream (Sites 1 and 2 — temporal
+context injection and checkPeriod null-recovery instruction);
+the other executed Phase B Prompt 4 (`periodService.lock` /
+`unlock`). Both did read-first, produced Step 2 plans, and
+committed. Neither session's context included awareness of
+the other.
+
+The discovery moment came during O3 Phase C. That session's
+read-first pass ran `git log --oneline -10` and found
+`78e9f0d fix(agent): Finding O3 Site 2 — checkPeriod
+null-recovery instruction (Bug B fix, contingency text)`
+already at HEAD, authored by `champagne-papa`, timestamped 14
+minutes earlier. The Phase C plan specified producing that
+exact commit; the executor had not authored it. The executor
+stopped and reported with four options, including "escalate —
+two separate actors appear to be committing to this branch
+under the same identity with overlapping scope."
+
+`git reflog` reconstruction produced the timeline. Five
+commits landed from one machine inside a 39-minute window:
+
+```
+09:30:44  6c407e7  O3 Site 1 (Bug A)             — O3 session
+09:34:42  dc757c3  crossOrgRlsIsolation cleanup  — Prompt 4 session
+09:39:34  66118ac  Prompt 4 feature              — Prompt 4 session
+09:53:57  78e9f0d  O3 Site 2 (Bug B)             — O3 session
+10:08:46  c24d69d  Check HEAD convention         — audit session
+```
+
+Two sessions interleaving by 3–15 minutes each. No compromise,
+no automation, no external actor. The Phase C executor
+correctly refused to silently reconcile the surprise commit —
+stop-and-report discipline working as designed.
+
+Three lessons from the arc.
+
+1. Stop-and-report is load-bearing for this class. A less
+   careful executor might have reconciled the surprise by
+   re-implementing the commit's content, producing a
+   duplicate or conflict. "If read-first contradicts the
+   prompt, stop" prevented that outcome.
+
+2. Concurrent sessions need an explicit HEAD-baseline check,
+   not just stop-on-contradiction. The contradiction
+   surfaced here only because Phase C's plan happened to
+   cite the exact files the parallel session had modified;
+   a non-overlapping parallel change would have slipped
+   through. One `git log --oneline -10` at the start of
+   Step 2 closes the general case.
+
+3. "Same git identity" is structurally unhelpful for
+   distinguishing actors. Every Claude Code session commits
+   under the human's git config, so authorship cannot
+   disambiguate sessions. External metadata is required —
+   session labels, branch names, workspace isolation, or a
+   lock file — and this workflow carried none.
+
+**Forward link.** Lesson 2 was codified in `c24d69d
+chore(conventions): add "Check HEAD before Step 2 plan"
+convention` at `docs/04_engineering/conventions.md`,
+requiring `git log --oneline -10` at the start of Step 2 with
+stop-and-report on HEAD movement since the prompt was
+written. Lesson 1 was already established doctrine the arc
+validated; lesson 3 is captured below as unresolved.
+
+**Unresolved follow-up.** Only one concurrent-session
+datapoint exists. The right fix for actor-ambiguity is not
+yet clear: candidates include a session-labeling convention
+(first line of every prompt states "Session A — O3"), a
+branching convention (short-lived session branches merged at
+handoff), a lock file, or per-session workspace isolation
+(git worktrees). Each has different tradeoffs against speed,
+review overhead, and robustness. Codifying from one datapoint
+would institutionalize a guess; waiting for the second
+datapoint to see the pattern.
+
+### B. "Foreign uncommitted work" misread in an earlier session (Prompt 4) — 2026-04-22
+
+During the Phase B Prompt 4 session, mid-execution, the
+executor observed uncommitted changes in the working tree
+under `src/agent/orchestrator/` and related test files that
+were not part of the Prompt 4 scope. The executor flagged
+the changes as "foreign uncommitted work," used explicit
+file paths in every `git add` to avoid touching them, and
+reported that the foreign changes "self-reverted into a
+commit" between two successive `git status` checks.
+
+Retrospective interpretation under subsection A's timeline:
+those "foreign" changes were the O3 session's in-flight
+edits. What the Prompt 4 executor perceived as "self-
+reverting" was the O3 session completing `6c407e7` at
+09:30:44 — the diffs moved from "uncommitted in the working
+tree" to "committed in history" without the Prompt 4 session
+issuing the commit.
+
+Class: same root cause as subsection A — concurrent-session
+ambiguity — presenting as a different symptom. Not "commit
+not authored at HEAD" but "diff not written in the tree."
+The `c24d69d` HEAD-baseline check addresses the first
+symptom and not the second. A working-tree baseline check
+(`git status --short` captured at Step 2 and compared at
+commit time) would close the second, but the same reasoning
+as subsection A's unresolved follow-up applies: one
+datapoint is not enough to codify the right form.
+
+### C. Prompt-side misdirection on conventions.md heading style (e00dd25 amend to c24d69d) — 2026-04-22
+
+The initial Check-HEAD convention commit (`e00dd25`) landed
+under the heading `### 11. Check HEAD before Step 2 plan`.
+The prompt had instructed the executor to "check the file
+for the current highest number" with a template heading of
+the form `### N. Check HEAD before Step 2 plan`. The
+executor found that `conventions.md` uses purely descriptive
+headings throughout and that the `Convention #8/#9/#10`
+numbering cited in the prompt lives in friction-journal
+datapoints, not in `conventions.md`. It applied `N = 11` as
+the friction-journal sequence continuation and flagged the
+resulting stylistic deviation in its audit report. On
+authorization, `e00dd25` was amended to `c24d69d` with the
+heading changed to `### Check HEAD before Step 2 Plan` —
+descriptive, title-case, matching the Phase 1.2 Conventions
+section's pattern. Body text unchanged.
+
+Class: prompt-writer-side drift, distinct from the Spec-to-
+Implementation Verification failures recorded in Phase A.
+Phase A covers drift in assertions-about-the-code that an
+executor verifies by grep. This covers drift in
+instructions-to-the-executor about the structure of a file
+the executor is being asked to modify — the executor cannot
+grep its way out of a bad structural instruction; the fix
+belongs on the prompt-writer side (read the file before
+specifying the style of the edit).
+
+**Forward link.** Worth tracking whether this becomes
+recurring. Three or more similar instances would justify
+growing the Spec-to-Implementation Verification convention
+with a seventh category for "style and structural claims
+about files the prompt asks the executor to modify." One
+datapoint is not enough; logging and waiting.
