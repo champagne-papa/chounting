@@ -35,6 +35,7 @@ import {
 } from '@/agent/prompts/suffixes/onboardingSuffix';
 import { canvasContextSuffix } from '@/agent/prompts/suffixes/canvasContextSuffix';
 import { orgContextSummary } from '@/agent/prompts/suffixes/orgContextSummary';
+import { temporalContextSuffix } from '@/agent/prompts/suffixes/temporalContext';
 
 export interface BuildSystemPromptInput {
   persona: Persona;
@@ -43,11 +44,20 @@ export interface BuildSystemPromptInput {
   canvasContext?: CanvasContext;
   user: { user_id: string; display_name?: string };
   onboarding?: OnboardingState | null;
+  // O3 Site 1 — current date for temporal context injection
+  // (required, no default; injected by orchestrator and tests).
+  now: Date;
 }
 
 export function buildSystemPrompt(input: BuildSystemPromptInput): string {
   const base = basePersonaPrompt(input);
-  const sections: string[] = [base];
+  // O3 Site 1: temporalContextSuffix is positioned as a PREFIX
+  // despite "suffix" in the name — see comment in
+  // temporalContext.ts for full rationale (filesystem consistency
+  // with sibling suffixes/ files). Tool descriptions reference
+  // "the Current date above" — that anchor must precede the
+  // persona body in render order.
+  const sections: string[] = [temporalContextSuffix(input.now), base];
 
   const orgSummary = orgContextSummary(input.orgContext);
   if (orgSummary) sections.push(orgSummary);

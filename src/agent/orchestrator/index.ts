@@ -212,6 +212,7 @@ export async function handleUserMessage(
     canvasContext: input.canvas_context,
     user: { user_id: input.user_id },
     onboarding: currentOnboarding,
+    now: new Date(), // O3 Site 1 — current date for temporal context block
   });
 
   // Step 5: full conversation history (master §5.2 step 5 — no

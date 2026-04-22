@@ -8,6 +8,8 @@ import { buildSystemPrompt } from '@/agent/orchestrator/buildSystemPrompt';
 import { SEED } from '../setup/testDb';
 import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
+
 describe('CA-49: buildSystemPrompt onboarding', () => {
   it('appends the onboarding suffix for controller + null orgContext', () => {
     const prompt = buildSystemPrompt({
@@ -15,6 +17,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       orgContext: null,
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
     });
 
     // Onboarding branch of the identity block (no org name)
@@ -40,6 +43,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       orgContext: null,
       locale: 'en',
       user: { user_id: SEED.USER_AP_SPECIALIST },
+      now: FIXED_NOW,
     });
 
     expect(prompt).not.toContain('## Onboarding');
@@ -52,6 +56,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       orgContext: makeOrgContextFixture(),
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER },
+      now: FIXED_NOW,
     });
 
     expect(prompt).not.toContain('## Onboarding');

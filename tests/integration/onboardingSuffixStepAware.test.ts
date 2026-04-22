@@ -9,11 +9,14 @@ import type { OnboardingState } from '@/agent/onboarding/state';
 import { SEED } from '../setup/testDb';
 import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
+
 const baseInput = {
   persona: 'controller' as const,
   orgContext: null,
   locale: 'en' as const,
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Alex' },
+  now: FIXED_NOW,
 };
 
 function freshAt(step: 1 | 2 | 3 | 4, completed: number[]): OnboardingState {
@@ -93,6 +96,7 @@ describe('CA-67: onboardingSuffix step-aware prose', () => {
         completed_steps: [1, 2, 3],
         invited_user: false,
       },
+      now: FIXED_NOW,
     });
     expect(prompt).not.toContain('## Onboarding');
     // The template_id itself appears in the shared

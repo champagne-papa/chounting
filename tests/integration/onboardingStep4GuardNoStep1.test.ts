@@ -15,6 +15,7 @@ import { makeTestContext } from '../setup/makeTestContext';
 import { adminClient, SEED } from '../setup/testDb';
 
 const USER = SEED.USER_AP_SPECIALIST;
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
 
 describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
   const ctx = makeTestContext({
@@ -157,6 +158,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         completed_steps: [2, 3],
         invited_user: false,
       },
+      now: FIXED_NOW,
     });
 
     // Recovery branch language
@@ -184,6 +186,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         completed_steps: [1, 2, 3],
         invited_user: false,
       },
+      now: FIXED_NOW,
     });
 
     expect(prompt).toContain('## Onboarding — Step 4 of 4: First task');

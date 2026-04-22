@@ -11,6 +11,7 @@ import { SEED } from '../setup/testDb';
 
 const UUID_V4_REGEX =
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
 
 describe('CA-54: OrgContext injection — positive + negative assertions', () => {
   it('includes org_name, industry_display_name, functional_currency, and controller display_name; excludes any UUIDs', async () => {
@@ -24,6 +25,7 @@ describe('CA-54: OrgContext injection — positive + negative assertions', () =>
         user_id: SEED.USER_CONTROLLER,
         display_name: 'Controller User',
       },
+      now: FIXED_NOW,
     });
 
     // Positive assertions — the human-readable fields are present.

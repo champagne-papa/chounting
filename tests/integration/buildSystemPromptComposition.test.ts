@@ -10,6 +10,8 @@ import { buildSystemPrompt } from '@/agent/orchestrator/buildSystemPrompt';
 import { SEED } from '../setup/testDb';
 import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
+
 describe('CA-48: buildSystemPrompt composition', () => {
   it('composes identity + tools + rules + contract + voice + locale for controller', () => {
     const prompt = buildSystemPrompt({
@@ -17,6 +19,7 @@ describe('CA-48: buildSystemPrompt composition', () => {
       orgContext: makeOrgContextFixture(),
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
     });
 
     // Section 1 — Identity block (session-authored template)

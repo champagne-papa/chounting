@@ -8,10 +8,13 @@ import { buildSystemPrompt } from '@/agent/orchestrator/buildSystemPrompt';
 import { SEED } from '../setup/testDb';
 import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
+
 const BASE_INPUT = {
   persona: 'controller' as const,
   orgContext: makeOrgContextFixture(),
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+  now: FIXED_NOW,
 };
 
 describe('CA-52: buildSystemPrompt locale directive', () => {

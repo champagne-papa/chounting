@@ -11,11 +11,14 @@ import type { CanvasContext } from '@/shared/types/canvasContext';
 import { SEED } from '../setup/testDb';
 import { makeOrgContextFixture } from '../fixtures/agent/orgContextFixture';
 
+const FIXED_NOW = new Date('2026-04-21T00:00:00Z');
+
 const BASE_INPUT = {
   persona: 'controller' as const,
   orgContext: makeOrgContextFixture(),
   locale: 'en' as const,
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+  now: FIXED_NOW,
 };
 
 describe('CA-50: buildSystemPrompt canvas context', () => {
