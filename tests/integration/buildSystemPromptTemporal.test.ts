@@ -91,4 +91,48 @@ describe('CA-84: buildSystemPrompt temporal context', () => {
       expect(prompt.startsWith('Current date:')).toBe(true);
     });
   });
+
+  // T5: checkPeriod's recovery instruction (Site 2) references the
+  // temporal anchor "the Current date above" — verifies the prefix
+  // positioning makes the cross-section reference true positional.
+  it('checkPeriod tool description references "the Current date above"', () => {
+    const prompt = buildSystemPrompt({
+      persona: 'controller',
+      orgContext: makeOrgContextFixture(),
+      locale: 'en',
+      user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
+    });
+
+    const checkPeriodBulletStart = prompt.indexOf('`checkPeriod`');
+    expect(checkPeriodBulletStart).toBeGreaterThan(-1);
+
+    const nextToolBoundary = prompt.indexOf('\n- `', checkPeriodBulletStart + 1);
+    const checkPeriodBulletBody = nextToolBoundary === -1
+      ? prompt.slice(checkPeriodBulletStart)
+      : prompt.slice(checkPeriodBulletStart, nextToolBoundary);
+    expect(checkPeriodBulletBody).toContain('the Current date above');
+  });
+
+  // T6: postJournalEntry's defense-in-depth nudge references the
+  // same temporal anchor at point-of-consumption (the tool that
+  // commits the date to the ledger).
+  it('postJournalEntry tool description references "the Current date above"', () => {
+    const prompt = buildSystemPrompt({
+      persona: 'controller',
+      orgContext: makeOrgContextFixture(),
+      locale: 'en',
+      user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
+    });
+
+    const postJournalBulletStart = prompt.indexOf('`postJournalEntry`');
+    expect(postJournalBulletStart).toBeGreaterThan(-1);
+
+    const nextToolBoundary = prompt.indexOf('\n- `', postJournalBulletStart + 1);
+    const postJournalBulletBody = nextToolBoundary === -1
+      ? prompt.slice(postJournalBulletStart)
+      : prompt.slice(postJournalBulletStart, nextToolBoundary);
+    expect(postJournalBulletBody).toContain('the Current date above');
+  });
 });

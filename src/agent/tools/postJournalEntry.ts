@@ -7,7 +7,7 @@ import { PostJournalEntryInputSchema } from '@/shared/schemas/accounting/journal
 
 export const postJournalEntryTool = {
   name: 'postJournalEntry',
-  description: 'Create a journal entry. ALWAYS use dry_run=true on the first call. The orchestrator replays a second call with dry_run=false only after the user approves the ProposedEntryCard.',
+  description: `Create a journal entry. ALWAYS use dry_run=true on the first call. The orchestrator replays a second call with dry_run=false only after the user approves the ProposedEntryCard. Resolve relative entry_date expressions (e.g., "this month," "today," "yesterday") against the Current date above.`,
   input_schema: zodToJsonSchema(PostJournalEntryInputSchema),
   zodSchema: PostJournalEntryInputSchema,
 } as const;
