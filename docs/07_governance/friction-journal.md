@@ -4908,3 +4908,64 @@ because the work is pure markdown edits):
    would have added review overhead without content value.
    Documentation is cheaper to ship than code, and the review
    response benefits from being a single artifact.
+
+## Phase A — invariant-doc consolidation (2026-04-21)
+
+Phase A of the Phase 1.x execution cycle consolidated the
+invariant-documentation framework introduced by ADR-0008:
+service-layer UNBALANCED backstop (Prompt 1) and INV-AUDIT-002
+audit_log append-only enforcement (Prompt 2). Three doc-only
+lessons surfaced during execution; each gets its own
+subsection below.
+
+### A. Drafter-side Spec-to-Implementation Verification failure (Prompt 3 before_state convention) — 2026-04-21
+
+Drafting Prompt 3 (doc-only codification of the `before_state`
+capture convention into the INV-AUDIT-001 leaf), the drafter
+framed the convention as new — "no current call site populates
+`before_state`" and "`periodService.lock` / `unlock` will be
+the first real exercise." Both claims were wrong. Phase 1.5A
+(2026-04-15) introduced the convention across six service
+files (`orgService`, `addressService`, `membershipService`,
+`invitationService`, `userProfileService`,
+`agent/orchestrator/loadOrCreateSession`), with three
+integration tests (`addressServiceAudit.test.ts`,
+`userProfileAudit.test.ts`,
+`agentSessionOrgSwitchAudit.test.ts`) and a contributor-facing
+entry at `docs/04_engineering/conventions.md:190`.
+
+Executor caught at the Step 2 gate via
+`grep -rn "recordMutation" src/`. A five-second check at
+drafting time would have prevented five paragraphs of wrong
+framing.
+
+Minor secondary drift in the same draft: the proposed DELETE
+bullet cited `addressService.ts:287, 332, 340` for "address
+removal"; verification showed only line 287 is DELETE
+(`removeAddress`), while 332 and 340 are UPDATE sites inside
+`setPrimaryAddress`. Trimmed to `:287` at the Step 2 gate.
+The paragraph about not making stale citations contained a
+stale citation — the same class of error at a second layer,
+which is itself a useful datapoint about how drafter memory
+compounds.
+
+Class: same as the Phase 1.2 Session 2 "Cited-Code
+Verification" and Session 6 "identity assertion" datapoints —
+narratively correct, contractually wrong against the actual
+codebase. The drafter's goal (surface the convention in the
+authoritative leaf) survived the correction; only the framing
+("first implementation site") drifted.
+
+**Refinement to Spec-to-Implementation Verification
+convention.** The existing five-category list (numeric claims,
+literal values, list elements, structural references,
+identity assertions) covers facts about the shipped code but
+doesn't explicitly cover *temporal* claims. Sixth category
+added in this commit: **temporal claims** — any assertion
+that code is "new," "first," "not yet implemented," "the only
+current X," or similar. Verify via grep against the shipped
+codebase, not against a mental model of a prior phase.
+Codebase state drifts faster than drafter memory updates. See
+`docs/04_engineering/conventions.md` "Spec-to-Implementation
+Verification" section for the full list and the matching
+Refinement datapoint paragraph.

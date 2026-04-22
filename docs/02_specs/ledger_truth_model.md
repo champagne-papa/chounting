@@ -2957,6 +2957,78 @@ three-trigger + two-RLS-policy + three-REVOKE enforcement, and
 `docs/02_specs/invariants.md` Cross-layer pairings for the
 registered pairing.
 
+**Before-state capture convention.** The `before_state` field
+on `AuditEntry` carries the pre-mutation state of the row
+being modified. Three conventions govern when and how it is
+populated:
+
+- **INSERT mutations omit `before_state`.** The row did not
+  exist before the mutation. `recordMutation` accepts
+  `before_state: undefined` (or the field's absence), which
+  serializes as SQL `NULL`. Example: `journalEntryService.post`,
+  which creates a new `journal_entries` row.
+
+- **UPDATE mutations MUST capture `before_state`.** Before
+  issuing the `UPDATE`, the service function `SELECT`s the
+  full row through the same `db` `SupabaseClient` and passes
+  the result to `recordMutation` as a
+  `Record<string, unknown>`. The `SELECT` runs through the
+  same client (and therefore the same transaction) as the
+  subsequent `UPDATE` and the `recordMutation` write, making
+  the three operations atomic: either the whole sequence
+  commits (capture + mutate + audit), or nothing commits
+  (transaction rolls back, data unchanged, no audit orphan).
+  If the pre-update `SELECT` returns zero rows, the service
+  must throw `ServiceError('NOT_FOUND', ...)` (or the
+  domain-specific equivalent) before attempting the `UPDATE` —
+  this is not a `recordMutation` concern, it is the service
+  function's responsibility to not call `recordMutation` for
+  a mutation that never happened.
+
+- **DELETE mutations MUST capture `before_state` via the same
+  pattern.** `addressService.removeAddress` already exercises
+  this (see `src/services/org/addressService.ts:287`): it
+  `SELECT`s the row, issues the `DELETE`, then calls
+  `recordMutation` with `before_state` set to the pre-delete
+  row. For ledger tables specifically, Phase 1.1 permits no
+  `DELETE` — the `journal_entries` and `journal_lines` tables
+  have no DELETE RLS policy (default deny), and `audit_log`
+  itself is append-only per INV-AUDIT-002 (Layer 1a). The
+  convention governs any current or future tenant-scoped
+  table that supports delete operations.
+
+**Current implementation sites.** The convention was
+introduced during Phase 1.5A (2026-04-15) and is applied
+across the organization and membership management surface:
+`orgService.updateOrgProfile` (UPDATE with pre-update
+`SELECT`), `addressService` (INSERT + UPDATE + DELETE mix),
+`membershipService` (four lifecycle UPDATE mutations),
+`invitationService` (create / cancel / accept),
+`userProfileService` (conditional UPSERT —
+`before_state: undefined` on the insert branch, populated on
+the update branch), and
+`src/agent/orchestrator/loadOrCreateSession.ts` (session
+org-switch UPDATE). Three integration tests exercise the
+convention: `tests/integration/addressServiceAudit.test.ts`,
+`tests/integration/userProfileAudit.test.ts`, and
+`tests/integration/agentSessionOrgSwitchAudit.test.ts`. Future
+UPDATE or DELETE service methods — including
+`periodService.lock` / `unlock` when they land — follow the
+same pattern. The contributor-facing reminder lives at
+`docs/04_engineering/conventions.md:190` ("Audit
+`before_state` Convention"); this paragraph is the
+load-bearing spec.
+
+**Phase 2 evolution of `before_state`.** When `audit_log`
+becomes a projection from the `events` stream (per this
+leaf's Phase 2 evolution note — Simplification 1 reversing),
+the `before_state` field migrates from a column on
+`audit_log` into the event payload. The shape and semantics
+are unchanged: INSERT events carry no before-state; UPDATE
+and DELETE events carry a full pre-mutation row snapshot. The
+projection worker unpacks the event payload and writes the
+projected `audit_log` row with `before_state` set as today.
+
 **What breaks if this rule is violated.** A service
 function that mutates data without calling
 `recordMutation`:

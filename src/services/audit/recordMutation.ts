@@ -9,6 +9,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 
+/**
+ * Audit payload passed to recordMutation(). See the INV-AUDIT-001
+ * leaf in docs/02_specs/ledger_truth_model.md for the full rule;
+ * the "Before-state capture convention" section of that leaf
+ * covers before_state semantics — INSERT omits it, UPDATE and
+ * DELETE capture the full pre-mutation row via a same-transaction
+ * SELECT.
+ */
 export interface AuditEntry {
   // org_id is nullable per migration 113 (2026-04-15) —
   // login/logout and user-profile-update audit rows legitimately

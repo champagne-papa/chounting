@@ -273,6 +273,11 @@ this convention):
 - **Identity assertions** (named symbols — functions, methods,
   routes, schema fields, constants) — grep the symbol at the
   cited location before claiming it exists.
+- **Temporal claims** (phrases like "first", "new", "not yet
+  implemented", "the only current X", "no current call site
+  does Y") — verify via grep against the shipped codebase, not
+  against a mental model of a prior phase. Codebase state
+  drifts faster than drafter memory updates.
 
 The cost is 5–10 minutes of grep-verification per sub-brief;
 the payoff is avoiding mid-execution drift where the executor
@@ -321,6 +326,23 @@ The fifth bullet (**Identity assertions**) was added to close
 that gap. Same class as the original three ("narratively
 correct, contractually wrong"); different verification move
 (grep for the symbol, not the value).
+
+**Refinement datapoint (Phase A):** the Prompt 3 draft for
+codifying the `before_state` capture convention asserted "no
+current call site populates `before_state`" and framed
+`periodService.lock` / `unlock` as "the first real exercise of
+this convention." Both claims were false — Phase 1.5A had
+introduced the convention across six service files two weeks
+earlier, with three integration tests and an entry at
+`conventions.md:190`. The previous five-category list (through
+Identity Assertions) covered facts about the shipped code but
+not *temporal* claims about it. The sixth bullet (**Temporal
+claims**) was added to close that gap. Same class as the prior
+datapoints ("narratively correct, contractually wrong");
+different verification move (grep against the current codebase
+for the temporal assertion, not against drafter memory of a
+prior phase). See `docs/07_governance/friction-journal.md`
+"Phase A" section, subsection A, for the incident record.
 
 **Relationship to Cited-Code Verification** (Phase 1.5A
 convention above): Cited-Code Verification catches drift
