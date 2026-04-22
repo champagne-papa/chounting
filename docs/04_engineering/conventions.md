@@ -356,6 +356,28 @@ direction, the other guards the source-of-truth → sub-brief
 direction. Both apply during drafting; neither supersedes the
 other.
 
+### Check HEAD before Step 2 Plan
+
+Before writing a Step 2 plan, an agent MUST run:
+
+```bash
+git log --oneline -10
+```
+
+and confirm HEAD matches the baseline the prompt was written
+against. If HEAD has moved since the prompt was written (new
+commits are present that the prompt does not reference), STOP
+and report before planning. Do not silently reconcile.
+
+Rationale: concurrent Claude Code sessions under the same git
+identity can interleave commits on the same branch. A Step 2
+plan written against stale HEAD will duplicate or conflict with
+work already landed. This check is cheap (one tool call) and
+prevents the entire class of "I found a commit I didn't author"
+incidents. First observed: 2026-04-22, Phase C of O3 — Phase C
+agent discovered 78e9f0d already at HEAD, committed 14 minutes
+earlier by a parallel session working the same plan.
+
 ---
 
 ## Appendix: Worked Example — Posting a Journal Entry
