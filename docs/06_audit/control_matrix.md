@@ -1,6 +1,6 @@
 # Control Matrix
 
-Audit-side evidence for the 17 Phase 1.1 invariants. Maps each
+Audit-side evidence for the 18 Phase 1.1 invariants. Maps each
 INV-ID to its spec definition, its test coverage, and the
 specific mechanism by which it is enforced in code.
 
@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 17 invariants — audit evidence
+## The 18 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -47,10 +47,10 @@ scheduled), the specific enforcement mechanism, and the
 non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
-leaf's Summary section: Layer 1 first (11 invariants), then
+leaf's Summary section: Layer 1 first (12 invariants), then
 Layer 2 (6 invariants).
 
-### Layer 1a — Physical Truth, commit-time (11 invariants)
+### Layer 1a — Physical Truth, commit-time (12 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
 and 1b (scheduled audit detection). All 11 Phase 1.1 invariants
@@ -134,6 +134,14 @@ under "Phase 2 Reserved Invariants."
 - **Test coverage:** Service-layer portion covered by `tests/integration/reversalMirror.test.ts` (the empty-reason rejection path is step 1 of the `validateReversalMirror` algorithm). A dedicated "try to insert a reversal with empty reversal_reason through direct DML" test is not on the Phase 1.1 floor because it would require bypassing the service layer entirely — Phase 1.1 has no code path that does so. The dedicated DB-CHECK test lands in Phase 1.2 alongside the `reverseJournalEntry` agent tool.
 - **Code enforcement:** `CONSTRAINT reversal_reason_required_when_reversing CHECK (reverses_journal_entry_id IS NULL OR (reversal_reason IS NOT NULL AND length(trim(reversal_reason)) > 0))` on `journal_entries`. The `length(trim(...)) > 0` form rejects whitespace-only values, not just NULL. Defined in `supabase/migrations/20240102000000_add_reversal_reason.sql`.
 - **Non-bypassable from application layer:** Postgres CHECK constraint catches any reversal-insert path that lacks a meaningful reason.
+
+#### INV-AUDIT-002 — The audit_log table is append-only
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-audit-002`](../02_specs/ledger_truth_model.md#inv-audit-002--the-audit_log-table-is-append-only-layer-1a)
+- **Test coverage:** **None in Phase 1.1** — Phase 1.2 obligation. The Category A test that attempts every mutation path (`UPDATE`, `DELETE`, `TRUNCATE`) against `audit_log` lands alongside the AI Action Review queue work (Phase 1.2), which depends on `audit_log` integrity for its historical view. Manual spot-check procedure documented in `docs/04_engineering/conventions.md` (forward-facing; written when the Category A test lands).
+- **Code enforcement:** Three triggers (`trg_audit_log_no_update`, `trg_audit_log_no_delete`, `trg_audit_log_no_truncate`) all calling `reject_audit_log_mutation()` which raises `feature_not_supported`. Plus two RLS policies (`audit_log_no_update` / `audit_log_no_delete`, both `USING (false)`) surfacing append-only intent at the RLS layer. Plus three `REVOKE TRUNCATE ON audit_log FROM PUBLIC|authenticated|anon` statements as defense in depth (TRUNCATE bypasses row-level triggers; the statement-level trigger catches it but REVOKE removes the privilege itself from non-privileged roles). Defined in `supabase/migrations/20240122000000_audit_log_append_only.sql`.
+- **Non-bypassable from application layer:** The triggers fire on every UPDATE / DELETE / TRUNCATE regardless of client. The Supabase-managed `service_role` retains `TRUNCATE` privilege by platform constraint, but `trg_audit_log_no_truncate` catches it. RLS policies provide the second layer for `authenticated`/`anon` paths.
+- **Pairing with INV-AUDIT-001:** INV-AUDIT-001 (Layer 2) guarantees every mutation writes an `audit_log` row; INV-AUDIT-002 (Layer 1a) guarantees that row is permanent. Together: every mutation produces a permanent audit record. Registered as a cross-layer pairing in `docs/02_specs/invariants.md`.
 
 ### Layer 2 — Operational Truth (6 invariants)
 
@@ -248,6 +256,7 @@ deliberately accepts as backstops, not foundational rules.
 |---|---|---|
 | `unique_entry_number_per_org_period` UNIQUE constraint in `supabase/migrations/20240104000000_add_entry_number.sql` | "Retroactive collision detector" for the no-FOR-UPDATE entry-number allocation pattern | Not on the audit floor. Phase 1.1 deliberately accepts gaps in entry numbering under failure conditions; the rule the codebase actually cares about is sequentiality, not uniqueness, and UNIQUE cannot enforce sequentiality. See the Transaction Isolation section of `ledger_truth_model.md` for the discipline-vs-invariant distinction. |
 | `je_attachments_select` RLS policy in `supabase/migrations/20240106000000_add_attachments.sql` | Collective participant in INV-RLS-001 ("the set of policies that enforce it grows") | Audit coverage is provided by INV-RLS-001's Category A floor test (`crossOrgRlsIsolation.test.ts`), which exercises the collective enforcement. The attachments-table policy is not separately audited because it follows the same `user_has_org_access(org_id)` pattern as every other tenant-scoped table. |
+| `reportService.trialBalance()` footer check in `src/services/reporting/reportService.ts` | Trial balance debits equal credits (theorem of INV-LEDGER-001 (Layer 1a)) | Not on the audit floor. The rule is INV-LEDGER-001 (Layer 1a), covered by the `unbalancedJournalEntry.test.ts` Category A floor test. The service-layer throw is a boundary defense for non-UI consumers (agents, exports, reconciliation integrations, tests), not a separate audit artifact. The equivalent UI check in `BasicTrialBalanceView.tsx` covers the render path. |
 
 See [`invariants.md`](../02_specs/invariants.md) "Discipline
 backstops (not invariants)" section for the full non-promotion
@@ -270,6 +279,6 @@ diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort
      <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
 ```
 
-Expected: 17 distinct INV-IDs in both directions, empty symmetric
+Expected: 18 distinct INV-IDs in both directions, empty symmetric
 diff. This is the single command an auditor can run at any future
 point to confirm the doc-to-code reachability has not drifted.

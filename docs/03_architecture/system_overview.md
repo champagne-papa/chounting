@@ -59,7 +59,7 @@ modules and reporting layer.
 
 chounting is **Model B core, on a Hybrid trajectory.** Phase
 1.1 delivered the invariant-enforced core (see
-`docs/02_specs/ledger_truth_model.md` for the 17 invariants that
+`docs/02_specs/ledger_truth_model.md` for the 18 invariants that
 make up the core). Every Phase 2+ brief under `docs/09_briefs/`
 adds either a domain module, a reporting-layer component, or a
 Model-B primitive chounting has not yet needed.

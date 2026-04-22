@@ -73,7 +73,7 @@ gradient:
 
 | Layer | Role | Enforcement mechanism | Examples |
 |---|---|---|---|
-| **Layer 1a — Physical Truth, commit-time** | The database prevents at commit | Postgres CHECK constraints, BEFORE/AFTER triggers, DEFERRABLE CONSTRAINT TRIGGER, RLS policies | INV-LEDGER-001 through 006, INV-MONEY-002/003, INV-IDEMPOTENCY-001, INV-REVERSAL-002, INV-RLS-001 (all 11 Phase 1.1 Layer 1 invariants) |
+| **Layer 1a — Physical Truth, commit-time** | The database prevents at commit | Postgres CHECK constraints, BEFORE/AFTER triggers, DEFERRABLE CONSTRAINT TRIGGER, RLS policies | INV-LEDGER-001 through 006, INV-MONEY-002/003, INV-IDEMPOTENCY-001, INV-REVERSAL-002, INV-RLS-001, INV-AUDIT-002 (all 12 Phase 1.1 Layer 1a invariants) |
 | **Layer 1b — Physical Truth, scheduled audit** | The database detects on a cadence | SQL queries under `docs/07_governance/audits/prompts/` run by a scheduled job or the audit-scans skill | (no Phase 1.1 members; Phase 2 adds INV-CHECKPOINT-001 and INV-SUBLEDGER-TIEOUT-001 — see the "Phase 2 Reserved Invariants" subsection at the end of Layer 1) |
 | **Layer 2 — Operational Truth** | Services decide | TypeScript service functions wrapped in `withInvariants()`, Zod schemas at every boundary, typed `ServiceError` codes | INV-SERVICE-001/002, INV-AUTH-001, INV-MONEY-001, INV-REVERSAL-001, INV-AUDIT-001 |
 | **Layer 3 — Temporal Truth** | Events as source of truth | Append-only event stream (`events` table with triggers) | INV-LEDGER-003 (enforcement exists at Layer 1a today; the Layer 3 role of "events as source of truth" is a Phase 2 obligation) |
@@ -1409,6 +1409,163 @@ section; `docs/03_architecture/phase_plan.md` Phase 1.1
 table (INV-REVERSAL-001 covers the service-layer portion);
 `docs/07_governance/adr/0001-reversal-semantics.md` ADR
 placement rationale.
+
+---
+
+### INV-AUDIT-002 — The audit_log table is append-only (Layer 1a)
+
+**Invariant.** No `UPDATE`, no `DELETE`, and no `TRUNCATE` can
+modify rows in the `audit_log` table. Once `recordMutation()`
+writes a row, it is permanent. This is the Layer 1a enforcement
+of the append-only rule that makes the audit trail
+trustworthy — an auditor asking "what happened?" can rely on
+the answer because nothing between the write and the read can
+rewrite history.
+
+**Scope in Phase 1.1.** Unlike `events` (a reserved seat), the
+`audit_log` table is actively written today by every mutating
+service function via `recordMutation()` (INV-AUDIT-001,
+Simplification 1). The rule is both enforced AND exercised from
+day one: every successful journal post, reversal, org mutation,
+profile update, and membership change produces an `audit_log`
+row, and none of those rows can be modified after insert.
+
+**Enforcement.** Three triggers plus two RLS policies plus three
+`REVOKE` statements, defined in
+`supabase/migrations/20240122000000_audit_log_append_only.sql`.
+Two triggers fire `BEFORE` row-level mutations and one fires
+`BEFORE` a statement-level `TRUNCATE`. All three call the same
+rejection function:
+
+```sql
+CREATE OR REPLACE FUNCTION reject_audit_log_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_log is append-only — UPDATE, DELETE, and TRUNCATE are forbidden'
+    USING ERRCODE = 'feature_not_supported';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_log_no_update
+  BEFORE UPDATE ON audit_log
+  FOR EACH ROW
+  EXECUTE FUNCTION reject_audit_log_mutation();
+
+CREATE TRIGGER trg_audit_log_no_delete
+  BEFORE DELETE ON audit_log
+  FOR EACH ROW
+  EXECUTE FUNCTION reject_audit_log_mutation();
+
+CREATE TRIGGER trg_audit_log_no_truncate
+  BEFORE TRUNCATE ON audit_log
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION reject_audit_log_mutation();
+
+CREATE POLICY audit_log_no_update ON audit_log
+  FOR UPDATE USING (false);
+
+CREATE POLICY audit_log_no_delete ON audit_log
+  FOR DELETE USING (false);
+
+REVOKE TRUNCATE ON audit_log FROM PUBLIC;
+REVOKE TRUNCATE ON audit_log FROM authenticated;
+REVOKE TRUNCATE ON audit_log FROM anon;
+```
+
+**Why three triggers instead of one.** Postgres fires different
+trigger events for different DML operations, and a `BEFORE
+UPDATE` trigger does not catch `DELETE` or `TRUNCATE`. A
+compound `BEFORE UPDATE OR DELETE` trigger still does not catch
+`TRUNCATE`, because `TRUNCATE` is a DDL-adjacent operation with
+its own trigger event. Each mutation path has its own trigger.
+The rule "audit_log is append-only" has to be stated to Postgres
+three times to cover three different ways a row could disappear.
+
+**Why REVOKE TRUNCATE plus the trigger — defense in depth.**
+Same rationale as INV-LEDGER-003. `TRUNCATE` bypasses row-level
+triggers (they do not fire during truncation); only
+statement-level `BEFORE TRUNCATE` triggers do. The migration
+therefore takes two protections: it installs
+`trg_audit_log_no_truncate` as a `BEFORE TRUNCATE` statement
+trigger that raises `feature_not_supported`, AND it revokes the
+`TRUNCATE` privilege from every non-privileged role (`PUBLIC`,
+`authenticated`, `anon`). The Supabase-managed `service_role`
+retains the `TRUNCATE` privilege because the platform's grant
+management makes revoking it awkward, but the trigger catches it
+anyway. The trigger is the authoritative enforcement; the REVOKE
+is the second line.
+
+**Why two RLS policies AND triggers.** The service-role client
+bypasses RLS entirely but hits every trigger; `authenticated`
+and `anon` are caught by both RLS and the triggers. The explicit
+`USING (false)` policies for UPDATE and DELETE are redundant
+with default-deny (absence of a policy already denies the
+operation for user-scoped clients), but they surface the
+append-only intent at the RLS layer so it is discoverable from
+`\d audit_log` in psql, and they guard against a future
+migration accidentally broadening the default-deny by adding a
+permissive UPDATE or DELETE policy without re-evaluating
+append-only. The triggers are the authoritative enforcement for
+the service-role path; the policies document intent for
+everyone else.
+
+**Interaction with the service layer.** `recordMutation()`
+writes `audit_log` rows via `adminClient` (service-role client,
+per INV-SERVICE-002), which bypasses RLS. The triggers fire
+regardless of which client issues the DML, so the service-role
+bypass of RLS is backstopped by the trigger enforcement. A
+service function that somehow ended up with a `UPDATE audit_log`
+or `DELETE FROM audit_log` statement in its body would be
+rejected by the database with `feature_not_supported`; no code
+path in Phase 1.1 attempts such a write, and none should in any
+future phase.
+
+**Pairing with INV-AUDIT-001.** INV-AUDIT-001 (Layer 2)
+guarantees every mutating service call writes an `audit_log`
+row in the same transaction; INV-AUDIT-002 (this rule, Layer 1a)
+guarantees that row is permanent. Together: every mutation
+produces a permanent audit record. The pairing is registered in
+`docs/02_specs/invariants.md` Cross-layer pairings table. Both
+rules compose at different layers: AUDIT-001 is the service-layer
+write guarantee; AUDIT-002 is the database-level permanence
+guarantee. Breaking either leaves the audit trail
+untrustworthy — AUDIT-001 without AUDIT-002 means a mutation
+produces an audit row that could later be rewritten; AUDIT-002
+without AUDIT-001 means a mutation might not produce a row at
+all.
+
+**No dedicated integration test — Phase 1.2 obligation.**
+INV-AUDIT-002 is not on the Category A floor today because the
+Phase 1.1 test scaffold does not exercise direct DML against
+`audit_log`. The correctness floor test for the append-only
+rule is scheduled for Phase 1.2 alongside the AI Action Review
+queue work (which depends on `audit_log` integrity for its
+historical view). Until then, a manual verification procedure
+(issue `UPDATE audit_log SET action = 'tampered' WHERE
+audit_log_id = any_uuid;` and `DELETE FROM audit_log WHERE
+...` through `psql` using service-role credentials, and confirm
+`feature_not_supported` surfaces in both cases) is documented in
+`docs/04_engineering/conventions.md` as a spot-check.
+
+**Phase 2 evolution.** The rule is permanent. When `audit_log`
+becomes a projection from the `events` stream (Simplification 1
+reversing in Phase 2 — see
+`docs/03_architecture/phase_simplifications.md`), the projected
+rows still land in `audit_log` via the same INSERT path, and
+INV-AUDIT-002 continues to apply to them. The projection worker
+inserts; it does not update or delete projected rows. If the
+projection is rewritten (e.g., to use a new row shape), the
+projection worker builds a new table and the old `audit_log` is
+either frozen or replaced by migration — never rewritten in
+place. The trigger shape and the REVOKE statements do not
+change.
+
+**Referenced by:** `docs/02_specs/data_model.md` `audit_log`
+section (triggers and RLS policies list); INV-AUDIT-001 leaf
+(Interaction with INV-AUDIT-002 subsection);
+`src/services/audit/recordMutation.ts` (pairing annotation in
+the header comment); `docs/04_engineering/conventions.md`
+(manual spot-check procedure, forward-facing).
 
 ---
 
@@ -2785,6 +2942,21 @@ policy on `audit_log`), the caller would receive
 This is another example of INV-SERVICE-002 being a
 prerequisite for other Layer 2 invariants to hold.
 
+**Interaction with INV-AUDIT-002.** INV-AUDIT-001 (this rule)
+guarantees every mutation writes an `audit_log` row;
+INV-AUDIT-002 (Layer 1a) guarantees that row is permanent —
+no `UPDATE`, `DELETE`, or `TRUNCATE` can modify it after
+insert. The two rules compose: a mutation produces an audit
+record, and that record cannot be rewritten, erased, or wiped.
+Breaking either leaves the audit trail untrustworthy:
+AUDIT-001 without AUDIT-002 means a mutation produces a row
+that could later be rewritten; AUDIT-002 without AUDIT-001
+means a mutation might not produce a row at all. See the
+INV-AUDIT-002 (Layer 1a) leaf above (Layer 1 section) for the
+three-trigger + two-RLS-policy + three-REVOKE enforcement, and
+`docs/02_specs/invariants.md` Cross-layer pairings for the
+registered pairing.
+
 **What breaks if this rule is violated.** A service
 function that mutates data without calling
 `recordMutation`:
@@ -4030,7 +4202,7 @@ the default.
 For reference, the complete list of Phase 1.1 invariants, in the
 order they appear in this file:
 
-**Layer 1a — Physical Truth, commit-time (11 invariants):**
+**Layer 1a — Physical Truth, commit-time (12 invariants):**
 
 1. INV-LEDGER-001 — Debit = credit per journal entry
 2. INV-LEDGER-002 — Posting to a locked period is rejected
@@ -4043,6 +4215,7 @@ order they appear in this file:
 9. INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key
 10. INV-RLS-001 — Cross-org data is never visible outside the org
 11. INV-REVERSAL-002 — Reversal entries require a non-empty reason
+12. INV-AUDIT-002 — The audit_log table is append-only
 
 **Layer 1b — Physical Truth, scheduled audit (zero Phase 1.1
 invariants).** The sub-layer is reserved by ADR-0008 and holds
@@ -4059,12 +4232,12 @@ locks strategy and the three read-then-write patterns in Phase
 
 **Layer 2 — Operational Truth (6 invariants):**
 
-12. INV-AUTH-001 — Every mutating service call is authorized
-13. INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
-14. INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
-15. INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
-16. INV-REVERSAL-001 — Reversal lines must mirror the original
-17. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
+13. INV-AUTH-001 — Every mutating service call is authorized
+14. INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
+15. INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
+16. INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
+17. INV-REVERSAL-001 — Reversal lines must mirror the original
+18. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
 
 **Layer 3 — Temporal Truth:** zero INV-IDs in Phase 1.1. The
 Layer 1a enforcement of "events are append-only" (INV-LEDGER-003)

@@ -1,5 +1,6 @@
 // src/services/audit/recordMutation.ts
 // INV-AUDIT-001 (primary enforcement): every mutating service call writes an audit_log row in the same transaction.
+// Paired with INV-AUDIT-002 (Layer 1a) — the database makes the audit_log row permanent once this function writes it (see supabase/migrations/20240122000000_audit_log_append_only.sql).
 // Synchronous audit log writer (Simplification 1).
 // Called inside the same database transaction as the mutation it records.
 // In Phase 2 this role moves to the events table; for now audit_log is

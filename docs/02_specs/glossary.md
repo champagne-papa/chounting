@@ -160,7 +160,7 @@ duplicate. Optional for `source = 'manual'` and `source =
 **INV-ID.** A stable identifier for an invariant in this
 codebase. Format: `INV-DOMAIN-NNN` where DOMAIN is one of
 LEDGER, MONEY, IDEMPOTENCY, RLS, REVERSAL, AUTH, SERVICE, or
-AUDIT. NNN is a three-digit sequence. There are 17 INV-IDs in
+AUDIT. NNN is a three-digit sequence. There are 18 INV-IDs in
 Phase 1.1 — see `invariants.md` for the full index.
 
 **InvariantViolationError.** A typed error subclass in

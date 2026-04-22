@@ -1,6 +1,6 @@
 # Invariants Index
 
-The canonical index for the 17 Phase 1.1 invariants. The single
+The canonical index for the 18 Phase 1.1 invariants. The single
 place to look up "what are all the rules, where are they
 documented, and where are they enforced in code?"
 
@@ -26,11 +26,11 @@ briefs under `docs/09_briefs/phase-2/`. See
 As of commit `65bcfe0` (Waypoint F verification, completed
 during the Phase 1.1 closeout docs restructure):
 
-- **17 distinct INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md` (11 Layer 1a, 6 Layer 2,
+- **18 distinct INV-IDs** documented in
+  `docs/02_specs/ledger_truth_model.md` (12 Layer 1a, 6 Layer 2,
   0 Layer 1b)
-- **17 distinct INV-IDs** annotated in code (`src/` +
-  `supabase/migrations/`) (11 Layer 1a, 6 Layer 2, 0 Layer 1b)
+- **18 distinct INV-IDs** annotated in code (`src/` +
+  `supabase/migrations/`) (12 Layer 1a, 6 Layer 2, 0 Layer 1b)
 - **Symmetric difference: empty.** Every documented invariant
   has at least one annotation site in code; every annotated
   INV-ID has a corresponding leaf in the doc.
@@ -44,10 +44,10 @@ diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort
 
 Expected output: empty (no diff).
 
-## The 17 invariants
+## The 18 invariants
 
 The order matches the leaf's Summary section: Layer 1 first
-(11 invariants), then Layer 2 (6 invariants). Within each
+(12 invariants), then Layer 2 (6 invariants). Within each
 layer, the order matches the order the invariants appear in
 `ledger_truth_model.md`.
 
@@ -64,12 +64,13 @@ layer, the order matches the order the invariants appear in
 | 9 | INV-IDEMPOTENCY-001 | 1a | Agent-sourced entries require idempotency key | CHECK constraint + Zod refine pairing | [leaf](ledger_truth_model.md#inv-idempotency-001--agent-sourced-entries-require-idempotency-key) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `idempotency_required_for_agent`); `src/shared/schemas/accounting/journalEntry.schema.ts` (`idempotencyRefinement` — Phase 1.1 dead code, activates Phase 1.2) |
 | 10 | INV-RLS-001 | 1a | Cross-org data is never visible outside the org | RLS policies (collective) + SECURITY DEFINER helpers | [leaf](ledger_truth_model.md#inv-rls-001--cross-org-data-is-never-visible-outside-the-org) | `supabase/migrations/20240101000000_initial_schema.sql` (RLS HELPER FUNCTIONS section) |
 | 11 | INV-REVERSAL-002 | 1a | Reversal entries require a non-empty reason | CHECK constraint | [leaf](ledger_truth_model.md#inv-reversal-002--reversal-entries-require-a-non-empty-reason) | `supabase/migrations/20240102000000_add_reversal_reason.sql` (CONSTRAINT `reversal_reason_required_when_reversing`) |
-| 12 | INV-AUTH-001 | 2 | Every mutating service call is authorized | TypeScript middleware (4 pre-flight checks) | [leaf](ledger_truth_model.md#inv-auth-001--every-mutating-service-call-is-authorized) | `src/services/middleware/withInvariants.ts` (primary); `src/services/auth/canUserPerformAction.ts` (permission source) |
-| 13 | INV-SERVICE-001 | 2 | Every mutating service function is invoked through `withInvariants` | Structural pattern (export contract + wrap site) | [leaf](ledger_truth_model.md#inv-service-001--every-mutating-service-function-is-invoked-through-withinvariants) | `src/services/accounting/journalEntryService.ts` (export contract); `src/app/api/orgs/[orgId]/journal-entries/route.ts` (wrap site) |
-| 14 | INV-SERVICE-002 | 2 | The service layer uses `adminClient`, never `userClient` | Structural pattern (import discipline) | [leaf](ledger_truth_model.md#inv-service-002--the-service-layer-uses-adminclient-never-userclient) | `src/services/accounting/journalEntryService.ts` (adminClient discipline) |
-| 15 | INV-MONEY-001 | 2 | Money at the service boundary is string-typed, never JavaScript `Number` | Branded types + Zod schemas + arithmetic helpers + decimal.js confinement (collective) | [leaf](ledger_truth_model.md#inv-money-001--money-at-the-service-boundary-is-string-typed-never-javascript-number) | `src/shared/schemas/accounting/money.schema.ts` (collective enforcement) |
-| 16 | INV-REVERSAL-001 | 2 | Reversal lines must mirror the original | TypeScript service function (5-step algorithm) | [leaf](ledger_truth_model.md#inv-reversal-001--reversal-lines-must-mirror-the-original) | `src/services/accounting/journalEntryService.ts` (function `validateReversalMirror`) |
-| 17 | INV-AUDIT-001 | 2 | Every mutating service call writes an `audit_log` row in the same transaction | TypeScript service function + call-site discipline | [leaf](ledger_truth_model.md#inv-audit-001--every-mutating-service-call-writes-an-audit_log-row-in-the-same-transaction) | `src/services/audit/recordMutation.ts` (primary); `src/services/accounting/journalEntryService.ts` (call site in `post`) |
+| 12 | INV-AUDIT-002 | 1a | The audit_log table is append-only | 3 triggers + 2 RLS policies + 3 REVOKEs (defense in depth) | [leaf](ledger_truth_model.md#inv-audit-002--the-audit_log-table-is-append-only-layer-1a) | `supabase/migrations/20240122000000_audit_log_append_only.sql` (function `reject_audit_log_mutation` + RLS policies `audit_log_no_update` / `audit_log_no_delete` + REVOKE block) |
+| 13 | INV-AUTH-001 | 2 | Every mutating service call is authorized | TypeScript middleware (4 pre-flight checks) | [leaf](ledger_truth_model.md#inv-auth-001--every-mutating-service-call-is-authorized) | `src/services/middleware/withInvariants.ts` (primary); `src/services/auth/canUserPerformAction.ts` (permission source) |
+| 14 | INV-SERVICE-001 | 2 | Every mutating service function is invoked through `withInvariants` | Structural pattern (export contract + wrap site) | [leaf](ledger_truth_model.md#inv-service-001--every-mutating-service-function-is-invoked-through-withinvariants) | `src/services/accounting/journalEntryService.ts` (export contract); `src/app/api/orgs/[orgId]/journal-entries/route.ts` (wrap site) |
+| 15 | INV-SERVICE-002 | 2 | The service layer uses `adminClient`, never `userClient` | Structural pattern (import discipline) | [leaf](ledger_truth_model.md#inv-service-002--the-service-layer-uses-adminclient-never-userclient) | `src/services/accounting/journalEntryService.ts` (adminClient discipline) |
+| 16 | INV-MONEY-001 | 2 | Money at the service boundary is string-typed, never JavaScript `Number` | Branded types + Zod schemas + arithmetic helpers + decimal.js confinement (collective) | [leaf](ledger_truth_model.md#inv-money-001--money-at-the-service-boundary-is-string-typed-never-javascript-number) | `src/shared/schemas/accounting/money.schema.ts` (collective enforcement) |
+| 17 | INV-REVERSAL-001 | 2 | Reversal lines must mirror the original | TypeScript service function (5-step algorithm) | [leaf](ledger_truth_model.md#inv-reversal-001--reversal-lines-must-mirror-the-original) | `src/services/accounting/journalEntryService.ts` (function `validateReversalMirror`) |
+| 18 | INV-AUDIT-001 | 2 | Every mutating service call writes an `audit_log` row in the same transaction | TypeScript service function + call-site discipline | [leaf](ledger_truth_model.md#inv-audit-001--every-mutating-service-call-writes-an-audit_log-row-in-the-same-transaction) | `src/services/audit/recordMutation.ts` (primary); `src/services/accounting/journalEntryService.ts` (call site in `post`) |
 
 ## Cross-layer pairings
 
@@ -89,6 +90,7 @@ primary.
 | INV-AUDIT-001 (L2 primary) | INV-AUDIT-001 (L2 call site) | Same INV at two sites: enforcement function + call site inside caller's transaction | `recordMutation.ts` (primary) and `journalEntryService.ts` post function (call site) |
 | INV-SERVICE-001 (L2 export contract) | INV-SERVICE-001 (L2 wrap site) | Same INV at two sites: service module exports unwrapped + route handler wraps | `journalEntryService.ts` (export contract) and `journal-entries/route.ts` POST handler (wrap site) |
 | INV-LEDGER-003 (L1a primary) | INV-LEDGER-003 (L1a defense in depth) | Same INV at two sites: trigger function + REVOKE TRUNCATE block | `20240101000000_initial_schema.sql` (function `reject_events_mutation` + REVOKE block) |
+| INV-AUDIT-001 (L2) | INV-AUDIT-002 (L1a) | Layer 2 service-layer write guarantee + Layer 1a database-level permanence guarantee; AUDIT-001 gets the row in, AUDIT-002 keeps it there | `recordMutation.ts` (L2 primary) and `20240122000000_audit_log_append_only.sql` (L1a primary — function `reject_audit_log_mutation` + RLS policies + REVOKE block) |
 
 ## Discipline backstops (not invariants)
 

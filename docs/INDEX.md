@@ -25,7 +25,7 @@ execution brief. See the folder README for the deletion criterion.
 
 ## 02_specs — the rules (enforcement-backed)
 
-- `ledger_truth_model.md` — the canonical 17 invariants with full leaves, Phase 2 evolution notes, and interactions. Tiebreaker for "is X legal in the ledger."
+- `ledger_truth_model.md` — the canonical 18 invariants with full leaves, Phase 2 evolution notes, and interactions. Tiebreaker for "is X legal in the ledger."
 - `agent_autonomy_model.md` — Layer 4 governance: the Agent Ladder (three rungs), limit model (four dimensions), System vs. Policy boundary, policy decision tree.
 - `intent_model.md` — the canonical `Intent` discriminated union (Navigation / Mutation / Query), `ProposedMutation` shape, Four Questions grammar, Logic Receipts spec.
 - `mutation_lifecycle.md` — the six states a proposed mutation passes through, Needs Attention prioritization triggers, the 24-hour reversible window.
