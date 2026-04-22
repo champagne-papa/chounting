@@ -318,6 +318,157 @@ the agent's `tool_input` may need orchestrator
 overwrite-to-`agent` at post-time for EC-2 pass criterion
 (a) to not false-negative.
 
+### Session 8 mid-arc closeout — O3 + C9 + C8 throughline (2026-04-22)
+
+Today's working session shipped four arcs across five commits, all
+on `staging` on top of plan-anchor 9471a9d. Session 8 backlog
+(C7, C10, C11, C12, EC-2 full run) remains open and carries
+forward to next working session.
+
+**O3 — Bug A + Bug B prompt-layer fixes** (3 commits):
+
+- **6c407e7** — `fix(agent): Finding O3 Site 1 — temporal context
+  injection (Bug A fix)`. Dual UTC + org-local current-date prefix
+  block via new `temporalContext.ts` helper. +6 tests (CA-84
+  T1–T4, T4 parameterized over three personas).
+- **78e9f0d** — `fix(agent): Finding O3 Site 2 — checkPeriod
+  null-recovery instruction (Bug B fix, contingency text)`.
+  Recovery instruction in `checkPeriodTool.description` + temporal
+  nudge in `postJournalEntryTool.description`. Contingency text
+  per Phase A indeterminate fallback (transcript logs absent at
+  execution time; contingency's broader trigger is a strict
+  superset of primary's). +4 tests (T5/T6 added to CA-84; CA-85;
+  CA-86).
+- **3e7dae4** — `docs(friction): Phase C O3 closeout +
+  Preservation and Ambiguity Gates convention proposal`.
+  Friction-journal Phase C entry. Load-bearing output:
+  convention-catalog elevation proposal (codified in C9 below).
+  CURRENT_STATE.md updated with O3 — Complete entry.
+
+Entry 1 paid-API retry: clean. `agent_sessions
+45c9ef23-11af-46b3-af4c-39a77384817e`. DR Rent / CR Cash at
+2400.00 CAD; `entry_date 2026-04-01` (Bug A observably fixed).
+Spend $0.094.
+
+**C9 — convention-catalog codification** (1 commit):
+
+- **a610e0e** — `docs(conventions): codify three new Phase 1.2
+  conventions from O3 retrospective`. Three new conventions added
+  to `docs/04_engineering/conventions.md` under existing `## Phase
+  1.2 Conventions` section: "Re-verify Environmental Claims at
+  Each Gate", "Preservation and Ambiguity Gates", "Erase-to-Clean
+  vs. Document-to-Verify". Family-clustered with the existing
+  "Check HEAD before Step 2 Plan" entry (parallel-commit-
+  robustness siblings). All three above the two-datapoint
+  codification threshold; locked language cross-references
+  friction-journal Phase C section (b) for evidence.
+
+**Source: "manual" investigation** (read-only arc; no commit produced):
+
+EC-2 pass criterion (a) prerequisite. Finding:
+`src/app/api/agent/confirm/route.ts:134` hardcodes
+`source: 'agent'` at post-replay time via
+`{ ...toolInput, dry_run: false, source: 'agent' }`
+spread-then-override. Posted journal_entries rows carry
+`source='agent'` regardless of the agent's tool_input emission.
+EC-2 pass criterion (a) cannot false-negative on this surface. No
+commit produced — the arc's charter was investigate-and-classify,
+benign outcome meant no fix warranted. Flagged here because the
+arc cleared an EC-2 prereq and deserves record in the session's
+throughline.
+
+**C8 — Mode B listJournalEntries fix** (1 commit):
+
+- **bd5cd75** — `feat(phase-1.2): Session 8 Commit 8 — Mode B
+  listJournalEntries description + persona hint`. Per
+  session-8-brief.md P36. Tool description amended (3-clause
+  structure, system-wide org_id anchoring, agent-invisibility
+  honesty per CA-54 awareness); new `TOOL_SELECTION_HINTS` shared
+  constant composed into all three persona prompts immediately
+  after `ANTI_HALLUCINATION_RULES`; CA-87 regression test
+  (mock-orchestrator pattern, same family as CA-86). Test-scope
+  limitation acknowledged in test header — guards plumbing, not
+  real-Claude prompt-contract behavior; behavioral validation
+  deferred to C7 EC-13 adversarial run.
+
+**Spend tally:** $0.094 (Entry 1 paid-API retry). Cumulative
+Session 8 spend: $0.20 of $5.00 ceiling. Forward-calibrated EC-2
+full-run baseline: $1.80 (20 entries × $0.09); halt thresholds
+unchanged ($3 cumulative / $0.50 single-call). The pre-O3 P34
+estimate of $0.30–$0.80 full run was written before O3's expanded
+system prompt; $1.80 is the corrected baseline for the next
+paid-API approval gate.
+
+**Convention candidate logged below threshold: metabolic-load
+formulation.** Pattern: small arcs have two distinct cost curves
+— ride-on-prior-hard-work arcs (e.g., C9 codifying O3's Phase E
+drafts) cost less in the *sustained-design-thinking* class;
+targeted-investigation arcs (e.g., source-manual) cost less in
+the *attention-to-detail* class. Same "small arc" label,
+different cognitive surfaces. Disposition: single datapoint today
+(C9 ride-on-prior-work); awaiting a second instance before
+codification. When the second datapoint arrives, the two cost
+curves should be named distinctly rather than collapsed into one
+"small arc" category.
+
+**Deferred to next working session, with dispositions:**
+
+- **C7 EC-13 adversarial run** — paid-API arc; needs fresh
+  approval gate; not a fit for compressed end-of-session attention
+  budget.
+- **C10 27-EC matrix reconciliation** — synthesis-heavy; benefits
+  from fresh-session attention.
+- **C11 Phase 1.2 retrospective** — large authored artifact
+  (~700–1000 lines per session-8-brief.md P39); benefits from
+  fresh-session attention.
+- **C12 Session 8 + Phase 1.2 closeout** — gated on C7/C10/C11
+  completion per session-8-brief.md spec; this mid-arc closeout
+  deliberately does not co-opt the C12 name.
+- **EC-2 full run** — paid-API; prereq cleared per source-manual
+  investigation; needs fresh approval gate at $1.80 calibrated
+  baseline.
+
+**No action pending on cross-session coordination.** If audit
+session or Prompt 4 session resumes and produces new commit
+activity or push intent, that's the trigger to revisit; otherwise
+no action required. Branch ahead-count cross-referenced in the
+push-decision section below.
+
+**Push decision (resolved: held, with three named unhold conditions):**
+
+At commit time: +9 ahead of `origin/staging`. This count is a
+point-in-time snapshot; future readers should cross-reference
+with `git log origin/staging..staging` at read time rather than
+trusting the number. Today's O3/C9/C8 commits co-exist with
+audit-session commits (`c24d69d`, `85f4b3b`) and Prompt-4-session
+commits (`dc757c3`, `66118ac`) in the same branch. A `git push`
+from this context would land all 9 under a single push event,
+collapsing per-session attribution. Disposition: do not push from
+this session's context. Any one of the three conditions below
+resolves the hold (the push action itself still requires explicit
+go-ahead from the operator at the time):
+
+- **(a) Audit session and Prompt 4 session both confirmed as not
+  expecting to push their own commits separately.** How to
+  confirm: check session-handoff docs or resume prompts from
+  those sessions for push-intent language; absence of such
+  language treats the coordination question as resolved.
+- **(b) Enough time has passed that the other sessions'
+  push-intent is moot** (e.g., a week — if those sessions haven't
+  pushed by then, they aren't going to).
+- **(c) A new arc requires pushing for arc-specific reasons** (CI
+  on a PR, collaborator needing access, etc.) making the
+  coordination question moot by necessity.
+
+**Full retrospective:** see
+`docs/07_governance/friction-journal.md` Phase C — O3 closeout
+(2026-04-22) for the load-bearing analysis of today's arcs,
+including the convention-catalog elevation that landed in C9,
+the meta-pattern datapoints (exonerate-via-cleanup three
+instances + four symmetric-application instances), the
+architectural-strength observation on template-driven narrational
+wrappers, and the open questions queued for future arcs.
+
 ---
 
 ## Agent Autonomy Design Sprint — Documented (2026-04-16)
