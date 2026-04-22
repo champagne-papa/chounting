@@ -375,7 +375,7 @@ Add two rows to the Cross-layer pairings table in
   guarantees every mutation writes an audit row; AUDIT-002
   guarantees that row is permanent. Together: every mutation
   produces a permanent audit record.
-- **INV-LEDGER-001 (L1) ↔ INV-RECURRING-001 (L1).** LEDGER-001
+- **INV-LEDGER-001 (L1a) ↔ INV-RECURRING-001 (L1).** LEDGER-001
   guards posted entries; RECURRING-001 guards templates so a
   broken template cannot produce unbalanced posted entries.
 

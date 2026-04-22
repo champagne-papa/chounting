@@ -6,7 +6,7 @@
 ALTER TABLE journal_entries
   ADD COLUMN reversal_reason text;
 
--- INV-REVERSAL-002: reversal entries require a non-empty reason.
+-- INV-REVERSAL-002 (Layer 1a): reversal entries require a non-empty reason.
 -- length(trim(...)) > 0 rejects whitespace-only values, not just NULL.
 -- Complement to INV-REVERSAL-001 (Layer 2 mirror check): the mirror
 -- rule ensures reversals swap debits/credits correctly; this rule

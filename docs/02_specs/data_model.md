@@ -817,7 +817,7 @@ The header row of a financial transaction. One journal entry owns
 one or more journal lines. In the Phase 1.1 authority gradient,
 journal entries are written by `journalEntryService.post()` (Layer 2)
 inside a transaction that the deferred constraint on `journal_lines`
-(Layer 1) validates at COMMIT.
+(Layer 1a) validates at COMMIT.
 
 ```sql
 CREATE TABLE journal_entries (

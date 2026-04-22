@@ -176,7 +176,7 @@ The Layer 1 invariants are presented below in the order they appear
 in the migration file, so a reader walking from the SQL to the
 invariant documentation follows the same sequence.
 
-### INV-LEDGER-001 — Debit = credit per journal entry
+### INV-LEDGER-001 — Debit = credit per journal entry (Layer 1a)
 
 **Invariant.** The sum of `debit_amount` across all `journal_lines`
 for a given `journal_entry_id` must equal the sum of
@@ -275,7 +275,7 @@ simplified" bullet.
 
 ---
 
-### INV-LEDGER-002 — Posting to a locked period is rejected
+### INV-LEDGER-002 — Posting to a locked period is rejected (Layer 1a)
 
 **Invariant.** A journal line whose parent `journal_entries` row
 references a `fiscal_periods` row with `is_locked = true` cannot
@@ -418,11 +418,11 @@ note.
 
 ---
 
-### INV-LEDGER-003 — The events table is append-only
+### INV-LEDGER-003 — The events table is append-only (Layer 1a)
 
 **Invariant.** No `UPDATE`, no `DELETE`, and no `TRUNCATE`
 can modify rows in the `events` table. Once a row is
-inserted, it is permanent. This is the Layer 1 enforcement
+inserted, it is permanent. This is the Layer 1a enforcement
 of the append-only rule that makes the events table
 trustworthy as a source of truth in Phase 2.
 
@@ -431,7 +431,7 @@ trustworthy as a source of truth in Phase 2.
 append-only triggers installed from day one, but no code
 writes to it until Phase 2 (Simplification 2, see
 `docs/03_architecture/phase_simplifications.md`). The
-invariant is still a Layer 1 rule today because the triggers
+invariant is still a Layer 1a rule today because the triggers
 are installed and would fire on any attempt to mutate an
 `events` row, whether by direct DML, a misconfigured service
 function, or a malicious caller. The rule *becomes
@@ -550,7 +550,7 @@ Phase 2 test obligations.
 
 ---
 
-### INV-LEDGER-006 — Journal line amounts are non-negative
+### INV-LEDGER-006 — Journal line amounts are non-negative (Layer 1a)
 
 **Invariant.** Both `debit_amount` and `credit_amount` on
 any row in `journal_lines` must be greater than or equal to
@@ -633,7 +633,7 @@ test coverage for `journalEntrySchema.test.ts`;
 
 ---
 
-### INV-LEDGER-004 — A journal line is debit XOR credit
+### INV-LEDGER-004 — A journal line is debit XOR credit (Layer 1a)
 
 **Invariant.** For any row in `journal_lines`, at least one
 of `debit_amount` and `credit_amount` must be zero. A line
@@ -715,7 +715,7 @@ test coverage; `docs/04_engineering/conventions.md` Zod
 
 ---
 
-### INV-LEDGER-005 — A journal line is never all-zero
+### INV-LEDGER-005 — A journal line is never all-zero (Layer 1a)
 
 **Invariant.** For any row in `journal_lines`, at least one
 of `debit_amount` and `credit_amount` must be strictly
@@ -787,7 +787,7 @@ coverage; `docs/04_engineering/conventions.md` Zod
 
 ---
 
-### INV-MONEY-002 — Original amount matches base amount
+### INV-MONEY-002 — Original amount matches base amount (Layer 1a)
 
 **Invariant.** For any row in `journal_lines`,
 `amount_original` must equal `debit_amount + credit_amount`.
@@ -893,7 +893,7 @@ schema obligations; `docs/04_engineering/testing_strategy.md`
 
 ---
 
-### INV-MONEY-003 — CAD amount matches FX-converted original
+### INV-MONEY-003 — CAD amount matches FX-converted original (Layer 1a)
 
 **Invariant.** For any row in `journal_lines`, `amount_cad`
 must equal `ROUND(amount_original * fx_rate, 4)`. This ties
@@ -1006,7 +1006,7 @@ ingestion brief (when written).
 
 ---
 
-### INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key
+### INV-IDEMPOTENCY-001 — Agent-sourced entries require idempotency key (Layer 1a)
 
 **Invariant.** Any row in `journal_entries` with `source =
 'agent'` must have a non-null `idempotency_key`. Rows with
@@ -1125,7 +1125,7 @@ retry safety pattern.
 
 ---
 
-### INV-RLS-001 — Cross-org data is never visible outside the org
+### INV-RLS-001 — Cross-org data is never visible outside the org (Layer 1a)
 
 **Invariant.** A user authenticated as a member of org A
 cannot read any row, from any tenant-scoped table, that
@@ -1138,7 +1138,7 @@ across the tenant boundary is possible through any user-
 scoped query.
 
 **Why this is a rollup rather than a single SQL snippet.**
-Unlike the other Layer 1 invariants in this file —
+Unlike the other Layer 1a invariants in this file —
 each of which is enforced by a single CHECK or trigger with
 a fixed location — INV-RLS-001 is the *collective effect*
 of every RLS policy in the schema. The rule is enforced by
@@ -1261,7 +1261,7 @@ pattern (service-role vs user-scoped).
 
 ---
 
-### INV-REVERSAL-002 — Reversal entries require a non-empty reason
+### INV-REVERSAL-002 — Reversal entries require a non-empty reason (Layer 1a)
 
 **Invariant.** A journal entry that reverses another (has
 `reverses_journal_entry_id IS NOT NULL`) must have a
@@ -1270,7 +1270,7 @@ reversal was posted — "vendor misclassified," "duplicate
 of entry #12345," "wrong amount, FX rate corrected" — and
 is required as a schema fact, not as a service-layer
 convention. A reversal without a reason is not a legal
-reversal. This is the Layer 1 complement to
+reversal. This is the Layer 1a complement to
 INV-REVERSAL-001 (the service-layer mirror check): the
 mirror rule guarantees that a reversal swaps the original's
 debits and credits; the reason rule guarantees that the
@@ -1356,7 +1356,7 @@ has to pass through.
 **Interaction with INV-REVERSAL-001.** INV-REVERSAL-001 is
 the Layer 2 service-layer check that verifies a reversal's
 lines mirror the original with debits and credits swapped.
-INV-REVERSAL-002 is the Layer 1 database CHECK that
+INV-REVERSAL-002 is the Layer 1a database CHECK that
 verifies a reversal has a non-empty reason. Both apply to
 the same `journal_entries` row when
 `reverses_journal_entry_id IS NOT NULL`. Both must be
@@ -2218,7 +2218,7 @@ async function post(input, ctx) {
 **Interaction with INV-AUTH-001 and INV-RLS-001.** The three
 invariants work together:
 
-- **INV-RLS-001** (Layer 1) is the database-level defense.
+- **INV-RLS-001** (Layer 1a) is the database-level defense.
   It catches cross-org reads through any user-scoped client.
 - **INV-AUTH-001** (Layer 2) is the service-layer defense.
   It catches unauthorized mutations at the wrapper level,
@@ -2428,7 +2428,7 @@ function. A code review finding `import Decimal from
 rejected PR.
 
 **Interaction with INV-MONEY-002 and INV-MONEY-003.** The
-two Layer 1 money CHECKs enforce the database-level
+two Layer 1a money CHECKs enforce the database-level
 consistency:
 
 - INV-MONEY-002: `amount_original = debit_amount + credit_amount`
@@ -2541,7 +2541,7 @@ begins. The algorithm has five steps:
    empty, or whitespace-only, throw
    `ServiceError('REVERSAL_NOT_MIRROR', 'reversal_reason is
    required and must be non-empty')`. This is a service-layer
-   defense-in-depth check — the Layer 1 CHECK constraint
+   defense-in-depth check — the Layer 1a CHECK constraint
    (INV-REVERSAL-002) also catches this, but the service layer
    gives the caller a cleaner error code upstream of the database.
 2. **Load the referenced entry.** `SELECT journal_entry_id, org_id
@@ -2580,7 +2580,7 @@ through `toMoney(v) => Number(v).toFixed(4)` before equality
 checks, so the comparison is correct regardless of whether the
 driver returned strings or numbers.
 
-**Interaction with INV-REVERSAL-002.** The Layer 1 CHECK constraint
+**Interaction with INV-REVERSAL-002.** The Layer 1a CHECK constraint
 `reversal_reason_required_when_reversing` is the authoritative
 enforcement for the reversal_reason rule — even if a bug in
 `validateReversalMirror` allowed a reversal without a reason, the
@@ -2882,7 +2882,7 @@ append-only triggers are installed (see INV-LEDGER-003 for the full
 physical enforcement) — but the layer's **role** as "source of
 truth" is a Phase 2 obligation, not a Phase 1.1 enforcement point.
 This is the explicit split the Authority Gradient table captures
-with the INV-LEDGER-003 row: *"enforcement exists at Layer 1 today;
+with the INV-LEDGER-003 row: *"enforcement exists at Layer 1a today;
 the Layer 3 role of 'events as source of truth' is a Phase 2
 obligation."*
 
@@ -2891,11 +2891,11 @@ invariant appears in this file if and only if it has a
 corresponding enforcement point in code today (the Scope note at
 the top of this file). The only rule that *could* be a Layer 3
 invariant in Phase 1.1 is "the events table is append-only," and
-that rule is already enforced at Layer 1 by
+that rule is already enforced at Layer 1a by
 INV-LEDGER-003's triggers and REVOKE statements. Listing it a
 second time under Layer 3 would duplicate the enforcement point
 and create two places to update when Phase 2 lights up the table.
-The discipline is: the append-only rule lives at Layer 1 (where it
+The discipline is: the append-only rule lives at Layer 1a (where it
 is enforced today); the "source of truth" role lives at Layer 3
 (where it becomes active in Phase 2). Neither rule gets a Layer 3
 INV-ID in Phase 1.1 because no Phase 1.1 code path exercises the
@@ -2951,7 +2951,7 @@ The gradient is permanent; the implementation evolves.
 **The single Phase 1.1 rule that lives partially at Layer 3.**
 INV-LEDGER-003 ("the events table is append-only") is the one
 invariant whose **Layer 3 role** becomes observable in Phase 2
-while its **Layer 1 enforcement** is already in place today. The
+while its **Layer 1a enforcement** is already in place today. The
 leaf lives under Layer 1 in this file because the enforcement is
 mechanical, and the leaf's "Phase 2 evolution" section explains
 how the same unchanged rule lights up at Layer 3 when events begin
@@ -2963,7 +2963,7 @@ trigger and REVOKE enforcement explained in INV-LEDGER-003.
 **Referenced by:** `docs/03_architecture/phase_simplifications.md`
 (Simplifications 1 and 2 describe the Phase 1.1 → Phase 2 shift
 for audit and events); `docs/03_architecture/phase_plan.md` Phase 2
-"What lights up" bullet; INV-LEDGER-003 (Layer 1 leaf, append-only
+"What lights up" bullet; INV-LEDGER-003 (Layer 1a leaf, append-only
 enforcement); INV-AUDIT-001 (Layer 2 leaf, Phase 2 projection
 shift).
 
@@ -3050,7 +3050,7 @@ Phase 1.1 / Phase 1.2 Layer 4 discipline is:
    instead of posting a duplicate. The Layer 4 discipline is "the
    agent must generate the key once at the proposal boundary and
    propagate it unchanged through the confirmation." The runtime
-   enforcement is INV-IDEMPOTENCY-001 at Layer 1 (CHECK
+   enforcement is INV-IDEMPOTENCY-001 at Layer 1a (CHECK
    constraint) and the `ai_actions` slot lookup at Layer 2.
 5. **No service logic in prompts.** The agent's system prompt
    describes *what actions are available* and *how to use the
@@ -3086,7 +3086,7 @@ a *lower-layer* enforcement, not by a Layer 4 assertion:
   database RLS policies catch cross-org reads through user-scoped
   clients).
 - Idempotency key carried through is backed by
-  INV-IDEMPOTENCY-001 (the Layer 1 CHECK constraint) and by the
+  INV-IDEMPOTENCY-001 (the Layer 1a CHECK constraint) and by the
   service-layer slot lookup in `ai_actions`.
 - "No service logic in prompts" is backed by code review and by
   the Phase 1.2 test obligation that prompt text not reference
@@ -3278,8 +3278,8 @@ which is exactly the property idempotency provides.
 
 **Implementation.** Three layered mechanisms make the rule hold:
 
-1. **Schema enforcement (Layer 1).** INV-IDEMPOTENCY-001 is the
-   Layer 1 CHECK constraint `idempotency_required_for_agent` that
+1. **Schema enforcement (Layer 1a).** INV-IDEMPOTENCY-001 is the
+   Layer 1a CHECK constraint `idempotency_required_for_agent` that
    requires `idempotency_key IS NOT NULL` whenever `source =
    'agent'`. A service function that forgets to set the key on
    an agent-sourced entry hits the CHECK at INSERT time.
@@ -3702,7 +3702,7 @@ the default.
   point per rule" discipline in
   `docs/03_architecture/phase_simplifications.md`); the Zod
   schema's `.refine()` catches unbalanced input at the boundary,
-  and the Layer 1 deferred constraint trigger catches it at
+  and the Layer 1a deferred constraint trigger catches it at
   `COMMIT`. When the trigger fires, `journalEntryService.post()`
   wraps the resulting `check_violation` as `POST_FAILED`, not
   `UNBALANCED`.
@@ -4054,8 +4054,8 @@ locks strategy and the three read-then-write patterns in Phase
 17. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
 
 **Layer 3 — Temporal Truth:** zero INV-IDs in Phase 1.1. The
-Layer 1 enforcement of "events are append-only" (INV-LEDGER-003)
-lives at Layer 1 because it is enforced there today; the Layer 3
+Layer 1a enforcement of "events are append-only" (INV-LEDGER-003)
+lives at Layer 1a because it is enforced there today; the Layer 3
 **role** of "events as source of truth" is a Phase 2 obligation
 and has no active invariant in Phase 1.1.
 

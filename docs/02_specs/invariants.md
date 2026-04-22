@@ -27,9 +27,10 @@ As of commit `65bcfe0` (Waypoint F verification, completed
 during the Phase 1.1 closeout docs restructure):
 
 - **17 distinct INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md`
+  `docs/02_specs/ledger_truth_model.md` (11 Layer 1a, 6 Layer 2,
+  0 Layer 1b)
 - **17 distinct INV-IDs** annotated in code (`src/` +
-  `supabase/migrations/`)
+  `supabase/migrations/`) (11 Layer 1a, 6 Layer 2, 0 Layer 1b)
 - **Symmetric difference: empty.** Every documented invariant
   has at least one annotation site in code; every annotated
   INV-ID has a corresponding leaf in the doc.
@@ -52,17 +53,17 @@ layer, the order matches the order the invariants appear in
 
 | # | INV-ID | Layer | Rule (one line) | Enforcement type | Leaf | Code site(s) |
 |---|---|---|---|---|---|---|
-| 1 | INV-LEDGER-001 | 1 | Debit = credit per journal entry | Deferred CONSTRAINT TRIGGER | [leaf](ledger_truth_model.md#inv-ledger-001--debit--credit-per-journal-entry) | `supabase/migrations/20240101000000_initial_schema.sql` (function `enforce_journal_entry_balance`) |
-| 2 | INV-LEDGER-002 | 1 | Posting to a locked period is rejected | Trigger with `SELECT ... FOR UPDATE` | [leaf](ledger_truth_model.md#inv-ledger-002--posting-to-a-locked-period-is-rejected) | `supabase/migrations/20240101000000_initial_schema.sql` (function `enforce_period_not_locked`) |
-| 3 | INV-LEDGER-003 | 1 | The events table is append-only | 3 triggers + 3 REVOKEs (defense in depth) | [leaf](ledger_truth_model.md#inv-ledger-003--the-events-table-is-append-only) | `supabase/migrations/20240101000000_initial_schema.sql` (function `reject_events_mutation` + REVOKE TRUNCATE block) |
-| 4 | INV-LEDGER-006 | 1 | Journal line amounts are non-negative | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-006--journal-line-amounts-are-non-negative) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amounts_nonneg`) |
-| 5 | INV-LEDGER-004 | 1 | A journal line is debit XOR credit | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-004--a-journal-line-is-debit-xor-credit) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_is_debit_xor_credit`) |
-| 6 | INV-LEDGER-005 | 1 | A journal line is never all-zero | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-005--a-journal-line-is-never-all-zero) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_is_not_all_zero`) |
-| 7 | INV-MONEY-002 | 1 | Original amount matches base amount | CHECK constraint | [leaf](ledger_truth_model.md#inv-money-002--original-amount-matches-base-amount) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amount_original_matches_base`) |
-| 8 | INV-MONEY-003 | 1 | CAD amount matches FX-converted original | CHECK constraint | [leaf](ledger_truth_model.md#inv-money-003--cad-amount-matches-fx-converted-original) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amount_cad_matches_fx`) |
-| 9 | INV-IDEMPOTENCY-001 | 1 | Agent-sourced entries require idempotency key | CHECK constraint + Zod refine pairing | [leaf](ledger_truth_model.md#inv-idempotency-001--agent-sourced-entries-require-idempotency-key) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `idempotency_required_for_agent`); `src/shared/schemas/accounting/journalEntry.schema.ts` (`idempotencyRefinement` — Phase 1.1 dead code, activates Phase 1.2) |
-| 10 | INV-RLS-001 | 1 | Cross-org data is never visible outside the org | RLS policies (collective) + SECURITY DEFINER helpers | [leaf](ledger_truth_model.md#inv-rls-001--cross-org-data-is-never-visible-outside-the-org) | `supabase/migrations/20240101000000_initial_schema.sql` (RLS HELPER FUNCTIONS section) |
-| 11 | INV-REVERSAL-002 | 1 | Reversal entries require a non-empty reason | CHECK constraint | [leaf](ledger_truth_model.md#inv-reversal-002--reversal-entries-require-a-non-empty-reason) | `supabase/migrations/20240102000000_add_reversal_reason.sql` (CONSTRAINT `reversal_reason_required_when_reversing`) |
+| 1 | INV-LEDGER-001 | 1a | Debit = credit per journal entry | Deferred CONSTRAINT TRIGGER | [leaf](ledger_truth_model.md#inv-ledger-001--debit--credit-per-journal-entry) | `supabase/migrations/20240101000000_initial_schema.sql` (function `enforce_journal_entry_balance`) |
+| 2 | INV-LEDGER-002 | 1a | Posting to a locked period is rejected | Trigger with `SELECT ... FOR UPDATE` | [leaf](ledger_truth_model.md#inv-ledger-002--posting-to-a-locked-period-is-rejected) | `supabase/migrations/20240101000000_initial_schema.sql` (function `enforce_period_not_locked`) |
+| 3 | INV-LEDGER-003 | 1a | The events table is append-only | 3 triggers + 3 REVOKEs (defense in depth) | [leaf](ledger_truth_model.md#inv-ledger-003--the-events-table-is-append-only) | `supabase/migrations/20240101000000_initial_schema.sql` (function `reject_events_mutation` + REVOKE TRUNCATE block) |
+| 4 | INV-LEDGER-006 | 1a | Journal line amounts are non-negative | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-006--journal-line-amounts-are-non-negative) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amounts_nonneg`) |
+| 5 | INV-LEDGER-004 | 1a | A journal line is debit XOR credit | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-004--a-journal-line-is-debit-xor-credit) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_is_debit_xor_credit`) |
+| 6 | INV-LEDGER-005 | 1a | A journal line is never all-zero | CHECK constraint | [leaf](ledger_truth_model.md#inv-ledger-005--a-journal-line-is-never-all-zero) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_is_not_all_zero`) |
+| 7 | INV-MONEY-002 | 1a | Original amount matches base amount | CHECK constraint | [leaf](ledger_truth_model.md#inv-money-002--original-amount-matches-base-amount) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amount_original_matches_base`) |
+| 8 | INV-MONEY-003 | 1a | CAD amount matches FX-converted original | CHECK constraint | [leaf](ledger_truth_model.md#inv-money-003--cad-amount-matches-fx-converted-original) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `line_amount_cad_matches_fx`) |
+| 9 | INV-IDEMPOTENCY-001 | 1a | Agent-sourced entries require idempotency key | CHECK constraint + Zod refine pairing | [leaf](ledger_truth_model.md#inv-idempotency-001--agent-sourced-entries-require-idempotency-key) | `supabase/migrations/20240101000000_initial_schema.sql` (CONSTRAINT `idempotency_required_for_agent`); `src/shared/schemas/accounting/journalEntry.schema.ts` (`idempotencyRefinement` — Phase 1.1 dead code, activates Phase 1.2) |
+| 10 | INV-RLS-001 | 1a | Cross-org data is never visible outside the org | RLS policies (collective) + SECURITY DEFINER helpers | [leaf](ledger_truth_model.md#inv-rls-001--cross-org-data-is-never-visible-outside-the-org) | `supabase/migrations/20240101000000_initial_schema.sql` (RLS HELPER FUNCTIONS section) |
+| 11 | INV-REVERSAL-002 | 1a | Reversal entries require a non-empty reason | CHECK constraint | [leaf](ledger_truth_model.md#inv-reversal-002--reversal-entries-require-a-non-empty-reason) | `supabase/migrations/20240102000000_add_reversal_reason.sql` (CONSTRAINT `reversal_reason_required_when_reversing`) |
 | 12 | INV-AUTH-001 | 2 | Every mutating service call is authorized | TypeScript middleware (4 pre-flight checks) | [leaf](ledger_truth_model.md#inv-auth-001--every-mutating-service-call-is-authorized) | `src/services/middleware/withInvariants.ts` (primary); `src/services/auth/canUserPerformAction.ts` (permission source) |
 | 13 | INV-SERVICE-001 | 2 | Every mutating service function is invoked through `withInvariants` | Structural pattern (export contract + wrap site) | [leaf](ledger_truth_model.md#inv-service-001--every-mutating-service-function-is-invoked-through-withinvariants) | `src/services/accounting/journalEntryService.ts` (export contract); `src/app/api/orgs/[orgId]/journal-entries/route.ts` (wrap site) |
 | 14 | INV-SERVICE-002 | 2 | The service layer uses `adminClient`, never `userClient` | Structural pattern (import discipline) | [leaf](ledger_truth_model.md#inv-service-002--the-service-layer-uses-adminclient-never-userclient) | `src/services/accounting/journalEntryService.ts` (adminClient discipline) |
@@ -82,12 +83,12 @@ primary.
 
 | INV-A | INV-B | Relationship | Pairing site |
 |---|---|---|---|
-| INV-REVERSAL-002 (L1) | INV-REVERSAL-001 (L2) | Layer 1 reason CHECK + Layer 2 mirror service-check; both apply to reversal entries | Cross-references in both directions: `20240102000000_add_reversal_reason.sql` annotation cites INV-REVERSAL-001; `journalEntryService.ts validateReversalMirror` annotation cites INV-REVERSAL-002 |
-| INV-IDEMPOTENCY-001 (L1) | INV-IDEMPOTENCY-001 (L2 pre-flight) | Same INV at two layers: Layer 1 CHECK constraint + Layer 2 Zod refine pre-flight (currently dead code in Phase 1.1; activates Phase 1.2) | `20240101000000_initial_schema.sql` (CONSTRAINT) and `journalEntry.schema.ts` (`idempotencyRefinement`) |
+| INV-REVERSAL-002 (L1a) | INV-REVERSAL-001 (L2) | Layer 1a reason CHECK + Layer 2 mirror service-check; both apply to reversal entries | Cross-references in both directions: `20240102000000_add_reversal_reason.sql` annotation cites INV-REVERSAL-001; `journalEntryService.ts validateReversalMirror` annotation cites INV-REVERSAL-002 |
+| INV-IDEMPOTENCY-001 (L1a) | INV-IDEMPOTENCY-001 (L2 pre-flight) | Same INV at two layers: Layer 1a CHECK constraint + Layer 2 Zod refine pre-flight (currently dead code in Phase 1.1; activates Phase 1.2) | `20240101000000_initial_schema.sql` (CONSTRAINT) and `journalEntry.schema.ts` (`idempotencyRefinement`) |
 | INV-AUTH-001 (L2 primary) | INV-AUTH-001 (L2 permission source) | Same INV at two sites: middleware enforcement + role-action matrix | `withInvariants.ts` (primary) and `canUserPerformAction.ts` (permission source) |
 | INV-AUDIT-001 (L2 primary) | INV-AUDIT-001 (L2 call site) | Same INV at two sites: enforcement function + call site inside caller's transaction | `recordMutation.ts` (primary) and `journalEntryService.ts` post function (call site) |
 | INV-SERVICE-001 (L2 export contract) | INV-SERVICE-001 (L2 wrap site) | Same INV at two sites: service module exports unwrapped + route handler wraps | `journalEntryService.ts` (export contract) and `journal-entries/route.ts` POST handler (wrap site) |
-| INV-LEDGER-003 (L1 primary) | INV-LEDGER-003 (L1 defense in depth) | Same INV at two sites: trigger function + REVOKE TRUNCATE block | `20240101000000_initial_schema.sql` (function `reject_events_mutation` + REVOKE block) |
+| INV-LEDGER-003 (L1a primary) | INV-LEDGER-003 (L1a defense in depth) | Same INV at two sites: trigger function + REVOKE TRUNCATE block | `20240101000000_initial_schema.sql` (function `reject_events_mutation` + REVOKE block) |
 
 ## Discipline backstops (not invariants)
 
@@ -115,13 +116,19 @@ order to keep bidirectional reachability intact:
 1. **Write the leaf in `ledger_truth_model.md` first.** Define
    the invariant text, the enforcement mechanism, the layer
    classification, and the interactions with existing
-   invariants. The leaf is the canonical statement of the
-   rule.
-2. **Add the annotation in code.** A `-- INV-XYZ-NNN` comment
-   in SQL migrations for Layer 1, a `// INV-XYZ-NNN` comment in
-   TypeScript source for Layer 2. The annotation establishes
-   bidirectional reachability — a future grep finds both the
-   doc and the code site.
+   invariants. For Layer 1 invariants, classify as 1a or 1b per
+   ADR-0008's three tests (single-row-or-transaction-scoped?
+   synchronous cost acceptable? scheduled cadence adequate?).
+   Layer 2 invariants do not require sub-layer classification.
+   The leaf is the canonical statement of the rule.
+2. **Add the annotation in code or audit prompt.** A
+   `-- INV-XYZ-NNN (Layer 1a)` comment in SQL migrations for
+   Layer 1a rules; a SQL file under
+   `docs/07_governance/audits/` (header-tagged with
+   `INV-XYZ-NNN (Layer 1b)`) for Layer 1b rules; a
+   `// INV-XYZ-NNN` comment in TypeScript source for Layer 2.
+   The annotation establishes bidirectional reachability — a
+   future grep finds both the doc and the code (or audit) site.
 3. **Add the row to this file's main table.** New row at the
    end of the layer's section, with the leaf anchor and the
    code site(s).
@@ -131,6 +138,13 @@ order to keep bidirectional reachability intact:
 5. **Verify bidirectional reachability.** Run the diff command
    from the "Bidirectional reachability statement" section
    above. Expected output: empty.
+
+**Sub-layer classification.** Layer 1 invariants carry a
+`(Layer 1a)` or `(Layer 1b)` tag in their leaf header, their
+`invariants.md` table row (column value `1a` or `1b`), and
+their code annotations. See
+`docs/07_governance/adr/0008-layer-1-enforcement-modes.md` for
+the classification procedure.
 
 The order is non-negotiable per the
 `docs/02_specs/README.md` spec-without-enforcement rule:

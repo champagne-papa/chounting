@@ -187,7 +187,7 @@ CREATE TABLE journal_entries (
   created_at                timestamptz NOT NULL DEFAULT now(),
   created_by                uuid REFERENCES auth.users(id),
   CONSTRAINT idempotency_required_for_agent
-    CHECK (source <> 'agent' OR idempotency_key IS NOT NULL)  -- INV-IDEMPOTENCY-001
+    CHECK (source <> 'agent' OR idempotency_key IS NOT NULL)  -- INV-IDEMPOTENCY-001 (Layer 1a)
 );
 
 CREATE INDEX idx_je_org_period ON journal_entries (org_id, fiscal_period_id);
@@ -230,15 +230,15 @@ CREATE TABLE journal_lines (
   amount_cad         numeric(20,4) NOT NULL DEFAULT 0,
   fx_rate            numeric(20,8) NOT NULL DEFAULT 1.0,
   CONSTRAINT line_amounts_nonneg
-    CHECK (debit_amount >= 0 AND credit_amount >= 0),  -- INV-LEDGER-006
+    CHECK (debit_amount >= 0 AND credit_amount >= 0),  -- INV-LEDGER-006 (Layer 1a)
   CONSTRAINT line_is_debit_xor_credit
-    CHECK ((debit_amount = 0) OR (credit_amount = 0)),  -- INV-LEDGER-004
+    CHECK ((debit_amount = 0) OR (credit_amount = 0)),  -- INV-LEDGER-004 (Layer 1a)
   CONSTRAINT line_is_not_all_zero
-    CHECK (debit_amount > 0 OR credit_amount > 0),  -- INV-LEDGER-005
+    CHECK (debit_amount > 0 OR credit_amount > 0),  -- INV-LEDGER-005 (Layer 1a)
   CONSTRAINT line_amount_original_matches_base
-    CHECK (amount_original = debit_amount + credit_amount),  -- INV-MONEY-002
+    CHECK (amount_original = debit_amount + credit_amount),  -- INV-MONEY-002 (Layer 1a)
   CONSTRAINT line_amount_cad_matches_fx
-    CHECK (amount_cad = ROUND(amount_original * fx_rate, 4))  -- INV-MONEY-003
+    CHECK (amount_cad = ROUND(amount_original * fx_rate, 4))  -- INV-MONEY-003 (Layer 1a)
 );
 
 CREATE INDEX idx_jl_entry ON journal_lines (journal_entry_id);
@@ -248,7 +248,7 @@ CREATE INDEX idx_jl_account ON journal_lines (account_id);
 -- DEFERRED CONSTRAINT: debit = credit per journal entry
 -- -----------------------------------------------------------------
 
--- INV-LEDGER-001: sum of debits equals sum of credits per journal entry.
+-- INV-LEDGER-001 (Layer 1a): sum of debits equals sum of credits per journal entry.
 -- Deferred constraint trigger — evaluated at COMMIT, not per statement,
 -- so multi-line entries can transiently unbalance during INSERT.
 -- Dispatch: trg_enforce_journal_entry_balance (CONSTRAINT TRIGGER below).
@@ -286,7 +286,7 @@ CREATE CONSTRAINT TRIGGER trg_enforce_journal_entry_balance
 -- TRIGGER: period not locked
 -- -----------------------------------------------------------------
 
--- INV-LEDGER-002: posting to a locked fiscal period is rejected.
+-- INV-LEDGER-002 (Layer 1a): posting to a locked fiscal period is rejected.
 -- Takes SELECT ... FOR UPDATE on the fiscal_periods row to serialize
 -- against concurrent periodService.lock() transactions — see the
 -- Transaction Isolation section in ledger_truth_model.md for the race.
@@ -577,7 +577,7 @@ COMMENT ON TABLE events IS
 -- EVENTS APPEND-ONLY TRIGGERS
 -- -----------------------------------------------------------------
 
--- INV-LEDGER-003: events table is append-only — no UPDATE, DELETE, or TRUNCATE.
+-- INV-LEDGER-003 (Layer 1a): events table is append-only — no UPDATE, DELETE, or TRUNCATE.
 -- Triggers below dispatch to this function for UPDATE and DELETE (row-level)
 -- and for TRUNCATE (statement-level). TRUNCATE needs special handling
 -- because row-level triggers do not fire during TRUNCATE — see the
@@ -605,7 +605,7 @@ CREATE TRIGGER trg_events_no_truncate
   FOR EACH STATEMENT
   EXECUTE FUNCTION reject_events_mutation();
 
--- INV-LEDGER-003 (defense in depth): REVOKE TRUNCATE closes the
+-- INV-LEDGER-003 (Layer 1a, defense in depth): REVOKE TRUNCATE closes the
 -- row-level-trigger gap. Row-level triggers (trg_events_no_update,
 -- trg_events_no_delete) do not fire during TRUNCATE; the statement-
 -- level trg_events_no_truncate catches it, but a role with TRUNCATE
@@ -621,7 +621,7 @@ REVOKE TRUNCATE ON events FROM anon;
 -- RLS HELPER FUNCTIONS
 -- -----------------------------------------------------------------
 
--- INV-RLS-001: cross-org data is never visible outside the org.
+-- INV-RLS-001 (Layer 1a): cross-org data is never visible outside the org.
 -- This is a COLLECTIVE invariant — its enforcement is the cumulative
 -- effect of every RLS policy in the schema plus the two SECURITY
 -- DEFINER helpers below (user_has_org_access, user_is_controller)

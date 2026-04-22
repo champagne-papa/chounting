@@ -262,7 +262,7 @@ and what is clunky. This is the input to Phase 2 scoping.
    constraint, P&L query sees them net to zero.
 8. **Period lock exercised after the real close.** After locking,
    deliberately attempt to post into the locked period. Verify:
-   rejected by period lock trigger (Layer 1), rejection message
+   rejected by period lock trigger (Layer 1a), rejection message
    surfaces in UI, no partial write, `trace_id` appears in pino logs.
 9. **Backup and restore path verified end-to-end.** Run the full
    restore path at least once: take a backup, restore to a scratch
