@@ -3,6 +3,7 @@ import {
   MoneyAmountSchema,
   FxRateSchema,
   addMoney,
+  subtractMoney,
   multiplyMoneyByRate,
   eqMoney,
   zeroMoney,
@@ -59,6 +60,22 @@ describe('Money arithmetic', () => {
   it('addMoney handles negative values', () => {
     const result = addMoney('100.0000' as MoneyAmount, '-100.0000' as MoneyAmount);
     expect(result).toBe('0.0000');
+  });
+
+  it('subtractMoney produces positive result when a > b', () => {
+    expect(subtractMoney('100.0000' as MoneyAmount, '30.0000' as MoneyAmount)).toBe('70.0000');
+  });
+
+  it('subtractMoney preserves signed result when a < b (direction is triage signal)', () => {
+    expect(subtractMoney('30.0000' as MoneyAmount, '100.0000' as MoneyAmount)).toBe('-70.0000');
+  });
+
+  it('subtractMoney returns zero when a == b', () => {
+    expect(subtractMoney('100.0000' as MoneyAmount, '100.0000' as MoneyAmount)).toBe('0.0000');
+  });
+
+  it('subtractMoney preserves four-decimal precision', () => {
+    expect(subtractMoney('100.1234' as MoneyAmount, '0.0012' as MoneyAmount)).toBe('100.1222');
   });
 
   it('multiplyMoneyByRate matches Postgres ROUND behavior', () => {

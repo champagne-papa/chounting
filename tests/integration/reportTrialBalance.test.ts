@@ -8,7 +8,14 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { journalEntryService } from '@/services/accounting/journalEntryService';
-import { reportService, type TrialBalanceRow } from '@/services/reporting/reportService';
+import {
+  reportService,
+  computeTrialBalanceFooter,
+  buildUnbalancedLogFields,
+  type TrialBalanceRow,
+  type FooterTotals,
+} from '@/services/reporting/reportService';
+import type { MoneyAmount } from '@/shared/schemas/accounting/money.schema';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import Decimal from 'decimal.js';
 
@@ -189,5 +196,115 @@ describe('Trial Balance report aggregation', () => {
     expect(accruedRow).toBeDefined();
     expect(accruedRow.debit_total_cad).toBe('0.0000');
     expect(accruedRow.credit_total_cad).toBe('0.0000');
+  });
+});
+
+// Unit-style tests for the pure helpers extracted from reportService.trialBalance.
+// These exercise the footer-check and log-shape-building logic directly with
+// hand-crafted row arrays, without touching the database. Placed here rather
+// than in tests/unit/ to keep the Step 5 file footprint at four files total
+// and to keep helper tests adjacent to the integration tests for the service
+// they support (per S8-0424-arc-A-step5 scope discipline). toEqual against
+// exact expected objects is deliberate — alerting-contract tests must fail
+// loudly on both missing and extra fields, not silently match a subset.
+
+function mockRow(
+  code: string,
+  debit: string,
+  credit: string,
+): TrialBalanceRow {
+  return {
+    account_id: `id-${code}`,
+    account_code: code,
+    account_name: `Mock account ${code}`,
+    account_type: 'asset',
+    debit_total_cad: debit as MoneyAmount,
+    credit_total_cad: credit as MoneyAmount,
+  };
+}
+
+describe('computeTrialBalanceFooter (pure helper)', () => {
+  it('balanced totals → balanced=true, delta=0', () => {
+    const rows: TrialBalanceRow[] = [
+      mockRow('1000', '100.0000', '0.0000'),
+      mockRow('4000', '0.0000', '100.0000'),
+    ];
+    expect(computeTrialBalanceFooter(rows)).toEqual<FooterTotals>({
+      totalDebit: '100.0000' as MoneyAmount,
+      totalCredit: '100.0000' as MoneyAmount,
+      delta: '0.0000' as MoneyAmount,
+      balanced: true,
+    });
+  });
+
+  it('debits > credits → balanced=false, positive delta (triage: debit side heavy)', () => {
+    const rows: TrialBalanceRow[] = [
+      mockRow('1000', '150.0000', '0.0000'),
+      mockRow('4000', '0.0000', '100.0000'),
+    ];
+    expect(computeTrialBalanceFooter(rows)).toEqual<FooterTotals>({
+      totalDebit: '150.0000' as MoneyAmount,
+      totalCredit: '100.0000' as MoneyAmount,
+      delta: '50.0000' as MoneyAmount,
+      balanced: false,
+    });
+  });
+
+  it('credits > debits → balanced=false, negative delta (triage: credit side heavy)', () => {
+    const rows: TrialBalanceRow[] = [
+      mockRow('1000', '100.0000', '0.0000'),
+      mockRow('4000', '0.0000', '175.5000'),
+    ];
+    expect(computeTrialBalanceFooter(rows)).toEqual<FooterTotals>({
+      totalDebit: '100.0000' as MoneyAmount,
+      totalCredit: '175.5000' as MoneyAmount,
+      delta: '-75.5000' as MoneyAmount,
+      balanced: false,
+    });
+  });
+
+  it('empty rows → balanced=true, both totals zero, delta=0', () => {
+    expect(computeTrialBalanceFooter([])).toEqual<FooterTotals>({
+      totalDebit: '0.0000' as MoneyAmount,
+      totalCredit: '0.0000' as MoneyAmount,
+      delta: '0.0000' as MoneyAmount,
+      balanced: true,
+    });
+  });
+});
+
+describe('buildUnbalancedLogFields (pure helper)', () => {
+  const footer: FooterTotals = {
+    totalDebit: '150.0000' as MoneyAmount,
+    totalCredit: '100.0000' as MoneyAmount,
+    delta: '50.0000' as MoneyAmount,
+    balanced: false,
+  };
+
+  it('populates every field of the alerting contract with fiscal_period_id present', () => {
+    const input = {
+      org_id: 'org-abc-123',
+      fiscal_period_id: 'period-2026-Q2',
+    };
+    expect(buildUnbalancedLogFields(input, footer)).toEqual({
+      incident_type: 'ledger_integrity',
+      org_id: 'org-abc-123',
+      fiscal_period_id: 'period-2026-Q2',
+      total_debit: '150.0000' as MoneyAmount,
+      total_credit: '100.0000' as MoneyAmount,
+      delta: '50.0000' as MoneyAmount,
+    });
+  });
+
+  it('coalesces missing fiscal_period_id to null (cross-period trial balance)', () => {
+    const input = { org_id: 'org-abc-123' };
+    expect(buildUnbalancedLogFields(input, footer)).toEqual({
+      incident_type: 'ledger_integrity',
+      org_id: 'org-abc-123',
+      fiscal_period_id: null,
+      total_debit: '150.0000' as MoneyAmount,
+      total_credit: '100.0000' as MoneyAmount,
+      delta: '50.0000' as MoneyAmount,
+    });
   });
 });

@@ -9,6 +9,7 @@ import { loggerWith } from '@/shared/logger/pino';
 import {
   addMoney,
   eqMoney,
+  subtractMoney,
   toMoneyAmount,
   zeroMoney,
   type MoneyAmount,
@@ -39,6 +40,78 @@ export interface TrialBalanceRow {
 
 export interface TrialBalanceResult {
   rows: TrialBalanceRow[];
+}
+
+// -- Pure helpers exported for unit-style tests ------------------------------
+//
+// Extracted from trialBalance()'s footer-check so the UNBALANCED contract is
+// unit-testable without mocking the Supabase client or the pino logger. The
+// glue between these helpers and the service (log.error + throw) is ~4 lines
+// and is enforced by TypeScript plus code review; the helpers themselves
+// carry the alerting-contract test guard.
+
+export interface FooterTotals {
+  totalDebit: MoneyAmount;
+  totalCredit: MoneyAmount;
+  delta: MoneyAmount; // signed: totalDebit - totalCredit
+  balanced: boolean;  // eqMoney(totalDebit, totalCredit)
+}
+
+/**
+ * Sums debit and credit totals across trial-balance rows and reports whether
+ * they balance. Pure — no side effects, deterministic on the row array.
+ *
+ * `delta` is signed (`totalDebit - totalCredit`) so the direction of
+ * imbalance survives into downstream log / error shapes as a triage signal
+ * for on-call engineers. A positive delta means debits exceed credits; a
+ * negative delta means credits exceed debits.
+ */
+export function computeTrialBalanceFooter(rows: TrialBalanceRow[]): FooterTotals {
+  let totalDebit: MoneyAmount = zeroMoney();
+  let totalCredit: MoneyAmount = zeroMoney();
+  for (const row of rows) {
+    totalDebit = addMoney(totalDebit, row.debit_total_cad);
+    totalCredit = addMoney(totalCredit, row.credit_total_cad);
+  }
+  const delta = subtractMoney(totalDebit, totalCredit);
+  return {
+    totalDebit,
+    totalCredit,
+    delta,
+    balanced: eqMoney(totalDebit, totalCredit),
+  };
+}
+
+/**
+ * Exact shape of the structured pino log fields emitted on the UNBALANCED
+ * throw path. The `incident_type` literal is load-bearing for alerting
+ * routing (pino consumers filter on it to separate integrity incidents from
+ * normal 422 errors); TypeScript's literal type plus the unit test on
+ * buildUnbalancedLogFields guard the contract against silent drift.
+ *
+ * See docs/09_briefs/phase-1.1/control-foundations-brief.md §9.
+ */
+export interface UnbalancedLogFields {
+  incident_type: 'ledger_integrity';
+  org_id: string;
+  fiscal_period_id: string | null;
+  total_debit: MoneyAmount;
+  total_credit: MoneyAmount;
+  delta: MoneyAmount;
+}
+
+export function buildUnbalancedLogFields(
+  input: { org_id: string; fiscal_period_id?: string | null },
+  footer: FooterTotals,
+): UnbalancedLogFields {
+  return {
+    incident_type: 'ledger_integrity',
+    org_id: input.org_id,
+    fiscal_period_id: input.fiscal_period_id ?? null,
+    total_debit: footer.totalDebit,
+    total_credit: footer.totalCredit,
+    delta: footer.delta,
+  };
 }
 
 // -- Service -----------------------------------------------------------------
@@ -148,25 +221,15 @@ export const reportService = {
     // the broader "one enforcement point per rule" discipline, and
     // docs/02_specs/invariants.md "Discipline backstops (not
     // invariants)" section for the registration of this backstop.
-    let totalDebit: MoneyAmount = zeroMoney();
-    let totalCredit: MoneyAmount = zeroMoney();
-    for (const row of rows) {
-      totalDebit = addMoney(totalDebit, row.debit_total_cad);
-      totalCredit = addMoney(totalCredit, row.credit_total_cad);
-    }
-    if (!eqMoney(totalDebit, totalCredit)) {
+    const footer = computeTrialBalanceFooter(rows);
+    if (!footer.balanced) {
       log.error(
-        {
-          org_id: input.org_id,
-          fiscal_period_id: input.fiscal_period_id ?? null,
-          total_debit: totalDebit,
-          total_credit: totalCredit,
-        },
+        buildUnbalancedLogFields(input, footer),
         'Trial balance backstop: debits != credits — INV-LEDGER-001 (Layer 1a) violated upstream',
       );
       throw new ServiceError(
         'UNBALANCED',
-        `Trial balance totals do not match: debits=${totalDebit}, credits=${totalCredit}`,
+        `Trial balance totals do not match: debits=${footer.totalDebit}, credits=${footer.totalCredit}, delta=${footer.delta}`,
       );
     }
 

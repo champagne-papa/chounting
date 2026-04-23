@@ -39,6 +39,10 @@ export function addMoney(a: MoneyAmount, b: MoneyAmount): MoneyAmount {
   return new Decimal(a).plus(new Decimal(b)).toFixed(4) as MoneyAmount;
 }
 
+export function subtractMoney(a: MoneyAmount, b: MoneyAmount): MoneyAmount {
+  return new Decimal(a).minus(new Decimal(b)).toFixed(4) as MoneyAmount;
+}
+
 export function multiplyMoneyByRate(
   amount: MoneyAmount,
   rate: FxRate,
