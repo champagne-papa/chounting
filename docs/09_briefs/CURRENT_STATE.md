@@ -298,16 +298,20 @@ $0.03/entry estimate; forward-calibrated EC-2 full-run
 baseline is $1.80, not the inherited $0.30–$0.80).
 
 Full test suite post-O3 + Prompt 4: 412 passing + 1 failed
-(CA-65 `agentSessionOrgSwitchAudit`). Failure shape (extra
-audit row) is consistent with the Phase 1.5A `before_state`
-convention applied to `loadOrCreateSession.ts`; the test
-was not updated to expect two rows. Prompt 4's code does
-not touch `loadOrCreateSession.ts`; true attribution
-requires `git log --oneline -- tests/integration/agentSessionOrgSwitchAudit.test.ts`
-and `git blame src/agent/orchestrator/loadOrCreateSession.ts`
-to identify the actual landing commit. Not yet run.
-`pnpm agent:validate` green at the Phase D pre-flight
-check.
+(CA-65 `agentSessionOrgSwitchAudit`). Third-pass
+attribution resolved in Session M (this session,
+2026-04-22): the regression is in the test's cleanup
+pattern, not in any emit-code change. The test's
+`beforeEach`/`afterEach` `audit_log.delete()` calls worked
+when `da4641e` (Session 4, 2026-04-18) wrote the test, but
+commit `1b18dab` (2026-04-21) installed INV-AUDIT-002's
+append-only triggers that silently reject the delete. Rows
+from the first `it` block persisted into the second, causing
+the second block to see 2 rows under a describe-scoped
+`trace_id` filter. Fix pattern: same as `dc757c3`
+(per-test `trace_id` + drop `audit_log.delete()`). Applied
+in this commit. `pnpm agent:validate` green at the Phase D
+pre-flight check.
 
 Phase E convention-catalog elevation proposal: *Preservation
 and Ambiguity Gates* (three datapoints crossing the

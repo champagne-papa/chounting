@@ -13,20 +13,33 @@ import { makeTestContext } from '../setup/makeTestContext';
 const USER = SEED.USER_EXECUTIVE;
 
 describe('CA-65: agent.session_org_switched audit emits', () => {
-  const ctx = makeTestContext({
-    user_id: USER,
-    org_ids: [SEED.ORG_HOLDING, SEED.ORG_REAL_ESTATE],
-  });
-  const log = loggerWith({ trace_id: ctx.trace_id });
+  let ctx: ReturnType<typeof makeTestContext>;
+  let log: ReturnType<typeof loggerWith>;
 
   beforeEach(async () => {
+    // Per-test ctx so each it block gets a fresh trace_id.
+    // NOTE: audit_log rows from this test are NOT deleted — the
+    // table is append-only per INV-AUDIT-002 (Layer 1a,
+    // migration 20240122000000_audit_log_append_only.sql), and
+    // DELETE is rejected by trigger. The prior idiom
+    // (.from('audit_log').delete().eq('trace_id', ...)) silently
+    // fails under Supabase-js and was the cause of CA-65's
+    // regression — rows accumulated across the two it blocks
+    // when they shared a describe-scoped trace_id. Per-test
+    // trace_id plus dropping the audit_log delete is the
+    // precedent pattern from dc757c3 (applied to
+    // crossOrgRlsIsolation.test.ts).
+    ctx = makeTestContext({
+      user_id: USER,
+      org_ids: [SEED.ORG_HOLDING, SEED.ORG_REAL_ESTATE],
+    });
+    log = loggerWith({ trace_id: ctx.trace_id });
+
     await adminClient().from('agent_sessions').delete().eq('user_id', USER);
-    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   afterEach(async () => {
     await adminClient().from('agent_sessions').delete().eq('user_id', USER);
-    await adminClient().from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
   it('org_A → org_B emits one agent.session_org_switched row with before_state.previous_org_id = org_A', async () => {

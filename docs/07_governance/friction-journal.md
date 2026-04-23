@@ -5471,19 +5471,24 @@ directions, document wins."*
   approval request should cite $1.80 as the calibrated
   baseline, not the inherited $0.03/entry; halt thresholds
   unchanged ($3 cumulative / $0.50 single-call).**
-- **CA-65 `agentSessionOrgSwitchAudit.test.ts` still red
-  post-all-commits.** Failure shape (extra audit row)
-  consistent with the Phase 1.5A `before_state` convention
-  applied to `loadOrCreateSession.ts`; the test was not
-  updated to expect two rows. Prompt 4's code does not
-  touch `loadOrCreateSession.ts`; true attribution
-  requires
-  `git log --oneline -- tests/integration/agentSessionOrgSwitchAudit.test.ts`
-  and
-  `git blame src/agent/orchestrator/loadOrCreateSession.ts`
-  to identify the actual landing commit and the cleanup
-  arc ownership. Not O3's concern either way. Investigation
-  deferred.
+- **CA-65 `agentSessionOrgSwitchAudit.test.ts` — third-pass
+  attribution.** Original framing ("Prompt-4-caused")
+  corrected in `5430ea5` to "consistent with before_state
+  convention on `loadOrCreateSession.ts`." Session M
+  investigation (2026-04-22, this commit) resolved the
+  actual cause: the regression is in the test's cleanup
+  pattern. `da4641e` (Session 4, 2026-04-18) wrote the
+  test with `audit_log.delete()` in
+  `beforeEach`/`afterEach`; `1b18dab` (2026-04-21)
+  installed INV-AUDIT-002's append-only triggers, which
+  silently rejected the deletes (Supabase-js returns error
+  as result object rather than throwing). Rows accumulated
+  across the two `it` blocks because the describe-scoped
+  `ctx.trace_id` was shared. Fix: same pattern as
+  `dc757c3` (per-test `trace_id` + drop
+  `audit_log.delete()`). Not O3's concern; was Session 4's
+  test-cleanup pattern that silently regressed when
+  Phase 1.x's append-only enforcement landed.
 
 ### (f) Open questions / indeterminate items
 
@@ -5519,13 +5524,13 @@ directions, document wins."*
   later. Status: hypothesized → directionally supported by
   one datapoint → waiting for the load-bearing scenarios in
   the wild.
-- **CA-65 test regression not yet addressed.** Flagged in
-  section (e). Status: observed; attribution unconfirmed
-  (initial attribution to Prompt 4 was softened in the
-  Phase C ratification pass after Prompt 4's code was
-  shown not to touch `loadOrCreateSession.ts`). Pending
-  `git log` / `git blame` investigation to identify
-  ownership.
+- **CA-65 test regression — RESOLVED.** Flagged in section
+  (e); third-pass attribution and test fix landed in
+  Session M (this commit). True cause: test's cleanup
+  pattern silently broke when INV-AUDIT-002's append-only
+  triggers (`1b18dab`) blocked the `audit_log.delete()`
+  calls the test used between its two `it` blocks. Fix
+  applied per `dc757c3` pattern.
 
 **Forward link.** Section (b)'s convention-catalog elevation
 proposal (title: *Preservation and Ambiguity Gates*) was the
@@ -5653,3 +5658,27 @@ ratification arc. Whether this is process gap or intentional
 distinction is unresolved. Separate scoping prompt will
 address the threshold question after this closeout and the
 convention amendment land.
+
+**CA-65 three-pass attribution — hallucination-flag-and-
+retract in the governance record.** Session M's CA-65
+investigation surfaced a substantive error in `5430ea5`'s
+softened attribution. The third-pass resolution traced the
+regression to commit `1b18dab` (INV-AUDIT-002 append-only
+enforcement, 2026-04-21), not `b4585bb` (the
+`loadOrCreateSession.ts` audit-emit code). Neither `b4585bb`
+nor the `before_state` convention are the cause — the test's
+cleanup pattern (`audit_log.delete()` in
+`beforeEach`/`afterEach`, pre-INV-AUDIT-002 idiom) silently
+broke when the append-only triggers landed. Fix pattern
+matches `dc757c3`'s precedent for
+`crossOrgRlsIsolation.test.ts` (per-test `trace_id` + drop
+`audit_log.delete()`). This is the Mutual Hallucination-
+Flag-and-Retract Discipline applying to its own artifacts:
+`5430ea5`'s ratified governance record contained a
+second-order error (the Phase 1.5A `before_state`
+attribution) that a later investigation retracted in favor
+of the actual cause. Datapoint for the convention: a
+three-pass attribution arc (Prompt 4 → `b4585bb` +
+`before_state` → `1b18dab` + test cleanup) where each
+successive investigation narrowed the cause from one
+family of commits to the specific introducing commit.
