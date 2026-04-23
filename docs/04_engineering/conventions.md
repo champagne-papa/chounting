@@ -724,8 +724,29 @@ Composes with "Session Lock File Convention" (below): the
 label is the identifier, the lock is the enforcement. See
 also: "Check HEAD before Step 2 Plan" (`c24d69d`), "Re-verify
 Environmental Claims at Each Gate" (`a610e0e`), and "Mutual
-Hallucination-Flag-and-Retract Discipline" (above). First
-codified: 2026-04-22, coordination-mechanism ratification
+Hallucination-Flag-and-Retract Discipline" (above).
+
+**Label hygiene.** Labels should be date-stamped,
+arc-descriptive, or both — `coord-2026-04-22`, `M-coord`,
+`S8-0423`, `phase-1.2-s8-mid` are illustrative — rather
+than bare single letters or tokens indistinguishable across
+arcs. The examples earlier in this section (`Session M`,
+`Session O — O3`, `Session P4 — Prompt 4`) are descriptive
+but not unique across time: a later session initializing
+with `session-init.sh M` would produce indistinguishable
+`git log --grep='Session: M'` results against the coord
+arc's four commits (`918e68a`, `c12513a`, `00afe82`,
+`4372d65`). See `docs/09_briefs/CURRENT_STATE.md` "Session
+M (coord arc) — disambiguation note" and friction-journal
+subsection (h) for the incident record. This is a
+recommendation, not a requirement — the Operator rule
+above still owns label choice; the Session Lock File
+Convention's commit-time refusal remains the sole
+collision-prevention mechanism. Hygiene backstops the
+readability layer (attribution, post-hoc search, history
+reconstruction), not collision prevention.
+
+First codified: 2026-04-22, coordination-mechanism ratification
 commit.
 
 ### Session Lock File Convention
@@ -868,7 +889,7 @@ mechanism, they are not enumerated below.
 | Plan-Time Model-Config Verification | (this commit) | 2026-04-22 | Phase C ratification pass |
 | Material Gaps Surface at Layer-Transition Boundaries (C9 Convention #9) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
 | Mutual Hallucination-Flag-and-Retract Discipline (C9 Convention #10) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
-| Session Labeling Convention | (this commit) | 2026-04-22 | Coordination-mechanism ratification |
+| Session Labeling Convention | `918e68a` (codification); (this commit) (amendment re: label hygiene) | 2026-04-22 | Coordination-mechanism ratification; label-hygiene amendment (Session M near-collision, friction-journal subsection (h)) |
 | Session Lock File Convention | `918e68a` (codification); (this commit) (amendment re: env-inheritance) | 2026-04-22 | Coordination-mechanism ratification; v1 handshake amendment (Session M first-activation finding) |
 
 Retroactive-ratification entries marked "(retro)" reflect

@@ -5683,6 +5683,54 @@ three-pass attribution arc (Prompt 4 → `b4585bb` +
 successive investigation narrowed the cause from one
 family of commits to the specific introducing commit.
 
+### (h) Label near-collision — bare "M" and the hygiene amendment
+
+Session M's lifecycle surfaced a readability limit in the
+freshly-codified Session Labeling Convention: bare single-
+letter labels carry no date or arc context. "M" was the
+coord-arc's label — owning `918e68a` (codification),
+`c12513a` (friction-journal subsection (g)), `00afe82`
+(env-handshake amendment), and `4372d65` (CA-65 cleanup +
+third-pass attribution correction) — but a later session
+formally initializing with `session-init.sh M` or
+colloquially referring to "Session M" in prose would
+produce indistinguishable `git log --grep='Session: M'`
+results against those four commits. The Session Lock File
+Convention's commit-time refusal catches foreign-session
+commits at commit time but does not disambiguate post-hoc
+which "M" each landed commit belonged to; that's a
+readability property the lock mechanism was never designed
+to provide.
+
+Immediate response (Part A, `49ce364`): CURRENT_STATE.md
+disambiguation note (`docs/09_briefs/CURRENT_STATE.md`
+"Session M (coord arc) — disambiguation note"), naming the
+four commits the coord arc's Session M owns and
+recommending future "M" sessions pick a more specific
+label.
+
+Systemic response (Part B, this commit): Session Labeling
+Convention amended with a "Label hygiene" subsection
+recommending date-stamped or arc-descriptive labels
+(`coord-2026-04-22`, `M-coord`, `S8-0423`,
+`phase-1.2-s8-mid` are illustrative). The Operator rule
+still owns label choice — hygiene is guidance, not
+enforcement; the Session Lock File Convention's
+commit-time refusal remains the sole collision-prevention
+mechanism, with hygiene backstopping only the readability
+layer (attribution, post-hoc search, history
+reconstruction).
+
+Process note: this is the second amendment of a Phase 1.2
+convention following the codification commit (`918e68a`).
+The first (`00afe82`) originated from a mechanism gap (env
+inheritance); this one originates from a post-codification
+usability finding (label readability). Both share the
+amendment shape: friction-journal entry written first and
+cited in the commit body, convention prose extended, and
+Governance Audit row updated with provenance of both the
+codification commit and the amendment.
+
 ## Phase D — EC-2 partial run + C10 (2026-04-23)
 
 ### (a) Today's arc throughline
