@@ -101,6 +101,7 @@ not delete it.
 | [ADR-0005](./0005-three-path-intent-schema.md) | Three-Path Entry Model with Canonical Intent Schema | Accepted | 2026-04-16 |
 | [ADR-0006](./0006-agent-persona-unnamed.md) | Agent Persona: Senior Bookkeeper, Unnamed | Accepted | 2026-04-16 |
 | [ADR-0008](./0008-layer-1-enforcement-modes.md) | Layer 1 Enforcement Modes — Commit-Time (1a) vs. Scheduled Audit (1b) | Accepted | 2026-04-21 |
+| [ADR-0009](./0009-before-state-capture-convention.md) | Audit `before_state` Capture Convention | Accepted | 2026-04-23 |
 
 (ADR-0007 is reserved for the agent-architecture policy ADR — blocked by Q27–Q31 in `docs/02_specs/open_questions.md`; sketched in `docs/09_briefs/phase-2/agent_architecture_proposal.md`.)
 
