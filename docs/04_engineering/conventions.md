@@ -759,9 +759,28 @@ Operating rules:
   [prompt_doc_path]`. The script creates the lock; if a
   foreign lock exists, it prints the current lock and exits
   non-zero.
-- **Shell setup** exports `COORD_SESSION=<label>` in the
-  operator's shell so the pre-commit hook recognizes the
-  session's commits.
+- **Session identification at commit time.** The pre-commit
+  hook reads the `COORD_SESSION` environment variable from
+  the committing subprocess. Two paths are supported:
+  (a) **inline env** (default): the agent passes
+  `COORD_SESSION=<label>` inline on each commit command
+  (`COORD_SESSION=M git commit ...`), so the variable is
+  scoped to the commit subprocess only; (b) **shell export**
+  (operator-side): `export COORD_SESSION=<label>` in the
+  shell that launched Claude Code *before* launching it, so
+  the Bash tool inherits the env. Path (a) is the v1
+  default because Claude Code's Bash tool subprocesses
+  inherit env from the Claude Code process, not from the
+  operator's current terminal — exports performed after
+  Claude Code starts are invisible to the agent. Path (b)
+  works only when the operator sequences the export before
+  starting Claude Code; re-exporting mid-session has no
+  effect on the agent. Under path (a), the handshake's
+  semantics are "agent labels its own commit with the
+  session's label," not "informed operator authorized
+  each commit" — the residual guarantee is that foreign-
+  session agents in parallel Claude Code sessions would
+  not know the correct label and would fail the hook.
 - **Every Step 2 gate** reads `.coordination/session-lock.json`
   in addition to running `git log --oneline -10` per the
   "Check HEAD" convention. If a foreign lock is active, the
@@ -850,7 +869,7 @@ mechanism, they are not enumerated below.
 | Material Gaps Surface at Layer-Transition Boundaries (C9 Convention #9) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
 | Mutual Hallucination-Flag-and-Retract Discipline (C9 Convention #10) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
 | Session Labeling Convention | (this commit) | 2026-04-22 | Coordination-mechanism ratification |
-| Session Lock File Convention | (this commit) | 2026-04-22 | Coordination-mechanism ratification |
+| Session Lock File Convention | `918e68a` (codification); (this commit) (amendment re: env-inheritance) | 2026-04-22 | Coordination-mechanism ratification; v1 handshake amendment (Session M first-activation finding) |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review
