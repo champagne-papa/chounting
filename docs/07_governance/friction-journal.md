@@ -5682,3 +5682,374 @@ three-pass attribution arc (Prompt 4 → `b4585bb` +
 `before_state` → `1b18dab` + test cleanup) where each
 successive investigation narrowed the cause from one
 family of commits to the specific introducing commit.
+
+## Phase D — EC-2 partial run + C10 (2026-04-23)
+
+### (a) Today's arc throughline
+
+Session S8-0423 shipped C10 (27-EC reconciliation matrix) and
+the first five entries of EC-2's frozen 20-entry paid-API spec.
+Two commits land on `staging` on top of plan-anchor `9aaeeec` —
+`0d4007f` (C10) and the closeout this entry accompanies.
+Parallel-session activity from the coord-arc Session M
+interleaved one commit (`49ce364`, Session M disambiguation
+note in CURRENT_STATE.md) under our session lock window;
+disposition is benign (scoped doc clarification, no functional
+overlap with EC-2 work).
+
+EC-2 paused at Entry 5 confirmed; Entry 6 (multi-line payroll +
+withholdings) is tomorrow's resume point. EC-2 target adjusted
+from spec's 20 → 19 (Entry 2 reject) → 18 (Entry 4 edit). Two
+deliberate surface tests ate two entry slots; both are
+edit/reject-path code-verification byproducts, not agent
+failures.
+
+Carry-forward to next working session: C7 (EC-13 adversarial),
+C11 (retrospective), C12 (Session 8 + Phase 1.2 closeout), EC-2
+continuation Entry 6 → Entry 20.
+
+### (b) EC-2 per-entry batch table
+
+Five entries processed across six `ai_actions` rows (Entry 1
+had two attempts after b0eddc53's UI failure). Three confirmed
+as criterion (a) `source='agent'`; two used as deliberate
+surface tests; one staled from the failure-recovery cycle.
+
+| Entry | ai_action | JE | Source | Date | Cost | Latency | Verdict |
+|---|---|---|---|---|---|---|---|
+| 1.a | `b0eddc53` | — | — | — | $0.0604 | — | STALED — UI Failed-to-fetch + scrollback lost; `resolution_reason: stale_on_ui_failure_entry_1_pre_restart_scrollback_lost` |
+| 1.b | `13a6014f` | #29 | agent | 2026-04-01 | $0.0966 | 74.8s | PASS — retry after staling clean; first criterion (a) entry; DR 5100 Office Expenses / CR 1000 Cash |
+| 2 | `3454bc83` | — | — | 2026-04-23 | $0.1037 | 87.7s | REJECTED — deliberate reject-path surface test (`resolution_reason: "Test 1 for reject"`); proposal would have been PASS-clean if approved |
+| 3 | `2e272525` | #30 | agent | 2026-04-23 | $0.1100 | 103.3s | PASS — DR 5100 Office Expenses / CR 2000 Accounts Payable for $187.43 Staples; full-to-expense (no tax split — COA has zero tax accounts; org non-registrant) |
+| 4 dry-run | `5d125307` | — | — | 2026-04-23 | $0.0833 | 19.5s | EDITED — deliberate edit-path surface test → JE #31 source=manual amount 420.50 "EDIT TEST 1"; proposal would have been PASS-clean if approved |
+| 5 | `53344192` | #32 | agent | 2026-04-15 | $0.1261 | 122.1s | PASS-sophisticated — first 3-line entry; first prompt-explicit-date selection; first reference-field extraction (`2026-041`); 2200 Accrued Liabilities used as best-available substitute for missing GST Payable |
+
+Cost columns are dry-run only (confirm-flow incurred $0 LLM
+cost; pure UI-to-DB). Edit-flow Entry 4 also incurred $0 for
+the edit operation itself (architectural finding in (c)).
+
+### (c) Surface test outcomes
+
+**Entry 2 reject path verified.** UI Reject button → `POST
+/api/agent/reject 200 in 894ms` → `ai_action` moves to
+`status='rejected'` with operator-supplied `resolution_reason`.
+No `journal_entry` produced. No LLM API calls during reject.
+Architectural note: reject endpoint exists separately from
+confirm endpoint; clean separation.
+
+**Entry 4 edit path verified — with finding flagged for
+Phase 1.3+ review.** UI Edit button does NOT have its own
+backend endpoint. The "Edit" flow internally composes:
+(1) `POST /api/agent/reject` (marking the proposed action as
+not-accepted), (2) direct `journal_entries` insert with
+operator-edited values, (3) `ai_action` moves to
+`status='edited'` with `resolution_reason='edited_and_replaced'`.
+Resulting JE has `source='manual'`, NOT `source='agent'`.
+
+**Source-flip finding for Phase 1.3+ disposition.** When an
+operator edits an agent's proposal, should the resulting JE
+preserve `source='agent'` (with an `edited=true` flag) or flip
+to `source='manual'`? Current behavior is flip-to-manual.
+Implications: (i) edit-path entries don't satisfy `source='agent'`
+criterion (a) — affecting EC-2 target adjustments when edits
+occur (today's adjustment 19 → 18 was driven by this); (ii) for
+downstream analytics ("what fraction of agent proposals required
+editing?"), the current source-flip loses provenance. Whether
+this is intentional semantic or oversight is undetermined;
+flagged for Phase 1.3+ disposition decision.
+
+### (d) COA gap findings (5 distinct gaps)
+
+The dev fixture `Bridge Holding Co (DEV)` has a 16-account
+chart of accounts structured for a holding company (Dividend
+Income, Management Fee Income, Interest Income on the revenue
+side; Intercompany Receivables / Payables on the balance
+sheet). EC-2's prompt-set was designed against an
+operating-company COA (consulting revenue, customer AR, rent
+expense, credit card payables). Five distinct COA gaps
+surfaced across Entries 1-5:
+
+| Gap | Affected Entry | Best-Available Substitute | Verdict Disposition |
+|---|---|---|---|
+| No "Rent Expense" account | Entry 1 | 5100 Office Expenses | PASS-clean (best-available) |
+| No "Accounts Receivable" account | Entries 2, 4, 5 | 1300 Other Receivables | PASS-clean pattern |
+| No "Credit Card Payable" account | Entry 3 | 2000 Accounts Payable | PASS-clean (best-available) |
+| No GST/PST/HST/ITC tax accounts | Entries 3, 5 | None (Entry 3 full-to-expense); 2200 Accrued Liabilities (Entry 5) | PASS-clean both — Entry 3 simple-path correct given non-registrant; Entry 5 creative best-available |
+| No "Consulting" / "Service Revenue" account | Entries 4, 5 | 4100 Management Fee Income | PASS-clean pattern (only revenue option close to service-fee category) |
+
+**Meta-finding: fixture-prompt domain mismatch, not fixture
+defect.** The 16-account COA is internally consistent for a
+holding company. The EC-2 prompt set is internally consistent
+for an operating company. They model different business
+structures. The agent's correct play in every gap was
+best-available substitution — fabrication would have HALT-fired,
+asking for clarification was an option spec accepted but agent
+didn't take. This is not an agent error nor a fixture error;
+it's a test-design domain mismatch worth surfacing for Phase
+1.3+ planning (see (h) future-revisit queue).
+
+### (e) Sophisticated-handling positive on Entry 5
+
+Entry 5 is the strongest agent-quality positive of the five
+entries. Spec rubric had 10 distinct dimensions; agent passed
+all 10:
+
+- ✓ Three legs (multi-line split structure)
+- ✓ GST = 5% of 4000 = 200 exactly (NOT tax-on-tax 5% of 4200 = 210)
+- ✓ AR = sum of revenue + tax (4200)
+- ✓ Invoice number "2026-041" extracted into `reference` field
+  (first JE this run with reference populated)
+- ✓ April 15 honoured (NOT today 2026-04-23) — agent correctly
+  parsed prompt's "Invoice dated April 15" as the entry date
+- ✓ GST-only (no PST) — correct for BC professional services exemption
+- ✓ No HST split fabrication — correct for BC (GST + PST jurisdiction)
+- ✓ Balanced 3-leg (debits 4200 = credits 4000+200)
+- ✓ All 3 account_ids verified in COA (no fabrication)
+- ✓ No Bug A/B recurrence
+
+Notable: agent's choice of 2200 Accrued Liabilities for the
+GST-collected leg is creative-but-defensible best-available.
+Spec required "GST Payable" account; COA has none. Agent did
+NOT (a) omit the GST leg, (b) fabricate a non-existent account,
+OR (c) ask for clarification. It chose the closest-existing
+liability and posted a structurally-correct 3-leg entry. This
+is the behavior the COA-gap pattern was forecasting in best
+case.
+
+### (f) Latency forecast refinement
+
+Original observation (Entries 1-3): monotonic latency increase
+74.8 → 87.7 → 103.3, attributed to growing-context (each entry
+accumulates conversation history, increasing input tokens and
+processing time). Forecast extrapolation predicted Entry 5 at
+~135s, Entry 6 at ~150s (HALT zone), Entry 7 at ~165s.
+
+Entry 4 broke the trend at 19.5s. Initial read: outlier or
+trend break. Entry 5 at 122.1s suggested trend continuation
+but with noise.
+
+Refined hypothesis: latency-vs-entry trend is correct **for
+3-call orchestration entries only**. Entry 4's 19.5s was a
+2-call orchestration (Edit-flow apparently uses different call
+sequence — likely no `checkPeriod` re-call when period is
+already established in conversation context; or Edit-flow
+short-circuits the natural-language wrapper). The 2-call edge
+case is not an outlier from trend, it's a different
+orchestration path.
+
+3-call entries' actual deltas:
+- Entry 1 → 2: +12.9s
+- Entry 2 → 3: +15.6s
+- Entry 3 → 5 (skipping 4's 2-call): +18.8s over two entries-
+  worth of context = ~9.4s/entry rate (slower-than-original-
+  extrapolation but still increasing)
+
+Refined forecast (3-call assumption): Entry 6 ~131-138s; Entry
+7 ~141-150s (HALT zone); Entry 8 ~150-160s (likely halt).
+
+The orchestration-path subclass distinction is the load-bearing
+variable; raw entry-number-vs-latency curve was overfitted to
+small-n monotonic data. Per-call subclass matters more than
+per-entry count.
+
+### (g) Productive vs unproductive spend breakdown
+
+Total spend today: **$0.5801** of $3.00 run halt.
+
+| Category | Cost | % | Entries |
+|---|---|---|---|
+| Productive (criterion-(a) JEs) | $0.3326 | 57.3% | JE #29, #30, #32 |
+| Unproductive (no criterion-(a) contribution) | $0.2474 | 42.7% | b0eddc53 staled, 3454bc83 rejected, 5d125307 edited |
+
+Of the unproductive 42.7%:
+- $0.0604 (10.4%) — b0eddc53 staled from UI failure-recovery
+  cycle (legitimate cost; failure surfaced and was recovered cleanly)
+- $0.1037 (17.9%) — Entry 2 surface test (intentional reject-
+  path validation)
+- $0.0833 (14.4%) — Entry 4 surface test (intentional edit-
+  path validation)
+
+The two surface-test costs (32.3% combined) are deliberate
+budget allocations for test coverage of reject/edit code paths
+that wouldn't otherwise be exercised in a clean 20-entry run.
+Documented as "EC-2 byproduct testing" for future-run budget
+calibration: a clean re-run targeting 18 entries would expect
+to spend ~$1.62 ($0.09 average × 18) without surface tests, vs.
+$1.80 calibrated baseline that included ~10% buffer.
+
+The b0eddc53 staling cost (10.4% — UI failure cycle) is a
+non-deterministic environmental cost that would not necessarily
+recur. Worth tracking across multiple EC-2 runs if/when the
+test re-runs to establish failure-rate baseline.
+
+### (h) Future-revisit queue from EC-2 run 2026-04-23
+
+Three discrete items deferred for Phase 1.3+ disposition:
+
+**(1) Re-run Entry 3 (or equivalent tax-including prompt) when
+COA has tax accounts.** Current Entry 3 verdict PASS-clean is
+correct against current non-registrant fixture; does not
+demonstrate tax-aware accounting that a real BC ASPE corporation
+would require. Blocked on: Phase 1.3+ COA-refinement (tax
+accounts added to fixture). Dependent on: decision about
+whether `Bridge Holding Co (DEV)` should be modeled as
+GST-registrant (affects `gst_registration_date` field as well
+as COA accounts).
+
+**(2) Edit-path source-flip disposition review.** Current
+behavior: operator editing an agent proposal flips resulting JE
+to `source='manual'`, losing agent-provenance. Decision to
+make: preserve `source='agent'` with edited flag, or accept
+current flip-to-manual semantics. Affects EC-2 criterion (a)
+accounting when edits occur. Phase 1.3+ scope.
+
+**(3) Address 5 COA gaps in Phase 1.3+ fixture refinement.** The
+domain mismatch between EC-2 prompts (operating-company
+semantics) and dev fixture (holding-company COA) creates
+structural friction for verdict assessment. Options:
+
+- (a) Extend dev fixture to model an operating subsidiary
+  alongside the holding parent (richer COA, two test orgs)
+- (b) Revise EC-2 prompt set to use holding-company-appropriate
+  transactions (intercompany flows, dividend declarations, etc.)
+- (c) Accept the mismatch and document that EC-2 verdicts are
+  calibrated against best-available-substitution rather than
+  spec-named accounts
+
+Recommendation pending Phase 1.3+ planning context. Note: option
+(a) creates more re-test surface; option (b) reframes the EC-2
+spec which is a larger artifact to revise; option (c) is the
+lowest-effort path but means EC-2 will continue to need
+COA-aware verdict reading forever.
+
+### (i) Process-meta findings for C11 §3
+
+Today's session produced datapoints across five distinct
+codification-candidate patterns. Three approach the
+two-datapoint threshold; two are first datapoints worth
+logging:
+
+**(1) Relay-visibility asymmetry pattern — approaching
+threshold.** Three datapoints today plus prior accumulated:
+
+- Operator's interpretation of empty message (relay channel
+  uncertainty about what was actually sent)
+- Pause-invocation on absent continue signal (channel-state
+  interpretation drift)
+- Entry 3 API-call miscount (operator reported "2 calls" when
+  log showed 3) and Entry 4 ("1 call" when log showed 2) —
+  partial-paste creates partial-information channel asymmetry
+
+Pattern statement: when operator and WSL Claude communicate
+via external-consultant-Claude relay, the relay introduces
+channel-state lag and partial-information artifacts. Each
+agent sees a different slice of state. Bidirectional
+verification discipline (operator asks WSL Claude to verify;
+WSL Claude re-queries DB rather than trusting relayed state)
+catches the asymmetry but doesn't eliminate it. Approaching
+codification threshold; one more substantive datapoint warrants
+formal codification.
+
+**(2) External-consultant-accepts-WSL-Claude-derivations-
+without-independent-verification — second datapoint.** The
+Entry 3 tax verdict initially recommended PASS-clean was WSL
+Claude's call, which external-consultant-Claude accepted
+without re-deriving. When operator pushed back ("should this
+have been tax-split?"), the verdict required re-verification
+of the underlying COA + registrant + spec evidence. This is a
+propagation-of-error pattern: if WSL Claude's first-pass
+derivation has any error, external-consultant-Claude inheriting
+it without independent check amplifies the error to operator-
+facing surface. First datapoint earlier in session
+(context-truncated). Codification threshold met if a third
+datapoint appears in next session; worth pre-staging
+codification language.
+
+**(3) Plan-time latency forecasts from small-n trends — single
+datapoint with structural insight.** Entry 4's 19.5s breaking
+the 74.8 → 87.7 → 103.3 monotonic forecast taught the lesson:
+3-entry trends overfit when there's structural variation in
+orchestration (call-count subclass). Forecast refinement
+required naming the subclass variable and refitting per-
+subclass. Lesson generalizes beyond latency: any small-n trend
+extrapolation should ask "what's the subclass variable I'm
+assuming holds constant?" before extrapolating.
+
+**(4) Standing-instructions-produce-reach-for-behavior — single
+datapoint.** Earlier in session, "use Playwright whenever
+appropriate" instruction nudged WSL Claude toward proposing
+Playwright for EC-2 execution despite operator's manual-paste
+discipline. Caught by operator pushback. Lesson: standing
+instructions imply defaults that compete with case-by-case
+reasoning; discipline requires the case-by-case to win when
+they conflict. Adjacent to but distinct from
+convention-codification-before-operational-preconditions.
+
+**(5) Arc-compounding-without-tripwire — second datapoint.**
+First was C10 yesterday (planned as "30 rows surface for
+review" executing as multi-investigation + classification
+debate + gate-time discovery + re-stage). Today's EC-2 was
+planned as "5 entries before pause" but executed as 6
+ai_actions (Entry 1 attempt 1 + retry + 4 more) + multiple
+halt-investigation cycles + COA-gap re-derivations across each
+entry + edit-path verification byproduct. Two datapoints;
+codification candidate.
+
+Codification language for the pattern: arcs decompose into
+sub-arcs invisibly when the per-task tripwires don't trigger
+because each sub-arc is small. Cumulative cognitive load
+compounds without per-decision halt-and-surface. Mitigation:
+explicit pause-invocation when arc execution shape diverges
+from plan-shape, even if no individual sub-arc warrants halt.
+
+### (j) Tomorrow's resume point
+
+Entry 6 of EC-2's 18-target run (target adjusted from spec's
+20 due to surface-test slot sacrifices). Entry 6 spec text:
+
+> "Ran payroll for our one employee yesterday. Gross $4,800,
+> fed tax withheld $720, CPP $267.84, EI $75.84, net deposit
+> to her account was $3,736.32."
+
+Entry 6 is the second multi-line split (5+ lines: gross expense
++ 4 deduction credits + cash credit). COA-gap candidates likely
+high: payroll-deduction-payable accounts (federal tax payable,
+CPP payable, EI payable) almost certainly don't exist. Best-
+available pattern likely 2200 Accrued Liabilities for all 3
+deductions (consistent with Entry 5's GST handling).
+
+**Halt monitors at session end:**
+- Per-call $0.50 budget remaining (not consumed today)
+- Chunk-1 cumulative $0.92 remaining (vs $1.50 halt) —
+  comfortable
+- Run cumulative $2.42 remaining (vs $3.00 halt) — comfortable
+- Latency-trend tracking: 3-call entries continue rising
+  (~9-15s/entry); 2-call edge case for edit-flow only
+- Bright-line halts unchanged
+
+**Operator action items for tomorrow's resume:**
+
+- Fresh `session-init.sh` with new label (S8-0424 or
+  arc-descriptive)
+- Restart dev server with proper `tee` pipe to fresh log file
+- Verify session_start window — today's session_start was
+  `2026-04-23T03:05:18Z`; tomorrow's run continues from same
+  EC-2 session_start so Entry 6's `source='agent'` criterion
+  filter still applies (no need to re-cleanslate the test org)
+- Pasted prompts continue from spec line where Entry 6 starts
+- Bring Entry 6 spec text + COA payroll-deduction pre-check up
+  before paste
+
+**Push decision (held, three named unhold conditions same as
+prior closeouts):**
+
+- (a) Audit session and Prompt 4 session both confirmed as not
+  expecting to push their own commits separately
+- (b) Enough time has passed that other sessions' push-intent
+  is moot
+- (c) A new arc requires pushing for arc-specific reasons
+
+At commit time today: branch will be N ahead of `origin/staging`
+(C10 + closeout = 2 today, plus prior held commits and the
+Session M `49ce364` interleave). Cross-reference at read-time
+via `git log origin/staging..staging` for accurate count.

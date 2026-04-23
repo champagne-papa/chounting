@@ -492,6 +492,124 @@ specific label (date-stamped or arc-descriptive, per the
 Session Labeling Convention) to avoid the collision this note
 exists to resolve.
 
+### Session 8 EC-2 partial run + C10 (2026-04-23) — paused at Entry 5
+
+Session S8-0423 shipped two arcs across two commits on `staging`
+on top of plan-anchor `9aaeeec` (with `49ce364`'s Session M
+disambiguation note interleaved from parallel coord-arc activity).
+
+**C10 — 27-EC reconciliation matrix** landed as `0d4007f`. Six-
+column matrix per `session-8-brief.md` P38; 30 rows (27 ECs + 3
+shipping items); 21 MET / 9 DEFERRED / 0 MISSED / 0 N/A. Schema
+items S1/S2 excluded per P38 scope. Test-naming spec-vs-impl
+drift flagged for C11 §3 codification.
+
+**EC-2 partial run** processed Entries 1-5 of the 20-entry
+frozen spec. Three confirmed as criterion (a) `source='agent'`:
+JE #29 (Entry 1, DR 5100 Office Expenses / CR 1000 Cash, $2400
+office rent), JE #30 (Entry 3, DR 5100 / CR 2000 AP, $187.43
+Staples), JE #32 (Entry 5, multi-line split DR 1300 Other
+Receivables / CR 4100 Management Fee Income / CR 2200 Accrued
+Liabilities, $4200 Bathurst Legal invoice with GST). Two
+entries used as deliberate UI surface tests: Entry 2 reject-
+path verification (rejected as "Test 1 for reject"; reject
+endpoint working); Entry 4 edit-path verification (edited to
+JE #31 source=manual "EDIT TEST 1" amount 420.50; edit flow
+internally calls `/api/agent/reject` + manual JE insert). One
+ai_action staled mid-run from UI failure-recovery cycle
+(`b0eddc53`,
+`stale_on_ui_failure_entry_1_pre_restart_scrollback_lost`).
+
+**EC-2 target adjusted 20 → 19 → 18** for today's run (Entry 2
+and Entry 4 slots permanently scratched as surface-test
+byproducts). Current count: **3/18 criterion (a) entries**
+posted. Resume point: Entry 6 of spec; entries 6 → 20 remain.
+
+**Spend tally:** $0.5801 of $3.00 run halt. Productive
+(criterion-(a) JEs): $0.3326. Unproductive (b0eddc53 staled +
+Entry 2 reject + Entry 4 edit): $0.2474. Remaining run budget
+$2.4199; chunk-1 budget remaining $0.9199 of $1.50 halt.
+
+**Five COA gaps surfaced** between EC-2 prompts (operating-
+company semantics) and dev fixture's holding-company COA: no
+Rent Expense, no Accounts Receivable, no Credit Card Payable,
+no GST/PST/HST/ITC tax accounts, no Consulting/Service Revenue.
+Agent correctly used best-available substitution in each case;
+no fabrication, no hallucination, no Bug A/B recurrence. Domain
+mismatch (not fixture defect) flagged for Phase 1.3+
+refinement.
+
+**Sophisticated-handling positive on Entry 5:** first 3-line
+multi-line entry; first prompt-explicit-date semantic selection
+(2026-04-15 from "Invoice dated April 15", NOT today
+2026-04-23); first reference-field extraction (`2026-041` from
+"Invoice #2026-041"); creative best-available substitution
+(2200 Accrued Liabilities for missing GST Payable). All 10
+spec-rubric dimensions PASS.
+
+**Latency forecast refinement:** original monotonic-trend
+forecast (74.8 → 87.7 → 103.3) was correct for 3-call
+orchestration entries only. Entry 4 at 19.5s was 2-call (Edit-
+flow uses different orchestration path). Refined: 3-call
+subclass continues rising at ~9-15s/entry; Entry 6 forecast
+131-138s; Entry 7 forecast 141-150s (HALT zone). Halt monitors
+active and unchanged.
+
+**Carry-forward to next working session (Session 8 backlog
+remaining):**
+
+- **C7 EC-13 adversarial run** — paid-API; needs fresh
+  approval gate
+- **C11 Phase 1.2 retrospective** — large authored artifact
+  (~700-1000 lines per `session-8-brief.md` P39); needs fresh-
+  session attention
+- **C12 Session 8 + Phase 1.2 closeout** — gated on C7/C11/EC-2
+  completion per spec
+- **EC-2 continuation Entry 6 → Entry 20** — paid-API; needs
+  fresh approval gate continuing from $0.5801 today + ~$1.62
+  forecast for remaining 13 entries (extrapolating from
+  $0.10-$0.13 productive average; total ~$2.18 expected,
+  comfortable under $3.00 halt)
+
+**Future-revisit queue from EC-2 run 2026-04-23 (3 items):**
+
+- (1) Re-run Entry 3 when COA has tax accounts (current PASS-
+  clean is COA-constraint-correct but doesn't demonstrate
+  tax-aware accounting)
+- (2) Edit-path source-flip review for Phase 1.3+ (preserve
+  `source='agent'` with edited flag vs. current flip to manual)
+- (3) Address 5 COA gaps in Phase 1.3+ fixture refinement
+  (extend fixture to operating-co semantics OR revise EC-2
+  prompt set to holding-co semantics OR document COA-aware
+  verdict protocol)
+
+**Process-meta findings for C11 §3 (5 codification candidates):**
+relay-visibility asymmetry (3 datapoints, approaching threshold);
+external-consultant-accepts-WSL-Claude-derivations-without-
+independent-verification (2 datapoints, threshold-met-pending-3rd);
+plan-time latency forecasts from small-n trends (1 datapoint,
+structural insight); standing-instructions-produce-reach-for-
+behavior (1 datapoint, Playwright reach); arc-compounding-
+without-tripwire (2 datapoints with C10 yesterday + EC-2 today,
+codification candidate). Full evidence in friction-journal
+Phase D — EC-2 partial run + C10 (2026-04-23).
+
+**Push decision (held):** branch is +N ahead of `origin/staging`
+at this commit time (C10 + closeout = 2 today, plus prior held
+commits and the `49ce364` Session M interleave). Three named
+unhold conditions unchanged: (a) audit/Prompt 4 sessions' push
+intent confirmed/disclaimed, (b) sufficient time elapsed,
+(c) new arc requires push. Cross-reference branch ahead-count
+at read time via `git log origin/staging..staging`.
+
+**Tomorrow's resume:** fresh `session-init.sh`, dev-server
+restart with `tee`, Entry 6 spec surface + COA payroll-
+deduction pre-check before paste. Entry 6 is multi-line payroll
+(5+ lines: gross expense + 4 deduction credits + cash credit);
+COA-gap candidates high (payroll-deduction-payable accounts
+likely don't exist; 2200 Accrued Liabilities pattern likely
+repeats).
+
 ---
 
 ## Agent Autonomy Design Sprint — Documented (2026-04-16)
