@@ -42,6 +42,27 @@ export interface TrialBalanceResult {
   rows: TrialBalanceRow[];
 }
 
+// -- Balance Sheet types -----------------------------------------------------
+
+/**
+ * Flattened shape of the 4-row Balance Sheet per brief §3.1. All
+ * four amount fields are pre-flipped by the RPC per account type,
+ * so they are naturally positive for normal-balance activity. Do
+ * not apply a second sign flip at the caller.
+ *
+ * Equation check: assets == liabilities + equity_base + current_earnings.
+ * Enforced at the view layer (red banner on mismatch) rather than
+ * the service — Balance Sheet is not promoted to a discipline
+ * backstop per brief §6.
+ */
+export interface BalanceSheetResult {
+  assets: MoneyAmount;
+  liabilities: MoneyAmount;
+  equity_base: MoneyAmount;
+  current_earnings: MoneyAmount;
+  as_of_date: string; // echoed back for client display
+}
+
 // -- Pure helpers exported for unit-style tests ------------------------------
 //
 // Extracted from trialBalance()'s footer-check so the UNBALANCED contract is
@@ -234,5 +255,77 @@ export const reportService = {
     }
 
     return { rows };
+  },
+
+  /**
+   * Point-in-time Balance Sheet. Returns the 4-row shape per
+   * brief §3.1 flattened to named scalar fields: assets,
+   * liabilities, equity_base, current_earnings (synthesized from
+   * revenue/expense activity through as_of_date).
+   *
+   * Sign convention: the RPC pre-flips per account type, so all
+   * four returned values are naturally positive for normal-balance
+   * activity. Do NOT apply a second flip here or at the caller.
+   * This deviates from accountBalanceService.get (Step 6), which
+   * returns debit-positive with caller-flip — "entity that knows
+   * the polarity does the flip." get_balance_sheet knows the type
+   * directly; accountBalanceService's RPC does not.
+   *
+   * Inclusive-of-day (entry_date <= as_of_date). Matches
+   * accountBalanceService (Step 6) and get_accounts_by_type
+   * (Step 8). See brief §3.1.
+   *
+   * Accounting-equation check (assets == liabilities + equity_base
+   * + current_earnings) lives in BasicBalanceSheetView.tsx as a
+   * red-banner render on mismatch. Balance Sheet does NOT promote
+   * to a discipline backstop (no service-layer throw) per brief §6.
+   */
+  async balanceSheet(
+    input: { org_id: string; as_of_date?: string | null },
+    ctx: ServiceContext,
+  ): Promise<BalanceSheetResult> {
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    // Service-side default matches accountBalanceService +
+    // reportService.profitAndLoss's `?? null` pattern. RPC has
+    // no DEFAULT; service is the single owner of "today" so
+    // integration tests stay deterministic.
+    const asOfDate = input.as_of_date ?? new Date().toISOString().slice(0, 10);
+
+    const { data, error } = await db.rpc('get_balance_sheet', {
+      p_org_id: input.org_id,
+      p_as_of_date: asOfDate,
+    });
+
+    if (error) {
+      log.error({ error }, 'Failed to call get_balance_sheet RPC');
+      throw new ServiceError('READ_FAILED', error.message);
+    }
+
+    // RPC returns exactly 4 rows with account_type in
+    // {'asset','liability','equity','current_earnings'}. Flatten
+    // to named scalar fields. toMoneyAmount coerces NUMERIC
+    // (Supabase driver returns as JS number — Phase 15B).
+    const rows = (data ?? []) as Array<{ account_type: string; total_cad: string | number }>;
+    const byType = (t: string): MoneyAmount => {
+      const row = rows.find((r) => r.account_type === t);
+      return toMoneyAmount(row?.total_cad ?? 0);
+    };
+
+    return {
+      assets: byType('asset'),
+      liabilities: byType('liability'),
+      equity_base: byType('equity'),
+      current_earnings: byType('current_earnings'),
+      as_of_date: asOfDate,
+    };
   },
 };

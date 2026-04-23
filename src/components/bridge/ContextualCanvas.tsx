@@ -16,6 +16,7 @@ import { ProposedEntryCard } from '@/components/ProposedEntryCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 import { ReversalForm } from '@/components/canvas/ReversalForm';
+import { BasicBalanceSheetView } from '@/components/canvas/BasicBalanceSheetView';
 import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
@@ -131,6 +132,8 @@ function renderDirective(
       return <BasicPLView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'report_trial_balance':
       return <BasicTrialBalanceView orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'report_balance_sheet':
+      return <BasicBalanceSheetView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

@@ -56,6 +56,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the profit & loss report';
     case 'report_trial_balance':
       return 'the trial balance report';
+    case 'report_balance_sheet':
+      return 'the balance sheet report';
     case 'reversal_form':
       return 'the reversal form';
     case 'none':

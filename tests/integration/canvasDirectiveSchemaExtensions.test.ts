@@ -134,4 +134,31 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
       }),
     ).toThrow();
   });
+
+  // Phase 0-1.1 Arc A Step 7 — report_balance_sheet directive.
+
+  it('accepts report_balance_sheet + orgId (asOfDate optional)', () => {
+    const parsedMin = canvasDirectiveSchema.parse({
+      type: 'report_balance_sheet',
+      orgId: validOrg,
+    });
+    expect(parsedMin.type).toBe('report_balance_sheet');
+
+    const parsedWithDate = canvasDirectiveSchema.parse({
+      type: 'report_balance_sheet',
+      orgId: validOrg,
+      asOfDate: '2026-04-23',
+    });
+    expect(parsedWithDate.type).toBe('report_balance_sheet');
+  });
+
+  it('rejects report_balance_sheet with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'report_balance_sheet',
+        orgId: validOrg,
+        bogus: true,
+      }),
+    ).toThrow();
+  });
 });
