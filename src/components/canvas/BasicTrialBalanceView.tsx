@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
+import type { SelectedEntity } from '@/shared/types/canvasContext';
 import type { TrialBalanceRow } from '@/services/reporting/reportService';
 import type { FiscalPeriodListItem } from '@/services/accounting/periodService';
 import {
@@ -14,9 +15,10 @@ import {
 export interface BasicTrialBalanceViewProps {
   orgId: string;
   onNavigate: CanvasNavigateFn;
+  onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
-export function BasicTrialBalanceView({ orgId, onNavigate: _onNavigate }: BasicTrialBalanceViewProps) {
+export function BasicTrialBalanceView({ orgId, onNavigate, onSelectEntity }: BasicTrialBalanceViewProps) {
   const [rows, setRows] = useState<TrialBalanceRow[] | null>(null);
   const [periods, setPeriods] = useState<FiscalPeriodListItem[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
@@ -138,7 +140,23 @@ export function BasicTrialBalanceView({ orgId, onNavigate: _onNavigate }: BasicT
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.account_id} className="border-b border-neutral-100 hover:bg-neutral-50">
+            <tr
+              key={row.account_id}
+              className="border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+              onClick={() => {
+                onSelectEntity?.({
+                  type: 'account',
+                  id: row.account_id,
+                  display_name: `${row.account_code} — ${row.account_name}`,
+                });
+                onNavigate({
+                  type: 'report_account_ledger',
+                  orgId,
+                  accountId: row.account_id,
+                  periodId: selectedPeriodId,
+                });
+              }}
+            >
               <td className="py-2 font-mono">{row.account_code}</td>
               <td className="py-2">{row.account_name}</td>
               <td className="py-2 text-neutral-500">{row.account_type}</td>

@@ -161,4 +161,35 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
       }),
     ).toThrow();
   });
+
+  // Phase 0-1.1 Arc A Step 8a — report_account_ledger directive.
+
+  it('accepts report_account_ledger + orgId + accountId (periodId optional)', () => {
+    const validAccountId = '22222222-2222-2222-2222-222222222222';
+    const parsedMin = canvasDirectiveSchema.parse({
+      type: 'report_account_ledger',
+      orgId: validOrg,
+      accountId: validAccountId,
+    });
+    expect(parsedMin.type).toBe('report_account_ledger');
+
+    const parsedWithPeriod = canvasDirectiveSchema.parse({
+      type: 'report_account_ledger',
+      orgId: validOrg,
+      accountId: validAccountId,
+      periodId: '33333333-3333-3333-3333-333333333333',
+    });
+    expect(parsedWithPeriod.type).toBe('report_account_ledger');
+  });
+
+  it('rejects report_account_ledger with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'report_account_ledger',
+        orgId: validOrg,
+        accountId: '22222222-2222-2222-2222-222222222222',
+        bogus: true,
+      }),
+    ).toThrow();
+  });
 });

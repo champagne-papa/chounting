@@ -14,6 +14,7 @@ export type CanvasDirective =
   | { type: 'report_pl'; orgId: string; periodId?: string }
   | { type: 'report_trial_balance'; orgId: string; periodId?: string }
   | { type: 'report_balance_sheet'; orgId: string; asOfDate?: string }
+  | { type: 'report_account_ledger'; orgId: string; accountId: string; periodId?: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'none' }
 

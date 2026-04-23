@@ -19,6 +19,7 @@ import { ReversalForm } from '@/components/canvas/ReversalForm';
 import { BasicBalanceSheetView } from '@/components/canvas/BasicBalanceSheetView';
 import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
+import { AccountLedgerView } from '@/components/canvas/AccountLedgerView';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
@@ -131,9 +132,11 @@ function renderDirective(
     case 'report_pl':
       return <BasicPLView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'report_trial_balance':
-      return <BasicTrialBalanceView orgId={d.orgId} onNavigate={onNavigate} />;
+      return <BasicTrialBalanceView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'report_balance_sheet':
       return <BasicBalanceSheetView orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'report_account_ledger':
+      return <AccountLedgerView orgId={d.orgId} accountId={d.accountId} periodId={d.periodId} onNavigate={onNavigate} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

@@ -54,6 +54,12 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
     asOfDate: z.string().date().optional(),
   }).strict(),
   z.object({
+    type: z.literal('report_account_ledger'),
+    orgId: uuid,
+    accountId: uuid,
+    periodId: uuid.optional(),
+  }).strict(),
+  z.object({
     type: z.literal('reversal_form'),
     orgId: uuid,
     sourceEntryId: uuid,
