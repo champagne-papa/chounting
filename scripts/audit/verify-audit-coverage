@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# CLI shim for scripts/audit/verifyAuditCoverage.ts.
+#
+# Exit codes:
+#   0 — no gaps
+#   1 — gaps detected (caller should page / alert)
+#   2 — verifier crashed (transient failure)
+#
+# The shim exists so operators can invoke directly without knowing
+# the tsx invocation pattern. CI uses the `pnpm verify-audit-coverage`
+# npm script (same shape minus the shebang). If you need to invoke
+# this shim directly, chmod +x it first — the executable bit is not
+# committed because git's handling of it is inconsistent across
+# platforms in this repo.
+set -e
+exec tsx "$(dirname "$0")/verifyAuditCoverage.ts" "$@"

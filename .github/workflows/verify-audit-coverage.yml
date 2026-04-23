@@ -1,0 +1,66 @@
+name: Verify Audit Coverage
+
+# Daily Layer-2 detection backstop for INV-AUDIT-001. See
+# docs/05_operations/audit_verification.md for purpose, scope, and
+# known follow-ups.
+#
+# Triggers: schedule (daily 06:00 UTC) + manual dispatch. No push or
+# PR triggers — the service-layer test suite at PR time catches most
+# recordMutation-missing bugs, and daily cadence is adequate for the
+# long-tail regression surface.
+#
+# Security note: this workflow does not read any untrusted inputs
+# (no github.event.issue.*, github.event.pull_request.*, or similar
+# attacker-controlled fields are referenced in run: blocks). The
+# supabase CLI output captured into $GITHUB_ENV is trusted — it
+# comes from a deterministic local-only Supabase instance spun up
+# within the same job.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+
+      - name: Start local Supabase
+        run: pnpm db:start
+
+      # Capture Supabase env vars (NEXT_PUBLIC_SUPABASE_URL,
+      # SUPABASE_SERVICE_ROLE_KEY, etc.) emitted by `supabase status
+      # -o env` into $GITHUB_ENV so later steps can read them as
+      # regular env vars. This is the primary path — deterministic
+      # output from the CLI. If `-o env` is not supported in the
+      # pinned CLI version, fallback is manual grep-parsing of
+      # `supabase status` stdout for the `service_role key:` line
+      # and exporting it plus the URL manually. Keep this comment
+      # block if/when the fallback is exercised so future readers
+      # understand the shape.
+      - name: Capture Supabase env vars
+        run: supabase status -o env >> "$GITHUB_ENV"
+
+      - name: Apply migrations + seed
+        run: pnpm db:reset && pnpm db:seed:all
+
+      - name: Verify audit coverage
+        run: pnpm verify-audit-coverage
