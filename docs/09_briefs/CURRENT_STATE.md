@@ -473,6 +473,25 @@ instances + four symmetric-application instances), the
 architectural-strength observation on template-driven narrational
 wrappers, and the open questions queued for future arcs.
 
+### Session M (coord arc) — disambiguation note
+
+The "Session M" label was used by the 2026-04-22 conversation
+that codified the coordination mechanism (Session Labeling +
+Session Lock File Conventions in `918e68a`) and the three
+follow-on commits documenting and amending it: `c12513a`
+(friction-journal Phase C (g)), `00afe82` (env-inheritance
+handshake amendment), and `4372d65` (CA-65 cleanup + third-pass
+attribution correction).
+
+If a later session uses the label "M" — formally via
+`session-init.sh M` or colloquially in prose — that session is
+distinct from this one. Disambiguate by date range and commit
+SHA: the coord arc's Session M ran 2026-04-22 and owns the four
+commits named above. Future "M" sessions should pick a more
+specific label (date-stamped or arc-descriptive, per the
+Session Labeling Convention) to avoid the collision this note
+exists to resolve.
+
 ---
 
 ## Agent Autonomy Design Sprint — Documented (2026-04-16)
