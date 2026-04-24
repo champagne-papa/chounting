@@ -19,6 +19,7 @@ import { adminClient } from '@/db/adminClient';
 
 export const ACTION_NAMES = [
   'journal_entry.post',
+  'journal_entry.adjust',
   'chart_of_accounts.read',
   'chart_of_accounts.write',
   'period.lock',

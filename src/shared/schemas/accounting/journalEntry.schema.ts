@@ -134,15 +134,45 @@ export const ReversalInputSchema = JournalEntryBaseSchema
   .refine(balancedRefinement, balancedMessage)
   .refine(idempotencyRefinement, idempotencyMessage);
 
+// --- Adjustment form: entry_type='adjusting' literal + adjustment_reason required ---
+//
+// Third discriminator variant (Phase 0-1.1 Arc A Step 9a). Adjusting
+// entries are a controller-only workflow (route wraps with
+// withInvariants action='journal_entry.adjust' so Invariant 4 gates
+// the path).
+//
+// Rejects reversal fields structurally — an adjusting entry cannot
+// also be a reversal. The combination is rejected at Zod parse here,
+// so the route's reversal-wins precedence is defensive only.
+//
+// Rejects adjustment_status client override per ADR-0010 Layer 2 —
+// the DB DEFAULT 'posted' is the only Phase 1 value, and the Zod
+// boundary prevents any client from proposing a reserved state.
+
+export const AdjustmentInputSchema = JournalEntryBaseSchema
+  .extend({
+    entry_type: z.literal('adjusting'),
+    adjustment_reason: z.string().min(1),
+    // Reject reversal fields — adjustments cannot also be reversals.
+    reverses_journal_entry_id: z.undefined().optional(),
+    reversal_reason: z.undefined().optional(),
+    // Reject reserved-state client override (ADR-0010 Layer 2).
+    adjustment_status: z.undefined().optional(),
+  })
+  .refine(balancedRefinement, balancedMessage)
+  .refine(idempotencyRefinement, idempotencyMessage);
+
 // --- Exported types ---
 
 // Output types (after parse — defaults applied, transforms run)
 export type PostJournalEntryInput = z.infer<typeof PostJournalEntryInputSchema>;
 export type ReversalInput = z.infer<typeof ReversalInputSchema>;
+export type AdjustmentInput = z.infer<typeof AdjustmentInputSchema>;
 
 // Input types (before parse — optional fields allowed)
 export type PostJournalEntryInputRaw = z.input<typeof PostJournalEntryInputSchema>;
 export type ReversalInputRaw = z.input<typeof ReversalInputSchema>;
+export type AdjustmentInputRaw = z.input<typeof AdjustmentInputSchema>;
 
 // --- mirrorLines pure helper (§15.7) ---
 // Swaps debit_amount ↔ credit_amount per line.

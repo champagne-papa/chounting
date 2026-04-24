@@ -29,9 +29,6 @@ import { resolve } from 'node:path';
 // `journalEntryService` predates Phase 1.5A — a tracked historical
 // exception, not a new standard.
 //
-// TODO(step-9): add 'journal_entry.adjust' to JOURNAL_ENTRY_ACTIONS
-//   when adjusting entries ship. See brief §9 "extensions as ship-
-//   order dependencies."
 // TODO(step-10): add 'recurring_run.generate', 'recurring_run.approve',
 //   'recurring_run.reject' to a new RECURRING_RUN_ACTIONS set, and
 //   'recurring_template.create', 'recurring_template.update',
@@ -42,6 +39,7 @@ import { resolve } from 'node:path';
 export const JOURNAL_ENTRY_ACTIONS = [
   'journal_entry.post',
   'journal_entry.reverse',
+  'journal_entry.adjust',
 ] as const;
 
 export const FISCAL_PERIOD_LOCK_ACTIONS = ['period.locked'] as const;

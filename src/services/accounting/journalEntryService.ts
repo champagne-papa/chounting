@@ -22,9 +22,12 @@
 import {
   PostJournalEntryInputSchema,
   ReversalInputSchema,
+  AdjustmentInputSchema,
   type PostJournalEntryInputRaw,
   type ReversalInputRaw,
+  type AdjustmentInputRaw,
   type ReversalInput,
+  type AdjustmentInput,
 } from '@/shared/schemas/accounting/journalEntry.schema';
 import {
   addMoney,
@@ -39,9 +42,12 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
 
-// --- Service input: discriminated union of create and reversal ---
+// --- Service input: discriminated union of create, reversal, and adjustment ---
 
-type JournalEntryServiceInput = PostJournalEntryInputRaw | ReversalInputRaw;
+type JournalEntryServiceInput =
+  | PostJournalEntryInputRaw
+  | ReversalInputRaw
+  | AdjustmentInputRaw;
 
 // C5 Part 2: chunk size for PostgREST `.in(col, uuids)` queries.
 // Large .in() lists are serialized into the URL query string; once the
@@ -66,14 +72,29 @@ async function post(
   input: JournalEntryServiceInput,
   ctx: ServiceContext,
 ): Promise<{ journal_entry_id: string; entry_number: number }> {
-  // Route parse based on input shape
+  // Route parse based on input shape. Three discriminators:
+  //   - reversal: carries reverses_journal_entry_id
+  //   - adjustment: entry_type literal 'adjusting'
+  //   - else: regular post
+  //
+  // Reversal wins precedence if both somehow set — but the Zod
+  // schemas reject the combination structurally (AdjustmentInputSchema
+  // rejects reverses_journal_entry_id via z.undefined().optional()),
+  // so the precedence is defensive rather than load-bearing.
   const isReversal =
     'reverses_journal_entry_id' in input &&
     input.reverses_journal_entry_id !== undefined;
 
+  const isAdjustment =
+    !isReversal &&
+    'entry_type' in input &&
+    (input as { entry_type?: unknown }).entry_type === 'adjusting';
+
   const parsed = isReversal
     ? ReversalInputSchema.parse(input)
-    : PostJournalEntryInputSchema.parse(input);
+    : isAdjustment
+      ? AdjustmentInputSchema.parse(input)
+      : PostJournalEntryInputSchema.parse(input);
 
   const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
   const db = adminClient();
@@ -114,8 +135,15 @@ async function post(
 
   const nextEntryNumber = (maxRow?.entry_number ?? 0) + 1;
 
-  // --- Derive entry_type (programmatic, never from input) ---
-  const entryType = isReversal ? 'reversing' : 'regular';
+  // --- Derive entry_type (programmatic, never from client-controllable fields) ---
+  // The adjustment branch does carry entry_type: 'adjusting' through
+  // the input (AdjustmentInputSchema requires the literal), but the
+  // service still derives authoritatively from the discriminator
+  // variables rather than trusting the parsed.entry_type value.
+  const entryType =
+    isReversal ? 'reversing'
+      : isAdjustment ? 'adjusting'
+      : 'regular';
 
   // --- Insert journal entry ---
   // idempotency_key is required when source='agent' per
@@ -142,6 +170,13 @@ async function post(
         isReversal && 'reversal_reason' in parsed
           ? (parsed as ReversalInput).reversal_reason
           : null,
+      adjustment_reason:
+        isAdjustment && 'adjustment_reason' in parsed
+          ? (parsed as AdjustmentInput).adjustment_reason
+          : null,
+      // adjustment_status NOT written on any branch — DB DEFAULT
+      // 'posted' is the only Phase 1 value per ADR-0010 Layer 3
+      // (service emits nothing, DEFAULT handles assignment).
       entry_number: nextEntryNumber,
       entry_type: entryType,
       created_by: ctx.caller.user_id,
@@ -184,7 +219,10 @@ async function post(
   // enforcement mechanism (Simplification 1; replaced by the events projection in Phase 2).
   await recordMutation(db, ctx, {
     org_id: parsed.org_id,
-    action: isReversal ? 'journal_entry.reverse' : 'journal_entry.post',
+    action:
+      isAdjustment ? 'journal_entry.adjust'
+        : isReversal ? 'journal_entry.reverse'
+        : 'journal_entry.post',
     entity_type: 'journal_entry',
     entity_id: entry.journal_entry_id,
   });

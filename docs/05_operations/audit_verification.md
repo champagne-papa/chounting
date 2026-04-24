@@ -28,7 +28,8 @@ no synchronous enforcement option and sit in Layer 1b natively.
 Two entity-table reconciliations in Step 4:
 
 - Every `journal_entries` row → matching `audit_log` row with
-  action in `{'journal_entry.post', 'journal_entry.reverse'}`.
+  action in `{'journal_entry.post', 'journal_entry.reverse',
+  'journal_entry.adjust'}`.
 - Every currently-locked `fiscal_periods` row (`locked_at IS NOT
   NULL`) → matching `audit_log` row with action `'period.locked'`.
 
@@ -47,9 +48,10 @@ uses past-tense action strings (`period.locked`, `period.unlocked`)
 per the Phase 1.5A audit-key convention (`docs/04_engineering/conventions.md`
 §190+). The brief §9 examples for `period.*` predate the
 convention's consolidation; shipped code is the authoritative
-source. `journal_entry.post` and `journal_entry.reverse` remain
-imperative because `journalEntryService` predates Phase 1.5A — a
-tracked historical exception, not a new standard.
+source. `journal_entry.post`, `journal_entry.reverse`, and
+`journal_entry.adjust` remain imperative because
+`journalEntryService` predates Phase 1.5A — a tracked historical
+exception, not a new standard.
 
 The verifier reconciles **currently-locked** `fiscal_periods`
 rows, not the full lock/unlock event history. The `fiscal_periods`

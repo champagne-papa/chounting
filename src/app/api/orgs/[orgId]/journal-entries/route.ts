@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   PostJournalEntryInputSchema,
   ReversalInputSchema,
+  AdjustmentInputSchema,
 } from '@/shared/schemas/accounting/journalEntry.schema';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { journalEntryService } from '@/services/accounting/journalEntryService';
@@ -19,17 +20,44 @@ export async function POST(
     const { orgId } = await params;
     const json = await req.json();
 
-    // Discriminate on body shape, then parse with the correct schema.
-    // This produces meaningful Zod errors (from the intended schema)
-    // rather than confusing union-mismatch errors.
+    // Discriminate on body shape, then parse with the correct
+    // schema. Three discriminators:
+    //   - reversal: body carries reverses_journal_entry_id.
+    //   - adjustment: body's entry_type === 'adjusting'.
+    //   - else: regular post.
+    //
+    // Reversal wins precedence if both somehow present. The Zod
+    // schemas reject the combination structurally (AdjustmentInputSchema
+    // rejects reverses_journal_entry_id via z.undefined().optional()),
+    // so the precedence is defensive rather than load-bearing.
     const isReversal =
       json && typeof json === 'object' &&
       'reverses_journal_entry_id' in json &&
       json.reverses_journal_entry_id;
 
-    const parsed = isReversal
-      ? ReversalInputSchema.parse(json)
-      : PostJournalEntryInputSchema.parse(json);
+    const isAdjustment =
+      !isReversal &&
+      json && typeof json === 'object' &&
+      json.entry_type === 'adjusting';
+
+    let parsed;
+    let action: 'journal_entry.post' | 'journal_entry.adjust';
+
+    if (isAdjustment) {
+      parsed = AdjustmentInputSchema.parse(json);
+      action = 'journal_entry.adjust';
+    } else if (isReversal) {
+      parsed = ReversalInputSchema.parse(json);
+      // Reversals use journal_entry.post permission (Phase 1.1
+      // simplification — no separate journal_entry.reverse permission
+      // in ACTION_NAMES). The audit action name for reversals is
+      // still 'journal_entry.reverse' but that's emitted inside the
+      // service via recordMutation, not used for permission gating.
+      action = 'journal_entry.post';
+    } else {
+      parsed = PostJournalEntryInputSchema.parse(json);
+      action = 'journal_entry.post';
+    }
 
     // Validate URL orgId matches body org_id (prevent mismatch)
     if (parsed.org_id !== orgId) {
@@ -46,9 +74,14 @@ export async function POST(
     // annotation at the top of journalEntryService.ts (module exports unwrapped; route handler
     // wraps at the call site). Skipping this wrap would silently bypass all four INV-AUTH-001
     // pre-flight checks (context shape, caller verification, org-access, role authorization).
+    //
+    // Action name is dynamic so Invariant 4's canUserPerformAction
+    // fires with the right permission key. For adjusting entries,
+    // this gates controllers-only via the journal_entry.adjust
+    // permission seeded in 20240130000000.
     const result = await withInvariants(
       journalEntryService.post,
-      { action: 'journal_entry.post' }
+      { action }
     )(parsed, ctx);
 
     // 201 Created — REST convention for resource creation.
