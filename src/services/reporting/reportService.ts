@@ -63,6 +63,34 @@ export interface BalanceSheetResult {
   as_of_date: string; // echoed back for client display
 }
 
+// -- Accounts-by-type types --------------------------------------------------
+
+/**
+ * One row per account of the requested account_type, with debit
+ * and credit totals across the period (or all periods when
+ * fiscal_period_id is null). Shape mirrors TrialBalanceRow minus
+ * account_type (already filtered by the query) and plus nothing.
+ *
+ * Sign convention: RPC returns debit_total_cad and credit_total_cad
+ * as separate columns, NOT pre-flipped. The consumer
+ * (AccountsByTypeView) renders both columns TB-style. This
+ * asymmetry with get_balance_sheet's pre-flipped single-total shape
+ * was ratified in Step 8a's migration header (brief §4 Step 8):
+ * shape follows the consumer. AccountsByTypeView needs two columns;
+ * BalanceSheetView needs four scalars.
+ */
+export interface AccountsByTypeRow {
+  account_id: string;
+  account_code: string;
+  account_name: string;
+  debit_total_cad: MoneyAmount;
+  credit_total_cad: MoneyAmount;
+}
+
+export interface AccountsByTypeResult {
+  rows: AccountsByTypeRow[];
+}
+
 // -- Pure helpers exported for unit-style tests ------------------------------
 //
 // Extracted from trialBalance()'s footer-check so the UNBALANCED contract is
@@ -327,5 +355,62 @@ export const reportService = {
       current_earnings: byType('current_earnings'),
       as_of_date: asOfDate,
     };
+  },
+
+  /**
+   * Per-account totals for one account type. Returns one row per
+   * chart_of_accounts entry of the requested type that has any
+   * journal activity, with debit and credit totals in CAD.
+   *
+   * Consumed by AccountsByTypeView (Step 8b) for the P&L drill-
+   * down chain: P&L row-click → accounts-by-type → account-ledger.
+   *
+   * Sign convention: debit/credit returned separately, NOT pre-
+   * flipped. Consumer renders TB-style two columns. See the type
+   * docstring above for the sign-convention-follows-consumer
+   * discipline ratified in Step 8a's migration header.
+   *
+   * Error translation: invalid account_type values surface as
+   * READ_FAILED (not a domain error) because the RPC's
+   * `::account_type` cast fails at the Postgres level with
+   * invalid_text_representation. This matches the other
+   * reportService methods' RPC-error path. Callers that need
+   * pre-validation against the enum should gate at the route or
+   * orchestrator layer, not expect NOT_FOUND semantics here.
+   */
+  async accountsByType(
+    input: { org_id: string; account_type: string; fiscal_period_id?: string | null },
+    ctx: ServiceContext,
+  ): Promise<AccountsByTypeResult> {
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    const { data, error } = await db.rpc('get_accounts_by_type', {
+      p_org_id: input.org_id,
+      p_account_type: input.account_type,
+      p_period_id: input.fiscal_period_id ?? null,
+    });
+
+    if (error) {
+      log.error({ error }, 'Failed to call get_accounts_by_type RPC');
+      throw new ServiceError('READ_FAILED', error.message);
+    }
+
+    const rows: AccountsByTypeRow[] = (data ?? []).map((row: Record<string, unknown>) => ({
+      account_id: row.account_id as string,
+      account_code: row.account_code as string,
+      account_name: row.account_name as string,
+      debit_total_cad: toMoneyAmount(row.debit_total_cad as string | number),
+      credit_total_cad: toMoneyAmount(row.credit_total_cad as string | number),
+    }));
+
+    return { rows };
   },
 };

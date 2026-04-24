@@ -27,7 +27,7 @@ function computeNetIncome(rows: PLRow[]): string {
   return revenueNet.minus(expenseNet).toFixed(4);
 }
 
-export function BasicPLView({ orgId, onNavigate: _onNavigate }: BasicPLViewProps) {
+export function BasicPLView({ orgId, onNavigate }: BasicPLViewProps) {
   const [rows, setRows] = useState<PLRow[] | null>(null);
   const [periods, setPeriods] = useState<FiscalPeriodListItem[]>([]);
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | undefined>(undefined);
@@ -135,7 +135,17 @@ export function BasicPLView({ orgId, onNavigate: _onNavigate }: BasicPLViewProps
           </thead>
           <tbody>
             {revenueRow && (
-              <tr className="border-b border-neutral-100 hover:bg-neutral-50">
+              <tr
+                className="border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                onClick={() =>
+                  onNavigate({
+                    type: 'report_accounts_by_type',
+                    orgId,
+                    accountType: 'revenue',
+                    periodId: selectedPeriodId,
+                  })
+                }
+              >
                 <td className="py-2">{revenueRow.account_type}</td>
                 <td className="py-2 text-right font-mono">{revenueRow.debit_total_cad}</td>
                 <td className="py-2 text-right font-mono">{revenueRow.credit_total_cad}</td>
@@ -158,7 +168,17 @@ export function BasicPLView({ orgId, onNavigate: _onNavigate }: BasicPLViewProps
           </thead>
           <tbody>
             {expenseRow && (
-              <tr className="border-b border-neutral-100 hover:bg-neutral-50">
+              <tr
+                className="border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer"
+                onClick={() =>
+                  onNavigate({
+                    type: 'report_accounts_by_type',
+                    orgId,
+                    accountType: 'expense',
+                    periodId: selectedPeriodId,
+                  })
+                }
+              >
                 <td className="py-2">{expenseRow.account_type}</td>
                 <td className="py-2 text-right font-mono">{expenseRow.debit_total_cad}</td>
                 <td className="py-2 text-right font-mono">{expenseRow.credit_total_cad}</td>

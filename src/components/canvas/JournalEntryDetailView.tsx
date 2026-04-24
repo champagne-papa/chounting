@@ -102,15 +102,41 @@ export function JournalEntryDetailView({ orgId, entryId, onNavigate }: Props) {
             <dt className="font-medium text-neutral-500">Created</dt>
             <dd>{new Date(entry.created_at).toLocaleString()}</dd>
 
-            {entry.reverses_journal_entry_id != null && (
-              <>
-                <dt className="font-medium text-neutral-500">Reverses Entry</dt>
-                <dd>{entry.reverses_journal_entry_id}</dd>
+            {entry.reverses_journal_entry_id != null && (() => {
+              // Capture entry.reverses into a local const so the
+              // type narrowing survives into the onClick closure.
+              // Naked `entry.reverses!.entry_id` would be a
+              // non-null-assertion footgun; the capture is the
+              // safe idiom.
+              const reversesTarget = entry.reverses;
+              return (
+                <>
+                  <dt className="font-medium text-neutral-500">Reverses Entry</dt>
+                  <dd>
+                    {reversesTarget ? (
+                      <button
+                        className="text-blue-600 hover:underline"
+                        onClick={() =>
+                          onNavigate({
+                            type: 'journal_entry',
+                            orgId,
+                            entryId: reversesTarget.entry_id,
+                            mode: 'view',
+                          })
+                        }
+                      >
+                        #{reversesTarget.entry_number}
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
 
-                <dt className="font-medium text-neutral-500">Reason</dt>
-                <dd>{entry.reversal_reason ?? '—'}</dd>
-              </>
-            )}
+                  <dt className="font-medium text-neutral-500">Reason</dt>
+                  <dd>{entry.reversal_reason ?? '—'}</dd>
+                </>
+              );
+            })()}
           </dl>
 
           {/* Lines table */}

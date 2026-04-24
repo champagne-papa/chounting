@@ -192,4 +192,46 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
       }),
     ).toThrow();
   });
+
+  // Phase 0-1.1 Arc A Step 8b — report_accounts_by_type directive.
+
+  it('accepts report_accounts_by_type + orgId + accountType across all five enum values (periodId optional)', () => {
+    const accountTypes = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const;
+    for (const accountType of accountTypes) {
+      const parsedMin = canvasDirectiveSchema.parse({
+        type: 'report_accounts_by_type',
+        orgId: validOrg,
+        accountType,
+      });
+      expect(parsedMin.type).toBe('report_accounts_by_type');
+
+      const parsedWithPeriod = canvasDirectiveSchema.parse({
+        type: 'report_accounts_by_type',
+        orgId: validOrg,
+        accountType,
+        periodId: '33333333-3333-3333-3333-333333333333',
+      });
+      expect(parsedWithPeriod.type).toBe('report_accounts_by_type');
+    }
+
+    // Reject an accountType outside the enum.
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'report_accounts_by_type',
+        orgId: validOrg,
+        accountType: 'not_a_type',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects report_accounts_by_type with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'report_accounts_by_type',
+        orgId: validOrg,
+        accountType: 'revenue',
+        bogus: true,
+      }),
+    ).toThrow();
+  });
 });

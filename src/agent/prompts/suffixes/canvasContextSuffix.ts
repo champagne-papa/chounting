@@ -60,6 +60,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the balance sheet report';
     case 'report_account_ledger':
       return 'an account ledger';
+    case 'report_accounts_by_type':
+      return 'a per-account breakdown for one account type';
     case 'reversal_form':
       return 'the reversal form';
     case 'none':

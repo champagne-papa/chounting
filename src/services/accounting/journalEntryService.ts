@@ -319,6 +319,7 @@ export type JournalEntryDetail = {
     end_date: string;
   } | null;
   reversed_by: { entry_id: string; entry_number: number } | null;
+  reverses: { entry_id: string; entry_number: number } | null;
   journal_lines: Array<{
     journal_line_id: string;
     account_id: string;
@@ -461,6 +462,24 @@ async function get(
     ? { entry_id: reversingEntry.journal_entry_id, entry_number: reversingEntry.entry_number }
     : null;
 
+  // D5: if this entry is itself a reversal, look up its target to
+  // surface entry_number (not the raw UUID) to the detail view.
+  // Shape mirrors reversed_by with the join direction flipped.
+  let reverses: { entry_id: string; entry_number: number } | null = null;
+  if (entry.reverses_journal_entry_id) {
+    const { data: reversedEntry } = await db
+      .from('journal_entries')
+      .select('journal_entry_id, entry_number')
+      .eq('journal_entry_id', entry.reverses_journal_entry_id)
+      .maybeSingle();
+    if (reversedEntry) {
+      reverses = {
+        entry_id: reversedEntry.journal_entry_id,
+        entry_number: reversedEntry.entry_number,
+      };
+    }
+  }
+
   // PostgREST returns chart_of_accounts as a single object for many-to-one
   // FK relationships, but Supabase's generated types model it as an array.
   // Double assertion bridges the Supabase type → our JournalEntryDetail type.
@@ -472,6 +491,7 @@ async function get(
   return {
     ...hydrated,
     reversed_by,
+    reverses,
     journal_lines: hydrated.journal_lines.map((line) => ({
       ...line,
       debit_amount: toMoneyAmount(line.debit_amount),
