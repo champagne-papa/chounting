@@ -1,6 +1,9 @@
 // src/components/canvas/AdjustmentForm.tsx
-// Line editor JSX copy-pasted from JournalEntryForm (Step 9b;
-// Step 12 queue item 17 tracks the eventual extraction).
+// Adjusting journal entry form. Wraps the shared <LineEditor />
+// component (extracted at Step 10b). This file was the second
+// consumer of the inline line-editor JSX; JournalEntryForm was
+// the first; both now delegate to LineEditor. Step 12 queue item
+// 17 RESOLVED at 10b.
 
 'use client';
 

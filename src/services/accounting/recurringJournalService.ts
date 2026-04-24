@@ -57,7 +57,6 @@ import {
 } from '@/shared/schemas/accounting/recurringJournal.schema';
 import {
   addMoney,
-  zeroMoney,
   toMoneyAmount,
   oneRate,
   type MoneyAmount,
@@ -786,10 +785,6 @@ async function getRun(
 
   return run as RecurringRunDetail;
 }
-
-// Helper: silence unused-import noise. `zeroMoney` is imported for
-// future use (line-balance helpers) but not referenced above.
-void zeroMoney;
 
 export const recurringJournalService = {
   createTemplate,

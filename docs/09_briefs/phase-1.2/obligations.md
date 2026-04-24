@@ -160,6 +160,42 @@ write-active.
 
 ---
 
+## Phase 2 obligations carried forward by Arc A
+
+These are Phase 2 items surfaced during Arc A (Phase 0-1.1
+Control Foundations) that must be discharged before the related
+feature becomes write-active beyond Arc A's manual-path shape.
+
+- **`approveRun` atomicity hardening.** Arc A Step 10a
+  implements `recurringJournalService.approveRun` as best-effort
+  sequential per D10-D (A1): call `journalEntryService.post()`,
+  then UPDATE the run's `status` + `journal_entry_id`, then write
+  the `recurring_run.approve` audit row. On UPDATE failure after
+  post success, the service logs
+  `incident_type: 'recurring_run_orphaned'` at ERROR level and
+  throws `POST_FAILED`; retry is blocked by the dual orphan-guard
+  (status + journal_entry_id). The pattern matches
+  `journalEntryService.post()`'s own non-atomic sequence (journal
+  entry INSERT + journal lines INSERT + audit INSERT as separate
+  HTTP-level transactions against PostgREST). The orphan risk is
+  narrow but real. If a Phase 2 session judges atomicity
+  hardening valuable for the scheduler path, the fix is uniform
+  across the service layer (a PL/pgSQL RPC `approve_recurring_run`
+  that performs INSERT journal_entry + INSERT journal_lines +
+  UPDATE run + INSERT audit_log in a single transaction), not a
+  one-off for approveRun. Tracked under Step 12 queue item 19.
+  ADR-0010 and INV-RECURRING-001 are unaffected either way.
+- **Per-code `ServiceErrorCode` catalog expansion** was
+  partially deferred across closeout sessions. Step 12a of Arc A
+  closed this out by expanding the per-code catalog in
+  `docs/02_specs/ledger_truth_model.md` §Structured Error
+  Contracts to all 56 codes and the HTTP-status table to match.
+  Phase 1.2's and beyond new codes should extend the same
+  catalog in-step with the code addition rather than
+  accumulating drift.
+
+---
+
 ## Phase 2+ deferrals (NOT Phase 1.2 obligations)
 
 These were explicitly deferred past Phase 1.2:
@@ -171,6 +207,11 @@ These were explicitly deferred past Phase 1.2:
 - Materialized views / read models for report performance
 - Multi-currency FX wiring (Phase 4 per PLAN.md §8b)
 - Event sourcing activation (events table writes, Phase 2)
-- Recurring entries (Phase 2, requires pg-boss)
+- Recurring entries scheduler (Phase 2, requires pg-boss). The
+  data model, service layer (createTemplate / generateRun /
+  approveRun / rejectRun), API routes, and manual UI shipped at
+  Arc A (Steps 10a + 10b); only the automated scheduler that
+  triggers `generateRun` on template cadence and the auto-post
+  consumption of the `auto_post` flag remain Phase 2.
 - Bank reconciliation, AP/AR modules
 - REVOKE UPDATE/DELETE on ledger tables (belt-and-suspenders)

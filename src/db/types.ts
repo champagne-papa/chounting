@@ -39,33 +39,33 @@ export type Database = {
           conversation: Json
           last_activity_at: string
           locale: string
-          turns: Json
           org_id: string | null
           session_id: string
           started_at: string
           state: Json
+          turns: Json
           user_id: string
         }
         Insert: {
           conversation?: Json
           last_activity_at?: string
           locale?: string
-          turns?: Json
           org_id?: string | null
           session_id?: string
           started_at?: string
           state?: Json
+          turns?: Json
           user_id: string
         }
         Update: {
           conversation?: Json
           last_activity_at?: string
           locale?: string
-          turns?: Json
           org_id?: string | null
           session_id?: string
           started_at?: string
           state?: Json
+          turns?: Json
           user_id?: string
         }
         Relationships: [
@@ -170,6 +170,7 @@ export type Database = {
           entity_type: string
           idempotency_key: string | null
           org_id: string | null
+          reason: string | null
           session_id: string | null
           tool_name: string | null
           trace_id: string
@@ -185,6 +186,7 @@ export type Database = {
           entity_type: string
           idempotency_key?: string | null
           org_id?: string | null
+          reason?: string | null
           session_id?: string | null
           tool_name?: string | null
           trace_id: string
@@ -200,6 +202,7 @@ export type Database = {
           entity_type?: string
           idempotency_key?: string | null
           org_id?: string | null
+          reason?: string | null
           session_id?: string | null
           tool_name?: string | null
           trace_id?: string
@@ -828,6 +831,8 @@ export type Database = {
       }
       journal_entries: {
         Row: {
+          adjustment_reason: string | null
+          adjustment_status: Database["public"]["Enums"]["adjustment_status"]
           created_at: string
           created_by: string | null
           description: string
@@ -847,6 +852,8 @@ export type Database = {
           source_system: string
         }
         Insert: {
+          adjustment_reason?: string | null
+          adjustment_status?: Database["public"]["Enums"]["adjustment_status"]
           created_at?: string
           created_by?: string | null
           description: string
@@ -866,6 +873,8 @@ export type Database = {
           source_system: string
         }
         Update: {
+          adjustment_reason?: string | null
+          adjustment_status?: Database["public"]["Enums"]["adjustment_status"]
           created_at?: string
           created_by?: string | null
           description?: string
@@ -1359,6 +1368,147 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_journal_runs: {
+        Row: {
+          created_at: string
+          journal_entry_id: string | null
+          recurring_run_id: string
+          recurring_template_id: string
+          rejection_reason: string | null
+          scheduled_for: string
+          status: Database["public"]["Enums"]["recurring_run_status"]
+        }
+        Insert: {
+          created_at?: string
+          journal_entry_id?: string | null
+          recurring_run_id?: string
+          recurring_template_id: string
+          rejection_reason?: string | null
+          scheduled_for: string
+          status?: Database["public"]["Enums"]["recurring_run_status"]
+        }
+        Update: {
+          created_at?: string
+          journal_entry_id?: string | null
+          recurring_run_id?: string
+          recurring_template_id?: string
+          rejection_reason?: string | null
+          scheduled_for?: string
+          status?: Database["public"]["Enums"]["recurring_run_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_journal_runs_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["journal_entry_id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_runs_recurring_template_id_fkey"
+            columns: ["recurring_template_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_journal_templates"
+            referencedColumns: ["recurring_template_id"]
+          },
+        ]
+      }
+      recurring_journal_template_lines: {
+        Row: {
+          account_id: string
+          credit_amount: number
+          currency: string
+          debit_amount: number
+          description: string | null
+          recurring_template_id: string
+          tax_code_id: string | null
+          template_line_id: string
+        }
+        Insert: {
+          account_id: string
+          credit_amount?: number
+          currency?: string
+          debit_amount?: number
+          description?: string | null
+          recurring_template_id: string
+          tax_code_id?: string | null
+          template_line_id?: string
+        }
+        Update: {
+          account_id?: string
+          credit_amount?: number
+          currency?: string
+          debit_amount?: number
+          description?: string | null
+          recurring_template_id?: string
+          tax_code_id?: string | null
+          template_line_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_journal_template_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_template_lines_recurring_template_id_fkey"
+            columns: ["recurring_template_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_journal_templates"
+            referencedColumns: ["recurring_template_id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_template_lines_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
+            referencedColumns: ["tax_code_id"]
+          },
+        ]
+      }
+      recurring_journal_templates: {
+        Row: {
+          auto_post: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          is_active: boolean
+          org_id: string
+          recurring_template_id: string
+          template_name: string
+        }
+        Insert: {
+          auto_post?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          is_active?: boolean
+          org_id: string
+          recurring_template_id?: string
+          template_name: string
+        }
+        Update: {
+          auto_post?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          is_active?: boolean
+          org_id?: string
+          recurring_template_id?: string
+          template_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_journal_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           granted_at: string
@@ -1627,6 +1777,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_account_balance: {
+        Args: {
+          p_org_id: string
+          p_account_id: string
+          p_as_of_date: string
+        }
+        Returns: {
+          balance_cad: number
+        }[]
+      }
+      get_account_ledger: {
+        Args: {
+          p_org_id: string
+          p_account_id: string
+          p_period_id?: string
+        }
+        Returns: {
+          journal_entry_id: string
+          entry_number: number
+          entry_date: string
+          description: string
+          debit_amount: number
+          credit_amount: number
+          amount_cad: number
+          running_balance: number
+        }[]
+      }
+      get_accounts_by_type: {
+        Args: {
+          p_org_id: string
+          p_account_type: string
+          p_period_id?: string
+        }
+        Returns: {
+          account_id: string
+          account_code: string
+          account_name: string
+          debit_total_cad: number
+          credit_total_cad: number
+        }[]
+      }
+      get_balance_sheet: {
+        Args: {
+          p_org_id: string
+          p_as_of_date: string
+        }
+        Returns: {
+          account_type: string
+          total_cad: number
+        }[]
+      }
       get_profit_and_loss: {
         Args: {
           p_org_id: string
@@ -1652,6 +1853,27 @@ export type Database = {
           credit_total_cad: number
         }[]
       }
+      test_post_balanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_amount: number
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_org_id: string
+          p_period_id: string
+          p_debit_account: string
+          p_credit_account: string
+          p_debit_amount: number
+          p_credit_amount: number
+        }
+        Returns: string
+      }
       user_has_org_access: {
         Args: {
           target_org_id: string
@@ -1676,6 +1898,7 @@ export type Database = {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
       accounting_framework: "aspe" | "ifrs" | "us_gaap" | "other"
       address_type: "mailing" | "physical" | "registered" | "payment_stub"
+      adjustment_status: "posted" | "pending_approval" | "approved" | "rejected"
       ai_action_status:
         | "pending"
         | "confirmed"
@@ -1704,6 +1927,11 @@ export type Database = {
         | "restaurant"
         | "holding_company"
       org_status: "active" | "trial" | "suspended" | "archived" | "closed"
+      recurring_run_status:
+        | "pending_approval"
+        | "approved"
+        | "posted"
+        | "rejected"
       report_basis: "accrual" | "cash"
       user_role: "executive" | "controller" | "ap_specialist"
     }

@@ -4130,15 +4130,21 @@ error classes and one reserved-but-unclassed sentinel:
 
 **HTTP status mapping.** Every `ServiceErrorCode` maps to an HTTP
 status code via `src/app/api/_helpers/serviceErrorToStatus.ts`,
-which is the single authoritative translation layer. The mapping:
+which is the single authoritative translation layer. The mapping
+below enumerates all 56 codes; codes are listed within each
+status row grouped by category.
 
 | HTTP status | Codes |
 |---|---|
-| **401** | `UNAUTHENTICATED` |
-| **403** | `PERMISSION_DENIED`, `ORG_ACCESS_DENIED`, `UNVERIFIED_CALLER` |
-| **404** | `NOT_FOUND` |
-| **422** | `UNBALANCED`, `PERIOD_LOCKED`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`, `REVERSAL_NOT_MIRROR` |
-| **500** | `MISSING_CONTEXT`, `MISSING_TRACE_ID`, `MISSING_CALLER`, `POST_FAILED`, `READ_FAILED`, `ORG_CREATE_FAILED`, `TEMPLATE_NOT_FOUND`, `COA_LOAD_FAILED`, `PERIOD_GENERATION_FAILED` |
+| **400 Bad Request** | `EXTERNAL_IDS_MALFORMED`, `ADDRESS_VALIDATION_FAILED`, `PERIOD_REASON_REQUIRED` |
+| **401 Unauthorized** | `UNAUTHENTICATED` |
+| **403 Forbidden** | `PERMISSION_DENIED`, `ORG_ACCESS_DENIED`, `UNVERIFIED_CALLER` |
+| **404 Not Found** | `NOT_FOUND`, `ORG_NOT_FOUND`, `ADDRESS_NOT_FOUND`, `PROFILE_NOT_FOUND`, `INVITATION_NOT_FOUND`, `MEMBERSHIP_NOT_FOUND`, `AGENT_SESSION_NOT_FOUND`, `RECURRING_TEMPLATE_NOT_FOUND` |
+| **409 Conflict** | `PERIOD_ALREADY_LOCKED`, `PERIOD_NOT_LOCKED` |
+| **410 Gone** | `AGENT_SESSION_EXPIRED` |
+| **422 Unprocessable Entity** | `UNBALANCED`, `PERIOD_LOCKED`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`, `REVERSAL_NOT_MIRROR`, `ORG_IMMUTABLE_FIELD`, `INDUSTRY_NOT_FOUND`, `PARENT_ORG_NOT_FOUND`, `PARENT_ORG_IS_SELF`, `NO_COA_TEMPLATE_FOR_INDUSTRY`, `ADDRESS_TYPE_IMMUTABLE`, `USER_ALREADY_MEMBER`, `INVITATION_ALREADY_PENDING`, `INVITATION_INVALID_OR_EXPIRED`, `OWNER_CANNOT_BE_SUSPENDED`, `OWNER_CANNOT_BE_REMOVED`, `OWNER_ROLE_CHANGE_DENIED`, `MEMBERSHIP_ALREADY_SUSPENDED`, `MEMBERSHIP_NOT_SUSPENDED`, `AGENT_TOOL_VALIDATION_FAILED`, `AGENT_STRUCTURED_RESPONSE_INVALID`, `ONBOARDING_INCOMPLETE`, `RECURRING_TEMPLATE_INACTIVE`, `RECURRING_RUN_NOT_PENDING` |
+| **500 Internal Server Error** | `MISSING_CONTEXT`, `MISSING_TRACE_ID`, `MISSING_CALLER`, `POST_FAILED`, `READ_FAILED`, `ORG_CREATE_FAILED`, `TEMPLATE_NOT_FOUND`, `COA_LOAD_FAILED`, `PERIOD_GENERATION_FAILED`, `ORG_UPDATE_FAILED`, `ADDRESS_WRITE_FAILED`, `PROFILE_UPDATE_FAILED`, `INVITATION_WRITE_FAILED` |
+| **503 Service Unavailable** | `AGENT_UNAVAILABLE` |
 
 The `AUDIT_WRITE_FAILED` sentinel produces a 500 via the API
 route handler's generic `instanceof ServiceError` → else → 500
@@ -4146,17 +4152,16 @@ default path, because it is a plain `Error` and falls through to
 the default.
 
 **Code catalog.** The 56 `ServiceErrorCode` values plus the
-`AUDIT_WRITE_FAILED` sentinel, organized by category. The per-
-code entries below were authored during the Phase 1.1 closeout
-and cover the original 19 codes; the subsequent Phase 1.5 and
-Arc A additions (period lifecycle, org profile, addresses, user
-profiles, invitations, membership lifecycle, agent, and
-recurring journals) expand the union but their per-code catalog
-expansion is deferred to a dedicated session (tracked in Step 12
-queue). The HTTP-status mapping table above enumerates only the
-Phase 1.1 subset for the same reason; refer to
-`src/app/api/_helpers/serviceErrorToStatus.ts` for the complete
-mapping.
+`AUDIT_WRITE_FAILED` sentinel, organized by category matching
+the grouping comments in `src/services/errors/ServiceError.ts`.
+Entries authored during the Phase 1.1 closeout (the original 19
+codes) carry the full template (Class, Thrown by, Meaning,
+Caller action, HTTP status, Phase 2 evolution); the Phase 1.5
+and Arc A additions (37 codes across eight categories) shipped
+their catalog entries at Arc A Step 12a with a condensed
+template (Class, Thrown by, Meaning, HTTP status; Caller action
+and Phase 2 evolution only where notable) to match the
+mechanical closeout scope.
 
 ### Auth / Access (4 codes)
 
@@ -4370,6 +4375,39 @@ mapping.
   `check_violation` is detected as a balance failure
   specifically). The generic code remains as the fallback.
 
+### Period lifecycle (3 codes)
+
+#### `PERIOD_ALREADY_LOCKED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `periodService.lock()` when the pre-update
+  SELECT finds `is_locked = true`.
+- **Meaning:** Controller attempted to lock a fiscal period that
+  is already locked. Idempotency rejection — the caller should
+  treat this as a successful no-op from the business
+  perspective, but surfacing it as an error preserves "one lock
+  event per lock transition" audit semantics.
+- **HTTP status:** 409 Conflict
+
+#### `PERIOD_NOT_LOCKED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `periodService.unlock()` when the pre-update
+  SELECT finds `is_locked = false`.
+- **Meaning:** Controller attempted to unlock a fiscal period
+  that is not locked. Parallel to `PERIOD_ALREADY_LOCKED`.
+- **HTTP status:** 409 Conflict
+
+#### `PERIOD_REASON_REQUIRED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `periodService.lock()` and
+  `periodService.unlock()` when the caller-supplied
+  `reason` is empty or whitespace-only.
+- **Meaning:** Both lock and unlock require a non-empty
+  `reason` per brief §9's audit-log operational addition.
+- **HTTP status:** 400 Bad Request
+
 ### Reversals (3 codes)
 
 #### `REVERSAL_CROSS_ORG`
@@ -4575,6 +4613,369 @@ mapping.
   more specific codes (e.g. `RPC_FAILED` for the reporting RPC
   functions, `SCHEMA_MISMATCH` for driver-level type failures).
   The generic wrapper remains as the fallback.
+
+### Org profile (8 codes, Phase 1.5A)
+
+#### `ORG_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService` read/update paths when the
+  requested `org_id` does not correspond to a row (or lies
+  outside the caller's membership set, which the inline
+  org-access check treats as equivalent to "not found" to avoid
+  leaking existence).
+- **Meaning:** Org does not exist or caller has no access.
+- **HTTP status:** 404 Not Found
+
+#### `ORG_IMMUTABLE_FIELD`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.updateOrgProfile()` when the client
+  attempts to change a Phase 1.5A immutable field (e.g.,
+  `industry`, `functional_currency`). The set of immutable
+  fields is encoded in the service's update allow-list.
+- **Meaning:** The client asked to change a field that is
+  locked post-creation. Org creation is the only path that
+  writes these fields.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `INDUSTRY_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()` when the
+  requested industry does not map to a seeded
+  `chart_of_accounts_templates` row.
+- **Meaning:** Industry value not recognized.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `PARENT_ORG_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService` create/update paths when the
+  supplied `parent_org_id` does not reference a valid
+  `organizations` row.
+- **Meaning:** Parent org reference is dangling.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `PARENT_ORG_IS_SELF`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService` when `parent_org_id = org_id`.
+  Paired with the DB-level `org_parent_is_not_self` CHECK as
+  the service-layer pre-flight.
+- **Meaning:** Self-parenting is not a valid hierarchy edge.
+  Phase 2 will add cycle detection (see `obligations.md`
+  §Phase 2 obligations carried forward by Phase 1.5A); this
+  check catches only the direct case.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `EXTERNAL_IDS_MALFORMED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService` update path when the client-
+  provided `external_ids` JSON object fails structural
+  validation (keys must be strings, values must be strings,
+  no nested objects).
+- **Meaning:** `external_ids` must be a flat string→string map.
+- **HTTP status:** 400 Bad Request
+
+#### `NO_COA_TEMPLATE_FOR_INDUSTRY`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.createOrgWithTemplate()` when the
+  industry has no seeded `chart_of_accounts_templates` rows.
+  Distinct from `INDUSTRY_NOT_FOUND` — the industry value is
+  valid but the template seed set is empty.
+- **Meaning:** Seed data gap; an administrator must seed the
+  CoA template for this industry before the org can be
+  created.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `ORG_UPDATE_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `orgService.updateOrgProfile()` when the
+  final UPDATE statement returns a driver error.
+- **Meaning:** Generic server-side wrapper for an unexpected
+  update failure.
+- **HTTP status:** 500 Internal Server Error
+
+### Org addresses (4 codes, Phase 1.5A)
+
+#### `ADDRESS_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `addressService` read/update/delete paths
+  when the requested `address_id` does not correspond to a
+  row in the caller's org.
+- **Meaning:** Address does not exist or caller has no access.
+- **HTTP status:** 404 Not Found
+
+#### `ADDRESS_TYPE_IMMUTABLE`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `addressService.updateAddress()` when the
+  client attempts to change `address_type` after creation.
+- **Meaning:** The primary/billing/shipping discriminator is
+  a creation-time decision; to change it, delete and re-add.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `ADDRESS_VALIDATION_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `addressService` create/update paths when
+  the external address validation service rejects the input
+  (malformed postal code, unresolved country, etc.).
+- **Meaning:** Address shape is malformed or unrecognized.
+- **HTTP status:** 400 Bad Request
+
+#### `ADDRESS_WRITE_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `addressService` mutating paths when the
+  final INSERT/UPDATE returns a driver error.
+- **Meaning:** Generic server-side wrapper.
+- **HTTP status:** 500 Internal Server Error
+
+### User profiles (2 codes, Phase 1.5B)
+
+#### `PROFILE_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `profileService` read paths when the
+  requested `user_id` has no `profiles` row.
+- **Meaning:** Profile does not exist. Usually a post-signup
+  timing issue — the `profiles` row is inserted by a trigger
+  on `auth.users` and may lag briefly.
+- **HTTP status:** 404 Not Found
+
+#### `PROFILE_UPDATE_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `profileService.updateProfile()` when the
+  UPDATE returns a driver error.
+- **Meaning:** Generic server-side wrapper.
+- **HTTP status:** 500 Internal Server Error
+
+### Invitations (5 codes, Phase 1.5B)
+
+#### `USER_ALREADY_MEMBER`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `invitationService.createInvitation()` when
+  the target email already resolves to an active membership
+  in the target org.
+- **Meaning:** No invitation needed — user already belongs.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `INVITATION_ALREADY_PENDING`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `invitationService.createInvitation()` when
+  an active invitation already exists for the (email, org)
+  pair.
+- **Meaning:** Prevents duplicate invitations. The caller
+  should either resend the existing invitation or revoke it
+  first.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `INVITATION_WRITE_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `invitationService` mutating paths on driver
+  error.
+- **Meaning:** Generic server-side wrapper.
+- **HTTP status:** 500 Internal Server Error
+
+#### `INVITATION_INVALID_OR_EXPIRED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `invitationService.acceptInvitation()` when
+  the token does not resolve to an active invitation row
+  (expired, revoked, already accepted, malformed).
+- **Meaning:** The invitation token cannot be accepted.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `INVITATION_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `invitationService` read paths (controller
+  views the invitations list or a specific invitation) when
+  the requested `invitation_id` is not found in the caller's
+  org.
+- **Meaning:** Invitation does not exist or caller has no
+  access.
+- **HTTP status:** 404 Not Found
+
+### Membership lifecycle (6 codes, Phase 1.5B)
+
+#### `OWNER_CANNOT_BE_SUSPENDED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService.suspendMembership()` when
+  the target membership is the org's sole owner-role holder.
+- **Meaning:** An org must have at least one active owner;
+  suspending the only owner would leave the org ungovernable.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `OWNER_CANNOT_BE_REMOVED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService.removeMembership()` when
+  the target membership is the org's sole owner-role holder.
+- **Meaning:** Same rationale as `OWNER_CANNOT_BE_SUSPENDED`.
+  Promote another member to owner first.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `OWNER_ROLE_CHANGE_DENIED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService.changeRole()` when the
+  role change would demote the last owner.
+- **Meaning:** Same one-owner-minimum rule; demotion is
+  blocked if no other owner exists.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `MEMBERSHIP_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService` read/update/delete paths
+  when the requested `membership_id` does not correspond to a
+  row in the caller's org.
+- **Meaning:** Membership does not exist or caller has no
+  access.
+- **HTTP status:** 404 Not Found
+
+#### `MEMBERSHIP_ALREADY_SUSPENDED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService.suspendMembership()` when
+  the target membership is already suspended.
+- **Meaning:** Idempotency rejection; suspend transitions are
+  one-way from active.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `MEMBERSHIP_NOT_SUSPENDED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `membershipService.reactivateMembership()`
+  when the target membership is not currently suspended.
+- **Meaning:** Reactivate expects the suspended state as its
+  pre-condition.
+- **HTTP status:** 422 Unprocessable Entity
+
+### Agent (6 codes, Phase 1.2)
+
+#### `AGENT_UNAVAILABLE`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent service layer when the upstream Claude
+  API or the orchestrator's session provider is unreachable.
+- **Meaning:** External dependency outage. Retryable.
+- **HTTP status:** 503 Service Unavailable
+
+#### `AGENT_TOOL_VALIDATION_FAILED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent tool-call validation layer when the
+  model's tool-call payload fails Zod parsing at the tool's
+  input boundary.
+- **Meaning:** The model produced a structurally-invalid
+  tool call. The orchestrator retries (structural retry
+  budget); persistent failure surfaces this code.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `AGENT_SESSION_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent session service when the caller
+  references a `session_id` that does not resolve to a row.
+- **Meaning:** Session identifier is unknown.
+- **HTTP status:** 404 Not Found
+
+#### `AGENT_SESSION_EXPIRED`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent session service when the caller
+  references a session whose TTL has passed.
+- **Meaning:** Distinct from `AGENT_SESSION_NOT_FOUND` because
+  an expired session existed and has a findable history; the
+  client should start a new session rather than retry.
+- **HTTP status:** 410 Gone
+
+#### `AGENT_STRUCTURED_RESPONSE_INVALID`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent orchestrator when the model's
+  structured response (the canvas-directive + text-response
+  envelope) fails Zod parsing after the structural retry
+  budget is exhausted. The orchestrator returns a fallback
+  template response in this case; the error is logged but
+  not propagated to the caller as an uncaught exception.
+- **Meaning:** The model could not produce a valid structured
+  response within the retry budget.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `ONBOARDING_INCOMPLETE`
+
+- **Class:** `ServiceError`
+- **Thrown by:** agent orchestrator pre-flight when the
+  caller has not completed the onboarding flow that
+  establishes which org they are operating in.
+- **Meaning:** Agent calls require an active org context; the
+  caller must complete onboarding first.
+- **HTTP status:** 422 Unprocessable Entity
+
+### Recurring journals (3 codes, Arc A Step 10)
+
+#### `RECURRING_TEMPLATE_NOT_FOUND`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `recurringJournalService` methods
+  (`updateTemplate`, `deactivateTemplate`, `generateRun`,
+  `approveRun`, `getTemplate`) when the requested
+  `recurring_template_id` does not correspond to a row in the
+  caller's org.
+- **Meaning:** Template does not exist or caller has no
+  access.
+- **HTTP status:** 404 Not Found
+
+#### `RECURRING_TEMPLATE_INACTIVE`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `recurringJournalService.generateRun()` and
+  `approveRun()` when the target template has
+  `is_active = false`.
+- **Meaning:** The template was deactivated; no new runs can
+  be generated against it. Reactivate the template (via
+  `updateTemplate` with `is_active: true`) or use a different
+  template.
+- **HTTP status:** 422 Unprocessable Entity
+
+#### `RECURRING_RUN_NOT_PENDING`
+
+- **Class:** `ServiceError`
+- **Thrown by:** `recurringJournalService.approveRun()` and
+  `rejectRun()` when the target run does not satisfy the
+  dual orphan-guard (`status = 'pending_approval'` AND
+  `journal_entry_id IS NULL`).
+- **Meaning:** The run is not eligible for the requested
+  transition. This covers four sub-states: already posted
+  (status='posted' and journal_entry_id set); already
+  rejected (status='rejected'); the reserved approved state
+  (status='approved' — cannot occur in Phase 1 per ADR-0010
+  Layer 1, but the guard is defensive); orphaned (status
+  lingering at pending_approval but journal_entry_id
+  set, which can only happen if an earlier approve
+  succeeded at post() but failed at UPDATE — the
+  `recurring_run_orphaned` incident log path; see D10-D (A1)
+  framing).
+- **Caller action:** Inspect the run's current state (read
+  path `getRun`); if orphaned, the run's
+  `journal_entry_id` is the authoritative posted entry and
+  the run itself is a known-orphan state slated for operator
+  reconciliation.
+- **HTTP status:** 422 Unprocessable Entity
 
 ### Audit integrity sentinel (not a `ServiceErrorCode`)
 

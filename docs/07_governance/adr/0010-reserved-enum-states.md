@@ -16,7 +16,8 @@ designed consumer of the reserved-enum-states discipline. Per
 CLAUDE.md's "ADR before code" discipline, ADR-0010 lands
 alongside Step 9a's data/service artifacts (`adjustment_status`
 is the ADR's first live consumer at its first enforcement site;
-Step 10's `recurring_journal_runs.status` will be the second).
+Step 10's `recurring_journal_runs.status` is the second, now
+shipped at `supabase/migrations/20240131000000_recurring_journal_templates.sql`).
 
 ## Context
 
@@ -271,7 +272,19 @@ requires a smaller migration footprint at the cutover.
 - **`supabase/migrations/20240129000000_adjustment_status_enum.sql`**
   — the first deliberate consumer. Defines `adjustment_status`
   with four values; scoped CHECK restricts non-`posted` on
-  adjusting rows.
+  adjusting rows (discriminator-scoped form: `entry_type <>
+  'adjusting' OR adjustment_status = 'posted'`).
+- **`supabase/migrations/20240131000000_recurring_journal_templates.sql`**
+  — the second deliberate consumer. Defines
+  `recurring_run_status` with four values; unconditional scoped
+  CHECK `recurring_run_status_phase1_allowed` restricts
+  `status IN ('pending_approval', 'posted', 'rejected')` on all
+  runs (distinct form from 20240129000000 because the runs
+  table has no row-level discriminator — every row is a run, so
+  the CHECK applies unconditionally). The same migration ships
+  INV-RECURRING-001 (deferred CONSTRAINT TRIGGER on template
+  lines) — orthogonal enforcement concern in the same data
+  model.
 - **`supabase/migrations/20240128000000_add_adjustment_reason.sql`**
   — sibling Step 9a migration enforcing INV-ADJUSTMENT-001. Uses
   the same Layer 1 DB-CHECK pattern for a different invariant
