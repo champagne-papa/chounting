@@ -84,6 +84,46 @@ Precedent: Arc A used this pattern 6 times (Steps 7, 8a, 8b,
 `docs/07_governance/retrospectives/arc-A-retrospective.md` §3
 Pattern 2 for mechanism details.
 
+### Push readiness three-condition gate
+
+Push from the working branch to a shared branch requires three
+conditions met. Any condition unmet holds the push.
+
+1. **Test-suite health.** `pnpm test` full-suite green at HEAD,
+   OR deviations documented with (a) mechanism, (b) fix shape,
+   (c) explicit carry-forward framing (retrospective, friction-
+   journal, or filed queue item). "Acceptable baseline" without
+   these three artifacts is not a met condition.
+2. **Doc-sync reconciled.** `invariants.md` ↔ `control_matrix.md`
+   ↔ `ledger_truth_model.md` ↔ shipped code all consistent;
+   bidirectional reachability diff clean (or flagged exceptions
+   documented as Phase 2 stubs). `types.ts` regenerated against
+   the post-arc schema. ADRs, obligations, and any other arc-
+   affected governance docs reconciled.
+3. **Governance closeout.** Retrospective written; friction-
+   journal updated with arc-scope entries; any conventions
+   earned by fire count codified in this file or filed for
+   future codification with provenance.
+
+Pre-push sanity sequence (run from working-branch HEAD):
+
+```bash
+git log --oneline origin/main..HEAD | wc -l    # or origin/staging..HEAD
+git status --short                              # expect clean
+pnpm agent:validate                             # 26/26 green
+pnpm test                                       # Condition 1 evidence
+pnpm typecheck                                  # green
+```
+
+Precedent: the framework had been operating tacitly across Arc
+A and was codified at Arc A's push-readiness gate. Arc A's
+closeout state (487/487 full suite green; doc-sync reconciled;
+retrospective + friction-journal + convention codification
+shipped) is the reference example of all three conditions met.
+See `docs/07_governance/retrospectives/arc-A-retrospective.md`
+for the arc provenance and §5 for the meta-observation on the
+framework's implicit operation.
+
 ## Phase 1 Simplifications
 
 Three Phase 1 simplifications (synchronous audit log,

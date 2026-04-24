@@ -6242,3 +6242,28 @@ via `git log origin/staging..staging` for accurate count.
   additions rather than treating them as scope violations by
   default.
 
+- 2026-04-25 NOTE   Item 27 validation sequence revealed a
+  gate-check self-pollution pattern: running
+  `accountLedgerService.test.ts` in isolation first, then the
+  full suite, masked the fix (first full-suite run was 485/487
+  due to accumulated state from the isolation run — the same
+  test's own prior-run posts to 1100/1200 polluted the next
+  full-suite run's baseline-and-delta assertions). Post
+  `pnpm db:reset:clean` the full-suite run was 487/487. Future
+  fragility-fix sessions that gate via isolation-run-then-full-
+  suite must `db:reset:clean` between modes. Naming candidate:
+  "gate-check self-pollution." Fire count 1; below codification
+  threshold but worth logging so a future session doesn't
+  re-discover the rabbit hole.
+
+- 2026-04-25 NOTE   Three-condition push readiness framework
+  codified in `CLAUDE.md` (Session execution conventions
+  section, sibling to the UI-session screenshot gate). Framework
+  had been operating tacitly across Arc A; this entry marks its
+  transition from tacit-convention to written-rule. Provenance:
+  Arc A retrospective §5 meta-observations on the three-role
+  workflow + push-decision brief conversation 2026-04-24/25.
+  Fired once per arc (Arc A); codification threshold not
+  applicable to operational-standard rules (distinct from
+  pattern-observation rules which use the 3-fire threshold).
+
