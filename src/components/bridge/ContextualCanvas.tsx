@@ -16,6 +16,7 @@ import { ProposedEntryCard } from '@/components/ProposedEntryCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 import { ReversalForm } from '@/components/canvas/ReversalForm';
+import { AdjustmentForm } from '@/components/canvas/AdjustmentForm';
 import { BasicBalanceSheetView } from '@/components/canvas/BasicBalanceSheetView';
 import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
@@ -130,6 +131,8 @@ function renderDirective(
       return <JournalEntryDetailView orgId={d.orgId} entryId={d.entryId} onNavigate={onNavigate} />;
     case 'reversal_form':
       return <ReversalForm orgId={d.orgId} sourceEntryId={d.sourceEntryId} onNavigate={onNavigate} />;
+    case 'adjustment_form':
+      return <AdjustmentForm orgId={d.orgId} onNavigate={onNavigate} />;
     case 'report_pl':
       return <BasicPLView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'report_trial_balance':

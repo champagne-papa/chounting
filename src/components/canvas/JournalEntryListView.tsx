@@ -52,12 +52,20 @@ export function JournalEntryListView({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Journal Entries</h2>
-        <button
-          className="text-sm text-blue-600 hover:underline"
-          onClick={() => onNavigate({ type: 'journal_entry_form', orgId })}
-        >
-          + New Entry
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="text-sm text-blue-600 hover:underline"
+            onClick={() => onNavigate({ type: 'journal_entry_form', orgId })}
+          >
+            + New Entry
+          </button>
+          <button
+            className="text-sm text-blue-600 hover:underline"
+            onClick={() => onNavigate({ type: 'adjustment_form', orgId })}
+          >
+            + Post Adjustment
+          </button>
+        </div>
       </div>
 
       {loading && (

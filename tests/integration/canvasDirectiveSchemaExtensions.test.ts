@@ -234,4 +234,24 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
       }),
     ).toThrow();
   });
+
+  // Phase 0-1.1 Arc A Step 9b — adjustment_form directive.
+
+  it('accepts adjustment_form + orgId', () => {
+    const parsed = canvasDirectiveSchema.parse({
+      type: 'adjustment_form',
+      orgId: validOrg,
+    });
+    expect(parsed).toEqual({ type: 'adjustment_form', orgId: validOrg });
+  });
+
+  it('rejects adjustment_form with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'adjustment_form',
+        orgId: validOrg,
+        bogus: true,
+      }),
+    ).toThrow();
+  });
 });

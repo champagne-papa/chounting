@@ -137,6 +137,13 @@ export function JournalEntryDetailView({ orgId, entryId, onNavigate }: Props) {
                 </>
               );
             })()}
+
+            {entry.entry_type === 'adjusting' && entry.adjustment_reason && (
+              <>
+                <dt className="font-medium text-neutral-500">Adjustment Reason</dt>
+                <dd>{entry.adjustment_reason}</dd>
+              </>
+            )}
           </dl>
 
           {/* Lines table */}

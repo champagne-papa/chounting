@@ -70,6 +70,10 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
     orgId: uuid,
     sourceEntryId: uuid,
   }).strict(),
+  z.object({
+    type: z.literal('adjustment_form'),
+    orgId: uuid,
+  }).strict(),
   z.object({ type: z.literal('none') }).strict(),
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation

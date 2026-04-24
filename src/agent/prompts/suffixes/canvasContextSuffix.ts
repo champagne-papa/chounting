@@ -64,6 +64,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'a per-account breakdown for one account type';
     case 'reversal_form':
       return 'the reversal form';
+    case 'adjustment_form':
+      return 'the adjusting journal entry form';
     case 'none':
       return 'no canvas view';
     case 'user_profile':
