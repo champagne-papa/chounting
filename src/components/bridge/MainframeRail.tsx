@@ -23,6 +23,7 @@ interface Props {
 const ICONS = [
   { id: 'coa',      label: 'Chart of Accounts', icon: '\u{1F4D2}' },
   { id: 'journals', label: 'Journal Entries',    icon: '\u{1F4D4}' },
+  { id: 'recurring',     label: 'Recurring Journals', icon: '\u{1F504}' },
   { id: 'pl',            label: 'P&L Report',         icon: '\u{1F4CA}' },
   { id: 'trial_balance', label: 'Trial Balance',      icon: '\u2696' },
   { id: 'actions',       label: 'AI Action Review',   icon: '\u2705' },
@@ -40,6 +41,8 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
         return onNavigate({ type: 'chart_of_accounts', orgId });
       case 'journals':
         return onNavigate({ type: 'journal_entry_list', orgId });
+      case 'recurring':
+        return onNavigate({ type: 'recurring_template_list', orgId });
       case 'pl':
         return onNavigate({ type: 'report_pl', orgId });
       case 'trial_balance':

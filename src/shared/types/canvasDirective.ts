@@ -18,6 +18,9 @@ export type CanvasDirective =
   | { type: 'report_accounts_by_type'; orgId: string; accountType: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'; periodId?: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'adjustment_form'; orgId: string }
+  | { type: 'recurring_template_list'; orgId: string }
+  | { type: 'recurring_template_form'; orgId: string }
+  | { type: 'recurring_run_list'; orgId: string; recurringTemplateId?: string }
   | { type: 'none' }
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation:

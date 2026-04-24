@@ -17,6 +17,9 @@ import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 import { ReversalForm } from '@/components/canvas/ReversalForm';
 import { AdjustmentForm } from '@/components/canvas/AdjustmentForm';
+import { RecurringTemplateListView } from '@/components/canvas/RecurringTemplateListView';
+import { RecurringTemplateForm } from '@/components/canvas/RecurringTemplateForm';
+import { RecurringRunListView } from '@/components/canvas/RecurringRunListView';
 import { BasicBalanceSheetView } from '@/components/canvas/BasicBalanceSheetView';
 import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
@@ -133,6 +136,18 @@ function renderDirective(
       return <ReversalForm orgId={d.orgId} sourceEntryId={d.sourceEntryId} onNavigate={onNavigate} />;
     case 'adjustment_form':
       return <AdjustmentForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'recurring_template_list':
+      return <RecurringTemplateListView orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'recurring_template_form':
+      return <RecurringTemplateForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'recurring_run_list':
+      return (
+        <RecurringRunListView
+          orgId={d.orgId}
+          onNavigate={onNavigate}
+          recurringTemplateId={d.recurringTemplateId}
+        />
+      );
     case 'report_pl':
       return <BasicPLView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'report_trial_balance':

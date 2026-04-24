@@ -74,6 +74,19 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
     type: z.literal('adjustment_form'),
     orgId: uuid,
   }).strict(),
+  z.object({
+    type: z.literal('recurring_template_list'),
+    orgId: uuid,
+  }).strict(),
+  z.object({
+    type: z.literal('recurring_template_form'),
+    orgId: uuid,
+  }).strict(),
+  z.object({
+    type: z.literal('recurring_run_list'),
+    orgId: uuid,
+    recurringTemplateId: uuid.optional(),
+  }).strict(),
   z.object({ type: z.literal('none') }).strict(),
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation

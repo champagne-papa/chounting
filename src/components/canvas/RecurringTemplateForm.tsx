@@ -1,7 +1,7 @@
-// src/components/canvas/JournalEntryForm.tsx
-// Journal entry creation form. Fetches dropdown data from API routes,
-// manages dynamic lines via useFieldArray, computes running balance
-// with branded MoneyAmount types, and POSTs to the journal entries API.
+// src/components/canvas/RecurringTemplateForm.tsx
+// Phase 0-1.1 Arc A Step 10b — form for creating a recurring journal
+// template. Structural template: AdjustmentForm. Consumes the shared
+// <LineEditor /> extracted in the same session.
 
 'use client';
 
@@ -14,17 +14,16 @@ import {
   addMoney,
   eqMoney,
   zeroMoney,
-  oneRate,
   type MoneyAmount,
 } from '@/shared/schemas/accounting/money.schema';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
 import { LineEditor } from '@/components/canvas/LineEditor';
 
 // ---------------------------------------------------------------------------
-// Form schema (UI shape — intentionally different from PostJournalEntryInputSchema)
+// Form schema (UI shape — bridges to RecurringTemplateInputSchema via transform)
 // ---------------------------------------------------------------------------
 
-const JournalEntryFormLineSchema = z.object({
+const RecurringTemplateFormLineSchema = z.object({
   account_id: z.string().uuid({ message: 'Account is required' }),
   debit_or_credit: z.enum(['debit', 'credit'], {
     message: 'Select debit or credit',
@@ -33,30 +32,21 @@ const JournalEntryFormLineSchema = z.object({
   tax_code_id: z.union([z.string().uuid(), z.literal('')]).optional().transform((v) => v || undefined),
 });
 
-export const JournalEntryFormSchema = z.object({
-  fiscal_period_id: z.string().uuid({ message: 'Period is required' }),
-  entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be YYYY-MM-DD' }),
-  description: z.string().min(1, { message: 'Description is required' }),
-  reference: z.string().optional(),
-  lines: z.array(JournalEntryFormLineSchema).min(2, {
+const RecurringTemplateFormSchema = z.object({
+  template_name: z.string().min(1, { message: 'Template name is required' }),
+  description: z.string().optional(),
+  auto_post: z.boolean().default(false),
+  lines: z.array(RecurringTemplateFormLineSchema).min(2, {
     message: 'At least 2 lines are required',
   }),
 });
 
-export type JournalEntryFormState = z.infer<typeof JournalEntryFormSchema>;
-export type JournalEntryFormStateInput = z.input<typeof JournalEntryFormSchema>;
+type RecurringTemplateFormStateInput = z.input<typeof RecurringTemplateFormSchema>;
 
 // ---------------------------------------------------------------------------
 // Data-fetching types
 // ---------------------------------------------------------------------------
 
-type FiscalPeriod = {
-  period_id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_locked: boolean;
-};
 type Account = {
   account_id: string;
   account_code: string;
@@ -73,11 +63,11 @@ type TaxCode = {
 };
 
 // ---------------------------------------------------------------------------
-// Transform: form state -> service input shape
+// Transform: form state -> service input shape (RecurringTemplateInputSchema)
 // ---------------------------------------------------------------------------
 
 function formStateToServiceInput(
-  formState: JournalEntryFormStateInput,
+  formState: RecurringTemplateFormStateInput,
   orgId: string,
 ): Record<string, unknown> {
   const lines = formState.lines.map((line) => {
@@ -88,20 +78,15 @@ function formStateToServiceInput(
       debit_amount: isDebit ? amount : zeroMoney(),
       credit_amount: isDebit ? zeroMoney() : amount,
       currency: 'CAD',
-      amount_original: amount,
-      amount_cad: amount,
-      fx_rate: oneRate(),
       tax_code_id: line.tax_code_id || undefined,
     };
   });
 
   return {
     org_id: orgId,
-    fiscal_period_id: formState.fiscal_period_id,
-    entry_date: formState.entry_date,
-    description: formState.description,
-    reference: formState.reference || undefined,
-    source: 'manual' as const,
+    template_name: formState.template_name,
+    description: formState.description || undefined,
+    auto_post: formState.auto_post,
     lines,
   };
 }
@@ -110,52 +95,42 @@ function formStateToServiceInput(
 // Component
 // ---------------------------------------------------------------------------
 
-type JournalEntryFormProps = {
+type Props = {
   orgId: string;
   onNavigate: CanvasNavigateFn;
-  prefill?: Record<string, unknown>; // Reserved for Task 15 reversal; ignored in Task 13
 };
 
-export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
-  const [periods, setPeriods] = useState<FiscalPeriod[]>([]);
+export function RecurringTemplateForm({ orgId, onNavigate }: Props) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // --- Data fetching ---
-
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/orgs/${orgId}/fiscal-periods`).then((r) => r.json()),
       fetch(`/api/orgs/${orgId}/chart-of-accounts`).then((r) => r.json()),
       fetch(`/api/tax-codes`).then((r) => r.json()),
     ])
-      .then(([periodsData, accountsData, taxCodesData]) => {
-        setPeriods(periodsData.periods ?? []);
+      .then(([accountsData, taxCodesData]) => {
         setAccounts(accountsData.accounts ?? []);
         setTaxCodes(taxCodesData.taxCodes ?? []);
       })
       .catch(() => {
-        setPeriods([]);
         setAccounts([]);
         setTaxCodes([]);
       })
       .finally(() => setLoading(false));
   }, [orgId]);
 
-  // --- Form setup ---
-
-  const form = useForm<JournalEntryFormStateInput>({
-    resolver: zodResolver(JournalEntryFormSchema),
+  const form = useForm<RecurringTemplateFormStateInput>({
+    resolver: zodResolver(RecurringTemplateFormSchema),
     mode: 'onSubmit',
     defaultValues: {
-      fiscal_period_id: '',
-      entry_date: new Date().toISOString().slice(0, 10),
+      template_name: '',
       description: '',
-      reference: '',
+      auto_post: false,
       lines: [
         { account_id: '', debit_or_credit: 'debit', amount: '', tax_code_id: '' },
         { account_id: '', debit_or_credit: 'credit', amount: '', tax_code_id: '' },
@@ -167,8 +142,6 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
     control: form.control,
     name: 'lines',
   });
-
-  // --- Running balance ---
 
   const watchedLines = useWatch({ control: form.control, name: 'lines' });
 
@@ -194,8 +167,6 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
     if (!allValid) {
       return {
         display: '—',
-        totalDebit: null,
-        totalCredit: null,
         balanced: false,
         hasInput: false,
       };
@@ -205,49 +176,43 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
 
     return {
       display: `Debits: ${totalDebit} / Credits: ${totalCredit}`,
-      totalDebit,
-      totalCredit,
       balanced: !isInitial && eqMoney(totalDebit, totalCredit),
       hasInput: !isInitial,
     };
   }, [watchedLines]);
 
-  // --- Submit handler ---
-
-  const onSubmit = async (formData: JournalEntryFormStateInput) => {
+  const onSubmit = async (formData: RecurringTemplateFormStateInput) => {
     setFormError(null);
     setSubmitting(true);
     try {
       const serviceInput = formStateToServiceInput(formData, orgId);
 
-      const response = await fetch(`/api/orgs/${orgId}/journal-entries`, {
+      const response = await fetch(`/api/orgs/${orgId}/recurring-templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(serviceInput),
       });
 
       if (!response.ok) {
-        const errorBody = await response.json();
-
+        const errorBody = await response.json().catch(() => ({ error: 'Unknown error' }));
         if (response.status === 400 && errorBody.details) {
           for (const issue of errorBody.details) {
             const path = issue.path.join('.');
             form.setError(path as Parameters<typeof form.setError>[0], { message: issue.message });
           }
         } else if (response.status === 422) {
-          setFormError(errorBody.message || 'Unable to post entry');
+          setFormError(errorBody.message || 'Unable to create template');
         } else if (response.status === 401) {
           window.location.href = '/en/sign-in';
           return;
         } else {
-          setFormError('An unexpected error occurred. Please try again.');
+          setFormError(errorBody.message ?? errorBody.error ?? 'An unexpected error occurred.');
         }
         return;
       }
 
       await response.json();
-      form.reset();
-      onNavigate({ type: 'journal_entry_list', orgId });
+      onNavigate({ type: 'recurring_template_list', orgId });
     } catch {
       setFormError('An unexpected error occurred. Please try again.');
     } finally {
@@ -255,15 +220,13 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
     }
   };
 
-  // --- Render ---
-
   if (loading) {
     return <div className="text-sm text-neutral-400">Loading...</div>;
   }
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">New Journal Entry</h2>
+      <h2 className="text-lg font-semibold mb-4">New Recurring Template</h2>
 
       {formError && (
         <div className="mb-4 p-3 border border-red-300 rounded bg-red-50 text-sm text-red-600">
@@ -272,85 +235,59 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
       )}
 
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        {/* Header fields */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          {/* Fiscal Period */}
           <div>
             <label className="block text-sm font-medium text-neutral-600 mb-1">
-              Fiscal Period
-            </label>
-            {periods.length === 0 ? (
-              <div className="text-sm text-neutral-400">
-                No open fiscal periods. Contact your administrator to create or unlock a period.
-              </div>
-            ) : (
-              <select
-                {...form.register('fiscal_period_id')}
-                className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
-              >
-                <option value="">Select a period...</option>
-                {periods.map((p) => (
-                  <option key={p.period_id} value={p.period_id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {form.formState.errors.fiscal_period_id && (
-              <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.fiscal_period_id.message}
-              </p>
-            )}
-          </div>
-
-          {/* Entry Date */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 mb-1">
-              Entry Date
+              Template Name
             </label>
             <input
-              type="date"
-              {...form.register('entry_date')}
+              type="text"
+              {...form.register('template_name')}
               className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
             />
-            {form.formState.errors.entry_date && (
+            {form.formState.errors.template_name && (
               <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.entry_date.message}
+                {form.formState.errors.template_name.message}
               </p>
             )}
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-neutral-600 mb-1">
-              Description
+              Description (optional)
             </label>
             <input
               type="text"
               {...form.register('description')}
               className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
             />
-            {form.formState.errors.description && (
-              <p className="text-sm text-red-500 mt-1">
-                {form.formState.errors.description.message}
-              </p>
-            )}
-          </div>
-
-          {/* Reference */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-600 mb-1">
-              Reference (optional)
-            </label>
-            <input
-              type="text"
-              {...form.register('reference')}
-              className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
-            />
           </div>
         </div>
 
-        {/* Lines section — shared component (Step 10b extraction; Step 12 queue item 17 resolved). */}
+        {/* Auto-post checkbox with explanatory subtext (Phase 1 UX — avoid
+            misleading the controller into thinking auto_post bypasses
+            approval). Phase 2 scheduler will make this flag consequential. */}
+        <div className="mb-6">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              {...form.register('auto_post')}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-medium text-neutral-700">
+                Auto-post generated runs (bypass approval)
+              </span>
+              <span className="block text-xs text-neutral-500 mt-0.5">
+                When checked, generated runs will be posted automatically. Phase 1 requires
+                controllers to approve each run individually — this flag is reserved for the
+                Phase 2 scheduler and currently has no effect on the approval flow.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        {/* Lines section — shared component (Step 10b extraction). */}
         <LineEditor
           register={form.register}
           errors={form.formState.errors}
@@ -377,14 +314,20 @@ export function JournalEntryForm({ orgId, onNavigate }: JournalEntryFormProps) {
           </div>
         </div>
 
-        {/* Submit */}
         <div className="mt-6">
           <button
             type="submit"
-            disabled={submitting || loading || periods.length === 0 || accounts.length === 0}
+            disabled={submitting || loading || accounts.length === 0}
             className="px-4 py-2 bg-neutral-800 text-white text-sm rounded hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Posting...' : 'Post Entry'}
+            {submitting ? 'Saving...' : 'Save Template'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate({ type: 'recurring_template_list', orgId })}
+            className="ml-3 px-4 py-2 border border-neutral-300 text-sm rounded hover:bg-neutral-50"
+          >
+            Cancel
           </button>
         </div>
       </form>

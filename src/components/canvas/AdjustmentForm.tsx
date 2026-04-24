@@ -17,6 +17,7 @@ import {
   type MoneyAmount,
 } from '@/shared/schemas/accounting/money.schema';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
+import { LineEditor } from '@/components/canvas/LineEditor';
 
 // ---------------------------------------------------------------------------
 // Form schema (UI shape — bridges to AdjustmentInputSchema via transform below)
@@ -375,119 +376,16 @@ export function AdjustmentForm({ orgId, onNavigate }: AdjustmentFormProps) {
           )}
         </div>
 
-        {/* Lines section */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-neutral-600">Lines</span>
-            <button
-              type="button"
-              onClick={() => append({ account_id: '', debit_or_credit: 'debit', amount: '', tax_code_id: '' })}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              + Add Line
-            </button>
-          </div>
-
-          {form.formState.errors.lines?.message && (
-            <p className="text-sm text-red-500 mb-2">
-              {form.formState.errors.lines.message}
-            </p>
-          )}
-
-          <div className="space-y-3">
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-start gap-2 p-3 border border-neutral-200 rounded">
-                {/* Account */}
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs text-neutral-500 mb-0.5">Account</label>
-                  {accounts.length === 0 ? (
-                    <div className="text-sm text-neutral-400">
-                      No accounts available. Contact your administrator.
-                    </div>
-                  ) : (
-                    <select
-                      {...form.register(`lines.${index}.account_id`)}
-                      className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
-                    >
-                      <option value="">Select account...</option>
-                      {accounts.map((a) => (
-                        <option key={a.account_id} value={a.account_id}>
-                          {a.account_code} — {a.account_name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {form.formState.errors.lines?.[index]?.account_id && (
-                    <p className="text-sm text-red-500 mt-0.5">
-                      {form.formState.errors.lines[index].account_id.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Debit/Credit */}
-                <div className="w-24">
-                  <label className="block text-xs text-neutral-500 mb-0.5">D/C</label>
-                  <select
-                    {...form.register(`lines.${index}.debit_or_credit`)}
-                    className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
-                  >
-                    <option value="debit">Debit</option>
-                    <option value="credit">Credit</option>
-                  </select>
-                  {form.formState.errors.lines?.[index]?.debit_or_credit && (
-                    <p className="text-sm text-red-500 mt-0.5">
-                      {form.formState.errors.lines[index].debit_or_credit.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Amount */}
-                <div className="w-32">
-                  <label className="block text-xs text-neutral-500 mb-0.5">Amount</label>
-                  <input
-                    type="text"
-                    {...form.register(`lines.${index}.amount`)}
-                    placeholder="0.00"
-                    className="w-full border border-neutral-300 rounded px-2 py-1 text-sm font-mono"
-                  />
-                  {form.formState.errors.lines?.[index]?.amount && (
-                    <p className="text-sm text-red-500 mt-0.5">
-                      {form.formState.errors.lines[index].amount.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Tax Code */}
-                <div className="w-36">
-                  <label className="block text-xs text-neutral-500 mb-0.5">Tax Code</label>
-                  <select
-                    {...form.register(`lines.${index}.tax_code_id`)}
-                    className="w-full border border-neutral-300 rounded px-2 py-1 text-sm"
-                  >
-                    <option value="">— No tax —</option>
-                    {taxCodes.map((tc) => (
-                      <option key={tc.tax_code_id} value={tc.tax_code_id}>
-                        {tc.code} ({tc.rate})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Remove */}
-                <div className="pt-4">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    disabled={fields.length <= 2}
-                    className="text-sm text-red-600 hover:underline disabled:text-neutral-400 disabled:no-underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Lines section — shared component (Step 10b extraction; Step 12 queue item 17 resolved). */}
+        <LineEditor
+          register={form.register}
+          errors={form.formState.errors}
+          fields={fields}
+          append={append}
+          remove={remove}
+          accounts={accounts}
+          taxCodes={taxCodes}
+        />
 
         {/* Balance indicator */}
         <div className="mt-4 p-3 rounded border border-neutral-200">

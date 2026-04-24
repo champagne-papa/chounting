@@ -254,4 +254,68 @@ describe('CA-74: canvasDirectiveSchema — Session 6 extensions', () => {
       }),
     ).toThrow();
   });
+
+  // Phase 0-1.1 Arc A Step 10b — recurring journal directives.
+
+  it('accepts recurring_template_list + orgId', () => {
+    const parsed = canvasDirectiveSchema.parse({
+      type: 'recurring_template_list',
+      orgId: validOrg,
+    });
+    expect(parsed).toEqual({ type: 'recurring_template_list', orgId: validOrg });
+  });
+
+  it('rejects recurring_template_list with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'recurring_template_list',
+        orgId: validOrg,
+        bogus: true,
+      }),
+    ).toThrow();
+  });
+
+  it('accepts recurring_template_form + orgId', () => {
+    const parsed = canvasDirectiveSchema.parse({
+      type: 'recurring_template_form',
+      orgId: validOrg,
+    });
+    expect(parsed).toEqual({ type: 'recurring_template_form', orgId: validOrg });
+  });
+
+  it('rejects recurring_template_form with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'recurring_template_form',
+        orgId: validOrg,
+        bogus: true,
+      }),
+    ).toThrow();
+  });
+
+  it('accepts recurring_run_list + orgId (with and without recurringTemplateId)', () => {
+    const parsedMin = canvasDirectiveSchema.parse({
+      type: 'recurring_run_list',
+      orgId: validOrg,
+    });
+    expect(parsedMin).toEqual({ type: 'recurring_run_list', orgId: validOrg });
+
+    const parsedWithTemplate = canvasDirectiveSchema.parse({
+      type: 'recurring_run_list',
+      orgId: validOrg,
+      recurringTemplateId: '22222222-2222-2222-2222-222222222222',
+    });
+    expect(parsedWithTemplate.type).toBe('recurring_run_list');
+  });
+
+  it('rejects recurring_run_list with unknown fields (.strict())', () => {
+    expect(() =>
+      canvasDirectiveSchema.parse({
+        type: 'recurring_run_list',
+        orgId: validOrg,
+        recurringTemplateId: '22222222-2222-2222-2222-222222222222',
+        bogus: true,
+      }),
+    ).toThrow();
+  });
 });
