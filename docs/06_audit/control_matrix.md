@@ -1,8 +1,8 @@
 # Control Matrix
 
-Audit-side evidence for the 18 Phase 1.1 invariants. Maps each
-INV-ID to its spec definition, its test coverage, and the
-specific mechanism by which it is enforced in code.
+Audit-side evidence for the 20 Phase 0-1.1 + Arc A invariants.
+Maps each INV-ID to its spec definition, its test coverage, and
+the specific mechanism by which it is enforced in code.
 
 This file is auditor-facing — it answers "how do I verify that
 rule X is actually enforced and tested?" Different audience and
@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 18 invariants — audit evidence
+## The 20 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -47,16 +47,17 @@ scheduled), the specific enforcement mechanism, and the
 non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
-leaf's Summary section: Layer 1 first (12 invariants), then
+leaf's Summary section: Layer 1 first (14 invariants), then
 Layer 2 (6 invariants).
 
-### Layer 1a — Physical Truth, commit-time (12 invariants)
+### Layer 1a — Physical Truth, commit-time (14 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
-and 1b (scheduled audit detection). All 11 Phase 1.1 invariants
-below are Layer 1a. Phase 1.1 has zero Layer 1b members; Phase 2
-stubs are recorded in `docs/02_specs/ledger_truth_model.md`
-under "Phase 2 Reserved Invariants."
+and 1b (scheduled audit detection). All 14 Phase 0-1.1 + Arc A
+invariants below are Layer 1a. The control-foundations set has
+zero Layer 1b members; Phase 2 stubs are recorded in
+`docs/02_specs/ledger_truth_model.md` under "Phase 2 Reserved
+Invariants."
 
 #### INV-LEDGER-001 — Debit = credit per journal entry
 
@@ -142,6 +143,21 @@ under "Phase 2 Reserved Invariants."
 - **Code enforcement:** Three triggers (`trg_audit_log_no_update`, `trg_audit_log_no_delete`, `trg_audit_log_no_truncate`) all calling `reject_audit_log_mutation()` which raises `feature_not_supported`. Plus two RLS policies (`audit_log_no_update` / `audit_log_no_delete`, both `USING (false)`) surfacing append-only intent at the RLS layer. Plus three `REVOKE TRUNCATE ON audit_log FROM PUBLIC|authenticated|anon` statements as defense in depth (TRUNCATE bypasses row-level triggers; the statement-level trigger catches it but REVOKE removes the privilege itself from non-privileged roles). Defined in `supabase/migrations/20240122000000_audit_log_append_only.sql`.
 - **Non-bypassable from application layer:** The triggers fire on every UPDATE / DELETE / TRUNCATE regardless of client. The Supabase-managed `service_role` retains `TRUNCATE` privilege by platform constraint, but `trg_audit_log_no_truncate` catches it. RLS policies provide the second layer for `authenticated`/`anon` paths.
 - **Pairing with INV-AUDIT-001:** INV-AUDIT-001 (Layer 2) guarantees every mutation writes an `audit_log` row; INV-AUDIT-002 (Layer 1a) guarantees that row is permanent. Together: every mutation produces a permanent audit record. Registered as a cross-layer pairing in `docs/02_specs/invariants.md`.
+
+#### INV-ADJUSTMENT-001 — Adjusting entries require a non-empty reason
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-adjustment-001`](../02_specs/ledger_truth_model.md#inv-adjustment-001--adjusting-entries-require-a-non-empty-reason-layer-1a)
+- **Test coverage:** `tests/integration/adjustmentEntry.test.ts` — test 2 ("Zod rejects empty adjustment_reason via .min(1)") exercises the Layer 2 Zod boundary, and test 3 ("DB CHECK rejects whitespace-only adjustment_reason") exercises the Layer 1a DB CHECK by submitting `'   '` which slips past `.min(1)` (length-only) and is rejected by the CHECK's `length(trim(...)) > 0` form. Test 1 verifies the happy-path adjusting-entry post succeeds with `adjustment_status = 'posted'` via the DB DEFAULT (ADR-0010 Layer 3 pin on the sibling reserved-enum-states affordance).
+- **Code enforcement:** `CONSTRAINT adjustment_reason_required_for_adjusting CHECK (entry_type <> 'adjusting' OR (adjustment_reason IS NOT NULL AND length(trim(adjustment_reason)) > 0))` on `journal_entries`. Discriminator-scoped: non-adjusting rows trivially satisfy via the `entry_type <> 'adjusting'` short-circuit. The `length(trim(...)) > 0` form rejects whitespace-only values — stricter than the Zod-boundary `.min(1)` which is length-only. Defined in `supabase/migrations/20240128000000_add_adjustment_reason.sql`.
+- **Non-bypassable from application layer:** Postgres CHECK constraint evaluated on every INSERT and UPDATE regardless of client. The service-layer Zod `.min(1)` is a fast ergonomic pre-flight; the DB CHECK is the stricter authoritative guard.
+
+#### INV-RECURRING-001 — Recurring journal templates balance
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-recurring-001`](../02_specs/ledger_truth_model.md#inv-recurring-001--recurring-journal-templates-balance-layer-1a)
+- **Test coverage:** `tests/integration/recurringJournal.test.ts` — test 2 ("INV-RECURRING-001 Layer 2: Zod rejects unbalanced template") exercises the Zod boundary by submitting a 100/50 debit/credit split and asserting ZodError; test 3 ("INV-RECURRING-001 Layer 1: deferred CONSTRAINT TRIGGER rejects unbalanced at commit") bypasses Zod via direct `adminClient().from('recurring_journal_template_lines').insert(...)` and asserts the deferred trigger rejects at commit with a message matching `/not balanced|check_violation|enforce_template_balance/i`. The two-layer coverage demonstrates both enforcement points independently.
+- **Code enforcement:** `CONSTRAINT TRIGGER trg_enforce_template_balance` declared `DEFERRABLE INITIALLY DEFERRED` on `recurring_journal_template_lines`. The trigger function `enforce_template_balance()` aggregates `SUM(debit_amount)` and `SUM(credit_amount)` for the parent `recurring_template_id` at commit and raises `check_violation` if they disagree. Structural mirror of INV-LEDGER-001's `enforce_journal_entry_balance` at `supabase/migrations/20240101000000_initial_schema.sql:255-283`. Defined in `supabase/migrations/20240131000000_recurring_journal_templates.sql`.
+- **Non-bypassable from application layer:** the deferred constraint runs at COMMIT regardless of which client (user-scoped or service-role) issued the INSERT. The service layer's Zod refine is a pre-flight ergonomic check, not authoritative enforcement.
+- **Pairing with INV-LEDGER-001:** INV-RECURRING-001 guards the recurring-journal template; INV-LEDGER-001 guards the posted journal entry that results from `approveRun`. Together: a broken template cannot produce unbalanced posted entries because either (a) the template write fails at RECURRING-001's CONSTRAINT TRIGGER, or (b) `approveRun` reads balanced template lines and the resulting `journal_entries` / `journal_lines` INSERT must also balance per LEDGER-001. Registered as a cross-layer pairing in `docs/02_specs/invariants.md`.
 
 ### Layer 2 — Operational Truth (6 invariants)
 
@@ -279,6 +295,6 @@ diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort
      <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
 ```
 
-Expected: 18 distinct INV-IDs in both directions, empty symmetric
+Expected: 20 distinct INV-IDs in both directions, empty symmetric
 diff. This is the single command an auditor can run at any future
 point to confirm the doc-to-code reachability has not drifted.

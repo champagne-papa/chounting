@@ -1569,6 +1569,306 @@ the header comment); `docs/04_engineering/conventions.md`
 
 ---
 
+### INV-ADJUSTMENT-001 — Adjusting entries require a non-empty reason (Layer 1a)
+
+**Invariant.** A journal entry with `entry_type = 'adjusting'`
+must have a non-empty `adjustment_reason`. The reason captures
+*why* the adjustment was posted — "period-end accrual,"
+"correction to intercompany AR overstatement," "reclassify
+deposits from liability to revenue" — and is required as a
+schema fact, not as a service-layer convention. An adjusting
+entry without a reason is not a legal adjustment. This is the
+Layer 1a complement to the adjusting-entry controller-only
+discipline: the permission rule gates *who* can post; the
+reason rule gates *whether* the posting carries the story an
+auditor will ask for. The discriminator is `entry_type`;
+non-adjusting rows have the CHECK predicate trivially true
+because the `entry_type <> 'adjusting'` short-circuit fires.
+
+**Enforcement.** `CONSTRAINT
+adjustment_reason_required_for_adjusting CHECK (entry_type <>
+'adjusting' OR (adjustment_reason IS NOT NULL AND
+length(trim(adjustment_reason)) > 0))` on `journal_entries`,
+defined in
+`supabase/migrations/20240128000000_add_adjustment_reason.sql`:
+
+```sql
+ALTER TABLE journal_entries
+  ADD COLUMN adjustment_reason text NULL;
+
+ALTER TABLE journal_entries
+  ADD CONSTRAINT adjustment_reason_required_for_adjusting
+  CHECK (
+    entry_type <> 'adjusting'
+    OR (adjustment_reason IS NOT NULL AND length(trim(adjustment_reason)) > 0)
+  );
+```
+
+**Why `length(trim(...)) > 0` instead of `IS NOT NULL`.** The
+`length(trim(...)) > 0` form rejects whitespace-only values
+(single space, tab, newline), not just NULL. An `IS NOT NULL`
+check would accept a single space as a "present" reason,
+capturing no story for auditors. This parallels
+INV-REVERSAL-002's identical form — same discipline, different
+discriminator. The Zod schema's `.min(1)` is length-only and
+accepts whitespace-only strings; the database CHECK is the
+strictly tighter guard. An integration test
+(`adjustmentEntry.test.ts` test 3) exercises this asymmetry
+by submitting `'   '` which passes Zod and is rejected by the
+CHECK.
+
+**Three-layer defense.** The rule has layered enforcement for
+fast ergonomic failure plus authoritative database truth:
+
+1. **Layer 1 — DB CHECK (this invariant).** Rejects any
+   INSERT/UPDATE that sets `entry_type = 'adjusting'` without
+   a non-empty `adjustment_reason`. Authoritative; non-
+   bypassable from the application layer.
+2. **Layer 2 — Zod boundary.**
+   `AdjustmentInputSchema.adjustment_reason: z.string().min(1)`
+   in `src/shared/schemas/accounting/journalEntry.schema.ts`
+   rejects empty-string at the schema parse, returning a
+   clean `ZodError` before the service body runs. `.min(1)`
+   is length-only and does not catch whitespace-only strings;
+   the DB CHECK is the tighter guard for those.
+3. **Layer 3 — Service emission.**
+   `journalEntryService.post()`'s adjusting branch writes
+   `parsed.adjustment_reason` through from the parsed input;
+   never synthesizes a reason, never coerces NULL to a
+   placeholder. No service code constructs an adjusting
+   entry without a real reason.
+
+**Interaction with INV-REVERSAL-002.** Both invariants share
+the "column required when discriminator value" shape:
+INV-REVERSAL-002 requires `reversal_reason` when
+`reverses_journal_entry_id IS NOT NULL`; INV-ADJUSTMENT-001
+requires `adjustment_reason` when `entry_type = 'adjusting'`.
+The two reasons live on different columns because they answer
+different auditor questions. A reversal's reason explains
+*why the original is being undone*; an adjusting entry's
+reason explains *why this period-end posting exists*. A
+single entry cannot be both (AdjustmentInputSchema rejects
+the combination at the Zod boundary via
+`reverses_journal_entry_id: z.undefined().optional()`).
+
+**Interaction with INV-LEDGER-001.** Independent guarantees.
+INV-ADJUSTMENT-001 requires a reason on adjusting entries;
+INV-LEDGER-001 requires the adjusting entry itself to balance.
+Both must be satisfied for the posting to commit. Both are
+Layer 1a CHECKs, so both run at the database regardless of
+the path that reached the INSERT.
+
+**Interaction with ADR-0010.** The sibling migration
+(20240129000000_adjustment_status_enum.sql) ships the
+`adjustment_status` reserved-enum-states affordance (ADR-0010
+§Decision, first deliberate consumer). ADR-0010's three-layer
+defense is specifically for reserved enum values, a distinct
+enforcement class from INV-ADJUSTMENT-001's required-when-
+discriminator rule. The two rules land in adjacent Step 9a
+migrations because they describe complementary facts about
+adjusting entries (their reason requirement and their
+workflow-state shape), but they apply to different columns
+and answer different audit questions.
+
+**Phase 2 evolution.** If a Phase 2 maker-checker workflow
+activates on adjusting entries (per ADR-0010's reserved-
+enum-states framing for `adjustment_status`), the reason rule
+is orthogonal: the workflow adds an approval gate on
+*whether to post*, not on *whether the posting carries a
+reason*. The CHECK constraint is unchanged at the Phase 2
+cutover. The Phase 2 approver may append additional reason
+context via a separate column — but the original non-empty
+`adjustment_reason` remains a schema fact.
+
+**Integration test.**
+`tests/integration/adjustmentEntry.test.ts` exercises both
+the Layer 2 Zod rejection (test 2: empty string rejected
+with ZodError) and the Layer 1a DB CHECK rejection (test 3:
+whitespace-only rejected with POST_FAILED carrying the
+`check_violation` code). Test 1 verifies the happy-path
+insert succeeds with `adjustment_status = 'posted'` via the
+DB DEFAULT (ADR-0010 Layer 3 pin on the sibling reserved-
+enum-states affordance). The two-layer coverage demonstrates
+the strictness asymmetry: `.min(1)` accepts `'   '` and the
+DB CHECK is the backstop.
+
+**Referenced by:**
+`src/shared/schemas/accounting/journalEntry.schema.ts`
+(`AdjustmentInputSchema`);
+`src/services/accounting/journalEntryService.ts` (adjusting
+branch of `post()`);
+`supabase/migrations/20240128000000_add_adjustment_reason.sql`
+(this CHECK);
+`supabase/migrations/20240129000000_adjustment_status_enum.sql`
+(sibling Step 9a migration — the `adjustment_status`
+reserved-enum-states consumer);
+`docs/07_governance/adr/0010-reserved-enum-states.md`
+(three-layer defense shape for `adjustment_status`;
+INV-ADJUSTMENT-001 follows an analogous Layer 1/2/3 pattern
+for a different enforcement class);
+`tests/integration/adjustmentEntry.test.ts` (tests 2 + 3).
+
+---
+
+### INV-RECURRING-001 — Recurring journal templates balance (Layer 1a)
+
+**Invariant.** The sum of `debit_amount` across all
+`recurring_journal_template_lines` for a given
+`recurring_template_id` must equal the sum of `credit_amount`
+across the same lines. This rule is enforced at transaction
+commit time, not at statement time — a service function may
+insert any number of template lines within a single
+transaction, and the rule is checked once when the
+transaction commits. A recurring-journal template that does
+not balance cannot produce a balanced posted run through
+`approveRun`, so the enforcement site protects the
+*template*; INV-LEDGER-001 protects the *posted run* that
+results. Together they guarantee that a broken template
+cannot produce unbalanced posted entries.
+
+**Enforcement.** `CONSTRAINT TRIGGER
+trg_enforce_template_balance`, defined in
+`supabase/migrations/20240131000000_recurring_journal_templates.sql`.
+The trigger is declared `DEFERRABLE INITIALLY DEFERRED`,
+which means Postgres evaluates it at `COMMIT` rather than
+after each row-level operation. The trigger body aggregates
+sums and raises `check_violation` if they disagree:
+
+```sql
+CREATE OR REPLACE FUNCTION enforce_template_balance()
+RETURNS TRIGGER AS $$
+DECLARE
+  total_debit numeric(20,4);
+  total_credit numeric(20,4);
+  v_template_id uuid;
+BEGIN
+  v_template_id := COALESCE(NEW.recurring_template_id, OLD.recurring_template_id);
+
+  SELECT
+    COALESCE(SUM(debit_amount), 0),
+    COALESCE(SUM(credit_amount), 0)
+  INTO total_debit, total_credit
+  FROM recurring_journal_template_lines
+  WHERE recurring_template_id = v_template_id;
+
+  IF total_debit <> total_credit THEN
+    RAISE EXCEPTION
+      'Recurring journal template % is not balanced: debits=%, credits=%',
+      v_template_id, total_debit, total_credit
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER trg_enforce_template_balance
+  AFTER INSERT OR UPDATE OR DELETE ON recurring_journal_template_lines
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW
+  EXECUTE FUNCTION enforce_template_balance();
+```
+
+**Why deferred.** A template with two or more lines cannot be
+inserted line-by-line if the balance check runs at statement
+time — after the first `INSERT`, the template is transiently
+unbalanced (total_debit ≠ total_credit), and a non-deferred
+trigger would reject the first insert before the second line
+was written. The `DEFERRABLE INITIALLY DEFERRED` setting
+moves the evaluation to `COMMIT`, by which time all lines for
+the template have been inserted and the sums can be compared
+against a fully-populated set. This is a structural mirror of
+INV-LEDGER-001's `enforce_journal_entry_balance` trigger at
+`supabase/migrations/20240101000000_initial_schema.sql:255-283`;
+the Step 10a migration's header comment cites the structural
+mirror explicitly.
+
+**Three-layer defense.** Like INV-LEDGER-001, the rule has
+layered enforcement for fast ergonomic failure plus
+authoritative database truth:
+
+1. **Layer 1 — DB CONSTRAINT TRIGGER (this invariant).**
+   Deferred, fires at commit. Authoritative; non-bypassable
+   from the application layer.
+2. **Layer 2 — Zod boundary.**
+   `RecurringTemplateInputSchema.refine()` and
+   `RecurringTemplateUpdateSchema.refine()` in
+   `src/shared/schemas/accounting/recurringJournal.schema.ts`
+   verify balanced lines at the service boundary. Faster
+   ergonomic error than waiting for the DB trigger.
+3. **Layer 3 — Service emission.**
+   `recurringJournalService`'s `createTemplate` and
+   `updateTemplate` methods all parse through the Zod schemas
+   before any INSERT. No bypass path writes template lines
+   without Zod-validated balance.
+
+**Interaction with INV-LEDGER-001 (cross-layer pairing).**
+INV-RECURRING-001 protects the recurring-journal *template*
+(rules for generating entries); INV-LEDGER-001 protects the
+*posted* journal entry that results from `approveRun`.
+Together: a broken template cannot produce an unbalanced
+posted run even through the approve-and-post path, because
+either (a) creating or updating the template fails at this
+invariant (Layer 1a commit-time CONSTRAINT TRIGGER), or (b)
+`approveRun` reads balanced template lines and the resulting
+`journal_entries` / `journal_lines` INSERT must also balance
+per INV-LEDGER-001. The pairing is registered in the
+cross-layer pairings table in `invariants.md`.
+
+**Interaction with ADR-0010.** The same migration
+(20240131000000) that ships this invariant also ships the
+`recurring_journal_runs.status` reserved-enum-states
+affordance (ADR-0010's second deliberate consumer;
+`adjustment_status` is the first). The two are orthogonal
+enforcement concerns — INV-RECURRING-001 guards balance at
+the template level; ADR-0010's scoped CHECK on
+`recurring_journal_runs.status` guards against Phase 1 writes
+of the reserved `'approved'` value — but they land in the
+same migration because they describe the same data model
+(recurring journals) at complementary layers. The migration's
+scoped CHECK is unconditional (every row of
+`recurring_journal_runs` is a run, no discriminator column
+needed), which is a variant of ADR-0010's pattern distinct
+from Step 9a's `entry_type <>  'adjusting'` discriminator-
+scoped form.
+
+**Phase 2 evolution.** The rule is permanent. When the Phase
+2 recurring-journal scheduler ships (per
+`docs/09_briefs/phase-1.2/obligations.md`), the scheduler
+calls the same approve-and-post path that manual approval
+uses in Phase 1; the template balance rule is unchanged. The
+scheduler is a caller, not an invariant surface. The deferred
+CONSTRAINT TRIGGER continues to protect every write site,
+including scheduler-initiated inserts or updates.
+
+**Integration test.**
+`tests/integration/recurringJournal.test.ts` exercises both
+layers: test 2 (Zod Layer 2) submits a deliberately
+unbalanced template via the service and asserts rejection
+with ZodError; test 3 (DB Layer 1) bypasses Zod via direct
+`adminClient` INSERT on
+`recurring_journal_template_lines` and asserts the deferred
+trigger rejects at commit with a message matching
+`/not balanced|check_violation|enforce_template_balance/i`.
+The two-layer coverage demonstrates both enforcement points
+independently.
+
+**Referenced by:**
+`src/shared/schemas/accounting/recurringJournal.schema.ts`
+(`RecurringTemplateInputSchema.refine()` — Layer 2);
+`src/services/accounting/recurringJournalService.ts` (Layer 3
+discipline in service method headers);
+`supabase/migrations/20240131000000_recurring_journal_templates.sql`
+(this CONSTRAINT TRIGGER);
+`supabase/migrations/20240101000000_initial_schema.sql:255-283`
+(structural template — `enforce_journal_entry_balance`);
+`docs/07_governance/adr/0010-reserved-enum-states.md`
+(sibling reserved-enum-states consumer in the same
+migration);
+`tests/integration/recurringJournal.test.ts` (tests 2 + 3).
+
+---
+
 ### Transaction Isolation (READ COMMITTED + targeted row locks)
 
 **This is not an invariant.** Transaction isolation is a
@@ -3799,15 +4099,17 @@ error classes and one reserved-but-unclassed sentinel:
 1. **`ServiceError`** — defined in
    `src/services/errors/ServiceError.ts`. Constructor:
    `new ServiceError(code, message, details?)`. The `code` is a
-   value from the `ServiceErrorCode` union type (19 codes in
-   Phase 1.1). The class extends `Error` and sets `name =
-   'ServiceError'`. The message is prefixed with `[CODE]` so
-   stack traces and log dumps show the code inline.
+   value from the `ServiceErrorCode` union type (56 codes as of
+   Arc A ship; count reconciled from the actual union at
+   Step 11 per the D11-C ratification, updating from the
+   Phase 1.1 baseline of 19). The class extends `Error` and
+   sets `name = 'ServiceError'`. The message is prefixed with
+   `[CODE]` so stack traces and log dumps show the code inline.
 2. **`InvariantViolationError`** — defined in
    `src/services/middleware/errors.ts`. **`InvariantViolationError`
    is a subclass of `ServiceError`**, not a parallel class. The
    constructor takes the same `ServiceErrorCode` values (it
-   reuses the 19-code union) and differs only in `this.name =
+   reuses the 56-code union) and differs only in `this.name =
    'InvariantViolationError'`. A catch block on `ServiceError`
    catches both; a catch block on `InvariantViolationError`
    catches only the throws from `withInvariants`. The subclass
@@ -3843,8 +4145,18 @@ route handler's generic `instanceof ServiceError` → else → 500
 default path, because it is a plain `Error` and falls through to
 the default.
 
-**Code catalog.** The 19 `ServiceErrorCode` values plus the
-`AUDIT_WRITE_FAILED` sentinel, organized by category.
+**Code catalog.** The 56 `ServiceErrorCode` values plus the
+`AUDIT_WRITE_FAILED` sentinel, organized by category. The per-
+code entries below were authored during the Phase 1.1 closeout
+and cover the original 19 codes; the subsequent Phase 1.5 and
+Arc A additions (period lifecycle, org profile, addresses, user
+profiles, invitations, membership lifecycle, agent, and
+recurring journals) expand the union but their per-code catalog
+expansion is deferred to a dedicated session (tracked in Step 12
+queue). The HTTP-status mapping table above enumerates only the
+Phase 1.1 subset for the same reason; refer to
+`src/app/api/_helpers/serviceErrorToStatus.ts` for the complete
+mapping.
 
 ### Auth / Access (4 codes)
 
@@ -4309,12 +4621,12 @@ the default.
 
 ---
 
-## Summary — The 17 Phase 1.1 Invariants
+## Summary — The 20 Phase 0-1.1 + Arc A Invariants
 
-For reference, the complete list of Phase 1.1 invariants, in the
-order they appear in this file:
+For reference, the complete list of Phase 0-1.1 + Arc A
+invariants, in the order they appear in this file:
 
-**Layer 1a — Physical Truth, commit-time (12 invariants):**
+**Layer 1a — Physical Truth, commit-time (14 invariants):**
 
 1. INV-LEDGER-001 — Debit = credit per journal entry
 2. INV-LEDGER-002 — Posting to a locked period is rejected
@@ -4328,6 +4640,8 @@ order they appear in this file:
 10. INV-RLS-001 — Cross-org data is never visible outside the org
 11. INV-REVERSAL-002 — Reversal entries require a non-empty reason
 12. INV-AUDIT-002 — The audit_log table is append-only
+13. INV-ADJUSTMENT-001 — Adjusting entries require a non-empty reason
+14. INV-RECURRING-001 — Recurring journal templates balance
 
 **Layer 1b — Physical Truth, scheduled audit (zero Phase 1.1
 invariants).** The sub-layer is reserved by ADR-0008 and holds
@@ -4344,12 +4658,12 @@ locks strategy and the three read-then-write patterns in Phase
 
 **Layer 2 — Operational Truth (6 invariants):**
 
-13. INV-AUTH-001 — Every mutating service call is authorized
-14. INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
-15. INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
-16. INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
-17. INV-REVERSAL-001 — Reversal lines must mirror the original
-18. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
+15. INV-AUTH-001 — Every mutating service call is authorized
+16. INV-SERVICE-001 — Every mutating service function is invoked through `withInvariants`
+17. INV-SERVICE-002 — The service layer uses `adminClient`, never `userClient`
+18. INV-MONEY-001 — Money at the service boundary is string-typed, never JavaScript `Number`
+19. INV-REVERSAL-001 — Reversal lines must mirror the original
+20. INV-AUDIT-001 — Every mutating service call writes an `audit_log` row in the same transaction
 
 **Layer 3 — Temporal Truth:** zero INV-IDs in Phase 1.1. The
 Layer 1a enforcement of "events are append-only" (INV-LEDGER-003)
@@ -4366,6 +4680,7 @@ not by Layer 4 assertions.
 
 **Cross-cutting sections:** Service Communication Rules (five
 rules extracted from PLAN.md §15) and Structured Error Contracts
-(19 ServiceError codes + 1 AUDIT_WRITE_FAILED sentinel) document
-the boundary discipline and the error taxonomy that apply across
-all layers.
+(56 ServiceError codes + 1 AUDIT_WRITE_FAILED sentinel as of Arc
+A ship; count reconciled from the actual `ServiceErrorCode` union
+per the D11-C ratification at Step 11) document the boundary
+discipline and the error taxonomy that apply across all layers.
