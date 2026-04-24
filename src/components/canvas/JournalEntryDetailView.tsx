@@ -195,11 +195,33 @@ export function JournalEntryDetailView({ orgId, entryId, onNavigate }: Props) {
 
           {/* Actions */}
           <div className="mt-4">
-            {entry.reversed_by ? (
-              <div className="text-sm text-neutral-500">
-                This entry has already been reversed by Entry #{entry.reversed_by.entry_number}
-              </div>
-            ) : (
+            {entry.reversed_by ? (() => {
+              // Capture entry.reversed_by into a local const so
+              // the type narrowing survives into the onClick
+              // closure. Naked `entry.reversed_by!.entry_id`
+              // would be a non-null-assertion footgun; the
+              // capture is the safe idiom (mirrors the reverses
+              // block above).
+              const reversedByTarget = entry.reversed_by;
+              return (
+                <div className="text-sm text-neutral-500">
+                  This entry has already been reversed by{' '}
+                  <button
+                    className="text-blue-600 hover:underline"
+                    onClick={() =>
+                      onNavigate({
+                        type: 'journal_entry',
+                        orgId,
+                        entryId: reversedByTarget.entry_id,
+                        mode: 'view',
+                      })
+                    }
+                  >
+                    Entry #{reversedByTarget.entry_number}
+                  </button>
+                </div>
+              );
+            })() : (
               <button
                 className="text-sm text-red-600 hover:underline"
                 onClick={() =>

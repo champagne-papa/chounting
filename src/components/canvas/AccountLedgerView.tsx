@@ -129,13 +129,13 @@ export function AccountLedgerView({ orgId, accountId, periodId, onNavigate }: Ac
       ) : (
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr>
-              <th className="text-right text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Entry #</th>
-              <th className="text-left text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Date</th>
-              <th className="text-left text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Description</th>
-              <th className="text-right text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Debit</th>
-              <th className="text-right text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Credit</th>
-              <th className="text-right text-xs uppercase tracking-wide text-neutral-500 border-b border-neutral-200 pb-2">Running Balance</th>
+            <tr className="border-b border-neutral-200">
+              <th className="py-2 pr-4 text-right text-xs uppercase tracking-wide text-neutral-500">Entry #</th>
+              <th className="py-2 pr-4 text-left text-xs uppercase tracking-wide text-neutral-500">Date</th>
+              <th className="py-2 pr-4 text-left text-xs uppercase tracking-wide text-neutral-500">Description</th>
+              <th className="py-2 pr-4 text-right text-xs uppercase tracking-wide text-neutral-500">Debit</th>
+              <th className="py-2 pr-4 text-right text-xs uppercase tracking-wide text-neutral-500">Credit</th>
+              <th className="py-2 text-right text-xs uppercase tracking-wide text-neutral-500">Running Balance</th>
             </tr>
           </thead>
           <tbody>
@@ -152,13 +152,13 @@ export function AccountLedgerView({ orgId, accountId, periodId, onNavigate }: Ac
                   })
                 }
               >
-                <td className="py-2 text-right">{row.entry_number}</td>
-                <td className="py-2">{row.entry_date}</td>
-                <td className="py-2">{row.description}</td>
-                <td className="py-2 text-right font-mono">
+                <td className="py-2 pr-4 text-right">{row.entry_number}</td>
+                <td className="py-2 pr-4">{row.entry_date}</td>
+                <td className="py-2 pr-4">{row.description}</td>
+                <td className="py-2 pr-4 text-right font-mono">
                   {row.debit_amount !== '0.0000' ? row.debit_amount : ''}
                 </td>
-                <td className="py-2 text-right font-mono">
+                <td className="py-2 pr-4 text-right font-mono">
                   {row.credit_amount !== '0.0000' ? row.credit_amount : ''}
                 </td>
                 <td className="py-2 text-right font-mono">{row.running_balance}</td>

@@ -150,20 +150,20 @@ describe('accountLedgerService.get', () => {
     currentPeriodId = period!.period_id;
   });
 
-  it('returns empty rows + correct CoA metadata for Cash on fresh seed', async () => {
+  it('returns well-shaped result with correct CoA metadata for Cash', async () => {
     const result = await accountLedgerService.get(
       { org_id: SEED.ORG_HOLDING, account_id: cashAccountId },
       freshCtx(),
     );
 
-    // Empty-seed shape pin. Note: this is sensitive to suite
-    // ordering — assumes this test runs first against a fresh
-    // seed (vitest sequential default within a file). Other
-    // test files posting to Cash in a parallel suite run could
-    // make rows non-empty; the gate-check command uses
-    // `pnpm db:reset && pnpm test tests/integration/
-    // accountLedgerService.test.ts` to isolate.
-    expect(result.rows).toEqual([]);
+    // Shape + metadata pin. Order-independent — prior suites may
+    // post to Cash with today's dates, so row count is not
+    // asserted. The load-bearing checks are: (a) rows is an
+    // array (RPC returned a flattened list), (b) CoA metadata
+    // survives the JOIN untouched. Tests 3-6 cover running-
+    // balance behavior against specific row content via
+    // baseline-and-delta assertions.
+    expect(Array.isArray(result.rows)).toBe(true);
     expect(result.account.code).toBe('1000');
     expect(result.account.name).toBe('Cash and Cash Equivalents');
     expect(result.account.type).toBe('asset');
