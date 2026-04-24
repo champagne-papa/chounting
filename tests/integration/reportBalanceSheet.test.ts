@@ -2,8 +2,10 @@
 // Integration tests for reportService.balanceSheet + the
 // get_balance_sheet RPC. Six tests:
 //
-//   1. 4-row return shape against fresh seed — all zeros; as_of_date
-//      echo present; all four fields coerced to MoneyAmount.
+//   1. Shape pin — all four fields (assets, liabilities,
+//      equity_base, current_earnings) are MoneyAmount-shaped
+//      strings; as_of_date echoes today. Order-independent;
+//      does not assert absolute values (post-Step-12b rewrite).
 //   2. Accounting equation balances against posted activity —
 //      assets == liabilities + equity_base + current_earnings.
 //   3. Current-earnings synthesis (the D8 in-RPC path) — revenue

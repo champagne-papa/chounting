@@ -4,11 +4,10 @@
 //
 // Six tests:
 //
-//   1. Shape + empty-seed behavior — Cash account, fresh seed,
-//      0 rows + correct CoA metadata. Order-sensitive against
-//      the suite (assumes test 1 runs first against a fresh
-//      seed; tests 3-6 use baseline-and-delta to be order-
-//      independent).
+//   1. Shape + metadata pin — Cash account metadata survives
+//      the JOIN; rows is an array. Order-independent; does
+//      not assert row count or absolute-value state (post-
+//      Step-12b rewrite).
 //   2. NOT_FOUND on bogus account_id (distinct ergonomic from
 //      accountBalanceService's return-zero — ledger needs
 //      metadata that doesn't exist for a phantom account).
@@ -39,8 +38,8 @@
 // an asset that a credit-on-liability would.
 //
 // Baseline pattern: per-test baseline capture at the top of each
-// mutating test body. Order-independent for tests 3-6, no shared
-// beforeAll baseline.
+// mutating test body. Order-independent across all tests, no
+// shared beforeAll baseline.
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
