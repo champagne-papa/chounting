@@ -37,6 +37,13 @@ export const ACTION_NAMES = [
   'user.suspend',
   'user.remove',
   'user.profile.update',
+  // Recurring journals (Phase 0-1.1 Arc A Step 10)
+  'recurring_template.create',
+  'recurring_template.update',
+  'recurring_template.deactivate',
+  'recurring_run.generate',
+  'recurring_run.approve',
+  'recurring_run.reject',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];

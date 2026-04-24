@@ -27,14 +27,12 @@ import { resolve } from 'node:path';
 // shipped code is the authoritative source. `journal_entry.post`
 // and `journal_entry.reverse` remain imperative because
 // `journalEntryService` predates Phase 1.5A — a tracked historical
-// exception, not a new standard.
-//
-// TODO(step-10): add 'recurring_run.generate', 'recurring_run.approve',
-//   'recurring_run.reject' to a new RECURRING_RUN_ACTIONS set, and
-//   'recurring_template.create', 'recurring_template.update',
-//   'recurring_template.deactivate' to a new RECURRING_TEMPLATE_ACTIONS
-//   set, plus their entity-table-scanning logic in runVerifier. See
-//   brief §9 "extensions as ship-order dependencies."
+// exception, not a new standard. The recurring-journal action keys
+// shipped in Step 10a follow the same imperative pattern
+// (`recurring_template.create`, `recurring_run.generate`, etc.)
+// because they pair with a service that predates the convention's
+// audit-key update — a deliberate alignment with the adjacent
+// journalEntryService rather than a new standard.
 
 export const JOURNAL_ENTRY_ACTIONS = [
   'journal_entry.post',
@@ -43,6 +41,19 @@ export const JOURNAL_ENTRY_ACTIONS = [
 ] as const;
 
 export const FISCAL_PERIOD_LOCK_ACTIONS = ['period.locked'] as const;
+
+// Step 10a extensions — entity-table scans for recurring_journal_*.
+export const RECURRING_TEMPLATE_ACTIONS = [
+  'recurring_template.create',
+  'recurring_template.update',
+  'recurring_template.deactivate',
+] as const;
+
+export const RECURRING_RUN_ACTIONS = [
+  'recurring_run.generate',
+  'recurring_run.approve',
+  'recurring_run.reject',
+] as const;
 
 // Defined but unused by the Step-4 reconciliation path. `fiscal_periods`
 // schema doesn't persist unlock history (`locked_at` becomes NULL on
@@ -59,7 +70,11 @@ export const FISCAL_PERIOD_UNLOCK_ACTIONS = ['period.unlocked'] as const;
 // --- Types ------------------------------------------------------------------
 
 export interface EntityRow {
-  entity_type: 'journal_entry' | 'fiscal_period';
+  entity_type:
+    | 'journal_entry'
+    | 'fiscal_period'
+    | 'recurring_journal_template'
+    | 'recurring_journal_run';
   entity_id: string;
   org_id: string;
   expected_action_set: readonly string[];
@@ -178,10 +193,35 @@ export async function runVerifier(db?: SupabaseClient): Promise<GapReport> {
     throw new Error(`VERIFIER_READ_FAILED (fiscal_periods): ${fpErr.message}`);
   }
 
+  const { data: recurringTemplates, error: rtErr } = await client
+    .from('recurring_journal_templates')
+    .select('recurring_template_id, org_id');
+  if (rtErr) {
+    throw new Error(`VERIFIER_READ_FAILED (recurring_journal_templates): ${rtErr.message}`);
+  }
+
+  // Runs don't carry org_id directly; synthesize via the template map.
+  const templateOrgMap = new Map<string, string>();
+  for (const t of recurringTemplates ?? []) {
+    templateOrgMap.set(t.recurring_template_id as string, t.org_id as string);
+  }
+
+  const { data: recurringRuns, error: rrErr } = await client
+    .from('recurring_journal_runs')
+    .select('recurring_run_id, recurring_template_id');
+  if (rrErr) {
+    throw new Error(`VERIFIER_READ_FAILED (recurring_journal_runs): ${rrErr.message}`);
+  }
+
   const { data: auditRows, error: alErr } = await client
     .from('audit_log')
     .select('action, entity_type, entity_id, org_id')
-    .in('entity_type', ['journal_entry', 'fiscal_period']);
+    .in('entity_type', [
+      'journal_entry',
+      'fiscal_period',
+      'recurring_journal_template',
+      'recurring_journal_run',
+    ]);
   if (alErr) {
     throw new Error(`VERIFIER_READ_FAILED (audit_log): ${alErr.message}`);
   }
@@ -204,6 +244,24 @@ export async function runVerifier(db?: SupabaseClient): Promise<GapReport> {
           org_id: p.org_id as string,
           expected_action_set: FISCAL_PERIOD_LOCK_ACTIONS,
           lifecycle_event: 'locked',
+        }),
+      ),
+    ...(recurringTemplates ?? []).map(
+      (t): EntityRow => ({
+        entity_type: 'recurring_journal_template',
+        entity_id: t.recurring_template_id as string,
+        org_id: t.org_id as string,
+        expected_action_set: RECURRING_TEMPLATE_ACTIONS,
+      }),
+    ),
+    ...(recurringRuns ?? [])
+      .filter((r) => templateOrgMap.has(r.recurring_template_id as string))
+      .map(
+        (r): EntityRow => ({
+          entity_type: 'recurring_journal_run',
+          entity_id: r.recurring_run_id as string,
+          org_id: templateOrgMap.get(r.recurring_template_id as string)!,
+          expected_action_set: RECURRING_RUN_ACTIONS,
         }),
       ),
   ];

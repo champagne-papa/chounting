@@ -25,13 +25,22 @@ no synchronous enforcement option and sit in Layer 1b natively.
 
 ## 2. What it reconciles
 
-Two entity-table reconciliations in Step 4:
+Four entity-table reconciliations (two shipped in Step 4; two
+added in Step 10a):
 
 - Every `journal_entries` row → matching `audit_log` row with
   action in `{'journal_entry.post', 'journal_entry.reverse',
   'journal_entry.adjust'}`.
 - Every currently-locked `fiscal_periods` row (`locked_at IS NOT
   NULL`) → matching `audit_log` row with action `'period.locked'`.
+- Every `recurring_journal_templates` row → matching `audit_log`
+  row with action in `{'recurring_template.create',
+  'recurring_template.update', 'recurring_template.deactivate'}`.
+- Every `recurring_journal_runs` row → matching `audit_log` row
+  with action in `{'recurring_run.generate', 'recurring_run.approve',
+  'recurring_run.reject'}`. `org_id` for runs is synthesized from
+  the parent template (runs don't carry a denormalized `org_id`
+  column).
 
 **Scope direction: one-directional.** The verifier scans from
 entity tables to `audit_log` only. The reverse direction (every
@@ -157,16 +166,16 @@ the shape future sessions follow.
   `journal_entries` entity-row synthesis picks it up automatically
   because the filter is by `entity_type`, not by action; only the
   action-set constant needs extension.
-- **`TODO(step-10)`** — recurring journals. When Step 10 ships,
-  add `RECURRING_RUN_ACTIONS` and `RECURRING_TEMPLATE_ACTIONS`
-  const sets, plus entity-table-scanning logic in `runVerifier`
-  for the new `recurring_journal_runs` and
-  `recurring_journal_templates` tables. The existing
-  `audit_log` SELECT's `.in('entity_type', [...])` filter needs
-  extension to include the new entity types.
+- **Step 10a extension (shipped)** — recurring journals.
+  `RECURRING_TEMPLATE_ACTIONS` and `RECURRING_RUN_ACTIONS` const
+  sets plus entity-table scans for `recurring_journal_templates`
+  and `recurring_journal_runs` landed alongside the recurring-
+  journals data model. Runs synthesize `org_id` via the parent
+  template (no denormalized column on the runs table).
 
-Future contributors find these extension points by running
-`grep -rn "TODO(step-9)\|TODO(step-10)" scripts/`.
+Future contributors find remaining extension points by running
+`grep -rn "TODO(step-9)" scripts/` (no `TODO(step-10)` markers
+remain).
 
 ## 6. Known follow-ups
 

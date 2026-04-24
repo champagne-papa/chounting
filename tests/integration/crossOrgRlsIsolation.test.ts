@@ -193,7 +193,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         .from('permissions')
         .select('permission_key');
       expect(error).toBeNull();
-      expect(data!.length).toBe(19);
+      expect(data!.length).toBe(25);
     });
 
     it('CA-37: role_permissions readable by any authenticated user', async () => {
@@ -201,7 +201,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         .from('role_permissions')
         .select('role_id, permission_key');
       expect(error).toBeNull();
-      expect(data!.length).toBe(27);
+      expect(data!.length).toBe(33);
     });
 
     it('CA-37: roles shows system roles to any authenticated user', async () => {

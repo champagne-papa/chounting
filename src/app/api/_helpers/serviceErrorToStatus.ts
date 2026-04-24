@@ -29,6 +29,7 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'INVITATION_NOT_FOUND':
     case 'MEMBERSHIP_NOT_FOUND':
     case 'AGENT_SESSION_NOT_FOUND':
+    case 'RECURRING_TEMPLATE_NOT_FOUND':
       return 404;
 
     // Gone (resource expired)
@@ -73,6 +74,8 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'AGENT_TOOL_VALIDATION_FAILED':
     case 'AGENT_STRUCTURED_RESPONSE_INVALID':
     case 'ONBOARDING_INCOMPLETE':
+    case 'RECURRING_TEMPLATE_INACTIVE':
+    case 'RECURRING_RUN_NOT_PENDING':
       return 422;
 
     // Server errors (unexpected failures)

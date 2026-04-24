@@ -66,7 +66,11 @@ export type ServiceErrorCode =
   | 'AGENT_SESSION_NOT_FOUND'
   | 'AGENT_SESSION_EXPIRED'
   | 'AGENT_STRUCTURED_RESPONSE_INVALID'
-  | 'ONBOARDING_INCOMPLETE';
+  | 'ONBOARDING_INCOMPLETE'
+  // Recurring journals (Phase 0-1.1 Arc A Step 10)
+  | 'RECURRING_TEMPLATE_NOT_FOUND'
+  | 'RECURRING_TEMPLATE_INACTIVE'
+  | 'RECURRING_RUN_NOT_PENDING';
 
 export class ServiceError extends Error {
   constructor(
