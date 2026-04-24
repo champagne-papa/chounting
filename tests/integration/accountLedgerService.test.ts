@@ -13,17 +13,30 @@
 //      accountBalanceService's return-zero — ledger needs
 //      metadata that doesn't exist for a phantom account).
 //   3. Posted activity + running-balance correctness — three
-//      ascending-date entries on Cash; baseline-relative delta
-//      assertions.
+//      ascending-date entries on Investments in Subsidiaries;
+//      baseline-relative delta assertions.
 //   4. Period filter (shape + pass-through only) — current
 //      period / non-matching UUID / undefined. Multi-period
 //      coverage deferred to 8b when accounts_by_type tests can
 //      amortize the unlock/lock fixture.
 //   5. Cross-org access denied — RealEstate-only ctx attempts
 //      a HOLDING ledger query.
-//   6. Sign-convention pin — credit-only entry on Accounts
-//      Payable; running_balance delta must be -500 (debit-
-//      positive convention; caller flips for natural balance).
+//   6. Sign-convention pin — credit-only entry on Intercompany
+//      Receivables; running_balance delta must be -500 (debit-
+//      positive convention; caller flips for natural balance
+//      when presenting liabilities or contra-assets).
+//
+// Tests 3 and 6 migrated off Cash (1000) / Accounts Payable (2000)
+// at Item 27 resolution. Those seed accounts are promiscuously
+// shared across test files, and window-function-computed
+// running_balance at historical dates interleaves with other
+// files' posts under full-suite sequential execution. Tests 3/6
+// now use 1100 Investments in Subsidiaries and 1200 Intercompany
+// Receivables respectively — both HOLDING asset accounts with
+// zero hits in other test files. Debit-positive running_balance
+// semantics apply uniformly across account types, so test 6's
+// sign-convention pin still exercises the same RPC behavior on
+// an asset that a credit-on-liability would.
 //
 // Baseline pattern: per-test baseline capture at the top of each
 // mutating test body. Order-independent for tests 3-6, no shared
@@ -39,11 +52,13 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 describe('accountLedgerService.get', () => {
   const db = adminClient();
 
-  let cashAccountId: string;             // 1000 — asset (HOLDING)
-  let shareCapitalAccountId: string;     // 3000 — equity (HOLDING)
-  let accountsPayableAccountId: string;  // 2000 — liability (HOLDING)
-  let professionalFeesAccountId: string; // 5000 — expense (HOLDING)
-  let currentPeriodId: string;           // open period in HOLDING
+  let cashAccountId: string;                    // 1000 — asset (HOLDING)
+  let shareCapitalAccountId: string;            // 3000 — equity (HOLDING)
+  let accountsPayableAccountId: string;         // 2000 — liability (HOLDING)
+  let professionalFeesAccountId: string;        // 5000 — expense (HOLDING)
+  let investmentsAccountId: string;             // 1100 — asset (HOLDING; clean — used only here)
+  let intercompanyReceivablesAccountId: string; // 1200 — asset (HOLDING; clean — used only here)
+  let currentPeriodId: string;                  // open period in HOLDING
 
   const controllerCtx: ServiceContext = {
     trace_id: crypto.randomUUID(),
@@ -136,6 +151,24 @@ describe('accountLedgerService.get', () => {
       .eq('account_code', '5000')
       .single();
 
+    // Clean accounts for tests 3 and 6 — Item 27 migration. These
+    // two codes have zero hits in other test files, so the
+    // running_balance window function doesn't interleave with
+    // historical-dated activity from other suites.
+    const { data: investments } = await db
+      .from('chart_of_accounts')
+      .select('account_id')
+      .eq('org_id', SEED.ORG_HOLDING)
+      .eq('account_code', '1100')
+      .single();
+
+    const { data: intercompanyReceivables } = await db
+      .from('chart_of_accounts')
+      .select('account_id')
+      .eq('org_id', SEED.ORG_HOLDING)
+      .eq('account_code', '1200')
+      .single();
+
     const { data: period } = await db
       .from('fiscal_periods')
       .select('period_id')
@@ -147,6 +180,8 @@ describe('accountLedgerService.get', () => {
     shareCapitalAccountId = shareCapital!.account_id;
     accountsPayableAccountId = ap!.account_id;
     professionalFeesAccountId = profFees!.account_id;
+    investmentsAccountId = investments!.account_id;
+    intercompanyReceivablesAccountId = intercompanyReceivables!.account_id;
     currentPeriodId = period!.period_id;
   });
 
@@ -179,38 +214,40 @@ describe('accountLedgerService.get', () => {
     ).rejects.toThrow('NOT_FOUND');
   });
 
-  it('returns ordered rows with correct running-balance for three ascending-date entries on Cash', async () => {
-    // Baseline: capture current Cash running balance (whatever
-    // prior tests produced). Assert deltas against this baseline
-    // so the test is order-independent.
+  it('returns ordered rows with correct running-balance for three ascending-date entries on Investments in Subsidiaries', async () => {
+    // Baseline: capture current Investments running balance
+    // (expected 0 — no other test file posts to account 1100 —
+    // but the baseline-and-delta shape is kept for robustness).
+    // Assert deltas against baseline so the test is order-
+    // independent.
     const baseline = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: cashAccountId, fiscal_period_id: currentPeriodId },
+      { org_id: SEED.ORG_HOLDING, account_id: investmentsAccountId, fiscal_period_id: currentPeriodId },
       freshCtx(),
     );
     const base = baseline.rows.length > 0
       ? parseFloat(baseline.rows[baseline.rows.length - 1].running_balance)
       : 0;
 
-    // Entry 1 (2026-01-10): DR Cash 500 / CR Share Capital 500
+    // Entry 1 (2026-01-10): DR Investments 500 / CR Share Capital 500
     await postEntry([
-      { account_id: cashAccountId, debit_amount: '500.0000', credit_amount: '0.0000' },
+      { account_id: investmentsAccountId, debit_amount: '500.0000', credit_amount: '0.0000' },
       { account_id: shareCapitalAccountId, debit_amount: '0.0000', credit_amount: '500.0000' },
     ], '2026-01-10');
 
-    // Entry 2 (2026-01-15): DR Cash 300 / CR Share Capital 300
+    // Entry 2 (2026-01-15): DR Investments 300 / CR Share Capital 300
     await postEntry([
-      { account_id: cashAccountId, debit_amount: '300.0000', credit_amount: '0.0000' },
+      { account_id: investmentsAccountId, debit_amount: '300.0000', credit_amount: '0.0000' },
       { account_id: shareCapitalAccountId, debit_amount: '0.0000', credit_amount: '300.0000' },
     ], '2026-01-15');
 
-    // Entry 3 (2026-01-20): DR Professional Fees 200 / CR Cash 200
+    // Entry 3 (2026-01-20): DR Professional Fees 200 / CR Investments 200
     await postEntry([
       { account_id: professionalFeesAccountId, debit_amount: '200.0000', credit_amount: '0.0000' },
-      { account_id: cashAccountId, debit_amount: '0.0000', credit_amount: '200.0000' },
+      { account_id: investmentsAccountId, debit_amount: '0.0000', credit_amount: '200.0000' },
     ], '2026-01-20');
 
     const result = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: cashAccountId, fiscal_period_id: currentPeriodId },
+      { org_id: SEED.ORG_HOLDING, account_id: investmentsAccountId, fiscal_period_id: currentPeriodId },
       freshCtx(),
     );
 
@@ -274,23 +311,24 @@ describe('accountLedgerService.get', () => {
     ).rejects.toThrow('ORG_ACCESS_DENIED');
   });
 
-  it('running_balance is debit-positive: credit contribution on AP yields negative delta', async () => {
+  it('running_balance is debit-positive: credit contribution on Intercompany Receivables yields negative delta', async () => {
     const baseline = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: accountsPayableAccountId, fiscal_period_id: currentPeriodId },
+      { org_id: SEED.ORG_HOLDING, account_id: intercompanyReceivablesAccountId, fiscal_period_id: currentPeriodId },
       freshCtx(),
     );
     const baseRb = baseline.rows.length > 0
       ? parseFloat(baseline.rows[baseline.rows.length - 1].running_balance)
       : 0;
 
-    // DR Cash 500 / CR AP 500 — single AP credit row.
+    // DR Cash 500 / CR Intercompany Receivables 500 — single
+    // credit row on the ledger-target account.
     await postEntry([
       { account_id: cashAccountId, debit_amount: '500.0000', credit_amount: '0.0000' },
-      { account_id: accountsPayableAccountId, debit_amount: '0.0000', credit_amount: '500.0000' },
+      { account_id: intercompanyReceivablesAccountId, debit_amount: '0.0000', credit_amount: '500.0000' },
     ]);
 
     const result = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: accountsPayableAccountId, fiscal_period_id: currentPeriodId },
+      { org_id: SEED.ORG_HOLDING, account_id: intercompanyReceivablesAccountId, fiscal_period_id: currentPeriodId },
       freshCtx(),
     );
 
@@ -301,8 +339,11 @@ describe('accountLedgerService.get', () => {
     );
 
     expect(newRow).toBeDefined();
-    // Debit-positive: credit on a liability subtracts from the
-    // running balance. Delta from baseline must be -500.
+    // Debit-positive: credit on any account subtracts from the
+    // running balance (uniform convention across account types;
+    // caller flips the sign for natural-balance presentation of
+    // liabilities and contra-assets). Delta from baseline must
+    // be -500.
     expect(parseFloat(newRow!.running_balance) - baseRb).toBeCloseTo(-500, 4);
   });
 });
