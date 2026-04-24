@@ -54,6 +54,36 @@ remain authoritative. Load by trigger:
 3. Any non-obvious decision has a friction-journal entry or an
    ADR, per the rule in `docs/07_governance/adr/README.md`.
 
+## Session execution conventions
+
+Conventions for per-step execution that fire on specific scope
+conditions. Rules here earn their place by multi-fire
+codification threshold (typically 3+) — one-off patterns belong
+in a retrospective or the friction-journal, not here.
+
+### UI-session screenshot gate
+
+Any step that ships UI changes requires a screenshot gate before
+ratification.
+
+1. Orchestrator drafts a prescribed capture sequence (typically
+   2–5 shots) with per-shot verifications.
+2. Founder captures against a fresh `pnpm db:reset:clean && pnpm
+   db:seed:all` state to eliminate accumulated test pollution.
+3. Orchestrator spot-checks each shot against the prescribed
+   verifications.
+4. Gate blocks arc / phase closeout until passed.
+
+Typical triggers: new canvas views, table structure changes,
+new clickability or navigation paths, visual discriminators on
+entry types. Steps that touch only non-visible surfaces
+(service logic, API routes, server-side guards) skip the gate.
+
+Precedent: Arc A used this pattern 6 times (Steps 7, 8a, 8b,
+9b, 10b, 12b). See
+`docs/07_governance/retrospectives/arc-A-retrospective.md` §3
+Pattern 2 for mechanism details.
+
 ## Phase 1 Simplifications
 
 Three Phase 1 simplifications (synchronous audit log,
