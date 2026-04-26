@@ -1,6 +1,71 @@
-# Where I am as of 2026-04-25 (Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; Phase 1.2 Session 8 C6 EC-2 actual run partial 10/20 + 1/1 PASS + halt at Entry 12; OI-2 fix stack pending pre-Phase-1.2-close; full-suite 487/487 green at HEAD `064d0da`)
+# Where I am as of 2026-04-26 (Phase 1.2 — The Double Entry Agent CLOSED via C12 under Reading B; OI-3 + Class 2 fix-stack carry to Phase 2; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; full-suite 534/536 at HEAD on this commit, 2 failing on Arc A item 27 running-balance shared-DB fragility — fix shape known)
 
-## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
+## Phase 1.2 — Closed (2026-04-26 via C12)
+
+Phase 1.2 closed under Reading B: OI-3 and Class 2 fix-stack
+work extends into Phase 2 rather than gating Phase 1.2 close.
+Closeout artifacts landed across five durable commits:
+
+- **Section (p) C11 retrospective on C7 EC-13** — commit
+  `f221bab` (`docs/07_governance/friction-journal.md`).
+- **OI-3 Class 2 fix-stack scoping doc** — commit `161bff8`
+  (`docs/09_briefs/phase-1.2/oi-3-class-2-fix-stack-scoping.md`).
+- **Section (o) C7 closeout deliverables** (Meta A first
+  application) — commit `52a63f0`.
+- **Conventions catalog Meta A + Meta B + Convention #11
+  rename** — commit `d2b2f50`.
+- **Phase 1.2 retrospective + EC dispositions + Phase 2
+  obligations + section (q) closeout** — this commit
+  (C12 — five deliverables in one commit).
+
+Test count at C12 close: **534/536** under shared-DB full-suite
+(2 failing on Arc A item 27, `accountLedgerService` running-
+balance fragility, fix shape known per Arc A retrospective
+Pattern 3 — migrate to less-polluted account, 1300 precedent;
+clean baseline under `pnpm db:reset:clean` is 536/536).
+
+Cumulative paid-API spend across Phase 1.2: **~$3.96-$4.11
+estimated** (WSL-summed from in-friction-journal records;
+operator authoritative dashboard total may differ — verify
+against Anthropic dashboard if exact total matters).
+
+Commits since Session 1 anchor `4a62faf`: **144**.
+
+Load-bearing closeout artifact for Phase 2 brief authoring:
+`docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+(this commit).
+
+## Phase 2 — Inheritance and opening workstreams
+
+Phase 2 opens against the Phase 1.2 closeout state. The
+canonical carry-forward queue lives at
+`docs/09_briefs/phase-2/obligations.md` (this commit):
+
+- **Two named workstreams**: OI-3 fix-stack implementation
+  (against scoping doc `161bff8`) and Class 2 fix-stack
+  implementation (gated on OI-3 M1 results).
+- **Nine deferred ECs**: 5 paid-API gates + 4 non-paid-API
+  smaller items (test-authoring + screenshot-commit).
+- **Four investigation queue items**: Mode B org_id confusion,
+  structural-response-invalid, edit-path source-flip review,
+  latency-not-caching paradox.
+- **Three sensible-accounting candidates** (Phase 1.3+
+  refinements).
+- **Five COA gaps + three roadmap items** (fixture
+  refinement).
+- **Eleven architectural follow-ups**.
+- **Four convention split-triggers + two meta-level triggers**
+  live.
+- **Ten process observations below codification threshold**.
+
+The first paid-API gate Phase 2 will hit is OI-3 M1 post-fix
+validation (synthetic-prompt harness, $0.50 ceiling, 9 shapes
+× 3 runs); this is also the discriminating evidence between
+H3b-ii alone and H3 independently live, which determines
+whether the Class 2 fix-stack collapses into OI-3 or extends
+beyond it.
+
+## Phase 1.2 — In-flight session-by-session record (preserved)
 
 Master execution brief at `docs/09_briefs/phase-1.2/brief.md`
 (frozen at SHA aae547a). Per founder decision, Phase 1.2 is

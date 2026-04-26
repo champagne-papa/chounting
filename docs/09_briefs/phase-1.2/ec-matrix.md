@@ -67,11 +67,11 @@ once rather than repeated per row.
 
 | EC | Criterion | Source | Verification | Status | Evidence |
 |---|---|---|---|---|---|
-| EC-2 | 20 real entries posted through agent; ledger correct | brief §20 line 1291 | Manual + `phase_plan.md` #2 | DEFERRED | Partial coverage: Entry 1 paid-API retry yesterday (O3 Phase D, agent_sessions `45c9ef23-...`, $0.094 spend) verified clean (DR Rent / CR Cash 2400.00 CAD, entry_date 2026-04-01, no UUID leak). Full 20-entry run not executed; C6 paid-run hit Bug A/B mid-Entry-1 (now fixed by O3 Site 1+2). Calibrated baseline $1.80 per O3 closeout. |
-| EC-9 | 20 real entries + 10 friction entries (behavioral) | brief §20 line 1298 | Manual + `phase_plan.md` #9 | DEFERRED | Same dependency as EC-2 (20-entry run pending) plus an additional 10 friction entries for behavioral assertion. Friction-entry portion not yet specced as discrete deliverable in Session 8 work; EC-2 full run captures the 20-entry portion when it executes. |
+| EC-2 | 20 real entries posted through agent; ledger correct | brief §20 line 1291 | Manual + `phase_plan.md` #2 | PARTIAL — 10/20 | C12 update: PARTIAL with verified/attempted/untried split per Meta A (`d2b2f50`). **Verified (10/20):** Phase E delivered 10 productive entries through chunk-1 (commit `064d0da` baseline; full inventory in friction-journal section (m)). C7 EC-13 added Entries 12 + 14 productive (commit `52a63f0`, section (o)). **Attempted-but-Class-2 (2):** C7 Entries 13 + 15 staled per OI-3 scoping doc (`161bff8`) §1 Finding mechanism. **Untried (8):** chunk-2 Entries 16-20 (untried-by-halt, post-Class-2 systematic halt at Entry 15) + Entry 12 retry + Entry 13 retry. Carries to Phase 2 post-OI-3 + Class 2 fix-stack per `phase-2/obligations.md` §2. Earlier evidence (O3 Phase D Entry 1 retry, agent_sessions `45c9ef23-...`, $0.094 spend) preserved as the calibration anchor for $1.80 forecast. |
+| EC-9 | 20 real entries + 10 friction entries (behavioral) | brief §20 line 1298 | Manual + `phase_plan.md` #9 | DEFERRED | Phase E delivered 10 productive entries against the 20-entry portion (commit `064d0da` baseline; partial coverage shared with EC-2's PARTIAL update above). The 10-friction-entries dimension is untouched by Phase E or C7. Phase 2 needs both EC-2 continuation and a separate friction-behavioral run; status remains DEFERRED until both dimensions execute. Friction-entry portion not yet specced as discrete deliverable. |
 | EC-10 | Time-to-confirmed-entry: target < 30s | brief §20 line 1299 | Manual measurement, `phase_plan.md` #10 | DEFERRED | Single datapoint from O3 Entry 1 retry: ~71s wall-clock paste-to-card-render (operator-observed). 71s exceeds 30s target by ~2.4×. Single datapoint is not a full-run aggregate; full-run + per-entry latency measurement required for EC-10 verification. **Forward-looking concern:** the 30s target may need revisiting against expanded-prompt baseline; capture in C11 §6 handoff for either (a) target revision in C11 §5 calibration, or (b) reducibility investigation before EC-2 full-run approval. |
-| EC-11 | Cost-per-entry recorded | brief §20 line 1300 | Dashboard (per `phase_plan.md` #11) | DEFERRED | Cost-recording mechanism shipped (pino `usage` log lines from `callClaude.ts`; jq-based extraction documented). Single datapoint recorded ($0.094 for Entry 1, captured in O3 Phase D execution). Per-entry cost across full 20-entry run not yet recorded; EC-11's verification mechanism implies full-run aggregate dashboard data. |
-| EC-13 | Anti-hallucination adversarial test | brief §20 line 1302 | Manual, `phase_plan.md` #13 | DEFERRED | Scheduled as Session 8 C7 per session-8-brief.md §6 + per CURRENT_STATE Session 8 mid-arc closeout's "Deferred to next working session" list. Adversarial vector framework specced in session-8-brief.md (7 vectors per §6 EC-13 spec). |
+| EC-11 | Cost-per-entry recorded | brief §20 line 1300 | Dashboard (per `phase_plan.md` #11) | DEFERRED | Cost-recording mechanism shipped (pino `usage` log lines from `callClaude.ts`; jq-based extraction documented). Per-entry cost data durable across Phase E inventory + C7 cost rollup at friction-journal section (o) lines 6996-7003 totaling $0.4913 across 6 line items per the C7 closeout deliverable D2 cost trichotomy ($0.2163 verification + $0.2750 discovery; commit `52a63f0`). Earlier datapoint $0.094 (Entry 1, O3 Phase D) preserved. EC-11's verification mechanism per spec is "dashboard aggregate data" which is operator-side and outside this commit's authoring scope; status remains DEFERRED until operator-side dashboard aggregation is captured. |
+| EC-13 | Anti-hallucination adversarial test | brief §20 line 1302 | Manual, `phase_plan.md` #13 | PARTIAL — verified OI-2 fix-stack scope; Class 2 fix-stack untested | C12 update: PARTIAL. C7 EC-13 paid-API verification run (2026-04-26, S9-0425, agent_sessions `7d0e1d6a-...`, $0.4913 spend; friction-journal section (o), commit `52a63f0`) verified OI-2 fix-stack end-to-end on relative-date resolution (gate A short-circuit at $0/129ms on Entry 14 "last month" token), Site 1 pre-Zod injection (`org_id`/`fiscal_period_id`/`idempotency_key` pre-Zod overwrite), and Site 2 card post-fill (orchestrator-owned UUIDs stamped onto emitted cards). Class 2 fix-stack scoped at OI-3 doc (`161bff8`) but untested as workstream not yet implemented; Phase 2 carries the OI-3 + Class 2 implementation per `phase-2/obligations.md` §1. Earlier scheduling reference (session-8-brief.md §6 7-vector adversarial framework) preserved. |
 
 ---
 
@@ -119,18 +119,20 @@ completeness.
 
 ## Final totals
 
-| Section | MET | DEFERRED | MISSED | Total |
-|---|---|---|---|---|
-| §1 Foundations and Regression | 3 | 0 | 0 | 3 |
-| §2 Agent Mechanics | 5 | 2 | 0 | 7 |
-| §3 Paid-API Validation | 0 | 5 | 0 | 5 |
-| §4 User-Facing Surfaces | 3 | 1 | 0 | 4 |
-| §5 Onboarding + Forms | 7 | 1 | 0 | 8 |
-| §6 Shipping line items | 3 | 0 | 0 | 3 |
-| **Total** | **21** | **9** | **0** | **30** |
+C12 update: EC-2 and EC-13 promoted from DEFERRED → PARTIAL with verified/attempted/untried split per Meta A. EC-9 and EC-11 stay DEFERRED with annotations naming durable evidence in friction-journal section (o) and OI-3 scoping doc.
 
-No MISSED rows; no §7 #4 split-point trigger fires. The 9 DEFERREDs cluster: 5 in §3 (paid-API gates pending — EC-2 full run + C7 EC-13), 2 in §2 (missing dedicated tests for clarification-path-retry-isolation and mid-conversation-API-failure), 1 in §4 (EC-14 screenshot-committed portion), 1 in §5 (EC-27 screenshot-committed portion). All have named Phase 1.3+ remediation pointers in their Evidence columns.
+| Section | MET | PARTIAL | DEFERRED | MISSED | Total |
+|---|---|---|---|---|---|
+| §1 Foundations and Regression | 3 | 0 | 0 | 0 | 3 |
+| §2 Agent Mechanics | 5 | 0 | 2 | 0 | 7 |
+| §3 Paid-API Validation | 0 | 2 | 3 | 0 | 5 |
+| §4 User-Facing Surfaces | 3 | 0 | 1 | 0 | 4 |
+| §5 Onboarding + Forms | 7 | 0 | 1 | 0 | 8 |
+| §6 Shipping line items | 3 | 0 | 0 | 0 | 3 |
+| **Total** | **21** | **2** | **7** | **0** | **30** |
 
-**Phase 1.2 close-readiness:** Phase 1.2 cannot fully close until the 5 §3 paid-API DEFERREDs resolve (EC-2 full run + C7 EC-13). The 4 non-paid-API DEFERREDs (EC-15, EC-16, EC-14, EC-27) are smaller follow-up items — EC-14 and EC-27 could be resolved jointly via a shared screenshot-commit pass.
+No MISSED rows; no §7 #4 split-point trigger fires. The 2 PARTIALs are EC-2 (10/20) and EC-13 (OI-2 verified, Class 2 untested). The 7 DEFERREDs cluster: 3 in §3 (EC-9, EC-10, EC-11 — paid-API gates pending behavioral / latency-sustained / dashboard-aggregate verification respectively), 2 in §2 (EC-15, EC-16 — missing dedicated tests for clarification-path-retry-isolation and mid-conversation-API-failure), 1 in §4 (EC-14 screenshot-committed portion), 1 in §5 (EC-27 screenshot-committed portion). All have named Phase 1.3+ or Phase 2 remediation pointers in their Evidence columns.
+
+**Phase 1.2 close-readiness:** Phase 1.2 closes under Reading B (OI-3 / Class 2 fix-stack work extends into Phase 2). Phase 2 inherits the 2 PARTIAL ECs as workstream-gated (EC-2 continuation + EC-13 Class 2 fix-stack — both per `phase-2/obligations.md` §1) and the 7 DEFERRED ECs as discrete follow-up items (EC-9 / EC-10 / EC-11 Phase 2 paid-API gates; EC-15 / EC-16 test-authoring gaps; EC-14 / EC-27 screenshot-commit pass).
 
 **Spec-vs-implementation drift:** noted per-row throughout; generalizable pattern captured in C11 §3 retrospective per the preamble pointer.

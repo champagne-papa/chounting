@@ -7824,3 +7824,131 @@ scope for the deploy fix.
 - **Vercel deploy state:** preview green; runtime auth blocked
   on empty Supabase project (separate Stage 2 work)
 
+### (q) C12 — Phase 1.2 closeout (2026-04-26)
+
+**Date:** 2026-04-26 (UTC), session S14-c12-phase-1-2-closeout-0426
+**Status:** Closed under Reading B — OI-3 / Class 2 fix-stack
+work extends into Phase 2. Phase 1.2 closes with five durable
+inheritance artifacts plus this commit's five C12 deliverables.
+**Author SHA at session start:** `e4c069f`
+
+#### C12 narrative
+
+C12 closes Phase 1.2 under Reading B. Five deliverables landed
+in this commit:
+
+- **D1** Phase retrospective at
+  `docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+  (920 lines, 9 sections — phase summary, inheritance-artifact
+  map, 8 phase-level patterns, Phase 2 inheritance narrative,
+  calibration data, honest limitations, what to keep/change,
+  Phase 2 starting state).
+- **D2** 27-EC matrix final dispositions at
+  `docs/09_briefs/phase-1.2/ec-matrix.md` (in-place updates).
+  EC-2 → PARTIAL 10/20 with verified/attempted/untried split
+  per Meta A; EC-13 → PARTIAL with OI-2 verified scope + Class 2
+  untested annotation; EC-9 + EC-11 stay DEFERRED with
+  annotations naming durable evidence in section (o) and OI-3
+  scoping doc; EC-10 stays DEFERRED unchanged. Final totals:
+  21 MET / 2 PARTIAL / 7 DEFERRED / 0 MISSED.
+- **D3** CURRENT_STATE phase transition at
+  `docs/09_briefs/CURRENT_STATE.md`. Header line rewritten to
+  name Phase 1.2 close + Phase 2 open; new "Phase 1.2 — Closed"
+  section + new "Phase 2 — Inheritance and opening workstreams"
+  section added; existing in-flight session-by-session content
+  preserved (relabeled as historical record).
+- **D4** Phase 2 obligations doc at
+  `docs/09_briefs/phase-2/obligations.md` (new file, 433 lines,
+  9 sections — named workstreams, deferred ECs, investigation
+  queue, sensible-accounting candidates, COA gaps,
+  architectural follow-ups, convention split-trigger watch,
+  process observations, Phase 2+ deferrals).
+- **D5** This entry — section (q) C12 closeout in
+  friction-journal.
+
+#### Phase 1.2 final state summary
+
+**Cumulative test count:** 534/536 under shared-DB full-suite
+(534 passing, 2 failing on Arc A item 27 — `accountLedgerService`
+running-balance fragility, fix shape known per Arc A
+retrospective Pattern 3 — migrate to less-polluted account,
+1300 precedent; clean baseline under `pnpm db:reset:clean` is
+536/536). Phase 1.1 baseline was 49 unit + 26 integration = 75
+tests; Phase 1.2 added 461 tests across 8 main sessions and
+carve-outs.
+
+**Cumulative paid-API spend:** ~$3.96-$4.11 estimated
+(WSL-summed from in-friction-journal records; operator
+authoritative dashboard total may differ). Breakdown: Session
+4 EC-66 ~$0.02; Session 5/5.1/5.2 EC-20 smoke runs ~$0.05
+estimated; Session 8 O3 Entry 1 retry $0.094; Session 8 Phase
+D partial run $0.5801; Session 8 Phase E full run ~$2.78-$2.93
+(operator dashboard authoritative); Session 8 C7 EC-13
+$0.4913.
+
+**Commits since Session 1 anchor `4a62faf`:** 144.
+
+**Durable inheritance artifact list with commit-hash invariants:**
+
+1. Section (p) C11 retrospective on C7 EC-13 — `f221bab`.
+2. OI-3 Class 2 fix-stack scoping doc — `161bff8`.
+3. Section (o) C7 closeout deliverables (Meta A first
+   application) — `52a63f0`.
+4. Conventions catalog Meta A + Meta B + Convention #11
+   rename — `d2b2f50`.
+5. C12 Phase 1.2 closeout (D1+D2+D3+D4+D5) — this commit.
+
+#### Convention #10 retraction sub-track count post-C12
+
+Cumulative through C11 = 17 (12 prior + 4 in C7 + 1 in C11).
+No new retractions surfaced during C12 authoring (D1/D2/D3/D4/
+D5 stayed within the EC-direction discipline floor without
+producing new retraction-track datapoints). Phase 1.2 closes
+with the cumulative 17-retraction baseline; Phase 2 inherits
+the count.
+
+#### Convention applications during C12 authoring
+
+- **Meta A** applied to D1's pattern-naming sections — 8
+  named patterns each carrying their own dimension shape (fire
+  count, datapoints, codification status, phase-level lesson).
+  Also applied to D2's EC matrix updates (EC-2 verified/
+  attempted/untried trichotomy preserved at the matrix-row
+  level).
+- **Meta B** applied to D4's workstream cross-dependency
+  articulation (named workstreams + deferred ECs +
+  investigation queue + architectural follow-ups together
+  enumerate the cross-component dependencies Phase 2 inherits).
+- **Convention #11** applied at session-init-time preflight
+  (orphan check on `pending` `ai_actions` rows for the active
+  session_id at S14 start; no orphans surfaced).
+- **Convention #10 EC-direction sub-track** applied throughout
+  authoring — all EC-claim shapes (calibration data, paid-API
+  spend totals, test count, commit count) qualified as
+  authoritative-vs-estimated where applicable; one
+  WSL-summed-vs-dashboard-authoritative caveat surfaced
+  explicitly in calibration data (D1 §5; D5 final state above).
+- **Spec-to-Implementation Verification (Convention #8)**
+  applied to D2's MET spot-checks (EC-3 trace propagation,
+  EC-18 persona guardrails, EC-22 invited user — all verified
+  via direct file existence check before EC matrix edits).
+
+#### Forward pointer
+
+Phase 2 opens with **OI-3 fix-stack implementation** and
+**Class 2 fix-stack implementation** as named workstreams. The
+OI-3 implementation chat opens against
+`docs/09_briefs/phase-1.2/oi-3-class-2-fix-stack-scoping.md`
+on commit `161bff8` as inheritance and resolves the §3c
+sub-decision (four-option enumeration on tentative-state
+representation) as its first action. The first paid-API gate
+Phase 2 hits is OI-3 M1 post-fix validation (synthetic-prompt
+harness, $0.50 ceiling, 9 shapes × 3 runs); this is also the
+discriminating evidence for whether Class 2 collapses into
+OI-3 or extends beyond it.
+
+The full carry-forward queue lives at
+`docs/09_briefs/phase-2/obligations.md` (D4 above). Phase 2
+brief authors sequence work from the queue per Phase 2 scope
+decisions.
+
