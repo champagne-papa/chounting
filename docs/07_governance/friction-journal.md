@@ -7650,3 +7650,177 @@ sequenced.
 - **Convention #10 retraction count post-C11:** mainline
   cumulative through C11 = 17 (16 prior + 1 this retro)
 
+## Vercel deploy fix — typescript-eslint plugin under pnpm (2026-04-26)
+
+A streak of failing Vercel preview deploys all errored at the
+ESLint step with `Definition for rule
+'@typescript-eslint/no-explicit-any' was not found` from
+`src/components/canvas/LineEditor.tsx:77,79`. Build compiled
+fine; ESLint blew up. This entry records the root cause, the fix,
+the diagnostic signal that confirmed the fix, and the
+follow-up items filed separately.
+
+### A. Root cause
+
+The `@typescript-eslint` plugin was previously resolved
+ambiently via npm's flat-tree hoisting. Nothing in
+`eslint.config.mjs` declared it — the config only extends
+`next/core-web-vitals`, which does not reference
+`@typescript-eslint/*` rules; `next/typescript` (which does)
+was never extended. The inline disable comments in
+`LineEditor.tsx` (load-bearing `any` on the
+`UseFormRegister<any>` type, documented at the file top)
+happened to find the plugin in `node_modules` because some
+transitive dependency had hoisted it there.
+
+The npm → pnpm migration (visible in build logs as `Package
+Manager changed from npm to pnpm`) exposed the latent gap.
+pnpm's strict, non-hoisted `node_modules` stopped exposing
+transitive peer deps the way npm's flat tree did. ESLint 9 also
+turns unknown rule references in disable comments into hard
+errors rather than the silent ignores ESLint 8 produced. The
+combination converted a long-standing ambient dependency into a
+build-blocker.
+
+This is **not** a Next 15 regression. Under npm hoisting this
+would have continued to "work by accident" indefinitely. If the
+project ever migrated back to npm or someone forked it under
+npm, the same ambient resolution would re-occur — the latent
+gap would be re-hidden, not re-fixed. Worth being explicit about
+the attribution because "Next dropped it" is the wrong-but-
+plausible story a future reader would land on.
+
+### B. Fix
+
+Local commit `e19cc91` on `staging`:
+
+- `pnpm add -D typescript-eslint` (8.59.0)
+- `eslint.config.mjs`: spread `tseslint.configs.recommended`
+  before the `FlatCompat` block. Order matters — parser setup
+  must precede next's config, otherwise next can clobber the
+  parser typescript-eslint needs.
+- Configure `@typescript-eslint/no-unused-vars` with
+  `argsIgnorePattern: '^_'`, `varsIgnorePattern: '^_'`,
+  `caughtErrorsIgnorePattern: '^_'` to match the codebase's
+  existing underscore-prefix convention for intentionally-unused
+  params; downgrade to `warn` so the 3 remaining genuine
+  findings don't block the build.
+
+Lint state after fix: 0 errors, 6 warnings (cleanup deferred).
+Local `pnpm build` green. Vercel preview deploy green after
+push + Supabase env-var update (see §D).
+
+### C. Diagnostic signal — lint-flip
+
+After the install, the lint output for `LineEditor.tsx:79`
+flipped from:
+
+> Error: Definition for rule
+> '@typescript-eslint/no-explicit-any' was not found.
+
+to:
+
+> Warning: Unused eslint-disable directive (no problems were
+> reported from '@typescript-eslint/no-explicit-any').
+
+This is a high-signal confirmation: the rule is now both
+*registered* and *active*. `report-unused-disable-directives` is
+on under `tseslint.configs.recommended`, so the directive is
+being evaluated against actual violations and found
+unnecessary. The inverse failure mode (install present in name
+only, plugin not actually loaded) would have left the
+"unknown rule" error in place. Worth remembering as a debugging
+tell for plugin-resolution issues: *unknown* → *unused* is the
+shape that says "fully wired."
+
+(Side observation: line 77's disable is still load-bearing —
+`register: UseFormRegister<any>` does use `any`. Line 79's
+disable was always stale — `errors: FieldErrors<FieldValues>`
+doesn't use `any`. Cleanup item filed; not addressed in the
+build-fix commit.)
+
+### D. Runtime verification — Supabase env-var mismatch
+
+After push and a green Vercel build, the staging login form
+returned `{"code":"invalid_credentials","message":"Invalid login
+credentials"}` (HTTP 400). The 400-with-JSON-body shape
+confirmed:
+
+- `NEXT_PUBLIC_SUPABASE_URL` reaches a real Supabase project
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` is valid for that project (a
+  bad key would have produced a 401 about the API key, not a
+  400 about credentials)
+- The build picked up the new env values (no stale bundle)
+- Network path, DNS, CORS — all fine
+
+The `controller@thebridge.local` test user simply does not exist
+in the new project — it has no migrations applied and no seed
+data. This is a runtime-state mismatch, not a deploy-pipeline
+issue. Filed as a follow-up item (§E item 2); explicitly out of
+scope for the deploy fix.
+
+### E. Follow-up items filed (not fixed in this work)
+
+1. **packageManager mismatch.** `package.json#packageManager`
+   declares `pnpm@9.0.0` while `pnpm-lock.yaml` is generated by
+   `pnpm@10.x`. Vercel tolerates this (warning, not failure)
+   but the divergence travels with this commit — `pnpm add -D
+   typescript-eslint` regenerated the lockfile under local pnpm
+   10, so the mismatch is now baked into a fresh artifact
+   rather than a stale one. Same *shape* of problem as the
+   ambient-plugin issue (declared metadata diverging from
+   actual runtime, papered over by tooling tolerance), kept
+   separate by the same principle that kept the lint cleanup
+   separate.
+2. **Staging Supabase project rebuild.** New project is empty.
+   Migrations from `supabase/migrations/` need to apply, then
+   seed scripts. Scope uncharacterized — could be 15 minutes if
+   migrations apply cleanly, could be 2 hours if they've
+   drifted. Stage 2 work; not blocking for the deploy fix.
+3. **Lint cleanup commit (the 6 warnings).**
+   `BasicBalanceSheetView.tsx:10` unused `MoneyAmount` import;
+   `taxCodeService.ts:25` and `invitationService.ts:230` `ctx`
+   params should be `_ctx`; `LineEditor.tsx:79` stale
+   `eslint-disable` directive (line 77's is still valid);
+   `confirm/route.ts:93` stale `no-console` disable;
+   `mfa-enroll/page.tsx:81` pre-existing `<img>` warning
+   (unrelated). To land on a clean baseline after Vercel
+   confirms green.
+4. **`NEXT_PUBLIC_APP_URL` per-branch concern.** If staging is
+   the only branch deploying as Preview, the static value
+   works. If multiple feature branches deploy as Previews, the
+   static value will be wrong for all non-staging Previews —
+   `NEXT_PUBLIC_*` is baked at build time, so a runtime fallback
+   to `VERCEL_URL` would be the cleaner long-term shape.
+   Surfaced during env-var setup planning; not addressed.
+
+### F. Process slips worth recording
+
+1. **`session-init.sh` accepts any string as label, including
+   flag-shaped strings.** Initial invocation was
+   `scripts/session-init.sh --help` (intent: see usage); the
+   script silently created a session lock named `--help`. No
+   validation on label shape. Cleaned up via `session-end.sh`
+   and re-initialized with proper label `vercel-deploy-fix`.
+   Not at codification threshold; flagged in case the same
+   mistake recurs.
+2. **`COORD_SESSION` shell-scope foot-gun.** Each Bash tool
+   invocation is a fresh subshell. `export COORD_SESSION=...`
+   in one call does not carry to subsequent calls. For
+   short multi-commit runs, inline-prefix
+   (`COORD_SESSION='label' git commit ...`) is the simplest
+   discipline. A wrapper that reads
+   `.coordination/session-lock.json` back into env at the top
+   of each command would centralize this if session-lock-aware
+   work becomes a regular pattern; over-engineered for a single
+   session.
+
+### Session bookkeeping
+
+- **Session label:** `vercel-deploy-fix` (closed)
+- **Branch state:** `staging` at `e19cc91` (1 commit ahead of
+  origin pre-push; pushed during this session)
+- **Lint baseline post-fix:** 0 errors, 6 warnings
+- **Vercel deploy state:** preview green; runtime auth blocked
+  on empty Supabase project (separate Stage 2 work)
+
