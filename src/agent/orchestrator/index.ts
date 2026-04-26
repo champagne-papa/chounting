@@ -46,7 +46,11 @@ import { buildSystemPrompt } from './buildSystemPrompt';
 import { respondToUserInputSchema } from '@/agent/tools/schemas/respondToUser.schema';
 import { validateParamsAgainstTemplate } from '@/agent/prompts/validTemplateIds';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
-import { resolveRelativeDate } from '@/agent/dateResolution/resolveRelativeDate';
+import {
+  resolveRelativeDate,
+  detectPromptWeekday,
+  dayOfWeekOfDate,
+} from '@/agent/dateResolution/resolveRelativeDate';
 import {
   type OnboardingState,
   readOnboardingState,
@@ -259,6 +263,88 @@ export async function handleUserMessage(
   };
   const existingTurns = session.turns;
 
+  // OI-2 fix-stack item 4 (validation commit) — gate A: span-token
+  // short-circuit. When resolveRelativeDate identified a span phrase
+  // ("last quarter," "this month," etc.), the prompt is structurally
+  // ambiguous about which calendar date the operator means. Refusing
+  // before the LLM call eliminates two C6 failure surfaces at once:
+  // (a) no tokens spent on a prompt the resolver already knows is
+  // ambiguous, (b) no executeTool dispatch and therefore no
+  // ai_actions row that could orphan if the LLM stalls mid-render.
+  // Failure path: state stays unchanged (sub-brief §6.4 item 5).
+  if (resolved.kind === 'span') {
+    log.info(
+      {
+        source_phrase: resolved.source_phrase,
+        span_kind: resolved.span_kind,
+      },
+      'OI-2 gate A: span short-circuit — emitting clarification without LLM call',
+    );
+    const clarifyTurn: PersistedAssistantTurn = {
+      role: 'assistant',
+      id: crypto.randomUUID(),
+      template_id: 'agent.clarify.entry_date_ambiguous',
+      params: {
+        source_phrase: resolved.source_phrase,
+        span_kind: resolved.span_kind,
+      },
+      timestamp: new Date().toISOString(),
+      trace_id: ctx.trace_id,
+    };
+    // Synthetic terminating message: no LLM was called, so there is
+    // no real Anthropic.Messages.Message to persist. Mirrors the
+    // success path's responseForPersist pattern (text-only content
+    // describing what the orchestrator did).
+    const syntheticContent: Anthropic.Messages.ContentBlock[] = [
+      {
+        type: 'text',
+        text: '[server-emitted clarification: span-token short-circuit]',
+        citations: null,
+      },
+    ];
+    const syntheticResponse = {
+      id: 'oi2_gate_a_span_short_circuit',
+      type: 'message',
+      role: 'assistant',
+      model: MODEL,
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+      content: syntheticContent,
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        server_tool_use: null,
+      },
+    } as unknown as Anthropic.Messages.Message;
+    const conversationWithUserTurn: Anthropic.Messages.MessageParam[] = [
+      ...(session.conversation as Anthropic.Messages.MessageParam[]),
+      { role: 'user', content: input.message },
+    ];
+    await persistSession(
+      session.session_id,
+      conversationWithUserTurn,
+      syntheticResponse,
+      ctx.trace_id,
+      log,
+      undefined,
+      [...existingTurns, userTurn, clarifyTurn],
+    );
+    await emitMessageProcessedAudit();
+    return {
+      session_id: session.session_id,
+      response: {
+        template_id: 'agent.clarify.entry_date_ambiguous',
+        params: {
+          source_phrase: resolved.source_phrase,
+          span_kind: resolved.span_kind,
+        },
+      },
+      trace_id: ctx.trace_id,
+    };
+  }
+
   let validationRetries = 0;
   let structuralRetries = 0;
 
@@ -358,6 +444,92 @@ export async function handleUserMessage(
         });
         hadValidationError = true;
         continue;
+      }
+
+      // OI-2 fix-stack item 3 (validation commit) — gate B: day-of-
+      // week validation. Runs post-Zod (parsed.data.entry_date is a
+      // valid ISO date) and pre-executeTool (the orphan-creating
+      // ai_actions.insert lives inside executeTool's dry_run branch,
+      // so the gate must precede it). Scope: postJournalEntry only;
+      // reverseJournalEntry's date semantics differ (operator picks
+      // the reversal date from a known set, not from a relative
+      // phrase). English-only — non-English prompts skip with
+      // log.warn per ratified decision point #3 (locale-aware
+      // weekday parsing is its own scope). Mismatch: fail-fast —
+      // emit dow_mismatch template, persist failure turn, return.
+      // No retry (C6 footprint showed 0% agent self-recovery on
+      // relative-date stalls).
+      if (tu.name === 'postJournalEntry') {
+        const promptWeekday =
+          input.locale === 'en' ? detectPromptWeekday(input.message) : null;
+        if (input.locale !== 'en' && /\b(?:sun|mon|tues?|wed|thu|fri|satur)day\b/i.test(input.message)) {
+          log.warn(
+            { locale: input.locale },
+            'OI-2 gate B: dow validation skipped (non-English locale)',
+          );
+        }
+        if (promptWeekday !== null) {
+          const entryDate = (parsed.data as { entry_date: string }).entry_date;
+          const resolvedDow = dayOfWeekOfDate(entryDate, input.tz);
+          // Capitalize the prompt weekday to match Intl's long-form
+          // output (Intl emits "Saturday", detectPromptWeekday
+          // returns "saturday").
+          const promptDow =
+            promptWeekday.weekday.charAt(0).toUpperCase() +
+            promptWeekday.weekday.slice(1);
+          if (resolvedDow.toLowerCase() !== promptWeekday.weekday) {
+            log.warn(
+              {
+                tool_name: tu.name,
+                resolved_date: entryDate,
+                resolved_dow: resolvedDow,
+                prompt_dow: promptDow,
+                source_phrase: promptWeekday.phrase,
+              },
+              'OI-2 gate B: day-of-week mismatch — fail-fast, no ai_actions insert',
+            );
+            const dowFailureTurn: PersistedAssistantTurn = {
+              role: 'assistant',
+              id: crypto.randomUUID(),
+              template_id: 'agent.error.entry_date_dow_mismatch',
+              params: {
+                resolved_date: entryDate,
+                resolved_dow: resolvedDow,
+                prompt_dow: promptDow,
+                source_phrase: promptWeekday.phrase,
+              },
+              timestamp: new Date().toISOString(),
+              trace_id: ctx.trace_id,
+            };
+            // Persist the failure: conversation reflects the user
+            // message + the (rejected) tool_use turn so the
+            // transcript is honest about what was attempted, and
+            // the failure turn is recorded for the UI.
+            await persistSession(
+              session.session_id,
+              messages,
+              resp,
+              ctx.trace_id,
+              log,
+              undefined,
+              [...existingTurns, userTurn, dowFailureTurn],
+            );
+            await emitMessageProcessedAudit();
+            return {
+              session_id: session.session_id,
+              response: {
+                template_id: 'agent.error.entry_date_dow_mismatch',
+                params: {
+                  resolved_date: entryDate,
+                  resolved_dow: resolvedDow,
+                  prompt_dow: promptDow,
+                  source_phrase: promptWeekday.phrase,
+                },
+              },
+              trace_id: ctx.trace_id,
+            };
+          }
+        }
       }
 
       try {

@@ -49,6 +49,18 @@ export const AGENT_EMITTABLE_TEMPLATE_IDS = {
   'agent.entry.rejected': z.object({}).strict(),
   'agent.response.natural': z.object({ text: z.string() }).strict(),
   'agent.onboarding.first_task.navigate': z.object({}).strict(),
+  // OI-2 fix-stack item 4 (validation commit). Agent-emittable
+  // because Claude may surface a clarification on out-of-list span
+  // phrasing the resolver missed; the orchestrator's primary use is
+  // server-side self-emit on the span short-circuit path. Both
+  // paths share the template. span_kind='unresolved' is reserved
+  // for a future fuzzy date-shape detector — currently unused.
+  'agent.clarify.entry_date_ambiguous': z
+    .object({
+      source_phrase: z.string(),
+      span_kind: z.enum(['week', 'month', 'quarter', 'year', 'unresolved']),
+    })
+    .strict(),
   'proposed_entry.what_changed': z.object({}).strict(),
   'proposed_entry.why.rule_matched': z.object({ label: z.string() }).strict(),
   'proposed_entry.why.novel_pattern': z.object({}).strict(),
@@ -71,6 +83,21 @@ export const SERVER_EMITTED_TEMPLATE_IDS = {
     .object({ retries: z.number() })
     .strict(),
   'agent.error.structured_response_missing': z.object({}).strict(),
+  // OI-2 fix-stack item 3 (validation commit). Orchestrator
+  // self-emits on day-of-week mismatch between a weekday token in
+  // the user's prompt and the day-of-week of the agent's
+  // entry_date (computed in the request's IANA tz). Fail-fast: no
+  // retry, no ai_actions row written. English-only prompts; non-
+  // English locales skip the gate. Server-emitted only — never
+  // shown to Claude.
+  'agent.error.entry_date_dow_mismatch': z
+    .object({
+      resolved_date: z.string(),
+      resolved_dow: z.string(),
+      prompt_dow: z.string(),
+      source_phrase: z.string(),
+    })
+    .strict(),
 } as const satisfies Record<string, z.ZodTypeAny>;
 
 export type ValidTemplateId =

@@ -143,6 +143,43 @@ function shiftDays(ymd: YMD, deltaDays: number): string {
   return anchor.toISOString().slice(0, 10);
 }
 
+// OI-2 fix-stack item 3 (validation commit). Helper used by the
+// orchestrator's day-of-week validation gate. Detects ANY weekday
+// token in the message — qualified ("last Friday") or bare
+// ("Friday", "on Friday"). The qualifier is unused at this layer
+// because dow validation only needs the asserted weekday, not the
+// resolved date (the resolver already produced that for
+// last/this/next forms). English-only by construction; non-English
+// locales skip the gate at the call site.
+const BARE_WEEKDAY_RE = /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i;
+
+export function detectPromptWeekday(
+  messageText: string,
+): { weekday: WeekdayName; phrase: string } | null {
+  const m = messageText.match(BARE_WEEKDAY_RE);
+  if (!m || m.index === undefined) return null;
+  const weekday = m[1].toLowerCase() as WeekdayName;
+  return { weekday, phrase: weekday };
+}
+
+// Compute the day-of-week of an ISO calendar date in the supplied
+// IANA timezone. Returns the long-form English name (e.g.,
+// 'Saturday'). Used by the dow validation gate to compare against
+// the prompt-asserted weekday from detectPromptWeekday.
+export function dayOfWeekOfDate(isoDate: string, tz: string): string {
+  // Anchor at UTC noon of the calendar date so the tz formatter
+  // resolves to the same calendar day regardless of tz offset
+  // (avoids edge cases where 00:00 UTC could be the previous day
+  // in negative-offset zones).
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const anchor = new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0));
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'long',
+  });
+  return fmt.format(anchor);
+}
+
 function weekdayResolution(
   now: Date,
   tz: string,

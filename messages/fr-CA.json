@@ -55,7 +55,11 @@
     },
     "error": {
       "tool_validation_failed": "I was unable to format a valid request after {retries} attempts. Please rephrase what you'd like to do.",
-      "structured_response_missing": "I had trouble formatting a response. Please try again."
+      "structured_response_missing": "I had trouble formatting a response. Please try again.",
+      "entry_date_dow_mismatch": "The date {resolved_date} is a {resolved_dow}, but you mentioned {prompt_dow} (\"{source_phrase}\"). Could you confirm the date you intended?"
+    },
+    "clarify": {
+      "entry_date_ambiguous": "\"{source_phrase}\" covers a {span_kind}, not a single date. Which day should the entry be posted on?"
     },
     "response": {
       "natural": "{text}"

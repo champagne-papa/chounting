@@ -89,7 +89,13 @@ describe('CA-86: agent handles null checkPeriod return', () => {
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
         tz: 'UTC',
-        message: "Paid last year's office rent — $2,400 to Dufferin Properties, cheque went out April 1, 2025.",
+        // OI-2 validation commit: original phrasing was "Paid last
+        // year's office rent..." — the "last year" span token would
+        // now trigger gate A's short-circuit before any LLM call,
+        // bypassing the checkPeriod-null path this test exercises.
+        // Replaced with explicit-date phrasing so the test still
+        // hits the checkPeriod tool dispatch.
+        message: "Paid the office rent — $2,400 to Dufferin Properties, cheque went out April 1, 2025.",
       },
       ctx,
     );
