@@ -18,6 +18,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     // Onboarding branch of the identity block (no org name)
@@ -44,6 +45,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       locale: 'en',
       user: { user_id: SEED.USER_AP_SPECIALIST },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     expect(prompt).not.toContain('## Onboarding');
@@ -57,6 +59,7 @@ describe('CA-49: buildSystemPrompt onboarding', () => {
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     expect(prompt).not.toContain('## Onboarding');

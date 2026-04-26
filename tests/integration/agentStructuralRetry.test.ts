@@ -53,6 +53,7 @@ describe('CA-43: structural retry budget', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'what is my balance?',
       },
       ctx,

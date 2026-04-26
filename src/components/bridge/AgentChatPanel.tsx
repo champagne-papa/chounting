@@ -187,10 +187,16 @@ function ProductionChat({
       setInput('');
 
       try {
+        // OI-2 fix-stack item 1: capture browser tz per-send.
+        // Stable within a session in practice; per-send keeps the
+        // capture site adjacent to the fetch and avoids retaining
+        // the value across renders.
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const body: Record<string, unknown> = {
           org_id: orgId,
           message: trimmed,
           locale,
+          tz,
         };
         if (sessionId !== null) {
           body.session_id = sessionId;
@@ -629,10 +635,15 @@ function OnboardingChat({
     setTurns((prev) => [...prev, { role: 'user', text: message }]);
     setInput('');
 
+    // OI-2 fix-stack item 1: same browser-tz capture as the
+    // production-mode send. Per-send keeps capture adjacent to the
+    // fetch and avoids retaining across renders.
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const body: Record<string, unknown> = {
       org_id: orgId,
       message,
       locale,
+      tz,
     };
     if (sessionId === null) {
       body.initial_onboarding = initialOnboardingState;

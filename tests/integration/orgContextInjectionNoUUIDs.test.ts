@@ -26,6 +26,7 @@ describe('CA-54: OrgContext injection — positive + negative assertions', () =>
         display_name: 'Controller User',
       },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     // Positive assertions — the human-readable fields are present.

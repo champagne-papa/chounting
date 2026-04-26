@@ -117,7 +117,7 @@ describe('agentConversationProtocolInvariant: persisted conversation is API-vali
     const ctx = makeTestContext({ user_id: USER, org_ids: [ORG] });
 
     const res = await handleUserMessage(
-      { user_id: USER, org_id: ORG, locale: 'en', message: 'Hi' },
+      { user_id: USER, org_id: ORG, locale: 'en', tz: 'UTC', message: 'Hi' },
       ctx,
     );
 
@@ -161,6 +161,7 @@ describe('agentConversationProtocolInvariant: persisted conversation is API-vali
         user_id: USER,
         org_id: ORG,
         locale: 'en',
+        tz: 'UTC',
         message: 'Show me the accounts.',
       },
       ctx,

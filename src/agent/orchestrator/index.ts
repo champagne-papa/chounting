@@ -46,6 +46,7 @@ import { buildSystemPrompt } from './buildSystemPrompt';
 import { respondToUserInputSchema } from '@/agent/tools/schemas/respondToUser.schema';
 import { validateParamsAgainstTemplate } from '@/agent/prompts/validTemplateIds';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
+import { resolveRelativeDate } from '@/agent/dateResolution/resolveRelativeDate';
 import {
   type OnboardingState,
   readOnboardingState,
@@ -78,6 +79,14 @@ export interface HandleUserMessageInput {
   message: string;
   session_id?: string;
   canvas_context?: CanvasContext;
+  /**
+   * OI-2 fix-stack item 1: IANA timezone string for the user's
+   * browser. Required at the orchestrator boundary; the route
+   * coerces with `parsed.tz ?? 'UTC'` for non-browser callers.
+   * Threaded into buildSystemPrompt's temporal block and
+   * resolveRelativeDate.
+   */
+  tz: string;
   /**
    * Session 5 / sub-brief §6.6: the welcome page computes an
    * initial OnboardingState server-side and passes it in on the
@@ -205,6 +214,16 @@ export async function handleUserMessage(
   // its onboarding branch automatically.
   const orgContext =
     input.org_id !== null ? await loadOrgContext(input.org_id) : null;
+  // OI-2 fix-stack item 2: server-side relative-date resolution.
+  // Foundation commit consumes 'resolved' (augments prompt) and
+  // 'none' (no-op). 'span' is detected here but not yet acted on
+  // — validation commit adds the short-circuit before LLM call.
+  const turnNow = new Date();
+  const resolved = resolveRelativeDate(input.message, turnNow, input.tz);
+  const resolvedEntryDate =
+    resolved.kind === 'resolved'
+      ? { date: resolved.date, sourcePhrase: resolved.source_phrase }
+      : undefined;
   const system = buildSystemPrompt({
     persona,
     orgContext,
@@ -212,7 +231,9 @@ export async function handleUserMessage(
     canvasContext: input.canvas_context,
     user: { user_id: input.user_id },
     onboarding: currentOnboarding,
-    now: new Date(), // O3 Site 1 — current date for temporal context block
+    now: turnNow,
+    timezone: input.tz,
+    resolvedEntryDate,
   });
 
   // Step 5: full conversation history (master §5.2 step 5 — no

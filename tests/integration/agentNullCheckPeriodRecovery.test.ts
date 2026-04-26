@@ -88,6 +88,7 @@ describe('CA-86: agent handles null checkPeriod return', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: "Paid last year's office rent — $2,400 to Dufferin Properties, cheque went out April 1, 2025.",
       },
       ctx,

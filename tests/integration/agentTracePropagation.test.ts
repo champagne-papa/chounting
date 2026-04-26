@@ -53,6 +53,7 @@ describe('CA-47: trace_id propagation', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'post a cash entry',
       },
       ctx,

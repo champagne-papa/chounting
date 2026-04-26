@@ -103,6 +103,7 @@ describe('CA-71: invited-user shortened flow', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: 'My name is Invited Alex.',
         initial_onboarding: {
           in_onboarding: true,

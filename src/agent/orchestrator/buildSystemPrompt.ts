@@ -35,7 +35,10 @@ import {
 } from '@/agent/prompts/suffixes/onboardingSuffix';
 import { canvasContextSuffix } from '@/agent/prompts/suffixes/canvasContextSuffix';
 import { orgContextSummary } from '@/agent/prompts/suffixes/orgContextSummary';
-import { temporalContextSuffix } from '@/agent/prompts/suffixes/temporalContext';
+import {
+  temporalContextSuffix,
+  resolvedEntryDateSection,
+} from '@/agent/prompts/suffixes/temporalContext';
 
 export interface BuildSystemPromptInput {
   persona: Persona;
@@ -47,6 +50,17 @@ export interface BuildSystemPromptInput {
   // O3 Site 1 — current date for temporal context injection
   // (required, no default; injected by orchestrator and tests).
   now: Date;
+  // OI-2 fix-stack item 1 — IANA timezone for the temporal block.
+  // Browser supplies this via the request; the route falls back
+  // to 'UTC' for non-browser callers, in which case the temporal
+  // block emits a single line.
+  timezone: string;
+  // OI-2 fix-stack item 2 — server-resolved entry_date when the
+  // user's message contained a point-date token. Rendered as a
+  // section immediately after the temporal block so postJournalEntry's
+  // "Use the resolved entry_date from the temporal context above"
+  // instruction has a true positional anchor.
+  resolvedEntryDate?: { date: string; sourcePhrase: string };
 }
 
 export function buildSystemPrompt(input: BuildSystemPromptInput): string {
@@ -57,7 +71,11 @@ export function buildSystemPrompt(input: BuildSystemPromptInput): string {
   // with sibling suffixes/ files). Tool descriptions reference
   // "the Current date above" — that anchor must precede the
   // persona body in render order.
-  const sections: string[] = [temporalContextSuffix(input.now), base];
+  const sections: string[] = [temporalContextSuffix(input.now, input.timezone)];
+  if (input.resolvedEntryDate) {
+    sections.push(resolvedEntryDateSection(input.resolvedEntryDate));
+  }
+  sections.push(base);
 
   const orgSummary = orgContextSummary(input.orgContext);
   if (orgSummary) sections.push(orgSummary);

@@ -96,6 +96,7 @@ describe('CA-69: onboarding step 2+3 atomic transition', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: `Create an org named ${orgName}.`,
         initial_onboarding: {
           in_onboarding: true,

@@ -46,6 +46,7 @@ describe.skipIf(!HAS_KEY)(
             user_id: SEED.USER_CONTROLLER,
             org_id: SEED.ORG_HOLDING,
             locale: 'en',
+            tz: 'UTC',
             message: 'Hi, who am I?',
           },
           ctx,

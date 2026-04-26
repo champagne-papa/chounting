@@ -62,6 +62,7 @@ describe('CA-70: onboarding step 4 completion', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: "Let's post a journal entry.",
         initial_onboarding: {
           in_onboarding: true,
@@ -109,6 +110,7 @@ describe('CA-70: onboarding step 4 completion', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: 'Still thinking about what to try.',
         initial_onboarding: {
           in_onboarding: true,

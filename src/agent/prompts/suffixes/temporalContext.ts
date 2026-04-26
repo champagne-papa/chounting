@@ -1,9 +1,8 @@
 // src/agent/prompts/suffixes/temporalContext.ts
-// O3 Site 1 (Bug A fix). Injects current-date context into the
-// system prompt as dual UTC + org-local stamps so the agent
-// can resolve relative date expressions ("this month," "today,"
-// "yesterday") against an authoritative anchor instead of
-// falling back to training-data temporal priors.
+// O3 Site 1 / OI-2 fix-stack item 1. Injects current-date context
+// into the system prompt as either a single UTC line (when no
+// browser timezone is available) or dual UTC + org-local stamps
+// (when a real IANA timezone is supplied by the request).
 //
 // Filename uses the "suffix" naming convention for filesystem
 // consistency with sibling helpers in this folder
@@ -14,17 +13,50 @@
 // "the Current date above" — those references must resolve to a
 // block that physically precedes them in the rendered prompt.
 //
-// Phase 1.2 design (per docs/09_briefs/phase-1.2/session-8-c6-prereq-
-// o3-agent-date-context.md §5.b): both stamps emit identical UTC
-// values because organizations.timezone does not exist yet (Phase 2
-// follow-up — see Open Item OI-2). The "Phase 2 will resolve" note
-// in the org-local stamp tells the agent why the two values are
-// currently identical.
+// OI-2 fix-stack foundation commit replaced the Phase-1.2 dual-UTC
+// placeholder. The browser supplies its IANA timezone via the
+// /api/agent/message request; the route falls back to 'UTC' for
+// non-browser callers, in which case this helper emits a single
+// line with no placeholder boilerplate.
 
-export function temporalContextSuffix(now: Date): string {
-  const isoDate = now.toISOString().slice(0, 10);
+function isoDateInTz(now: Date, timezone: string): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  // en-CA's date format is YYYY-MM-DD, which matches ISO 8601
+  // calendar-date format directly. Use formatToParts to be robust
+  // to runtime locale-data variations.
+  const parts = fmt.formatToParts(now);
+  const y = parts.find((p) => p.type === 'year')?.value ?? '0000';
+  const m = parts.find((p) => p.type === 'month')?.value ?? '00';
+  const d = parts.find((p) => p.type === 'day')?.value ?? '00';
+  return `${y}-${m}-${d}`;
+}
+
+export function temporalContextSuffix(now: Date, timezone: string): string {
+  const utcIso = now.toISOString().slice(0, 10);
+  if (timezone === 'UTC') {
+    return `Current date: ${utcIso} (ISO 8601, UTC)`;
+  }
+  const localIso = isoDateInTz(now, timezone);
   return [
-    `Current date: ${isoDate} (ISO 8601, UTC)`,
-    `Today (org-local): ${isoDate} (UTC — org timezone not yet configured; Phase 2 will resolve from organizations.timezone)`,
+    `Current date: ${utcIso} (ISO 8601, UTC)`,
+    `Today (org-local): ${localIso} (${timezone})`,
   ].join('\n');
 }
+
+// Companion section that surfaces a server-resolved entry_date
+// when the orchestrator's resolveRelativeDate identified a point-
+// date token in the user's message. Rendered immediately after the
+// temporal block so postJournalEntry's "Use the resolved entry_date
+// from the temporal context above" instruction has a true positional
+// anchor.
+export function resolvedEntryDateSection(
+  resolved: { date: string; sourcePhrase: string },
+): string {
+  return `Resolved entry_date for this turn: ${resolved.date} (from phrase: "${resolved.sourcePhrase}")`;
+}
+

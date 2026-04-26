@@ -26,6 +26,14 @@ const agentMessageRequestSchema = z
     locale: z.enum(['en', 'fr-CA', 'zh-Hant']).optional(),
     session_id: z.string().uuid().optional(),
     canvas_context: canvasContextSchema.optional(),
+    // OI-2 fix-stack item 1: browser-supplied IANA timezone. The
+    // browser captures via Intl.DateTimeFormat().resolvedOptions()
+    // .timeZone and sends on every turn. Optional at the wire (any
+    // non-browser caller may omit it); the route coerces to 'UTC'
+    // before handing to the orchestrator. ServiceContext does not
+    // (yet) carry a tz field — see Phase 2 follow-up item 6 for
+    // the org-level timezone migration.
+    tz: z.string().optional(),
     // Session 5 / sub-brief §6.6: the welcome page passes the
     // computed initial OnboardingState on the first turn of a
     // fresh onboarding session. The orchestrator merges it into
@@ -55,6 +63,11 @@ export async function POST(req: Request) {
         // ProposedEntryCard. Orchestrator consumers treat it as
         // pass-through reference material only.
         canvas_context: parsed.canvas_context as CanvasContext | undefined,
+        // OI-2 fix-stack item 1: 'UTC' fallback for non-browser
+        // callers (server-to-server tests, future programmatic
+        // clients). Browser callers always populate parsed.tz from
+        // Intl.DateTimeFormat().resolvedOptions().timeZone.
+        tz: parsed.tz ?? 'UTC',
         initial_onboarding: parsed.initial_onboarding,
       },
       ctx,

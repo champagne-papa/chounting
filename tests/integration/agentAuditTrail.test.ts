@@ -38,6 +38,7 @@ describe('CA-64: agent.* audit trail (message_processed + tool_executed)', () =>
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'Show me the chart of accounts',
       },
       ctx,

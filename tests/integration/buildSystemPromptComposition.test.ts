@@ -20,6 +20,7 @@ describe('CA-48: buildSystemPrompt composition', () => {
       locale: 'en',
       user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     // Section 1 — Identity block (session-authored template)
@@ -77,5 +78,38 @@ describe('CA-48: buildSystemPrompt composition', () => {
 
     // No canvas suffix (canvasContext undefined)
     expect(prompt).not.toContain('## Current canvas context');
+  });
+
+  it('includes the resolved-entry-date section when resolvedEntryDate is provided', () => {
+    const prompt = buildSystemPrompt({
+      persona: 'controller',
+      orgContext: makeOrgContextFixture(),
+      locale: 'en',
+      user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
+      timezone: 'UTC',
+      resolvedEntryDate: { date: '2026-04-20', sourcePhrase: 'yesterday' },
+    });
+
+    expect(prompt).toContain(
+      'Resolved entry_date for this turn: 2026-04-20 (from phrase: "yesterday")',
+    );
+  });
+
+  it('omits the resolved-entry-date section when resolvedEntryDate is undefined', () => {
+    const prompt = buildSystemPrompt({
+      persona: 'controller',
+      orgContext: makeOrgContextFixture(),
+      locale: 'en',
+      user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
+      now: FIXED_NOW,
+      timezone: 'UTC',
+    });
+
+    // Anchor on the colon-suffix form (see buildSystemPromptTemporal
+    // — the bare phrase appears in postJournalEntry's tool description
+    // as a quoted reference and would false-positive an unqualified
+    // not.toContain).
+    expect(prompt).not.toContain('Resolved entry_date for this turn:');
   });
 });

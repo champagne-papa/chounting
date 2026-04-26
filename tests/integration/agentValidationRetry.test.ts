@@ -42,6 +42,7 @@ describe('CA-41: Zod validation retry (Fixture C)', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'post a $100 cash entry',
       },
       ctx,

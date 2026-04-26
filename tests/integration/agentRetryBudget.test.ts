@@ -36,6 +36,7 @@ describe('CA-42: Q13 validation retry budget exhaustion', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'post an entry',
       },
       ctx,

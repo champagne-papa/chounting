@@ -68,6 +68,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: "Let's do a journal entry.",
         initial_onboarding: {
           in_onboarding: true,
@@ -119,6 +120,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: "Let's do a journal entry.",
         initial_onboarding: {
           in_onboarding: true,
@@ -159,6 +161,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         invited_user: false,
       },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     // Recovery branch language
@@ -187,6 +190,7 @@ describe('Session 5.2: step-4 completion guard (step 1 required)', () => {
         invited_user: false,
       },
       now: FIXED_NOW,
+      timezone: 'UTC',
     });
 
     expect(prompt).toContain('## Onboarding — Step 4 of 4: First task');

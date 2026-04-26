@@ -15,6 +15,7 @@ const BASE_INPUT = {
   orgContext: makeOrgContextFixture(),
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
   now: FIXED_NOW,
+  timezone: 'UTC',
 };
 
 describe('CA-52: buildSystemPrompt locale directive', () => {

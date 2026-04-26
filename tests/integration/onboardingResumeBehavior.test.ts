@@ -67,6 +67,7 @@ describe('CA-72: onboarding resume behavior', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: 'hello',
         initial_onboarding: {
           in_onboarding: true,
@@ -122,6 +123,7 @@ describe('CA-72: onboarding resume behavior', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: 'back again',
         session_id: r1.session_id,
       },
@@ -172,6 +174,7 @@ describe('CA-72: onboarding resume behavior', () => {
           user_id: USER,
           org_id: null,
           locale: 'en',
+          tz: 'UTC',
           message: 'resume attempt',
           session_id: created.session_id,
         },

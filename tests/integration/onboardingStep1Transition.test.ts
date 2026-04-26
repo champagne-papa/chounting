@@ -85,6 +85,7 @@ describe('CA-68: onboarding step 1 transition', () => {
         user_id: USER,
         org_id: null,
         locale: 'en',
+        tz: 'UTC',
         message: 'My name is Alex.',
         initial_onboarding: {
           in_onboarding: true,

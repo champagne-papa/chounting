@@ -34,6 +34,7 @@ describe('CA-40: tool call then respondToUser (Fixture B)', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'list my accounts',
       },
       ctx,

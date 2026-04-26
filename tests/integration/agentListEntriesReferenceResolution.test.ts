@@ -89,6 +89,7 @@ describe('CA-87: agent listJournalEntries reference resolution', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'Show me entry 42 — what was that one again?',
       },
       ctx,

@@ -19,6 +19,7 @@ const BASE_INPUT = {
   locale: 'en' as const,
   user: { user_id: SEED.USER_CONTROLLER, display_name: 'Jamie' },
   now: FIXED_NOW,
+  timezone: 'UTC',
 };
 
 describe('CA-50: buildSystemPrompt canvas context', () => {

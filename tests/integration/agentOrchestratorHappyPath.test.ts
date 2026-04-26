@@ -30,6 +30,7 @@ describe('CA-39: orchestrator happy path (Fixture A)', () => {
         user_id: SEED.USER_CONTROLLER,
         org_id: SEED.ORG_HOLDING,
         locale: 'en',
+        tz: 'UTC',
         message: 'Hi, who am I?',
       },
       ctx,
