@@ -6267,3 +6267,423 @@ via `git log origin/staging..staging` for accurate count.
   applicable to operational-standard rules (distinct from
   pattern-observation rules which use the 3-fire threshold).
 
+## Phase E — Session 8 C6 EC-2 actual run + C11 codifications (2026-04-24/25)
+
+### (a) Run window + outcome summary
+
+**Run window:** 2026-04-24 23:12 UTC → 2026-04-25 21:32 UTC (spans
+UTC midnight rollover; ~22.3 wall-clock hours including a ~19-hour
+operator break; agent-active session-time ~3 hours).
+
+**Session lock labels:** S8-0424 (initial), S8-0425 (relabeled at
+break-resume per Session Labeling Convention).
+
+**Active agent_session:** `fb89b62c-adc0-4b6a-8e73-8ee816ff02ad`
+(persisted across the entire run; 32+ turns by Entry 12).
+
+**Target org:** `22222222-2222-2222-2222-222222222222` (Bridge Real
+Estate Entity DEV) — controller persona. Wrong-org routing inherited
+from S8-0423's resume prompt was caught at session-start and
+corrected to Real Estate fixture before any productive entry (see
+section (e) finding #1 + cluster cross-reference).
+
+**Outcome:** **10/20 productive entries posted + 1/1 ambiguity-test
+PASS + 1 failed entry (halt fired).** Run ended at hard-rule halt
+on Entry 12 attempt 2 — reproducibility across consecutive attempts
+with identical signature pattern.
+
+| Class | Count | Detail |
+|---|---|---|
+| Productive entries (criterion (a) `source='agent'`) | **10/20** | JEs #1–10 |
+| Ambiguity tests passed | **1/1** | Entry 11 (EC-11 hallucination-resistance: clarifying question, no card render) |
+| Failed entries (with documented orphans) | **1** | Entry 12 (two attempts, both AGENT_STRUCTURED_RESPONSE_INVALID) |
+| Total `ai_actions` orphans staled | **7** | 5 OI-2 + 2 structural-response-invalid |
+
+### (b) Pass-criteria evaluation
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| (a) `source='agent'` target 20/20 | **PARTIAL — 10/20** | All 10 productive entries `source='agent'` confirmed in DB |
+| (b) `ai_actions` ↔ `journal_entries` join integrity | **PASS** | All 10 verified at per-entry JOIN check; idempotency_key linked correctly bidirectionally |
+| (c) Ledger balanced + deferred-constraint compliance | **PASS** | Every JE balanced (DR=CR); period-locked checks clean; INV-AUDIT-001/002 untouched |
+| (d) Cost rollup | **DEFERRED** | This-run worst-case WSL est ~$2.78–$2.93 of $3.00 single-run ceiling. Cumulative across S8-0421/0422/0423/0424/0425 deferred to operator Anthropic dashboard cross-reference (`ai_actions.response_payload.cost_usd` not populated for this run; chunk-1/2 telemetry hole from dev-server log-capture gap recurrences — see finding #7 — is the root cause of the in-DB cost-attribution gap) |
+
+### (c) Sensible-accounting narrative
+
+**Path-1 default pattern (Entries 3 and 10).** On tax-inclusive
+corp-card purchases ($187.43 Staples; $94.20 Balzac's), agent chose
+Path-1 (full-to-expense) over Path-B (split GST ITC asset + PST-
+rolled-into-expense). Spec accepts both; agent's choice is rubric-
+clean. Real-world accounting cost: agent leaves recoverable GST ITC
+on the table on every tax-inclusive tangible-goods entry and that
+compounds over time. **Phase 1.3+ refinement candidate** — prompt-
+layer nudge OR spec-layer tightening for the tangible-goods/corp-
+card/tax-inclusive compound.
+
+**Entry 6 employer-side payroll burden.** Spec-clean payroll entry
+covered employee-side mechanics only (gross + 3 withholding
+liabilities + cash). Agent did not proactively offer employer-side
+burden (CPP match, EI premium, EHT/WCB). **Anti-hallucination
+correctly prevented fabrication** — prompt didn't supply employer-
+side numbers. Phase 1.3+ candidate: a `bookPayrollEntry` tool
+computing employer-side burden from province + current rate tables,
+OR a prompt-layer follow-up.
+
+**Entry 7 prepaid amortization.** Spec-clean policy-purchase booking
+(DR Prepaid Insurance / CR Cash for $6,000; coverage window
+May 1 2026–Apr 30 2027 in description and prepaid-leg memo). Agent
+did not proactively offer to schedule the 12 monthly $500
+amortization entries. Anti-hallucination correctly stuck to prompt
+content. Phase 1.3+ candidate: when agent books a prepaid asset,
+proactively ask whether to schedule the amortization entries —
+recurring-journal substrate from Arc A makes this feasible.
+
+**Entry 10 April 18 date — degraded-commitment artifact.** Spec
+target was April 17 (last Friday from operator-PDT 2026-04-24).
+Agent committed to April 18 (Saturday) on attempt 3 after two byte-
+identical re-pastes under the OI-2 stall pattern. Accounting fields
+(DR 5730 / CR 2010 / $94.20) clean; date is wrong by one day.
+**Operator disposition (a)** — leave April 18 in run record as
+degraded-commitment-under-OI-2 artifact; document as Phase 2
+evidence; defer correction to post-fix verification run.
+
+### (d) Two-class failure inventory
+
+**Class 1 — OI-2 stall (false-success narration). 5 events across
+4 entries (6, 8, 9, 10).** Agent emits an `agent.response.natural`
+template variant claiming the proposed entry card rendered ("ready
+for your review above") but no card actually rendered in the UI.
+The `postJournalEntry` tool call wrote a `pending` ai_action
+(orphan); something downstream — UI-render validation on
+`entry_date`, template selection, or similar — broke silently.
+**Trigger condition (refined):** relative-date-token AND proximity
+to UTC-rollover; pre-rollover stall rate on relative-date prompts
+~50% (1/2: Entry 6 stalled, Entry 7 did not despite being closer
+to rollover); post-rollover stall rate 100% (4/4: Entries 8, 9,
+10, plus rolled-over Entry 6 attempts). **Recovery:** 0% agent
+self-recovery; 100% required operator intervention (re-paste,
+often with explicit date anchor — Entry 8 only recovered after
+operator added explicit "April 24" anchor on attempt 3). **Mid-run
+reclassification:** initial framing was "prompt leak"; reclassified
+mid-run to render-failure-with-false-success-narration after
+operator clarified no card rendered (see retraction R-#10 in
+section (j)).
+
+**Class 2 — Structural-response-invalid. 2 events on 1 entry (12).**
+Agent successfully calls `postJournalEntry` with valid, ideal
+`tool_input` (entry_date 2026-04-25, DR 5710 spec-match, CR 1000,
+balanced cents-exact); then fails to emit any valid `respondToUser`
+call across `STRUCTURAL_MAX_RETRIES` iterations. Orchestrator emits
+canned `agent.error.structured_response_missing` template per master
+§6.2 item 5 (`src/agent/orchestrator/index.ts:777-808`). **Documented
+orchestrator behavior — not novel.** What's novel is seeing it fire,
+not the existence of the handling. **Hypothesis weighting (post-
+reproducibility):** context saturation at high turn count (~32+
+turns) strongly favored. Reproducibility eliminates random
+transient and Anthropic API output-format degradation; tool_input
+was clean on both attempts → prompt shape not the cause; failure
+is specifically in the second-half-of-orchestrator-loop (post-
+tool-call respondToUser emission). **Recovery in this run:** 0%;
+second attempt produced identical failure; hard rule fired; halt
+mandatory.
+
+### (e) All findings (with cross-references to scratch files)
+
+1. **Wrong-org routing** — caught at session start. Bridge Holding
+   (`11111…`) targeted by inherited resume prompts; corrected to
+   Real Estate (`22222…`) before any productive entry. Source: spec
+   uses `<test_org_id>` placeholder; operator UI default carried
+   over from prior session. See `/tmp/s8-0424-wrong-org-finding.md`.
+2. **OI-2 UTC-rollover gap surfaced live** — first observation
+   Entry 8 first-attempt; later mid-run reclassified from "prompt-
+   leak" to render-failure-with-false-success-narration after
+   operator clarification. Mechanism documented in
+   `src/agent/prompts/suffixes/temporalContext.ts:24-30` (Phase 1.2
+   simplification: UTC-only injection because `organizations.timezone`
+   not yet shipped). See `/tmp/s8-0424-oi-2-finding.md`.
+3. **Structural-response-invalid as new failure class** — Entry 12,
+   reproducible across 2 attempts, separate from OI-2. See
+   `/tmp/s8-0424-oi-2-finding.md` "NON-OI-2 FINDING" section at top.
+4. **Pre-staged SQL three-error catch** (Entry 8 stale-handling
+   path) — external-consultant pre-staged SQL used non-existent
+   column (`resolved_at`), wrong status (`rejected` vs canonical
+   `stale`), and wrong table-target framing. WSL Claude verified
+   live schema + b0eddc53 precedent + check constraint before
+   executing. See `/tmp/s8-0424-oi-2-finding.md` "Stale-handling
+   for first-attempt card (schema-corrected)" section.
+5. **Tax-inclusive sensible-accounting Path-1 default** — Entries
+   3 and 10. See `/tmp/s8-0424-sensible-accounting-notes.md`.
+6. **Latency-not-caching paradox** — post-credit-top-up Entries
+   2–7 showed 12–16s warm-state latency; `cache_read_input_tokens=0`
+   on all calls falsifies caching hypothesis. Mechanism unexplained
+   from external view. See `/tmp/s8-0424-latency-pattern.md`.
+7. **Dev-server log-capture gap (3 recurrences)** — operator pasted
+   `pnpm dev` without `tee` redirect at original chunk-1 start,
+   chunk-2 restart, and break-restart. Resolved at chunk-3 only
+   (post-break restart with operator-confirmed tee in process tree).
+   Root cause of the chunk-1/2 in-DB cost-attribution gap noted
+   in section (b) criterion (d). See
+   `/tmp/s8-0424-dev-server-observations.md`.
+8. **Convention #10 EC-direction sub-track sources** — 7 datapoints
+   consolidated for sub-track introduction; see section (h).
+9. **Convention #11 candidate** — per-entry tripwire-A preflight
+   on session orphan state; not OI-2-specific. See section (i)
+   for codification source-evidence + rationale.
+10. **Type-conditional / sub-class taxonomy retracted mid-run** —
+    Entry 9 initially classified "OI-2 type-immune" because
+    adjusting-entry semantics; falsified when retroactive orphan
+    discovered (Entry 9 prompt has "this month" relative-date
+    token → vulnerable). Sub-class B (weekday-arithmetic drift)
+    for Entry 10 retracted entirely; Entry 10's April 18 is
+    degraded-commitment-under-byte-identical-re-paste, not a
+    calendar-arithmetic error. Sub-class A (UTC-rollover) is the
+    only real OI-2 sub-class; broader than initially characterized.
+    See `/tmp/s8-0424-oi-2-finding.md` "CORRECTED MECHANISM"
+    section. (Two of the three retractions in this finding land
+    in retraction sub-track R-#11 and R-#12 — see section (j).)
+11. **Session-lock PID staleness when session-init.sh runs via
+    Bash tool** — structural artifact, not a bug introduced this
+    session. `$$` captures script-shell PID which dies when Bash
+    tool returns. See `/tmp/s8-0424-dev-server-observations.md`.
+
+**Cluster cross-reference.** Findings #1 (wrong-org), #2 (OI-2
+UTC-rollover), and #4 (pre-staged-SQL schema mismatch) are
+datapoints for the existing **"Re-verify Environmental Claims at
+Each Gate"** convention (`docs/04_engineering/conventions.md` §
+under "Phase 1.2 Conventions"). This run contributes three
+datapoints to that existing convention's continued evolution —
+distinct from the C10 EC-direction sub-track (section (h)) and
+C11 codification (section (i)) tracks. Local capture in
+`/tmp/s8-0424-oi-2-finding.md` (lines 480–484, 495–500) and
+`/tmp/s8-0424-wrong-org-finding.md`.
+
+### (f) OI-2 fix stack (6-item, slotted pre-C11 closeout)
+
+**Minimum scope to ship Phase 1.2 close.** Scope-doc framing:
+trigger mechanism partially characterized; deterministic-resolution
+stack is the correct response regardless of full mechanistic
+clarity. If we can't fully characterize when the LLM fails, we
+shouldn't trust it to resolve dates at all.
+
+1. **User-local timezone injection.** `temporalContext.ts` reads
+   org timezone (or browser tz, or session metadata) and emits
+   both UTC and local stamps with distinguishing labels.
+2. **Deterministic date resolution.** Server-side resolution of
+   relative-date tokens at prompt-construction time, not LLM
+   arithmetic at response time.
+3. **Day-of-week validation.** When agent emits a date, validate
+   that the resolved date's actual day-of-week matches any prompt
+   day-of-week token; refuse on mismatch.
+4. **Refuse-on-ambiguity for span-prompts.** "Last week", "this
+   quarter" span tokens require operator-clarification rather than
+   LLM point-date selection.
+5. **Confidence-thresholded commit.** Date resolutions below
+   confidence threshold surface to operator for explicit
+   confirmation rather than committing silently.
+6. **Defer org-level timezone (Phase 2).** Schema migration adding
+   `organizations.timezone` field + resolver in
+   `temporalContextSuffix` — Phase 2 resolution. Phase 1.2 ships
+   without this if items 1–5 sufficient via session-metadata /
+   browser-tz route.
+
+### (g) Separate workstream — structural-response-invalid
+
+**NOT in OI-2 fix stack.** Hypothesis: context-window saturation
+at high turn counts (~32+ turns) producing respondToUser emission
+failures despite clean tool_input. Mitigations to investigate in a
+future scoping pass:
+
+- Agent-session rotation thresholds (cap turn count per session)
+- Context-window monitoring with proactive truncation
+- Structural-retry budget calibration (currently
+  `STRUCTURAL_MAX_RETRIES`; re-tune?)
+- Session-state liveness checks before respondToUser emission
+- Whether specific accumulated context (the 7 prior stale rows?
+  the rejected card? the 5 OI-2 false-success narrations?)
+  contributes to the failure surface
+
+**Not a Phase 1.2 close-out blocker.** Recommend separate design
+commit if investigation confirms reproducibility on future runs
+(today's evidence already strongly supports — reproduced 2/2).
+
+### (h) Convention #10 EC-direction sub-track (7 new datapoints; sub-track formally introduced this commit)
+
+**Sub-track structure formally introduced to Convention #10 this
+commit.** The convention covers two operational phases of epistemic
+discipline under uncertainty: pre-claim hygiene (EC-direction sub-
+track, new) and post-claim correction (retraction sub-track,
+existing). Rationale and prior-datapoint grandfathering (9 priors
+remain in retraction sub-track unaltered) documented in the
+`conventions.md` Convention #10 amendment landing as Commit 2 of
+this closeout. Numbering below is sub-track-internal, not session-
+cumulative.
+
+- **EC-#1 Stream-existence ≠ persistence.** Log-capture gap
+  inference error: an open log stream was treated as evidence of
+  DB persistence; it isn't. Log presence is necessary but not
+  sufficient. EC must verify persistence via DB query, not stream
+  observation.
+- **EC-#2 Visible-trace ≠ total-cost.** Orphan-trace cost
+  undercount: cost estimates derived from visible operator-paste
+  log-lines understate actual spend because orphan ai_action
+  tool-calls (no card rendered, no operator-paste resumption)
+  contribute cost without a paste-line trace. EC cost estimates
+  must add explicit orphan-line accounting.
+- **EC-#3 Visible-trace ≠ operator-action-context.** Operator
+  re-paste as mitigation (not agent self-recovery): a re-pasted
+  prompt that produces a successful entry on attempt-N can read
+  as agent self-recovery from the trace alone. Load-bearing for
+  the OI-2 reclassification — the `agent.response.natural` "ready
+  for your review above" emission on attempt-1 was first-classified
+  as agent-recovered when in fact it was operator-recovered via
+  explicit-anchor re-paste.
+- **EC-#4 Operator must approve stale-handling SQL before
+  execution.** Even when consultant ratifies. Established mid-run
+  across 7 stale operations after the b0eddc53/Entry 8 path
+  surfaced two schema-mismatches in pre-staged SQL (column
+  `resolved_at` doesn't exist; status `rejected` is for operator-
+  rejection, not never-rendered cards). Mutual flag-and-retract
+  protected the run from a wrong-shape stale-handling write.
+- **EC-#5 EC asks for operator-narration before classifying a
+  new agent-behavior pattern requiring action.** When EC observes
+  a new pattern that requires operator intervention (reject,
+  re-paste, explicit anchor), EC asks the operator to narrate the
+  action and motivation before classifying the pattern. Should
+  have fired at Entry 8 first-attempt; didn't, and mis-
+  classification propagated through 4 entries (per EC-#3 above).
+- **EC-#6 EC cost estimates flagged as lower bounds when multi-
+  paste behavior is visible** in operator screenshots. Companion
+  to EC-#2: when log-line traces are incomplete (telemetry hole +
+  orphan-line gap + visible re-paste behavior), report cost as
+  lower-bound range, not point estimate.
+- **EC-#7 EC infers from DB-visible state with explicit "based
+  on what's visible" qualifiers.** For claims requiring filesystem
+  or operator-action context beyond the DB, EC asks rather than
+  infers.
+
+### (i) Convention #11 codification source — per-entry tripwire-A preflight
+
+**Codification source-evidence + rationale; canonical text deferred
+to Commit 2 `conventions.md` write.**
+
+Per-entry tripwire-A preflight on session orphan state. Generic
+pending-orphan check (`SELECT COUNT(*) FROM ai_actions WHERE
+session_id=<current> AND status='pending'`) before each operator
+paste. Caught all 7 staled orphans correctly across both failure
+classes (5 OI-2 + 2 structural-response-invalid) — the mechanism
+is failure-class-agnostic. Not OI-2-specific. Generalizes to: any
+session that posts via the agent should preflight pending-orphan
+state at the entry boundary, regardless of what's expected to fail.
+
+**Codification rationale.** Convention #11 lands as a sibling to
+Convention #10's EC-direction sub-track (per (h) above): both are
+pre-claim/pre-action hygiene rules, but C11 is about session-state
+verification and C10 EC-direction is about EC-claim qualification.
+They reinforce rather than overlap. Canonical text + naming slot
+in `conventions.md` catalog land at Commit 2.
+
+### (j) Convention #10 retraction sub-track (3 new this run; mainline cumulative through Session 8 C6 = 9 prior + 3 = 12)
+
+The three retractions from this run continue the existing retraction
+sub-track session-cumulative numbering (R-#10 through R-#12). The
+9 priors per friction-journal.md line 4665 (Session 8 mainline
+retraction-track scope; excludes 2 S8 O3-arc retractions captured
+separately in `conventions.md` Convention #10 codification-trigger
+set datapoints #7–#8) + 3 this run = **12 mainline cumulative
+through S8 C6**. No Phase D additions verified.
+
+- **R-#10 — UTC-midnight Entry-8-attempt-1 prompt-leak
+  misclassification.** Initial framing of the OI-2 stall pattern
+  was "prompt leak" (relative-date tokens leaking into agent's
+  UTC-anchored context, producing date drift). Mid-run reclassified
+  to render-failure-with-false-success-narration after operator
+  clarified no card rendered. Reclassification cost: 4 entries'
+  worth of mis-classification before retraction; caught when
+  operator surfaced the missing-card observation. Tightly coupled
+  to EC-direction sub-track datapoint EC-#3 — the reclassification
+  is the load-bearing forcing-function for that pre-claim hygiene
+  rule.
+- **R-#11 — Sub-class B (weekday-arithmetic drift) for Entry 10
+  retracted entirely.** Entry 10's April 18 (Saturday) vs spec
+  April 17 (Friday) was first classified as a calendar-arithmetic
+  error class within OI-2's sub-class taxonomy. Falsified when
+  byte-identical re-paste analysis showed the third attempt
+  committed identically to attempts 1+2 (no calendar arithmetic
+  involved); the actual mechanism is degraded-commitment-under-
+  byte-identical-re-paste. Sub-class B does not exist as a real
+  OI-2 sub-class.
+- **R-#12 — Entry 9 "OI-2 type-immune" claim.** Entry 9
+  (depreciation, adjusting entry, posted 2026-04-25 00:52 UTC)
+  was first classified as "OI-2 type-immune" because adjusting-
+  entry semantics anchor to fiscal-period-end rather than relative-
+  date-tokens. Falsified when retroactive-orphan discovery showed
+  Entry 9's prompt contained "this month" (relative-date token);
+  vulnerability is type-conditional, not type-immune. Refines OI-2
+  sub-class taxonomy to: today/yesterday simple-entries vulnerable;
+  adjusting/period-end entries conditionally vulnerable on
+  relative-date tokens.
+
+### (k) Scratch-provenance (run-record housekeeping)
+
+9 files retained at `/tmp/s8-0424-*.md` through close. 7 canonical
+(per Session 8 inventory); 2 superseded — `resume-brief.md`
+chunk-2 procedural handoff, fully superseded; `utc-midnight-
+rollover.md` pre-reclassification OI-2 draft, lines 83–94 third-
+datapoint framing folded into `oi-2-finding.md` and the cluster
+cross-reference in section (e). All retained for run-record
+archaeology; not load-bearing for next session.
+
+### (l) Carry-forward
+
+- **OI-2 fix stack (6-item)** — gating for next paid-API session.
+  Ship items 1–5 minimum; defer item 6 (org-tz schema migration)
+  to Phase 2 if items 1–5 sufficient.
+- **Structural-response-invalid investigation** — separate design
+  pass per section (g). Hypothesis: context-window saturation at
+  high turn counts. Mitigation surface listed.
+- **Entries 13–20 + Entry 12 retry** — fresh-session re-run gate.
+  Run from a fresh `agent_session` (not continuing
+  `fb89b62c-...`); context accumulation is a known confound for
+  Class 2.
+- **OI-2 deferral framing reassessment.** Phase 1.2 deferred OI-2
+  to Phase 2 without behavioral-footprint data. Footprint now:
+  ~100% stall rate on relative-date prompts post-UTC-rollover; 0%
+  agent self-recovery. Phase 2 priority should be reassessed at
+  the next planning gate.
+- **Sensible-accounting Phase 1.3+ candidates** — Path-1 default
+  prompt nudge; `bookPayrollEntry` employer-side tool;
+  prepaid-amortization scheduling proactive ask.
+
+### (m) C6 disposition + Session 8 state through C6
+
+**SHIP AS PARTIAL.** This entry captures: 10 productive + 1/1 PASS
++ 1 failed-entry inventory; all findings with scratch cross-refs;
+OI-2 fix stack scope (6-item, pre-C11); structural-response-invalid
+as separate workstream (post-Phase-1.2); EC-direction sub-track
+formally introduced to Convention #10 with 7 datapoints; 3 new
+retractions in retraction sub-track (cumulative 12); Convention
+#11 codification source. Future paid-API session deferred until
+OI-2 fix stack lands and a fresh `agent_session` is initialized.
+
+**Session 8 state through C6 (this entry):**
+
+- Convention #10 retraction sub-track: **12 mainline cumulative
+  through S8 C6** (9 prior per friction-journal.md line 4665,
+  Session 8 mainline scope; + 3 this run; no Phase D additions; 2
+  S8 O3-arc retractions captured separately in `conventions.md`
+  C10 codification-trigger set datapoints #7–#8 are not counted
+  in this mainline ledger).
+- Convention #10 EC-direction sub-track: **7 datapoints** (sub-
+  track formally introduced this commit; sub-track-internal
+  numbering EC-#1 through EC-#7).
+- Convention #11: **codified as new convention this commit**
+  (canonical text in `conventions.md` per Commit 2; this entry
+  carries source-evidence + rationale only).
+- "Re-verify Environmental Claims at Each Gate" convention:
+  **3 new evolution datapoints** this run (findings #1, #2, #4
+  per cluster cross-reference in section (e)).
+- Paid-API spend: this-run worst-case ~$2.78–$2.93 of $3.00
+  single-run ceiling; cumulative S8 deferred to operator dashboard
+  cross-reference.
+- Single-run halt threshold ($3): not exceeded this run.
+

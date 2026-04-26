@@ -1,4 +1,4 @@
-# Where I am as of 2026-04-19 (Phase 1.2 Session 7.1 shipped; Session 8 next, with Session 7.1 Commit 4 shell polish still outstanding)
+# Where I am as of 2026-04-25 (Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; Phase 1.2 Session 8 C6 EC-2 actual run partial 10/20 + 1/1 PASS + halt at Entry 12; OI-2 fix stack pending pre-Phase-1.2-close; full-suite 487/487 green at HEAD `064d0da`)
 
 ## Phase 1.2 — The Double Entry Agent (in flight, decomposed into sessions)
 
@@ -602,13 +602,121 @@ intent confirmed/disclaimed, (b) sufficient time elapsed,
 (c) new arc requires push. Cross-reference branch ahead-count
 at read time via `git log origin/staging..staging`.
 
-**Tomorrow's resume:** fresh `session-init.sh`, dev-server
+**Tomorrow's resume:** [SUPERSEDED — see Phase E section below
+for what actually happened.] fresh `session-init.sh`, dev-server
 restart with `tee`, Entry 6 spec surface + COA payroll-
 deduction pre-check before paste. Entry 6 is multi-line payroll
 (5+ lines: gross expense + 4 deduction credits + cash credit);
 COA-gap candidates high (payroll-deduction-payable accounts
 likely don't exist; 2200 Accrued Liabilities pattern likely
 repeats).
+
+---
+
+### Arc A — Phase 0-1.1 Control Foundations shipped (2026-04-24 closeout)
+
+Arc A shipped 14 commits + 2 discipline-meta commits across 12
+steps (0 through 12b). Final commit `202b6cc` (Step 12b polish-
+sweep). Retrospective at `docs/07_governance/retrospectives/
+arc-A-retrospective.md`. Three-condition push readiness gate
+codified in `CLAUDE.md` (Session execution conventions section,
+sibling to UI-session screenshot gate) on 2026-04-25 — framework
+had been operating tacitly across Arc A; this codification marks
+transition from tacit-convention to written-rule.
+
+Test count at Arc-A close: **487/487 full-suite green** (post
+`pnpm db:reset:clean` baseline; gate-check self-pollution pattern
+noted when running isolation-then-full sequence without reset
+between modes). File-top comment staleness pattern fired 3× in
+Arc A → Pattern 8 codification landed at `064d0da` (CLAUDE.md
+session-execution-conventions §3, sibling to push-readiness gate).
+
+### Phase E — Session 8 C6 EC-2 actual run + C11 codifications (2026-04-24/25)
+
+Session S8-0424/0425 ran the C6 EC-2 paid-API verification work
+(post-Arc-A, post-O3-fix). Run window 2026-04-24 23:12 UTC →
+2026-04-25 21:32 UTC, spanning UTC midnight rollover with a ~19-
+hour operator break. Active `agent_session`
+`fb89b62c-adc0-4b6a-8e73-8ee816ff02ad` persisted across the
+entire run (32+ turns by Entry 12). Target org Bridge Real Estate
+Entity DEV (`22222…`); wrong-org routing inherited from S8-0423
+caught and corrected at session-start.
+
+**Outcome: 10/20 productive entries + 1/1 ambiguity-test PASS +
+1 failed entry (halt fired).** Run ended at hard-rule halt on
+Entry 12 attempt 2 — reproducible AGENT_STRUCTURED_RESPONSE_
+INVALID failure on consecutive attempts with identical signature.
+
+Two failure classes surfaced:
+
+- **Class 1 — OI-2 stall (false-success narration).** 5 events
+  across 4 entries (6, 8, 9, 10). Mechanism: agent emits
+  `agent.response.natural` claiming card rendered when no card
+  rendered; trigger condition relative-date-token AND proximity
+  to UTC-rollover. Pre-rollover stall rate ~50%, post-rollover
+  100%. 0% agent self-recovery; 100% required operator re-paste
+  with explicit-date anchor. Mid-run reclassified from "prompt
+  leak" to render-failure-with-false-success-narration.
+- **Class 2 — Structural-response-invalid.** 2 events on Entry 12.
+  Mechanism: agent emits valid `tool_input` but fails to emit any
+  valid `respondToUser` across `STRUCTURAL_MAX_RETRIES`
+  iterations. Hypothesis (post-reproducibility): context
+  saturation at high turn count; tool_input clean on both
+  attempts so failure is in second-half-of-orchestrator-loop.
+  Distinct from OI-2.
+
+Cumulative paid-API spend this run: worst-case WSL est ~$2.78–
+$2.93 of $3.00 single-run ceiling (cumulative S8 deferred to
+operator Anthropic dashboard cross-reference; in-DB cost-
+attribution gap from chunk-1/2 dev-server log-capture telemetry
+hole).
+
+**OI-2 fix stack (6-item, slotted pre-C11 closeout):** user-local
+timezone injection; deterministic date resolution; day-of-week
+validation; refuse-on-ambiguity for span-prompts; confidence-
+thresholded commit; defer org-level timezone (Phase 2). Items
+1–5 minimum to ship Phase 1.2 close; item 6 (`organizations.
+timezone` schema migration) Phase 2 if items 1–5 sufficient via
+session-metadata or browser-tz route.
+
+**Convention evolution (this commit):**
+
+- Convention #10 EC-direction sub-track formally introduced
+  (7 datapoints, sub-track-internal numbering EC-#1 through
+  EC-#7).
+- Convention #10 retraction sub-track: 3 new (R-#10/11/12),
+  cumulative 12 through S8 C6 (9 prior + 3 this run; no Phase D
+  additions).
+- Convention #11 codified as new convention this commit (per-
+  entry tripwire-A preflight on session orphan state; canonical
+  text in `conventions.md` per Commit 2 of this closeout).
+- "Re-verify Environmental Claims at Each Gate" convention
+  gained 3 new evolution datapoints from findings #1, #2, #4
+  (cluster cross-reference).
+
+**Carry-forward (next paid-API session):**
+
+- **OI-2 fix stack** — gating for next paid-API session.
+- **Structural-response-invalid investigation** — separate
+  design pass; hypothesis context-window saturation at high turn
+  counts; mitigation surface includes session-rotation thresholds,
+  context-window monitoring, retry-budget calibration, session-
+  state liveness checks.
+- **Entries 13–20 + Entry 12 retry** — fresh-session re-run gate.
+  Run from a fresh `agent_session` (not continuing
+  `fb89b62c-...`); context accumulation is a known confound for
+  Class 2.
+- **OI-2 deferral framing reassessment.** Phase 1.2 deferred OI-2
+  to Phase 2 without behavioral-footprint data; footprint now
+  ~100% stall rate post-UTC-rollover, 0% agent self-recovery.
+  Phase 2 priority should be reassessed at next planning gate.
+- **Sensible-accounting Phase 1.3+ candidates** — Path-1 default
+  prompt nudge; `bookPayrollEntry` employer-side tool; prepaid-
+  amortization scheduling proactive ask.
+
+Full per-entry inventory, findings index, and convention-
+evolution detail in friction-journal Phase E section
+(`docs/07_governance/friction-journal.md` lines 6271+).
 
 ---
 
@@ -749,6 +857,11 @@ See docs/09_briefs/phase-1.2/obligations.md for the full list. Key items:
    patterns, calibration data, and process insights from 18 tasks
 
 ## Counts
+
+> **[As-of marker: Phase 1.1 baseline]** — for current cumulative
+> counts, see friction-journal Phase E (line 6271+) and Arc A
+> retrospective
+> (`docs/07_governance/retrospectives/arc-A-retrospective.md`).
 
 - Migrations: 7 (001-007)
 - Integration tests: 26 (7 files)
