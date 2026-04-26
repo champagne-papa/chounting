@@ -6742,3 +6742,299 @@ computation). Revisit trigger: dedicated diagnostic pass on the
 ledger-arithmetic surface, or a regression that causes the count
 to grow beyond 2.
 
+**NOTE 3 update (2026-04-26, C7 EC-13 closeout):** Reclassified
+to non-deterministic state-sensitivity. See section (o) Obs-B'
+below — Phase B's Hard 3 (535/535 clean) and Phase C's Hard 3
+re-runs (534/536) hit different states from the same seed.
+
+### (o) C7 EC-13 — OI-2 fix-stack paid-API verification run
+
+**Date:** 2026-04-26 (UTC), session S9-0425
+**Status:** PARTIAL — 2 productive entries posted, 2 Class 2
+orphans staled, 5 untried at halt
+**Halt trigger:** D2 inherited halt condition — same Class 2
+pattern reproduced ≥2 times within chunk-1
+**Verification verdict:** OI-2 fix stack VERIFIED for what it
+was scoped to do (relative-date resolution, gate A span short-
+circuit, Site 1 + Site 2 wiring)
+**Cumulative spend:** $0.4913 against $1.50 full-run ceiling
+
+#### Run shape
+
+- **Handshake** (8 criteria): all green. Hard 1–5 + Soft 6
+  verified via Phase A/B against fresh state. Soft 7 (pending-
+  orphan preflight on `b54bf6fc-...`) verified zero rows.
+  Soft 8 (synthetic dry-run replay of canonical Entry 8)
+  authored as durable test pair
+  (`tests/integration/soft8EntryEightReplay.test.ts` +
+  `tests/fixtures/anthropic/entry8FirstAttempt.ts`) plus
+  Path β spy on `callClaude.ts`; commit `db2589a` on
+  `origin/staging`.
+- **Paid run** (10 deferred entries from C6 EC-2): halted after
+  4 productive attempts. Paid-run session:
+  `7d0e1d6a-7365-4f3b-b66a-de8fef4edcf6`.
+
+#### Final paid-run row table
+
+| ai_action_id | status | description | created_at UTC | resolved_at UTC |
+|---|---|---|---|---|
+| `e5867fcd-...` | confirmed | April AWS bill — auto-debited from checking | 05:49:31 | 05:51:25 |
+| `54adf4f3-...` | stale | Invoice to King West Studios — March project (gross $8,000; 5% early-pay discount if paid by Apr 30) | 05:57:13 | 06:08:24 |
+| `b933b3f5-...` | confirmed | Refund to Eglinton Retail — overpayment on last month's invoice, cheque issued | 06:07:11 | 06:11:49 |
+| `008065e7-...` | stale | Month-end: increase allowance for doubtful accounts per aging review | 06:13:19 | 06:17:19 |
+
+Productive ledger entries posted: `journal_entry_id
+d37fb73c-...` (Entry 12, AWS) + `journal_entry_id 25b38a75-...`
+(Entry 14, Eglinton refund).
+
+#### OI-2 fix stack — VERIFIED
+
+The fix stack performed exactly per its scoped mechanisms:
+
+- **Relative-date resolution:** All 4 attempted entries resolved
+  relative-date tokens cleanly to 2026-04-25 server-side;
+  resolved-date line landed in temporal context block of every
+  system prompt; zero relative-date stalls observed (the C6
+  failure mode is structurally prevented).
+- **Gate A (span short-circuit):** Fired correctly on Entry 14's
+  "last month" token (`resolveRelativeDate.ts` leftmost-wins
+  detection). 129ms wall-clock, $0 spend, no orphan possible by
+  construction; clarification template emitted cleanly.
+  Operator's "Today" follow-up resolved via second-turn
+  `kind: 'resolved'` path.
+- **Site 1 (pre-Zod org_id + idempotency_key injection):** All 4
+  ai_actions rows carry valid org_id and idempotency_key; zero
+  Zod rejections. Foundation-commit Site 1 path working end-
+  to-end.
+- **Site 2 (card post-fill):** Worked correctly when the agent
+  emitted a canvas_directive. Entry 14's
+  `card.idempotency_key = 8375c750-...` matched ai_actions
+  `row.idempotency_key` byte-for-byte; `card.org_id` and
+  `card.trace_id` post-filled with authoritative session/ctx
+  values.
+
+#### NEW finding: Class 2 systematic reproduction (out-of-scope for OI-2)
+
+C7 reproduced the C6 row-without-card Class 2 orphan pattern on
+Entry 13 and Entry 15 — both on a fresh agent_session (paid-run
+session `7d0e1d6a-...`), at low turn counts (turns 4 and 6
+respectively). **This falsifies the Phase E section (g)
+hypothesis** that Class 2 is driven by context-window
+saturation at high turn count (~32+ turns). The pattern is more
+general: agent inconsistently chooses to emit canvas_directive
+based on response-prose-shape selection, not on context window
+size.
+
+**Structural identity of orphan turns** (Entry 13 + Entry 15):
+
+- `template_id: agent.response.natural` at the respondToUser
+  top level
+- `params.text` carries the markdown rendering of the proposed
+  entry
+- No `card` field, no `canvas_directive_pill` field on the
+  persisted turn
+- Yet a `postJournalEntry` tool_use successfully fired in the
+  same turn (writing the pending row)
+
+The pending row's `idempotency_key` has no counterpart anywhere
+in the response payload — the UI has no structured handle to
+flip the row's status via the confirm/reject path.
+
+**Candidate hypothesis (H3):** Class 2 fires when the agent
+perceives the entry as "needing explanation" — adjusting
+entries with contra-asset accounts, accounting-policy choices
+(gross vs net), etc. The agent reaches for
+`agent.response.natural` template to add prose explanation, and
+in doing so omits the canvas_directive. Direct simple
+transactions (Entry 12 AWS bill, Entry 14 cash refund despite
+the date clarification turn) get clean cards; entries the agent
+perceives as needing "context" get the orphan pattern.
+
+H1 ("method-choice-clarification specifically triggers Class
+2") was falsified by Entry 15: no clarifying-question flow,
+direct one-paste, still produced row-without-card. H2 ("general
+low-turn Class 2") is supported but H3 sharpens the pattern
+from "any low-turn entry" to "entries the agent perceives as
+needing prose explanation."
+
+Sample N=4 — H3 not conclusively confirmed during paid run;
+further investigation should use synthetic prompts in a Class 2
+fix-stack workstream chat without paid-API budget tied to EC-2
+spec entries.
+
+**Class 2 becomes a new fix-stack workstream post-C7** (call it
+OI-3 or whatever the operator names it).
+
+#### Observations (8)
+
+- **Obs-A:** `pnpm db:reset` is plain `supabase db reset
+  --local`, not composite. `pnpm db:seed:all` (seed-only) and
+  `pnpm db:reset:clean` (full reset+kong-restart+seed) are the
+  targets that include seeding. Multiple session-handoff prompts
+  have implicitly treated `db:reset` as a complete reset+seed
+  step. Worth a conventions-catalog or session-handoff-template
+  clarification.
+
+- **Obs-B' (upgrade of Phase E NOTE 3):**
+  `accountLedgerService.test.ts` running-balance assertions are
+  non-deterministically reproducible depending on test ordering
+  / interleaved DB state. Phase B's Hard 3 (535/535 clean) and
+  Phase C's Hard 3 implicit re-runs (534/536 + Soft 8) hit
+  different states from the same seed. NOTE 3 should be
+  reclassified from "permanent carry-forward" to "non-
+  deterministic state-sensitivity, root cause unknown,
+  investigation deferred." Future verification handshakes should
+  either require a deterministic-state harness or accept "0–N
+  failures with named signature" rather than exact-count gates.
+
+- **Obs-C:** Orphan-prevention is two-part structural (pending
+  row + paired ProposedEntryCard via matching `idempotency_key`
+  from Site 2 post-fill), not row-presence-state. The OI-2
+  fix-stack handoff prompt and prior Phase E framing described
+  "orphan ai_actions row" in a way that elided the row+card
+  structural pairing. Convention #11's preflight check is
+  *about* that pairing; convention text could be sharper.
+
+- **Obs-D:** EC-2 spec date-anchored expectations (Entry 12
+  expected 2026-04-20; many other entries similarly anchored)
+  were authored under a frozen `today=2026-04-20` reference at
+  spec-freeze time. C7 EC-13 ran on 2026-04-25 (5 days later).
+  The OI-2 fix stack correctly resolves "today" / "this
+  morning" against the actual current UTC date, producing
+  entries dated 2026-04-25. Spec-vs-runtime date drift should
+  be classified as **flag** (not fail) for entries with
+  relative-date tokens.
+
+- **Obs-E (final):** C7 reproduced the C6 row-without-card
+  Class 2 orphan pattern at low turn count on a fresh
+  agent_session (Entry 13 turn 6, Entry 15 turn 8). Context-
+  window-saturation hypothesis from Phase E section (g)
+  falsified. H1 (method-choice-clarification specifically
+  triggers) falsified by Entry 15. H3 emerged: agent reaches
+  for `agent.response.natural` template when it perceives entry
+  as needing prose explanation, omitting canvas_directive.
+  Sample N=4. Forensic preservation: staled rows' `tool_input`
+  retains full balanced-lines payload (DR/CR legs were
+  structurally valid; failure was in response-wrapping layer).
+
+- **Obs-F:** Convention #11 (Per-Entry Pending-Orphan Preflight)
+  cannot gate operator UI paste in real-time — agent UI accepts
+  paste before WSL-Claude-backend preflight completes. During
+  C7, Entry 14 paste fired in UI at 06:07:11 UTC while operator
+  was awaiting R1/R2/R3 ratification on Entry 13's stale-
+  disposition routing. The UI's permissive paste-acceptance and
+  the WSL-Claude-backend's preflight-gating are not
+  synchronized. Future runs should either (a) block UI input
+  field during routing cycles, or (b) reframe Convention #11 as
+  post-paste verification (preflight runs after paste lands,
+  before next paste fires; orphan detection reactive rather
+  than preventive).
+
+- **Obs-G:** Dev-server log line `template_id: <X>` surfaces
+  `parsedRespond.template_id` (the respondToUser top-level
+  only); `canvas_directive` presence is the actual orphan-vs-
+  clean discriminator and is NOT in the log line. Both Entry 13
+  (orphan) and Entry 14 (clean pair) showed
+  `template_id: agent.response.natural`. Future Class 2
+  telemetry should surface canvas_directive presence/absence in
+  the log line.
+
+- **Obs-H:** Soft 8
+  (`tests/integration/soft8EntryEightReplay.test.ts`) verifies
+  orchestrator wiring assuming the agent emits the right shape
+  (template_id + canvas_directive + matching idempotency_key).
+  It does NOT verify the agent reliably emits the right shape.
+  That gap was outside Soft 8's scope and is now empirically
+  confirmed as a real production failure mode (Entry 13, Entry
+  15). Future scoping prompts should distinguish "orchestrator-
+  wiring verification" (Soft 8 scope, mocked-LLM integration
+  tests) from "agent-emission discipline verification" (which
+  is now the Class 2 fix-stack workstream's territory,
+  requiring synthetic-prompt harness against the real model OR
+  adversarial fixture coverage).
+
+#### Convention #10 retraction sub-track entries (4 — advancing 12 → 16 cumulative)
+
+- **#13:** D2's Path X two-half re-seed framing was an overcall.
+  `agentOrgIdInjection.test.ts:365-437` demonstrates the simpler
+  upfront-queued `[postTurn, respondTurn]` pattern with Site 2
+  post-fill resolving UUIDs after model emission. Path X
+  redefined to mean upfront queued, not two-half.
+
+- **#14:** D1's `card.dry_run_entry_id === ai_action_id`
+  defensive-depth assertion didn't survive contact with Site 2
+  mechanics. Site 2 post-fill stamps idempotency_key/org_id/
+  trace_id, not dry_run_entry_id. Soft 8's actual defensive-
+  depth assertions are `card.org_id` and `card.trace_id`
+  (which Site 2 post-fills) plus the bonus
+  `card.dry_run_entry_id` echo (which the model passes through
+  from postJournalEntry's tool_result, not orchestrator-
+  stamped).
+
+- **#15:** R3's "preserve handshake row across full-suite runs"
+  intent was structurally incompatible with the existing peer-
+  test sweep pattern (`agent_sessions WHERE user_id =
+  SEED.USER_CONTROLLER`). Path A re-mint via `beforeEach`
+  upsert is the resolution: preserves UUID identity stably,
+  accepts that the row's state/conversation/turns reset on each
+  run.
+
+- **#16:** D3's Class 2 disposition framing ("observe and
+  continue") was incomplete. D3 was authored under the
+  assumption Class 2 would fire sporadically; the inherited D2
+  systematic-issue halt condition (≥2 entries with the same
+  pattern) overrides D3's per-instance "continue" rule when the
+  same Class 2 pattern reproduces in close succession. Future
+  verification handshakes should explicitly resolve the D2-vs-
+  D3 interaction at scoping time. Path: D3 modified to "observe
+  and continue, UNLESS the same Class 2 pattern reproduces ≥2
+  times within the same chunk, in which case D2's systematic-
+  issue halt applies."
+
+#### Cost rollup
+
+- Entry 12 (productive): $0.1176
+- Entry 13 turn 1 (clarifying): $0.0844
+- Entry 13 turn 2 (orphan, staled): $0.0928
+- Entry 14 turn 1 (gate A short-circuit, no LLM call): $0.0000
+- Entry 14 turn 2 (productive): $0.0987
+- Entry 15 (orphan, staled): $0.0978
+- **Cumulative: $0.4913** ($0.275 of which spent on Class 2
+  orphan disposals — 56% of total)
+
+Wall-clock paste-#1 to halt: ~31 min.
+
+#### Run-record artifacts preserved
+
+- **Handshake session_id:**
+  `b54bf6fc-0a13-4c8b-8567-c5a2fc8b2772` (label:
+  S9-0425-handshake-soft7), original mintage
+  2026-04-26T04:03:40Z
+- **Paid-run session_id:**
+  `7d0e1d6a-7365-4f3b-b66a-de8fef4edcf6`, organic UI mintage
+  2026-04-26T05:49:00Z-ish
+- **Soft 8 commit:** `db2589a` on `origin/staging` — durable
+  regression test for OI-2 orphan-prevention property at
+  integration layer
+- **Test suite delta:** 535 → 536 (Soft 8 adds 1 test); Hard 3
+  baseline now non-deterministic per Obs-B'
+- **Dev-server log:** archived to
+  `$HOME/chounting-logs/c7-ec13-run-20260426T054634Z.log`
+
+#### Untried entries (deferred)
+
+Entries 16, 17, 18, 19, 20 from
+`docs/07_governance/ec-2-prompt-set.md`, plus Entry 13 retry
+(if re-attempted with method pre-specified). These remain
+available for a future verification run after the Class 2
+fix-stack workstream lands.
+
+#### Phase 1.2 status post-C7
+
+- C7 EC-13 closes PARTIAL (2 productive + 2 staled + 5 untried
+  + handshake cleanly green)
+- C11 retrospective opens next (separate chat)
+- C12 Phase 1.2 closeout follows C11
+- Class 2 fix-stack workstream queued as new workstream
+  (post-C7, pre-or-during-Phase-2 — operator scope decision)
+
