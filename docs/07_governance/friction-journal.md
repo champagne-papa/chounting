@@ -7038,3 +7038,439 @@ fix-stack workstream lands.
 - Class 2 fix-stack workstream queued as new workstream
   (post-C7, pre-or-during-Phase-2 — operator scope decision)
 
+### (p) C11 retrospective on C7 EC-13 (2026-04-26)
+
+**Date:** 2026-04-26 (UTC), session S10-C11-0426
+**Status:** Closed — retrospective structurally complete; durable
+artifacts queued for separate operator-reviewed authoring chats
+**Scope:** Phase 1.2 Session 8/9 retrospective on C7 EC-13's
+paid-API verification run (section (o) above)
+
+#### Retro structure traversed
+
+Four sections (wins / frictions / conventions / OI-3 fix-stack
+scoping). Standalone item (Convention #11 rename) interleaved
+with the conventions section. Each section closed before the
+next opened; no carry-forward of unresolved threads between
+sections.
+
+#### Wins (4)
+
+1. **8-criterion handshake discipline paid off without paid-API
+   spend.** Pre-paid handshake surfaced two state-pollution
+   observations (Obs-A db:reset naming, Obs-B' Hard 3 running-
+   balance non-determinism) on free runs before the meter
+   started. Validates handshake-before-paid-run as a phase
+   convention, not a one-off.
+2. **Soft 8 Approach 1 (durable test) over ephemeral.** Commit
+   `db2589a` lands regression coverage at the integration layer
+   for OI-2's orphan-prevention property
+   (`tests/integration/soft8EntryEightReplay.test.ts`). C7
+   closes PARTIAL but Soft 8's coverage is durable.
+3. **OI-2 fix-stack correctness on real prompts.** Real-model
+   verification: gate A short-circuit on Entry 14 ("last
+   month" → 129ms, $0, no orphan possible); Site 1 pre-Zod
+   `org_id`+`idempotency_key` injection working; Site 2 card
+   post-fill working when `canvas_directive` emitted. C6's
+   relative-date stall failure mode structurally prevented.
+4. **OI-2 fix-stack delivered its designed cost-shape.** Entry
+   14 gate A short-circuit hit the 129ms / $0 / no-model-call
+   path. Validates the fix-stack on cost-shape, distinct from
+   Win 3's correctness validation — two parts of OI-2's design
+   verified separately.
+
+**Note:** original "halt at Class 2" win demoted; split into
+Fact A (runtime discipline working) + Fact B (D2-vs-D3 scoping
+gap) and routed to the frictions section. Bundle obscured Fact
+B; lives in gaps not wins.
+
+#### Two non-promotions
+
+- **EC-2 prompt set holding up structurally** = absence of
+  failure, ambient discipline.
+- **Friction-journal section (o) capture density** = substrate,
+  not result. Would promote only if Obs-B' or retraction #16
+  specifically wouldn't have landed without (o)'s structure —
+  not the case here; both surfaced from run mechanics, not the
+  capture format.
+
+#### Frictions — Cluster A (runtime-correct, framing-risk)
+
+Three items sharing the mechanism that runtime-correct outcomes
+had default-natural-language reads that overstated the result.
+The framing fix in each is the explicit qualifier authored into
+the run record so the natural-language read can't propagate
+alone.
+
+1. **Halt-collision Fact A/B split (D2-vs-D3 scoping gap).**
+   D2 (halt on systematic reproduction) and D3 (continue per-
+   instance for out-of-scope failure) collided when retraction
+   #16 surfaced. Runtime resolved by picking D2 cleanly. **Fact
+   A:** halt logic executed correctly under collision —
+   runtime discipline. **Fact B:** D2-vs-D3 collision was
+   foreseeable; scoping doc didn't pre-resolve which rule wins
+   when both apply — scoping-process gap. Net framing: *halt
+   discipline executed correctly under a foreseeable scoping
+   gap; the halt working is not evidence the scoping process is
+   sufficient.*
+2. **Class 2 budget consumption split.** $0.275 of $0.4913 (56%)
+   routed to Class 2 orphan disposals. **Friction A (scope-
+   boundary, descriptive):** C7 encountered a systematic out-
+   of-scope failure during in-scope verification — normal
+   exploration, not actionable. **Friction B (budget-shape gap,
+   actionable):** $1.50 ceiling authored without reserve for
+   out-of-scope discoveries; ceiling held by halt firing before
+   trajectory exceeded, not because ceiling sized for realized
+   spend mix. Net framing: *cost-attribution must distinguish
+   OI-2 verification cost ($0.2163) from Class 2 discovery cost
+   ($0.275); run total understates per-dimension cost when read
+   as either.*
+3. **OI-2 verification shape-coverage gap (#6a).** Of 4
+   attempted entries, 2 productive (12, 14) hit only the simple
+   double-entry shape; 2 staled (13, 15) on multi-line split +
+   contra-asset shapes; 16 untried. OI-2 fix-stack never tested
+   against multi-leg, contra-account, cross-reference, intra-
+   asset, or ambiguous-cross-entry shapes — Class 2 attrition
+   intercepted upstream of the OI-2 surface. Net framing: *OI-2
+   verified on simple double-entry + gate A relative-date
+   short-circuit; behavior on complex shapes untested. PARTIAL
+   closure carries verified/attempted/untried decomposition;
+   "verified end-to-end" without that decomposition overstates
+   coverage.*
+
+#### Frictions — Cluster B (independent)
+
+Three items each with its own mechanism. Distinct from Cluster
+A — no shared structural property beyond all being C7-observed.
+
+1. **Obs-F: Convention #11 raced UI paste during ratification
+   cycle.** Entry 14 paste fired in the agent UI at
+   06:07:11Z while operator was awaiting R1/R2/R3 ratification
+   on Entry 13's stale-disposition routing. Convention #11 is
+   authored as a preflight but functions as post-paste
+   verification — the WSL-Claude-backend check runs after UI
+   paste lands, not before. UI paste-acceptance and backend
+   preflight are not synchronized. C7 outcome was incidentally
+   clean (gate A short-circuit, no orphan generated), not a
+   result of #11 catching the race. Net framing: *#11 functions
+   as post-paste verification, not preflight gating; rename to
+   match runtime; preventive UI-side interlock is a separate
+   optional follow-on.*
+2. **Obs-G: telemetry under-surfaced canvas_directive.** Mostly
+   standing gap with C7-specific delta. Standing: response-
+   extraction log in `src/agent/orchestrator/index.ts`
+   (line ~890 region per spot-verify) emits `template_id` and
+   `had_tool_calls`; `canvas_directive` is part of the response
+   shape and was always relevant to orphan-prone vs. clean
+   entries, but was never logged. C7-specific delta: OI-2's
+   Site 2 post-fill (lines 899–902) ships with **zero
+   telemetry of its own** — it's a substantive new orchestrator
+   mechanism (mints `idempotency_key` propagation, enforces
+   strict `ProposedEntryCardSchema`, can throw on invalid model
+   emission) with no log calls. Net framing: *closeout patches
+   are #1a (extend response-extraction log fields with
+   `directive_present` + `directive_source`) and #1b (add Site 2
+   post-fill log emit at the moment post-fill happens);
+   broader telemetry-salience question is Section 3 scope.*
+3. **Obs-D: spec-vs-runtime date drift.** EC-2 authored under
+   spec-time anchor 2026-04-20; C7 ran on 2026-04-25. OI-2
+   correctly resolved relative-date tokens against runtime
+   anchor (gate A fired as designed). Run record captures
+   runtime disposition per entry but not spec-time disposition;
+   the two diverge implicitly when the spec→run gap is non-
+   trivial. Net framing: *closeout patch is per-entry
+   disposition tuple (spec-disposition, runtime-disposition);
+   broader spec-anchoring and drift-budget questions are
+   Section 3 scope. C7 drift was small (5 days) and outcomes
+   don't appear to have diverged materially, but the run
+   record's lack of vocabulary means that claim itself requires
+   re-resolving relative tokens to verify.*
+
+#### Cross-cluster meta-shapes
+
+Two meta-shapes cross-cut Clusters A and B. The A/B observation
+organization and the meta-shape convention organization are
+distinct axes — both correct for what they organize.
+
+- **Meta-shape A (state-decomposition):** Cluster A items 1, 2,
+  3 + Cluster B item 3. **N=4.** Run record collapses N states
+  into one; framing fix is explicit N-tuple decomposition.
+- **Meta-shape B (scoping-time articulation):** Cluster A items
+  1 and 3 + Cluster B item 2. **N=3.** Cross-dependencies
+  between independently-authored components stay implicit in
+  the scoping doc until runtime collision; fix is a scoping-
+  time articulation step.
+
+Cluster B item 1 (Convention #11 rename) doesn't fit either
+meta-shape — it's a naming/scope mismatch (preventive name,
+reactive function). Standalone at N=1; possibly a third meta-
+shape if a second instance ever surfaces, but on N=1 it lives
+as a standalone item.
+
+#### Conventions drafted (2 + 1 rename)
+
+Convention text drafted in C11; ratification and conventions-
+catalog edits at `docs/04_engineering/conventions.md` are
+separate operator-reviewed work, not authored here. (Catalog
+path verified at C11 close; the file's own header notes the
+structured-response rule lives at
+`docs/09_briefs/phase-1.2/agent_architecture.md` — relevant
+context for OI-3's prompt-surgery work since that's where the
+rule the surgery would update is authored.)
+
+1. **Meta A — PARTIAL closure state-decomposition.** Single
+   convention covering N=4 instances. Headline collapses
+   distinct runtime states; run record must surface all states
+   even when one has zero population. Decomposition shapes may
+   be **value-level** (sub-values of one axis: coverage as
+   verified/attempted/untried, cost as verification/discovery/
+   total, spec-runtime as spec-disposition/runtime-disposition)
+   or **axis-level** (claims about different layers bundled by
+   runtime coincidence: halt-policy outcome as runtime-
+   execution discipline / scoping-completeness). Hybrid closed-
+   list + open-question with open-question as floor; standing
+   list authored as examples-not-mandatory-checks
+   ("dimensions that have appeared in prior runs and may
+   apply"). **Per-sub-type N=2 split trigger** preserved for
+   axis-level decomposition (currently N=1 — Instance 4 / halt-
+   policy).
+2. **Meta B — Scoping-time cross-dependency articulation.**
+   Single convention covering N=3 instances. Components
+   authored independently produce runtime collisions when their
+   cross-dependencies stay implicit; convention requires the
+   scoping author articulate the cross-product question at
+   scoping time. Three named sub-types: **policy-rule
+   interactions** (pairwise check across rules in a scoping
+   doc); **invariant-pipeline dependencies** (when verifying
+   invariant N, what other invariants are upstream and what's
+   the plan if any fail systematically — choose explicitly:
+   sequence, synthesize bypass, or claim coverage against
+   post-attrition residue); **telemetry-salience dependencies**
+   with sub-clauses (i) refresh existing telemetry on salience
+   shift, (ii) add telemetry to fix-stack-introduced code paths.
+   **Articulation may be iterative** — resolving one cross-
+   dependency can surface another; continue until no new cross-
+   dependencies surface. **Per-sub-type N=2 split trigger** +
+   **meta-level N=5 review trigger** (re-evaluate whether the
+   meta-shape still holds across sub-types if list grows to
+   five).
+3. **Convention #11 rename.** "Per-Entry Pending-Orphan
+   Preflight" → "Per-Entry Pending-Orphan Post-Paste
+   Verification." One-sentence bound documentation: catches
+   orphan state existing when verification runs; does not catch
+   orphan state arising during the gap between UI paste and
+   verification. Optional UI-side interlock (input field
+   disabled while WSL loop has unresolved disposition routing)
+   is a separate UX-backlog item, not blocked on the rename.
+
+#### Convention #10 retraction sub-track entries (1 — advancing 16 → 17)
+
+- **#17:** C11 facilitator's initial framing of H3 / H3b as
+  "collapse on inspection — same mechanism, different framings"
+  was too clean. Discrimination pass found H3 and H3b describe
+  **different layers of the same observed phenomenon**, causally
+  entangled but stacked, both potentially live: H3b is the
+  instructional layer (prompt has zero canvas_directive
+  guidance + selection rubric routes ambiguity to no-directive
+  template); H3 is the model-cognitive layer (does the model
+  perceive complexity → choose natural template, or follow the
+  rubric mechanically without complexity-perception entering?).
+  Path: H3 / H3b treated as primary/secondary stack in OI-3
+  scoping doc. Primary H3b-ii (instructional clarity-absence)
+  is fix target; secondary H3 (cognitive) is fix-validation
+  question, observable post-fix by running staled shapes
+  against modified prompt — clean emission falsifies independent
+  H3, persistent absence promotes H3 to live mechanism. The
+  collapse framing would have foreclosed on H3 detection if H3
+  is independently live.
+
+#### OI-3 workstream scoping (forward-looking)
+
+**Mechanism identified.** Prompt has **zero instructional
+surface on canvas_directive emission** (structural absence, not
+inadequacy) + selection rubric in `validTemplateIdsSection`
+routes ambiguity-perception to `agent.response.natural`
+(no-directive template, prose-only).
+
+**Discrimination pass exhausted three prompt-text surfaces:**
+
+- `STRUCTURED_RESPONSE_CONTRACT` (shared sections): defines
+  responses as `{template_id, params}`; no canvas_directive
+  mention.
+- `respondToUser` tool description: names template_id and
+  params; no canvas_directive mention.
+- `validTemplateIdsSection` rendered into prompt: routes
+  ambiguity to `agent.response.natural` for "asking a
+  clarifying question when context is ambiguous."
+
+Grep across `src/agent/prompts/` confirmed no other
+instructional surfaces (only type imports, schema field, and
+runtime handling in orchestrator). Asymmetry is structural:
+**input direction** (`canvas_context_suffix`) is documented;
+**output direction** (`canvas_directive`) is not.
+
+**Hypothesis treatment:**
+
+- **Primary:** H3b-ii (prompt-instructional clarity-absence) —
+  fix target, prompt-surgery on three surfaces above.
+- **Secondary:** H3 (model-cognitive complexity-perception) —
+  fix-validation question, observable post-fix.
+- **Residual:** H3a (template-coverage gap; collapses into H3b
+  on inspection — `agent.entry.proposed` exists and is the
+  canonical directive-bearing emission, gap is in selection
+  guidance not inventory); H3c (schema-side rejection upstream;
+  weakly disfavored — Site 2's defense-in-depth `.parse()`
+  throws rather than silently strips, so emitted-but-rejected
+  would surface as error, not orphan); H3d-broad (turn-level
+  interaction effects, requires methodology-level testing —
+  long-context version falsified at N=2 by C7's low-turn
+  staled entries); H3e (model nondeterminism, test-design
+  dimension, orthogonal to mechanism).
+
+**Methodology partition:**
+
+- **M3 baseline (free):** production-trace measurement of
+  pre-fix `canvas_directive` emission rate per shape category;
+  documents pre-fix state for post-fix comparison.
+- **Prompt-surgery (the fix itself):** three surfaces above;
+  draft text in OI-3 scoping doc, not in C11.
+- **M1 post-fix validation (paid, $0.50 ceiling):** synthetic
+  harness against real model on staled shapes (multi-line split
+  with discount, contra-asset adjusting entry) + untried shapes
+  (3-leg asset/financing, contra-intangible, ambiguous cross-
+  entry); 3–5 runs per shape for H3e variance + H3 vs. H3b-only
+  discrimination; Meta A decomposed across coverage / cost /
+  hypothesis-discrimination dimensions.
+- **M2 durable test:** Soft-8-pattern integration test for
+  regression coverage post-fix (out-of-OI-3-scope; lands in
+  normal integration-test workflow, parallel to Win 2's
+  `soft8EntryEightReplay.test.ts`).
+
+**Meta-evolution notes for OI-3 scoping doc authoring:**
+
+- Hypothesis-discrimination is **N=1** in Meta A's example
+  list (fifth example after coverage / cost / spec-runtime /
+  halt-policy axis-level). Future N=2 fires the per-sub-type
+  split trigger.
+- Meta B's first application to OI-3's scoping doc produces
+  meta-evidence on **Meta B's own prompt design** as well as
+  on OI-3's scoping shape. The invariant-pipeline articulation
+  prompt should surface the recursive Class-2-as-upstream-and-
+  as-fix question on application; if it does, the prompt is
+  doing its work; if it doesn't, the prompt may need
+  sharpening for self-referential cases. N=1 application —
+  informative, not falsification trigger.
+- Recursive Meta B application to OI-3: tentative resolution
+  is **synthetic-bypass prompts** (one of Meta B's three named
+  choices), since "sequence the upstream fix first" is
+  circular here (OI-3 *is* the upstream fix) and "claim
+  coverage against post-attrition residue" reproduces the
+  same C7 shape-coverage gap OI-3 is meant to address.
+
+**Provisional naming:** OI-3 (operator confirms at OI-3
+scoping doc landing).
+
+#### C7 closeout deliverables generated by Meta A (~90 min)
+
+Four mechanical re-attribution items, ready to author when
+operator routes the work. Three are bookkeeping; deliverable 3
+is the one that produces new evidence rather than re-attributing
+existing evidence.
+
+1. **Coverage trichotomy.** Verified: Entries 12, 14.
+   Attempted-but-Class-2: Entries 13, 15. Untried-by-design:
+   Entries 1–11 (excluded at C7 scoping for handshake-overlap
+   avoidance; available for verification anytime by re-
+   scoping). Untried-by-halt: Entries 16–20 (chunk-2
+   attempted from Entry 12 onward; halt fired at Entry 15;
+   available only after Class 2 fix-stack lands or via
+   synthetic-prompt bypass). ~30 min.
+2. **Cost trichotomy.** Verification: $0.2163 (Entries 12 + 14
+   productive paths + Entry 13 turn-1 clarifying + Entry 14
+   turn-1 free gate A). Discovery: $0.275 (Class 2 disposals on
+   Entries 13, 15). Total: $0.4913. Re-attributed from existing
+   cost log line items. ~20 min.
+3. **Spec-runtime tuple.** For Entries 12, 13, 14, 15, re-
+   resolve relative-date tokens against spec-time anchor
+   2026-04-20; compare to runtime outcomes from runtime anchor
+   2026-04-25. The comparison is between two fixed historical
+   anchors and is independent of when the comparison runs — do
+   not conflate either anchor with current authoring time.
+   Produces either "drift was non-material across all four
+   attempted entries" (probable, given the 5-day gap and that
+   gate A correctly resolved relative tokens at runtime) or
+   "drift was material on Entry X, flag for re-review." Highest
+   information-content item of the four. ~30 min.
+4. **Halt-collision axis-level decomposition.** Capture Fact A
+   (halt logic executed correctly under D2-vs-D3 collision —
+   runtime-execution discipline) and Fact B (D2-vs-D3
+   collision was live at runtime due to scoping-process gap —
+   scoping-completeness) as separate run-record entries.
+   Block "halt discipline worked" headline from carrying
+   forward as evidence that scoping was sufficient. ~10 min.
+
+#### Ambient meta-meta-finding
+
+**Codification-threshold purpose-vs-form distinction.** When
+applying a project convention to a new situation, check whether
+the situation matches the convention's purpose before applying
+its form. Mechanical form-application to a structurally
+different situation is a known retrospective failure mode.
+Surfaced twice in C11:
+
+- Convention #10's retraction discipline applied to prior
+  chat's closeout state via spot-verification — **correct**
+  application of form (fresh-Claude audit-eye on prior-Claude's
+  verification claims) under matched purpose (catch
+  miscarriage before it propagates). Caught the line-number
+  drift in scoping Claude's Item 2 floor.
+- Codification-threshold N≥2 rule applied mechanically to Meta
+  B's three sub-shapes would have produced **wrong answer**:
+  "(b) authors three N=1 conventions, therefore violates
+  discipline." Purpose-check disambiguates — the rule was
+  authored against under-evidenced singletons, not against
+  three observations sharing a structural property. Each Meta
+  B instance is a complete mechanism observation, not a
+  pattern at the threshold. Codification-threshold reframed as
+  supporting factor for (a) rather than load-bearing.
+
+Not at codification threshold itself (N=2, both within C11).
+Flagged for ambient capture; future retros may surface a third
+instance and warrant convention authoring.
+
+#### Forward-looking artifacts queued
+
+C11 produced findings; execution is downstream and operator-
+sequenced.
+
+1. **Conventions-catalog edit.** Meta A + Meta B + Convention
+   #11 rename land at `docs/04_engineering/conventions.md`.
+   Separate operator-reviewed governance chat; convention text
+   drafted above, ratification of landed-state text is
+   separate.
+2. **OI-3 scoping doc.** Path operator decides
+   (`docs/09_briefs/phase-1.2/oi-3-scoping.md` or similar).
+   Mechanism, fix surface, methodology, hypothesis treatment
+   enumerated above; doc authoring is a separate chat. OI-3's
+   prompt-surgery touches
+   `docs/09_briefs/phase-1.2/agent_architecture.md` (the
+   structured-response rule's authoritative location).
+3. **C7 closeout deliverables.** ~90 min mechanical, four
+   items above. Does not gate other work; can land alongside
+   any of (1), (2), or (4).
+4. **C12 Phase 1.2 closeout.** Depends on whether OI-3 lands
+   inside Phase 1.2 or extends into Phase 2 (operator scope
+   decision). If Phase 1.2: C12 follows OI-3. If Phase 2: C12
+   can close before OI-3 opens.
+
+#### Session bookkeeping
+
+- **Retro session_id (chat scope):** S10-C11-0426
+- **Branch state at C11 close:** `staging` at `5fb3b7b` (clean,
+  no working-tree changes prior to this section's authoring)
+- **Sections closed:** 1 (wins, revised) / 2 (frictions, six
+  items in two clusters) / 3 (conventions, two metas + one
+  standalone) / 4 (Class 2 / OI-3 fix-stack scoping)
+- **Convention #10 retraction count post-C11:** mainline
+  cumulative through C11 = 17 (16 prior + 1 this retro)
+
