@@ -921,21 +921,56 @@ ratification commit. Supporting tooling:
 `.coordination/README.md`, `scripts/session-init.sh`,
 `scripts/session-end.sh`, `scripts/install-hooks.sh`.
 
-### Per-Entry Pending-Orphan Preflight
+### Per-Entry Row-Card Pairing Post-Paste Verification
 
 Each agent-mediated session that posts via tools
-preflights session orphan state at the entry boundary.
-Before each operator paste — or each agent-initiated
-action that may write a `pending` `ai_action` — the
-executor or EC verifies that no `pending` `ai_actions`
-exist for the active `session_id`. The check is
-generic SQL (`SELECT COUNT(*) FROM ai_actions WHERE
-session_id=<current> AND status='pending'`) and is
-failure-class-agnostic: it catches orphans regardless
-of the failure mechanism that produced them.
+verifies the row+card structural pairing at the entry
+boundary, after the operator paste has landed in the
+agent UI. Before each agent-initiated action that may
+write a `pending` `ai_action` — and as the immediate
+post-paste verification step on operator-paste turns —
+the executor or EC verifies that no orphaned
+`pending` `ai_actions` exist for the active
+`session_id`. An orphan is a `pending` row without a
+paired ProposedEntryCard via matching
+`idempotency_key` (the Site 2 post-fill pairing
+established by OI-2). The check is generic SQL
+(`SELECT COUNT(*) FROM ai_actions WHERE
+session_id=<current> AND status='pending'` plus the
+row-card pairing inspection on any non-zero count) and
+is failure-class-agnostic: it catches orphans
+regardless of the failure mechanism that produced
+them.
+
+**Pairing — what the verification is actually about
+(Obs-C, friction-journal section (o), commit
+`5fb3b7b`):** orphan-prevention is two-part structural
+(pending row + paired ProposedEntryCard via matching
+`idempotency_key`), not row-presence-state. A pending
+row with a paired card is a normal in-flight
+proposal; a pending row without a paired card is the
+orphan signature this convention catches. The
+verification's load-bearing check is the pairing, not
+the row count alone.
+
+**Temporal scope — post-paste verification, not
+preflight gating (Cluster B Item 1 / Obs-F,
+friction-journal section (p), commit `f221bab`):**
+the agent UI's paste-acceptance is permissive (input
+field accepts paste whenever submission is enabled),
+and the WSL-Claude-backend verification runs in the
+backend loop unaware of UI state. The two surfaces
+are not synchronized; the verification cannot block
+the paste before the fact. It catches orphan state
+existing when the verification runs, but does not
+catch orphan state arising during the gap between UI
+paste and backend verification. An optional UI-side
+interlock (input field disabled while WSL loop has
+unresolved disposition routing) is a separate
+UX-backlog item, not blocked on this convention.
 
 Rationale: source evidence from S8-0424/0425 Phase E
-(C6 EC-2 actual run). The preflight caught all 7
+(C6 EC-2 actual run). The verification caught all 7
 staled orphans correctly across two distinct failure
 classes during the run — 5 OI-2 stalls (false-success
 narration with no card rendered;
@@ -946,21 +981,23 @@ emission across `STRUCTURAL_MAX_RETRIES`). The
 mechanism does not require the operator or EC to know
 in advance which class will fire. Full source detail
 in `docs/07_governance/friction-journal.md` Phase E
-sections (i) and (j).
+sections (i) and (j); rename rationale in section (p)
+under Cluster B Item 1 plus section (o) Obs-C.
 
 Scope: applies to any session that posts to
 `ai_actions` via the agent toolchain. Entry boundary =
-before each operator paste in agent-mediated runs
-(the natural unit of work for paid-API verification
-sessions); generalizes to any agent-initiated action
-that may write a `pending` row in sessions where
-pending orphans can accumulate. Resolution path for
-non-zero pending count: stale the orphans with
-`status='stale'` + `staled_at` timestamp + descriptive
-reason-string (per the `stale_status_has_timestamp`
-check constraint); operator approves the SQL before
-execution per Convention #10 EC-direction sub-track
-datapoint EC-#4.
+the immediate post-paste window in agent-mediated
+runs (the natural unit of work for paid-API
+verification sessions); generalizes to any
+agent-initiated action that may write a `pending` row
+in sessions where pending orphans can accumulate.
+Resolution path for non-zero pending count: stale the
+orphans with `status='stale'` + `staled_at` timestamp
++ descriptive reason-string (per the
+`stale_status_has_timestamp` check constraint);
+operator approves the SQL before execution per
+Convention #10 EC-direction sub-track datapoint
+EC-#4.
 
 Composes with: **Mutual Hallucination-Flag-and-Retract
 Discipline EC-direction sub-track** — sibling pre-
@@ -974,11 +1011,267 @@ that broader convention's intent. **Session Lock File
 Convention** — operates within active session-lock
 context; `session_id` from `agent_sessions` is
 distinct from the session-lock label, but both anchor
-at session-start and decay if not preflight-verified.
+at session-start and decay if not verified.
 
-First codified: 2026-04-25, C6 closeout commit. Source
+First codified: 2026-04-25, C6 closeout commit
+(prior name: "Per-Entry Pending-Orphan Preflight").
+Renamed and amended (this commit) to surface the
+row+card structural pairing as the actual orphan
+signature (Obs-C) and to flip the temporal framing
+from "preflight gating" to "post-paste verification"
+to match runtime behavior (Cluster B Item 1). Source
 evidence in `docs/07_governance/friction-journal.md`
-Phase E section (i).
+Phase E section (i), section (o) Obs-C
+(commit `5fb3b7b`), and section (p) Cluster B Item 1
+(commit `f221bab`).
+
+---
+
+### PARTIAL Closure State-Decomposition (Meta A)
+
+When a verification arc closes PARTIAL — halted before
+completing all in-scope items, whether by budget
+ceiling, systematic-issue halt, operator pause, or any
+other early-termination mechanism — the run record
+must populate the dimensions this convention names
+rather than collapse to a single-value disposition
+that loses information. The natural-language headline
+for any measured dimension ("X verified," "Y spent,"
+"Z covered," "halt fired correctly") implicitly elects
+a single state; the run record must surface all states
+the runtime distinguished, even when one state has
+zero population.
+
+At scoping time, the run author articulates which
+dimensions the run will measure and what runtime
+states each headline could collapse. The standing
+list below names dimensions that have appeared in
+prior runs and may apply; it is reference, not a
+mandatory checklist. Authors should consider whether
+each applies and add new dimensions as they surface.
+
+Decomposition shapes may be **value-level** (sub-values
+of one axis) or **axis-level** (claims about different
+layers bundled by runtime coincidence). When a
+decomposition is axis-level, name the layers
+explicitly so the bundling that produced the single
+headline doesn't reproduce in the run record.
+
+**Standing dimensions (reference, not mandatory):**
+
+- **Coverage trichotomy** (value-level): verified /
+  attempted-but-failed / untried. Untried may
+  sub-decompose by mechanism (untried-by-design vs.
+  untried-by-halt) where the distinction matters for
+  remediation paths.
+- **Cost trichotomy** (value-level): verification
+  spend / discovery spend / total. Distinguishes
+  in-scope verification cost from out-of-scope
+  failure-mode disposal cost; reading the run total
+  as "verification cost" inflates the unit by
+  conflating the two.
+- **Spec-runtime tuple** (value-level): spec-time
+  disposition / runtime disposition. Distinguishes
+  what the spec author expected at spec-time anchor
+  from what the runtime produced at runtime anchor;
+  the two diverge implicitly when the spec→run gap is
+  non-trivial.
+- **Halt-policy outcome** (axis-level; originating
+  instance, not the dimension's general shape):
+  runtime-execution discipline / scoping-completeness.
+  The halt firing is a runtime-discipline fact;
+  whether the collision should have been live at
+  runtime is a scoping-process fact. The single "halt
+  fired correctly" headline bundles both; the
+  decomposition splits them so the runtime success
+  doesn't carry forward as evidence the scoping was
+  sufficient. Future axis-level dimensions may surface
+  with different layer-pairs (e.g.,
+  test-coverage-discipline / scoping-completeness on a
+  different verification arc) — the dimension's
+  general shape is "claims about different layers
+  bundled by runtime coincidence into one headline,"
+  with halt-policy outcome as the C7-derived first
+  instance.
+
+**Per-sub-type N=2 split trigger:** when any single
+sub-type accumulates a second instance, that sub-type
+graduates to its own convention. Currently axis-level
+decomposition is at N=1 (halt-policy outcome); a
+second axis-level instance would fire the split.
+Hypothesis-discrimination dimension (introduced in
+OI-3 scoping doc §7a, commit `161bff8`, Part 5) is
+also at N=1 and would graduate per the same trigger
+on a second authoring.
+
+First applied: friction-journal section (o) "C7
+closeout deliverables (Meta A application, post-C11)"
+sub-section, commit `52a63f0`. The four C7 closeout
+deliverables (coverage trichotomy / cost trichotomy /
+spec-runtime tuple / halt-collision axis-level) are
+Meta A's first concrete population. The OI-3 scoping
+doc §7a (commit `161bff8`) is the second application,
+applying Meta A at scoping time to OI-3's M1 post-fix
+validation run measurement dimensions.
+
+Composes with: **Scoping-Time Cross-Dependency
+Articulation (Meta B)** — sibling meta-convention.
+Meta B applies at scoping time pre-execution
+(articulating cross-dependencies before they fire as
+runtime collisions); Meta A applies at run-record
+time post-PARTIAL-closure (decomposing the
+single-value disposition into the dimensions the
+runtime distinguished). They are temporally
+complementary: Meta B prevents some collisions from
+landing in run records at all; Meta A ensures the
+ones that do land surface their full state-space.
+**Mutual Hallucination-Flag-and-Retract Discipline
+(Convention #10)** — upstream epistemic-hygiene
+framework. PARTIAL closures sit downstream of #10's
+discipline: when a run closes PARTIAL, the
+state-decomposition Meta A requires is itself a
+hallucination-resistance mechanism (single-value
+dispositions are the natural-language headline that
+overstates the result; the decomposition is the
+explicit qualifier that blocks the carry-forward).
+
+First codified: this commit, S13 conventions-catalog
+codification. Drafted in C11 retrospective
+(`docs/07_governance/friction-journal.md` section (p),
+commit `f221bab`); first concrete application in S12
+(`52a63f0`); applied at scoping time in OI-3 scoping
+doc (`161bff8`).
+
+---
+
+### Scoping-Time Cross-Dependency Articulation (Meta B)
+
+When scoping a verification run, fix-stack, or
+workstream, the author must articulate
+cross-dependencies between components that have been
+authored independently. Components may be policy
+rules within a scoping doc, distinct workstream
+artifacts (fix-stacks, prompt sets, verification
+harnesses), or existing code paths interacting with
+new code paths a fix-stack introduces.
+Cross-dependencies that stay implicit at scoping time
+surface as runtime collisions, where the scoping doc
+didn't ask the cross-product question and the
+runtime is left to resolve the collision ad-hoc.
+
+The articulation is concrete: for each
+cross-dependency the run measures against, name the
+components, name the interaction question, and
+resolve it (or explicitly defer with a named
+fallback).
+
+**Articulation may be iterative:** resolving one
+cross-dependency can surface another (e.g., choosing
+to sequence an upstream fix opens a question about
+how the upstream fix's own scoping articulates its
+dependencies). Continue articulation until no new
+cross-dependencies surface.
+
+**Cross-dependency types that have appeared in prior
+runs and may apply** (reference, not mandatory):
+
+- **Policy-rule interactions:** for each pair of
+  policy rules `(D_i, D_j)` authored in the scoping
+  doc, does the doc say which wins when both apply?
+  Pairwise check across the rule set. The
+  D2-vs-D3 collision in C7 EC-13 (friction-journal
+  section (p), Cluster A Item 1 / Fact A + Fact B
+  split) is the originating instance — D2 (halt on
+  systematic reproduction) and D3 (continue
+  per-instance for out-of-scope failure) collided at
+  runtime because the scoping doc never asked the
+  pairwise question.
+- **Downstream-component dependencies:** when
+  verifying invariant N or shipping a fix-stack
+  against component N, what other components are
+  downstream — by execution-order, by contract-shape,
+  or by any other coupling — and what's the plan if
+  any of them fail systematically or shift their
+  contract during the run? Choose explicitly:
+  sequence the downstream fix first, synthesize
+  bypass artifacts, or claim coverage only against
+  the post-attrition residue. This sub-type covers
+  both the original invariant-pipeline case (Meta B's
+  N=2 instance: OI-3 verification facing
+  Class-2-as-upstream-and-as-fix recursion, OI-3
+  scoping doc §7b commit `161bff8`) and the
+  contract-shape case surfaced in OI-3 §7c
+  (prompt-surgery work coupled to ProposedEntryCard
+  schema via tentative-state representation), and is
+  open to future cases where a component's downstream
+  coupling does not fit either named precedent.
+- **Telemetry-salience dependencies:** when a fix-stack
+  lands on invariant N, two sub-checks. (i) Does
+  existing telemetry surface the discriminators that
+  matter for N's failure modes? If not, the fix-stack
+  scope includes the telemetry refresh. (ii) Does any
+  net-new code path the fix-stack introduces have its
+  own telemetry? If not, the fix-stack scope includes
+  net-new instrumentation. The OI-3 case (OI-3
+  scoping doc §7b commit `161bff8`) scheduled the
+  canvas_directive log-field patch into OI-3 Part 2
+  per sub-clause (i); sub-clause (ii) did not fire
+  because prompt-surgery introduces no net-new
+  orchestrator/service code paths.
+
+Authors should consider whether each applies and add
+new cross-dependency types as they surface.
+
+**Per-sub-type N=2 split trigger:** when any single
+sub-type accumulates evidence of structurally
+distinct mechanisms (e.g., a future case that doesn't
+fit either the "by execution-order" or "by
+contract-shape" coupling under downstream-component
+dependencies, or a third sub-type beyond
+policy-rule/downstream-component/telemetry-salience),
+re-evaluate whether to split. **Meta-level N=5 review
+trigger:** if the cross-dependency type list grows to
+five sub-types, re-evaluate whether the meta-shape
+still holds across them or has fragmented into a
+grab-bag.
+
+First applied: OI-3 scoping doc §7b (commit
+`161bff8`). All three articulation prompts surfaced
+their cross-dependencies cleanly on first application
+— policy-rule interactions surfaced two halt-criteria
+pairs and resolved both with precedent citations;
+downstream-component dependencies surfaced the
+recursive Class-2-as-upstream-and-as-fix dependency
+and resolved with synthetic-bypass; telemetry-salience
+surfaced the canvas_directive log-field gap and
+scheduled the patch into OI-3 Part 2. The §7c
+contract-shape observation drove this convention's
+sub-type rename from the original drafted name
+("invariant-pipeline dependencies") to the broader
+"downstream-component dependencies" framing landed
+above; rename is N=1-evidence-driven, not a
+falsification trigger.
+
+Composes with: **PARTIAL Closure State-Decomposition
+(Meta A)** — sibling meta-convention; Meta A applies
+post-PARTIAL-closure, Meta B applies at scoping-time
+pre-execution. Together they form a temporal pair on
+the verification arc. **Spec-to-Implementation
+Verification (Convention #8)** — upstream
+verification-discipline sibling. Spec-to-Impl catches
+drift in assertions about shipped code at
+implementation time; Meta B catches drift in
+cross-layer coordination at scoping time. Both
+prevent classes of drift that would otherwise surface
+as runtime failures, and both share the
+"articulation-now-prevents-collision-later" shape.
+
+First codified: this commit, S13 conventions-catalog
+codification. Drafted in C11 retrospective
+(`docs/07_governance/friction-journal.md` section (p),
+commit `f221bab`); first applied in OI-3 scoping doc
+§7b (commit `161bff8`) with the §7c sub-type rename
+informing the final form landed here.
 
 ---
 
@@ -1022,7 +1315,10 @@ mechanism, they are not enumerated below.
 | Session Labeling Convention | `918e68a` (codification); (this commit) (amendment re: label hygiene) | 2026-04-22 | Coordination-mechanism ratification; label-hygiene amendment (Session M near-collision, friction-journal subsection (h)) |
 | Session Lock File Convention | `918e68a` (codification); (this commit) (amendment re: env-inheritance) | 2026-04-22 | Coordination-mechanism ratification; v1 handshake amendment (Session M first-activation finding) |
 | Mutual Hallucination-Flag-and-Retract Discipline (sub-track structure amendment) | (this commit) | 2026-04-25 | Phase E — C6 closeout sub-track introduction (EC-direction sub-track formally introduced; retraction sub-track grandfathered at 8 codification-trigger datapoints) |
-| Per-Entry Pending-Orphan Preflight | (this commit) | 2026-04-25 | Phase E — C6 closeout codification from S8-0424/0425 EC-2 actual run; caught 7 staled orphans across two failure classes |
+| Per-Entry Pending-Orphan Preflight | `f935efc` (codification) | 2026-04-25 | Phase E — C6 closeout codification from S8-0424/0425 EC-2 actual run; caught 7 staled orphans across two failure classes |
+| Per-Entry Row-Card Pairing Post-Paste Verification (rename + body amendment to Convention #11) | (this commit) | 2026-04-26 | Phase 1.2 S13 conventions-catalog codification; rename-and-amend folding Obs-C row+card pairing finding (section (o), commit `5fb3b7b`) and Cluster B Item 1 post-paste-verification finding (section (p), commit `f221bab`) into prior "Per-Entry Pending-Orphan Preflight" entry |
+| PARTIAL Closure State-Decomposition (Meta A) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + S12 first concrete application (section (o) closeout deliverables, commit `52a63f0`) + S13 codification |
+| Scoping-Time Cross-Dependency Articulation (Meta B) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + OI-3 scoping doc first application and §7c sub-type rename observation (commit `161bff8`) + S13 codification with rename to "downstream-component dependencies" sub-type |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review
