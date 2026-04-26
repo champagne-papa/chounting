@@ -602,8 +602,30 @@ to the correct claim rather than paper over with a
 compatible-sounding revision. The correction can come from
 either direction; neither side is exempt.
 
-Rationale: eight datapoints across Sessions 7.1 and the
-Session 8 O3 arc triggered codification. Six from the
+This convention has two operational sub-tracks: a
+**retraction sub-track** for post-claim correction
+(catching wrong claims after assertion and explicitly
+retracting), and an **EC-direction sub-track** for
+pre-claim hygiene (rules governing how EC qualifies,
+infers, and asks under uncertainty before claiming).
+Both are operational phases of the same epistemic-
+discipline-under-uncertainty practice — same operator
+(Claude calibrating its epistemic state), different
+temporal phase (pre-claim vs. post-claim). The
+retraction sub-track was the codification-trigger
+scope; the EC-direction sub-track was formally
+introduced 2026-04-25 in the C6 closeout commit per
+Phase E retrospective.
+
+**Retraction sub-track datapoints** (8 priors
+enumerated below as codification-trigger set,
+including 2 S8 O3-arc datapoints #7–#8; mainline
+retraction-track cumulative through 2026-04-25 C6
+close = 12 — see
+`docs/07_governance/friction-journal.md` Phase E for
+the running mainline ledger): eight datapoints across
+Sessions 7.1 and the Session 8 O3 arc triggered
+codification. Six from the
 Session 7.1 thread: (1) **P20 prose tweaks** (7.1.1 design
 pass) — founder added two precise tweaks to drafted prose;
 planner drafted, founder flagged, planner ratified.
@@ -635,6 +657,52 @@ commit `78e9f0d` landed from the O3 session while a
 separate audit session was read-first for the same Phase C
 scope; the `c24d69d` Check-HEAD convention fired correctly
 on discovery.
+
+**EC-direction sub-track datapoints** (7 datapoints;
+sub-track formally introduced 2026-04-25 C6 closeout
+commit; the 8 retraction-track priors enumerated above
+are grandfathered as the codification-trigger set —
+this commit introduces the sub-track structure
+prospectively and does not retroactively reclassify
+priors into sub-tracks):
+
+- **EC-#1 EC verifies persistence via DB query, not
+  stream observation.** Log presence is necessary but
+  not sufficient evidence of DB write.
+- **EC-#2 EC includes orphan `ai_action` contributions
+  in cost estimates.** Visible operator-paste log-line
+  traces understate actual spend when tool-calls
+  produce orphans (no card rendered, no operator-paste
+  resumption); cost from these is invisible to
+  paste-line traces alone.
+- **EC-#3 EC distinguishes operator-mitigated outcomes
+  from agent self-recovery.** Visible traces alone
+  cannot distinguish operator re-paste with explicit-
+  anchor (mitigation) from agent self-correction; EC
+  asks for operator-action narration before
+  classifying outcome attribution.
+- **EC-#4 Operator approval required before executing
+  stale-handling SQL,** even when consultant ratifies.
+  Pre-staged SQL is verified against live schema and
+  check constraints by the executor; operator approval
+  is the second gate before write.
+- **EC-#5 EC requests operator-narration of intent
+  before classifying any new agent-behavior pattern
+  requiring operator intervention** (reject, re-paste,
+  explicit-date anchor, or similar action).
+- **EC-#6 EC reports cost estimates as lower-bound
+  ranges when telemetry is incomplete** (log-line
+  traces missing, orphan-line gap, or multi-paste
+  behavior visible in operator screenshots).
+- **EC-#7 EC qualifies inferences from DB-visible
+  state with explicit "based on what's visible"
+  framing.** For claims requiring filesystem,
+  operator-action, or session-context beyond
+  DB-visible state, EC asks rather than infers.
+
+Source evidence for the 7 EC-direction sub-track
+datapoints in `docs/07_governance/friction-journal.md`
+Phase E section (h) (2026-04-25 S8 C6 closeout).
 
 **Scope — single-track commit flow binds the executor,
 not the operator.** Single-track commit-flow discipline
@@ -670,10 +738,13 @@ derived from the O3 arc's own experience, made explicit on
 
 First codified: 2026-04-22, as part of the deferred
 Session 8 C9 codification (landed in the same commit as
-Convention #9 and the governance-audit mechanism). See
+Convention #9 and the governance-audit mechanism).
+Sub-track structure introduced 2026-04-25 in the C6
+closeout commit per Phase E retrospective. See
 `docs/07_governance/friction-journal.md` Session 7.1
-retrospective and Phase C section for the full datapoint
-records.
+retrospective and Phase C section for the codification-
+trigger record; Phase E section (h) for EC-direction
+sub-track source evidence.
 
 ### Session Labeling Convention
 
@@ -850,6 +921,65 @@ ratification commit. Supporting tooling:
 `.coordination/README.md`, `scripts/session-init.sh`,
 `scripts/session-end.sh`, `scripts/install-hooks.sh`.
 
+### Per-Entry Pending-Orphan Preflight
+
+Each agent-mediated session that posts via tools
+preflights session orphan state at the entry boundary.
+Before each operator paste — or each agent-initiated
+action that may write a `pending` `ai_action` — the
+executor or EC verifies that no `pending` `ai_actions`
+exist for the active `session_id`. The check is
+generic SQL (`SELECT COUNT(*) FROM ai_actions WHERE
+session_id=<current> AND status='pending'`) and is
+failure-class-agnostic: it catches orphans regardless
+of the failure mechanism that produced them.
+
+Rationale: source evidence from S8-0424/0425 Phase E
+(C6 EC-2 actual run). The preflight caught all 7
+staled orphans correctly across two distinct failure
+classes during the run — 5 OI-2 stalls (false-success
+narration with no card rendered;
+`agent.response.natural` template variant emitted) and
+2 structural-response-invalid events (Entry 12; agent
+emitted valid `tool_input` but failed `respondToUser`
+emission across `STRUCTURAL_MAX_RETRIES`). The
+mechanism does not require the operator or EC to know
+in advance which class will fire. Full source detail
+in `docs/07_governance/friction-journal.md` Phase E
+sections (i) and (j).
+
+Scope: applies to any session that posts to
+`ai_actions` via the agent toolchain. Entry boundary =
+before each operator paste in agent-mediated runs
+(the natural unit of work for paid-API verification
+sessions); generalizes to any agent-initiated action
+that may write a `pending` row in sessions where
+pending orphans can accumulate. Resolution path for
+non-zero pending count: stale the orphans with
+`status='stale'` + `staled_at` timestamp + descriptive
+reason-string (per the `stale_status_has_timestamp`
+check constraint); operator approves the SQL before
+execution per Convention #10 EC-direction sub-track
+datapoint EC-#4.
+
+Composes with: **Mutual Hallucination-Flag-and-Retract
+Discipline EC-direction sub-track** — sibling pre-
+action hygiene rule; this convention verifies session
+state while EC-direction qualifies EC-claim shape;
+they reinforce rather than overlap. **Re-verify
+Environmental Claims at Each Gate** — this convention
+is a gate-time environmental-anchor check on agent-
+session state, making it a mechanical enforcer of
+that broader convention's intent. **Session Lock File
+Convention** — operates within active session-lock
+context; `session_id` from `agent_sessions` is
+distinct from the session-lock label, but both anchor
+at session-start and decay if not preflight-verified.
+
+First codified: 2026-04-25, C6 closeout commit. Source
+evidence in `docs/07_governance/friction-journal.md`
+Phase E section (i).
+
 ---
 
 ## Governance Audit — Phase 1.2 Convention Ratifications
@@ -891,6 +1021,8 @@ mechanism, they are not enumerated below.
 | Mutual Hallucination-Flag-and-Retract Discipline (C9 Convention #10) | (this commit) | 2026-04-22 | Phase C ratification pass + C9 codification |
 | Session Labeling Convention | `918e68a` (codification); (this commit) (amendment re: label hygiene) | 2026-04-22 | Coordination-mechanism ratification; label-hygiene amendment (Session M near-collision, friction-journal subsection (h)) |
 | Session Lock File Convention | `918e68a` (codification); (this commit) (amendment re: env-inheritance) | 2026-04-22 | Coordination-mechanism ratification; v1 handshake amendment (Session M first-activation finding) |
+| Mutual Hallucination-Flag-and-Retract Discipline (sub-track structure amendment) | (this commit) | 2026-04-25 | Phase E — C6 closeout sub-track introduction (EC-direction sub-track formally introduced; retraction sub-track grandfathered at 8 codification-trigger datapoints) |
+| Per-Entry Pending-Orphan Preflight | (this commit) | 2026-04-25 | Phase E — C6 closeout codification from S8-0424/0425 EC-2 actual run; caught 7 staled orphans across two failure classes |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review
