@@ -7019,7 +7019,16 @@ Wall-clock paste-#1 to halt: ~31 min.
 - **Test suite delta:** 535 → 536 (Soft 8 adds 1 test); Hard 3
   baseline now non-deterministic per Obs-B'
 - **Dev-server log:** archived to
-  `$HOME/chounting-logs/c7-ec13-run-20260426T054634Z.log`
+  `$HOME/chounting-logs/c7-ec13-run-20260426T054634Z.log`.
+  Note: archive captures only Entry 12's processing (~first
+  minute of the ~31-minute run) — Entries 13–15 are not in
+  the archive. Cause of incompleteness (log rotation, tee
+  restart, copy truncation) not investigated this session;
+  flagged for downstream visibility. The C7 closeout
+  deliverables sub-section's D3 analysis worked from text-
+  token extraction (entry text + section (o) capture) rather
+  than runtime-resolution-trace, so the archive coverage gap
+  was not load-bearing.
 
 #### Untried entries (deferred)
 
@@ -7028,6 +7037,173 @@ Entries 16, 17, 18, 19, 20 from
 (if re-attempted with method pre-specified). These remain
 available for a future verification run after the Class 2
 fix-stack workstream lands.
+
+#### C7 closeout deliverables (Meta A application, post-C11)
+
+These four items apply Meta A's PARTIAL closure
+state-decomposition convention (drafted in C11 section (p),
+landing in conventions catalog in a separate chat) to C7
+EC-13's run record. The decomposition is post-hoc here — Meta A
+was authored after C7 ran — but the same dimensions Meta A
+names are populated below.
+
+##### D1 — Coverage trichotomy (four-way split across 20 entries)
+
+| Entry  | Shape                                       | Disposition           | Mechanism                                                |
+|--------|---------------------------------------------|-----------------------|----------------------------------------------------------|
+| 1–11   | (chunk-1)                                   | Untried-by-design     | Excluded at C7 scoping for handshake-overlap avoidance   |
+| 12     | Simple double-entry (April AWS bill)        | Verified              | Productive; canvas_directive emitted; Site 2 post-fill   |
+| 13     | Multi-line split with discount (King West)  | Attempted-but-Class-2 | Orphan staled; no canvas_directive on turn 2             |
+| 14     | Relative-date refund (Eglinton "last month")| Verified              | Gate A short-circuit fired ($0 / 129ms); turn 2 productive |
+| 15     | Contra-asset adjusting (Allowance bump)     | Attempted-but-Class-2 | Orphan staled; no canvas_directive emitted               |
+| 16–20  | Multi-leg / cross-ref / intra-asset / contra-intangible / ambiguous-bait | Untried-by-halt | Halt fired at Entry 15 per D2 systematic-issue rule      |
+
+The untried-by-design vs. untried-by-halt distinction is
+preserved explicitly: the two populations have different
+mechanisms (scoping-time exclusion vs. runtime halt) and
+different remediation paths. Chunk-1 entries 1–11 are available
+for verification anytime by re-scoping (no upstream blocker);
+chunk-2 entries 16–20 are available only after the Class 2
+fix-stack lands or via synthetic-prompt bypass per OI-3 scoping
+doc §6 Part 6.
+
+##### D2 — Cost trichotomy (verification / discovery / total)
+
+Re-attributed from the per-line cost rollup at lines 6996–7003
+above:
+
+**Verification spend: $0.2163**
+- Entry 12 productive:                     $0.1176
+- Entry 14 turn 1 (gate A short-circuit):  $0.0000
+- Entry 14 turn 2 productive:              $0.0987
+
+**Discovery spend: $0.2750**
+- Entry 13 turn 1 clarifying:              $0.0844
+- Entry 13 turn 2 orphan staled:           $0.0928
+- Entry 15 orphan staled:                  $0.0978
+
+**Total: $0.4913** ($0.2163 + $0.2750, exact identity)
+
+The cost rollup at line 7002 reports "$0.275" as a
+3-significant-digit rounding of $0.2750; the trichotomy uses
+the unrounded $0.2750 to keep the verification + discovery =
+total identity exact. The decomposition supports a sharper
+cost claim than the run total: verification spend ($0.2163)
+is the OI-2-verification-cost unit observed in C7;
+discovery spend ($0.2750) is the Class-2-disposal cost
+observed in C7. Reading the run total ($0.4913) as
+"OI-2 verification cost" inflates the unit by a factor of
+~2.27 by conflating in-scope verification with out-of-scope
+discovery. Phase 2 cost-model authoring (or any downstream
+work that cites C7's spend) inherits this distinction; the
+specific decomposition Phase 2 uses is its own scoping
+decision, not committed here.
+
+##### D3 — Spec-runtime tuple (NEW evidence)
+
+Re-resolved relative-date tokens for Entries 12–15 against
+spec-time anchor 2026-04-20 vs. runtime anchor 2026-04-25
+(5-day drift between anchors). Material-drift threshold:
+disposition-flip OR code-path-flip.
+
+**Sources, per evidence layer:**
+- Entry text (relative-date token enumeration, all four
+  entries): `docs/07_governance/ec-2-prompt-set.md` lines
+  309–355.
+- Runtime disposition + gate-A behavior (all four entries):
+  section (o)'s entry-by-entry capture above.
+- Dev-server log archive (Entry 12 only):
+  `$HOME/chounting-logs/c7-ec13-run-20260426T054634Z.log`. The
+  archive is incomplete (flagged in §"Run-record artifacts
+  preserved" above) and was not load-bearing for any entry's
+  re-resolution; D3's analysis is text-token extraction, not
+  runtime-resolution-trace.
+
+Substitution-per-entry: Entries 13, 14, 15 worked from EC-2
+prompt set + section (o) capture (the substitution that the
+archive's incompleteness forced). Entry 12 also worked from
+the same sources; the archive's Entry 12 coverage was
+confirmatory but not load-bearing. Readers retracing this
+analysis later should expect EC-2 prompt set entry text + the
+matching section (o) entry-disposition capture as the
+authoritative basis for each entry's tuple.
+
+| Entry | Relative-date tokens                       | Spec-time resolution      | Runtime resolution        | Disposition flip? | Code-path flip? | Verdict        |
+|-------|--------------------------------------------|---------------------------|---------------------------|-------------------|-----------------|----------------|
+| 12    | "April" (absolute); "this morning" (implicit posted-date) | 2026-04-20 | 2026-04-25 | No (productive both)   | No (normal-LLM both)    | Non-material   |
+| 13    | "March" (absolute); "April 30" (absolute)  | (no relative tokens)      | (no relative tokens)      | No (Class 2 both) | No (no path differ) | Non-material   |
+| 14    | "last month" (gate-A span); "today" (implicit cheque date) | "last month" → March 2026; "today" → 2026-04-20 | "last month" → March 2026; "today" → 2026-04-25 | No (productive both)   | No (gate A short-circuit both) | Non-material   |
+| 15    | "Month-end"                                | 2026-04-30                | 2026-04-30                | No (Class 2 both) | No (no path differ) | Non-material   |
+
+**Both anchors land in April 2026**, which is the load-bearing
+property: span tokens like "last month" resolve identically
+("last month" = March 2026 under both 2026-04-20 and 2026-04-25
+anchors), and month-end tokens resolve identically (2026-04-30
+under both). The 5-day drift on implicit posted-date tokens
+("this morning", "today") shifts the entry's authored date by
+5 days but doesn't flip disposition or code path — both anchors
+sit inside the current open period, no fiscal-period boundary
+is crossed, no gate-A span resolution differs.
+
+**Non-materiality is contingent on these specific anchors,
+not a general property of 5-day drifts.** A 5-day drift across
+a month boundary (e.g., 2026-03-29 → 2026-04-03) would resolve
+"last month" to February 2026 under spec-time vs. March 2026
+under runtime — a span-token disposition flip on any entry
+referencing "last month." Similarly, "Month-end" would resolve
+to 2026-03-31 vs. 2026-04-30 — different fiscal periods, with
+checkPeriod possibly producing different code paths. Future
+verification runs whose anchor pairs straddle a month boundary
+(or fiscal-period boundary, or year boundary for entries
+referencing "last year") cannot inherit C7's non-material
+finding; D3 must be re-run with the anchor-specific tokens.
+
+Drift was non-material across all four attempted entries.
+C11's high-confidence prediction holds. The run record's
+single-value disposition (per Cluster B Item 3 / Obs-D in
+section (p)) does not collapse a load-bearing distinction in
+C7's case, but the convention discipline of populating both
+anchors explicitly is preserved going forward.
+
+##### D4 — Halt-collision axis-level decomposition
+
+This is the axis-level decomposition Meta A names as Instance 4
+in its example list. The two facts below describe **different
+layers of the same observed phenomenon** (runtime-execution vs.
+scoping-completeness) bundled by runtime coincidence into a
+single "halt fired correctly" headline. They are recorded as
+**separate run-record entries** to block the conflation.
+
+**Fact A (runtime-execution discipline).** Halt logic executed
+correctly under D2-vs-D3 collision at runtime. When the second
+Class-2 orphan surfaced at Entry 15, the halt fired as designed
+under D2's systematic-issue rule and prevented further chunk-2
+attempts. The runtime-execution mechanism worked: D2 took
+precedence over D3's per-instance-continue framing without
+operator intervention or framework deadlock. The halt itself
+is a real win on runtime discipline.
+
+**Fact B (scoping-completeness gap).** The D2-vs-D3 collision
+was live at runtime due to a scoping-process gap. C7's scoping
+did not anticipate the collision — D2 (halt on systematic
+reproduction) and D3 (continue per-instance for out-of-scope
+failure) were authored as independently coherent rules without
+a pairwise interaction-check. The collision surfaced only when
+chunk-2 entries hit Class 2 territory and the runtime had to
+resolve which rule wins. The scoping-process mechanism that
+should have flagged the collision pre-runtime did not fire.
+
+**Carry-forward framing (load-bearing for OI-3 / Phase 2).**
+The original "halt at Class 2" framing treated
+halt-discipline-worked as evidence that scoping-process-was-
+sufficient. This conflation is what the axis-level
+decomposition blocks. Fact A and Fact B are both true; reading
+them as a combined win obscures Fact B and risks the next
+verification run repeating the scoping miss because the
+retrospective remembered "halt discipline worked" instead of
+"scoping was incomplete and the runtime degraded safely."
+Future workstreams inheriting C7 should inherit the split, not
+the conflated win.
 
 #### Phase 1.2 status post-C7
 
