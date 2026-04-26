@@ -53,6 +53,27 @@ export function __setMockFixtureQueue(
   __mockFixture = fixtures;
 }
 
+// OI-2 handshake Soft 8 — capture the params handed to the most
+// recent callClaude invocation so integration tests can assert
+// on the system prompt, message history, or tool list as actually
+// dispatched. Mirrors __setMockFixtureQueue's test-only access
+// pattern; production callers ignore. Last-call-wins semantic:
+// when the orchestrator's main loop fires multiple callClaude
+// invocations in one handleUserMessage flow, the captured value
+// reflects the final invocation. The `system` arg is computed
+// once outside the loop, so it is identical across calls.
+let __lastCallParams: Anthropic.Messages.MessageCreateParams | null = null;
+
+/**
+ * Test-only accessor for the params handed to the most recent
+ * callClaude invocation. Returns null if no call has occurred
+ * since process start. Pair with __setMockFixtureQueue for
+ * assertions about what the orchestrator actually sent.
+ */
+export function __getLastClaudeCallParams(): Anthropic.Messages.MessageCreateParams | null {
+  return __lastCallParams;
+}
+
 // Lazily constructed client — avoid instantiation at import time
 // so test environments without ANTHROPIC_API_KEY can import the
 // module without blowing up.
@@ -79,6 +100,11 @@ export async function callClaude(
   params: Anthropic.Messages.MessageCreateParams,
   log: Logger,
 ): Promise<Anthropic.Messages.Message> {
+  // Soft 8 spy — record params before dispatch so integration
+  // tests can inspect what the orchestrator actually sent. No
+  // production effect.
+  __lastCallParams = params;
+
   // Fixture path — takes precedence before real API.
   if (__mockFixture !== null) {
     if (__mockFixture.length === 0) {
