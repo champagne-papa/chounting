@@ -6687,3 +6687,58 @@ OI-2 fix stack lands and a fresh `agent_session` is initialized.
   cross-reference.
 - Single-run halt threshold ($3): not exceeded this run.
 
+### (n) OI-2 fix-stack closeout NOTEs (post-implementation)
+
+Three follow-up items surfaced during OI-2 fix-stack
+implementation (foundation commit `6896f4b`, validation commit
+`91a317f`). None block C7 EC-13 verification — flagged here so
+they don't drift into archaeology.
+
+**NOTE 1 — `reverseJournalEntry` dow-gate scope deferral.**
+Validation-commit gate B (day-of-week validation) is scoped to
+`postJournalEntry` only via an explicit `if (tu.name ===
+'postJournalEntry')` guard in the orchestrator. The dispatcher
+pattern means broadening to `reverseJournalEntry` is a one-line
+change, but the date semantics differ enough (operator typically
+picks the reversal date from a known set, not arithmetic from a
+relative phrase) that the brief's recommendation to defer was
+ratified. Revisit trigger: a real-world reversal-prompt
+mismatch surfacing during C7 verification or later operator
+runs. Until then, scoped to `postJournalEntry` matches the C6
+evidence base.
+
+**NOTE 2 — `source_phrase` granularity in
+`agent.error.entry_date_dow_mismatch`.** Gate B's
+`detectPromptWeekday` helper currently returns the bare weekday
+name as `phrase` (e.g., `'friday'`), not the full qualified
+phrase (e.g., `'last friday'`). The dow_mismatch template's
+`source_phrase` param therefore surfaces the bare token. Richer
+context (preserving the `last|this|next` qualifier) would
+require detecting the qualifier-prefix optionally and threading
+it into the helper's return shape. Deferred for the validation
+commit to keep the diff narrow. Revisit trigger: operator
+feedback that the bare weekday in error UI is too terse, or a
+case where the qualifier carries load-bearing intent for the
+clarification flow.
+
+**NOTE 3 — Carry-forward `accountLedgerService.test.ts`
+failures.** Two tests in
+`tests/integration/accountLedgerService.test.ts` (`returns
+ordered rows with correct running-balance for three ascending-
+date entries on Investments in Subsidiaries` and
+`running_balance is debit-positive: credit contribution on
+Intercompany Receivables yields negative delta`) were verified
+pre-existing on baseline `f935efc` via `git stash` + isolated
+re-run during the foundation-commit ratification turn. Same
+failure shape (running-balance arithmetic on specific accounts;
+diff values on the order of 600–3000 from expected), same line
+numbers (`accountLedgerService.test.ts:269` and `:346`),
+unchanged through both fix-stack commits — full-suite tally
+moved 519/521 → 533/535 from foundation to validation; the
+failure count stayed at 2. Likely an account-fixture / seed-
+pollution issue independent of OI-2 (the fix stack does not
+touch ledger arithmetic, account migration, or running-balance
+computation). Revisit trigger: dedicated diagnostic pass on the
+ledger-arithmetic surface, or a regression that causes the count
+to grow beyond 2.
+
