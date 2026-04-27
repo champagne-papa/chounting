@@ -474,6 +474,18 @@ entries live in the active `friction-journal.md` Phase 2 section.
   grep both patterns: `friction-journal\.md` AND `friction-journal
   section`. Refinement candidate for tooling: heading detector or
   citation auditor should catch both patterns.
+- **Identity-assertion grep for parallel Zod-schema/TS-type pairs.**
+  When a brief enumerates consumer files for a schema-change
+  decision (§3c-style scope), the consumer set must include both
+  the Zod schema file (`*.schema.ts` under `src/shared/schemas/`)
+  AND its TS type companion (`*.ts` under `src/shared/types/` for
+  hand-maintained types) when the codebase pairs them. Pattern
+  fired N=1 during S18 verification (TS type companions to
+  `proposedEntryCard.schema.ts` and `canvasDirective.schema.ts`
+  were missed by the brief's six-file enumeration; surfaced at
+  Task 2 verification per Convention #8 Identity assertions).
+  Refinement candidate for brief-template mental model: brief
+  authors verify TS-type companions for any schema-change scope.
 
 Cross-reference: matching `[ROUTE?]` entries in the active
 `friction-journal.md` Phase 2 section.
