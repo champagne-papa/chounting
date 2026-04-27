@@ -142,7 +142,7 @@ Codified from Phase 1.2 Session 1 (2026-04-18) where the sub-brief
 named only CA-28. The full `pnpm test` at commit 4 surfaced
 CA-37's two hardcoded assertions (`toBe(16)` and `toBe(22)`);
 executor correctly stopped and flagged rather than silently
-extending scope. See `docs/07_governance/friction-journal.md`
+extending scope. See `docs/07_governance/friction-journal/phase-1.2.md`
 entry 2026-04-18 (CA-37 sub-brief gap).
 
 ### Cited-Code Verification
@@ -170,7 +170,7 @@ Phase 1.2 as the migration window — but the sub-brief cited both
 schemas as "verbatim, no new Zod" without the grep that would have
 caught it. Cost one stop-and-flag mid-execution; grep takes five
 seconds at drafting time. See
-`docs/07_governance/friction-journal.md` entry 2026-04-18 (Phase
+`docs/07_governance/friction-journal/phase-1.2.md` entry 2026-04-18 (Phase
 1.1 agent-path guard removal).
 
 ### API Boundary Casing
@@ -225,7 +225,7 @@ absorption is a review-fail.
 Codified from the three `invitationService` bugs found in the
 Phase 1.5B closeout review — two of the three bugs were hidden
 because errors were caught and swallowed, so tests passed on the
-happy path. See `docs/07_governance/friction-journal.md` entry
+happy path. See `docs/07_governance/friction-journal/phase-1.5.md` entry
 2026-04-15 (invitationService bugs) for the full incident.
 
 ### NOT NULL Column Blast Radius
@@ -242,7 +242,7 @@ Phase 1.5A's `source_system NOT NULL` on `journal_entries` broke
 four files (`journalEntryService.ts`, `crossOrgRlsIsolation.test.ts`,
 both SQL test helpers, plus `dev.sql`). All fixes were mechanical
 but should have been pre-identified in the brief. See
-`docs/07_governance/friction-journal.md` entry 2026-04-15.
+`docs/07_governance/friction-journal/phase-1.5.md` entry 2026-04-15.
 
 ---
 
@@ -347,7 +347,7 @@ claims**) was added to close that gap. Same class as the prior
 datapoints ("narratively correct, contractually wrong");
 different verification move (grep against the current codebase
 for the temporal assertion, not against drafter memory of a
-prior phase). See `docs/07_governance/friction-journal.md`
+prior phase). See `docs/07_governance/friction-journal/phase-1.2.md`
 "Phase A" section, subsection A, for the incident record.
 
 **Refinement datapoint (Phase C):** the Phase C Site 1
@@ -360,7 +360,7 @@ Plan-time grep of the target symbol would have caught it.
 Same class as the prior refinements ("narratively correct,
 contractually wrong"); different verification move (grep the
 call sites of the symbol being changed, not the sibling-family
-of the test names). See `docs/07_governance/friction-journal.md`
+of the test names). See `docs/07_governance/friction-journal/phase-1.2.md`
 Phase C section (c) under "Plan-time-discipline family" ("B5
 file-structure underestimate") for the incident record.
 
@@ -437,7 +437,7 @@ this convention covers commit-time, approval-time, and
 phase-boundary gates plus the agent's own pre-action
 environmental assumptions. First observed: 2026-04-22, O3
 execution arc; full analysis in
-`docs/07_governance/friction-journal.md` Phase C section (c)
+`docs/07_governance/friction-journal/phase-1.2.md` Phase C section (c)
 under "Plan-time-discipline family" and
 "Symmetric-application datapoints."
 
@@ -476,7 +476,7 @@ inverse-of-action reasoning is unsound regardless of actor
 authority. See also "Erase-to-Clean vs. Document-to-Verify"
 for the broader meta-principle. First observed: 2026-04-22,
 O3 execution arc; full retrospective in
-`docs/07_governance/friction-journal.md` Phase C section (b).
+`docs/07_governance/friction-journal/phase-1.2.md` Phase C section (b).
 
 ### Erase-to-Clean vs. Document-to-Verify
 
@@ -509,7 +509,7 @@ both sides remain susceptible. See also "Preservation and
 Ambiguity Gates" for the gate-specific application of this
 principle. First observed: 2026-04-22, O3 execution arc;
 meta-pattern analysis in
-`docs/07_governance/friction-journal.md` Phase C section (c)
+`docs/07_governance/friction-journal/phase-1.2.md` Phase C section (c)
 under "Meta-pattern family."
 
 ### Plan-Time Model-Config Verification
@@ -535,7 +535,7 @@ have under-reported for any cached turn. Structurally the
 same pattern as working-tree-cleanliness and
 C6-evidence-preservation: untested environmental
 assumption that fires silently until it breaks. See
-`docs/07_governance/friction-journal.md` Phase C section
+`docs/07_governance/friction-journal/phase-1.2.md` Phase C section
 (c) under "Plan-time-discipline family" for the full
 incident record. First observed: 2026-04-22, O3 Phase D
 execution plan.
@@ -583,7 +583,7 @@ contract is what both layers think it is). Narrative
 coherence on one side of a boundary is insufficient
 evidence; the other side's shape must be read and matched.
 
-See `docs/07_governance/friction-journal.md` Session 7 and
+See `docs/07_governance/friction-journal/phase-1.2.md` Session 7 and
 Session 7.1 retrospectives for the full datapoint records.
 First codified: 2026-04-22, as part of the deferred
 Session 8 C9 codification (landed in the same commit as
@@ -622,7 +622,7 @@ enumerated below as codification-trigger set,
 including 2 S8 O3-arc datapoints #7–#8; mainline
 retraction-track cumulative through 2026-04-25 C6
 close = 12 — see
-`docs/07_governance/friction-journal.md` Phase E for
+`docs/07_governance/friction-journal/phase-1.2.md` Phase E for
 the running mainline ledger): eight datapoints across
 Sessions 7.1 and the Session 8 O3 arc triggered
 codification. Six from the
@@ -701,7 +701,7 @@ priors into sub-tracks):
   DB-visible state, EC asks rather than infers.
 
 Source evidence for the 7 EC-direction sub-track
-datapoints in `docs/07_governance/friction-journal.md`
+datapoints in `docs/07_governance/friction-journal/phase-1.2.md`
 Phase E section (h) (2026-04-25 S8 C6 closeout).
 
 **Scope — single-track commit flow binds the executor,
@@ -734,14 +734,14 @@ surprises each resolved in one round is a noisy
 environment, not degraded execution. Provenance: retune
 derived from the O3 arc's own experience, made explicit on
 2026-04-22 per Phase C section (c) in
-`docs/07_governance/friction-journal.md`.
+`docs/07_governance/friction-journal/phase-1.2.md`.
 
 First codified: 2026-04-22, as part of the deferred
 Session 8 C9 codification (landed in the same commit as
 Convention #9 and the governance-audit mechanism).
 Sub-track structure introduced 2026-04-25 in the C6
 closeout commit per Phase E retrospective. See
-`docs/07_governance/friction-journal.md` Session 7.1
+`docs/07_governance/friction-journal/phase-1.2.md` Session 7.1
 retrospective and Phase C section for the codification-
 trigger record; Phase E section (h) for EC-direction
 sub-track source evidence.
@@ -758,7 +758,7 @@ the session authors: `Session: <label>`.
 Rationale: four concurrent-session failures on 2026-04-22
 (commit interleave, DB state wipe, authorization race,
 ratification bypass — see
-`docs/07_governance/friction-journal.md` Phase B subsection A
+`docs/07_governance/friction-journal/phase-1.2.md` Phase B subsection A
 for the full record) and the explicit ad-hoc coordination
 behavior in commit `9aaeeec` (parallel session authoring a
 session-closeout that named four co-existing sessions on the
@@ -943,8 +943,8 @@ regardless of the failure mechanism that produced
 them.
 
 **Pairing — what the verification is actually about
-(Obs-C, friction-journal section (o), commit
-`5fb3b7b`):** orphan-prevention is two-part structural
+(Obs-C, captured in `phase-1.2-retrospective.md` §3
+Pattern 6; original section (o), commit `5fb3b7b`):** orphan-prevention is two-part structural
 (pending row + paired ProposedEntryCard via matching
 `idempotency_key`), not row-presence-state. A pending
 row with a paired card is a normal in-flight
@@ -954,8 +954,9 @@ verification's load-bearing check is the pairing, not
 the row count alone.
 
 **Temporal scope — post-paste verification, not
-preflight gating (Cluster B Item 1 / Obs-F,
-friction-journal section (p), commit `f221bab`):**
+preflight gating (Cluster B Item 1 / Obs-F, captured in
+`phase-1.2-retrospective.md` §3 Pattern 6; original
+section (p), commit `f221bab`):**
 the agent UI's paste-acceptance is permissive (input
 field accepts paste whenever submission is enabled),
 and the WSL-Claude-backend verification runs in the
@@ -980,9 +981,11 @@ emitted valid `tool_input` but failed `respondToUser`
 emission across `STRUCTURAL_MAX_RETRIES`). The
 mechanism does not require the operator or EC to know
 in advance which class will fire. Full source detail
-in `docs/07_governance/friction-journal.md` Phase E
-sections (i) and (j); rename rationale in section (p)
-under Cluster B Item 1 plus section (o) Obs-C.
+in `docs/07_governance/friction-journal/phase-1.2.md`
+Phase E sections (i) and (j); rename rationale captured
+in `docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+§3 Pattern 6 (Cluster B Item 1 in original section (p)
+and Obs-C in original section (o)).
 
 Scope: applies to any session that posts to
 `ai_actions` via the agent toolchain. Entry boundary =
@@ -1020,10 +1023,11 @@ row+card structural pairing as the actual orphan
 signature (Obs-C) and to flip the temporal framing
 from "preflight gating" to "post-paste verification"
 to match runtime behavior (Cluster B Item 1). Source
-evidence in `docs/07_governance/friction-journal.md`
-Phase E section (i), section (o) Obs-C
-(commit `5fb3b7b`), and section (p) Cluster B Item 1
-(commit `f221bab`).
+evidence in `docs/07_governance/friction-journal/phase-1.2.md`
+Phase E section (i); rename evidence captured in
+`docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+§3 Pattern 6 (section (o) Obs-C, commit `5fb3b7b`;
+section (p) Cluster B Item 1, commit `f221bab`).
 
 ---
 
@@ -1104,12 +1108,14 @@ OI-3 scoping doc §7a, commit `161bff8`, Part 5) is
 also at N=1 and would graduate per the same trigger
 on a second authoring.
 
-First applied: friction-journal section (o) "C7
-closeout deliverables (Meta A application, post-C11)"
-sub-section, commit `52a63f0`. The four C7 closeout
-deliverables (coverage trichotomy / cost trichotomy /
-spec-runtime tuple / halt-collision axis-level) are
-Meta A's first concrete population. The OI-3 scoping
+First applied: captured in
+`phase-1.2-retrospective.md` §3 Pattern 6 (Meta A
+first concrete application; original friction-journal
+section (o) "C7 closeout deliverables (Meta A
+application, post-C11)" sub-section, commit `52a63f0`).
+The four C7 closeout deliverables (coverage trichotomy
+/ cost trichotomy / spec-runtime tuple / halt-collision
+axis-level) are Meta A's first concrete population. The OI-3 scoping
 doc §7a (commit `161bff8`) is the second application,
 applying Meta A at scoping time to OI-3's M1 post-fix
 validation run measurement dimensions.
@@ -1136,11 +1142,12 @@ overstates the result; the decomposition is the
 explicit qualifier that blocks the carry-forward).
 
 First codified: this commit, S13 conventions-catalog
-codification. Drafted in C11 retrospective
-(`docs/07_governance/friction-journal.md` section (p),
-commit `f221bab`); first concrete application in S12
-(`52a63f0`); applied at scoping time in OI-3 scoping
-doc (`161bff8`).
+codification. Drafted in C11 retrospective (captured in
+`docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+§3 Pattern 6; original `friction-journal/phase-1.2.md`
+section (p), commit `f221bab`); first concrete
+application in S12 (`52a63f0`); applied at scoping time
+in OI-3 scoping doc (`161bff8`).
 
 ---
 
@@ -1179,9 +1186,11 @@ runs and may apply** (reference, not mandatory):
   policy rules `(D_i, D_j)` authored in the scoping
   doc, does the doc say which wins when both apply?
   Pairwise check across the rule set. The
-  D2-vs-D3 collision in C7 EC-13 (friction-journal
-  section (p), Cluster A Item 1 / Fact A + Fact B
-  split) is the originating instance — D2 (halt on
+  D2-vs-D3 collision in C7 EC-13 (captured in
+  `phase-1.2-retrospective.md` §3 Pattern 6, Cluster A
+  Item 1 / Fact A + Fact B split; original
+  friction-journal section (p), commit `f221bab`) is
+  the originating instance — D2 (halt on
   systematic reproduction) and D3 (continue
   per-instance for out-of-scope failure) collided at
   runtime because the scoping doc never asked the
@@ -1267,11 +1276,12 @@ as runtime failures, and both share the
 "articulation-now-prevents-collision-later" shape.
 
 First codified: this commit, S13 conventions-catalog
-codification. Drafted in C11 retrospective
-(`docs/07_governance/friction-journal.md` section (p),
-commit `f221bab`); first applied in OI-3 scoping doc
-§7b (commit `161bff8`) with the §7c sub-type rename
-informing the final form landed here.
+codification. Drafted in C11 retrospective (captured in
+`docs/07_governance/retrospectives/phase-1.2-retrospective.md`
+§3 Pattern 6; original `friction-journal/phase-1.2.md`
+section (p), commit `f221bab`); first applied in OI-3
+scoping doc §7b (commit `161bff8`) with the §7c sub-type
+rename informing the final form landed here.
 
 ---
 

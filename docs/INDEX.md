@@ -19,9 +19,10 @@ rules and points here for everything else.
 
 ## 01_prd — product requirements
 
-Folder ships empty in Phase 1.1. First candidate is a Phase 1.2
-agent PRD if scope warrants a product-level doc separate from the
-execution brief. See the folder README for the deletion criterion.
+Folder ships empty through Phase 1.2 close (2026-04-26). First
+candidate is a Phase 2 PRD if scope warrants a product-level doc
+separate from the execution brief. See the folder README for the
+deletion criterion.
 
 ## 02_specs — the rules (enforcement-backed)
 
@@ -31,7 +32,7 @@ execution brief. See the folder README for the deletion criterion.
 - `mutation_lifecycle.md` — the six states a proposed mutation passes through, Needs Attention prioritization triggers, the 24-hour reversible window.
 - `data_model.md` — table-by-table schema reference: columns, named CHECK constraints, triggers, indexes, RLS policies.
 - `invariants.md` — contributor-facing rollup index: every INV-ID, its layer, its leaf anchor, its code enforcement site. Carries the bidirectional-reachability proof.
-- `glossary.md` — vocabulary reference for terms with project-specific meanings (`adminClient`, `MoneyAmount`, Two Laws, canvas directive, etc.). Does not redefine GAAP/IFRS or generic software terms.
+- `glossary.md` — vocabulary reference for terms with project-specific meanings (`adminClient`, `MoneyAmount`, Two Laws, canvas directive, etc.). Does not redefine GAAP/IFRS or generic software terms. Includes the `## Workflow Vocabulary` section (Arc / Phase / Session / Sub-session hierarchy + supporting terms; codified 2026-04-26).
 - `open_questions.md` — unresolved questions across founder data, architectural defaults, closeout surfacings, and formalization candidates. Current leading entry: Q32 (reversal-mirror step-order discrepancy).
 
 ## 03_architecture — how the pieces fit
@@ -46,7 +47,7 @@ execution brief. See the folder README for the deletion criterion.
 ## 04_engineering — from clone to running
 
 - `developer_setup.md` — prerequisites, local setup, seed flow, troubleshooting recipes.
-- `conventions.md` — branch/commit naming, contribution rules, coding conventions (camelCase API ↔ snake_case DB, permission/audit key naming, etc.).
+- `conventions.md` — branch/commit naming, contribution rules, coding conventions (camelCase API ↔ snake_case DB, permission/audit key naming, etc.). Also carries the Phase 1.5A and Phase 1.2 codified-convention catalogs and the `## Documentation Routing` convention (routing rule, write-time tripwires including the 10-second rule and `[ROUTE?]` fallback, codification thresholds, hygiene cadence, archival rule, deprecation model; codified 2026-04-26).
 - `testing_strategy.md` — what to test and how; Category A floor table; env-var cascade for test DB URLs.
 - `security.md` — Canadian-region hosting constraint, env var handling, logging hygiene rules.
 
@@ -62,8 +63,14 @@ for the deletion criterion.
 
 ## 07_governance — institutional memory
 
-- `friction-journal.md` — append-only war diary. `WANT` / `CLUNKY` / `WRONG` / `NOTE` entries recording what surprised us and why. Agents may append here; other files in this folder require explicit human approval.
+- `friction-journal.md` — append-only war diary for the **active phase only**. `WANT` / `CLUNKY` / `WRONG` / `NOTE` entries recording what surprised us and why. 10-second rule: each entry readable in ~10 seconds. Closed phases archive to `friction-journal/phase-X.md` per the Documentation Routing convention's archival rule. Agents may append here; other files in this folder require explicit human approval.
+- `friction-journal/phase-1.1.md` — archived terse-entry journal for Phase 1.1 (~42KB).
+- `friction-journal/phase-1.5.md` — archived terse-entry journal for Phase 1.5A (~4.5KB).
+- `friction-journal/phase-1.2.md` — archived journal for Phase 1.2 (~335KB). Sections (a) through (q) preserve original lettering across three independent sequences (Phase C / Phase D / Phase E). Long-prose subsections (o) "C7 EC-13 closeout deliverables" and (p) "C11 retrospective on C7 EC-13" stubbed with one-line pointers to `phase-1.2-retrospective.md` §3 Pattern 6.
+- `friction-journal/arc-A.md` — archived terse-entry journal for Arc A (Phase 0–1.1 Control Foundations, 2026-04-24 closeout, ~9.2KB). Cross-arc work spanning Phase 0–1.1; companion to `arc-A-retrospective.md`.
 - `retrospectives/phase-1.1-retrospective.md` — closeout retrospective (2026-04-13): what shipped, what surprised, lessons for Phase 1.2.
+- `retrospectives/phase-1.2-retrospective.md` — closeout retrospective (2026-04-26): wins / frictions / conventions / scope. Inheritance-artifact map at §2; cross-session patterns at §3 (Pattern 1–8).
+- `retrospectives/arc-A-retrospective.md` — Arc A closeout retrospective (2026-04-24): 12-step execution arc, 9 patterns, three-role workflow meta-observations.
 
 ### 07_governance/adr — Architecture Decision Records
 
@@ -74,6 +81,9 @@ for the deletion criterion.
 - `adr/0004-ghost-rows-visual-contract.md` — four-signal defense-in-depth for ghost rows (proposed-but-unapproved mutations); prevents "transient overlay mistaken for posted data."
 - `adr/0005-three-path-intent-schema.md` — chat / palette / Mainframe all produce the same `Intent` object; single intent schema prevents three bespoke routers.
 - `adr/0006-agent-persona-unnamed.md` — the agent is a senior bookkeeper, unnamed. No anthropomorphization in UI copy.
+- `adr/0008-layer-1-enforcement-modes.md` — Layer 1 invariant enforcement modes (CHECK constraint vs deferred constraint vs trigger).
+- `adr/0009-before-state-capture-convention.md` — `before_state` capture convention for `audit_log` rows; locked to Phase 1.5A's six-service rollout.
+- `adr/0010-reserved-enum-states.md` — reserved enum states with Phase 2 corrections; Phase 1 simplifications use placeholder values that Phase 2 fills.
 
 ### 07_governance/audits — audit framework
 
@@ -122,7 +132,7 @@ for the deletion criterion.
 - `phase-1.1/schema_reconciliation.md` — three-source reconciliation (migrations, generated types, Zod schemas) across 24 tables.
 - `phase-1.1/test_coverage_catalog.md` — catalog of 26 integration tests + 49 unit tests with gap notes.
 
-### 09_briefs/phase-1.2 — in flight (Double Entry Agent)
+### 09_briefs/phase-1.2 — closed 2026-04-26 (Double Entry Agent)
 
 - `phase-1.2/brief.md` — Phase 1.2 master execution brief. Frozen at SHA aae547a; never modified during execution.
 - `phase-1.2/agent_architecture.md` — phase-specific agent internals: orchestrator, tools, session persistence, institutional memory. Companion to the durable `03_architecture/agent_interface.md`.
@@ -135,6 +145,19 @@ for the deletion criterion.
 - `phase-1.2/session-4-brief.md` — Session 4: real API + routes + OrgContext (first paid-API session). Status in `CURRENT_STATE.md`.
 - `phase-1.2/session-5-brief.md` — Session 5: onboarding state machine + welcome page + sign-in redirect. Status in `CURRENT_STATE.md`.
 - `phase-1.2/session-6-brief.md` — Session 6: form-escape surfaces + canvas directive extensions (master §12 and §15). Status in `CURRENT_STATE.md`.
+- `phase-1.2/session-7-brief.md` — Session 7: orchestrator + tools execution. Status in `CURRENT_STATE.md`.
+- `phase-1.2/session-7-1-brief.md` — Session 7.1 sub-session: design pass (carved mid-thread when scope expanded).
+- `phase-1.2/session-7-1-1-brief.md` — Session 7.1.1: design-pass continuation.
+- `phase-1.2/session-7-1-2-brief.md` — Session 7.1.2: EC-19 run.
+- `phase-1.2/session-8-brief.md` — Session 8: paid-API verification + C6/C7 stack.
+- `phase-1.2/session-8-c6-prereq-o2-org-id-injection-plan.md` — Session 8 C6 prereq: OI-2 org-id injection fix-stack plan.
+- `phase-1.2/session-8-c6-prereq-o2-v2-pre-zod-injection-plan.md` — Session 8 C6 prereq: OI-2 v2 pre-Zod injection plan (revision after prior plan superseded).
+- `phase-1.2/session-8-c6-prereq-o3-agent-date-context.md` — Session 8 C6 prereq: OI-3 agent date-context preparation.
+- `phase-1.2/session-8-c6-prereq-o3-execution-plan.md` — Session 8 C6 prereq: OI-3 execution plan.
+- `phase-1.2/oi-3-class-2-fix-stack-scoping.md` — OI-3 / Class 2 fix-stack scoping doc (mechanism identified, fix surface bounded, methodology partitioned, hypothesis treatment authored; first concrete application of Meta A and Meta B at scoping time). Phase 2 carry-forward.
+- `phase-1.2/ec-matrix.md` — Phase 1.2 EC matrix (codified at C10, updated at C12). 27 ECs + 3 shipping line items across 6 sections; post-C12 totals: 21 MET / 7 DEFERRED / 2 PARTIAL / 0 MISSED.
+- `phase-1.2/session-15-brief.md` — Session 15 brief: Documentation Routing convention + Workflow Vocabulary ratification. Authority for the friction-journal split.
+- `phase-1.2/session-16-brief.md` — Session 16 brief: friction-journal split + INDEX update (this commit). First concrete application of Documentation Routing convention's archival rule.
 
 ### 09_briefs/phase-1.5 — closed (org profile, users/MFA, permissions)
 
@@ -148,6 +171,7 @@ for the deletion criterion.
 ### 09_briefs/phase-2 — forward-looking planning
 
 - `phase-2/README.md` — folder rules; protection note for `interaction_model_extraction.md`.
+- `phase-2/obligations.md` — Phase 2 carry-forward queue from Phase 1.2 closeout: named workstreams (OI-3 / Class 2), deferred ECs, investigation queue, sensible-accounting candidates, COA gaps, architectural follow-ups, convention split-trigger watch, Documentation Routing refinement candidates.
 - `phase-2/agent_architecture_proposal.md` — three-tier agent architecture (commit / proposal / interface paths). CTO-reviewed, approved in principle 2026-04-19. Resolution path: ADR-0007 + `02_specs/agent_architecture_policy.md` during Phase 2 scoping after Phase 1.3 triage. Five open items Q27–Q31 block ADR drafting. Operationalizes ADR-0003 and Simplification 3; changes no existing invariant.
 - `phase-2/interaction_model_extraction.md` — human-authored architectural statement (five interaction primitives). Preserved verbatim from the commit-4b prelude; do not modify without explicit approval.
 - `phase-2/cmd_z_as_reversal.md` — keyboard-undo-that-posts-a-reversal pattern (the ledger is append-only per ADR-0001).

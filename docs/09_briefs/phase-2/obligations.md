@@ -431,3 +431,49 @@ threshold.
 The two workstreams (OI-3 + Class 2) are the load-bearing
 opening scope. Everything else is per-Phase-2-scope-decision
 queue, not commitment.
+
+---
+
+## Documentation Routing refinement candidates (from S15 mental simulation + S16 execution)
+
+Surfaced during the S15 ratification mental simulation (commit
+`5b02474`) and the S16 first-application execution. Each is logged
+here for codification when its pattern repeats; matching `[ROUTE?]`
+entries live in the active `friction-journal.md` Phase 2 section.
+
+- **Session-scope reflection has no clean retrospective destination.**
+  Per the current Documentation Routing routing rule, retrospective
+  destinations are phase-scope or arc-scope; session-scope reflections
+  fall through to the `[ROUTE?]` fallback. Refinement candidate for
+  the next governance amendment.
+- **Pattern observations that are also deferred-codification candidates**
+  can legitimately split between `friction-journal.md` (the moment) and
+  `open_questions.md` (the deferred decision). Convention doesn't
+  spell this out; works in practice. Refinement candidate.
+- **Brief-creation session lock pattern.** Brief-creation sessions
+  (e.g., S15-brief-creation, S16-brief-creation) don't always acquire
+  session locks. Pattern fired N=2 (`f90753b` 2026-04-26, `6e76d89`
+  2026-04-27). At split-trigger threshold per Documentation Routing
+  §Codification thresholds (N=2). Codifies on N=3 fire — likely
+  candidate: codify a session-lock sub-type for documentation-only
+  sessions, or formalize the exempt path.
+- **Embedded-prose subsections without retrospective absorption.**
+  Section (n) "OI-2 fix-stack closeout NOTEs" surfaced during S16
+  split as ~60 lines of multi-paragraph prose under structured NOTE
+  markers, with no retrospective destination. Currently archived
+  verbatim in `friction-journal/phase-1.2.md`. Future migration
+  candidate (likely → `open_questions.md` or a new `phase-2/notes.md`
+  artifact) when the pattern repeats. Pattern fired N=1 during S16
+  execution.
+- **Citation-grep methodology gap.** The S16 brief's
+  `grep -nE 'friction-journal\.md'` methodology missed shorthand
+  citations using `friction-journal section (X)` without the `.md`
+  extension. Three missed citations surfaced during S16 execution
+  (lines ~946, ~1107, ~1182 in `conventions.md`). Future migration
+  commits applying the Documentation Routing archival rule should
+  grep both patterns: `friction-journal\.md` AND `friction-journal
+  section`. Refinement candidate for tooling: heading detector or
+  citation auditor should catch both patterns.
+
+Cross-reference: matching `[ROUTE?]` entries in the active
+`friction-journal.md` Phase 2 section.
