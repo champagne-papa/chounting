@@ -18,7 +18,7 @@ For the rules these terms participate in, see
 
 ## Index
 
-[A](#a) · [B](#b) · [C](#c) · [D](#d) · [F](#f) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+[A](#a) · [B](#b) · [C](#c) · [D](#d) · [F](#f) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w) · [Workflow Vocabulary](#workflow-vocabulary)
 
 ---
 
@@ -392,3 +392,115 @@ authorization). Every mutating service call goes through it
 [INV-SERVICE-001](ledger_truth_model.md#inv-service-001--every-mutating-service-function-is-invoked-through-withinvariants)
 and
 [INV-AUTH-001](ledger_truth_model.md#inv-auth-001--every-mutating-service-call-is-authorized).
+
+## Workflow Vocabulary
+
+Phase is the primary planning unit; arcs are execution
+threads that may cross phase boundaries. The two are
+complementary: phases bound scope, arcs bound continuous
+bodies of work.
+
+**Top-level work units:**
+
+- **Arc.** A continuous body of work spanning one or more
+  sessions; bounded by an objective and a closeout.
+  Examples: Arc A (Phase 0–1.1 Control Foundations), the
+  Coordination Arc (2026-04-22), the O3 Arc (2026-04-22).
+  May cross phase boundaries. Has its own retrospective
+  at close (e.g., `arc-A-retrospective.md`).
+- **Phase.** A numbered scope-bounded chunk of work
+  crossing the whole project (Phase 1.1, 1.2, 1.5A/B/C,
+  2). Has a master brief, exit criteria matrix, and a
+  phase retrospective. May contain multiple Arcs; an Arc
+  may also span Phases.
+- **Session.** One focused chat conversation against a
+  brief or sub-brief. Has a session label (per Session
+  Labeling Convention). Often produces 1–N commits.
+  Bounded by context-window or by founder pause.
+- **Sub-session.** A session carved mid-thread when scope
+  expands or context budget compresses. Use only when the
+  carve is durable. Example: Session 7.1 was a sub-
+  session because it carved Commits 4–5 from Session 7
+  mid-thread when scope expanded to 7.1.1 and 7.1.2. A
+  within-session pivot from one task to another is not a
+  sub-session.
+- **Step.** A numbered unit within an Arc's brief (Arc A
+  Step 7, Step 12b). Arc-specific vocabulary; Phases use
+  Sessions instead of Steps.
+- **Commit.** Atomic change, one per logical unit.
+  Carries a session label as Git trailer per Session
+  Labeling Convention.
+
+**Process/coordination units:**
+
+- **Brief.** The spec a session executes against. Master
+  briefs at `09_briefs/phase-X/brief.md`; sub-briefs at
+  `09_briefs/phase-X/session-N-brief.md`. Scoping docs
+  are a special class of brief authored mid-phase for
+  unscoped work (e.g.,
+  `oi-3-class-2-fix-stack-scoping.md`).
+- **Gate.** A verification checkpoint. Named gates in
+  current use: ratification gate, screenshot gate, push-
+  readiness gate, founder review gate. Gates are
+  checkpoints with explicit pass/fail criteria.
+- **Tripwire.** A write-time check that triggers when a
+  discipline is violated (10-second rule, file-top
+  staleness check, `[ROUTE?]` tag survival past session
+  close). Gates are checkpoints; tripwires are
+  continuous.
+
+**Quality/discipline units:**
+
+- **Convention.** A codified rule earned by 2–3 fires of
+  the same pattern. Lives in
+  `04_engineering/conventions.md`. See Documentation
+  Routing (this commit) for codification thresholds.
+- **ADR.** Already defined in §A above. Cross-reference:
+  ADRs are for architectural decisions crossing more than
+  one arc; conventions are for repeatable execution rules
+  within or across arcs.
+- **Invariant.** Already defined implicitly via INV-*
+  identifiers in `ledger_truth_model.md` and
+  `invariants.md`. A system property enforced by code.
+- **Exit Criterion (EC).** A numbered acceptance test for
+  a phase. The Phase 1.2 EC matrix
+  (`docs/09_briefs/phase-1.2/ec-matrix.md`) is the
+  reference shape.
+
+**Issue/observation units:**
+
+- **Friction entry.** A single short observation in
+  `friction-journal.md`. Tagged WANT/CLUNKY/WRONG/NOTE
+  per the file header.
+- **Pattern.** A recurring observation across 2+
+  datapoints; below codification threshold but worth
+  tracking. Promotes to Convention at N=3 fires.
+- **Datapoint.** One specific instance of a pattern
+  firing. Conventions cite codification-trigger
+  datapoints inline (typically 3 for first codification).
+- **Open question.** An unresolved question logged in
+  `02_specs/open_questions.md`. Carries forward across
+  sessions; resolved via ADR, Convention, or explicit
+  closeout entry.
+- **Obligation.** A carry-forward item promoted from one
+  phase to the next via
+  `09_briefs/phase-N/obligations.md`.
+
+**Failure/finding units:**
+
+- **Bug.** A defect in shipped code. Identified by
+  description, not number.
+- **Finding.** An audit observation. Has a UF-NNN
+  identifier (e.g., UF-001 in the Phase 1.1 audit).
+- **Class.** A categorized failure mode (Class 1 OI-2
+  stall, Class 2 structural-response-invalid). Class
+  numbers are scoped to a phase or workstream; not
+  globally unique.
+- **OI (Output Issue).** An observed agent-behavior issue
+  requiring investigation. Numbered OI-N within a phase
+  (OI-2, OI-3). Bigger than a Bug, smaller than a
+  Workstream.
+- **Workstream.** A Phase-2-style named opening (OI-3
+  fix-stack, Class 2 fix-stack). Bigger than an EC,
+  smaller than a Phase. Has its own scoping doc and exit
+  criteria.

@@ -1275,6 +1275,257 @@ informing the final form landed here.
 
 ---
 
+## Documentation Routing
+
+### Routing rule
+
+Each observation has a single load-bearing home. Other
+surfaces may contain summarized projections that point at
+the canonical source, but the substantive content lives at
+exactly one location.
+
+Routing destinations:
+
+- Raw friction signal (CLUNKY/WANT/WRONG/NOTE on a
+  specific moment) → `friction-journal.md`. Append-only;
+  format `[date] [category] [one-line description]` per
+  the file header. Active phase only — closed phases
+  archive per the archival rule below.
+- Repeatable rule earned by ≥3 fires →
+  `04_engineering/conventions.md`. Match the existing
+  voice.
+- Architectural decision crossing more than one arc →
+  `07_governance/adr/NNNN-<slug>.md`. See
+  `07_governance/adr/README.md` for format.
+- Phase- or arc-scope reflection →
+  `07_governance/retrospectives/<scope>-retrospective.md`.
+  Four-section shape per the Phase 1.2 retrospective
+  template.
+- Unresolved question → `02_specs/open_questions.md`.
+- Inheritance carry-forward →
+  `09_briefs/phase-N/obligations.md`.
+
+### Write-time tripwires
+
+Three policy tripwires plus a fallback rule:
+
+1. **The 10-second rule.** A single friction-journal
+   entry must be readable in roughly 10 seconds. Format
+   `[date] [category] [one-line description]` with
+   optional 2–3 line elaboration; entries longer than ~10
+   lines are signal that content belongs elsewhere. Apply
+   at write-time.
+2. **No embedded retrospectives in the journal.** Sub-
+   section headings like `### (a) Outcome summary` inside
+   the friction journal are signal that content has
+   overshot its container.
+3. **Closeout artifacts route by purpose.** A closeout
+   commit may produce a retrospective (long prose),
+   conventions (codified rules), an obligations entry
+   (carry-forward), and a `CURRENT_STATE.md` update —
+   each lands at its correct surface. Bundling them into
+   a friction-journal section is a routing failure.
+
+**Fallback rule (capture-first).** If routing is unclear
+at write-time, capture the observation in
+`friction-journal.md` with a `[ROUTE?]` tag and resolve
+later. Unresolved `[ROUTE?]` tags are resolved at session
+close (route to canonical destination or explicitly mark
+`[ROUTE: stays-in-journal]` with rationale). The phase-
+end hygiene pass (see below) audits that no tags survive
+across sessions; tags that survive the hygiene pass
+itself are a discipline violation requiring retroactive
+resolution.
+
+### Codification thresholds
+
+- **N=2** — split-trigger threshold (sub-types graduate
+  to own conventions on second instance).
+- **N=3** — codification threshold (friction-journal
+  pattern → `conventions.md` entry).
+- **N=5** — meta-shape review threshold (re-evaluate when
+  sub-type list reaches five).
+
+These are working thresholds, not laws. Convention #10's
+retraction sub-track was grandfathered at 8 datapoints;
+author judgment governs edge cases.
+
+### Hygiene cadence
+
+A phase-end hygiene pass is required at every phase
+close. The pass:
+
+1. Resolves any `[ROUTE?]` tags that have survived their
+   session-close clearing requirement.
+2. Reviews convention threshold candidates (patterns at
+   2+ datapoints not yet codified).
+3. Prunes obligations that have been completed or
+   invalidated.
+4. Verifies cross-references from `conventions.md` to
+   friction-journal subsections still resolve.
+
+Lands as part of the phase closeout commit set, alongside
+the phase retrospective.
+
+**Tooling floor.** Policy alone decays without tooling. A
+follow-on commit will deliver minimum viable tooling
+supporting this hygiene cadence:
+
+- **Line-length check** — script flagging any single
+  bullet item in `friction-journal.md` exceeding ~10
+  lines.
+- **`[ROUTE?]` tag scanner** — script listing unresolved
+  tags in the active journal, with a non-zero exit at
+  phase close if any survive.
+- **Heading detector** — script flagging `###` or `####`
+  headings inside `friction-journal.md` (signal that
+  retrospective content has been embedded).
+
+These are minimums. Additional tooling may follow.
+
+### Archival rule
+
+When a phase closes:
+
+1. That phase's friction-journal section moves to
+   `friction-journal/phase-X.md` in the same commit as
+   the phase retrospective.
+2. Archived sections preserve their original lettering
+   (sections (a) through (p) keep those letters in the
+   archive) so prior citations resolve without rewriting.
+3. Long-prose subsections already absorbed into the phase
+   retrospective are stubbed in the archive with a one-
+   line pointer (e.g., "Section (p): captured in
+   `phase-1.2-retrospective.md` §3 Pattern 6.") rather
+   than duplicated.
+4. Citations from `conventions.md` to friction-journal
+   subsections that have been absorbed into a
+   retrospective are rewritten to point at the
+   retrospective subsection, not the archive stub.
+
+### Deprecation model
+
+Conventions can be retired via three distinct paths, each
+with explicit lineage:
+
+- **Deprecated.** Convention is no longer applicable
+  (e.g., the underlying system was redesigned and the
+  discipline is moot). Convention text retains in
+  `conventions.md` with a `**DEPRECATED** as of <date>;
+  reason: <reason>` header and is moved to a "Deprecated
+  Conventions" section at end of file.
+- **Superseded.** Convention is replaced by a different
+  convention that handles the same problem differently.
+  Original convention links to its successor; successor
+  cites its predecessor. Same lineage shape as ADR
+  supersession.
+- **Merged.** Two or more conventions combine into one,
+  typically when their codification-trigger evidence is
+  found to be the same underlying pattern. The merge is
+  recorded in the surviving convention's body; the
+  merged-out conventions become one-line stubs pointing
+  at the survivor. Convention #11's rename
+  (Per-Entry Pending-Orphan Preflight + post-paste-
+  verification finding → Per-Entry Row-Card Pairing) is
+  the originating instance, codified retroactively here.
+
+All three paths require a Governance Audit row.
+
+### Known limitations
+
+This convention defers three concerns. Each is named
+explicitly so future review knows where to revisit:
+
+- **Ownership model deferred.** In current solo-dev-with-
+  Claude operation, ownership collapses to the operator.
+  Deferred — will be addressed when warranted, with full
+  review at that time.
+- **Read-path design deferred.** This convention covers
+  write discipline. Navigation/usage patterns
+  (onboarding read path, debugging read path, decision-
+  history read path) live in
+  `docs/04_engineering/DEV_WORKFLOW.md`. Deferred — will
+  be addressed when warranted, with full review at that
+  time.
+- **Priority gradient deferred.** All conventions are
+  currently flat (no CRITICAL/HIGH/LOCAL tagging).
+  Deferred — will be addressed when warranted, with full
+  review at that time.
+
+**Rationale.** Source evidence: across Phase 1.1 + Phase
+1.2 + Arc A (2026-04-12 through 2026-04-26), the friction
+journal grew from ~85 entries / ~42KB to 16+ lettered
+subsections + ~435KB. Three classes of drift produced the
+bloat:
+
+1. **Closeout absorption.** Friction-journal sections (o)
+   and (p) hold the C7 closeout deliverables and the C11
+   retrospective on C7 EC-13 — long-prose retrospective
+   material whose correct home is
+   `phase-1.2-retrospective.md`. Section (p) alone is
+   ~550 lines.
+2. **Session-closeout absorption.** Subsections (m) and
+   (n) hold session-closeout narratives that should have
+   routed either to inline `CURRENT_STATE.md` recaps
+   (short) or to the phase retrospective (long).
+3. **Convention codification source absorption.**
+   Subsection (h) holds the 7 EC-direction sub-track
+   datapoints; subsection (i) holds Convention #11's
+   codification source. These belong in `conventions.md`
+   once codified.
+
+The friction journal's value is fast pattern recognition
+— scanning ~50 entries in seconds to spot recurring pain.
+That value is degraded by embedded essays. Splitting by
+purpose (this rule) restores the property; splitting by
+size alone would not, because the genres would re-mix in
+the new files.
+
+`phase-1.2-retrospective.md` §2 ("Inheritance-artifact
+map") explicitly enumerates subsections (a)–(p) as
+inheritance artifacts rather than as journal entries —
+naming the absorption pattern at phase close. This
+convention codifies the discipline that prevents re-
+absorption going forward.
+
+The codification threshold for this convention itself:
+the routing rule did not fire 3 times in the conventional
+sense (the convention governs documentation discipline
+rather than execution discipline), but the absorption
+pattern fired three times across the three classes above.
+Threshold met by drift evidence, not by violation count.
+
+**Composes with.**
+
+- **Mutual Hallucination-Flag-and-Retract Discipline
+  (Convention #10)** — EC-direction sub-track qualifies
+  what the journal records under uncertainty; this
+  convention governs where the record lives. Both apply
+  at write-time.
+- **PARTIAL Closure State-Decomposition (Meta A)** —
+  closeout records produced under Meta A decomposition
+  route to phase retrospective, obligations queue, and
+  `CURRENT_STATE.md` — not to the friction journal.
+- **Scoping-Time Cross-Dependency Articulation (Meta B)**
+  — scoping docs are themselves a routing destination
+  (under `09_briefs/phase-N/`).
+- **Spec-to-Implementation Verification (Convention #8)**
+  — citations from `conventions.md` to friction-journal
+  subsections that have been archived or absorbed must be
+  re-grepped and rewritten under Convention #8's
+  "Structural references" category.
+
+**First codified.** This commit, 2026-04-26 (post-C12,
+pre-Phase-2 opening). Drafted in response to friction-
+journal drift surfaced by `phase-1.2-retrospective.md` §2
+inheritance-artifact map. The first concrete application
+is the Phase 1.2 friction-journal split (follow-on
+commit, separate session). The split commit cites this
+convention as authority and applies the archival rule to
+close Phase 1.2's friction-journal scope.
+
+---
+
 ## Governance Audit — Phase 1.2 Convention Ratifications
 
 Every convention in this file's Phase 1.2 section is
@@ -1319,6 +1570,7 @@ mechanism, they are not enumerated below.
 | Per-Entry Row-Card Pairing Post-Paste Verification (rename + body amendment to Convention #11) | (this commit) | 2026-04-26 | Phase 1.2 S13 conventions-catalog codification; rename-and-amend folding Obs-C row+card pairing finding (section (o), commit `5fb3b7b`) and Cluster B Item 1 post-paste-verification finding (section (p), commit `f221bab`) into prior "Per-Entry Pending-Orphan Preflight" entry |
 | PARTIAL Closure State-Decomposition (Meta A) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + S12 first concrete application (section (o) closeout deliverables, commit `52a63f0`) + S13 codification |
 | Scoping-Time Cross-Dependency Articulation (Meta B) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + OI-3 scoping doc first application and §7c sub-type rename observation (commit `161bff8`) + S13 codification with rename to "downstream-component dependencies" sub-type |
+| Documentation Routing | (this commit) | 2026-04-26 | C12 closeout follow-on; codified pre-friction-journal-split as the routing authority for the split commit |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review
