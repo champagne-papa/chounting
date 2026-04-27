@@ -59,6 +59,7 @@ export const ProposedEntryCardSchema = z
     idempotency_key: z.string().uuid(),
     dry_run_entry_id: z.string().uuid(),
     trace_id: z.string().uuid(),
+    tentative: z.boolean().optional(),
   })
   .strict();
 

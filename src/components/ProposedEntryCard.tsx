@@ -163,9 +163,19 @@ export function ProposedEntryCard({ card, onResolved, onNavigate }: Props) {
 
   return (
     <div
-      className="rounded-lg border border-neutral-300 bg-white p-4 max-w-2xl shadow-sm"
+      className={`rounded-lg border border-neutral-300 bg-white p-4 max-w-2xl shadow-sm${
+        card.tentative ? ' opacity-75 italic' : ''
+      }`}
       data-testid="proposed-entry-card"
     >
+      {card.tentative && (
+        <div
+          className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600"
+          data-testid="proposed-entry-tentative-badge"
+        >
+          Tentative
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3">
         <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
           {card.org_name}

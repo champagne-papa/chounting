@@ -35,4 +35,5 @@ export type ProposedEntryCard = {
   idempotency_key: string;
   dry_run_entry_id: string;
   trace_id: string;       // NEW
+  tentative?: boolean;    // OI-3 §3c (a) — S18: model sets true when the proposal is best-effort under ambiguity
 };

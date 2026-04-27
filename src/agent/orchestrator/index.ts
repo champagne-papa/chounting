@@ -887,8 +887,24 @@ export async function handleUserMessage(
         newState,
         [...existingTurns, userTurn, successAssistantTurn],
       );
+      // OI-3 Part 2 telemetry (closeout deliverable from C11 Obs-G):
+      // canvas_directive_present + directive_source enable observable
+      // canvas_directive emission rate for OI-3 M1 post-fix validation.
+      const canvasDirectivePresent =
+        successCard !== undefined || parsedRespond.canvas_directive !== undefined;
+      const directiveSource: 'model_loose' | 'site2_postfilled' | 'none' =
+        successCard !== undefined
+          ? 'site2_postfilled'
+          : parsedRespond.canvas_directive !== undefined
+            ? 'model_loose'
+            : 'none';
       log.info(
-        { template_id: parsedRespond.template_id, had_tool_calls: otherTools.length > 0 },
+        {
+          template_id: parsedRespond.template_id,
+          had_tool_calls: otherTools.length > 0,
+          canvas_directive_present: canvasDirectivePresent,
+          directive_source: directiveSource,
+        },
         'handleUserMessage: response extracted',
       );
       await emitMessageProcessedAudit();
