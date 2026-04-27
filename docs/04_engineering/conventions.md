@@ -1377,21 +1377,32 @@ close. The pass:
 Lands as part of the phase closeout commit set, alongside
 the phase retrospective.
 
-**Tooling floor.** Policy alone decays without tooling. A
-follow-on commit will deliver minimum viable tooling
-supporting this hygiene cadence:
+**Tooling floor.** Policy alone decays without tooling. The
+following minimum viable tooling supports this hygiene cadence
+(delivered at this commit):
 
-- **Line-length check** — script flagging any single
-  bullet item in `friction-journal.md` exceeding ~10
-  lines.
-- **`[ROUTE?]` tag scanner** — script listing unresolved
-  tags in the active journal, with a non-zero exit at
-  phase close if any survive.
-- **Heading detector** — script flagging `###` or `####`
-  headings inside `friction-journal.md` (signal that
-  retrospective content has been embedded).
+- **Line-length check**
+  (`scripts/check-friction-journal-line-length.sh`) — script
+  flagging any single bullet item in `friction-journal.md`
+  exceeding ~10 lines.
+- **`[ROUTE?]` tag scanner** (`scripts/scan-route-tags.sh`)
+  — script listing unresolved tags in the active journal,
+  with a non-zero exit at phase close (`--phase-end` mode)
+  if any survive.
+- **Heading detector** (`scripts/detect-journal-headings.sh`)
+  — script flagging `###` or `####` headings inside
+  `friction-journal.md` (signal that retrospective content
+  has been embedded).
+- **Citation auditor**
+  (`scripts/audit-friction-journal-citations.sh`) — script
+  auditing `conventions.md` for citations to
+  `friction-journal.md` patterns; catches both `\.md` and
+  shorthand `section (X)` patterns. Added in response to the
+  S16 C1-extension finding (see `phase-2/obligations.md`
+  §Documentation Routing refinement candidates fifth bullet).
 
-These are minimums. Additional tooling may follow.
+Run scripts manually until a phase-end hygiene cadence
+orchestrator wraps them. Additional tooling may follow.
 
 ### Archival rule
 
@@ -1581,6 +1592,7 @@ mechanism, they are not enumerated below.
 | PARTIAL Closure State-Decomposition (Meta A) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + S12 first concrete application (section (o) closeout deliverables, commit `52a63f0`) + S13 codification |
 | Scoping-Time Cross-Dependency Articulation (Meta B) | (this commit) | 2026-04-26 | C11 retrospective drafting (section (p), commit `f221bab`) + OI-3 scoping doc first application and §7c sub-type rename observation (commit `161bff8`) + S13 codification with rename to "downstream-component dependencies" sub-type |
 | Documentation Routing | (this commit) | 2026-04-26 | C12 closeout follow-on; codified pre-friction-journal-split as the routing authority for the split commit |
+| Documentation Routing (Tooling floor amendment — scripts shipped) | (this commit) | 2026-04-27 | S17 tooling delivery; closes the policy-then-tooling loop, adds citation-auditor as fourth bullet per S16 C1-extension finding |
 
 Retroactive-ratification entries marked "(retro)" reflect
 conventions that landed in `a610e0e` without a review
