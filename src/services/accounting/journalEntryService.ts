@@ -104,10 +104,16 @@ async function post(
     await validateReversalMirror(db, parsed as ReversalInput, log);
   }
 
-  // --- Period lock check (defense-in-depth; the DB trigger also catches this) ---
+  // --- Period lock + date-range check (defense-in-depth: the DB triggers
+  // also catch both cases — enforce_period_not_locked (initial schema, on
+  // journal_lines INSERT) for is_locked, and trg_journal_entry_period_range
+  // (S26 QW-03, on journal_entries INSERT) for the date-range case. Both
+  // triggers raise check_violation, which Supabase surfaces as a generic
+  // 23514 error; the service-layer check below produces the typed
+  // ServiceError for the UX-friendly path). ---
   const { data: period, error: periodErr } = await db
     .from('fiscal_periods')
-    .select('is_locked')
+    .select('is_locked, start_date, end_date')
     .eq('period_id', parsed.fiscal_period_id)
     .single();
 
@@ -116,6 +122,12 @@ async function post(
   }
   if (period.is_locked) {
     throw new ServiceError('PERIOD_LOCKED', 'Cannot post to a locked fiscal period');
+  }
+  if (parsed.entry_date < period.start_date || parsed.entry_date > period.end_date) {
+    throw new ServiceError(
+      'PERIOD_DATE_OUT_OF_RANGE',
+      `entry_date ${parsed.entry_date} is outside fiscal period range [${period.start_date}, ${period.end_date}]`,
+    );
   }
 
   // Balance check is enforced by the Zod schema .refine() (Task 8) and

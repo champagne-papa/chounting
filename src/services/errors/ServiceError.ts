@@ -13,6 +13,7 @@ export type ServiceErrorCode =
   // Journal posting
   | 'UNBALANCED'
   | 'PERIOD_LOCKED'
+  | 'PERIOD_DATE_OUT_OF_RANGE'
   | 'POST_FAILED'
   // Period lifecycle (Phase 1.x)
   | 'PERIOD_ALREADY_LOCKED'

@@ -10,6 +10,13 @@ describe('CB-05: journal_entries source_system + source_external_id partial uniq
   const db = adminClient();
   let periodId: string;
   const createdIds: string[] = [];
+  // Per-run unique suffix so rows accumulating across test runs don't
+  // collide on the partial unique index. S26 (UF-001) made
+  // journal_entries append-only at the DB layer; afterAll cleanup via
+  // DELETE no longer succeeds (trigger rejects), so each run must
+  // generate fresh source_external_id values.
+  const RUN_SUFFIX = crypto.randomUUID().slice(0, 8);
+  const stripeId = `ch_UNIQUE-${RUN_SUFFIX}`;
 
   beforeAll(async () => {
     const { data: period } = await db
@@ -23,9 +30,13 @@ describe('CB-05: journal_entries source_system + source_external_id partial uniq
   });
 
   afterAll(async () => {
-    if (createdIds.length > 0) {
-      await db.from('journal_entries').delete().in('journal_entry_id', createdIds);
-    }
+    // S26 (UF-001) journal_entries is append-only — DELETE cleanup
+    // is rejected by trg_journal_entries_no_delete. Rows accumulate
+    // across test runs; per-run unique source_external_id values
+    // (RUN_SUFFIX above) prevent unique-key collisions on subsequent
+    // runs. The createdIds array is preserved for diagnostic purposes
+    // only; no cleanup attempted.
+    void createdIds;
   });
 
   async function nextEntryNumber(): Promise<number> {
@@ -51,7 +62,7 @@ describe('CB-05: journal_entries source_system + source_external_id partial uniq
         description: 'CB-05 Stripe first',
         source: 'import',
         source_system: 'stripe',
-        source_external_id: 'ch_UNIQUE123',
+        source_external_id: stripeId,
         entry_number: await nextEntryNumber(),
       })
       .select('journal_entry_id')
@@ -69,7 +80,7 @@ describe('CB-05: journal_entries source_system + source_external_id partial uniq
         description: 'CB-05 Stripe dup',
         source: 'import',
         source_system: 'stripe',
-        source_external_id: 'ch_UNIQUE123',
+        source_external_id: stripeId,
         entry_number: await nextEntryNumber(),
       });
     expect(err2).not.toBeNull();
@@ -122,7 +133,7 @@ describe('CB-05: journal_entries source_system + source_external_id partial uniq
         description: 'CB-05 xero same ext-id',
         source: 'import',
         source_system: 'xero_migration',
-        source_external_id: 'ch_UNIQUE123',
+        source_external_id: stripeId,
         entry_number: await nextEntryNumber(),
       })
       .select('journal_entry_id')

@@ -184,12 +184,21 @@ describe('periodService.lock / periodService.unlock', () => {
     // Cross-layer drive-through: the service-layer lock and the
     // trigger-layer INV-LEDGER-002 agree on state. No journal entry
     // should post against a period that periodService.lock() locked.
+    // S26 QW-03: pass an in-period date so the date-range trigger
+    // doesn't fire before the lock trigger.
+    const { data: period } = await db
+      .from('fiscal_periods')
+      .select('start_date')
+      .eq('period_id', holdingPeriodId)
+      .single();
+
     const { error } = await db.rpc('test_post_balanced_entry', {
       p_org_id: SEED.ORG_HOLDING,
       p_period_id: holdingPeriodId,
       p_debit_account: holdingCashAcct,
       p_credit_account: holdingRentAcct,
       p_amount: 250,
+      p_entry_date: period!.start_date,
     });
     expect(error).not.toBeNull();
     expect(error?.message).toMatch(/locked fiscal period/i);

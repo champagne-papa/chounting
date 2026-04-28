@@ -185,8 +185,9 @@ checks:
       - 'ls tests/integration/ | grep -iE "journal.*immutab|ledger.*immutab"'
     expected:
       - 'migration 20240133000000_journal_immutability_triggers.sql exists'
-      - 'migration defines trg_journal_entries_no_update / no_delete and trg_journal_lines_no_update / no_delete (audit_log naming pattern mirror)'
-      - 'integration test asserts UPDATE/DELETE on journal_entries and journal_lines raises exception, including from adminClient'
+      - 'migration defines trg_journal_entries_no_update / no_delete / no_truncate and trg_journal_lines_no_update / no_delete / no_truncate (audit_log full-pattern mirror; six triggers total)'
+      - 'migration includes REVOKE TRUNCATE on journal_entries and journal_lines from PUBLIC, authenticated, anon. NOTE: RLS policies *_no_update / *_no_delete were already shipped at initial schema (lines 734-758) — this migration must NOT re-create them (would conflict on policy name). The full three-layer pattern across journal tables is: RLS policies (initial schema) + triggers (this migration) + REVOKE TRUNCATE (this migration).'
+      - 'integration test asserts UPDATE / DELETE on journal_entries and journal_lines raises exception, including from adminClient. TRUNCATE is not exercisable from PostgREST/Supabase JS clients — the trigger is verified by inspection of the migration file (.truncate() method does not exist).'
 
   - id: QW-05
     finding: UF-005 (cross-org account_id FK guard)

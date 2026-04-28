@@ -7,7 +7,7 @@ describe('Integration Test 2: locked period trigger rejects writes', () => {
 
     const { data: lockedPeriod } = await db
       .from('fiscal_periods')
-      .select('period_id')
+      .select('period_id, start_date')
       .eq('org_id', SEED.ORG_REAL_ESTATE)
       .eq('is_locked', true)
       .single();
@@ -34,6 +34,11 @@ describe('Integration Test 2: locked period trigger rejects writes', () => {
       p_debit_account: cashAcct!.account_id,
       p_credit_account: rentAcct!.account_id,
       p_amount: 500,
+      // S26 QW-03: pass an in-period date so the date-range trigger
+      // doesn't fire before the lock trigger. Test intent is "lock
+      // trigger rejects writes" — needs a date inside the locked
+      // period for the lock trigger to even be reached.
+      p_entry_date: lockedPeriod!.start_date,
     });
 
     expect(error).not.toBeNull();
