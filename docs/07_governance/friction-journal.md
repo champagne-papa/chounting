@@ -114,3 +114,13 @@ Categories:
   arithmetic domain — same mechanism: claimed verified, not
   actually verified). Captured for next codification pass;
   not codified per author-judgment clause.
+- 2026-04-28 NOTE — S25 non-ledger Day-1 closed at `9c0079b`:
+  QW-01 MFA wiring + QW-02 read-path org checks + QW-07
+  audit_log PII redaction. Six closeout items in commit body:
+  (a) UF-009 doc drift (src/middleware.ts vs repo-root);
+  (b) COA.get zero-callers, Edit-5 contingency moot;
+  (c) UF-008→UF-002 closed by guard-not-deletion;
+  (d) COA.list() error-wrap bundled per pattern-consistency;
+  (e) userProfileAudit CA-15 assertion updated post-redaction;
+  (f) COA.get combined-WHERE defense-in-depth vs brief's post-
+  fetch (tighter; CA-23 test 3). 556/558; S26 unblocked.
