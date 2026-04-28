@@ -124,3 +124,13 @@ Categories:
   (e) userProfileAudit CA-15 assertion updated post-redaction;
   (f) COA.get combined-WHERE defense-in-depth vs brief's post-
   fetch (tighter; CA-23 test 3). 556/558; S26 unblocked.
+- 2026-04-28 NOTE — S26 ledger-integrity Day-1 closed at
+  `cbb4018`: QW-04 immutability + QW-03 date-range + QW-05
+  cross-org. UF-001 immut + UF-004 + UF-005 closed (S27 closes
+  atomicity). (a) Class 2 finding: test_post_balanced/unbalanced
+  used current_date vs historical periods; period-range forced
+  p_entry_date param. (b) journalSourceExternalId afterAll moot
+  under append-only → per-run unique values. (c) DROP FUNCTION
+  IF EXISTS before CREATE OR REPLACE (PostgREST overload).
+  (d) crossOrgRls cascade carry-forward + entry_number UNIQUE
+  decision (default defer) before S27 Task 3. 546/3/20.

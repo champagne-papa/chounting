@@ -126,7 +126,7 @@ The "Do Not Do" list from `action-plan.md` lines 130–150 (DND-01..DND-05) rema
 
 - **Anchor:** `0952fdd` — S24 Phase 1.2 audit closeout (24 unified findings, YES-WITH-CAVEATS readiness).
 - **S25 anchor:** `0952fdd` (S24 closeout); S25 itself produced commit `9c0079b` (Commit 1 — implementation). Commit 2 (this commit, governance attribution) lands the friction-journal entry + arc-summary anchor update.
-- **S26 anchor:** `<S25 SHA>`; S26 itself produces commits at `<S26 SHA>` (one or three commits per Y2 split).
+- **S26 anchor:** `551feec` (S25 C2 governance); S26 itself produced commit `cbb4018` (Commit 1 — implementation). Commit 2 (this commit, governance attribution) lands the friction-journal entry + arc-summary anchor update.
 - **S27 anchor:** `<S26 SHA>`; S27 produces Commit 1 at `<S27 C1 SHA>` and Commit 2 at `<S27 C2 SHA>`.
 - **Arc closeout:** `<S27 C2 SHA>` is the SHA at which the four verification-gate conditions hold simultaneously. Phase 2 surface expansion sessions anchor against `<S27 C2 SHA>` or later.
 
