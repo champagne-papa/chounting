@@ -13,7 +13,7 @@ The four calls collapse to:
 2. Period-lock + date-range check — service layer, unchanged (S26 QW-03).
 3. `db.rpc('write_journal_entry_atomic', { ... })` — single call, wrapping the four prior writes.
 
-If audit_log insert fails inside the RPC, the entire transaction rolls back: no orphan entries, no orphan lines, no INV-AUDIT-001 violation. Pattern proven in `tests/setup/test_helpers.sql` and migration `supabase/migrations/20240107000000_report_rpc_functions.sql` (the existing report RPCs are reads, but the plpgsql call shape is identical).
+If audit_log insert fails inside the RPC, the entire transaction rolls back: no orphan entries, no orphan lines, no INV-AUDIT-001 violation. **Pattern reference (function-definition wrapper only, NOT body shape):** the existing RPC migrations (`supabase/migrations/20240107000000_report_rpc_functions.sql`, `20240125000000_account_balance_rpc.sql`, and the 0126/0127 sibling RPCs) are all `LANGUAGE sql` single-SELECT functions inlined by the planner — fundamentally different from this RPC, which is `LANGUAGE plpgsql` with a procedural body (multi-statement INSERT...RETURNING, control flow, potential EXCEPTION handling). The shared pattern is the function-definition wrapper (`CREATE OR REPLACE FUNCTION`, `RETURNS`, `GRANT EXECUTE`, `SECURITY INVOKER` vs. `DEFINER`), not the body. This RPC is the project's first procedural plpgsql write-path function; `tests/setup/test_helpers.sql` is the closest in-tree precedent for procedural plpgsql, but it's a test helper rather than a production migration.
 
 **Tech stack:** PostgreSQL plpgsql (new function), TypeScript service-layer (`db.rpc(...)` call pattern matches existing read RPCs at `accountBalanceService` and `balanceSheetService`), Supabase migrations, Vitest. No new dependencies. New migration file. Type regeneration: `pnpm types:gen` after migration apply (RPC signatures show up in `src/types/supabase.ts`).
 
@@ -26,7 +26,7 @@ If audit_log insert fails inside the RPC, the entire transaction rolls back: no 
 - `docs/07_governance/audits/phase-1.2/unified-findings.md` — UF-003 (lines 163–187 transaction atomicity gap; carry-forward from Phase 1.1 UF-001 per line 187 cross-reference). UF-001 (lines 117–135 — atomicity facet pairs with the immutability triggers from S26 to close the full ledger-integrity surface).
 - `docs/02_specs/ledger_truth_model.md` — INV-AUDIT-001 (every mutation produces an audit record; this RPC moves the guarantee from "service-layer convention with synchronous audit write" to "DB-transaction-enforced atomicity"). INV-LEDGER-001 + INV-AUDIT-001 pairing on the post path.
 - `docs/03_architecture/phase_simplifications.md:65–127` — documents the four-call sequence as "Simplification 1"; UF-003 evidence at `unified-findings.md:181`. This RPC is the named Phase 2 correction for that simplification.
-- Pattern reference: `supabase/migrations/20240107000000_report_rpc_functions.sql` — proven plpgsql function shape (reads, not writes, but the call surface is identical). `tests/setup/test_helpers.sql` referenced in the action-plan as a write-path pattern.
+- Pattern reference (function-definition wrapper only): `supabase/migrations/20240107000000_report_rpc_functions.sql` (and 0125/0126/0127 siblings) — `LANGUAGE sql` single-SELECT read RPCs; the body shape is NOT a precedent for this session's procedural plpgsql write RPC. The shared pattern is the wrapper (`CREATE OR REPLACE FUNCTION`, `RETURNS`, `GRANT EXECUTE`). `tests/setup/test_helpers.sql` is the closest in-tree procedural plpgsql but it is a test helper, not a production migration. This RPC is the project's first procedural plpgsql write-path function.
 - ADR-001 — reversal-mirror placement; stays in service layer.
 - S20 caching-enabled paid-validation pattern (`docs/09_briefs/phase-1.2/session-20-brief.md`) — paid-API regression methodology.
 - S22 caching-baseline (`docs/09_briefs/phase-2/session-22-brief.md`, commit `cceb725`) — caching-active per-flow cost measurement; this session's regression compares against that baseline.
@@ -71,11 +71,11 @@ What's decided at brief-write (do not re-litigate at execution time):
 
 1. **Single-item session.** Operator decision: only item that changes function shape (replaces 4 PostgREST calls with 1 RPC) merits dedicated isolation. No bundling with QW or other MT items.
 2. **RPC name: `write_journal_entry_atomic`.** Returns `{ entry_id: uuid, audit_log_id: uuid }`. Naming follows the existing `account_balance_rpc` / `balance_sheet_rpc` lineage from migrations 125/126/127.
-3. **RPC inputs: typed JSONB params matching the current `journalEntryService.post()` signature.** Specifically: entry header fields (`org_id`, `fiscal_period_id`, `entry_date`, `description`, `reference`, `source`, `idempotency_key`, `reverses_journal_entry_id`, `reversal_reason`, `adjustment_reason`, `entry_number`, `entry_type`, `created_by`), lines array (`account_id`, `description`, `debit_amount`, `credit_amount`, `currency`, `amount_original`, `amount_cad`, `fx_rate`, `tax_code_id`), audit metadata (`action`, `entity_type`, `tool_name`, `idempotency_key`, `before_state` post-PII-redaction from S25 QW-07).
+3. **RPC inputs: typed JSONB params matching the current `journalEntryService.post()` signature.** Specifically: entry header fields (`org_id`, `fiscal_period_id`, `entry_date`, `description`, `reference`, `source`, `idempotency_key`, `reverses_journal_entry_id`, `reversal_reason`, `adjustment_reason`, `entry_number`, `entry_type`, `created_by`), lines array (`account_id`, `description`, `debit_amount`, `credit_amount`, `currency`, `amount_original`, `amount_cad`, `fx_rate`, `tax_code_id`), audit metadata (`action`, `entity_type`, `tool_name`, `idempotency_key`, and a nullable `before_state` field that S25's PII redaction is applied to **only when non-null**). For the post path specifically, `before_state` is `null` today — `recordMutation()` is invoked without `before_state` for INSERT-type mutations (verified at the call site). The PII-redaction reuse from S25 QW-07 is a forward-compatibility provision for future RPC callers that may pass non-null `before_state`; it is a no-op on the current post path.
 4. **Reversal-mirror enforcement: STAYS in service layer (Zod refinement / `validateReversalMirror`).** Rationale: requires reading prior entry data; RPC stays scoped to the mutation surface. NOT moved into RPC.
 5. **Period date-range check (S26 QW-03 service-layer fast-path): STAYS in service layer.** RPC's defense-in-depth layer comes from S26's DB trigger; the service layer keeps the typed-error UX. NOT moved into RPC.
 6. **Audit-log writes: included in the RPC.** Splitting audit out defeats the purpose. INV-AUDIT-001 enforcement is now mechanical (DB transaction) instead of conventional (synchronous write inside the same caller-managed client).
-7. **`entry_number` computation: STAYS in service layer (current MAX+1 query at lines 127–136).** No `FOR UPDATE` lock per Phase 1.1 simplification; the RPC trusts the supplied `entry_number`. Phase 2 may move this into the RPC under a `FOR UPDATE` lock if concurrent-post collisions become observable.
+7. **`entry_number` computation: STAYS in service layer (current MAX+1 query at lines 127–136).** No `FOR UPDATE` lock per Phase 1.1 simplification; the RPC trusts the supplied `entry_number`. Phase 2 may move this into the RPC under a `FOR UPDATE` lock if concurrent-post collisions become observable. **Concurrent-post race acknowledgment:** today there is no `UNIQUE (org_id, fiscal_period_id, entry_number)` constraint on `journal_entries` (verified at HEAD against the initial schema — only an `idx_je_org_period` non-unique index exists). Two concurrent `post()` calls for the same `(org_id, fiscal_period_id)` can both observe the same `MAX+1` and write duplicate `entry_number` values silently. The agent's `idempotency_key` prevents the *same logical operation* from posting twice, but does not prevent two distinct concurrent operations from racing. See OPEN block below for the deferral-vs-fix decision on this race.
 8. **Test surface.** Existing `journalEntryService` integration tests (~15–20 tests under `tests/integration/`) become the regression bedrock — they verify that the post path's externally observable behavior is unchanged. Add a new `journalEntryAtomicRollback.test.ts` exercising failure-mid-transaction (e.g., violate the unbalanced constraint inside the RPC by passing imbalanced lines; assert that nothing persisted — no entry, no lines, no audit row).
 9. **Paid-API regression sanity at session closeout.** Re-fire `scripts/oi3-m1-validation.ts --first-shape-only` against shape 12 with caching-active to confirm orchestrator → service path unchanged from a model-cognitive standpoint. Estimated cost: ~$0.04–$0.06 per S22's measured baseline; ceiling $0.10 per-call. Operator authorization at Task 9 Step 1.
 10. **Estimated session duration: full day (~6–8 hours).** RPC authoring (~2h) + service refactor (~1h) + new rollback test (~1h) + full-suite regression (~1h) + paid-API regression + friction-journal (~1h) + review buffer.
@@ -83,8 +83,13 @@ What's decided at brief-write (do not re-litigate at execution time):
 
 OPEN — operator to resolve before Session start:
 
-- **MT-01 RPC: pass `audit_log` fields as separate JSONB or fold into the entry/lines params?** Two options: (a) one bundled JSONB param `entry_payload` containing nested `header`, `lines`, `audit`. (b) three separate JSONB params `header`, `lines`, `audit`. Default at brief-write: option (b), three separate params — simpler to type at the TS boundary and matches the conceptual decomposition. Operator confirms before Task 3.
-- **MT-01 reversal-mirror: any chance it should move into the RPC as a defense-in-depth layer?** Adds complexity; current placement is defensible (ADR-001). Default at brief-write: NO — stay in service layer, defer DB-level mirror enforcement to a separate Phase 2 ADR if scoped. Operator confirms before Task 3.
+- **MT-01 RPC parameter shape: three separate JSONB params (RESOLVED).** Per operator decision: option (b) three separate JSONB params (`header`, `lines`, `audit`). Rationale: simpler to type at the TS boundary; matches conceptual decomposition; PG handles three params fine; failure-mode distinguishability ("lines insert fails" vs "audit insert fails") is trivially preserved at integration-test level. Bundled JSONB would require RPC-internal shape validation duplicating Zod's job at the service layer for no win. NOT to be re-litigated.
+
+- **`entry_number` UNIQUE constraint scope expansion (genuinely OPEN).** Today there is no `UNIQUE (org_id, fiscal_period_id, entry_number)` constraint on `journal_entries`; concurrent-post race produces silent duplicates (per pre-decision #7). Two paths:
+  - **(a) Defer (default per Phase 1.1 simplification).** Keep entry_number generation in service layer; accept the race; Phase 2 work to move into RPC with `FOR UPDATE` lock or add the UNIQUE constraint when concurrent-post collisions become observable.
+  - **(b) Add the UNIQUE constraint in this session.** ~5 lines of SQL (one ALTER TABLE) + one integration test asserting the typed PG exception on collision. Costs nothing if entry-numbers are correctly generated; surfaces the race as a typed PG exception (the service catches it and retries — but retry handling is NOT in scope for this session, so a collision today would surface as `ServiceError('POST_FAILED')` to the caller). Surfaces the race instead of silent duplication.
+  - Brief-write recommendation: **operator's call.** If (b), S27 scope expands by ~5 lines SQL + 1 test (~30 minutes of additional work). If (a), record the deferral explicitly in this session's friction-journal entry per the audit's "Do Not Do" discipline.
+  - The reversal-mirror placement (formerly OPEN) is RESOLVED per pre-decision #4 + ADR-001: stays in service layer; do not re-litigate. DB-level mirror enforcement is a separate Phase 2 ADR if scoped.
 
 ---
 
@@ -147,7 +152,7 @@ Expected:
 - Lines insert at lines 206–213 (moves into RPC).
 - Audit-log insert via `recordMutation()` at lines 220–228 (moves into RPC).
 
-If line numbers drift from this expectation, surface to operator at Task 3.
+If line numbers drift from this expectation, surface to operator at Task 3. **Expected drift:** S26's QW-03 service-layer date-range check adds 2-3 lines to the period query block at lines 108-119; everything below shifts by that amount. A drift of ~2-5 lines is expected and not a halt condition. Drift of >10 lines, OR drift in the *structure* of the four-call surface (e.g., one of the calls has been factored into a helper, or a fifth call has been added), IS a halt condition — surface to operator before Task 3.
 
 - [ ] **Step 2: Verify S25 QW-07 PII redaction is at HEAD**
 
@@ -155,7 +160,7 @@ If line numbers drift from this expectation, surface to operator at Task 3.
 grep -n "redactPii\|PII_FIELDS" src/services/audit/recordMutation.ts
 ```
 
-Expected: redaction function present (added in S25). The RPC must apply the same redaction before persisting to `audit_log`. Operator's call at Task 3: redact in service before passing JSONB into RPC, OR replicate the redaction inside the RPC's plpgsql. Default at brief-write: redact in service (single source of truth; the helper from S25 is reused). Surface to operator.
+Expected: redaction function present (added in S25). **For the post path specifically, `before_state` is `null` — the redaction is a no-op on this call path.** The redact-in-service-vs-replicate-in-plpgsql question only matters when `before_state` is non-null, which today does not happen for `journal_entry.post`. Default forward-compatibility provision: redact in service before passing JSONB into the RPC (single source of truth; the helper from S25 is reused). This may turn out to be a non-decision at execution time; surface to operator only if `before_state` is non-null on the post path (drift from current state).
 
 - [ ] **Step 3: Verify S26 immutability triggers are at HEAD**
 
@@ -180,7 +185,7 @@ sed -n '1,50p' supabase/migrations/20240107000000_report_rpc_functions.sql
 sed -n '1,50p' supabase/migrations/20240125000000_account_balance_rpc.sql
 ```
 
-Expected: plpgsql function shape with `LANGUAGE plpgsql SECURITY DEFINER` (or `SECURITY INVOKER` — operator's call). Existing RPCs are reads; the new RPC is a write but the function-definition shape is identical.
+Expected: the existing RPC migrations are `LANGUAGE sql` single-SELECT functions (the planner inlines them); they are NOT procedural plpgsql precedents for this session's body. The shared pattern is the function-definition wrapper only — `CREATE OR REPLACE FUNCTION`, `RETURNS`, `GRANT EXECUTE`, `SECURITY INVOKER` vs. `DEFINER` choice. This session's RPC is the project's first procedural plpgsql write-path function; the body shape (multi-statement INSERT...RETURNING, BEGIN ... END block) is being introduced fresh in Task 3, not copied from an in-tree precedent. Confirm the wrapper conventions match (the body authoring is Task 3's surface).
 
 - [ ] **Step 6: Verify caching baseline at HEAD**
 
@@ -316,6 +321,7 @@ Header docstring:
 - Reference Phase 2 Simplification 1 correction (`docs/03_architecture/phase_simplifications.md`).
 - Note that reversal-mirror stays in service layer per ADR-001.
 - Note that period date-range check stays in service layer per S26 QW-03.
+- **Deferred-constraint trigger interaction:** explicitly note that `enforce_journal_entry_balance` (an `INITIALLY DEFERRED` constraint trigger on `journal_lines`, `AFTER INSERT OR UPDATE OR DELETE`, `FOR EACH ROW`) is the mechanism that produces the rollback semantic this RPC depends on. Inside the single RPC transaction, the trigger fires when the `journal_lines` insert completes; if debits ≠ credits, the trigger raises and the entire RPC rolls back (entry header + lines + audit_log all rolled back as a unit). The Test 1 (imbalanced lines) rollback test in Task 3 Step 3 exercises this exact mechanism. Without the deferred constraint, the rollback test would not be meaningful — the docstring should say so.
 
 Expected length: ~80–100 lines.
 
@@ -366,7 +372,7 @@ The PostgREST `db.rpc(...)` returns `data` as an array (RPCs returning TABLE sha
 - **Test 2 (FK violation on `account_id`):** pass an `account_id` not in `chart_of_accounts`. Expect `foreign_key_violation`. Assert no rows persisted.
 - **Test 3 (cross-org account-id, exercises S26 QW-05 trigger inside the RPC):** pass an `account_id` from a different org. Expect S26 QW-05 trigger to fire. Assert no rows persisted.
 - **Test 4 (RPC success path):** valid input; verify all three rows (entry + lines + audit) are present after RPC returns.
-- **Test 5 (service-layer guards still fire BEFORE the RPC):** out-of-range `entry_date` raises `ServiceError('PERIOD_DATE_OUT_OF_RANGE', ...)` from S26 QW-03; assert no RPC call was issued and no rows persisted.
+- **Test 5 (service-layer guards still fire BEFORE the RPC):** out-of-range `entry_date` raises `ServiceError('PERIOD_DATE_OUT_OF_RANGE', ...)` from S26 QW-03. Assert: (a) `ServiceError` is thrown with the expected code, (b) no rows persisted across `journal_entries` / `journal_lines` / `audit_log` for the test's idempotency_key (queryable by idempotency_key uniqueness). The "no RPC was called" claim is implicit in the no-rows-persisted observation; do NOT attempt to spy on `db.rpc` directly (that requires mocking the Supabase client, which integration tests do not do — the test exercises real PostgREST). The two assertions together prove the service-layer guard fires before the RPC and aborts the operation cleanly.
 
 - [ ] **Step 4: Surface diff scope expectation**
 
@@ -561,9 +567,13 @@ Expected: 4 files, ~+270 / -85 lines.
 
 ## Task 7: (RESERVED — symmetry with prior briefs)
 
+_Empty by design. Prior paid-API briefs (S20 / S22) used Tasks 7-8 for additional preparatory work between Commit 1 and the paid invocation (S20: harness D3 scope flag + dry-run methodology surface; S22: caching pre-flight + dry-run shape verification). S27 has no such intermediate work — Commit 1 ships the implementation outright; Task 9 fires the regression directly. Task numbering preserves alignment with prior briefs so an executing agent reading top-to-bottom sees the same Task-9 anchor for the paid run._
+
 ---
 
 ## Task 8: (RESERVED)
+
+_See Task 7 explanation. Empty by design._
 
 ---
 
@@ -605,13 +615,15 @@ The orchestrator → service path is unchanged structurally; the regression sani
 
 - [ ] **Step 4: Halt-and-surface conditions**
 
-- Per-call cost > $0.10 → caching may have stopped firing; halt and investigate before Commit 2.
-- Total cost > $0.20 → terminal halt.
-- `cache_read_input_tokens` still 0 on calls 2-3 → caching regression; halt and investigate.
-- Shape 12 emits `emitted_natural_with_orphan_row` (Class 2 orphan signature) → orchestrator → service path regressed; halt before Commit 2.
-- `pnpm test journalEntryAtomicRollback` re-run after the regression fails → environmental drift; halt.
+Formal halt conditions (any one fires → halt before Commit 2; surface to operator):
 
-In any halt mode, surface to operator before drafting the friction-journal entry. Re-validation is the deliverable; do not retry without operator direction.
+- **Cost overshoot.** Per-call cost > $0.10 → caching may have stopped firing; halt and investigate. Total cost > $0.20 → terminal halt.
+- **Caching regression.** `cache_read_input_tokens` still 0 on calls 2-3 → caching regression; halt and investigate.
+- **Model-cognitive regression.** Shape 12 emits `emitted_natural_with_orphan_row` (Class 2 orphan signature) → orchestrator → service path regressed; halt before Commit 2.
+- **Integration-test drift after regression.** Re-run `pnpm test journalEntryAtomicRollback` (and the broader `journalEntryService` integration suite) AFTER the paid regression completes. Any failure that was passing before the regression run → environmental drift signal (typically DB state pollution from the paid run leaking into the next test run); halt before Commit 2. This is a formal halt, not an incidental observation — paid-API regressions can perturb shared DB state in subtle ways that only surface on subsequent test runs, and Commit 2 should land against a clean test baseline.
+- **`agent:validate` drift.** Re-run `pnpm agent:validate` after the regression. Any failure → halt.
+
+In any halt mode, surface to operator before drafting the friction-journal entry. Re-validation is the deliverable; do not retry the paid run without operator direction (the paid spend is irrecoverable).
 
 ---
 
