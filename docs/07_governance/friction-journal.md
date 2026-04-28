@@ -105,3 +105,12 @@ Categories:
   15+20 now affordable: 9× × ~$0.08 = ~$0.72 fits scoping
   doc $0.75 ceiling. Convention #8 N=4 (quantitative-behavior
   gap). Run record: oi3-m1-cached-run-20260428T061604Z.json.
+- 2026-04-28 NOTE — S23 DEV_WORKFLOW.md authoring: §2 sub-shape
+  line-number citations were claimed verified but had off-by-
+  one errors caught at synthesis review. Fix: dropped line-
+  numbers in favor of entry-content markers (G2 / A2 /
+  classifier-strictness-gap / S22 caching). Convention #8 N=5
+  evidence (quantitative-behavior sub-shape in citation-
+  arithmetic domain — same mechanism: claimed verified, not
+  actually verified). Captured for next codification pass;
+  not codified per author-judgment clause.
