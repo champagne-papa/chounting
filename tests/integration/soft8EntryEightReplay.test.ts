@@ -62,6 +62,7 @@ import {
 import { makeTestContext } from '../setup/makeTestContext';
 import { adminClient } from '@/db/adminClient';
 import { SEED } from '../setup/testDb';
+import { getSystemPromptText } from '../setup/getSystemPromptText';
 
 const HANDSHAKE_SESSION_ID = 'b54bf6fc-0a13-4c8b-8567-c5a2fc8b2772';
 
@@ -163,7 +164,7 @@ describe('Soft 8: OI-2 fix-stack canonical Entry 8 replay (handshake S9-0425)', 
     // computed once outside the loop and is identical across calls.
     const lastParams = __getLastClaudeCallParams();
     expect(lastParams).not.toBeNull();
-    const systemPrompt = lastParams!.system as string;
+    const systemPrompt = getSystemPromptText(lastParams);
     expect(typeof systemPrompt).toBe('string');
     expect(systemPrompt).toContain(
       `Resolved entry_date for this turn: ${expectedResolvedDate} (from phrase: "today")`,

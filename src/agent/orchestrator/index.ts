@@ -369,12 +369,30 @@ export async function handleUserMessage(
       {
         model: MODEL,
         max_tokens: 4096,
-        system,
+        // S22 caching: wrap system in a single TextBlockParam[] with a
+        // cache_control breakpoint. The strategy depends on `system`
+        // being computed once outside this loop (see line 231 above);
+        // if a future commit moves system computation into the loop,
+        // every callClaude call would have a different cache key and
+        // the within-handleUserMessage cache hits collapse.
+        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+        // Caching covers the system block + tools array (the cached
+        // prefix). The messages array accumulates across iterations
+        // within a single handleUserMessage and continues to pay full
+        // input rate; those delta tokens are small relative to the
+        // cached prefix.
         messages,
-        tools: tools.map((t) => ({
+        // S22 caching: cache_control on the LAST tool marks the end of
+        // the cacheable tools prefix. respondToUser is the last tool
+        // for all three personas (toolsForPersona.ts:51,63,74); the
+        // cache key is per-persona-stable (full tools array differs
+        // by persona, so cross-persona cache hits don't occur — but
+        // persona doesn't change mid-handleUserMessage).
+        tools: tools.map((t, i, arr) => ({
           name: t.name,
           description: t.description,
           input_schema: t.input_schema as Anthropic.Messages.Tool.InputSchema,
+          ...(i === arr.length - 1 ? { cache_control: { type: 'ephemeral' as const } } : {}),
         })),
       },
       log,
