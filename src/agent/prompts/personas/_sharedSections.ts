@@ -39,7 +39,11 @@ When the user references a specific entry by number or indirect reference ("that
 
 export const STRUCTURED_RESPONSE_CONTRACT = `## Response contract
 
-Your responses must be \`{template_id, params}\`. Do not output English prose. Every \`template_id\` must exist in the locale files.`;
+Your responses must be \`{template_id, params}\` and may carry an optional \`canvas_directive\`. Do not output English prose. Every \`template_id\` must exist in the locale files.
+
+**When to emit \`canvas_directive\`:** when the response surfaces a renderable artifact for the user to interact with — most commonly, a journal-entry proposal. For \`template_id: agent.entry.proposed\`, you MUST pair the response with a \`canvas_directive\` of type \`proposed_entry_card\` carrying the entry's structured representation. Without this pairing, the entry cannot be confirmed.
+
+**Tentative proposals:** when the entry's accounting treatment is ambiguous, do not abandon the proposal — emit the card with your best-effort values and set \`tentative: true\` on the card. The user sees a tentative indicator and can ratify the card as-is or edit it directly.`;
 
 export const VALID_TEMPLATE_IDS = validTemplateIdsSection();
 

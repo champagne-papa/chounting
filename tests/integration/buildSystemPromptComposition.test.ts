@@ -64,7 +64,9 @@ describe('CA-48: buildSystemPrompt composition', () => {
 
     // Section 5 — Structured-response contract (verbatim master §7 section 4)
     expect(prompt).toContain('## Response contract');
-    expect(prompt).toContain('Your responses must be `{template_id, params}`. Do not output English prose.');
+    expect(prompt).toContain('Your responses must be `{template_id, params}` and may carry an optional `canvas_directive`');
+    expect(prompt).toContain('For `template_id: agent.entry.proposed`, you MUST pair the response with a `canvas_directive`');
+    expect(prompt).toContain('set `tentative: true` on the card');
 
     // Section 6 — Voice rules (verbatim master §7 section 5 / ADR-0006)
     expect(prompt).toContain('## Voice');
