@@ -24,3 +24,21 @@ Categories:
   Documentation Routing convention §Codification thresholds; if
   N=3 fires, codify session-lock sub-type for documentation-only
   sessions.
+- 2026-04-27 NOTE [ROUTE?] — Soft 8
+  (`soft8EntryEightReplay.test.ts`) has post-seed snapshot UUIDs
+  for ACCOUNT_CASH, ACCOUNT_UNEARNED_REVENUE,
+  ORG_REAL_ESTATE_FISCAL_PERIOD_ID — fragile to
+  `db:reset:clean`. Soft 9 (S19, commit `13e11f7`) uses runtime
+  lookup by natural key (`org_id` + `account_code`; `org_id` +
+  period name + `is_locked`) instead. Pattern for future tests:
+  prefer runtime lookup over hardcoded UUIDs. Soft 8 retrofit
+  candidate; codification N=2 if another test repeats hardcode.
+- 2026-04-27 NOTE [ROUTE?] — `accountLedgerService.test.ts` tests
+  3 (line 269) and 6 (line 346) share a `find()`-without-
+  trace_id-scoping pattern: each posts a JE with non-unique
+  (date, amount, debit/credit) signature, then `find()`s "the
+  new row"; under accumulated state from repeated `pnpm test`
+  runs, `find()` returns a stale row and delta math breaks.
+  Test 3 fired S18 push-readiness gate; test 6 fired S19 Task 7
+  Step 4. Fix: scope `find()` by trace_id, or capture
+  `entry_id` from `post()` return. N=2; next test-hygiene workstream.
