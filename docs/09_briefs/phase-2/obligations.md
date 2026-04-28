@@ -273,6 +273,34 @@ deferred from the phase scope.
   builder architecture is cache-friendly in shape but the
   attribute isn't wired. First step toward Phase 1.2 obligations
   doc's "Prompt caching configuration details" deferred decision.
+  **Update 2026-04-28:** within-turn caching shipped at S22
+  (`856dcc7`); -32% per-flow cost drop measured at `cceb725`.
+  Cross-turn caching (next architectural lift) remains Phase 2+
+  scope per the S22 commit body — requires prompt reordering to
+  move per-turn variable content (temporal context,
+  canvas_context) out of the cached prefix; non-trivial because
+  internal references like "the Current date above" couple
+  variable content to position. Targeted savings: closer to
+  the brief's projected -58%.
+- **Conversation shape Zod validation on load (QW-06 / UF-007
+  carry-forward from Phase 1.2 audit action plan)** — replace
+  the `as unknown[]` cast at
+  `src/agent/orchestrator/loadOrCreateSession.ts:194` with
+  explicit Zod validation of the persisted `agent_sessions.conversation`
+  JSONB against an `Anthropic.Messages.Message[]` schema. On
+  validation failure: log warning, initialize empty history.
+  **Sequencing constraint (decided 2026-04-28, brief-creation
+  session post-audit-brief-creation):** lands ALONGSIDE OR AFTER
+  cross-turn caching enablement above. Rationale: SDK message
+  shape is a moving target — the within-turn caching enablement
+  already required `system: string → TextBlockParam[]` adaptation;
+  cross-turn caching will require additional prompt reordering
+  that may further reshape persisted conversation JSONB.
+  Committing to a Zod schema before cross-turn caching forces a
+  re-revision shortly thereafter. Source: `audits/phase-1.2/action-plan.md`
+  §Quick Wins QW-06 (with deferral note); `audits/phase-1.2/unified-findings.md`
+  UF-007. Reclassified from Phase 1.2 Day-1 fix-stack on
+  2026-04-28 per operator decision.
 - **Dead `CanvasDirective` variant cleanup** — `ai_action_review_queue`
   per Session 8 C1 closeout note. Variant exists in the
   discriminated union but no code path emits it. Cleanup is

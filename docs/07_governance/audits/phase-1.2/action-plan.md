@@ -38,11 +38,13 @@ All items reference audit findings by ID.
 - **Why now:** Complements QW-02. Together, they close the cross-org account reference window. Single-org ledger integrity is foundational.
 - **Done when:** Attempting to insert a `journal_line` with an `account_id` from a different org raises a constraint violation. Test with multi-org setup.
 
-### QW-06: Conversation shape validation on load
+### QW-06: Conversation shape validation on load — DEFERRED to Phase 2
 - **Finding:** UF-007
 - **What to do:** Replace the `as unknown[]` cast in `src/agent/orchestrator/loadOrCreateSession.ts:194` with explicit Zod validation. Create a schema for `Anthropic.Messages.Message[]` (or a permissive union covering both old and new SDK shapes) and validate the loaded conversation against it. On validation failure, log a warning and initialize with empty history.
 - **Why now:** Defensive against SDK shape drift. Phase 2 will rotate sessions across SDK versions; this validates on load and prevents type errors at call time.
 - **Done when:** Loaded conversations validate against a Zod schema. Old SDK shapes either pass validation or are logged as mismatches and replaced with empty history.
+
+**Deferral note (2026-04-28, brief-creation session post-audit-brief-creation):** QW-06 is reclassified as a Phase 2 obligation and removed from the Day-1 fix-stack arc (S25 / S26 / S27). Rationale: SDK message shape is a moving target — the S22 caching enablement already required a `system: string → TextBlockParam[]` adaptation, and Phase 2 cross-turn caching (M8) will require additional prompt reordering that may further reshape the persisted `conversation` JSONB. Committing to a Zod schema before M8 lands forces a re-revision shortly thereafter. Sequencing decision: defer QW-06 to land alongside or after M8 cross-turn caching work in Phase 2, where the stable post-M8 message shape can be validated against a single durable schema. Phase 2 obligations entry recorded in `docs/09_briefs/phase-2/obligations.md` § Architectural follow-ups, sequenced after M8. Until then, the existing `as unknown[]` cast at `loadOrCreateSession.ts:194` remains; the audit (UF-007) flags it as known technical debt with documented sequencing.
 
 ### QW-07: Reduce PII in audit log via before_state redaction
 - **Finding:** UF-010
