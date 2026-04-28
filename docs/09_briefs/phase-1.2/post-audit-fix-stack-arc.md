@@ -26,10 +26,15 @@ This arc closes the Phase 1.2 audit's Day-1 and medium-term-priority obligations
 ```
 S25 (non-ledger Day-1) ── independent ── can run any time after S24 (audit closeout, anchor 0952fdd)
                                           │
-S26 (ledger-integrity Day-1) ── independent of S25 (different surfaces; different files)
-   ├── could run in parallel with S25 in principle (different test fixtures and migration vs.
-   │    middleware + service-layer files)
-   └── recommended sequential after S25 for context cleanliness and reduced blast radius
+S26 (ledger-integrity Day-1) ── REQUIRED sequential after S25
+   ├── Surfaces differ in principle (S26 = migration + ledger service; S25 = middleware
+   │    + read-path service + recordMutation), but both touch the journal-entry write path's
+   │    audit-trail infrastructure: S25's QW-07 modifies recordMutation's before_state
+   │    redaction; S26's QW-04 immutability triggers fire on every journal_entries / journal_lines
+   │    write. A merge-order surprise (S26 lands first, exercises a write path that S25's
+   │    PII redaction test then fails on) is the EC-2 "didn't think they'd interact and they
+   │    did" precedent that justifies treating sequential as binding, not preferred.
+   └── S25 must complete and merge before S26 starts
                                           │
 S27 (MT-01 atomicity RPC) ── BLOCKS on S26 closure
    ├── Reason: S27's RPC must respect S26's immutability triggers; running S27 against
@@ -41,10 +46,13 @@ S27 (MT-01 atomicity RPC) ── BLOCKS on S26 closure
 
 ## Ship order recommendation
 
-**S25 → S26 → S27.** Linear sequence; ~2 days total elapsed (S25 ~4h, S26 ~4h, S27 ~full day). The recommendation is to run sequentially even though S25 and S26 could be parallel in principle:
+**S25 → S26 → S27.** Linear sequence; ~2 days total elapsed (S25 ~4h, S26 ~4h, S27 ~full day). Sequential is **required**, not recommended, between S25 and S26:
+- **Shared write-path infrastructure.** S25's QW-07 modifies `recordMutation`'s `before_state` redaction; S26's QW-04 immutability triggers fire on every journal-entry write. The two surfaces don't directly overlap in code but share the journal-write call path. The EC-2 "we didn't think they'd interact and they did" precedent (Phase E friction journal) is the reason to treat the order as binding rather than preferred.
 - **Context cleanliness.** Each session's pre-flight verification, plan, and founder review benefit from a single unbroken trail of commits at HEAD; parallel branches require merge-coordination overhead that exceeds the time saved.
 - **Reduced blast radius.** Sequential commits mean a regression in S25 is caught before S26 ships; a parallel-branch failure would surface only at merge.
 - **Friction-journal lineage.** Each session's friction-journal entry references the prior session's outcome, building a coherent arc record. Parallel work fragments the lineage.
+
+S26 → S27 is also required-sequential per the dependency graph above (S27's RPC tests exercise S26's triggers).
 
 Parallelization within a single session is fine where designed (S26's three QW items can be implemented in any order within the session as long as the operator's pre-decision sequencing QW-04 → QW-03 → QW-05 is preserved at commit time per S26's hard constraints).
 
@@ -121,3 +129,176 @@ The "Do Not Do" list from `action-plan.md` lines 130–150 (DND-01..DND-05) rema
 - **S26 anchor:** `<S25 SHA>`; S26 itself produces commits at `<S26 SHA>` (one or three commits per Y2 split).
 - **S27 anchor:** `<S26 SHA>`; S27 produces Commit 1 at `<S27 C1 SHA>` and Commit 2 at `<S27 C2 SHA>`.
 - **Arc closeout:** `<S27 C2 SHA>` is the SHA at which the four verification-gate conditions hold simultaneously. Phase 2 surface expansion sessions anchor against `<S27 C2 SHA>` or later.
+
+---
+
+## Appendix: Verification Harness
+
+Mechanical-check spec for the four verification-gate conditions. A
+verification agent run post-S27 (ad-hoc, not pre-scheduled) checks
+out `<S27 C2 SHA>` and runs each block's `commands`; the gate
+condition holds iff every command's output matches `expected`. This
+appendix is the binding contract between gate definition and
+verification execution.
+
+### Gate 1: All six implementing QWs shipped
+
+```yaml
+gate: "QW-01 + QW-02 + QW-03 + QW-04 + QW-05 + QW-07 all closed"
+checks:
+  - id: QW-01
+    finding: UF-009 (MFA enforcement)
+    commands:
+      - 'grep -n "enforceMfa" middleware.ts'
+      - 'grep -rn "enforceMfa\\|mfaEnforcement" --include="*.ts" tests/integration/'
+    expected:
+      - 'middleware.ts contains an import of enforceMfa AND a call site (not just the import)'
+      - 'tests/integration/ contains an integration test asserting redirect behavior on aal1 session against mfa_required=true (not just column-flip)'
+
+  - id: QW-02
+    finding: UF-002 (read-path org checks)
+    commands:
+      - 'grep -nA 3 "export.*function.*get" src/services/accounting/chartOfAccountsService.ts | grep -A 3 "ctx.caller.org_ids"'
+      - 'grep -nA 3 "export.*function.*isOpen" src/services/accounting/periodService.ts | grep -A 3 "ctx.caller.org_ids"'
+      - 'ls tests/integration/ | grep -iE "chartOfAccounts.*get.*forbidden|period.*isOpen.*forbidden|cross.*org.*read"'
+    expected:
+      - 'chartOfAccountsService.get() body contains ctx.caller.org_ids.includes guard'
+      - 'periodService.isOpen() body contains ctx.caller.org_ids.includes guard'
+      - 'integration test exists asserting 403/FORBIDDEN ServiceError on cross-org call'
+
+  - id: QW-03
+    finding: UF-004 (period-date validation)
+    commands:
+      - 'grep -nA 5 "fiscal_period\\|entry_date" src/services/accounting/journalEntryService.ts | grep -E "start_date|end_date|BETWEEN"'
+      - 'ls supabase/migrations/ | grep -E "period.*date|date.*period"'
+      - 'ls tests/integration/ | grep -iE "period.*date.*range|backdate|date.*period"'
+    expected:
+      - 'journalEntryService.post() validates entry_date BETWEEN period.start_date AND period.end_date (or calls periodService.isOpen with the date)'
+      - 'a migration enforces the same at DB layer (defense-in-depth) — operator pre-decision: bundled commit ships both layers'
+      - 'integration test asserts rejection when entry_date is outside period date range'
+
+  - id: QW-04
+    finding: UF-001 (ledger immutability triggers)
+    commands:
+      - 'ls supabase/migrations/ | grep -E "20240133.*journal.*immutab|journal.*append"'
+      - 'grep -E "trg_journal_entries_no_(update|delete)|trg_journal_lines_no_(update|delete)" supabase/migrations/20240133*.sql'
+      - 'ls tests/integration/ | grep -iE "journal.*immutab|ledger.*immutab"'
+    expected:
+      - 'migration 20240133000000_journal_immutability_triggers.sql exists'
+      - 'migration defines trg_journal_entries_no_update / no_delete and trg_journal_lines_no_update / no_delete (audit_log naming pattern mirror)'
+      - 'integration test asserts UPDATE/DELETE on journal_entries and journal_lines raises exception, including from adminClient'
+
+  - id: QW-05
+    finding: UF-005 (cross-org account_id FK guard)
+    commands:
+      - 'grep -E "trg_journal_lines.*account.*org|check_account_org" supabase/migrations/20240133*.sql'
+      - 'grep -E "BEFORE INSERT OR UPDATE" supabase/migrations/20240133*.sql'
+      - 'ls tests/integration/ | grep -iE "cross.*org.*account|account.*cross.*org"'
+    expected:
+      - 'a BEFORE INSERT OR UPDATE trigger on journal_lines fires when account.org_id != journal_entry.org_id (UPDATE coverage is belt-and-suspenders for future QW-04 loosening)'
+      - 'integration test asserts insertion of journal_line with foreign-org account raises exception'
+
+  - id: QW-07
+    finding: UF-010 (audit_log before_state PII redaction)
+    commands:
+      - 'grep -nB 2 -A 10 "before_state" src/services/audit/recordMutation.ts | grep -E "invited_email|phone|first_name|last_name|display_name|redact|scrub"'
+      - 'ls tests/unit/ tests/integration/ | grep -iE "recordMutation.*pii|recordMutation.*redact|audit.*pii"'
+    expected:
+      - 'recordMutation.ts strips invited_email, phone, first_name, last_name, display_name from before_state before persisting'
+      - 'unit or integration test asserts the redaction (write a row with PII; assert audit_log row lacks those fields)'
+```
+
+### Gate 2: MT-01 RPC shipped with paid-API regression evidence
+
+```yaml
+gate: "MT-01 closed"
+checks:
+  - id: MT-01-rpc
+    commands:
+      - 'ls supabase/migrations/ | grep -E "20240134.*write_journal_entry_atomic"'
+      - 'grep -E "CREATE OR REPLACE FUNCTION write_journal_entry_atomic" supabase/migrations/20240134*.sql'
+      - 'grep -nE "rpc\\(.write_journal_entry_atomic|rpc.*write_journal_entry_atomic" src/services/accounting/journalEntryService.ts'
+    expected:
+      - 'migration 20240134000000_write_journal_entry_atomic_rpc.sql exists and defines plpgsql function'
+      - 'journalEntryService.post() calls db.rpc("write_journal_entry_atomic", ...) instead of issuing 4 sequential PostgREST calls'
+
+  - id: MT-01-tests
+    commands:
+      - 'ls tests/integration/ | grep -E "journalEntryAtomic|atomicRollback"'
+      - 'pnpm test journalEntryAtomicRollback 2>&1 | tail -5'
+    expected:
+      - 'tests/integration/journalEntryAtomicRollback.test.ts exists'
+      - 'pnpm test passes — rollback test exercises mid-transaction failure (e.g., audit_log insert fails, balance constraint fires) and asserts no orphan rows remain'
+
+  - id: MT-01-regression
+    commands:
+      - 'git log --grep="paid-API regression\\|write_journal_entry_atomic" --since=2026-04-28 --oneline | head -3'
+      - 'grep -E "oi3-m1-cached-mt01|MT-01.*regression" docs/07_governance/friction-journal.md'
+    expected:
+      - 'a Commit 2 lands with body referencing the paid-API regression run-record at $HOME/chounting-logs/oi3-m1-cached-mt01-${TS}.json'
+      - 'friction-journal NOTE entry summarizes the regression: cache_read_tokens > 0, cost stayed within S22 baseline ($0.04-0.10 expected), no model-cognitive regression on shape 12 productive emission'
+```
+
+### Gate 3: Action-plan QW-06 deferred to Phase 2 obligations
+
+```yaml
+gate: "QW-06 deferral captured in both files"
+checks:
+  - id: QW-06-action-plan
+    commands:
+      - 'grep -A 10 "QW-06" docs/07_governance/audits/phase-1.2/action-plan.md | grep -iE "deferred|defer.*phase 2|phase 2.*defer"'
+    expected:
+      - 'action-plan.md QW-06 entry contains an explicit deferral note referencing Phase 2 obligations and the SDK-shape moving-target rationale'
+
+  - id: QW-06-obligations
+    commands:
+      - 'grep -B 2 -A 10 "QW-06\\|Conversation shape Zod\\|UF-007" docs/09_briefs/phase-2/obligations.md'
+    expected:
+      - 'phase-2/obligations.md §6 Architectural follow-ups contains an entry sequenced alongside or after cross-turn caching enablement'
+      - 'entry cross-references action-plan.md QW-06 and unified-findings.md UF-007'
+```
+
+### Gate 4: Phase 1.2 audit Foundation Readiness blockers resolved
+
+```yaml
+gate: "UF-001 + UF-002 + UF-003 closed"
+checks:
+  - id: UF-001-closure
+    commands:
+      - 'git log --grep="UF-001\\|ledger immutability\\|journal_entries.*immutab" --since=2026-04-28 --oneline | head -5'
+      - 'grep -B 2 -A 2 "UF-001" docs/07_governance/friction-journal.md'
+    expected:
+      - 'two commits cite UF-001 closure: S26 (DB triggers) and S27 (atomicity facet via RPC)'
+      - 'friction-journal entry ties closure to UF-001 evidence'
+
+  - id: UF-002-closure
+    commands:
+      - 'git log --grep="UF-002\\|chartOfAccountsService.get.*org\\|periodService.isOpen.*org" --since=2026-04-28 --oneline | head -5'
+      - 'grep -B 2 -A 2 "UF-002" docs/07_governance/friction-journal.md'
+    expected:
+      - 'S25 commit cites UF-002 read-path closure'
+      - 'friction-journal entry ties closure to UF-002 evidence'
+      - 'note: broader CI-guard surface (UF-006 / LT-01) remains Phase 2 — gate does NOT require its closure'
+
+  - id: UF-003-closure
+    commands:
+      - 'git log --grep="UF-003\\|atomicity\\|write_journal_entry_atomic" --since=2026-04-28 --oneline | head -5'
+      - 'grep -B 2 -A 2 "UF-003" docs/07_governance/friction-journal.md'
+    expected:
+      - 'S27 commits cite UF-003 closure'
+      - 'friction-journal entry ties closure to UF-003 evidence and the atomicity-RPC mechanism'
+```
+
+### Verification agent invocation
+
+```bash
+# Post-S27 invocation pattern (ad-hoc; not pre-scheduled):
+# 1. Check out the arc-closeout SHA.
+# 2. Run each gate's checks; report per-gate PASS / FAIL with evidence.
+# 3. Overall verdict: Phase 2 surface expansion unblocked iff all 4 gates PASS.
+
+git checkout <S27 C2 SHA>
+# (verification agent runs the four gate blocks above and reports)
+```
+
+If any gate FAILs, the executing session for that gap reopens; do not proceed to Phase 2 surface expansion until the failing gate's closing commit lands and re-verification passes.

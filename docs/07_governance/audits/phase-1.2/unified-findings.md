@@ -317,7 +317,7 @@ Agent mutations lack session-level audit trail if emits fail silently. Forensic 
 `organizations.mfa_required` is a settable boolean column (Phase 1.5B). Flipping it to true produces no runtime effect because the middleware check never runs. The integration test (`tests/integration/mfaEnforcementMiddleware.test.ts`) explicitly states "the actual redirect behavior is verified manually in the browser," testing only that the column flips and the function exports, not that middleware.ts invokes the function.
 
 **Evidence:**
-- `src/middleware.ts` (lines 1–10) — only i18n routing; no enforceMfa import
+- ~~`src/middleware.ts` (lines 1–10)~~ **Correction (2026-04-28, post-audit-brief-cleanup):** the top-level middleware file is at repo-root `middleware.ts` (lines 1–10), not `src/middleware.ts`. Drift caught at S25 brief-write. Only i18n routing; no enforceMfa import.
 - `src/middleware/mfaEnforcement.ts` — fully implemented, line 10 exports `enforceMfa`
 - Grep for enforceMfa outside this file: only two matches (export and test import). Never called at runtime
 - `tests/integration/mfaEnforcementMiddleware.test.ts` header states manual verification; test does not assert runtime wiring
