@@ -35,19 +35,32 @@ export const chartOfAccountsService = {
 
     if (error) {
       log.error({ error }, 'Failed to list chart_of_accounts');
-      throw error;
+      throw new ServiceError('READ_FAILED', error.message);
     }
 
     return data ?? [];
   },
 
   /**
-   * Gets a single account by ID.
+   * Gets a single account by (account_id, org_id). Both fields are
+   * required: org_id is checked against the caller's memberships
+   * BEFORE the lookup (S25 QW-02 / UF-002), and the looked-up row's
+   * org_id is verified against the supplied org_id post-fetch as
+   * a defense-in-depth tenant boundary.
    */
   async get(
-    input: { account_id: string },
+    input: { account_id: string; org_id: string },
     ctx: ServiceContext,
   ) {
+    // Authorization: caller must be a member of the requested org.
+    // Matches list() pattern at line 20-25.
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -55,11 +68,19 @@ export const chartOfAccountsService = {
       .from('chart_of_accounts')
       .select('account_id, org_id, account_code, account_name, account_type, is_intercompany_capable, is_active')
       .eq('account_id', input.account_id)
-      .single();
+      .eq('org_id', input.org_id)
+      .maybeSingle();
 
     if (error) {
       log.error({ error }, 'Failed to get account');
-      throw error;
+      throw new ServiceError('READ_FAILED', error.message);
+    }
+
+    if (!data) {
+      throw new ServiceError(
+        'NOT_FOUND',
+        `Account ${input.account_id} not found in org_id=${input.org_id}`,
+      );
     }
 
     return data;

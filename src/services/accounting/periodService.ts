@@ -53,6 +53,15 @@ export const periodService = {
     input: { org_id: string; entry_date: string },
     ctx: ServiceContext,
   ) {
+    // Authorization: caller must be a member of the requested org.
+    // S25 QW-02 / UF-002. Matches listOpen() pattern at line 29.
+    if (!ctx.caller.org_ids.includes(input.org_id)) {
+      throw new ServiceError(
+        'ORG_ACCESS_DENIED',
+        `Caller does not have access to org_id=${input.org_id}`,
+      );
+    }
+
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 

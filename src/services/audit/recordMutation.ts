@@ -9,6 +9,32 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 
+// S25 QW-07 / UF-010: PII fields stripped from before_state before
+// the audit_log row is persisted. audit_log is append-only
+// (INV-AUDIT-002 + 20240122000000_audit_log_append_only.sql), so
+// PII captured here cannot be selectively scrubbed later — write-
+// time redaction is the only safe insertion point. Shallow clone
+// only; nested PII is NOT recursed (Phase 2 work — pino REDACT_CONFIG
+// expansion + structured nested support land together as MT-06).
+export const PII_FIELDS = [
+  'invited_email',
+  'phone',
+  'first_name',
+  'last_name',
+  'display_name',
+] as const;
+
+export function redactPii(
+  state: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null {
+  if (!state) return null;
+  const clone = { ...state };
+  for (const field of PII_FIELDS) {
+    delete clone[field];
+  }
+  return clone;
+}
+
 /**
  * Audit payload passed to recordMutation(). See the INV-AUDIT-001
  * leaf in docs/02_specs/ledger_truth_model.md for the full rule;
@@ -66,7 +92,7 @@ export async function recordMutation(
     action: entry.action,
     entity_type: entry.entity_type,
     entity_id: entry.entity_id ?? null,
-    before_state: entry.before_state ?? null,
+    before_state: redactPii(entry.before_state),
     after_state_id: entry.after_state_id ?? null,
     tool_name: entry.tool_name ?? null,
     idempotency_key: entry.idempotency_key ?? null,

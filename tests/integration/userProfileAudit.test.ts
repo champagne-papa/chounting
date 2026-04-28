@@ -4,6 +4,12 @@
 // - Upsert-insert branch (Session 5.2): row absent → upsert
 //   creates it, audit has before_state: null per Phase 1.5A
 //   convention distinguishing "created" from "mutated."
+//
+// S25 QW-07 (UF-010) — PII redaction: before_state JSONB now strips
+// invited_email / phone / first_name / last_name / display_name at
+// recordMutation write time. The "update branch" assertion below
+// verifies that before_state is captured (the row was non-empty
+// pre-mutation) AND that PII fields are absent after redaction.
 
 import { describe, it, expect, afterAll, beforeEach } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
@@ -39,8 +45,19 @@ describe('CA-15: updateProfile audit logging', () => {
     expect(auditRows).toHaveLength(1);
     expect(auditRows![0].entity_type).toBe('user_profile');
     expect(auditRows![0].entity_id).toBe(SEED.USER_CONTROLLER);
-    expect(auditRows![0].before_state).toBeTruthy();
-    expect((auditRows![0].before_state as Record<string, unknown>).display_name).toBe('Controller User');
+
+    // before_state is captured (the row existed pre-mutation) but PII
+    // fields are stripped per S25 QW-07 / UF-010. The non-PII row
+    // identifier (user_id) survives; PII (display_name, first_name,
+    // last_name, phone) does not.
+    const before = auditRows![0].before_state as Record<string, unknown>;
+    expect(before).toBeTruthy();
+    expect(before).not.toBeNull();
+    expect(before.user_id).toBe(SEED.USER_CONTROLLER);
+    expect(before.display_name).toBeUndefined();
+    expect(before.first_name).toBeUndefined();
+    expect(before.last_name).toBeUndefined();
+    expect(before.phone).toBeUndefined();
   });
 });
 
