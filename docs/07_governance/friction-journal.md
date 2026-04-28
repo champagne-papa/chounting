@@ -96,3 +96,12 @@ Categories:
   the brief's classifier didn't anticipate. Convention #8 fire
   (brief-authoring miss, not surgery or classifier-mechanic
   miss); N=3 codification trigger fires.
+- 2026-04-28 NOTE — S22 caching confirmed: cache_creation 8407
+  on call 1, cache_read 8407 on calls 2-3 (system+tools prefix
+  stable within handleUserMessage; §4a + Site 2 preserved).
+  Cost $0.119→$0.0808 per shape 12 dry-run (-32%; less than
+  -58% projected — uncached messages delta 9433 tokens, 1.12×
+  cached prefix). Cross-turn (Phase 2+) targets -58%. Shape
+  15+20 now affordable: 9× × ~$0.08 = ~$0.72 fits scoping
+  doc $0.75 ceiling. Convention #8 N=4 (quantitative-behavior
+  gap). Run record: oi3-m1-cached-run-20260428T061604Z.json.
