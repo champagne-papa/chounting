@@ -77,9 +77,11 @@ intervention (fine-tuning, prompt-cached examples,
 selection-behavior alignment). Phase 2 brief authors evaluate
 M1 results before scoping a separate Class 2 workstream.
 
-**Status claim:** Class 2 fix-stack queued as new workstream
-(post-C7, pre-or-during-Phase-2 — operator scope decision).
-Fix-stack content depends on OI-3 M1 results; do not pre-scope.
+**Status claim:** Class 2 fix-stack collapsed per S20 M1 evidence;
+shape 15 + 20 re-validation queued as OI-3 M1 completeness under
+caching-unblocked conditions. See
+`docs/09_briefs/phase-2/class-2-scope-decision.md` (commit landing
+this update) for the verdict and citations.
 
 ---
 
