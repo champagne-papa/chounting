@@ -18,9 +18,9 @@ export type Database = {
       graphql: {
         Args: {
           operationName?: string
-          query?: string
-          variables?: Json
           extensions?: Json
+          variables?: Json
+          query?: string
         }
         Returns: Json
       }
@@ -1779,9 +1779,9 @@ export type Database = {
     Functions: {
       get_account_balance: {
         Args: {
+          p_as_of_date: string
           p_org_id: string
           p_account_id: string
-          p_as_of_date: string
         }
         Returns: {
           balance_cad: number
@@ -1796,12 +1796,12 @@ export type Database = {
         Returns: {
           journal_entry_id: string
           entry_number: number
-          entry_date: string
           description: string
           debit_amount: number
           credit_amount: number
           amount_cad: number
           running_balance: number
+          entry_date: string
         }[]
       }
       get_accounts_by_type: {
@@ -1820,12 +1820,12 @@ export type Database = {
       }
       get_balance_sheet: {
         Args: {
-          p_org_id: string
           p_as_of_date: string
+          p_org_id: string
         }
         Returns: {
-          account_type: string
           total_cad: number
+          account_type: string
         }[]
       }
       get_profit_and_loss: {
@@ -1845,34 +1845,13 @@ export type Database = {
           p_period_id: string
         }
         Returns: {
+          account_type: string
+          account_name: string
+          credit_total_cad: number
+          debit_total_cad: number
           account_id: string
           account_code: string
-          account_name: string
-          account_type: string
-          debit_total_cad: number
-          credit_total_cad: number
         }[]
-      }
-      test_post_balanced_entry: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_amount: number
-        }
-        Returns: string
-      }
-      test_post_unbalanced_entry: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-          p_debit_account: string
-          p_credit_account: string
-          p_debit_amount: number
-          p_credit_amount: number
-        }
-        Returns: string
       }
       user_has_org_access: {
         Args: {
@@ -1882,8 +1861,8 @@ export type Database = {
       }
       user_has_permission: {
         Args: {
-          target_org_id: string
           target_permission_key: string
+          target_org_id: string
         }
         Returns: boolean
       }
@@ -1892,6 +1871,17 @@ export type Database = {
           target_org_id: string
         }
         Returns: boolean
+      }
+      write_journal_entry_atomic: {
+        Args: {
+          p_audit: Json
+          p_entry: Json
+          p_lines: Json
+        }
+        Returns: {
+          journal_entry_id: string
+          entry_number: number
+        }[]
       }
     }
     Enums: {

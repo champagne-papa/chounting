@@ -39,7 +39,7 @@ import {
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
-import { recordMutation } from '@/services/audit/recordMutation';
+import { redactPii } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
 
 // --- Service input: discriminated union of create, reversal, and adjustment ---
@@ -135,18 +135,6 @@ async function post(
   // No service-level balance check — single source of truth at the
   // schema boundary, DB as final guard.
 
-  // --- Compute entry_number (MAX + 1, no FOR UPDATE in Phase 1.1) ---
-  const { data: maxRow } = await db
-    .from('journal_entries')
-    .select('entry_number')
-    .eq('org_id', parsed.org_id)
-    .eq('fiscal_period_id', parsed.fiscal_period_id)
-    .order('entry_number', { ascending: false, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-
-  const nextEntryNumber = (maxRow?.entry_number ?? 0) + 1;
-
   // --- Derive entry_type (programmatic, never from client-controllable fields) ---
   // The adjustment branch does carry entry_type: 'adjusting' through
   // the input (AdjustmentInputSchema requires the literal), but the
@@ -157,15 +145,38 @@ async function post(
       : isAdjustment ? 'adjusting'
       : 'regular';
 
-  // --- Insert journal entry ---
-  // idempotency_key is required when source='agent' per
-  // INV-IDEMPOTENCY-001 (DB CHECK `idempotency_required_for_agent`
-  // on journal_entries). The Zod schema enforces this at the
-  // boundary; the service writes the column through so the DB
-  // constraint is satisfied.
-  const { data: entry, error: entryErr } = await db
-    .from('journal_entries')
-    .insert({
+  // --- S27 MT-01-rpc: atomic three-INSERT envelope via RPC ---
+  // The previous four-call surface (MAX+1 read → INSERT entries →
+  // INSERT lines → recordMutation INSERT audit_log) is now collapsed
+  // into a single db.rpc('write_journal_entry_atomic', ...) call.
+  // Atomicity rationale and rollback paths in
+  // supabase/migrations/20240134000000_write_journal_entry_atomic_rpc.sql.
+  //
+  // Per Task 3 Gate 3 (option a): redactPii() runs in the service
+  // before the RPC call, not in plpgsql. before_state is null on
+  // the post path today; the redact call site is a forward-
+  // compatibility provision for future paths that populate it.
+  const action: string =
+    isAdjustment ? 'journal_entry.adjust'
+      : isReversal ? 'journal_entry.reverse'
+      : 'journal_entry.post';
+
+  const reverses_journal_entry_id =
+    isReversal && 'reverses_journal_entry_id' in parsed
+      ? (parsed as ReversalInput).reverses_journal_entry_id
+      : null;
+  const reversal_reason =
+    isReversal && 'reversal_reason' in parsed
+      ? (parsed as ReversalInput).reversal_reason
+      : null;
+  const adjustment_reason =
+    isAdjustment && 'adjustment_reason' in parsed
+      ? (parsed as AdjustmentInput).adjustment_reason
+      : null;
+
+  // RETURNS TABLE → Supabase wraps result in an array; destructure index 0.
+  const { data, error } = await db.rpc('write_journal_entry_atomic', {
+    p_entry: {
       org_id: parsed.org_id,
       fiscal_period_id: parsed.fiscal_period_id,
       entry_date: parsed.entry_date,
@@ -174,77 +185,46 @@ async function post(
       source: parsed.source,
       source_system: parsed.source,
       idempotency_key: parsed.idempotency_key ?? null,
-      reverses_journal_entry_id:
-        isReversal && 'reverses_journal_entry_id' in parsed
-          ? (parsed as ReversalInput).reverses_journal_entry_id
-          : null,
-      reversal_reason:
-        isReversal && 'reversal_reason' in parsed
-          ? (parsed as ReversalInput).reversal_reason
-          : null,
-      adjustment_reason:
-        isAdjustment && 'adjustment_reason' in parsed
-          ? (parsed as AdjustmentInput).adjustment_reason
-          : null,
-      // adjustment_status NOT written on any branch — DB DEFAULT
-      // 'posted' is the only Phase 1 value per ADR-0010 Layer 3
-      // (service emits nothing, DEFAULT handles assignment).
-      entry_number: nextEntryNumber,
+      reverses_journal_entry_id,
+      reversal_reason,
+      adjustment_reason,
       entry_type: entryType,
       created_by: ctx.caller.user_id,
-    })
-    .select('journal_entry_id')
-    .single();
-
-  if (entryErr || !entry) {
-    log.error({ error: entryErr }, 'Failed to insert journal_entry');
-    throw new ServiceError('POST_FAILED', entryErr?.message ?? 'Insert failed');
-  }
-
-  // --- Insert journal lines ---
-  const lineRows = parsed.lines.map((line) => ({
-    journal_entry_id: entry.journal_entry_id,
-    account_id: line.account_id,
-    description: line.description ?? null,
-    debit_amount: line.debit_amount,
-    credit_amount: line.credit_amount,
-    currency: line.currency,
-    amount_original: line.amount_original,
-    amount_cad: line.amount_cad,
-    fx_rate: line.fx_rate,
-    tax_code_id: line.tax_code_id ?? null,
-  }));
-
-  const { error: linesErr } = await db
-    .from('journal_lines')
-    .insert(lineRows);
-
-  if (linesErr) {
-    log.error({ error: linesErr }, 'Failed to insert journal_lines');
-    throw new ServiceError('POST_FAILED', linesErr.message);
-  }
-
-  // --- INV-AUDIT-001 call site — Audit log (Simplification 1: synchronous write) ---
-  // Runs inside the caller's transaction (same `db` client) so the audit row commits
-  // atomically with the journal_entries + journal_lines writes above. See the INV-AUDIT-001
-  // leaf in docs/02_specs/ledger_truth_model.md for why same-transaction dispatch is the
-  // enforcement mechanism (Simplification 1; replaced by the events projection in Phase 2).
-  await recordMutation(db, ctx, {
-    org_id: parsed.org_id,
-    action:
-      isAdjustment ? 'journal_entry.adjust'
-        : isReversal ? 'journal_entry.reverse'
-        : 'journal_entry.post',
-    entity_type: 'journal_entry',
-    entity_id: entry.journal_entry_id,
+    },
+    p_lines: parsed.lines.map((line) => ({
+      account_id: line.account_id,
+      description: line.description ?? null,
+      debit_amount: line.debit_amount,
+      credit_amount: line.credit_amount,
+      currency: line.currency,
+      amount_original: line.amount_original,
+      amount_cad: line.amount_cad,
+      fx_rate: line.fx_rate,
+      tax_code_id: line.tax_code_id ?? null,
+    })),
+    p_audit: {
+      org_id: parsed.org_id,
+      user_id: ctx.caller.user_id,
+      trace_id: ctx.trace_id,
+      action,
+      entity_type: 'journal_entry',
+      before_state: redactPii(null),
+    },
   });
 
+  if (error || !data?.[0]) {
+    log.error({ error }, 'Journal entry RPC failed');
+    throw new ServiceError('POST_FAILED', error?.message ?? 'RPC failed');
+  }
+
+  const { journal_entry_id, entry_number: nextEntryNumber } = data[0];
+
   log.info(
-    { journal_entry_id: entry.journal_entry_id, entry_number: nextEntryNumber, entry_type: entryType },
+    { journal_entry_id, entry_number: nextEntryNumber, entry_type: entryType },
     'Journal entry posted',
   );
 
-  return { journal_entry_id: entry.journal_entry_id, entry_number: nextEntryNumber };
+  return { journal_entry_id, entry_number: nextEntryNumber };
 }
 
 // --- Reversal mirror validation (ADR-001 §1, PLAN.md §15e Layer 2) ---
