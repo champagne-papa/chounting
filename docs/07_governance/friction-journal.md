@@ -224,7 +224,7 @@ Categories:
   applicable 2; H user-id-scoped target-vs-caller asymmetry 1 site
   dead at bounded-read surface; I token-bearer 2). Plus Pattern J
   (auth-helpers, out of scope) and J-variant (loadOrgContext-shape,
-  flagged for Phase 2). Corrigendum at `741b002` splits S29 into
+  flagged for Phase 2). Corrigendum at `7ba3455` splits S29 into
   S29a (Pattern A wrap, ~18 sites; S29a brief-creation post-corrigendum)
   + S29b (Patterns C/E design + migration, 3 sites; brief-creation
   post-S30). Pattern G1 routed as separate friction-journal finding
