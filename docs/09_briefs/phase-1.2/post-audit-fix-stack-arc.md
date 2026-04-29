@@ -127,8 +127,8 @@ The "Do Not Do" list from `action-plan.md` lines 130–150 (DND-01..DND-05) rema
 - **Anchor:** `0952fdd` — S24 Phase 1.2 audit closeout (24 unified findings, YES-WITH-CAVEATS readiness).
 - **S25 anchor:** `0952fdd` (S24 closeout); S25 itself produced commit `9c0079b` (Commit 1 — implementation). Commit 2 (this commit, governance attribution) lands the friction-journal entry + arc-summary anchor update.
 - **S26 anchor:** `551feec` (S25 C2 governance); S26 itself produced commit `cbb4018` (Commit 1 — implementation). Commit 2 (this commit, governance attribution) lands the friction-journal entry + arc-summary anchor update.
-- **S27 anchor:** `<S26 SHA>`; S27 produces Commit 1 at `<S27 C1 SHA>` and Commit 2 at `<S27 C2 SHA>`.
-- **Arc closeout:** `<S27 C2 SHA>` is the SHA at which the four verification-gate conditions hold simultaneously. Phase 2 surface expansion sessions anchor against `<S27 C2 SHA>` or later.
+- **S27 anchor:** `cbb4018`; S27 produces Commit 1 at `9334c1f` and Commit 2 at `297256e`.
+- **Arc closeout:** `297256e` is the SHA at which the four verification-gate conditions hold simultaneously. Phase 2 surface expansion sessions anchor against `297256e` or later.
 
 ---
 
@@ -136,7 +136,7 @@ The "Do Not Do" list from `action-plan.md` lines 130–150 (DND-01..DND-05) rema
 
 Mechanical-check spec for the four verification-gate conditions. A
 verification agent run post-S27 (ad-hoc, not pre-scheduled) checks
-out `<S27 C2 SHA>` and runs each block's `commands`; the gate
+out `297256e` and runs each block's `commands`; the gate
 condition holds iff every command's output matches `expected`. This
 appendix is the binding contract between gate definition and
 verification execution.
@@ -225,19 +225,19 @@ checks:
 
   - id: MT-01-tests
     commands:
-      - 'ls tests/integration/ | grep -E "journalEntryAtomic|atomicRollback"'
-      - 'pnpm test journalEntryAtomicRollback 2>&1 | tail -5'
+      - 'ls tests/integration/ | grep -E "postJournalEntryRpcRollback|journalEntryAtomic|atomicRollback"'
+      - 'pnpm test postJournalEntryRpcRollback 2>&1 | tail -5'
     expected:
-      - 'tests/integration/journalEntryAtomicRollback.test.ts exists'
-      - 'pnpm test passes — rollback test exercises mid-transaction failure (e.g., audit_log insert fails, balance constraint fires) and asserts no orphan rows remain'
+      - 'tests/integration/postJournalEntryRpcRollback.test.ts exists (shipped naming; spec original was journalEntryAtomicRollback)'
+      - 'pnpm test passes — rollback test exercises five DB-trigger failure modes (deferred balance, period lock, cross-org account, period date-range, FK violation) and asserts no orphan rows remain across journal_entries / journal_lines / audit_log'
 
   - id: MT-01-regression
     commands:
-      - 'git log --grep="paid-API regression\\|write_journal_entry_atomic" --since=2026-04-28 --oneline | head -3'
-      - 'grep -E "oi3-m1-cached-mt01|MT-01.*regression" docs/07_governance/friction-journal.md'
+      - 'git log --grep="paid-API regression\\|paid regression\\|write_journal_entry_atomic" --since="2026-04-28T00:00:00" --oneline | head -3'
+      - 'grep -E "oi3-m1-cached-mt01|oi3-m1-run-s27|MT-01.*regression|paid regression" docs/07_governance/friction-journal.md'
     expected:
-      - 'a Commit 2 lands with body referencing the paid-API regression run-record at $HOME/chounting-logs/oi3-m1-cached-mt01-${TS}.json'
-      - 'friction-journal NOTE entry summarizes the regression: cache_read_tokens > 0, cost stayed within S22 baseline ($0.04-0.10 expected), no model-cognitive regression on shape 12 productive emission'
+      - 'a Commit 2 lands with body referencing the paid-API regression run-record at $HOME/chounting-logs/oi3-m1-run-s27-${TS}.json (shipped naming; spec original was oi3-m1-cached-mt01-${TS}.json)'
+      - 'friction-journal NOTE entry summarizes the regression: cumulative spend within $0.20 directive, agent path tool dispatch validated end-to-end (proposed_entry_card emitted), shape-12 productive outcome'
 ```
 
 ### Gate 3: Action-plan QW-06 deferred to Phase 2 obligations
@@ -266,15 +266,15 @@ gate: "UF-001 + UF-002 + UF-003 closed"
 checks:
   - id: UF-001-closure
     commands:
-      - 'git log --grep="UF-001\\|ledger immutability\\|journal_entries.*immutab" --since=2026-04-28 --oneline | head -5'
+      - 'git log --grep="UF-001\\|ledger immutability\\|journal_entries.*immutab" --since="2026-04-28T00:00:00" --oneline | head -5'
       - 'grep -B 2 -A 2 "UF-001" docs/07_governance/friction-journal.md'
     expected:
-      - 'two commits cite UF-001 closure: S26 (DB triggers) and S27 (atomicity facet via RPC)'
-      - 'friction-journal entry ties closure to UF-001 evidence'
+      - 'S26 commit cites UF-001 closure (immutability triggers; per unified-findings.md UF-001 is immutability-only)'
+      - 'friction-journal entry ties closure to UF-001 evidence (atomicity is UF-003, separate gate below)'
 
   - id: UF-002-closure
     commands:
-      - 'git log --grep="UF-002\\|chartOfAccountsService.get.*org\\|periodService.isOpen.*org" --since=2026-04-28 --oneline | head -5'
+      - 'git log --grep="UF-002\\|chartOfAccountsService.get.*org\\|periodService.isOpen.*org" --since="2026-04-28T00:00:00" --oneline | head -5'
       - 'grep -B 2 -A 2 "UF-002" docs/07_governance/friction-journal.md'
     expected:
       - 'S25 commit cites UF-002 read-path closure'
@@ -283,7 +283,7 @@ checks:
 
   - id: UF-003-closure
     commands:
-      - 'git log --grep="UF-003\\|atomicity\\|write_journal_entry_atomic" --since=2026-04-28 --oneline | head -5'
+      - 'git log --grep="UF-003\\|atomicity\\|write_journal_entry_atomic" --since="2026-04-28T00:00:00" --oneline | head -5'
       - 'grep -B 2 -A 2 "UF-003" docs/07_governance/friction-journal.md'
     expected:
       - 'S27 commits cite UF-003 closure'
@@ -298,7 +298,7 @@ checks:
 # 2. Run each gate's checks; report per-gate PASS / FAIL with evidence.
 # 3. Overall verdict: Phase 2 surface expansion unblocked iff all 4 gates PASS.
 
-git checkout <S27 C2 SHA>
+git checkout 297256e
 # (verification agent runs the four gate blocks above and reports)
 ```
 

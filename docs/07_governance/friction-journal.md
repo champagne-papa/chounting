@@ -160,3 +160,25 @@ Categories:
   (f) Harness `oi3-m1-validation.ts` constants permanently
   updated for S27-pattern reuse: ceilings 0.20/0.10, anchor +
   session_label. 571/3/20.
+- 2026-04-29 NOTE — Post-S27 verification gate at `297256e`:
+  all four gates substantively PASS; three mechanical drifts
+  fixed by follow-up commit. UF-001/UF-003 lineage
+  reconciliation: per `unified-findings.md`, UF-001 = ledger
+  immutability (closed by S26) and UF-003 = transaction
+  atomicity gap on multi-step writes (closed by S27). S27
+  commit bodies (`9334c1f`, `297256e`) cite "UF-001 atomicity
+  facet" — Phase-1.1 carryover framing where the original
+  Phase 1.1 UF-001 covered both. **S27 substantively closes
+  UF-003** per Phase 1.2's distinct numbering. Future audit
+  grep for `UF-003` should treat S27's commits + this NOTE +
+  the rollback test suite as the lineage. Harness Gate 4
+  UF-001 expected text aligned to immutability-only
+  (atomicity moved to UF-003 gate). Other drifts fixed:
+  test file name (`postJournalEntryRpcRollback`), run-record
+  path (`oi3-m1-run-s27-`). Sub-finding caught at re-verification:
+  harness `--since=2026-04-28` (bare date) returns empty under
+  git 2.43.0; replaced with ISO form
+  `--since="2026-04-28T00:00:00"`. Both git-log and friction-
+  journal evidence-clauses now produce findings as designed.
+  Phase 2 surface expansion gate-pass: mechanical verification
+  clear at this commit; unblock declaration is operator-pending.
