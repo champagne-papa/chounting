@@ -182,3 +182,34 @@ Categories:
   journal evidence-clauses now produce findings as designed.
   Phase 2 surface expansion gate-pass: mechanical verification
   clear at this commit; unblock declaration is operator-pending.
+- 2026-04-29 NOTE — Path C arc scoping at HEAD (post-d39ec09):
+  arc summary committed at `docs/09_briefs/phase-1.3/path-c-arc-summary.md`
+  scoping S28 (MT-05+MT-06) → S29 (MT-03 broad) → S30 (LT-01+
+  LT-03+LT-04 CI-enforcement cluster) → S31 (LT-02 test
+  coverage). Five-gate verification harness mirrors post-audit
+  fix-stack arc shape; brief-creation sessions follow
+  per-session post-ratification. Sub-finding caught at harness
+  authoring: verification-harness YAML uses single-quoted
+  strings; backslashes inside single-quoted YAML are literal,
+  not escapes. Predecessor harness at
+  `docs/09_briefs/phase-1.2/post-audit-fix-stack-arc.md` used
+  `\\|` doubles which do not behave as alternations under
+  `git log --grep` or `grep -E` — the YAML parser hands the
+  literal string `UF-001\\|ledger` to the shell, and the regex
+  engine treats `\\|` as a literal-backslash-then-pipe, not
+  alternation. Path-C harness uses `\|` singles throughout
+  (zero `\\|` occurrences verified via grep against the saved
+  file). Post-S27 verification-gate substantive PASS despite
+  the predecessor's doubles suggests either (a) verification
+  agent escape-normalization, (b) manual re-running with
+  corrected escaping, or (c) substring fallback matching on
+  the pre-alternation portion of the pattern; either way the
+  singles form is the durable shape. Same mechanical-drift-
+  in-verification-harness shape as the post-S27 `--since=`
+  bare-date / ISO-form sub-finding — both are "looks right
+  but doesn't behave right under specific tool versions."
+  Codification candidate at N=2 if a future harness reproduces
+  the same drift. Optional retroactive fix to
+  `post-audit-fix-stack-arc.md` (convert doubles to singles)
+  deferred — closed-state doc, operator's call whether to
+  fix-in-place or leave as known-drift item.
