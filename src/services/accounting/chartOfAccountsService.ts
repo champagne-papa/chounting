@@ -5,25 +5,16 @@ import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 export const chartOfAccountsService = {
   /**
    * Lists all accounts in the chart of accounts for an org.
    */
-  async list(
+  list: withInvariants(async (
     input: { org_id: string },
     ctx: ServiceContext,
-  ) {
-    // Authorization: caller must be a member of the requested org.
-    // Matches Phase 12A pattern for read functions (writes use
-    // withInvariants Invariant 3 instead).
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ) => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -39,7 +30,7 @@ export const chartOfAccountsService = {
     }
 
     return data ?? [];
-  },
+  }),
 
   /**
    * Gets a single account by (account_id, org_id). Both fields are
@@ -48,19 +39,10 @@ export const chartOfAccountsService = {
    * org_id is verified against the supplied org_id post-fetch as
    * a defense-in-depth tenant boundary.
    */
-  async get(
+  get: withInvariants(async (
     input: { account_id: string; org_id: string },
     ctx: ServiceContext,
-  ) {
-    // Authorization: caller must be a member of the requested org.
-    // Matches list() pattern at line 20-25.
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ) => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -84,5 +66,5 @@ export const chartOfAccountsService = {
     }
 
     return data;
-  },
+  }),
 };

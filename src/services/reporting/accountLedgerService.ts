@@ -40,6 +40,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import { toMoneyAmount, type MoneyAmount } from '@/shared/schemas/accounting/money.schema';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 export interface AccountLedgerLine {
   journal_entry_id: string;
@@ -76,21 +77,14 @@ interface AccountLedgerRpcRow {
 }
 
 export const accountLedgerService = {
-  async get(
+  get: withInvariants(async (
     input: {
       org_id: string;
       account_id: string;
       fiscal_period_id?: string | null;
     },
     ctx: ServiceContext,
-  ): Promise<AccountLedgerResult> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<AccountLedgerResult> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -141,5 +135,5 @@ export const accountLedgerService = {
         type: acctRow.account_type,
       },
     };
-  },
+  }),
 };

@@ -22,6 +22,7 @@ export const taxCodeService = {
    * The ctx parameter is taken for consistency with other service functions
    * (trace_id propagation) but not used for auth.
    */
+  // withInvariants: skip-org-check (pattern-G2: globally-shared reference data, RLS allows authenticated read)
   async listShared(ctx: ServiceContext): Promise<TaxCodeListItem[]> {
     const db = adminClient();
 

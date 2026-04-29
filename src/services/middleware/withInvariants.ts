@@ -1,5 +1,5 @@
 // src/services/middleware/withInvariants.ts
-// INV-AUTH-001 (primary): every mutating service call is authorized before the function body runs.
+// INV-AUTH-001 (primary): every service call (read or mutation) is authorized before the function body runs.
 // The universal service wrapper. Every service function in src/services/
 // is invoked through this. Performs pre-flight checks before the function
 // body runs:
@@ -16,7 +16,7 @@
 // rejects PRs that bypass this wrapper.
 
 import type { ServiceContext } from './serviceContext';
-import { InvariantViolationError } from './errors';
+import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import { canUserPerformAction, type ActionName } from '@/services/auth/canUserPerformAction';
 
@@ -35,20 +35,20 @@ export function withInvariants<I, O>(
 
     // Invariant 1: ServiceContext shape
     if (!ctx) {
-      throw new InvariantViolationError('MISSING_CONTEXT', 'ServiceContext is required');
+      throw new ServiceError('MISSING_CONTEXT', 'ServiceContext is required');
     }
     if (!ctx.trace_id) {
-      throw new InvariantViolationError('MISSING_TRACE_ID', 'ServiceContext.trace_id is required');
+      throw new ServiceError('MISSING_TRACE_ID', 'ServiceContext.trace_id is required');
     }
     if (!ctx.caller || !ctx.caller.user_id) {
-      throw new InvariantViolationError('MISSING_CALLER', 'ServiceContext.caller.user_id is required');
+      throw new ServiceError('MISSING_CALLER', 'ServiceContext.caller.user_id is required');
     }
 
     // Invariant 2: caller identity is verified, not claimed.
     // ctx.caller.verified must be true — buildServiceContext sets this
     // after validating the Supabase Auth JWT.
     if (!ctx.caller.verified) {
-      throw new InvariantViolationError('UNVERIFIED_CALLER', 'Caller identity has not been verified');
+      throw new ServiceError('UNVERIFIED_CALLER', 'Caller identity has not been verified');
     }
 
     // Invariant 3: org_id consistency.
@@ -63,7 +63,7 @@ export function withInvariants<I, O>(
       ctx.caller.org_ids &&
       !ctx.caller.org_ids.includes(claimedOrgId)
     ) {
-      throw new InvariantViolationError(
+      throw new ServiceError(
         'ORG_ACCESS_DENIED',
         `Caller does not have access to org_id=${claimedOrgId}`,
       );
@@ -75,7 +75,7 @@ export function withInvariants<I, O>(
     if (opts?.action && typeof claimedOrgId === 'string' && claimedOrgId) {
       const authResult = await canUserPerformAction(ctx, opts.action, claimedOrgId);
       if (!authResult.permitted) {
-        throw new InvariantViolationError('PERMISSION_DENIED', authResult.reason);
+        throw new ServiceError('PERMISSION_DENIED', authResult.reason);
       }
     }
 

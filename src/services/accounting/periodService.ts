@@ -7,6 +7,7 @@ import { loggerWith } from '@/shared/logger/pino';
 
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 export type FiscalPeriodListItem = {
   period_id: string;
@@ -21,18 +22,10 @@ export const periodService = {
    * Lists all open (unlocked) fiscal periods for an org.
    * Used by the journal entry form's period dropdown.
    */
-  async listOpen(
+  listOpen: withInvariants(async (
     input: { org_id: string },
-    ctx: ServiceContext,
-  ): Promise<FiscalPeriodListItem[]> {
-    // Authorization: caller must be a member of the requested org.
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+    _ctx: ServiceContext,
+  ): Promise<FiscalPeriodListItem[]> => {
     const db = adminClient();
     const { data, error } = await db
       .from('fiscal_periods')
@@ -43,25 +36,17 @@ export const periodService = {
 
     if (error) throw new ServiceError('READ_FAILED', error.message);
     return (data ?? []) as FiscalPeriodListItem[];
-  },
+  }),
 
   /**
    * Checks whether the fiscal period covering `entryDate` in `orgId` is open.
    * Returns the period if open, or null if locked / not found.
    */
-  async isOpen(
+  // S25 QW-02 / UF-002
+  isOpen: withInvariants(async (
     input: { org_id: string; entry_date: string },
     ctx: ServiceContext,
-  ) {
-    // Authorization: caller must be a member of the requested org.
-    // S25 QW-02 / UF-002. Matches listOpen() pattern at line 29.
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ) => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -89,7 +74,7 @@ export const periodService = {
     }
 
     return period;
-  },
+  }),
 
   /**
    * Locks a fiscal period. Writes `is_locked=true`, stamps
@@ -104,17 +89,10 @@ export const periodService = {
    * each other on the same row without deadlock (both acquire
    * the lock in the same order).
    */
-  async lock(
+  lock: withInvariants(async (
     input: { org_id: string; period_id: string; reason: string },
     ctx: ServiceContext,
-  ): Promise<{ period_id: string; locked_at: string }> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<{ period_id: string; locked_at: string }> => {
     if (input.reason.trim().length === 0) {
       throw new ServiceError(
         'PERIOD_REASON_REQUIRED',
@@ -182,7 +160,7 @@ export const periodService = {
       period_id: input.period_id,
       locked_at: (updated as { locked_at: string }).locked_at,
     };
-  },
+  }),
 
   /**
    * Unlocks a fiscal period. Mirror of lock(): writes
@@ -191,17 +169,10 @@ export const periodService = {
    * pre-mutation row as `before_state`, and the caller-supplied
    * `reason`.
    */
-  async unlock(
+  unlock: withInvariants(async (
     input: { org_id: string; period_id: string; reason: string },
     ctx: ServiceContext,
-  ): Promise<{ period_id: string }> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<{ period_id: string }> => {
     if (input.reason.trim().length === 0) {
       throw new ServiceError(
         'PERIOD_REASON_REQUIRED',
@@ -264,5 +235,5 @@ export const periodService = {
     );
 
     return { period_id: input.period_id };
-  },
+  }),
 };

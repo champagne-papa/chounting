@@ -18,6 +18,7 @@
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 export type AiActionStatus = 'pending' | 'confirmed' | 'rejected' | 'stale' | 'edited';
 
@@ -36,16 +37,8 @@ export interface AiActionListItem {
 
 async function list(
   input: { org_id: string; limit?: number; offset?: number },
-  ctx: ServiceContext,
+  _ctx: ServiceContext,
 ): Promise<AiActionListItem[]> {
-  // Inline org_access check — reads do not go through withInvariants.
-  if (!ctx.caller.org_ids.includes(input.org_id)) {
-    throw new ServiceError(
-      'ORG_ACCESS_DENIED',
-      `Caller does not have access to org_id=${input.org_id}`,
-    );
-  }
-
   const db = adminClient();
   const limit = input.limit ?? 50;
   const offset = input.offset ?? 0;
@@ -95,4 +88,4 @@ async function list(
   }));
 }
 
-export const aiActionsService = { list };
+export const aiActionsService = { list: withInvariants(list) };

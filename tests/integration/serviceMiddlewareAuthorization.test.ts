@@ -7,7 +7,7 @@ import { adminClient, SEED } from '../setup/testDb';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { journalEntryService } from '@/services/accounting/journalEntryService';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
-import { InvariantViolationError } from '@/services/middleware/errors';
+import { ServiceError } from '@/services/errors/ServiceError';
 
 describe('Integration Test 4: service middleware rejects unauthorized callers', () => {
   const db = adminClient();
@@ -43,7 +43,7 @@ describe('Integration Test 4: service middleware rejects unauthorized callers', 
     periodId = period!.period_id;
   });
 
-  it('throws InvariantViolationError before any DB write when the caller has no membership in the target org', async () => {
+  it('throws ServiceError before any DB write when the caller has no membership in the target org', async () => {
     // The AP Specialist user has membership in ORG_REAL_ESTATE ONLY.
     // Attempting a journal entry against ORG_HOLDING must be rejected
     // by withInvariants() → canUserPerformAction() BEFORE the transaction begins.
@@ -98,7 +98,7 @@ describe('Integration Test 4: service middleware rejects unauthorized callers', 
 
     await expect(
       withInvariants(journalEntryService.post, { action: 'journal_entry.post' })(input, ctx)
-    ).rejects.toThrow(InvariantViolationError);
+    ).rejects.toThrow(ServiceError);
 
     // Verify nothing was written — the check ran before the transaction.
     const { count: afterJournals } = await db

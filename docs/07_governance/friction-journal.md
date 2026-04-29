@@ -247,3 +247,257 @@ Categories:
   acquisition convention"). Path C verification harness Gate 3 + Gate 4
   expected text revised; dependency graph shifted to S28 → S29a → S30 →
   S29b → S31; ship-order ~7-10 working days (was ~5-7).
+- 2026-04-29 NOTE — S29a closeout: Path C MT-03 Pattern A wrap
+  mechanization + α-class-unify (this commit family). Nineteen-element
+  inventory captured at execution closeout.
+
+  (1) **UF-002 closure citation (Pattern A facet).** Surfaces closed:
+  16 Pattern A wrap sites across 8 service files (chartOfAccountsService,
+  periodService, accountBalanceService, journalEntryService.list,
+  accountLedgerService, aiActionsService, recurringJournalService
+  listTemplates+listRuns, reportService ×4); withInvariants throws
+  unification (α-class-unify); 7 legitimate-exception annotations
+  (3 Pattern D in userProfileService, 2 Pattern G2 at
+  taxCodeService.listShared and orgService.listIndustries, 2 Pattern I
+  in invitationService); 9 comment fixes ((a)-(e), (i), (j) re-framed,
+  (k), (l) added at execution per (γ)-ratification of brief-spec
+  scope-gap); bounded test-migration (5 sites, 2 files:
+  serviceMiddlewareAuthorization.test.ts + periodLockUnlock.test.ts).
+  UF-002 broader closure pending S29b (Patterns C/E).
+
+  (2) **Severity-elevation substrate-quantification (refined per #17).**
+  Corrigendum's "test-suite delta" framing was reframed at brief-creation
+  to "production-path 403→500 regression on cross-org-deny hot path";
+  substrate sweep quantified the blast radius to 42 route handlers
+  (instanceof ServiceError branches in src/app/api/). At execution-time
+  substrate review, element #17 surfaced that the production-path
+  regression risk was never actually present due to
+  InvariantViolationError-extends-ServiceError subclass-instanceof
+  semantics; (α-class-unify)'s justification rests on cleaner test-suite
+  shape and uniformity, not production-path-regression elimination.
+
+  (3) **Fractal-substrate-fidelity codification (graduated at N=3 at
+  brief-creation; this session = post-codification durability evidence).**
+  Codified shape: "Substrate fidelity is fractal — appendix descriptions,
+  upstream framings, and mid-session substrate claims can all over-
+  generalize and need substrate-re-derivation at use time, regardless of
+  source artifact's recency or claim-author's confidence. Verify-before-
+  assert applies recursively at every layer of inheritance from substrate
+  to claim." Brief-creation provenance: Firing 1 = Pattern D shape-
+  divergence; Firing 2 = G1 OQ-07 citation layer; Firing 3 = item (c)
+  anchor location. Post-codification firings this session (N=5+):
+  elements #13, #14, #15 (with multiple sub-shapes: spec gap,
+  estimate-vs-substrate, retroactive-ratification, L2 placement,
+  periodLockUnlock import-already-present, item (j) cross-item
+  inconsistency), #16, #17, #18. The codified convention's "applies
+  recursively at every layer" clause is durable post-graduation; firing
+  rate is itself substrate evidence of durability — codification didn't
+  "close" the convention; it surfaced more instances by giving the
+  executor a frame to recognize them within. Specific sub-pattern: brief-
+  creation scope-derivations are particularly prone to under-fidelity
+  because they're inherently aggregative; aggregation amplifies any
+  single missed sub-instance (#15, #16, #18 are concrete N=3 of this
+  sub-pattern). Counter-example showing sufficient-fidelity: brief's
+  Task 7 Step 3 anticipation of accountLedgerService running-balance
+  fragility was substrate-grounded (corrigendum's "what stays open"
+  table named the obligation precisely because the wrap was anticipated
+  to interact with it). When brief-creation has substrate-grounded
+  anticipation rather than inheritance from upstream, the convention's
+  gap-detection load drops.
+
+  (4) **Pattern A site count substrate-correction.** Corrigendum's "~18
+  sites" was approximation; substrate-grounded count is 16. Concrete
+  instance under #3.
+
+  (5) **Pattern D shape-divergence sub-finding.** Folded as Firing 1 of
+  #3's brief-creation provenance.
+
+  (6) **G1 finding-shape refinement (OQ-07 citation layer).**
+  Corrigendum's G1 framing ("comment factually wrong about RLS coverage")
+  substrate-refined to "comment cites resolved-decision document the
+  code doesn't honor" (orgService.getOrgProfile cites OQ-07's "rely on
+  RLS at DB level + route handler check" but uses adminClient and has
+  no route-handler check). Severity assessment for G1 remediation
+  refines from "comment fix" to "missing-mechanism-or-misremembered-
+  OQ-resolution discriminator." **Operator-pending decision-fork:**
+  (a) sibling Phase 1.3 session for G1 remediation, (b) Phase 2
+  obligation, (c) hot-fix.
+
+  (7) **Comment-fix scope-gap finding.** Item (k) —
+  journalEntryService.ts:1-7 file-top — was missing from the
+  corrigendum's seven-item scope; added during brief-creation. Item
+  (j)-framing also amended to substrate-grounded staleness on
+  listTemplates/listRuns. At execution, item (l) —
+  userProfileService.ts:1-9 file-top — surfaced as a third comment-fix
+  scope-gap instance (sibling of (k) and (j)); ratified at (γ)-rhythm
+  and included as ninth non-security fix.
+
+  (8) **Agent-side capability misrepresentation (over-claim direction).**
+  Four prior firings of "lock acquired but no on-disk substrate"
+  collapsed into one structural finding: the human-as-narrator was
+  describing script execution they cannot perform. Resolution:
+  passive/instructional voice from non-executing parties; verify-after-
+  acquire is the discipline that catches the failure mode.
+
+  (9) **Capability-symmetry sub-finding (under-claim direction).**
+  Brief-creation surfaced the inverse — agent (with Bash/Edit/Write
+  capabilities) had narrated read-only filesystem framing for itself.
+  Pairs with #8 as bidirectional siblings under the same substrate-vs-
+  claim discipline.
+
+  (10) **Gate-cadence-calibration sub-finding.** Discipline-layer
+  observation that gate cadence is itself a discipline, not a fixed
+  rule. Structural decisions earn sub-gates ((a), (b), (c)); mechanical
+  pre-flights earn integrated specification ((d)'s five-sub-item
+  single-sweep design). Sibling of #3 at the rhythm-of-discipline layer
+  rather than substrate-grounding-of-claims layer.
+
+  (11) **Pattern C/E zero-test-coverage sub-finding.** Pre-flight
+  (d)(iii) surfaced that Pattern C/E's three sites
+  (journalEntryService.get, recurringJournalService.getTemplate,
+  recurringJournalService.getRun) have zero test files exercising them
+  at the bounded-read surface. S29b's design-bearing migration would
+  land against an untested-shape baseline. **Operator-decision item
+  for LT-02/S31 scope:** should S29b's pre-flight add C/E test coverage
+  (in scope or sibling), or should LT-02/S31 absorb the gap?
+
+  (12) **Lock-mechanical-discipline three-mode finding.** Pre-commit
+  hook operates in three modes: no-lock-no-COORD_SESSION (advisory
+  warning only; commits proceed); lock-held-no-matching-COORD_SESSION
+  (blocks with explicit error); lock-held-matching-COORD_SESSION
+  (clean). Lock-acquisition is what UPGRADES the hook from advisory
+  to blocking. Without lock, capability misrepresentation is invisible
+  at commit time; with lock, mismatches surface. The four prior firings
+  of claim-without-substrate (#8 over-claim direction) were operating
+  in advisory mode, depriving the hook of enforcement teeth. Substrate-
+  mechanical confirmation of why verify-after-acquire discipline matters:
+  it's the user-facing surface of the mechanism that activates
+  commit-time substrate verification. Pairs with #8 and #9 at the
+  substrate-vs-claim layer; pairs with #10 at the rhythm-of-discipline
+  layer.
+
+  (13) **Chain-description drift.** S29a brief's Task 1 Step 2 chain
+  description (corrigendum then arc-summary then S28-brief then SHA-fix-
+  forward ordering) was substrate-wrong; actual chain has arc-summary
+  older than S28 brief, not newer (S28 brief committed before arc
+  summary; Path C scoping NOTE sits between them). Inherited from
+  continuity brief's chain claim at S29a brief-creation session start;
+  propagated through brief-drafting without substrate verification;
+  pre-flight at execution caught it. Non-blocking (load-bearing parent
+  anchor matches); folded as documentation-accuracy observation.
+
+  (14) **aiActionsService line-number drift + periodService trace-vs-
+  substrate micro-drift.** Brief's anchor table cited
+  aiActionsService.ts:41; substrate at execution HEAD shows :42.
+  Inherited from agent's own pre-flight derivation at brief-creation.
+  Plus periodService wrap-line trace (:25/:46/:92/:172) vs post-edit
+  substrate (:25/:49/:96/:180): 4-line micro-drift between the agent's
+  reported numbers and substrate state. Both fold under #3's "applies
+  recursively" clause; no fresh graduation.
+
+  (15) **Brief-spec gap on body-comment scope (with sub-shapes).**
+  Brief's Task 3 Step 1(b) instructed orphan-comment removal for items
+  (b), (c), (e) only; substrate at execution surfaced 2 additional
+  orphan auth comments at periodService.listOpen and periodService.isOpen
+  (plus 1 already-implicitly-handled at chartOfAccounts.get). Resolved
+  via (γ)-rhythm scope-amend with ratified spirit-of-brief reading; L2
+  vestige // S25 QW-02 / UF-002 preserved between JSDoc and wrapper at
+  periodService.isOpen. Sub-shapes folded into this element: (i)
+  estimate-vs-substrate gap (mid-execution "8-10 sites" estimate was
+  4-5x over substrate-grounded count of 2); (ii) retroactive-ratification
+  disclosure on chartOfAccounts.get's 2-line orphan removed under
+  unratified judgment call before scope question surfaced (disclosure
+  is the load-bearing discipline anchor, not the revert); (iii) post-
+  edit line-number drift on text-anchored references (substrate-
+  confirms-discipline rather than fresh gap); (iv) periodLockUnlock
+  import-already-present pattern (brief said "replace import" but
+  substrate had both InvariantViolationError and ServiceError already
+  coexisting; migration was "drop redundant" not "replace"); (v) item
+  (j) cross-item internal-consistency gap (brief's (j) replacement
+  text omitted the INV-SERVICE-001 lead-line that items (i)/(k)
+  preserve; synthesis-fix mid-execution folded mutations + reads into
+  one coherent block).
+
+  (16) **Brief pre-flight gap on test-floor verification.** Brief's
+  Task 7 expected pnpm agent:validate 26/26 green at execution HEAD.
+  Substrate at execution showed 6/26 — pre-existing test-DB state
+  pollution from prior runs (crossOrgRlsIsolation hardcoded-UUID
+  duplicate-key), orthogonal to S29a edits (stash-revert isolation
+  confirmed identical 6/26 at unmodified HEAD). Brief implicitly
+  conflated "clean-baseline floor" with "current-DB floor"; pre-flight
+  at brief-creation didn't run the test floor itself, only grepped
+  substrate. Resolution: pnpm db:reset:clean && pnpm db:seed:all
+  restores the clean-baseline pre-condition; post-reset agent:validate
+  confirms 26/26 floor. Sub-finding for future brief-creation
+  discipline: pre-flight should include test-floor verification, not
+  just grep-based substrate verification — the test floor is itself
+  substrate that brief-creation can over-anticipate. Recurrence at
+  Task 7 (post-Task-3 successful 26/26 run accumulated state requiring
+  second reset) confirms the recovery pattern is durable.
+
+  (17) **α-class-unify justification substrate-correction.** Brief's
+  framing of (α-class-unify) as eliminating "production-path 403→500
+  regression risk" (substrate-quantified to "42 route handlers") was
+  substrate-ungrounded. InvariantViolationError extends ServiceError
+  (errors.ts:11; JSDoc at lines 7-10 explicit: "Subclass of ServiceError
+  so catch blocks that handle ServiceError still work, while tests
+  can assert the specific class"); the 42 route-handler instanceof
+  ServiceError branches were already catching InvariantViolationError
+  throws cleanly via subclass-instanceof semantics. The regression
+  risk the brief framed never existed. (α-class-unify) is still the
+  right call for sub-rationales that do survive substrate correction
+  (cleaner test-suite shape, one fewer class-indirection layer,
+  uniformity with rest of service layer), but the production-path-
+  regression framing was a mid-derivation gap. Inherited from
+  corrigendum's "test-suite delta" framing then brief-creation's
+  "production-path regression" elevation then substrate at execution
+  closure of the inheritance-relationship gap. Element #2 refinement
+  note points here.
+
+  (18) **userProfileService comment-fix scope gap → resolved as item
+  (l).** Substrate at execution showed userProfileService.ts:3 carrying
+  // INV-SERVICE-001 export contract: plain unwrapped functions. —
+  same shape as items (i), (j), (k) (file-top INV-SERVICE-001
+  declarations claiming "plain unwrapped"); same staleness post-S29a
+  (post-Task-5, the file is annotated-not-wrapped). Brief-creation's
+  comment-fix scope-derivation missed it despite same-shape match.
+  Sibling of #15 at the cross-item-scope-completeness layer. Resolved
+  via (γ)-rhythm: included as item (l), Task 6 expanded from 5 fixes
+  to 6. Total non-security comment-fix scope at S29a closeout: 9.
+
+  (19) **Task 7 full-suite regression: three failures classified via
+  stash-revert isolation.** (a) verifyAuditCoverageRoundTrip: pre-
+  existing carry-forward (HEAD bafd4f9 fail = post-edit fail; expected
+  1 gap, got 159; data-driven). Orthogonal to S29a. Disposition:
+  continue carrying forward unchanged. (b) accountLedgerService
+  running-balance ×2 (test 3 line ~269, test 6 line ~346): brief-
+  anticipated wrap-driven carry-forward (HEAD pass → post-edit fail).
+  Phase 2 obligation per corrigendum's obligations.md §6 entry. Brief's
+  anticipation was substrate-grounded — counter-example to fractal-
+  fidelity-firing-on-gaps showing what sufficient-fidelity prediction
+  looks like. Disposition: NOTE-document, do not remediate. (c)
+  crossOrgRlsIsolation cascading pollution: not a behavioral
+  regression; passes 20/20 in fresh-DB isolation; downstream of
+  accountLedgerService's failure-state polluting journal_entries with
+  rows whose UUIDs collide with crossOrgRlsIsolation's beforeAll setup
+  INSERT. Disposition: NOTE-document as cascading carry-forward.
+  Stash-revert isolation candidate evolved at this firing (N=2): used
+  at Task 3 baseline-pollution diagnosis (N=1) and Task 7 failure
+  classification (N=2). Capability evolved from "baseline-vs-edit
+  discriminator" to "canonical mechanism for classifying failures into
+  orthogonal/wrap-attributable/cascading buckets" — classification
+  capability enables disposition decisions (carry-forward vs. halt)
+  without ambiguity at the test-runner output layer. N=3 graduates
+  per Documentation Routing convention.
+
+  Net outcomes this commit family: 16 Pattern A wraps; α-class-unify
+  with codes-verbatim (Hard constraint B preserved);
+  InvariantViolationError reach bounded to errors.ts class definition
+  (Hard constraint A preserved); 7 canonical-form annotations (Hard
+  constraint C); zero route-handler edits (Hard constraint D —
+  additive-only on route handler side); 9 comment fixes; 5-site
+  test-migration green; pnpm agent:validate 26/26 post-reset; pnpm
+  typecheck clean; full suite 551/574 passed (3 failures classified
+  per element #19). S30 unblocked: brief-creation against this S29a
+  closeout SHA. S29b sequences after S30 per the corrigendum's revised
+  dependency graph.

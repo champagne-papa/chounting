@@ -373,6 +373,7 @@ export const orgService = {
    * per OQ-07. Used during org creation, before the user has any
    * membership to scope by.
    */
+  // withInvariants: skip-org-check (pattern-G2: globally-shared reference data, RLS allows authenticated read)
   async listIndustries(_input: Record<string, never>, _ctx: ServiceContext) {
     const db = adminClient();
     const { data: rows, error } = await db

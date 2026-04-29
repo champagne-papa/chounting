@@ -1,8 +1,8 @@
 // src/services/accounting/journalEntryService.ts
-// INV-SERVICE-001 export contract (structural): this module exports post/list/get as unwrapped
-// plain functions. The `post` function is a mutating service function and MUST be invoked through
-// withInvariants() at the call site — see the POST handler in
-// src/app/api/orgs/[orgId]/journal-entries/route.ts for the wrap site (INV-SERVICE-001 wrap site).
+// INV-SERVICE-001 export contract (structural): this module exports post as unwrapped (route-handler-
+// wrapped via withInvariants; Pattern B). list wraps through withInvariants at its export site (S29a;
+// Pattern A). get is currently unwrapped pending S29b's design-bearing migration (Pattern C; entity-id-
+// only authorization).
 // INV-SERVICE-002 adminClient discipline (structural): every database access in this file goes through
 // adminClient() from '@/db/adminClient'. No userClient import, no direct supabase-js client
 // construction. See the INV-SERVICE-002 leaf in docs/02_specs/ledger_truth_model.md for the
@@ -41,6 +41,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { redactPii } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 // --- Service input: discriminated union of create, reversal, and adjustment ---
 
@@ -373,15 +374,8 @@ export type JournalEntryDetail = {
 
 async function list(
   input: { org_id: string; fiscal_period_id?: string },
-  ctx: ServiceContext,
+  _ctx: ServiceContext,
 ): Promise<JournalEntryListItem[]> {
-  // Authorization: caller must be a member of the requested org.
-  // Writes get this check from withInvariants Invariant 3; reads
-  // do it inline because they don't go through withInvariants.
-  if (!ctx.caller.org_ids.includes(input.org_id)) {
-    throw new ServiceError('ORG_ACCESS_DENIED', `Caller does not have access to org_id=${input.org_id}`);
-  }
-
   const db = adminClient();
 
   // Step 1: Fetch journal entries (header data)
@@ -536,6 +530,6 @@ async function get(
 
 export const journalEntryService = {
   post,
-  list,
+  list: withInvariants(list),
   get,
 };

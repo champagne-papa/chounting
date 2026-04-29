@@ -1,6 +1,6 @@
 // src/services/reporting/reportService.ts
 // Read-only report aggregation functions. Calls RPC functions defined in
-// migration 0007. No withInvariants wrapping — these are queries, not mutations.
+// migration 0007. All read functions wrap through withInvariants at their export sites (S29a).
 
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
@@ -14,6 +14,7 @@ import {
   zeroMoney,
   type MoneyAmount,
 } from '@/shared/schemas/accounting/money.schema';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 // -- P&L types ---------------------------------------------------------------
 
@@ -172,17 +173,10 @@ export const reportService = {
    * totals in CAD. Net income = revenue.credit - expense.debit,
    * computed by the caller.
    */
-  async profitAndLoss(
+  profitAndLoss: withInvariants(async (
     input: { org_id: string; fiscal_period_id?: string | null },
     ctx: ServiceContext,
-  ): Promise<ProfitAndLossResult> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<ProfitAndLossResult> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -206,24 +200,17 @@ export const reportService = {
     }));
 
     return { rows };
-  },
+  }),
 
   /**
    * Trial Balance: per-account debit/credit totals. Includes zero-balance
    * accounts (LEFT JOIN in the RPC). Footer totals (sum of all debits,
    * sum of all credits) must be equal — inequality is a bug signal.
    */
-  async trialBalance(
+  trialBalance: withInvariants(async (
     input: { org_id: string; fiscal_period_id?: string | null },
     ctx: ServiceContext,
-  ): Promise<TrialBalanceResult> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<TrialBalanceResult> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -283,7 +270,7 @@ export const reportService = {
     }
 
     return { rows };
-  },
+  }),
 
   /**
    * Point-in-time Balance Sheet. Returns the 4-row shape per
@@ -308,17 +295,10 @@ export const reportService = {
    * red-banner render on mismatch. Balance Sheet does NOT promote
    * to a discipline backstop (no service-layer throw) per brief §6.
    */
-  async balanceSheet(
+  balanceSheet: withInvariants(async (
     input: { org_id: string; as_of_date?: string | null },
     ctx: ServiceContext,
-  ): Promise<BalanceSheetResult> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<BalanceSheetResult> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -355,7 +335,7 @@ export const reportService = {
       current_earnings: byType('current_earnings'),
       as_of_date: asOfDate,
     };
-  },
+  }),
 
   /**
    * Per-account totals for one account type. Returns one row per
@@ -378,17 +358,10 @@ export const reportService = {
    * pre-validation against the enum should gate at the route or
    * orchestrator layer, not expect NOT_FOUND semantics here.
    */
-  async accountsByType(
+  accountsByType: withInvariants(async (
     input: { org_id: string; account_type: string; fiscal_period_id?: string | null },
     ctx: ServiceContext,
-  ): Promise<AccountsByTypeResult> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<AccountsByTypeResult> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -412,5 +385,5 @@ export const reportService = {
     }));
 
     return { rows };
-  },
+  }),
 };

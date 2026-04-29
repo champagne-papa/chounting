@@ -14,6 +14,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import { toMoneyAmount, type MoneyAmount } from '@/shared/schemas/accounting/money.schema';
+import { withInvariants } from '@/services/middleware/withInvariants';
 
 export const accountBalanceService = {
   /**
@@ -46,21 +47,14 @@ export const accountBalanceService = {
    *   owns this default; the RPC has no DEFAULT so integration
    *   tests can pin deterministic dates.
    */
-  async get(
+  get: withInvariants(async (
     input: {
       org_id: string;
       account_id: string;
       as_of_date?: string | null;
     },
     ctx: ServiceContext,
-  ): Promise<{ balance_cad: MoneyAmount }> {
-    if (!ctx.caller.org_ids.includes(input.org_id)) {
-      throw new ServiceError(
-        'ORG_ACCESS_DENIED',
-        `Caller does not have access to org_id=${input.org_id}`,
-      );
-    }
-
+  ): Promise<{ balance_cad: MoneyAmount }> => {
     const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
     const db = adminClient();
 
@@ -87,5 +81,5 @@ export const accountBalanceService = {
     // is belt-and-suspenders against an empty-array edge case.
     const raw = data?.[0]?.balance_cad ?? 0;
     return { balance_cad: toMoneyAmount(raw as string | number) };
-  },
+  }),
 };

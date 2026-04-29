@@ -1,11 +1,12 @@
 // src/services/user/userProfileService.ts
 //
-// INV-SERVICE-001 export contract: plain unwrapped functions.
+// INV-SERVICE-001 export contract: getOrCreateProfile, getProfile, and
+// updateProfile carry pattern-D skip-org-check annotations per S29a —
+// withInvariants's org-check is N/A since profiles are user-scoped, not
+// org-scoped (route reads user_id from ctx.caller, not from URL).
 // updateProfile is audit-logged; getOrCreateProfile is NOT
 // (fires on every sign-in — logging it would flood audit_log).
-// Authorization: updateProfile is own-profile-only (route reads
-// user_id from ctx.caller, not from URL). getOrCreateProfile is
-// called from sign-in callback only (OQ-03 resolved).
+// getOrCreateProfile is called from sign-in callback only (OQ-03 resolved).
 
 import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
@@ -33,6 +34,7 @@ function profilePatchToDbColumns(
 }
 
 export const userProfileService = {
+  // withInvariants: skip-org-check (pattern-D: own-profile-only, route reads user_id from ctx.caller)
   async getOrCreateProfile(
     input: { user_id: string; email: string },
     _ctx: ServiceContext,
@@ -69,6 +71,7 @@ export const userProfileService = {
     return created;
   },
 
+  // withInvariants: skip-org-check (pattern-D: own-profile-only, route reads user_id from ctx.caller)
   async getProfile(
     input: { user_id: string },
     _ctx: ServiceContext,
@@ -85,6 +88,7 @@ export const userProfileService = {
     return data;
   },
 
+  // withInvariants: skip-org-check (pattern-D: own-profile-only, route reads user_id from ctx.caller)
   async updateProfile(
     input: { user_id: string; patch: UpdateUserProfilePatch },
     ctx: ServiceContext,

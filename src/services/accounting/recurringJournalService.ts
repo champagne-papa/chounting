@@ -1,11 +1,10 @@
 // src/services/accounting/recurringJournalService.ts
-// INV-SERVICE-001 export contract (structural): this module exports its
-// mutating methods (createTemplate, updateTemplate, deactivateTemplate,
-// generateRun, approveRun, rejectRun) as unwrapped plain functions. Each
-// MUST be invoked through withInvariants() at the route handler boundary.
-// Read paths (listTemplates, getTemplate, listRuns, getRun) check org
-// membership inline via ctx.caller.org_ids (same pattern as
-// journalEntryService.list / periodService.listOpen).
+// INV-SERVICE-001 export contract (structural): mutations (createTemplate, updateTemplate,
+// deactivateTemplate, generateRun, approveRun, rejectRun) are route-handler-wrapped via
+// withInvariants per Pattern B. Read paths: listTemplates and listRuns wrap through
+// withInvariants at their export sites (S29a; Pattern A). getTemplate (Pattern C) and
+// getRun (Pattern E) currently check inline; deferred to S29b for design-bearing
+// migration to entity-id-only authorization.
 //
 // INV-SERVICE-002 adminClient discipline (structural): every database
 // access in this file goes through adminClient() from '@/db/adminClient'.
@@ -660,15 +659,8 @@ async function rejectRun(
 
 async function listTemplates(
   input: { org_id: string },
-  ctx: ServiceContext,
+  _ctx: ServiceContext,
 ): Promise<RecurringTemplateListItem[]> {
-  if (!ctx.caller.org_ids.includes(input.org_id)) {
-    throw new ServiceError(
-      'ORG_ACCESS_DENIED',
-      `Caller does not have access to org_id=${input.org_id}`,
-    );
-  }
-
   const db = adminClient();
   const { data, error } = await db
     .from('recurring_journal_templates')
@@ -719,15 +711,8 @@ async function getTemplate(
 
 async function listRuns(
   input: { org_id: string; recurring_template_id?: string; status?: string },
-  ctx: ServiceContext,
+  _ctx: ServiceContext,
 ): Promise<RecurringRunListItem[]> {
-  if (!ctx.caller.org_ids.includes(input.org_id)) {
-    throw new ServiceError(
-      'ORG_ACCESS_DENIED',
-      `Caller does not have access to org_id=${input.org_id}`,
-    );
-  }
-
   const db = adminClient();
 
   // Gather template IDs for this org so runs filter correctly.
@@ -793,8 +778,8 @@ export const recurringJournalService = {
   generateRun,
   approveRun,
   rejectRun,
-  listTemplates,
+  listTemplates: withInvariants(listTemplates),
   getTemplate,
-  listRuns,
+  listRuns: withInvariants(listRuns),
   getRun,
 };

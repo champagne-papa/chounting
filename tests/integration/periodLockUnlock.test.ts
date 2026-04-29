@@ -13,7 +13,6 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { periodService } from '@/services/accounting/periodService';
 import { withInvariants } from '@/services/middleware/withInvariants';
-import { InvariantViolationError } from '@/services/middleware/errors';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 
@@ -307,7 +306,7 @@ describe('periodService.lock / periodService.unlock', () => {
         },
         ctx,
       ),
-    ).rejects.toThrow(InvariantViolationError);
+    ).rejects.toThrow(ServiceError);
 
     const { count: after } = await db
       .from('audit_log')

@@ -1,9 +1,9 @@
 // src/services/org/invitationService.ts
 //
-// INV-SERVICE-001 export contract: plain unwrapped functions.
-// Mutating functions are wrapped at the route layer via
-// withInvariants({ action: 'user.invite' }). This file does NOT
-// enforce permissions; the wrapper does.
+// INV-SERVICE-001 export contract: mutating functions (inviteUser, revokeInvitation, resendInvitation) are
+// route-handler-wrapped via withInvariants. Read function listPendingInvitations is currently unwrapped
+// pending Pattern G1 remediation. Token-bearer functions (acceptInvitation, previewInvitationByToken) carry
+// pattern-I skip-org-check annotations per S29a.
 //
 // Token flow (OQ-02 RESOLVED): composite format
 // {invitation_id}:{random_hex}. Only bcrypt hash stored. On accept:
@@ -93,6 +93,7 @@ export const invitationService = {
     return { invitation_id: invitationId, token: compositeToken };
   },
 
+  // withInvariants: skip-org-check (pattern-I: token-bearer authorization, in-body validation)
   async acceptInvitation(
     input: { token: string },
     ctx: ServiceContext,
@@ -281,6 +282,7 @@ export const invitationService = {
    * functions" claim. See the session-start friction-journal entry
    * for the Convention #8 catch that produced it.
    */
+  // withInvariants: skip-org-check (pattern-I: token-bearer authorization, in-body validation)
   async previewInvitationByToken(
     token: string,
   ): Promise<{
