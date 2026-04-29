@@ -213,3 +213,37 @@ Categories:
   `post-audit-fix-stack-arc.md` (convert doubles to singles)
   deferred — closed-state doc, operator's call whether to
   fix-in-place or leave as known-drift item.
+- 2026-04-29 NOTE — S29 brief-creation surfaced substrate divergence
+  from arc-summary scope. Path C arc summary at `5775ae6` framed S29
+  as "every org-scoped service function hand-rolls the same guard
+  pattern as reads" — a one-pattern model. S29 brief-creation reads
+  surfaced nine distinct patterns (A wrap target ~18 sites; B
+  route-handler-wrapped ~17; C entity-id-only Pattern .in() scoping
+  2; D own-profile-only 3; E entity→parent→org check 1; G1 RLS-relies-
+  but-uses-adminClient security gap 4; G2 reference-data no-scoping-
+  applicable 2; H user-id-scoped target-vs-caller asymmetry 1 site
+  dead at bounded-read surface; I token-bearer 2). Plus Pattern J
+  (auth-helpers, out of scope) and J-variant (loadOrgContext-shape,
+  flagged for Phase 2). Corrigendum at `741b002` splits S29 into
+  S29a (Pattern A wrap, ~18 sites; S29a brief-creation post-corrigendum)
+  + S29b (Patterns C/E design + migration, 3 sites; brief-creation
+  post-S30). Pattern G1 routed as separate friction-journal finding
+  (severity assessment pending operator). Pattern H routed as dead-
+  code finding with deferred-full-grep caveat. Comment-fix scope
+  expanded to seven non-security fixes ((a)-(e), (i), (j) per the
+  corrigendum's pattern-landscape appendix) + three G1-conditional.
+  Codification candidate fired: read-completeness threshold (sibling
+  of Convention #8 sub-shape #3); single firing with progressive
+  depth — partial read surfaced 5 patterns, complete read surfaced
+  9 + G1 + H. N=1; not codified. Codification target's failure mode
+  named: "implementation read was partial enough to support a
+  confident-shaped finding but incomplete enough that the finding
+  mis-describes the substrate." Codification at N=3 per Documentation
+  Routing convention if reproduced. Brief-creation session-lock not
+  acquired (third firing of claim-without-substrate at brief-creation
+  cwd from this session's vantage; structural-shell-mismatch hypothesis
+  durable; [ROUTE?] thread updates with the morphed codification target
+  "verify-after-acquire as load-bearing step in brief-creation lock
+  acquisition convention"). Path C verification harness Gate 3 + Gate 4
+  expected text revised; dependency graph shifted to S28 → S29a → S30 →
+  S29b → S31; ship-order ~7-10 working days (was ~5-7).

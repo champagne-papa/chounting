@@ -16,6 +16,24 @@ gaps that go undetected until something fails, and test-coverage
 gaps that grow more expensive to backfill the further the codebase
 drifts from the audit-time state.
 
+> **2026-04-29 corrigendum (substrate divergence at S29 brief-creation).**
+> The S29 entry below was authored against a one-pattern model of the
+> service-layer authorization landscape ("every org-scoped service
+> function hand-rolls the same guard pattern as reads"). Substrate
+> reads at S29 brief-creation revealed nine distinct patterns plus a
+> security-finding (Pattern G1, four sites) plus a dead-code finding
+> (Pattern H, one site). The S29 entry has been split into S29a
+> (mechanical wrap of Pattern A; ~18 sites) and S29b (design-bearing
+> migration of Patterns C and E; 3 sites). Pattern G1 sites are flagged
+> as a separate friction-journal finding with their own remediation
+> path. The dependency graph, ship-order recommendation, "what stays
+> open" table, audit-finding lineage table, and Gate 3 of the
+> verification harness have been updated accordingly. The codification
+> candidate this fired (read-completeness threshold, sibling of
+> Convention #8 sub-shape #3) is captured in the friction-journal NOTE
+> attached to this corrigendum's commit. See the new "Pattern landscape"
+> appendix at the bottom of this document for the complete inventory.
+
 The framing the operator named at scoping is **"house in better
 order before adding rooms"**: Phase 2 will multiply the agent
 surface (mobile approvals, intercompany, recurring-entry
@@ -76,45 +94,106 @@ nested traversal recursion depth limit (defense against
 pathological JSON depth); brief-creation proposes; operator
 ratifies.
 
-### S29 — Service-layer authorization mechanically enforced (MT-03 broad)
+### S29a — Pattern A wrap mechanization (MT-03 narrow-broad)
 
-**File:** `docs/09_briefs/phase-1.3/session-29-brief.md` (drafted
-post-arc-summary ratification).
+**File:** `docs/09_briefs/phase-1.3/session-29a-brief.md` (drafted
+post-corrigendum-ratification).
 **Estimated duration:** ~1-2 days.
-**Summary:** Closes MT-03 broad-scope: route every org-scoped
-service function (reads AND mutations) through `withInvariants`,
-removing per-function manual `if (!ctx.caller.org_ids.includes(...)) throw ...`
-guards. The operator-ratified broadening from action-plan literal
-scope ("read-path enforcement wrapper") rests on three observations:
-(1) the convention-vs-mechanism principle that motivated MT-03
-applies identically to mutations; (2) the codebase's mutation
-functions hand-roll the same guard pattern as reads (verified at
-`periodService.lock` / `periodService.unlock` / similar — the
-in-code comment at `chartOfAccountsService.ts:18-19` ("Phase 12A
-pattern for read functions (writes use withInvariants Invariant 3
-instead)") names the inconsistency directly); (3) Phase 2 mobile-
-approval work will add new mutating service functions, and
-convention-only enforcement at that point compounds the debt.
-Cost differential vs. narrow scope is small (~half day above
-narrow per scoping estimate). The brief explicitly notes the
-broadening from action-plan literal, documents the rationale,
-and audits existing mutation call-sites for wrap-signature
-consistency as part of the work. Single bundled commit unless
-the wrap-site refactor exceeds ~80 lines of net diff (operator's
-call at execution; Y2 split available if scope expands).
+**Summary:** Closes Pattern A surface of MT-03 broad-scope: route
+every Pattern A org-scoped service function (~18 sites: hand-rolled
+`if (!ctx.caller.org_ids.includes(input.org_id)) throw ServiceError('ORG_ACCESS_DENIED', ...)`
+guards at chartOfAccountsService, periodService, accountBalanceService,
+journalEntryService.list, accountLedgerService.get, aiActionsService.list,
+recurringJournalService.listTemplates/listRuns, reportService.profitAndLoss/
+trialBalance/balanceSheet/accountsByType) through `withInvariants`,
+removing the per-function manual guards. The five comment-fix
+items ((a)-(e), (i), (j) per the Pattern Landscape appendix) land
+in the same commit family. Patterns C and E (entity-id-only signatures
+requiring design work) are deferred to S29b. Pattern G1 (security
+finding) is documented in the friction-journal NOTE attached to
+the S29a closeout, with severity assessment + three remediation
+options for operator decision. Patterns D, G2, I (legitimate
+exceptions) gain explicit annotation per pre-decision (c).
 
-**Pre-decisions for brief-creation session:** (a) Refactor
-strategy — wrap each service function inline at its export site,
-or extract a shared `withOrgAuth` helper that wraps and re-exports
-in bulk; brief-creation proposes; operator ratifies. (b) Per-
-function guards that legitimately do NOT require org scoping
-(e.g., user-profile reads with `org_id: null` audit shape per
-`recordMutation.ts:53-56`) need explicit annotation; brief-
-creation enumerates exceptions and proposes annotation shape.
-(c) Test-suite delta — full-suite green is required at session
-close; brief-creation pre-flights which integration tests
-exercise the wrapped paths and surfaces any expected failures
-for ratification before refactor begins.
+The operator-ratified broadening from action-plan literal scope
+("read-path enforcement wrapper") rests on the original three
+observations PLUS the substrate-revealed observation that the
+codebase's service-layer auth surface is more heterogeneous than
+the action plan anticipated. Closing Pattern A mechanically is
+the largest single mechanizable step toward the convention-vs-
+mechanism shape MT-03 names; Patterns C/E need design work that's
+better-housed in its own session.
+
+Single bundled commit unless the wrap-site refactor exceeds ~150
+lines of net diff (revised from ~80 lines per the corrigendum's
+~18-site-not-~6-site finding; operator's call at execution; Y2
+split available if scope expands).
+
+**Pre-decisions for brief-creation session:**
+(a) Refactor strategy — wrap each Pattern A service function inline
+at its export site, OR extract a shared `withOrgAuth` helper that
+wraps and re-exports in bulk. Brief-creation proposes; operator
+ratifies. The original arc-summary framing applies to Pattern A
+specifically.
+(b) Pattern B treatment — Pattern B sites (~17, route-handler-wrapped
+mutations per file-top INV-SERVICE-001 declarations) stay as-is or
+migrate to wrap-at-export-site? Brief-creation lean: stay (route-
+handler wrap is structurally fine; migration is non-trivial and
+not load-bearing for closing the convention-vs-mechanism shape).
+Operator ratifies.
+(c) Legitimate-exception annotation shape — Patterns D, G2, I get
+explicit annotation. Concrete proposal: a single-line comment shape
+above each function (e.g., `// withInvariants: skip-org-check
+(rationale: <pattern-specific>)`) that the eventual S30 LT-01(b)
+CI guard can recognize. Brief-creation proposes; operator ratifies.
+(d) Test-suite delta pre-flight — beyond the original "which
+integration tests exercise the wrapped paths," also surface (i)
+error-class divergence (Pattern A throws `ServiceError`,
+withInvariants Invariant 3 throws `InvariantViolationError`; same
+code, different class) and identify integration tests that pattern-
+match on error class rather than code; (ii) tests for journalEntryService.post
+that already exercise the route-handler wrap (Pattern B; their
+behavior should be unchanged); (iii) tests for Patterns C/E and
+G1 sites (their behavior should be unchanged — those sites are
+out of S29a scope).
+
+### S29b — Patterns C/E design + migration
+
+**File:** `docs/09_briefs/phase-1.3/session-29b-brief.md` (drafted
+post-S30, before-S31 per the revised dependency graph below).
+**Estimated duration:** ~2-3 days.
+**Summary:** Closes Patterns C and E of MT-03 broad-scope:
+journalEntryService.get (Pattern C), recurringJournalService.getTemplate
+(Pattern C-variant with domain-specific NOT_FOUND code), and
+recurringJournalService.getRun (Pattern E). All three have entity_id-
+only inputs (no `input.org_id`); all three throw NOT_FOUND on
+cross-org to avoid leaking existence. The convention-vs-mechanism
+closure for these sites requires a design choice: input-shape refactor
+(breaking — propagate to all callers including agent tools) OR a
+new `withInvariants` overload that accepts an org-resolution function
+the wrap can run before the entity lookup.
+
+S29b sequences AFTER S30, not before — the LT-01(b) CI guard from
+S30 fires against post-S29a state and tolerates Pattern C/E sites
+as annotated-exceptions until S29b closes them. This sequencing
+is novel for Path C (the original arc had S29 → S30 strictly); the
+trade-off is documented in the revised dependency graph below.
+
+**Pre-decisions for brief-creation session:**
+(a) Design choice — input-shape refactor vs `withInvariants`
+overload. Each has implications: input-shape change propagates to
+agent tool schemas (orchestrator's Site 1 pre-Zod org_id injection
+either accommodates or breaks); overload introduces a second
+withInvariants signature (more API surface, but no caller breakage).
+Brief-creation proposes; operator ratifies. This is the load-bearing
+decision of S29b.
+(b) Migration scope — Pattern C-variant in recurringJournalService.getTemplate
+already uses domain-specific NOT_FOUND (`RECURRING_TEMPLATE_NOT_FOUND`);
+the post-S29b shape preserves this OR uniformly returns the generic
+NOT_FOUND. Brief-creation proposes; operator ratifies.
+(c) Test-suite delta — re-runs the S29a-shape pre-flight against
+the C/E sites' tests; identifies tests pattern-matching on
+domain-specific NOT_FOUND codes vs the generic NOT_FOUND.
 
 ### S30 — Convention-to-CI-enforcement cluster (LT-01 + LT-03 + LT-04)
 
@@ -222,55 +301,76 @@ threshold — at what diff size does Commit 1 split into Commit 1a
 S28 (observability cluster) ─── independent ── can run any time after d39ec09 (post-S27 verification gate)
 │
 │
-S29 (MT-03 broad) ──────── REQUIRED sequential after S28 (or parallel-safe; operator's call)
-├── No code-path overlap with S28 (S28 = pino + recordMutation extensions; S29 = withInvariants + service files)
+S29a (Pattern A wrap) ──── REQUIRED sequential after S28 (or parallel-safe; operator's call)
+├── No code-path overlap with S28 (S28 = pino + recordMutation extensions; S29a = withInvariants + Pattern A service files)
 ├── Sequential preferred for context cleanliness (single unbroken commit trail at HEAD)
-└── S28 → S29 ordering chosen; not binding
+└── S28 → S29a ordering chosen; not binding
 │
 │
-S30 (CI-enforcement cluster) ── REQUIRED sequential after S29
-├── Reason: LT-01(b) wrap-site CI guard MUST fire against the post-S29 wrap-site state. Running LT-01(b)
-│    against pre-S29 codebase (per-function manual guards) would either false-positive on every service
-│    file or require dual-mode logic; both shapes are wrong-cost.
-├── Reason: LT-03's no-restricted-imports rule is independent of S29, but bundling with LT-01(b)
+S30 (CI-enforcement cluster) ── REQUIRED sequential after S29a; tolerates Pattern C/E annotated exceptions
+├── Reason: LT-01(b) wrap-site CI guard MUST fire against post-S29a state. Running LT-01(b) against
+│    pre-S29a codebase (per-function manual guards on Pattern A sites) would either false-positive
+│    on every Pattern A file or require dual-mode logic; both shapes are wrong-cost.
+├── LT-01(b) calibration: synthetic-violation fixture passes only on Pattern A bypass attempts;
+│    synthetic Pattern C/E annotated-exception bypass attempts pass-through-as-annotated. This is a
+│    feature, not a bug — the legitimate-exception case is a real shape the CI guard handles after
+│    S29b lands too. See revised Gate 4 LT-01(b) expected text below.
+├── Reason: LT-03's no-restricted-imports rule is independent of S29a, but bundling with LT-01(b)
 │    means a single CI-enforcement commit rather than two.
-└── Cannot parallelize with S29 — wrap-site CI guard's "what to check against" is ambiguous before
-    S29 lands.
+└── Cannot parallelize with S29a — wrap-site CI guard's "what to check against" is ambiguous before
+    S29a lands.
 │
 │
-S31 (LT-02 test coverage) ──── independent of S29/S30 in principle; sequencing-flexible
-├── Tests for agent confirm/reject paths (sub-item a) are independent of withInvariants refactor
-│    (S29 changes pre-flight checks; tests exercise post-flight behavior).
+S29b (Patterns C/E design + migration) ── REQUIRED sequential after S30; before S31
+├── Sequencing rationale: S30's LT-01(b) calibration handles Pattern C/E as annotated exceptions; S29b's
+│    closure converts those exceptions to wrapped sites, validating that LT-01(b)'s annotation-handling
+│    works under the post-S29b state. Running S29b before S30 would force LT-01(b)'s synthetic fixture
+│    to be re-calibrated post-S29b, doubling the calibration work.
+├── S29b's design decision (input-shape refactor vs withInvariants overload) is independent of S30's
+│    scope; both options are compatible with LT-01(b)'s post-S29a calibration.
+└── S31 sequences AFTER S29b so the LT-02(d) audit-log PII test exercises the post-S29b wrap path
+    (the wrap path includes Pattern C/E sites for the audit-log mutation surface; running LT-02(d)
+    against pre-S29b state means testing the partial-wrap state, which is sufficient but less
+    informative than testing the complete-wrap state).
+│
+│
+S31 (LT-02 test coverage) ──── REQUIRED sequential after S29b (revised from "independent")
+├── Tests for agent confirm/reject paths (sub-item a) are independent of S29b's wrap surface in principle,
+│    but the post-S29b state is the canonical state to test against per the lineage discipline.
 ├── Tests for cross-org/period-lock (sub-items c, e) exercise existing S26 triggers; independent.
-├── Tests for audit-log PII (sub-item d) exercise both S25 QW-07 and S28 MT-06 — REQUIRED sequential
-│    after S28 closes.
-└── Operator may sequence S31 in parallel with S29 if (d) is split out, or in serial after S30 for
-    context cleanliness. Recommendation: serial after S30 (mirror S25/S26/S27 single-trail discipline).
+├── Tests for audit-log PII (sub-item d) exercise S25 QW-07 + S28 MT-06; their behavior is unchanged
+│    under S29b but the post-S29b wrap state is the canonical state to test against.
+└── Operator may sequence S31 in parallel with S29b only if (d) is split out and the LT-01(b) calibration
+    is verified against the partial-wrap state. Default: serial after S29b for context cleanliness.
 ```
 
 ## Ship order recommendation
 
-**S28 → S29 → S30 → S31.** Linear sequence; ~5-7 working days total
-elapsed (S28 ~half day, S29 ~1-2 days, S30 ~1 day, S31 ~2-3 days).
+**S28 → S29a → S30 → S29b → S31.** Linear sequence; ~7-10 working
+days total elapsed (S28 ~half day, S29a ~1-2 days, S30 ~1 day,
+S29b ~2-3 days, S31 ~2-3 days). Revised from original ~5-7 days
+estimate per the S29 → S29a + S29b split.
 
-Sequential is **required** between S29 and S30 (LT-01(b) wrap-site
-CI guard must fire against post-S29 state). Other transitions are
+Sequential is **required** between S29a → S30 (LT-01(b) wrap-site
+CI guard must fire against post-S29a state) and between S30 → S29b
+(per the dependency graph rationale). Other transitions are
 sequential-preferred but not binding:
 
-- **S28 → S29:** No code-path overlap; could parallelize. Sequential
+- **S28 → S29a:** No code-path overlap; could parallelize. Sequential
   recommended for context cleanliness and to mirror S25/S26/S27's
   single-trail discipline.
-- **S30 → S31:** Independent except for S31's sub-item (d) which
-  exercises S28's MT-06. If S28 has shipped, S31 can run before
-  S30 in principle. Sequential after S30 recommended for
-  consistency.
+- **S29b → S31:** Independent of S31 in principle (S31's LT-02(d) test
+  exercises audit-log PII end-to-end; S29b's wrap doesn't change PII
+  capture/redaction behavior). Sequential after S29b recommended for
+  context cleanliness and lineage discipline.
 
 The S25 → S26 → S27 precedent's reasoning ("each session's friction-
 journal entry references the prior session's outcome, building a
 coherent arc record") applies here. Path C's friction-journal
 lineage benefits from linear ordering: S28's MT-06 closure is cited
-by S31's sub-item (d); S29's wrap-site refactor is cited by S30's
-LT-01(b) check; etc.
+by S31's sub-item (d); S29a's wrap-site refactor is cited by S30's
+LT-01(b) check; S30's LT-01(b) calibration is cited by S29b's
+exception-conversion closure; etc.
 
 Parallelization within a single session is fine where the brief
 designs for it (S30's three sub-clusters — LT-03 ESLint rule,
@@ -379,6 +479,9 @@ work, sorted by destination:
 | **QW-06 / UF-007** | Conversation shape Zod validation on load — replace `as unknown[]` cast in `loadOrCreateSession.ts:194` with explicit Zod validation. | Already deferred per S25 pre-decision; sequencing constraint "ALONGSIDE OR AFTER cross-turn caching enablement" per `obligations.md` §6 entry. |
 | **`accountLedgerService` running-balance fragility** | Test-hygiene fix — migrate affected tests to less-polluted account (1300 Short-term Investments precedent). 2 tests failing (3, 6) under shared-DB full-suite; clean under `pnpm db:reset:clean` baseline. Phase 2 obligation: characterize value-drift vs collision-drift per S27 friction-journal NOTE 2026-04-29 (e). | Phase 2 test-hygiene workstream; LT-02 (S31) brief should cite this as a sibling pattern but not absorb its scope. |
 | **UF-015** | Unbounded text fields (description, reference, notes) — column-level length caps. Severity unscoped at audit time. | Phase 2 evaluation per audit's "Phase 2 concern" framing. |
+| **Pattern G1 / S29-corrigendum security finding** | Service-layer authorization elided on four sites that use `adminClient()` (which bypasses RLS) while their comments delegate authorization to "RLS at DB level" or "route handler enforcement": `orgService.getOrgProfile`, `addressService.listAddresses`, `membershipService.listOrgUsers`, `invitationService.listPendingInvitations`. Comments are factually wrong about RLS coverage. Severity assessment + three remediation options (sibling Phase 1.3 session / Phase 2 obligation / hot-fix if exploitable today) attached to the S29a closeout friction-journal NOTE. | Operator-decision-pending; sequencing depends on severity assessment. |
+| **Pattern H / S29-corrigendum dead-code finding** | `membershipService.listForUser` exported but with zero call sites at the bounded-read surface (API routes, server components, components, agent code, integration tests, unit tests by filename). Suspicious shape if revived: `(input: { user_id: string }, ctx)` allows cross-user reads without caller-vs-target check. Out of S29 scope. Cleanup options: remove the export, OR harden the signature (add caller-vs-target check) before any future consumer lands. Full grep verification of zero call sites deferred as Phase 2 cleanup pre-flight. | Phase 2 cleanup workstream; lightweight. |
+| **Pattern J-variant (`loadOrgContext` shape)** | Helper-for-already-authorized-caller pattern: `loadOrgContext(orgId)` and similar helpers consumed by orchestrator/route paths after the caller's auth has been validated. Defensible in current use; no defense-in-depth against future misuse. Not S29 scope; flagged for Phase 2 hardening review under the convention-vs-mechanism discipline. | Phase 2 hardening review; very low priority. |
 
 ### Path A scope (Phase 1.3 deployment readiness, post-Path C, pre-MVP-feedback)
 
@@ -403,7 +506,7 @@ For traceability — which UF closes at which Path C gate:
 | UF | Severity | Path C closure | Notes |
 |---|---|---|---|
 | UF-001 | Critical | (S26 + S27, pre-Path C) | Closed at post-audit fix-stack arc; verified at d39ec09. |
-| UF-002 | High | Gate 3 (S29 broad-scope wrap) | S25 QW-02 closed the immediate two-method gap; S29 closes the broader convention-vs-mechanism shape across all reads + mutations. |
+| UF-002 | High | Gate 3 (S29a + S29b broad-scope wrap) | S25 QW-02 closed the immediate two-method gap; S29a closes the Pattern A convention-vs-mechanism shape (~18 sites); S29b closes Patterns C/E (3 sites) via design-bearing migration. Pattern G1 (4 sites) is a separate security finding tracked in the corrigendum's "what stays open" table; not under UF-002 closure semantics. |
 | UF-003 | High | (S27, pre-Path C) | Closed at post-audit fix-stack arc. |
 | UF-004 | High | (S26, pre-Path C) | Closed at post-audit fix-stack arc. |
 | UF-005 | High | (S26, pre-Path C) | Closed at post-audit fix-stack arc. |
@@ -468,11 +571,15 @@ For traceability — which UF closes at which Path C gate:
   at which the four post-audit fix-stack verification-gate
   conditions hold simultaneously and at which Path C scoping
   surfaced.
-- **S28 anchor:** `d39ec09`; S28 produces commit(s) TBD at
-  execution.
-- **S29 anchor:** S28 closeout SHA; S29 produces commit(s) TBD.
-- **S30 anchor:** S29 closeout SHA; S30 produces commit(s) TBD.
-- **S31 anchor:** S30 closeout SHA; S31 produces commit(s) TBD.
+- **Corrigendum anchor:** TBD at corrigendum-commit time;
+  references the substrate-divergence finding and N=1 firing
+  of the read-completeness threshold codification candidate.
+- **S28 anchor:** `d39ec09`; S28 produced commit `1400694` (brief)
+  and TBD execution commits.
+- **S29a anchor:** S28 closeout SHA; S29a produces commit(s) TBD.
+- **S30 anchor:** S29a closeout SHA; S30 produces commit(s) TBD.
+- **S29b anchor:** S30 closeout SHA; S29b produces commit(s) TBD.
+- **S31 anchor:** S29b closeout SHA; S31 produces commit(s) TBD.
 - **Arc closeout:** S31 closeout SHA is the SHA at which the five
   Path C verification-gate conditions hold simultaneously. Phase
   2 surface expansion sessions anchor against the arc-closeout
@@ -481,6 +588,70 @@ For traceability — which UF closes at which Path C gate:
   closeout SHA. Path A closeout (deployment readiness) precedes
   MVP feedback; Path C closeout precedes Phase 2 surface
   expansion. Both gates hold separately.
+
+---
+
+## Appendix: Pattern landscape (substrate inventory at S29 brief-creation)
+
+Service-layer authorization patterns observed at HEAD `1400694`
+(post-S28-brief commit). Inventoried at S29 brief-creation per
+the verify-directly discipline; surfaced here so future
+brief-creation sessions, future audits, and the S29a/S29b
+execution sessions have a single canonical reference for the
+"what shape is this site" question.
+
+Nine patterns + Pattern J (out-of-scope helpers) + Pattern
+J-variant (helper-for-already-authorized-caller).
+
+| Pattern | Shape | Sites | S29a/S29b disposition |
+|---|---|---|---|
+| **A** | Hand-rolled `if (!ctx.caller.org_ids.includes(input.org_id)) throw ServiceError('ORG_ACCESS_DENIED', ...)`; takes `org_id` directly. | ~18 sites: chartOfAccountsService.list/get; periodService.listOpen/isOpen/lock/unlock; accountBalanceService.get; journalEntryService.list; accountLedgerService.get; aiActionsService.list; recurringJournalService.listTemplates/listRuns; reportService.profitAndLoss/trialBalance/balanceSheet/accountsByType. | **S29a wrap target.** |
+| **B** | Service exports unwrapped function; route handler wraps via `withInvariants(fn, { action })(input, ctx)` per file-top INV-SERVICE-001 declaration. | ~17 sites: journalEntryService.post; orgService.createOrgWithTemplate/updateOrgProfile; addressService.addAddress/updateAddress/removeAddress/setPrimaryAddress; invitationService.inviteUser/revokeInvitation/resendInvitation; membershipService.changeUserRole/suspendUser/reactivateUser/removeUser; recurringJournalService.createTemplate/updateTemplate/deactivateTemplate/generateRun/approveRun/rejectRun. | **S29a pre-decision (b): stay route-handler-wrapped (default) or migrate to wrap-at-export-site.** |
+| **C** | Input has entity_id but no `org_id`; uses `.in('org_id', ctx.caller.org_ids)` to scope; throws `NOT_FOUND` (not FORBIDDEN). | journalEntryService.get; recurringJournalService.getTemplate (variant: domain-specific NOT_FOUND code). | **S29b design + migration.** |
+| **D** | `_ctx` underscore-unused; own-profile-only via `ctx.caller.user_id` (auth at route via "owner-of-user_id" semantics). | userProfileService.getOrCreateProfile/getProfile/updateProfile. | **Legitimate exception; S29a annotation per pre-decision (c).** |
+| **E** | Two-step entity→parent→org check; throws NOT_FOUND on cross-org. | recurringJournalService.getRun. | **S29b design + migration.** |
+| **G1** | RLS-relies-but-uses-adminClient; comment claims "RLS at DB level" or delegates to "route handler" but adminClient bypasses RLS; security gap. | orgService.getOrgProfile; addressService.listAddresses; membershipService.listOrgUsers; invitationService.listPendingInvitations. | **Separate friction-journal finding at S29a closeout; severity assessment + remediation options for operator decision; not S29 scope.** |
+| **G2** | Reference data, no-org-scoping-applicable (genuinely shared data); legitimate exception. | orgService.listIndustries; taxCodeService.listShared. | **Legitimate exception; S29a annotation per pre-decision (c).** |
+| **H** | User-id-scoped (target-vs-caller asymmetry); takes `user_id` that may differ from caller's own. **Dead code at bounded-read surface.** | membershipService.listForUser. | **Out of S29 scope; friction-journal NOTE only; full grep verification of zero call sites deferred as Phase 2 cleanup pre-flight.** |
+| **I** | Token-bearer authorization (caller is being granted access via this call; possession of a valid token is the auth signal). | invitationService.acceptInvitation; invitationService.previewInvitationByToken. | **Legitimate exception; S29a annotation per pre-decision (c).** |
+| **J** | Auth helper consumed by `withInvariants` itself or by route handlers — out of service-call surface. | getMembership; canUserPerformAction; resolveSignInDestination; authEvents. | **Out of scope (helpers, not services).** |
+| **J-variant** | Helper-for-already-authorized-caller pattern: takes only data-shape inputs (no `ctx`), expects caller has authorized. | loadOrgContext (orchestrator-internal). | **Out of S29 scope; flagged for Phase 2 hardening review (see "what stays open" table).** |
+
+### In-code comments needing fix-up
+
+S29a's commit family includes seven non-security comment fixes that close the convention-vs-mechanism shape's documentary surface. Three additional comment fixes are tied to Pattern G1 sites and remain conditional on G1 remediation (per the corrigendum's "what stays open" table).
+
+**Non-security fixes (S29a scope):**
+
+(a) `withInvariants.ts` lines 2-16 — internal contradiction (line 2 mutation-only framing vs lines 4 + 14-16 universal framing). S29a reconciles to universal framing per Gate 3's MT-03-withInvariants-comment check.
+
+(b) `chartOfAccountsService.ts:17-19` — comment claims "Phase 12A pattern for read functions (writes use withInvariants Invariant 3 instead)"; substrate has periodService.lock/unlock as Pattern A counter-examples. S29a updates to reflect post-wrap uniformity.
+
+(c) `journalEntryService.ts:378-383` — comment claims "Writes get this check from withInvariants Invariant 3; reads do it inline because they don't go through withInvariants"; same false premise as (b). S29a updates to reflect post-wrap uniformity.
+
+(d) `reportService.ts:2-3` — codifies the convention-vs-mechanism split with "No withInvariants wrapping — these are queries, not mutations". S29a replaces with the post-wrap uniform-wrap framing.
+
+(e) `aiActionsService.ts:39-40` — codifies the same split with "Inline org_access check — reads do not go through withInvariants". S29a replaces with the post-wrap uniform-wrap framing.
+
+(i) `invitationService.ts:1-7` (file-top INV-SERVICE-001) — generalizing-incorrectly framing. S29a updates to reflect Pattern B scope without claiming all writes are Pattern B.
+
+(j) `recurringJournalService.ts:1-7` (file-top INV-SERVICE-001) — same generalizing-incorrectly framing. S29a updates to reflect that internal `.eq('org_id', org_id)` checks are data-access discipline, not auth.
+
+**Security-finding-conditional fixes (deferred to G1 remediation session, whatever its scope ends up):**
+
+(f) `orgService.getOrgProfile` JSDoc — false claim about "RLS at DB level" while using adminClient. **Security finding**, not just doc fix.
+
+(g) `addressService.listAddresses` JSDoc — same shape as (f).
+
+(h) `membershipService.listOrgUsers` (file-top + per-function comments) — same shape as (f).
+
+The S29a closeout friction-journal NOTE flags (f), (g), (h) and the `invitationService.listPendingInvitations` site (which has no per-function comment to fix; just the file-top INV-SERVICE-001 declaration generalizing incorrectly) as the four-site Pattern G1 finding awaiting operator severity assessment.
+
+### Codification candidate surfaced
+
+The substrate-divergence finding fired a codification candidate at the friction-journal NOTE attached to the corrigendum's commit: **read-completeness threshold** (sibling of Convention #8 sub-shape #3 / assumption-vs-implementation). N=1; not codified. The candidate names the failure mode "implementation read was partial enough to support a confident-shaped finding but incomplete enough that the finding mis-describes the substrate." The S29 brief-creation session demonstrated this in single-firing-with-progressive-depth shape: partial read surfaced 5 patterns with high confidence; complete read surfaced 9 patterns + security finding (G1, 4 sites) + dead-code finding (H, 1 site).
+
+If a future session reproduces the same finding shape (claim authored against partial read; substrate verification reveals materially larger or differently-shaped reality), the candidate may codify per the Documentation Routing convention's N=3 threshold.
 
 ---
 
@@ -566,7 +737,8 @@ checks:
     commands:
       - 'grep -rnE "ctx\.caller\.org_ids\.includes" src/services/ | grep -v withInvariants.ts'
     expected:
-      - 'zero hits OR only annotated exceptions remain — every match outside withInvariants.ts must be either (a) inside an explicitly-annotated no-org-scoping function, or (b) zero. The wrap-through-middleware refactor moves the check to a single canonical site.'
+      - 'zero hits OR only annotated exceptions remain — every match outside withInvariants.ts must be either: (a) inside an explicitly-annotated no-org-scoping function (Pattern D — own-profile-only via ctx.caller.user_id; Pattern G2 — reference data with no-scoping-applicable; Pattern I — token-bearer authorization), OR (b) inside an explicitly-annotated entity-id-only legitimate exception (Patterns C and E, post-S29b mechanization), OR (c) zero on Pattern A surface.'
+      - 'note on calibration: between S29a closeout and S29b closeout, Patterns C and E sites carry annotated-exception comments; post-S29b, those sites are wrapped via the chosen design (input-shape refactor or withInvariants overload) and the annotation comments are removed.'
 
   - id: MT-03-withInvariants-comment
     commands:
@@ -599,8 +771,9 @@ checks:
     commands:
       - 'grep -rnE "withInvariants.*CI|wrap.*CI|service.*export.*check" eslint.config.mjs scripts/ .github/workflows/'
     expected:
-      - 'a CI check (custom ESLint rule, AST script, or workflow step) verifies that every exported service function in src/services/ either wraps through withInvariants OR carries an explicit no-wrap annotation'
-      - 'the check fails on a synthetic bypass fixture'
+      - 'a CI check (custom ESLint rule, AST script, or workflow step) verifies that every exported service function in src/services/ either wraps through withInvariants OR carries an explicit no-wrap annotation (Patterns D, G2, I) OR carries an entity-id-only legitimate-exception annotation (Patterns C, E pending S29b).'
+      - 'the check fails on a synthetic Pattern A bypass fixture (a service function with input.org_id that lacks the wrap and lacks an annotation).'
+      - 'the check pass-throughs on a synthetic Pattern C/E annotated-exception bypass fixture (a service function with entity_id-only input that carries the annotation comment) — this is a feature, not a bug, since the legitimate-exception case is a real shape S29b will close in the next session.'
 
   - id: LT-01c-hardcoded-test-urls
     finding: UF-006
