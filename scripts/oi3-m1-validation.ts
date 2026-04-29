@@ -42,10 +42,10 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const ORG_REAL_ESTATE = '22222222-2222-2222-2222-222222222222';
 const USER_CONTROLLER = '00000000-0000-0000-0000-000000000002';
-const ANCHOR_COMMIT = '8b1e92cb6b08c685dfddf9894e56c00de0aa8e34';
+const ANCHOR_COMMIT = '9334c1fc150de12b5871fe5374e42a6daa32b73d';
 
-const SPEND_CEILING_USD = 0.75;
-const PER_CALL_CEILING_USD = 0.15;
+const SPEND_CEILING_USD = 0.20;
+const PER_CALL_CEILING_USD = 0.10;
 const NEAR_CEILING_FACTOR = 0.9;
 
 // claude-sonnet-4-6 rates (Sonnet 4 / 4.5 / 4.6 retained pricing).
@@ -486,7 +486,7 @@ async function main(): Promise<void> {
     }
   } else {
     runRecord = {
-      session_label: 'S20-oi-3-m1-paid-validation',
+      session_label: 'S27-mt-01-rpc-paid-validation',
       run_mode: args.firstShapeOnly ? 'dry-run-first-shape-only' : 'paid-run-resume',
       started_at: new Date().toISOString(),
       halted_at: null,

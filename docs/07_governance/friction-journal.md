@@ -134,3 +134,29 @@ Categories:
   IF EXISTS before CREATE OR REPLACE (PostgREST overload).
   (d) crossOrgRls cascade carry-forward + entry_number UNIQUE
   decision (default defer) before S27 Task 3. 546/3/20.
+- 2026-04-29 NOTE — S27 ledger atomicity Day-1 closed at
+  `9334c1f`: MT-01 write_journal_entry_atomic RPC + service
+  refactor + 5 rollback tests. Closes UF-001 atomicity facet
+  on the post path. Paid regression: $0.07999695 cumulative on
+  shape-12 single-invocation (run-record at
+  $HOME/chounting-logs/oi3-m1-run-s27-20260429T015451Z.json).
+  Inferential coverage: agent path→service (paid) + service→
+  RPC (rollback 5/5) → composed agent confirm→RPC inferred;
+  pre-existing LT-02 gap. Closeout in commit body. New surface:
+  (a) entry_number UNIQUE deferred per Task 3 §0 option (a);
+  unique_entry_number_per_org_period (mig 0004) is collision
+  detector; FOR UPDATE bundles with Phase 2.
+  (b) Supabase CLI parser bug at v1.226.4 fixed by v2.95.4.
+  (c) Two-binary trap: pnpm exec resolves to node_modules
+  pinned, not brew. Function-name-length bisection correlation
+  reproducible byte-identically; no causal mechanism, moot
+  under upgrade.
+  (d) Verification-before-assertion applies to reviewers:
+  `unique_entry_number_per_org_period` flagged as fabricated,
+  retracted on lookup against `mig 0004:46`.
+  (e) accountLedgerService running_balance value-drift third
+  carry-forward; Phase 2 obligation: characterize value-drift
+  vs collision-drift.
+  (f) Harness `oi3-m1-validation.ts` constants permanently
+  updated for S27-pattern reuse: ceilings 0.20/0.10, anchor +
+  session_label. 571/3/20.
