@@ -471,3 +471,212 @@ halting is comparable to the cost of the work itself. Outside
 that zone, halt to the next gate. The operator may expand or
 contract the bounded-autonomy zone over time as trust
 calibration evolves.
+
+## 11. Independent validation and AI-assisted development discipline
+
+**Status: draft pending operator review. CTO review identified
+factual corrections before ship. Synthesized by Claude
+(claude.ai) during the journal-entry testing arc on 2026-04-30.
+Not yet validated against a fresh problem. Treat as proposed
+discipline; revisit after one full cycle of use on a different
+shape of work, and amend based on what survives contact.**
+
+**Authorship caveat.** This section was produced by the same
+kind of synthesis layer it is meant to discipline. The rules
+apply to it. Specifically: rule 8 (verification before
+synthesis) and rule 12 (synthesis-layer skepticism) require
+that any factual or structural claim in this policy be checked
+against the empirical record of the arc before being treated as
+canonical. The grounding artifacts begin with commits
+`9f6e799`, `3f41cdf`, and `72a2b1a`; subsequent Phase C and D.1
+artifacts should be verified against `git log` before this
+section is promoted beyond draft. D.2.0 was investigation-only
+and produced no implementation commit.
+
+### Purpose
+
+AI can assist with implementation, testing, and review, but
+AI-generated work is not considered verified merely because
+another AI session evaluates it. Verification must be grounded
+in specs, source files, database constraints, runtime behavior,
+or operator review.
+
+The goal is to avoid closed validation loops such as:
+
+> AI writes code → AI writes tests → AI judges the tests
+> sufficient.
+
+### Core rules
+
+1. **No discharge by AI assertion alone.** A task, invariant,
+   phase item, or deferred issue is not "complete" merely
+   because AI says the tests are sufficient. Completion
+   requires at least one grounding artifact: passing test
+   evidence, source/spec citation, migration/schema
+   verification, mutation test result, operator-written or
+   operator-reviewed assertion plan, or external/fresh-session
+   review.
+
+2. **Separate assertion planning from implementation.** For
+   high-risk work, tests must be planned before they are
+   written. Preferred sequence: (1) spec-derived assertion
+   plan, (2) operator review, (3) test implementation, (4)
+   targeted test run, (5) full-suite run, (6) commit. The
+   assertion plan should say which behavior is contractually
+   specified, which behavior is inferred, and which behavior is
+   regression-pinned.
+
+3. **Do not let implementation define the test.** When writing
+   tests for existing code, the implementation file should not
+   be used as the source of truth except to identify the public
+   API shape. Expected behavior should come from specs, ADRs,
+   migrations, schemas, service contracts, and explicit
+   operator decisions.
+
+4. **Classify every finding before fixing.** Before
+   remediation, classify the issue as one of: code gap, test
+   gap, spec gap, test-infrastructure gap, optional hardening,
+   or false alarm / equivalent behavior. Do not write
+   production code until the gap type is known.
+
+5. **Green baseline before broad verification.** Do not run
+   mutation testing, broad refactors, or phase-close audits on
+   a red test baseline. If a failure is known and accepted, it
+   must be explicitly documented with: exact failing test,
+   reason, why it is not blocking the current work, follow-up
+   owner or decision. The arc's D.1 close relocated
+   INV-AUDIT-001 regression detection from the integration test
+   to the daily CI cron, which is the intended enforcement
+   layer. Operator follow-up: verify the cron workflow has run
+   recently and is green before relying on it as the
+   enforcement layer.
+
+6. **Mutation testing is an audit tool, not the whole
+   workflow.** Use manual mutation checks or scoped Stryker
+   runs for critical paths, especially when AI wrote both
+   implementation and tests, a test claims to discharge an
+   invariant, a service mutates money, permissions, audit
+   state, or cross-org data, or a phase boundary is
+   approaching. Manual mutation testing on a critical service
+   requires nontrivial operator time end-to-end, including
+   synthesis, execution, and triage. Budget for it at phase
+   boundaries; do not expect it to fit into routine per-PR
+   work. Do not treat high line coverage as proof of
+   behavioral sufficiency.
+
+7. **Fresh-session review protocol.** When using a fresh AI
+   session for review: (1) provide the spec first, not the
+   implementation, (2) ask for expected assertions, (3) only
+   then provide test bodies, (4) ask for present / partial /
+   absent mapping, (5) record disagreements explicitly. A fresh
+   AI review is weaker if the spec itself was AI-authored and
+   not operator-owned. (Note: not yet exercised in practice as
+   of policy ratification; revisit after first use.)
+
+8. **Verification before synthesis.** Any claim about the
+   codebase must be checked before it becomes a conclusion.
+   Examples: "DB has no CHECK constraint" — "this is the only
+   guard" — "this test is the known offender" — "this failure
+   is just residue" — "this fully verifies the invariant".
+   Three claims of this shape fired during the arc and were
+   caught only by verification: a "no DB CHECK backstop" claim
+   on mutation 6 (incorrect; the constraint exists in
+   `supabase/migrations/20240102000000_add_reversal_reason.sql`);
+   a "`pnpm db:reset:clean && pnpm db:seed:all`" prescription
+   (incorrect; the first command already includes the second;
+   the double-seed reproduced an audit-coverage gap-count
+   failure); and a "5 files have CONFIRMED cross-run residue"
+   classification (incorrect; re-verification reduced to 0
+   CONFIRMED, 4 POSSIBLE, 1 SAFE in the five-file
+   re-examination, all crash-window-bounded). Unverified
+   synthesis must be labeled as synthesis.
+
+9. **Review diffs, not summaries.** AI summaries are not
+   sufficient for commit approval. Before commit, the operator
+   should review: changed files, assertion shape, test names,
+   comments that make contract claims, whether the diff matches
+   the approved scope.
+
+10. **Stop rule, with structural override.** Stop the session
+    and resume later or in a fresh context when: repeated
+    factual corrections occur; scope expands twice; the AI
+    recommends stopping but continues helping; the work feels
+    productive but verification is weakening; classification
+    changes materially after spot-checking. Stopping is a valid
+    engineering action, not a failure. **When the AI recommends
+    stopping, the operator should either stop, or explicitly
+    acknowledge the override in writing (e.g., "I'm choosing to
+    continue against your stop recommendation, here's why").
+    Continuing with a substantive next-step question without
+    acknowledging the override puts the discipline back on the
+    agent, where it has been shown to fail. The override is a
+    real engineering decision; treat it as one.** During the
+    arc, claude.ai recommended stopping multiple times in the
+    late phases of the thread, and those recommendations were
+    repeatedly overridden without explicit acknowledgement; the
+    work continued to look productive while further factual
+    errors landed.
+
+11. **Review-feedback discipline.** Review feedback based on
+    summaries (consultant feedback, AI summaries of diffs,
+    retrospective writeups) should be checked against the
+    underlying diff or artifact before being acted on.
+    Summaries can flag concerns that dissolve when the actual
+    code is read; acting on summary-level feedback without diff
+    verification produces churn on cosmetic tightening.
+
+12. **Synthesis-layer skepticism.** Claims made by the
+    synthesis layer (claude.ai or whichever AI is doing the
+    high-level reasoning) require the same verification
+    discipline as claims made by the implementation layer. The
+    synthesis layer operates further from verifiable artifacts
+    than the implementation layer; its error rate on factual
+    claims about the codebase is at least as high. The policy
+    applies to claude.ai's outputs as much as to WSL Claude's.
+
+### Recommended phase-close checklist
+
+Before marking a phase complete:
+
+- full suite green from a clean baseline;
+- known failures documented or resolved;
+- critical tests mapped to specific properties, not just
+  files/lines;
+- at least one independent validation artifact for high-risk
+  services;
+- mutation or manual mutation check on top-risk path;
+- unresolved spec gaps listed explicitly;
+- optional hardening separated from required correctness work.
+
+### Current policy position
+
+Stryker is recommended for scoped audits, not required before
+drafting or using this workflow.
+
+The workflow is based on empirical findings from the
+journal-entry testing arc: AI synthesis produces factual errors
+at a measurable rate; verification gates catch them when in
+place; the catch rate depends on the structure, not on the
+agent's care. Manual mutation exposed real test gaps; several
+gaps were tests gaps, not code gaps. Assertion-planning gates
+prevented implementation-driven tests. Full-suite green state
+was restored after narrowing test responsibility. Several rules
+above (1, 4, 8, 10) fired multiple times in-arc; per the
+document's ≥3-fires-of-the-same-shape graduation rule, none
+have yet earned canonical status in `conventions.md`.
+
+### Note on shape
+
+This v1 section uses a numbered-rule prescriptive structure
+that does not match §1–§10's reportorial-with-codification-
+status voice. The mismatch is acknowledged and accepted for v1
+ship. A v2 revision should consider re-shaping §11 to fit the
+document's house style once the patterns have fired against a
+non-testing-arc problem and earned codification. Reviewers and
+future operators should treat the rules as operational
+tendencies, consistent with the document's overall framing, not
+as enforceable rules. The patterns most likely to need
+revision: rule 2 (the assertion-planning sequence may be
+over-fit to the testing-arc problem shape) and rule 7
+(fresh-session review is hypothesized rather than
+demonstrated).
