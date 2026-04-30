@@ -25,7 +25,7 @@ as one valid reading among possible others until externally sanity-checked.
 | 3 | Date range inverted | KILLED (clean) | `journalEntryPeriodDateRange` | Strong kill — typed-error assertion distinguished service-layer from DB-trigger. |
 | 4 | `entryType` collapsed to 'regular' | PARTIAL | `adjustmentEntry` only | Caught for adjustments, NOT for reversals. `reversalMirror` doesn't assert on `entry_type`. |
 | 5 | `action` collapsed to 'journal_entry.post' | PARTIAL | `adjustmentEntry` only | Caught for adjustments, NOT for reversals. Reversal audit action could be silently mis-logged. |
-| 6 | `reversal_reason` whitespace check weakened | SURVIVED | — | Bucket A + parallel-oversight: `adjustment_reason` has a whitespace test, `reversal_reason` doesn't. No DB CHECK backstop. |
+| 6 | `reversal_reason` whitespace check weakened | SURVIVED | — | Bucket A + parallel-oversight: `adjustment_reason` has a whitespace test, `reversal_reason` doesn't. ~~No DB CHECK backstop.~~ **Correction (2026-04-30): DB CHECK `reversal_reason_required_when_reversing` does exist and uses `length(trim(...)) > 0`. Three-layer defense, not single-layer. See Factual corrigenda below.** |
 | 7 | Mirror canary (require identical not swapped) | KILLED (clean) | `reversalMirror` | Two-direction kill. Mirror invariant genuinely tested. |
 | 8 | Cross-org reversal check deleted | SURVIVED | — | Bucket A + security-shaped. Service-layer is the only guard (admin-client bypasses RLS). Latent privilege escalation. |
 
@@ -90,3 +90,42 @@ analysis with no DB dependency. The strict halt rule remains
 in force for any subsequent phase that touches code or runs
 tests against the DB. The override is recorded here, not
 normalized.
+
+## Factual corrigenda
+
+**2026-04-30 (Phase B verification):** The original report claimed
+mutation 6 (whitespace `reversal_reason`) had "No DB CHECK
+backstop." WSL Claude verified during Phase B that this is wrong:
+
+- Zod layer: `ReversalInputSchema.reversal_reason = z.string().min(1)`
+  — length-only, does NOT reject whitespace.
+- Service layer: `validateReversalMirror` checks
+  `reversal_reason.trim().length === 0` — rejects whitespace.
+- DB layer: `journal_entries.reversal_reason_required_when_reversing`
+  CHECK constraint uses `length(trim(reversal_reason)) > 0` —
+  rejects whitespace at the database.
+
+Mutation 6 is therefore a test gap in a three-layer defense, not
+a single-layer defense. The remediation urgency is correspondingly
+lower than the report originally implied. The kill/survive data is
+unchanged; only the characterization of the gap's severity was
+overstated.
+
+This correction matters because it asymmetrically shifts the
+priority ordering of the three survivors:
+- Mutation 2 (invalid `fiscal_period_id`): test gap in a
+  single-guard service-layer check; standard priority.
+- Mutation 6 (whitespace `reversal_reason`): test gap in a
+  three-layer defense; lower remediation urgency. The test would
+  verify the chain works; it would not close a real exposure.
+- Mutation 8 (cross-org reversal): test gap in a single-layer
+  defense (admin client bypasses RLS); the test is the ONLY signal
+  between spec and a privilege-escalation vector. Highest priority.
+
+Synthesis-side observation: the original report's claim was
+written by Claude (claude.ai) without verification of the DB
+layer. WSL Claude flagged the discrepancy during Phase B's spec-
+reference verification step. This is the kind of correction the
+"synthesis by Claude, externally unvalidated" caveat at the top
+of this report exists to enable. Recording the catch as evidence
+that the caveat is load-bearing, not boilerplate.
