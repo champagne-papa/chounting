@@ -570,6 +570,61 @@ renumbering (five line edits, no code change).
 
 **Source:** Skills migration session, 2026-04-19.
 
+### Q33 — Service-layer placement for the 7 `@/db/adminClient` direct-import sites in apps/web/
+
+The Pattern 3 monorepo migration (2026-04-30) carried forward a
+pre-existing baseline of **7 LT-03 / UF-006 violations** of the
+`no-restricted-imports` rule on `@/db/adminClient`. Each site
+imports the admin client directly into a route handler or agent
+module rather than going through the service layer:
+
+```
+apps/web/src/agent/memory/orgContextManager.ts:17
+apps/web/src/agent/orchestrator/index.ts:39
+apps/web/src/agent/orchestrator/loadOrCreateSession.ts:10
+apps/web/src/app/api/agent/confirm/route.ts:21
+apps/web/src/app/api/agent/conversation/route.ts:35
+apps/web/src/app/api/agent/reject/route.ts:28
+apps/web/src/app/api/auth/mfa-status/route.ts:4
+```
+
+Verified pre-existing by checkout of `b2bf9f3` (the pre-migration
+HEAD) and running `next lint` — same 7 errors. They were out of
+scope for the migration ("DO NOT modify any existing service,
+agent, schema, or route code in `src/`").
+
+**Why this is genuine uncertainty (not just an obligations
+entry):** the right service-layer shape for these consumers
+depends on patterns that haven't been observed yet. The agent
+modules in particular (`orgContextManager`, `orchestrator`,
+`loadOrCreateSession`) will reshape when the Double Entry Agent
+work proceeds. Building a service-layer surface around them
+*now* risks structuring against assumptions the agent work
+later contradicts; the consumers would have to be moved twice.
+
+**Resolution timing:** tied to the Double Entry Agent build,
+not to a calendar. Once the agent's actual data-access patterns
+are observable, decide which existing service each consumer
+belongs in (or whether a new service shape — e.g. an
+`agentSessionService`, `mfaStatusService` — is warranted) and
+move them in one coherent pass.
+
+**Current containment:**
+- `.github/workflows/ci.yml` filters `@chounting/web` out of the
+  `lint` and `build` jobs via `--filter=@chounting/demo`. CI is
+  green; the violations don't block PRs in any other workspace.
+- `docs/03_architecture/monorepo.md` has the full file:line list
+  in its "Pre-existing baseline" section with the same b2bf9f3
+  verification trail.
+- `apps/web/eslint.config.mjs` keeps the rule active so
+  *new* violations of the same kind would still be caught at
+  PR time once the baseline is cleared.
+
+**Blocks:** removing the `--filter=@chounting/demo` flags from
+`.github/workflows/ci.yml`'s lint and build jobs.
+
+**Source:** Pattern 3 monorepo migration, 2026-04-30.
+
 ---
 
 ## Section 4 — Formalization candidates
