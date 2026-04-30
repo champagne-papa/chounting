@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "@chounting/tokens": "workspace:*",
+    "@chounting/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.103.0",
