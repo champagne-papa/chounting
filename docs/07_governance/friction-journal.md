@@ -1277,3 +1277,80 @@ Categories:
   ADR or session brief. The drift list is durable specifically
   because an external review proposed each pattern and was
   overruled.
+
+- 2026-04-30 NOTE — S32 onboarding-posture revision shipped.
+  Two commits on `staging`:
+
+  - **Commit 1 (`f0c6e39`)** — prose + welcome header +
+    `agent_interface.md` "Onboarding modes" subsection.
+  - **Commit 2 (`37a24a0`)** — first-arrival treatment +
+    `resolveCompletionHref` three-point edit + drift-list
+    guardrail NOTE.
+
+  **Open Questions resolved at execution gate.** OQ1 = stage
+  list with Commissioning suppressed in Joining (suppression,
+  not strikethrough — "Joining is not a skip"); OQ2 =
+  `?first_arrival=1` query-param; OQ4 = surfaced for
+  awareness only (right home for the underlying "render from
+  structured fields" principle is a future Phase 2 brief
+  during interaction-model extraction); OQ5 = no arc-summary
+  for a one-session thread (revisit if a follow-up onboarding
+  session lands); OQ6 = Y2 commit shape (two commits, two
+  founder gates).
+
+  Phase 2 surface expansion + Path A deployment readiness
+  unaffected — this thread is interaction-model polish,
+  sibling to Path C audit cleanup.
+
+  **Follow-up candidates flagged in brief §8 (3).** Route split
+  between Commissioning and Joining if invited-user UX
+  accumulates enough divergent surface to warrant it; trust-
+  signal surfacing on Arrival ("every entry is immutable and
+  auditable" or similar); Four Questions audit-grammar
+  applicability to the Arrival sober handoff line (the
+  underlying "render from structured fields, never from
+  free-form model text" principle).
+
+  **Findings surfaced during execution (3).**
+
+  - **`crossOrgRlsIsolation` test-design finding (surfaced at
+    Task 5 full-suite run).** Test seeds `journal_entries`
+    with hardcoded UUIDs and attempts cleanup via `afterAll`
+    DELETE; migration `20240133000000_journal_immutability_triggers.sql`
+    makes `journal_entries` append-only at the trigger level,
+    so the DELETE silently no-ops. Result: every
+    `agent:validate && pnpm test` sequence on the same DB
+    without an intervening `pnpm db:reset:clean` reproduces
+    the PK collision. Sibling cluster to Arc-A item-27
+    `accountLedgerService` running-balance fragility (same
+    fix-shape category — shared-DB pollution; needs
+    test-isolation refactor). Phase 2 `obligations.md`
+    follow-up candidate; not S32's surface to fix.
+
+  - **Anchor-language phrasing convention (fire #1 against a
+    recurring pattern).** For sibling-thread briefs that open
+    independent of in-flight Path C / Path A sessions, prefer
+    "most recent in-flight Path C anchor" over "most recent
+    Path C closeout SHA." The in-flight phrasing handles the
+    case where Path C has open but unshipped sessions but the
+    sibling thread is independent of their completion.
+    Surfaced at Task 1 anchor-verdict ambiguity (S29b closeout
+    SHA `7774d25` vs S31 brief re-anchor `e809563`; both
+    readings yielded PASS). Codification threshold (3+ fires
+    per chounting's convention discipline) not yet met; track
+    for future briefs that open sibling threads.
+
+  - **Language repetition across navigation boundary as
+    deliberate structural reinforcement.** "Workspace ready"
+    appears verbatim in both the step-4 prose example
+    ("Workspace ready. Want to post your first journal
+    entry?") and the Arrival sober handoff line ("Workspace
+    ready. Ready when you are — what's first?"). The
+    repetition is the structural signal that the agent voice
+    is continuous across the onboarding-completion →
+    arrival-render boundary — same agent, same voice, before
+    and after the navigation. Hold across future copy-pass
+    revisions; treating the repetition as redundancy and
+    differentiating for variety would be a posture-test
+    failure dressed as editorial polish. The repetition is
+    doing work.
