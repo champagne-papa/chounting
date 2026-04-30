@@ -42,6 +42,18 @@ const eslintConfig = [
     },
   },
   {
+    // Operational/validation scripts (oi3 paid-API harness, audit
+    // verifier, seed scripts, etc.) hold the same role as tests/
+    // for LT-03 purposes. Pre-monorepo, scripts/ lived at the
+    // repo root and was outside `next lint`'s default scope; the
+    // monorepo move brought them into apps/web/scripts/, so this
+    // exception preserves the pre-existing lint baseline.
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
+  {
     // LT-01(b): every property of every `export const <serviceName>
     // = { ... }` literal in src/services/**/*.ts must be either
     // wrapped in withInvariants(...) or preceded by a canonical-form
