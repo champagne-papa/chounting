@@ -58,3 +58,35 @@ Findings to feed into §11 when it is drafted:
 2. Parallel-shape features (reversal/adjustment, etc.) need explicit symmetry checks for test surface area. LLMs write the test in front of them, not the test that should exist by symmetry.
 3. Test-name truth audits — every Category A floor test should be mutation-audited at least once and the result inscribed in the test header.
 4. State-residue is load-bearing infrastructure, not optional cleanup. Idempotency-across-runs is a test-suite property worth treating as a hard requirement.
+
+## Procedural corrigenda
+
+**2026-04-30 (post-Phase A commit):** The instruction sequence
+`pnpm db:reset:clean && pnpm db:seed:all` provided to WSL Claude
+was incorrect. `db:reset:clean` already invokes `db:seed:all`
+internally; the second invocation produced duplicate seed rows
+which manifested as a 159-vs-1 failure in
+`verifyAuditCoverageRoundTrip.test.ts`. WSL Claude correctly
+halted, identified the double-seed via the seed log, and
+surfaced for operator decision. The correct sequence is
+`pnpm db:reset:clean` alone. The fragility documented in the
+friction journal (prior-run residue) is a distinct phenomenon
+from this double-seed-in-single-session failure despite the
+identical symptom; future readers should not conflate the two.
+
+This is recorded for the record because the synthesizing AI
+(claude.ai) prescribed the incorrect command without reading
+the script first — a small instance of the same "inferring
+behavior instead of verifying" pattern this whole exercise is
+meant to surface. WSL Claude's halt-and-verify discipline
+prevented it from compounding.
+
+**2026-04-30 (Phase A → Phase B handoff):** WSL Claude correctly
+held strict to the halt rule when `pnpm test` failed after a
+single-seed reset (315 vs 1 gaps in
+verifyAuditCoverageRoundTrip.test.ts). claude.ai overrode the
+halt for Phase B specifically because Phase B is read-only
+analysis with no DB dependency. The strict halt rule remains
+in force for any subsequent phase that touches code or runs
+tests against the DB. The override is recorded here, not
+normalized.

@@ -1225,3 +1225,32 @@ Categories:
   Full writeup: reports/mutation/manual-dryrun-2026-04-29.md.
   Implications fed forward to a deferred §11 draft for
   DEV_WORKFLOW.md.
+
+- 2026-04-30 NOTE  Test-suite append-only-state fragility — second
+  mechanism confirmed. Per the 2026-04-30 NOTE above
+  (cross-run residue mechanism), an additional within-run
+  mechanism surfaced when verifying the post-Phase-A reset:
+  `verifyAuditCoverageRoundTrip.test.ts:39` failed with 315
+  gaps after a single clean `pnpm db:reset:clean`, then `pnpm
+  test`. Mechanism: other integration test files in the same
+  vitest run (recurringJournal, agentOrchestrator, etc.) post
+  journal entries to the shared test DB before
+  verifyAuditCoverageRoundTrip executes. The verifier scans
+  all tenant-entity rows and the test asserts on an exact
+  count, so accumulated test-data entities inflate the gap
+  count even when none of them are actual regressions.
+
+  Distinction worth preserving: the cross-run mechanism (entry
+  above) and the within-run mechanism (this entry) share a
+  root cause — exact-count assertion against append-only
+  state — but they are distinct phenomena. The cross-run case
+  fails because residue from a *prior* `pnpm test` run wasn't
+  cleaned. The within-run case fails because *current-run*
+  earlier test files seed entities into the DB before this
+  test runs. Either alone reproduces the symptom. Both
+  together compound it. A future fix needs to address the
+  test-design root cause (assert on a property, not a count)
+  to close both mechanisms simultaneously.
+
+  Recorded post-hoc during Phase B execution; observed during
+  the first attempt at a clean Phase A → Phase B handoff.
