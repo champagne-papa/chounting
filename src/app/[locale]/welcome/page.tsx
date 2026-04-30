@@ -112,8 +112,16 @@ export default async function WelcomePage({ params }: PageProps) {
   // 7 rewrite seam).
   const showSkipLink = initialState.current_step === 1;
 
+  // Pre-decision 4 — quiet structural header. Stage names are
+  // structural framing, not user-facing copy. Joining flow
+  // suppresses Commissioning per OQ1 default.
+  const stages = isInvitedUser
+    ? ['Recognition', 'Registration', 'Arrival']
+    : ['Recognition', 'Registration', 'Commissioning', 'Arrival'];
+  const currentStage = 'Registration'; // step 1 maps to Registration in both modes
+
   return (
-    <div className="fixed inset-0 flex bg-white">
+    <div className="fixed inset-0 flex flex-col bg-white">
       {showSkipLink && (
         <a
           href={`/${locale}/settings/profile`}
@@ -122,12 +130,23 @@ export default async function WelcomePage({ params }: PageProps) {
           Skip to form
         </a>
       )}
-      <div className="flex-1 max-w-2xl mx-auto flex flex-col">
-        <AgentChatPanel
-          orgId={null}
-          initialOnboardingState={initialState}
-          onboardingCompletionHref={completionHref}
-        />
+      <header className="px-6 pt-6 pb-2">
+        <ol className="flex flex-wrap gap-x-4 text-xs uppercase tracking-wide text-neutral-400">
+          {stages.map((stage) => (
+            <li key={stage} className={stage === currentStage ? 'text-neutral-700' : ''}>
+              {stage}
+            </li>
+          ))}
+        </ol>
+      </header>
+      <div className="flex-1 flex">
+        <div className="flex-1 max-w-2xl mx-auto flex flex-col">
+          <AgentChatPanel
+            orgId={null}
+            initialOnboardingState={initialState}
+            onboardingCompletionHref={completionHref}
+          />
+        </div>
       </div>
     </div>
   );

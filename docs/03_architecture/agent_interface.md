@@ -205,6 +205,28 @@ on the model's assertion.
 
 ---
 
+## Onboarding modes
+
+The agent supports two onboarding modes, distinguishable by
+`OnboardingState.invited_user`. The **Commissioning flow** is
+for users with no existing memberships; they pass through all
+four canonical stages — Recognition (sign-in), Registration
+(profile capture), Commissioning (org + industry), and Arrival
+(landing in the org). The **Joining flow** is for users invited
+to an existing organization (`invited_user === true`,
+`completed_steps: [2, 3]` pre-set); they pass through only
+Recognition, Registration, and Arrival — Commissioning was
+performed by whoever created the org. The state-machine shape is
+unchanged across modes; what differs is the agent's posture (a
+user joining an existing workspace is not in commissioning
+posture) and the welcome-page stage indicator (which suppresses
+Commissioning in the Joining flow). The four stage names are
+durable structural framing, not user-facing copy.
+
+Mode distinction codified at S32 (`docs/09_briefs/phase-1.3/session-32-onboarding-posture-brief.md`).
+
+---
+
 ## Cross-References
 
 - **Agent autonomy model** — governance rules for when the agent

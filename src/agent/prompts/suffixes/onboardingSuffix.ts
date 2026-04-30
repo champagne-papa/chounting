@@ -60,26 +60,39 @@ export function onboardingSuffix(
 
   switch (onboarding.current_step) {
     case 1:
+      if (onboarding.invited_user) {
+        return `## Onboarding — Step 1 of 4: Profile
+
+The user has been invited to an existing organization. Their workspace is already set up; the only thing outstanding is registering them so the system can address them correctly. ${completed}
+
+Ask for their display name — what they want to be called in the app. Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. The moment the call succeeds with a non-empty \`displayName\`, this step is done and the system routes them into their organization.
+
+Do NOT use commissioning vocabulary — phrases like "set up your workspace" or "your new organization" misframe the principal's relationship to a workspace that already exists. They are joining, not creating.
+
+If they prefer a form, the "Skip to form" link in the top-right takes them to /settings/profile.
+
+Plain question, no marketing copy, keep it short.`;
+      }
       return `## Onboarding — Step 1 of 4: Profile
 
-The user is new to The Bridge. Your job right now is to learn their name so the system can address them personally. ${completed}
+Before the user can set up their workspace, you need to know what to call them. ${completed}
 
-Ask for their display name first (what they want to be called in the app). Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. You may optionally also capture preferences (locale, timezone, phone) in the same call or in follow-up turns, but display name is the only field that advances the state machine — the moment \`updateUserProfile\` succeeds with a non-empty \`displayName\`, this step is done and the system routes the user to the next step.
+Ask for their display name first — what they want to be called in the app. Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. You may also capture preferences (locale, timezone, phone) in the same call or in follow-up turns, but display name is the only field that advances the state machine — the moment \`updateUserProfile\` succeeds with a non-empty \`displayName\`, this step is done and the system routes the user to the next step.
 
-If the user would rather use a form than chat, there's a "Skip to form" link in the top-right of the welcome screen that takes them to /settings/profile. Either path advances the state machine — don't push them toward one or the other.
+If the user would rather use a form, there's a "Skip to form" link in the top-right of the welcome screen that takes them to /settings/profile. Either path advances the state machine — don't push them toward one or the other.
 
-Keep the exchange short. No marketing copy, no tutorial — just the question.`;
+Plain question, no marketing copy, keep it short.`;
 
     case 2:
       return `## Onboarding — Step 2 of 4: Organization
 
-Profile is done. Now help the user set up their organization. ${completed}
+Profile is done. Now help the user bring their workspace into being. ${completed}
 
-Ask for the company name first. Then ask for the industry — call \`listIndustries\` and present the available options as a short list so the user can pick one by name or number. You can also capture legal name, business structure, and base currency in the same turn if the user volunteers them, but company name and industry are the minimum needed to create the org.
+**Prefer a single composed turn.** Ask for the company name AND the industry in one question — for example, "What should we call the company, and what type of business is it?" If the user volunteers extra fields in the same answer (legal name, business structure, base currency), capture them silently rather than re-asking. Defaults are fine for what isn't volunteered.
 
-Once you have company name + industry, call \`createOrganization\` with the collected fields. Success advances the state machine through steps 2 AND 3 together (industry selection is bundled into org creation).
+Call \`listIndustries\` if the user names an industry phrase you can't map directly, or to surface options when they're unsure. Once you have company name + industry, call \`createOrganization\` with the collected fields. Success advances the state machine through steps 2 AND 3 together (industry selection is bundled into org creation).
 
-If the user says something like "skip — I'll set this up later" or asks for a form, acknowledge that a form-based org-setup isn't wired in for you right now and offer to continue conversationally.`;
+If the user says "skip — I'll set this up later" or asks for a form, acknowledge that a form-based org-setup isn't wired in for you right now and offer to continue conversationally.`;
 
     case 3:
       return `## Onboarding — Step 3 of 4: Industry
@@ -112,11 +125,9 @@ Do NOT emit \`template_id: "agent.onboarding.first_task.navigate"\` right now �
 
 Everything is set up. ${completed}
 
-Invite the user to try a first real task. Offer two options in plain language:
-- "Want to try posting a journal entry?"
-- "Or would you rather see your Chart of Accounts first?"
+Recommend one concrete first action — posting a journal entry — and offer the transition. Plain phrasing, not chirpy. Something like: "Workspace ready. Want to post your first journal entry?"
 
-Wait for the user to pick one. When they commit to either option (or name a different first task — anything concrete), respond with the \`respondToUser\` tool using \`template_id: "agent.onboarding.first_task.navigate"\`. This is the explicit completion signal — the system will flip the onboarding flag and route the user into the main app. Do NOT use this template_id for any other turn or message; it is reserved for the moment the user commits to a first task.
+When the user commits to the suggestion, or names a different concrete first task (anything actionable they want to do first), respond with the \`respondToUser\` tool using \`template_id: "agent.onboarding.first_task.navigate"\`. This is the explicit completion signal — the system will flip the onboarding flag and route the user into the main app. Do NOT use this template_id for any other turn or message; it is reserved for the moment the user commits to a first task.
 
 If the user is still deciding or asks a clarifying question, respond with a regular template_id (the ones you'd use in normal operation) and stay at step 4 — the completion signal only fires when they pick a task.`;
     }
