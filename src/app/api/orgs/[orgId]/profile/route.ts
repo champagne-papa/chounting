@@ -1,6 +1,8 @@
 // src/app/api/orgs/[orgId]/profile/route.ts
 // Phase 1.5A — GET + PATCH org profile.
-// GET: any org member (RLS gates). PATCH: controller-only via
+// GET: any org member; gated by explicit caller.org_ids.includes(orgId)
+// check at the route handler (S30 hot-fix; element #6 G1 Variant γ
+// closure). PATCH: controller-only via
 // withInvariants({ action: 'org.profile.update' }).
 
 import { NextResponse } from 'next/server';

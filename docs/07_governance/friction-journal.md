@@ -629,3 +629,65 @@ Categories:
   (d) section transitions to resolved-at-hot-fix; LT-01(d) audit
   scope shrinks (this hot-fix's JSDoc reconciliation closes some
   claims preemptively).
+- 2026-04-30 NOTE — S30 hot-fix sibling fix-forward: route-handler
+  file-top reconciliation (this commit). Element-7 of the hot-fix
+  arc captures a substrate-completeness gap caught at chat-side
+  review post-execution.
+
+  (1) **Reconciliation-scope-derivation as substrate-completeness
+  gate (codification candidate at N=2; sibling-shape to S29a element
+  #18).** The hot-fix at c617f58 reconciled service-layer JSDoc
+  claims to reflect the new route-handler gate posture; it did NOT
+  reconcile the route-handler file-top comments which carried the
+  same documentation-vs-implementation drift at a sibling substrate
+  layer. profile/route.ts and addresses/route.ts file-tops both said
+  "GET: any org member (RLS gates)" — substrate-stale post-hot-fix
+  because services use adminClient (bypassing RLS) and the actual
+  gate is the route-handler caller.org_ids.includes(orgId) check.
+  invitations/route.ts said "list pending (controller)" — also
+  stale because the actual gate post-hot-fix is any-member-of-org,
+  not controller-only (role-permission decisions deferred to S30
+  territory per pre-decision (b-shape-1)). N=2 firing of the
+  reconciliation-scope-derivation pattern: N=1 was S29a element #18
+  (userProfileService comment-fix scope gap → resolved as item (l));
+  N=2 is this hot-fix's route-handler file-top gap. Same shape:
+  reconciliation scope derived from one substrate-layer; missed
+  sibling substrate-layer.
+
+  (2) **Codification candidate "Resolved-decision-citation as
+  contract" advances N=1 → N=2 within the same commit family.**
+  The hot-fix's own NOTE plan element #5 codification candidate
+  fired again here. The route-handler file-top comments cite RLS as
+  the gate (an OQ-07 claim); implementation post-c617f58 bypasses
+  RLS via adminClient and gates at the route-handler check. Same
+  misremembered-OQ-07-resolution shape that element #6 named at the
+  service layer, now manifest at the route-handler-file-top layer.
+  The codification candidate now has two firings within the hot-
+  fix arc: N=1 at the service-layer JSDoc (closed at c617f58); N=2
+  at the route-handler file-top (closed at this commit). One more
+  firing graduates per Documentation Routing convention's N=3
+  threshold.
+
+  (3) **Substrate-fidelity-gate execution-cadence-layer firing
+  surfaced post-execution.** The c617f58 closeout summary asserted
+  "no execution-time substrate-fidelity-gate firings surfaced;
+  brief-creation pre-flight findings matched execution-time
+  substrate exactly." Substrate at chat-side review revealed the
+  execution-cadence-layer DID have a firing — it just wasn't caught
+  at execution time because the brief's verify gates didn't extend
+  to the route-handler file-top comments. Discipline-correct
+  framing: execution-cadence-layer firing surfaced post-execution
+  at chat-side-review. Pairs with element-pre-7-sub-2's three-
+  cadence flow as additional discipline-cadence layer — the
+  substrate-fidelity-gate codification fires at the post-execution-
+  review cadence too, not just within the execution session itself.
+  This is itself a fractal-fidelity firing of element #3's "applies
+  recursively at every layer" clause — the closeout's claim of
+  substrate-completeness was the load-bearing-claim that chat-side
+  review found substrate-incomplete.
+
+  Net outcomes this commit: 3 route-handler file-top comments
+  reconciled to reflect post-hot-fix gate posture (profile,
+  addresses, invitations). users/route.ts file-top left as-is per
+  chat-side review (neutral; no RLS claim). Sibling fix-forward to
+  c617f58; standalone commit per Option A ratification.

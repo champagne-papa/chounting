@@ -1,5 +1,10 @@
-// POST /api/orgs/[orgId]/invitations — invite user (controller)
-// GET /api/orgs/[orgId]/invitations — list pending (controller)
+// POST /api/orgs/[orgId]/invitations — invite user (controller-only via
+//   withInvariants({ action: 'user.invite' }))
+// GET /api/orgs/[orgId]/invitations — list pending (any org member;
+//   gated by explicit caller.org_ids.includes(orgId) check at the route
+//   handler per S30 hot-fix; element #6 G1 Variant γ closure. Role-
+//   permission tightening deferred to S30 territory per pre-decision
+//   (b-shape-1).)
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';

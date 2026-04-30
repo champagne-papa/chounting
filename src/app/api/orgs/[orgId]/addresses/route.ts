@@ -1,6 +1,8 @@
 // src/app/api/orgs/[orgId]/addresses/route.ts
 // Phase 1.5A — GET (list) + POST (add) org addresses.
-// GET: any org member (RLS gates). POST: controller-only via
+// GET: any org member; gated by explicit caller.org_ids.includes(orgId)
+// check at the route handler (S30 hot-fix; element #6 G1 Variant γ
+// closure). POST: controller-only via
 // withInvariants({ action: 'org.address.create' }).
 
 import { NextResponse } from 'next/server';
