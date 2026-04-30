@@ -1199,3 +1199,29 @@ Categories:
   surface expansion gate unblocks. **S31 unblocked: brief-creation
   against this S29b closeout SHA opens next as the final session
   of Path C arc.**
+
+- 2026-04-30 NOTE  Test-suite state-residue fragility confirmed
+  reproducible. Manual mutation dry-run on
+  journalEntryService.post() exposed four fragility shapes:
+  (a) fixed UUIDs in 99990* range with afterAll cleanup that
+  runs only on success (crossOrgRlsIsolation.test.ts);
+  (b) exact-count assertion against append-only audit_log
+  (verifyAuditCoverageRoundTrip.test.ts:39 expects
+  gaps.length === 1); (c) tests assume pristine seed-state DB;
+  (d) cleaner shape was knowingly deferred (TODO comment in
+  verifyAuditCoverageRoundTrip acknowledges fragility, accepts
+  in exchange for not-yet-doing-cleaner-thing).
+
+  Reproducibility: failure recurred within a single session
+  after ~8 mutation cycles, without any code change. The suite
+  is not idempotent across runs without explicit
+  pnpm db:reset:clean. This is normal-developer-workflow
+  distance, not a corner case.
+
+  Architectural pattern: codebase has documented tendency to
+  accept test fragility in exchange for deferred cleaner-shape
+  work. Worth tracking as a tendency, not a one-off bug.
+
+  Full writeup: reports/mutation/manual-dryrun-2026-04-29.md.
+  Implications fed forward to a deferred §11 draft for
+  DEV_WORKFLOW.md.
