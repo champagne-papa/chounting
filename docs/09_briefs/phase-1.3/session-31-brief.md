@@ -1,16 +1,16 @@
 # Session 31 — Path C LT-02 test coverage closure (final session of Path C arc)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **No paid-API spend in this session** (S31 is test-coverage closure; sub-item (b) saturation curve uses simulated/replayed conversation per pre-decision (b-α); sub-item (a) agent confirm/reject integration uses fixtures-and-mocks per existing apiAgentConfirm* test precedent).
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **No paid-API spend in this session** (S31 is test-coverage closure; sub-item (b) boundary-not-overflow test uses mocked callClaude per pre-decision (b-α); sub-item (a) `journalEntryService.get` coverage uses existing fixture/mock patterns).
 
 **Goal:** Close the five LT-02 sub-items per `action-plan.md` and complete Path C arc Gate 5 (final gate). After S31 closes, all five verification-harness gates are green: Gate 1 (MT-05) + Gate 2 (MT-06) at S28; Gate 3 (UF-002 broad-scope wrap) at S29b; Gate 4 (LT-01 + LT-03 + LT-04 + QUALITY-006) at S30; Gate 5 (LT-02 test coverage) here. Phase 2 surface expansion gate unblocks at S31 closeout.
 
-**Architecture (V1 minimal scope):**
+**Architecture (V1 minimal scope; post-re-anchor substrate-honest amendments):**
 
-- **Sub-item (a) — agent confirm/reject route integration tests.** Closes the "agent confirm-flow integration coverage" Phase 2 obligation flagged at S27 closeout (friction-journal NOTE 2026-04-29 (a-f)). Existing `apiAgentConfirm*` tests cover endpoint-level behaviors (idempotent / not-found / stale); the LT-02(a) gap is the full agent-flow integration that exercises path→service→RPC composed. Closes the `journalEntryService.get` test coverage gap surfaced at S29b brief-creation pre-flight pre-5 (route handler partially covered; integration test exercises the full path).
-- **Sub-item (b) — conversation saturation curve characterization.** Simulated/replayed conversation history at turn counts up to 32; verify codebase truncation/rotation behavior (per pre-decision (b-α)). Tests codebase handling of saturation, not model-side behavior under saturation (latter is Phase 2 obligation requiring paid-API budget pre-allocation).
-- **Sub-item (c) — cross-org account contamination test.** Attempt to reference an account from org B in org A's journal-entry post; verify rejection. Exercises the S26 QW-05 cross-org trigger (chartOfAccountsServiceCrossOrg + journalLinesCrossOrgAccount substrate at HEAD). Sibling-shape to existing `crossOrgRlsIsolation` test surface; this sub-item closes the journal-entry-line-account-FK-cross-org gap.
-- **Sub-item (d) — audit-log PII presence assertions (S25 QW-07 + S28 MT-06 end-to-end).** Verify redaction works: write a `recordMutation` call carrying PII in `before_state` (flat + nested); read the resulting `audit_log` row; assert PII fields are absent. Encodes S28 closeout NOTE category iv naming-asymmetry honestly: `audit_log.before_state` redacts `invited_email`/`phone`/`first_name`/`last_name`/`display_name` (PII_FIELDS const) at any nesting depth (post-S28 redactPii recursive extension); pino logs redact `*.email`/`*.phone`/etc. at depth 1 only (post-S28 single-level pino paths; multi-level pino is Phase 2 per consolidated obligation). Test asserts both layers; documents the asymmetry as load-bearing-substrate not as bug.
-- **Sub-item (e) — period-lock date-range enforcement test.** Post journal entries before/after a period's date-range; verify rejection. Exercises the S26 QW-03 rejection. Sibling-shape to existing `lockedPeriodRejection` test (which covers locked-status); this sub-item closes the date-range-enforcement gap (entries with `entry_date` outside the locked period's `start_date..end_date` range).
+- **Sub-item (a) — `journalEntryService.get` post-S29b-wrapped coverage gap.** NARROW SCOPE per AMENDMENT 1: substrate at HEAD `7774d25` shows CA-61 (`apiAgentConfirmIdempotent.test.ts`) already covers full path→service→RPC composition through agent confirm flow with idempotency replay; the original brief's framing was substrate-stale. The narrow real gap is `journalEntryService.get` post-S29b-wrapped (S29b pre-flight pre-5 finding). New test file `tests/integration/journalEntryServiceGet.test.ts` covers same-org / cross-org / not-found cases.
+- **Sub-item (b) — conversation length boundary-not-overflow test.** REFRAMED per AMENDMENT 2: orchestrator main-loop step 5 explicitly comments "Conversation truncation — full history" — NO truncation/rotation logic at HEAD; testing truncation behavior tests behavior that doesn't exist. Substrate-honest reframe: test boundary-not-overflow — verify orchestrator handles 32-turn full-history without breaking (memory, persistence, mock-callClaude pass-through). New test file `tests/integration/agentConversationLengthBoundary.test.ts`. NO live Anthropic API call (mocked callClaude per pre-decision (b-α)). When Phase 2 ships truncation infrastructure, this test inverts to truncation-curve characterization.
+- **Sub-item (c) — coverage-sufficiency-verification of CA-28 + chartOfAccountsServiceCrossOrg.** REFRAMED per AMENDMENT 3: substrate at HEAD shows CA-28 (`journalLinesCrossOrgAccount.test.ts`) covers cross-org account contamination via FK trigger; `chartOfAccountsServiceCrossOrg.test.ts` covers service-layer side. Substrate-substantially duplicate. No new test file at S31 scope; substrate-record NOTE entry produced at execution closeout. Per Hard Constraint F: halt-and-surface if sufficiency-verification surfaces a substrate-real gap.
+- **Sub-item (d) — audit-log nested-PII redaction integration.** NARROW SCOPE per AMENDMENT 4: substrate at HEAD shows CA-15 (`userProfileAudit.test.ts`) covers integration-level flat-PII redaction end-to-end via `userProfileService.updateProfile`. The narrow real gap is post-S28 nested-PII recursion at integration level (unit-level coverage at `recordMutationPiiRedaction.test.ts` exists). New test file `tests/integration/auditLogNestedPiiRedaction.test.ts`. Naming-asymmetry honest encoding preserved per Hard Constraint C (audit_log redacts `invited_email` recursively; pino paths redact `*.email` at depth-1 only; multi-level pino is Phase 2 per consolidated obligation).
+- **Sub-item (e) — coverage-sufficiency-verification of CA-27.** REFRAMED per AMENDMENT 5: substrate at HEAD shows CA-27 (`journalEntryPeriodDateRange.test.ts`) covers all 3 cases the original brief specified (before-start rejection + after-end rejection + in-range success) plus DB-trigger coverage and on-boundary inclusivity; uses Soft 9 natural-key pattern. Substrate-substantially duplicate. No new test file at S31 scope; substrate-record NOTE entry produced at execution closeout. Per Hard Constraint F: halt-and-surface if sufficiency-verification surfaces a substrate-real gap.
 
 **Tech stack:** TypeScript, Vitest, Supabase Postgres (real DB via `pnpm db:reset:clean && pnpm db:seed:all` baseline). No new dependencies. No schema changes. No migrations. No orchestrator or prompt edits. **No paid-API spend** (sub-item (b) simulated; sub-item (a) uses existing fixture/mock patterns from apiAgentConfirm* test precedent).
 
@@ -58,10 +58,11 @@
   - Any orchestrator or prompt-text edits.
 - **Test posture floor (run-ordinal-dependent per S30 brief re-anchor-2 framing).** `pnpm agent:validate` 26/26 green at HEAD post-edit; if drift surfaces, run `pnpm db:reset:clean && pnpm db:seed:all` to restore clean baseline. Full suite fresh-post-reset baseline at HEAD `7774d25` = 1 failed (`verifyAuditCoverageRoundTrip` orthogonal carry-forward) + 570 passed + 20 skipped (591 total per S29b closeout). Post-S31 edits expected to preserve this baseline plus the deliberate test additions from sub-items (a)-(e). Total expected fresh-run at S31 closeout: 1 failed + (570 + N) passed + 20 skipped, where N ≥ 5 (one or more test cases per sub-item; substrate-grounded final count substrate-confirmed at execution Task 7 Step 5). Halt criteria: drift wrap-attributable to S31's edits → HALT; drift state-pollution-attributable (carry-forward category c per S29a element #19) → DO NOT halt; document.
 - **Hard Constraint A — Soft 9 runtime-lookup-by-natural-key pattern (load-bearing).** ANY new test against `accountLedgerService` or any account-balance-touching surface (sub-item (c) cross-org account contamination especially) MUST follow the runtime-lookup-by-natural-key pattern (Soft 9 precedent at S19, commit `13e11f7`) rather than hardcoded UUIDs (Soft 8 precedent). Replicating the running-balance fragility shape is a hard-veto-at-review condition. Tests look up account IDs by `account_code` + `org_id` at fixture-setup time; do NOT bake account UUIDs into test fixtures.
-- **Hard Constraint B — No paid-API spend.** Sub-item (b) saturation curve uses simulated/replayed conversation history (free); sub-item (a) agent confirm/reject integration tests use existing fixture/mock patterns from `apiAgentConfirm*` test precedent (mocks `buildServiceContext` + uses `adminClient` for direct DB setup; no Anthropic API call). If any sub-item drifts toward paid-API surface during execution, halt and surface for operator decision (Phase 2 paid-API budget pre-allocation territory; not S31 scope).
+- **Hard Constraint B — No paid-API spend.** Sub-item (b) boundary-not-overflow test uses mocked callClaude (replay-only; explicit anti-precedent cite of `agentRealClientSmoke.test.ts skipIf(!HAS_KEY)` — sub-item (b) test runs unconditionally with mocked callClaude); sub-item (a) `journalEntryService.get` coverage uses existing fixture/mock patterns (`buildServiceContext` mock + `adminClient` direct DB setup; no Anthropic API call). If any sub-item drifts toward paid-API surface during execution, halt and surface for operator decision (Phase 2 paid-API budget pre-allocation territory; not S31 scope).
 - **Hard Constraint C — Sub-item (d) PII naming-asymmetry honest encoding.** Test must encode the substrate-coherent existing pattern: `audit_log.before_state` redacts `PII_FIELDS = ['invited_email', 'phone', 'first_name', 'last_name', 'display_name']` recursively (post-S28 depth-8 + warn-and-continue); pino `REDACT_CONFIG.paths` redacts `*.email`/`*.phone`/`*.first_name`/`*.last_name`/`*.display_name` at single-level only (post-S28; multi-level deferred to Phase 2 per S28 closeout NOTE category iv). Test asserts both layers; documents the asymmetry in test-file header as load-bearing-substrate not bug. NO remediation of the asymmetry at S31 (Phase 2 consolidated obligation).
 - **Hard Constraint D — No schema changes.** S31 is test-additions only. No migration files. No type regeneration. No service-layer behavior changes (the post-S29a + S29b + S28 + S30 substrate is the test target).
-- **Hard Constraint E — Y2 commit shape (single bundled by default).** Y2 split available if Commit 1 net diff > 400 lines OR if any sub-item surfaces (γ)-rhythm scope-amend > 50 lines of pre-existing-test rewrite (substrate-fidelity-gate firing at execution cadence; would advance (γ)-rhythm scope-amend codification candidate from N=2 to N=3, graduating). Operator's call at execution; brief encodes guidance not fixed split.
+- **Hard Constraint E — Y2 commit shape (single bundled by default).** Y2 split available if Commit 1 net diff > 200 lines (lower threshold than original 400 since post-amendment surface is materially smaller; ~3 new test files + 2 substrate-record NOTE entries + 1 friction-journal NOTE; estimated ~150-200 lines total) OR if any sub-item's coverage-sufficiency-verification surfaces a substrate-real gap requiring scope-expansion in-flight (substrate-fidelity-gate firing at execution cadence; would advance (γ)-rhythm scope-amend codification candidate from N=2 to N=3, graduating). Operator's call at execution; brief encodes guidance not fixed split.
+- **Hard Constraint F — Post-amendment substrate-discipline.** Sub-items (c) + (e) coverage-sufficiency-verification produces substrate-record (NOTE entry) at S31 execution closeout; does NOT silently expand to fresh-test-creation if existing-test-coverage holds. Halt-and-surface to operator if a substrate-real gap surfaces during sufficiency-verification; do NOT scope-creep into in-flight test-creation without operator ratification. Per AMENDMENT 7's pre-flight delta-inventory pattern propagation; honors substrate-honest scope at execution.
 - **No SHA self-reference** in commit body or NOTE body per S29a element #1 + S28 closeout fix-forward precedent.
 - **Convention #8 verify-directly discipline.** Every cited file/line/anchor was grep-confirmed at brief-creation pre-flight against HEAD `7774d25`. Re-verify at execution time before edit; halt on any drift. Carry-forward category v line-cite drift (per S28 closeout NOTE) is illustrative-of-known-drift, not load-bearing claims.
 - **Grep-stable anchors locked.**
@@ -73,19 +74,37 @@
 
 ---
 
+## Pre-flight delta inventory (substrate-grounded reference at HEAD `9b093f1`)
+
+Per the codified discipline (substrate-fidelity-gate, graduated S30 N=∞; pre-flight delta-inventory pattern as brief-creation discipline propagated at S31 re-anchor per Read-completeness-threshold N=3 graduation):
+
+- **pre-1: Sub-item (e) period-lock date-range — CA-27 substrate-coverage.** `tests/integration/journalEntryPeriodDateRange.test.ts` (CA-27) at HEAD `7774d25` covers all 3 cases the original brief specified (before-start rejection + after-end rejection + in-range success) plus DB-trigger coverage and on-boundary inclusivity. Already uses Soft 9 natural-key pattern. Substrate-substantially duplicate; reframe to coverage-sufficiency-verification per AMENDMENT 5.
+
+- **pre-2: Sub-item (c) cross-org account — CA-28 substrate-coverage.** `tests/integration/journalLinesCrossOrgAccount.test.ts` (CA-28) at HEAD covers cross-org account contamination via FK trigger; `chartOfAccountsServiceCrossOrg.test.ts` covers service-layer. Substrate-substantially duplicate; reframe to coverage-sufficiency-verification per AMENDMENT 3.
+
+- **pre-3: Sub-item (a) agent confirm/reject — CA-61 substrate-coverage.** `tests/integration/apiAgentConfirmIdempotent.test.ts` (CA-61) at HEAD covers full path→service→RPC composition through agent confirm flow. The narrow real gap is `journalEntryService.get` post-S29b-wrapped coverage (S29b pre-flight pre-5 finding). Substrate-partially-redundant; narrow per AMENDMENT 1.
+
+- **pre-4: Sub-item (d) audit-log PII — CA-15 substrate-coverage.** `tests/integration/userProfileAudit.test.ts` (CA-15) at HEAD covers integration-level flat-PII redaction end-to-end via `userProfileService.updateProfile`. Real residual gap is post-S28 nested-PII recursion at integration level (unit-level coverage at `recordMutationPiiRedaction.test.ts` exists). Substrate-partially-redundant; narrow per AMENDMENT 4.
+
+- **pre-5: Sub-item (b) saturation curve — orchestrator-substrate-gap.** `src/agent/orchestrator/index.ts` main-loop step 5 comment explicitly says "Conversation truncation — full history" — meaning NO truncation/rotation logic at HEAD. Original brief's "test codebase truncation/rotation behavior at turn counts 8/16/24/32" has no substrate to exercise. Reframe to boundary-not-overflow per AMENDMENT 2.
+
+**Pre-flight delta-inventory pattern propagation:** this section's existence as a brief-creation discipline is itself a Read-completeness-threshold N=3 graduation outcome. Future briefs that produce substrate-claims about test-coverage-gaps OR existing-implementation-shapes carry a pre-flight delta-inventory section enumerating substrate-vs-brief-framing gaps. Sibling-shape to S30's pre-flight delta-inventory section. Codification graduates at this S31 re-anchor; codification-fire element captured at S31 execution closeout NOTE per (re-anchor-1-α)-style precedent (re-anchor commits don't carry codification-firing elements; defer to next execution closeout).
+
+---
+
 ## Pre-decisions enumerated
 
 What's decided at brief-write per operator-delegated recommendation at brief-creation pre-flight (do not re-litigate at execution time):
 
 1. **(a-α) Test pattern discipline — Soft 9 runtime-lookup-by-natural-key as Hard Constraint A.** Ratified verbatim per arc-summary's pre-decision (a) framing. Account-balance-touching tests use natural-key lookups (account_code + org_id); no hardcoded UUIDs. Honors Soft 9 precedent at S19 commit `13e11f7`; sibling pattern to `obligations.md` §6's `accountLedgerService` running-balance fragility (Phase 2; do NOT replicate shape).
 
-2. **(b-α) Saturation curve — simulated/replayed (free).** Fixture-based conversation history at turn counts up to 32; tests codebase truncation/rotation behavior, not model-side behavior under saturation. Saves $10-30 per run; preserves zero-paid-API-spend posture for S31. Live API saturation curve characterization for product reasons (model behavior under load) is Phase 2 obligation requiring paid-API budget pre-allocation; out of S31 scope.
+2. **(b-α) Boundary-not-overflow — mocked callClaude (free); REFRAMED per AMENDMENT 2.** Original arc-summary framing was "saturation curve characterization" testing truncation/rotation behavior at turn counts 8/16/24/32. Substrate at HEAD shows orchestrator main-loop step 5 has NO truncation/rotation logic ("Conversation truncation — full history"); testing truncation behavior tests behavior that doesn't exist. Substrate-honest reframe: boundary-not-overflow test verifies orchestrator handles 32-turn full-history without breaking; mocked callClaude per pre-decision (b-α). Saves $10-30 per run; preserves zero-paid-API-spend posture for S31. Live-API saturation curve characterization for product reasons (model behavior under load) is Phase 2 obligation requiring paid-API budget pre-allocation; out of S31 scope.
 
-3. **(c-α) Sub-item ordering — all five independent under (b-α) decision.** Default execution order: (e) period-lock → (c) cross-org account → (d) audit-log PII → (b) saturation curve → (a) agent confirm/reject. Rationale: complexity-ascending; cheapest/most-isolated first; agent-flow last in case it surfaces orthogonal substrate (e.g., reactivate-route bug fixture-touching; S30 closeout element 12 carry-forward).
+3. **(c-α) Sub-item ordering — all five independent under (b-α) decision.** Default execution order (post-re-anchor): (e) coverage-sufficiency-verification (CA-27) → (c) coverage-sufficiency-verification (CA-28 + chartOfAccountsServiceCrossOrg) → (d) nested-PII integration → (b) boundary-not-overflow → (a) `journalEntryService.get` coverage. Rationale: substrate-record-only sub-items first (cheap; no test-creation surface); test-creation sub-items second (complexity-ascending); narrow service-test last (smallest substrate surface; carry-forward for reactivate-route bug fixture-touching avoidance per S30 closeout element 12 carry-forward).
 
 4. **(d-α) Y2 split-trigger threshold — net diff > 400 lines OR (γ)-rhythm scope-amend > 50 lines of pre-existing-test rewrite.** Operator confirms at execution time; brief encodes guidance not fixed split. The 400-line threshold = roughly 5 sub-items × ~80 lines each; below that, single-commit Y2 is the default. (γ)-rhythm scope-amend trigger advances the codification candidate from N=2 to N=3 (graduates per Documentation Routing convention's N=3 threshold) if firings surface at execution cadence.
 
-5. **Estimated session duration: ~2-3 days** (largest Path C item per arc-summary). Task 0 substrate-confirm (~30 min) + sub-item (e) period-lock (~3 hours) + sub-item (c) cross-org account (~3 hours) + sub-item (d) audit-log PII (~3 hours; encodes naming-asymmetry honestly) + sub-item (b) saturation curve (~4 hours; fixture-based but new test surface from scratch) + sub-item (a) agent confirm/reject integration (~5 hours; closes journalEntryService.get test coverage gap; full path→service→RPC composition) + full-suite regression (~30 min) + friction-journal NOTE drafting (~1 hour) + review buffer.
+5. **Estimated session duration: ~5 hours** (post-re-anchor substrate-honest scope; original 2-3 days framing was substrate-stale per pre-flight delta inventory). Task 0 substrate-confirm (~30 min) + AMENDMENT 5 sub-item (e) coverage-sufficiency-verification (~30 min — substrate-confirm CA-27 + draft NOTE entry) + AMENDMENT 3 sub-item (c) coverage-sufficiency-verification (~30 min — substrate-confirm CA-28 + chartOfAccountsServiceCrossOrg + draft NOTE entry) + AMENDMENT 4 sub-item (d) nested-PII integration test (~1 hour) + AMENDMENT 2 sub-item (b) boundary-not-overflow test (~2 hours; new test surface with mocked callClaude fixture) + AMENDMENT 1 sub-item (a) journalEntryService.get coverage (~1 hour — narrow scope) + full-suite regression (~30 min) + friction-journal NOTE drafting (~30 min) + review buffer. **3 NEW test files** (sub-items a/b/d) + **2 substrate-record NOTE entries** (sub-items c/e) at S31 scope.
 
 OPEN — operator to resolve before / during S31 execution: _none ratified at brief-creation_. All four arc-summary pre-decisions ratified to (a-α) / (b-α) / (c-α) / (d-α) at brief-creation per substrate-grounded analysis.
 
@@ -95,11 +114,11 @@ OPEN — operator to resolve before / during S31 execution: _none ratified at br
 
 | ID | UF | Target file(s) | Done when | Test evidence required | Harness gate |
 |---|---|---|---|---|---|
-| S31-LT-02-a | UF-013 (test coverage) | `tests/integration/apiAgentConfirmFullFlow.test.ts` (NEW; or shape-equivalent name) | Test exercises full path→service→RPC composition: agent confirm endpoint receives a dry-run journal-entry-handle; route handler calls `journalEntryService.post` (post-S29a wrapped); RPC `write_journal_entry_atomic` invoked; audit_log row written; full transaction commits. Closes journalEntryService.get test coverage gap (S29b pre-flight pre-5) by exercising .get post-confirm to verify the returned shape. | New test file passes; agent:validate 26/26 unchanged. | Gate 5: LT-02a-confirm-reject-routes |
-| S31-LT-02-b | UF-013 (test coverage) | `tests/integration/agentSaturationCurve.test.ts` (NEW) | Test fixtures synthetic conversation history at turn counts 8/16/24/32; injects via `agent_sessions.conversation` JSONB column; invokes orchestrator's truncation/rotation logic via direct entry-point or simulated handleUserMessage; asserts truncation behavior at each turn count. Per pre-decision (b-α): NO live Anthropic API call; replay shape only. | New test file passes; full-suite green; pnpm test agentSaturationCurve clean. | Gate 5: LT-02b-saturation-curve |
-| S31-LT-02-c | UF-013 (test coverage) | `tests/integration/crossOrgAccountContamination.test.ts` (NEW) | Test posts journal entry in org A referencing an account UUID from org B; verify rejection via S26 QW-05 cross-org trigger (PostgreSQL-level; bubbles up to ServiceError). Hard Constraint A applies: account UUIDs looked up at fixture-setup via account_code + org_id natural key. | New test file passes; full-suite green. | Gate 5: LT-02c-cross-org-account |
-| S31-LT-02-d | UF-010 (audit_log PII surface) + UF-013 | `tests/integration/auditLogPiiRedactionEndToEnd.test.ts` (NEW) | Test invokes a service mutation (e.g., invitationService.inviteUser or a simpler one) carrying PII in before_state (flat + nested at depth 4); reads the resulting audit_log row directly via adminClient; asserts PII_FIELDS-redacted recursively. Encodes Hard Constraint C honest naming-asymmetry: tests audit_log.before_state for `invited_email` redaction (in PII_FIELDS) but does NOT test for `email` redaction (NOT in PII_FIELDS; documents the asymmetry as Phase 2 obligation per S28 closeout NOTE category iv). | New test file passes; full-suite green; pnpm test auditLogPiiRedaction clean. | Gate 5: LT-02d-audit-log-pii |
-| S31-LT-02-e | UF-013 + period-lock surface | `tests/integration/periodLockDateRangeRejection.test.ts` (NEW) | Test posts journal entry with entry_date BEFORE period.start_date; verify rejection. Posts journal entry with entry_date AFTER period.end_date; verify rejection. Posts journal entry with entry_date INSIDE range; verify success. Exercises S26 QW-03 rejection path. Sibling-shape to `lockedPeriodRejection` (which covers locked-status, not date-range). | New test file passes; full-suite green. | Gate 5: LT-02e-period-lock-date-range |
+| S31-LT-02-a | UF-013 (test coverage) | `tests/integration/journalEntryServiceGet.test.ts` (NEW; or shape-equivalent name) | `journalEntryService.get` post-S29b-wrapped coverage gap closed via new test exercising same-org / cross-org / not-found cases. Closes S29b pre-flight pre-5 finding. Out-of-scope removal: full path→service→RPC integration (CA-61 already covers); reactivate-route fixture-touching (orthogonal carry-forward per S30 NOTE element 12). | 3 cases pass: (i) get with same-org returns expected JournalEntryDetail shape; (ii) get with cross-org returns ServiceError('NOT_FOUND') per existence-leak-prevention contract; (iii) get with non-existent UUID returns ServiceError('NOT_FOUND'). | Gate 5: LT-02a-confirm-reject-routes |
+| S31-LT-02-b | UF-013 (test coverage) | `tests/integration/agentConversationLengthBoundary.test.ts` (NEW) | Boundary-not-overflow test verifies orchestrator handles 32-turn full-history without breaking; mocked callClaude per pre-decision (b-α). Substrate-honest reframe per AMENDMENT 2: orchestrator main-loop step 5 has NO truncation/rotation logic at HEAD ("Conversation truncation — full history"); test pins current "no truncation" architectural state as boundary-condition regression-guard. | Test fixtures synthetic 32-turn conversation; persists via `agent_sessions.conversation` JSONB; loads via loadOrCreateSession; asserts handleUserMessage signature accepts loaded session without throwing; mocked callClaude receives full conversation array. NO live Anthropic API call. | Gate 5: LT-02b-saturation-curve |
+| S31-LT-02-c | UF-013 (test coverage) | (coverage-sufficiency-verification of CA-28 + chartOfAccountsServiceCrossOrg; no new test file) | Substrate-record NOTE entry produced at S31 execution closeout naming `tests/integration/journalLinesCrossOrgAccount.test.ts` (CA-28) + `tests/integration/chartOfAccountsServiceCrossOrg.test.ts` as the LT-02(c) closure with substrate-cite. No new test file at S31 scope. If gap surfaces during sufficiency-verification, halt-and-surface to operator per Hard Constraint F. | Substrate-record NOTE entry; CA-28 + chartOfAccountsServiceCrossOrg substrate-confirmed via grep + read at execution Task entry. | Gate 5: LT-02c-cross-org-account |
+| S31-LT-02-d | UF-010 (audit_log PII surface) + UF-013 | `tests/integration/auditLogNestedPiiRedaction.test.ts` (NEW) | Nested-PII integration test verifies post-S28 redactPii recursive depth-N at integration level; flat-PII deferred to CA-15 (`userProfileAudit.test.ts`) existing coverage; naming-asymmetry honest encoding preserved per Hard Constraint C. Out-of-scope removal: flat-PII integration coverage (CA-15 already covers); pino-side single-level test (orthogonal layer; Phase 2 multi-level remediation tracks naming-asymmetry honest encoding). | Test invokes service mutation OR synthetic recordMutation call carrying nested PII at depth 4 (e.g., `{ a: { b: { c: { invited_email: 'leak@example.com', phone: '555-1212' } } } }`); reads audit_log row via adminClient; asserts PII_FIELDS members redacted recursively per post-S28 redactPii depth-8 traversal; documents naming-asymmetry as load-bearing-substrate per S28 closeout NOTE category iv. | Gate 5: LT-02d-audit-log-pii |
+| S31-LT-02-e | UF-013 + period-lock surface | (coverage-sufficiency-verification of CA-27; no new test file) | Substrate-record NOTE entry produced at S31 execution closeout naming `tests/integration/journalEntryPeriodDateRange.test.ts` (CA-27) as the LT-02(e) closure with substrate-cite. CA-27 covers all 3 cases the original brief specified plus DB-trigger coverage and on-boundary inclusivity; uses Soft 9 natural-key pattern. No new test file at S31 scope. If gap surfaces during sufficiency-verification, halt-and-surface to operator per Hard Constraint F. | Substrate-record NOTE entry; CA-27 substrate-confirmed via grep + read at execution Task entry. | Gate 5: LT-02e-period-lock-date-range |
 
 ---
 
@@ -182,135 +201,133 @@ If any sub-shape surfaces drift beyond expectations, halt and surface for substr
 
 ---
 
-## Task 3: Sub-item (e) — period-lock date-range rejection
+## Task 3: Sub-item (e) — coverage-sufficiency-verification of CA-27 (REFRAMED per AMENDMENT 5)
 
-- [ ] **Step 1: Read existing `lockedPeriodRejection.test.ts` for fixture pattern**
+- [ ] **Step 1: Read existing `lockedPeriodRejection.test.ts` + CA-27 (`journalEntryPeriodDateRange.test.ts`) for substrate context**
 
-Existing test covers locked-status rejection. Sub-item (e) sibling-shape covers date-range-out-of-window.
+`lockedPeriodRejection` covers locked-status rejection. CA-27 sibling-test covers date-range-out-of-window. Per AMENDMENT 5 / pre-flight pre-1: CA-27 substantively closes LT-02(e) at HEAD — coverage-sufficiency-verification is the substrate-honest scope at S31.
 
-- [ ] **Step 2: Create `tests/integration/periodLockDateRangeRejection.test.ts`**
+- [ ] **Step 2: Substrate-confirm CA-27 coverage sufficiency (per AMENDMENT 5)**
 
-Three test cases:
-- (i) Post entry with `entry_date` before `period.start_date` → expect rejection (S26 QW-03 trigger).
-- (ii) Post entry with `entry_date` after `period.end_date` → expect rejection.
-- (iii) Post entry with `entry_date` inside range → expect success.
+```bash
+ls -la tests/integration/journalEntryPeriodDateRange.test.ts
+grep -nE "before.*period|after.*period|in.*range|on.*boundary" tests/integration/journalEntryPeriodDateRange.test.ts | head -10
+```
 
-Hard Constraint A: account IDs looked up via natural-key (account_code + org_id) at fixture-setup; no hardcoded UUIDs.
+Expected: file exists; CA-27 covers all 3 cases (before-start rejection + after-end rejection + in-range success) plus DB-trigger coverage and on-boundary inclusivity. Uses Soft 9 natural-key pattern via chart_of_accounts lookup at fixture-setup. Per Hard Constraint F: if sufficiency-verification surfaces a substrate-real gap (e.g., agent-route-handler integration not covered), HALT-and-surface to operator; do NOT scope-creep into in-flight test-creation without operator ratification.
+
+- [ ] **Step 3: Draft substrate-record NOTE entry for sub-item (e) closure**
+
+Capture for Task 9 Step 1 friction-journal NOTE: "LT-02(e) closure substantially-covered by CA-27 (`tests/integration/journalEntryPeriodDateRange.test.ts`); coverage-sufficiency-verification ratified at S31 execution (no new test file required at S31 scope; Hard Constraint F preserved)."
+
+NO new test file at S31 scope per AMENDMENT 5. Sub-item (e) closes via substrate-record citation.
+
+---
+
+## Task 4: Sub-item (c) — coverage-sufficiency-verification of CA-28 + chartOfAccountsServiceCrossOrg
+
+- [ ] **Step 1: Substrate-confirm CA-28 + chartOfAccountsServiceCrossOrg coverage sufficiency (per AMENDMENT 3)**
+
+```bash
+ls -la tests/integration/journalLinesCrossOrgAccount.test.ts tests/integration/chartOfAccountsServiceCrossOrg.test.ts
+grep -nE "cross.*org|FK.*trigger|account.*from.*org" tests/integration/journalLinesCrossOrgAccount.test.ts tests/integration/chartOfAccountsServiceCrossOrg.test.ts | head -15
+```
+
+Expected: both files exist; CA-28 covers cross-org account contamination via FK trigger; chartOfAccountsServiceCrossOrg covers service-layer side. Uses Soft 9 natural-key pattern. Per Hard Constraint F: if sufficiency-verification surfaces a substrate-real gap (e.g., service-layer-error-code-mapping not covered), HALT-and-surface to operator; do NOT scope-creep.
+
+- [ ] **Step 2: Draft substrate-record NOTE entry for sub-item (c) closure**
+
+Capture for Task 9 Step 1 friction-journal NOTE: "LT-02(c) closure substantially-covered by CA-28 (`tests/integration/journalLinesCrossOrgAccount.test.ts`) + `tests/integration/chartOfAccountsServiceCrossOrg.test.ts`; coverage-sufficiency-verification ratified at S31 execution (no new test file required at S31 scope; Hard Constraint F preserved)."
+
+NO new test file at S31 scope per AMENDMENT 3. Sub-item (c) closes via substrate-record citation.
+
+---
+
+## Task 5: Sub-item (d) — audit-log nested-PII redaction integration (NARROW per AMENDMENT 4)
+
+- [ ] **Step 1: Read existing `tests/unit/recordMutationPiiRedaction.test.ts` (post-S28) + `tests/integration/userProfileAudit.test.ts` (CA-15)**
+
+recordMutationPiiRedaction.test.ts has 13 unit-level cases covering flat + nested + array + depth-limit. CA-15 covers integration-level FLAT-PII redaction end-to-end via `userProfileService.updateProfile`. Sub-item (d) at AMENDMENT 4 narrow scope is the integration-level NESTED-PII complement (CA-15 already covers flat).
+
+- [ ] **Step 2: Create `tests/integration/auditLogNestedPiiRedaction.test.ts`**
+
+Test cases (NARROW per AMENDMENT 4):
+- (i) Invoke a service mutation OR construct a synthetic recordMutation call carrying NESTED PII at depth 4 (e.g., `{ a: { b: { c: { invited_email: 'leak@example.com', phone: '555-1212' } } } }`). Read resulting audit_log row via adminClient. Assert PII_FIELDS members redacted recursively per post-S28 redactPii depth-8 traversal.
+- (ii) **Naming-asymmetry honest encoding (Hard Constraint C):** document the asymmetry in the test-file header as load-bearing-substrate per S28 closeout NOTE category iv. Audit-log redacts `invited_email` recursively (in PII_FIELDS); pino paths redact `*.email` at depth-1 only; multi-level pino is Phase 2 consolidated obligation. Test does NOT assert pino-side redaction (orthogonal layer; Phase 2 territory).
+
+Out-of-scope removal per AMENDMENT 4: flat-PII integration coverage (CA-15 already covers); pino-side single-level test (orthogonal layer; Phase 2 multi-level remediation tracks naming-asymmetry honest encoding).
 
 - [ ] **Step 3: Run new test file**
 
 ```bash
-pnpm test periodLockDateRangeRejection 2>&1 | tail -10
+pnpm test auditLogNestedPiiRedaction 2>&1 | tail -10
+```
+
+Expected: all cases green; nested redaction at depth 4 fires; naming-asymmetry preserved as load-bearing-substrate per Hard Constraint C.
+
+---
+
+## Task 6: Sub-item (b) — agent conversation length boundary-not-overflow (REFRAMED per AMENDMENT 2)
+
+- [ ] **Step 1: Substrate-confirm orchestrator's full-history pass-through**
+
+```bash
+grep -nE "Conversation truncation|full history|callClaude|conversation.*array" src/agent/orchestrator/index.ts | head -10
+```
+
+Expected: orchestrator main-loop step 5 comment confirms "Conversation truncation — full history" (NO truncation/rotation logic at HEAD). Capture the callClaude invocation entry-point — that's the layer the boundary-not-overflow test exercises (mocked).
+
+- [ ] **Step 2: Create `tests/integration/agentConversationLengthBoundary.test.ts`**
+
+Test cases (REFRAMED per AMENDMENT 2 — boundary-not-overflow, not saturation-curve):
+- (i) Construct a 32-turn synthetic conversation history (alternating user/assistant; ~500 chars per turn).
+- (ii) Persist via `agent_sessions.conversation` JSONB column.
+- (iii) Load session via `loadOrCreateSession`.
+- (iv) Mock callClaude to capture the conversation array passed in; assert handleUserMessage signature accepts the loaded session without throwing on conversation-length boundaries.
+- (v) Assert mocked callClaude received the full 32-turn conversation array (full-history pass-through; no truncation at HEAD).
+
+Substrate-honest framing: this test pins the current "no truncation" architectural state as a boundary-condition regression-guard. When Phase 2 ships truncation infrastructure, this test inverts to truncation-curve characterization OR is replaced with truncation-explicit tests.
+
+NO live Anthropic API call per pre-decision (b-α). Mocked callClaude replay-only; explicit cite of `agentRealClientSmoke.test.ts skipIf(!HAS_KEY)` as anti-precedent (test runs unconditionally).
+
+- [ ] **Step 3: Run new test file**
+
+```bash
+pnpm test agentConversationLengthBoundary 2>&1 | tail -10
+```
+
+Expected: all cases green.
+
+---
+
+## Task 7: Sub-item (a) — `journalEntryService.get` post-S29b-wrapped coverage (NARROW per AMENDMENT 1)
+
+- [ ] **Step 1: Substrate-confirm post-S29b-wrapped `journalEntryService.get` shape**
+
+```bash
+grep -nE "get: withInvariants\(get\)|^async function get\b" src/services/accounting/journalEntryService.ts | head -5
+```
+
+Expected: `get: withInvariants(get)` at export site (post-S29b); `async function get(input: { org_id: string; journal_entry_id: string }, ctx)` at function declaration. Verify input shape matches AMENDMENT 1's expectation.
+
+- [ ] **Step 2: Create `tests/integration/journalEntryServiceGet.test.ts`**
+
+Test cases (NARROW per AMENDMENT 1; closes S29b pre-flight pre-5 finding):
+- (i) `get` with same-org caller + valid journal_entry_id: returns expected `JournalEntryDetail` shape (org_id matches, lines populated, reversed_by/reverses fields populated correctly).
+- (ii) `get` with cross-org caller (caller has org_ids = [org_A]; journal_entry_id belongs to org_B): returns `ServiceError('NOT_FOUND')` per existence-leak-prevention contract.
+- (iii) `get` with non-existent UUID: returns `ServiceError('NOT_FOUND')`.
+
+Hard Constraint A: account IDs via natural-key (account_code + org_id) at fixture-setup if any line-fixture references touch chart_of_accounts.
+
+Out-of-scope removal per AMENDMENT 1: full path→service→RPC integration (CA-61 already covers); reactivate-route fixture-touching (orthogonal carry-forward per S30 NOTE element 12; sub-item (a) narrow scope at AMENDMENT 1 doesn't fixture-touch membership routes).
+
+- [ ] **Step 3: Run new test file**
+
+```bash
+pnpm test journalEntryServiceGet 2>&1 | tail -10
 ```
 
 Expected: 3/3 green.
-
----
-
-## Task 4: Sub-item (c) — cross-org account contamination
-
-- [ ] **Step 1: Read existing `chartOfAccountsServiceCrossOrg.test.ts` + `journalLinesCrossOrgAccount.test.ts` for fixture patterns**
-
-These cover the account-side cross-org checks. Sub-item (c) closes the journal-entry-line-account-FK-cross-org gap end-to-end.
-
-- [ ] **Step 2: Create `tests/integration/crossOrgAccountContamination.test.ts`**
-
-Test case: post a journal entry in org A whose line references an account UUID from org B. Account UUIDs looked up at fixture-setup via natural-key (org_id + account_code). Expect rejection via the database-level cross-org trigger (S26 QW-05). Bubble-up should surface as ServiceError.
-
-Hard Constraint A applies.
-
-- [ ] **Step 3: Run new test file**
-
-```bash
-pnpm test crossOrgAccountContamination 2>&1 | tail -10
-```
-
-Expected: green.
-
----
-
-## Task 5: Sub-item (d) — audit-log PII redaction end-to-end
-
-- [ ] **Step 1: Read existing `tests/unit/recordMutationPiiRedaction.test.ts` (post-S28)**
-
-13 unit-level cases covering flat + nested + array + depth-limit. Sub-item (d) is the integration-level complement: end-to-end through a real recordMutation call writing to the audit_log table.
-
-- [ ] **Step 2: Create `tests/integration/auditLogPiiRedactionEndToEnd.test.ts`**
-
-Test cases:
-- (i) Invoke a service mutation that calls recordMutation with PII in before_state (e.g., invitationService.inviteUser or revokeInvitation). Read the resulting audit_log row via adminClient. Assert before_state has PII_FIELDS redacted.
-- (ii) Invoke a service mutation with NESTED PII at depth 4 (e.g., synthesize a before_state with `{ a: { b: { c: { invited_email: 'leak@example.com' } } } }` if the codebase has a mutation that captures complex nested before_state; otherwise construct a synthetic test that exercises the recursive redaction via a custom recordMutation call). Assert nested PII redacted recursively.
-- (iii) **Naming-asymmetry honest encoding (Hard Constraint C):** Test that `email` field is NOT redacted (NOT in PII_FIELDS); document this assertion in the test-file header as Phase 2 obligation per S28 closeout NOTE category iv. Same for pino-side: assert `*.email` redacts at single-level only (depth 1) — multi-level pino redaction is Phase 2.
-
-The (iii) test is INTENTIONAL substrate-honesty: it pins the current asymmetry as a regression-guard. When Phase 2 closes the consolidated PII obligation, the test inverts to positive.
-
-- [ ] **Step 3: Run new test file**
-
-```bash
-pnpm test auditLogPiiRedactionEndToEnd 2>&1 | tail -10
-```
-
-Expected: all cases green; the naming-asymmetry assertion passes (substrate-coherent existing pattern).
-
----
-
-## Task 6: Sub-item (b) — conversation saturation curve
-
-- [ ] **Step 1: Substrate-grep orchestrator's truncation/rotation entry-point**
-
-```bash
-grep -nE "truncate|rotate|conversation.*length|context.*window" src/agent/orchestrator/index.ts | head -10
-```
-
-Capture the truncation/rotation logic location; saturation curve test fixtures conversation history through this layer.
-
-- [ ] **Step 2: Create `tests/integration/agentSaturationCurve.test.ts`**
-
-Test cases at turn counts 8 / 16 / 24 / 32:
-- (i) Construct synthetic conversation history (alternating user/assistant turns; each turn ~500 chars to stay below tokens-per-turn realism).
-- (ii) Persist via `agent_sessions.conversation` JSONB or pass directly to the truncation entry-point (substrate-decide at execution).
-- (iii) Invoke truncation/rotation; assert truncation behavior matches expected (e.g., oldest-turns-first dropped; system-message preserved; MT-04 cross-turn caching hooks fire if any).
-
-NO live Anthropic API call per pre-decision (b-α). Replay-only.
-
-- [ ] **Step 3: Run new test file**
-
-```bash
-pnpm test agentSaturationCurve 2>&1 | tail -10
-```
-
-Expected: all cases green.
-
----
-
-## Task 7: Sub-item (a) — agent confirm/reject full-flow integration
-
-- [ ] **Step 1: Read existing `apiAgentConfirm*` tests for fixture/mock pattern**
-
-Existing tests cover endpoint-level behaviors via `vi.mock('@/services/middleware/serviceContext', ...)` + `adminClient` direct DB setup. The LT-02(a) gap is the FULL agent flow: dry_run write → confirm endpoint → service layer → RPC → audit_log.
-
-- [ ] **Step 2: Create `tests/integration/apiAgentConfirmFullFlow.test.ts`**
-
-Test case: full path→service→RPC composition.
-- Dry-run a journal-entry post (writes to ai_actions with dry_run=true).
-- POST /api/agent/confirm with the dry-run handle.
-- Assert: 200 response; journal_entries row written; audit_log row written; full transaction committed.
-- Re-call confirm; assert idempotency (existing `apiAgentConfirmIdempotent` precedent).
-- ALSO: post-confirm, call `journalEntryService.get({ org_id, journal_entry_id })` (post-S29b wrapped) to verify the returned shape closes the journalEntryService.get test coverage gap (S29b pre-flight pre-5).
-
-Hard Constraint A: account IDs via natural-key.
-
-- [ ] **Step 3: Substrate-bug awareness check**
-
-The reactivate-route action-string substrate-bug (S30 closeout NOTE element 12) is at `src/app/api/orgs/[orgId]/users/[userId]/reactivate/route.ts:23` (action: 'user.suspend' instead of 'user.reactivate'). If this test fixture-touches the membership-service routes (unlikely for sub-item (a)'s confirm-flow scope), the bug carries forward; do NOT fix it at S31 (separate session).
-
-- [ ] **Step 4: Run new test file**
-
-```bash
-pnpm test apiAgentConfirmFullFlow 2>&1 | tail -10
-```
-
-Expected: all cases green.
 
 ---
 
@@ -392,32 +409,30 @@ Per S29a element #1 + S28 closeout fix-forward precedent: NO SHA self-reference 
 - [ ] **Step 2: Stage all changes**
 
 ```bash
-git add tests/integration/periodLockDateRangeRejection.test.ts \
-        tests/integration/crossOrgAccountContamination.test.ts \
-        tests/integration/auditLogPiiRedactionEndToEnd.test.ts \
-        tests/integration/agentSaturationCurve.test.ts \
-        tests/integration/apiAgentConfirmFullFlow.test.ts \
+git add tests/integration/journalEntryServiceGet.test.ts \
+        tests/integration/agentConversationLengthBoundary.test.ts \
+        tests/integration/auditLogNestedPiiRedaction.test.ts \
         docs/07_governance/friction-journal.md
 git status --short
 ```
 
-Expected: 6 files staged (5 new test files + friction-journal). No untracked files outside this set.
+Expected: 4 files staged (3 new test files for sub-items a/b/d + friction-journal NOTE containing sub-items c/e substrate-record entries). No untracked files outside this set.
 
-If Y2-split applies (per pre-decision (d-α) threshold), stage Commit 1 = test additions only; Commit 2 = friction-journal NOTE only.
+Per AMENDMENT 6's revised threshold (Hard Constraint E): Y2-split available if Commit 1 net diff > 200 lines OR if any sub-item's coverage-sufficiency-verification surfaced a substrate-real gap requiring scope-expansion (substrate-fidelity-gate firing at execution cadence; (γ)-rhythm scope-amend candidate advances N=2 → N=3 graduating). Operator's call at execution.
 
 - [ ] **Step 3: Commit**
 
 Subject (under 70 chars): `test(coverage): S31 LT-02 closure across five sub-items (Path C arc close)`
 
-Body covers:
-- Sub-item (a) closure: agent confirm/reject full-flow integration.
-- Sub-item (b) closure: saturation curve simulated/replayed (zero paid-API spend per pre-decision (b-α)).
-- Sub-item (c) closure: cross-org account contamination via Hard Constraint A natural-key pattern.
-- Sub-item (d) closure: audit-log PII redaction end-to-end with naming-asymmetry honest encoding (Phase 2 obligation per S28 closeout NOTE category iv).
-- Sub-item (e) closure: period-lock date-range enforcement (3 cases).
+Body covers (post-re-anchor scope per AMENDMENTS 1-5):
+- Sub-item (a) closure: `journalEntryService.get` post-S29b-wrapped coverage gap closed via `tests/integration/journalEntryServiceGet.test.ts` (NEW; 3 cases: same-org / cross-org / not-found). Closes S29b pre-flight pre-5.
+- Sub-item (b) closure: `tests/integration/agentConversationLengthBoundary.test.ts` (NEW) — boundary-not-overflow at 32-turn full-history; mocked callClaude per pre-decision (b-α); zero paid-API spend.
+- Sub-item (c) closure: coverage-sufficiency-verification of CA-28 + chartOfAccountsServiceCrossOrg; substrate-record NOTE entry. No new test file at S31 scope per AMENDMENT 3.
+- Sub-item (d) closure: nested-PII integration test at `tests/integration/auditLogNestedPiiRedaction.test.ts` (NEW); flat-PII deferred to CA-15; naming-asymmetry honest encoding preserved (Phase 2 obligation per S28 closeout NOTE category iv).
+- Sub-item (e) closure: coverage-sufficiency-verification of CA-27; substrate-record NOTE entry. No new test file at S31 scope per AMENDMENT 5.
 - Path C arc Gate 5 closed; all five gates green at this commit; Phase 2 surface expansion unblocks.
 - UF-013 + UF-014 (test-coverage facets) + UF-010 (audit_log surface end-to-end) closed.
-- Y2 commit shape: single bundled (default) OR Y2-split (per pre-decision (d-α) at execution).
+- Y2 commit shape: single bundled (default; ~150-200 line target post-re-anchor) OR Y2-split (per Hard Constraint E threshold > 200 lines or coverage-sufficiency-verification scope-expansion).
 - No SHA self-reference per S29a element #1 + S28 closeout fix-forward precedent.
 
 Do NOT include `Co-Authored-By` unless operator-confirmed at closeout.
@@ -462,12 +477,12 @@ Single message summarizing:
 
 This brief's exit-criteria map 1:1 to the Path C arc-summary verification harness Gate 5. At S31 closeout, the harness's mechanical checks for Gate 5 should fire green:
 
-**Gate 5: LT-02 test coverage closed (five sub-items)**
-- `LT-02a-confirm-reject-routes` — full agent confirm-flow integration test exists at `tests/integration/apiAgentConfirmFullFlow.test.ts`.
-- `LT-02b-saturation-curve` — saturation curve test exists at `tests/integration/agentSaturationCurve.test.ts`; turn counts 8/16/24/32 covered; simulated/replayed (no paid API).
-- `LT-02c-cross-org-account` — cross-org account contamination test exists at `tests/integration/crossOrgAccountContamination.test.ts`; Hard Constraint A applied.
-- `LT-02d-audit-log-pii` — audit-log PII end-to-end test exists at `tests/integration/auditLogPiiRedactionEndToEnd.test.ts`; naming-asymmetry honest encoding per Hard Constraint C.
-- `LT-02e-period-lock-date-range` — date-range enforcement test exists at `tests/integration/periodLockDateRangeRejection.test.ts`; 3 cases (before/inside/after).
+**Gate 5: LT-02 test coverage closed (five sub-items; post-re-anchor substrate-honest scope)**
+- `LT-02a-confirm-reject-routes` — `journalEntryService.get` post-S29b-wrapped coverage closed at `tests/integration/journalEntryServiceGet.test.ts` (NEW; 3 cases). CA-61 (`apiAgentConfirmIdempotent.test.ts`) substantively covers the original full-flow scope per pre-flight pre-3 / AMENDMENT 1.
+- `LT-02b-saturation-curve` — boundary-not-overflow test exists at `tests/integration/agentConversationLengthBoundary.test.ts` (NEW); 32-turn full-history pass-through verified with mocked callClaude per pre-decision (b-α). Per pre-flight pre-5 / AMENDMENT 2: orchestrator has NO truncation/rotation logic at HEAD; saturation-curve framing reframed to boundary-not-overflow.
+- `LT-02c-cross-org-account` — coverage-sufficiency-verified by CA-28 (`tests/integration/journalLinesCrossOrgAccount.test.ts`) + `tests/integration/chartOfAccountsServiceCrossOrg.test.ts`; substrate-record NOTE entry produced at S31 closeout. Per pre-flight pre-2 / AMENDMENT 3.
+- `LT-02d-audit-log-pii` — nested-PII integration test exists at `tests/integration/auditLogNestedPiiRedaction.test.ts` (NEW); naming-asymmetry honest encoding per Hard Constraint C. CA-15 (`userProfileAudit.test.ts`) substantively covers flat-PII per pre-flight pre-4 / AMENDMENT 4.
+- `LT-02e-period-lock-date-range` — coverage-sufficiency-verified by CA-27 (`tests/integration/journalEntryPeriodDateRange.test.ts`); substrate-record NOTE entry produced at S31 closeout. Per pre-flight pre-1 / AMENDMENT 5.
 
 **All five Path C arc gates at S31 closeout:**
 - Gate 1 (MT-05 audit-emit observability): closed at S28 (`e966f30`).
@@ -484,17 +499,20 @@ Path C arc closes; Phase 2 surface expansion gate unblocks.
 
 Element 1 (LT-02 closure citation + Path C arc closeout) + Element 2 (test pattern discipline outcomes per sub-item) + Element 3 (sub-findings i-viii per Task 9 Step 1) per the brief's NOTE plan.
 
-Codification candidates ledger at S31 brief-creation:
-- Substrate-fidelity-gate (graduated S30 N=∞; continuing-firings at brief-creation pre-flight cadence at S31)
+Codification candidates ledger at S31 re-anchor (per AMENDMENT 8):
+- Substrate-fidelity-gate (graduated S30 N=∞; continuing-firings at brief-creation pre-flight cadence at S31 re-anchor; at lock-acquisition cadence; at re-anchor cadence)
 - Resolved-decision-citation as contract (graduated S30 N=3)
 - Orphan-reference-review at edit-completion (graduated S28 re-anchor N=3)
-- Reconciliation-scope-derivation as substrate-completeness gate (graduated S29b parent-shape N=3; codification-fire element captured at S29b execution closeout)
-- (γ)-rhythm scope-amend (N=2; graduates if S31 sub-item surfaces > 50 lines of pre-existing-test rewrite per pre-decision (d-α))
-- Read-completeness-threshold (N=2; held)
+- Reconciliation-scope-derivation as substrate-completeness gate (graduated S29b parent-shape N=3 with strict-shape sub-tracking)
+- Read-completeness-threshold (**graduates at S31 re-anchor N=3 under loose-shape parent-shape with strict-shape sub-tracking**: S29 brief-creation partial-pattern-read N=1 + S30 brief-creation Pattern B count drift N=2 + S31 brief-creation existing-tests-not-fully-enumerated N=3; strict-shape distinguishes substrate-honestly-tagged firings (S30) from substrate-untagged-concealed firings (S31). Codification-fire element captured at S31 execution closeout per (re-anchor-1-α)-style precedent.)
+- (γ)-rhythm scope-amend (N=2; held; would advance to N=3 graduation if S31 execution surfaces in-flight scope-amendment per AMENDMENT 6 Hard Constraint E)
 - Library-documentation-vs-integrated-behavior-divergence (N=1)
-- Brief-spec-vs-arc-precedent-substrate-conflict (N=1)
+- Brief-spec-vs-arc-precedent-substrate-conflict (N=1-or-N=2)
 - Existence-leak-prevention-as-error-code-contract (N=1; ratified S29b)
 - Stash-revert isolation (N=2; held)
+- Action-string-substrate-drift (N=1; observation-only — reactivate route bug per S30 NOTE element 12)
+- Pre-flight delta-inventory pattern (NEW codification candidate at N=1; **propagated as brief-creation discipline at S31 re-anchor**; sibling-shape to S30 pre-flight delta-inventory section's source-shape)
+- post-acknowledgment-substrate-skip (NEW codification candidate at N=1; chat-side gap at S31 closeout-summary acknowledgment cadence; observation-only)
 - Action-string-substrate-drift (N=1; observation-only)
 
 ---
