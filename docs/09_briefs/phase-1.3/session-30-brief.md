@@ -7,9 +7,9 @@
 **Architecture (V1 minimal scope):**
 
 - **LT-03 (= LT-01(a)) — adminClient import restriction.** Add `no-restricted-imports` rule to `eslint.config.mjs` blocking `@/db/adminClient` import outside `src/services/`. Mechanizes UF-006's primary surface.
-- **LT-01(b) — withInvariants wrap-or-annotate enforcement.** Custom ESLint rule `services/withInvariants-wrap-or-annotate` that walks `ExportNamedDeclaration → ObjectExpression → Property` in `src/services/**/*.ts` and asserts each property is either (i) wrapped in `withInvariants(...)` or (ii) preceded by canonical-form annotation `// withInvariants: skip-org-check (pattern-X: rationale-string)`. Empty starting allowlist (annotation-default discipline; allowlist reserved for future standing-architectural exemptions). Pattern B/C/E/H sites annotated as part of S30's annotation pass.
+- **LT-01(b) — withInvariants wrap-or-annotate enforcement.** Custom ESLint rule `services/withInvariants-wrap-or-annotate` that walks `ExportNamedDeclaration → ObjectExpression → Property` in `src/services/**/*.ts` and asserts each property is either (i) wrapped in `withInvariants(...)` or (ii) preceded by canonical-form annotation `// withInvariants: skip-org-check (pattern-X: rationale-string)`. Empty starting allowlist (annotation-default discipline; allowlist reserved for future standing-architectural exemptions). Pattern B/C/E/H sites annotated as part of S30's annotation pass. Pattern G1 sites (orgService.getOrgProfile, addressService.listAddresses, membershipService.listOrgUsers, invitationService.listPendingInvitations) are wrapped via route-handler-check per hot-fix arc (`c617f58` + `5d58b36`); rule passes via wrap-detection at the route handler layer; G1 entries removed from S30 annotation pass.
 - **LT-01(c) — no-hardcoded-URLs CI check formalization (narrow scope).** Existing check at `package.json` `test:no-hardcoded-urls` (`! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/`) is narrower than parent brief implied. S30 closure = formalize the existing narrow check; ensure it runs in `pnpm agent:validate` (substrate-confirmed at brief-creation: it does); document scope. **Scope-extension to non-Supabase localhost references is OUT OF SCOPE per pre-decision (c-1c-α);** any extension would open Phase-2-shaped scope that violates the brief's own out-of-scope list.
-- **LT-01(d) — CLAUDE.md / AGENTS.md reconciliation.** Time-boxed audit of CLAUDE.md (185 lines) + AGENTS.md (5 lines) with one-hop reads of cited docs. 60-minute ceiling starting at audit-task entry. Three-bucket disposition (auto-resolve silent / auto-resolve commit-message-noted / surface for operator).
+- **LT-01(d) — CLAUDE.md / AGENTS.md reconciliation.** Time-boxed audit of CLAUDE.md (185 lines) + AGENTS.md (5 lines) with one-hop reads of cited docs. 60-minute ceiling starting at audit-task entry. Three-bucket disposition (auto-resolve silent / auto-resolve commit-message-noted / surface for operator). Audit population reduced post-hot-fix: 4 G1 service-function JSDocs (orgService.getOrgProfile, addressService.listAddresses, membershipService.listOrgUsers, invitationService.listPendingInvitations) + 3 route-handler file-tops (profile, addresses, invitations) were reconciled in the hot-fix arc (`c617f58` + `5d58b36`); these claims are pre-closed. Remaining audit population: CLAUDE.md (185 lines, per pre-decision (b)) + AGENTS.md (5 lines).
 - **LT-04 — ORG_SCOPED_TOOLS drift check.** Per-tool `orgScoped: boolean` required-field annotation on each ToolDef. Refactor: extract derived ORG_SCOPED_TOOLS Set from tool registry to `src/agent/tools/orgScopedTools.ts` (location lean per pre-decision (c)). Drift test in `tests/unit/agent/orgScopedTools.test.ts` asserts derivation correctness against orchestrator's reference. Field semantics question deferred to (c4) sub-pre-flight.
 - **`.next/` ignore in eslint.config.mjs.** Folded into LT-03's edit per pre-decision (a). Closes the 9,860-error baseline pollution surfaced at S30 brief-creation pre-flight.
 
@@ -17,7 +17,7 @@
 
 ---
 
-**Anchor (parent) SHA:** `c47e58d` — S29a execution closeout. Verify HEAD's parent matches at Task 1 Step 2. Chain (chronological, oldest → newest): `1400694` (S28 brief) → `7ba3455` (Path C corrigendum + folded NOTE) → `3cedd05` (corrigendum SHA fix-forward) → `bafd4f9` (S29a brief) → `c47e58d` (S29a execution).
+**Anchor (parent) SHA:** `5d58b36` — sibling fix-forward post-G1-hot-fix (route-handler file-top reconciliation across 3 routes). Verify HEAD's parent matches at Task 1 Step 2. Chain (chronological, oldest → newest): `1400694` (S28 brief) → `7ba3455` (Path C corrigendum + folded NOTE) → `3cedd05` (corrigendum SHA fix-forward) → `bafd4f9` (S29a brief) → `c47e58d` (S29a execution) → `53aa533` (S30 brief; this brief's prior anchor) → `ee35abf` (.gitignore cleanup; orthogonal) → `b4f6063` (G1 hot-fix brief) → `c617f58` (G1 hot-fix execution) → `5d58b36` (sibling fix-forward; route-handler file-top reconciliation) → this re-anchor commit.
 
 **Upstream authority:**
 - `docs/09_briefs/phase-1.3/path-c-arc-summary.md` (post-corrigendum at `7ba3455`) — S30 entry; arc summary's Pattern landscape appendix; Gate 4 LT-01/LT-03/LT-04/QUALITY-006 expected text.
@@ -46,14 +46,29 @@ Per the codified discipline graduated this session at N=3 ("Brief-creation pre-f
 - **pre-1: Lint baseline gap.** `pnpm lint` returns 10,614 problems (9,860 errors + 754 warnings) at HEAD `c47e58d`. Root cause: `.next/` build output is being linted; `eslint.config.mjs` has no `ignores` block. Pre-existing; not regression. Critical for LT-03/LT-01(b) design — broken baseline drowns custom-rule signals unless fixed first. Resolution: fold `ignores: ['.next/**']` into LT-03's eslint.config.mjs edit (per pre-decision (a)).
 - **pre-2: "Rule 8" framing-gap.** Parent brief cited "CLAUDE.md Rule 8 for LT-01(c)"; substrate shows CLAUDE.md doesn't number rules. The actual mechanism is `pnpm test:no-hardcoded-urls` defined inline in `package.json`: `! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/`. Existing check is narrower than parent brief implied — only blocks Supabase API local port (`localhost:54321`/`127.0.0.1:54321`); not `localhost:3000` (Next.js dev) or general `http://localhost`. Resolution: rename references throughout S30 brief; surface scope-extension question as pre-decision (c-1c).
 - **pre-3: ORG_SCOPED_TOOLS substrate-finding.** `updateOrgProfile` uses `session.org_id` but isn't in ORG_SCOPED_TOOLS Set. Substrate-confirmed at brief-creation post-feedback (read of `orchestrator/index.ts:1213-1227`): updateOrgProfile has BOTH (i) its own inline null-org check at lines 1219-1223 (`if (session.org_id === null) throw new Error('updateOrgProfile called without an active org (onboarding session)')`) AND (ii) an inline `withInvariants(orgService.updateOrgProfile, { action: 'org.profile.update' })` wrap at lines 1224-1227. The Set's actual semantics: "tools whose null-org rejection is gated by Set membership lookup at line 1105" — narrower than "tools that use org context." updateOrgProfile is intentionally outside the Set because its per-tool dispatcher case re-implements the null-org check with a tool-specific error message AND wraps locally rather than relying on Set-membership gating. Resolution: brief encodes the narrower semantics; field-naming choice (orgScoped vs requiresOrchestratorOrgGate vs alternative) lands at Task 0 Step 0.3 (before lock acquisition; operator-decided). **Disclosure (closeout-NOTE-element-pre-4 trigger):** initial brief-draft asserted state 2 as substrate-confirmed without reading lines 1214-1225 contents — only ran a grep that returned line numbers. Substrate verification was completed post-operator-feedback. This is itself a fractal-fidelity firing on the brief-drafting derivation; sibling shape to pre-1/2/3 at the brief-drafting cadence layer.
+- **pre-6: Anchor chain extension.** `c47e58d` → `ee35abf` (orthogonal .gitignore cleanup) → `b4f6063` (G1 hot-fix brief) → `c617f58` (G1 hot-fix execution) → `5d58b36` (sibling fix-forward). 4 interceding commits between this brief's prior anchor (`53aa533`) and the re-anchor target (`5d58b36`); 1 orthogonal, 3 within G1 hot-fix arc.
+- **pre-7: Pattern G1 row dispositions.** Removed from LT-01(b) annotation pass at S30 brief; sites now wrapped via route-handler-check (rule's wrap-or-annotate predicate satisfied via wrap-detection without annotation entry). LT-01(b) annotation count drops from "21 to 25 total" (with conditional +4 for Variant β) to a stable 21 (10 Pattern B + 3 Pattern C/E + 1 Pattern H + 7 D/G2/I existing).
+- **pre-8: LT-01(d) audit scope reduction.** Hot-fix's combined service-layer JSDoc + route-handler file-top reconciliation closes some claims that LT-01(d) would have audited: 4 G1 service-function JSDocs + 3 route-handler file-tops are pre-closed. Remaining LT-01(d) audit population: CLAUDE.md (185 lines) + AGENTS.md (5 lines) per pre-decision (b).
+- **pre-9: Carry-forward elements from hot-fix arc closeouts.** pre-6-equivalent (substrate-grep-first closure-execution evidence at hot-fix) and pre-7-equivalent family (substrate-fidelity-gate continuing-firings at hot-fix arc — five cadence layers now firing) carry forward from S30 hot-fix arc closeouts. First firing at re-anchor cadence layer is THIS pre-flight's delta-inventory derivation; sixth cadence layer.
 
-### Lint / typecheck / test floor at HEAD `c47e58d`
+### Lint / typecheck / test floor
+
+#### post-S29a at HEAD `c47e58d` (historical reference; brief's prior anchor)
 
 | Check | Result | Disposition |
 |---|---|---|
 | `pnpm typecheck` | clean | floor passes |
 | `pnpm lint` | 10,614 problems (9,860 errors + 754 warnings) | pre-existing baseline; resolved by S30 via `.next/` ignore |
 | `pnpm test` (post `db:reset:clean && db:seed:all`) | 1 failed (verifyAuditCoverageRoundTrip) / 573 passed / 0 skipped (574) | matches expected post-S29a state per element #19; pre-existing carry-forward |
+
+#### post-hot-fix at HEAD `5d58b36` (current re-anchor target)
+
+| Check | Result | Disposition |
+|---|---|---|
+| `pnpm typecheck` | clean | floor passes (carry-forward from hot-fix closeout NOTE) |
+| `pnpm agent:validate` | 26/26 (post `db:reset:clean && db:seed:all`) | floor passes (carry-forward from hot-fix closeout NOTE) |
+| `pnpm lint` | not directly queried at re-anchor (chat-side draft session, no bash); expected ~10,614 problems carry-forward — hot-fix arc made no source changes that would shift lint baseline; substrate-confirm at execution-time Task 2 Step 1 | pre-existing baseline; resolved by S30 via `.next/` ignore |
+| `pnpm test` (post `db:reset:clean && db:seed:all`) | 557/578 passed (4 new G1 cross-org regression tests in `tests/integration/orgGetCrossOrg.test.ts` pass; carry-forward set unchanged per S29a element #19) | carry-forward from hot-fix closeout NOTE. Per S29a element #19, the carry-forward set is 3 named categories accounting for ~21 individual test failures: (a) `verifyAuditCoverageRoundTrip` orthogonal (1 failure); (b) `accountLedgerService` running-balance brief-anticipated wrap-driven (2 failures); (c) `crossOrgRlsIsolation` cascading pollution downstream of (b) (~18 failures from beforeAll-setup state pollution per S29a element #19c). 557 + 21 = 578; arithmetic checks. The hot-fix closeout NOTE's "3 pre-existing carry-forwards" sub-clause was a category-count-vs-instance-count framing collapse (3 named categories vs ~21 actual test failures); the underlying numbers are substrate-correct. Folds into S30 closeout NOTE as a category-count-vs-instance-count framing-collapse finding. |
 
 ### LT-01(b) target population — 7 canonical-form annotation sites at `c47e58d`
 
@@ -79,8 +94,9 @@ Per pre-decision (a)'s annotation-default discipline, S30 adds annotations at th
 | B (~10 mutations) | journalEntryService.post; recurringJournalService.{createTemplate, updateTemplate, deactivateTemplate, generateRun, approveRun, rejectRun}; invitationService.{inviteUser, revokeInvitation, resendInvitation} | annotate with `(pattern-B: route-handler-wrapped via withInvariants(action: '...'))`; verbatim action per site |
 | C/E (3 sites) | journalEntryService.get; recurringJournalService.{getTemplate, getRun} | annotate with `(pattern-C: deferred to S29b)` / `(pattern-E: deferred to S29b)`; per (e) Variant α/β disposition |
 | D/G2/I (7 existing) | per pre-flight table above | already canonical at HEAD; no S30 edit |
-| G1 (4 sites) | orgService.getOrgProfile; addressService.listAddresses; membershipService.listOrgUsers; invitationService.listPendingInvitations | conditional per (d) variant disposition |
 | H (1 site) | membershipService.listForUser | annotate with `(pattern-H: dead code; remove in Phase 2 cleanup)` |
+
+Pattern G1 row removed: G1 sites are wrapped via route-handler-check at the route handler layer per hot-fix arc (`c617f58` + `5d58b36`); rule's wrap-or-annotate predicate is satisfied via wrap-detection without requiring a service-layer annotation entry. Stable annotation count = 21 (7 D/G2/I existing + 10 Pattern B + 3 Pattern C/E + 1 Pattern H; no G1 entry).
 
 ### LT-04 target — tool registry vs ORG_SCOPED_TOOLS Set
 
@@ -117,13 +133,13 @@ ORG_SCOPED_TOOLS Set semantics narrower than first-glance reading: gates **only*
   - LT-02 / S31 (test coverage cluster).
   - S29b (Patterns C/E design-bearing migration).
   - Pattern A wrap mechanization (S29a closed; substrate at HEAD `c47e58d`).
-  - Element #6 G1 remediation **except via (d) Variant β** (annotation-only); other variants are out-of-scope or dependency-blocking.
+  - Element #6 G1 substantive remediation. RESOLVED pre-S30 via hot-fix arc (`c617f58` + `5d58b36`); not in S30 scope because already done. See Out-of-scope explicit list item 6 for full provenance.
   - Pattern H removal (dead code; Phase 2 cleanup workstream); annotation only at S30.
   - docs/INDEX.md or broader docs-tree audit (LT-01(d) scope ceiling).
   - Recursive-descent reads from CLAUDE.md citations (LT-01(d) one-hop only).
 - **Test posture floor.** ALL existing tests at HEAD post-edit remain at the documented pre-existing carry-forward state. `pnpm agent:validate` clean. No new failures attributable to this session beyond any deliberate test additions (LT-04 drift test).
 - **Hard constraint A — ESLint custom rule isolation.** LT-01(b) rule must function correctly even with pre-existing lint baseline noise. Verified by: (i) folding `.next/` ignore in same edit; (ii) rule fires with zero false-positives on the 7 canonical-form sites; (iii) rule fires correctly on all post-S30 annotation additions.
-- **Hard constraint B — annotation-form canonical preserved.** All annotations added at S30 use the exact-string canonical form `// withInvariants: skip-org-check (pattern-X: rationale-string)`. Pattern B annotations carry verbatim action per site; Pattern C/E carry deferral text; Pattern G1 (if Variant β) carry deferral text; Pattern H carries dead-code text.
+- **Hard constraint B — annotation-form canonical preserved.** All annotations added at S30 use the exact-string canonical form `// withInvariants: skip-org-check (pattern-X: rationale-string)`. Pattern B annotations carry verbatim action per site; Pattern C/E carry deferral text; Pattern H carries dead-code text. (G1 sites are not annotated at the service layer; wrapped via route-handler-check per hot-fix arc `c617f58` + `5d58b36`.)
 - **Hard constraint C — LT-04 type-system enforcement.** `orgScoped: boolean` is a **required field** on ToolDef, no default, no optional marker. Type-checker enforces "every new tool has explicit org-scope decision at definition." Optional-with-default would silently flag new tools as non-org-scoped.
 - **Hard constraint D — LT-04 single-source-of-truth direction.** ORG_SCOPED_TOOLS Set in orchestrator is consumed (imported) from the dedicated module; orchestrator does NOT maintain its own Set. The dedicated module derives the Set from the tool registry. Drift test verifies derivation correctness against the source registry, not Set-vs-Set equality.
 - **Hard constraint E — LT-01(d) time-box.** 60-minute ceiling starts at audit-task entry, not session start. Hard ceiling; overruns surface unaudited remainder rather than extending. Lock acquisition + substrate reads + other Task-N work do not eat into the 60 minutes.
@@ -148,14 +164,11 @@ What's decided at brief-write (do not re-litigate at execution time; executor re
 
 5. **Y2 commit shape: single bundled commit by default.** Y2 split available if net diff exceeds ~200 lines OR LT-01(d)'s reconciliation surfaces non-trivial drift fixes. Operator's call at execution.
 
-6. **Estimated session duration: ~1-2 days.** Task 0 variant-confirmation pre-task (~5-10 min) + ESLint custom rule authoring (~3 hours including testing) + LT-03 rule (~30 min) + .next/ ignore (~5 min) + LT-04 refactor + drift test (~1.5 hours) + Pattern B/C/E/H annotation pass (~1.5 hours) + LT-01(d) audit (60-min ceiling) + LT-01(c) closure (~15 min) + full-suite regression (~30 min) + friction-journal NOTE drafting (~1.5 hours) + review buffer.
+6. **Estimated session duration: ~1-2 days.** Task 0 closure-confirm pre-task (~3-5 min — defensive grep for G1 closure substrate; (e) and (c4) confirmations remain in scope) + ESLint custom rule authoring (~3 hours including testing) + LT-03 rule (~30 min) + .next/ ignore (~5 min) + LT-04 refactor + drift test (~1.5 hours) + Pattern B/C/E/H annotation pass (~1.5 hours) + LT-01(d) audit (60-min ceiling) + LT-01(c) closure (~15 min) + full-suite regression (~30 min) + friction-journal NOTE drafting (~1.5 hours) + review buffer.
 
 OPEN — operator to resolve before / during S30 (carry-forward inputs from S29a closeout):
 
-- **(d) Element #6 G1 disposition (operator-pending; conditional task-shape encoded).** Three variants:
-  - **(d) Variant α — sibling Phase 1.3 session before S30:** G1 sites get wrapped/annotated separately in a sibling session; S30's annotation pass excludes G1; allowlist semantics unaffected.
-  - **(d) Variant β — Phase 2 obligation:** S30's annotation pass includes 4 G1 sites with `// withInvariants: skip-org-check (pattern-G1: deferred per element #6; Phase 2 obligation)`. Allowlist remains empty.
-  - **(d) Variant γ — hot-fix:** **S30 brief PAUSED until hot-fix lands.** Re-anchor SHA against post-hot-fix HEAD before re-opening; canonical-form annotation site count and Pattern G1 disposition substrate-re-derive at re-anchor; bundled-commit shape preserved; calendar-coupling acceptable since LT-01/03/04 isn't time-critical.
+- **(d) Element #6 G1 disposition — RESOLVED at hot-fix arc (`c617f58` + `5d58b36`).** G1 territory closed pre-S30 across both substrate layers: service-layer JSDoc reconciliation at hot-fix execution (`c617f58`); route-handler file-top reconciliation at sibling fix-forward (`5d58b36`). 4 G1 service functions are wrapped via explicit `caller.org_ids.includes(orgId)` check at route-handler with 403 ORG_ACCESS_DENIED; 4 cross-org regression tests in `tests/integration/orgGetCrossOrg.test.ts`; service-layer JSDoc + route-handler file-top documentation aligned with implementation. No carry-forward to S30 execution. Task 0 Step 0.1 transitions to defensive substrate-confirm of closure (see Task 0 Step 0.1 below).
 
 - **(e) Element #11 Pattern C/E zero-test-coverage (operator-pending; conditional task-shape encoded).** Two variants:
   - **(e) Variant α — S29b pre-flight adds C/E test coverage:** S30 LT-01(b) C/E annotation rationale = `(pattern-C: deferred to S29b)` / `(pattern-E: deferred to S29b)`; timeline-bounded; rule logic unchanged.
@@ -177,14 +190,17 @@ OPEN — operator to resolve before / during S30 (carry-forward inputs from S29a
 
 ## Task 0: Pre-Task discipline check — variant disposition (BEFORE lock acquisition)
 
-This task is the **discipline-correct halt-point for (d) Variant γ**: if (d) is unresolved or resolved to Variant γ with hot-fix not yet landed, **brief execution does not begin**. Lock acquisition + session-init are part of Task 1, deliberately AFTER this check.
+This task is the **discipline-correct halt-point for operator-pending variant decisions**: (e) Pattern C/E test-coverage timeline + (c4) updateOrgProfile field-naming. If either is unresolved at Task 0 entry, surface for operator before proceeding. Pre-decision (d) was resolved at hot-fix arc (`c617f58` + `5d58b36`); Step 0.1 below is the defensive substrate-confirm of closure rather than a variant-resolution gate. Lock acquisition + session-init are part of Task 1, deliberately AFTER this check.
 
-- [ ] **Step 0.1: Confirm (d) variant resolution**
+- [ ] **Step 0.1: Confirm (d) closure substrate.**
 
-Operator confirms which (d) variant has been ratified between sessions (or now, before opening):
-- **Variant α (sibling-session before S30):** verify the sibling G1 session has landed; substrate-confirm 4 G1 sites are wrapped/annotated. Proceed to Task 1.
-- **Variant β (Phase 2 obligation):** confirm the disposition is "annotation-only at S30; G1 substantive remediation is a Phase 2 obligation." Proceed to Task 1.
-- **Variant γ (hot-fix):** **HALT and pause this brief.** Re-anchor SHA against post-hot-fix HEAD before re-opening. Substrate-re-derive at re-anchor: canonical-form annotation site count, Pattern G1 disposition, ORG_SCOPED_TOOLS state, lint baseline state. The halt happens BEFORE lock acquisition because (i) re-anchoring after lock acquisition wastes the lock token's mechanical purpose; (ii) substrate-re-derivation may shift other pre-flight findings. Re-opening creates a fresh brief-creation session against post-hot-fix HEAD; this brief becomes a draft superseded by the re-anchored version.
+Pre-decision (d) was resolved at hot-fix arc (`c617f58` + `5d58b36`) — G1 territory closed pre-S30. This step is a defensive substrate-confirm that the closure holds at execution-time HEAD; it is NOT a variant-resolution gate (the variant resolution landed at hot-fix arc).
+
+```bash
+grep -rn 'caller.org_ids.includes(orgId)' src/app/api/orgs/
+```
+
+Expected: 4 hits (one per G1 GET route at profile, addresses, users, invitations). If hits drift below 4, HALT — could indicate regression after sibling fix-forward; surface for substrate-re-derivation. If hits exceed 4, surface — could indicate adjacent GET endpoints gained the same gate (possibly intentional but substrate-verify before proceeding).
 
 - [ ] **Step 0.2: Confirm (e) variant resolution**
 
@@ -227,13 +243,13 @@ cat .coordination/session-lock.json
 
 Expected: lock contents include `"session": "S30-ci-enforcement-cluster"`, fresh `started_at` timestamp, current PID. Per element #12 lock-mechanical-discipline finding from S29a: lock-acquisition is what UPGRADES the pre-commit hook from advisory to blocking. Without matching COORD_SESSION the hook silently downgrades. **Verify-after-acquire is load-bearing.**
 
-- [ ] **Step 2: Confirm HEAD points at the brief-creation commit, parent matches anchor chain**
+- [ ] **Step 2: Confirm HEAD points at the brief's authoritative commit, parent matches anchor chain**
 
 ```bash
 git log --oneline -5
 ```
 
-Expected: most recent commit is the S30 brief-creation commit; parent is `c47e58d` (S29a execution). If any drift, halt and surface to operator.
+Expected: most recent commit on the brief is the S30 re-anchor commit; its parent is `5d58b36` (sibling fix-forward post-G1-hot-fix). Earlier in the chain: `5d58b36` → `c617f58` → `b4f6063` → `ee35abf` → `53aa533` → `c47e58d` (S29a execution). If any drift, halt and surface to operator.
 
 - [ ] **Step 3: Branch posture**
 
@@ -246,9 +262,9 @@ Expected: `staging` branch, working tree clean.
 
 - [ ] **Step 4: Defensive variant-disposition re-check**
 
-Per Task 0 discipline: variant dispositions for (d), (e), and (c4) field-naming were resolved before lock acquisition. This step is a defensive re-check against ratified state; primary halt-point is Task 0.
+Per Task 0 discipline: (d) was resolved at hot-fix arc (`c617f58` + `5d58b36`); (e) and (c4) field-naming were resolved before lock acquisition. This step is a defensive re-check against ratified state; primary halt-point is Task 0.
 
-If (d) Variant γ surfaces here as the resolved disposition (which would indicate Task 0 was bypassed): **HALT immediately**, release lock via `bash scripts/session-end.sh`, and re-open per Task 0's Variant γ semantics.
+If Task 0 Step 0.1's `caller.org_ids.includes(orgId)` grep returned anything other than 4 hits (drift in (d) closure substrate) and Task 0 was bypassed: **HALT immediately**, release lock via `bash scripts/session-end.sh`, and re-run Task 0 Step 0.1 against execution-time HEAD before re-opening.
 
 ---
 
@@ -513,7 +529,7 @@ pnpm test eslint-rules 2>&1 | tail -10
 
 ---
 
-## Task 6: Pattern B/C/E/H + (conditional G1) annotation pass
+## Task 6: Pattern B/C/E/H annotation pass
 
 - [ ] **Step 1: Annotate Pattern B sites with verbatim action per Task 2 Step 4 sub-pre-flight**
 
@@ -531,25 +547,19 @@ Sites: journalEntryService.ts get; recurringJournalService.ts getTemplate, getRu
 
 `// withInvariants: skip-org-check (pattern-H: dead code; remove in Phase 2 cleanup)` at membershipService.listForUser.
 
-- [ ] **Step 4: Annotate Pattern G1 sites per (d) variant disposition**
-
-If (d) Variant α (sibling-session before S30): no S30 G1 annotations; G1 sites get wrapped/annotated in sibling session.
-If (d) Variant β: `// withInvariants: skip-org-check (pattern-G1: deferred per element #6; Phase 2 obligation)` at orgService.getOrgProfile, addressService.listAddresses, membershipService.listOrgUsers, invitationService.listPendingInvitations.
-If (d) Variant γ: this branch should not be reached at execution because Variant γ pauses S30.
-
-- [ ] **Step 5: Verify rule passes against post-annotation substrate**
+- [ ] **Step 4: Verify rule passes against post-annotation substrate**
 
 ```bash
 pnpm lint src/services/ 2>&1 | grep "services/withInvariants-wrap-or-annotate"
 ```
 
-Expected: zero rule violations (all sites either wrapped or annotated).
+Expected: zero rule violations (all sites either wrapped or annotated; G1 sites pass via wrap-detection at the route handler layer per hot-fix arc).
 
 ```bash
 grep -rn "// withInvariants: skip-org-check" src/services/ | wc -l
 ```
 
-Expected count: 7 (existing) + ~10 (B) + 3 (C/E) + 1 (H) + 0/4 (G1 per variant) = 21 to 25 total.
+Expected count: 7 (existing D/G2/I) + 10 (Pattern B) + 3 (Pattern C/E) + 1 (Pattern H) = 21 total.
 
 ---
 
@@ -671,14 +681,14 @@ If unexpected drift surfaces, apply S29a's stash-revert isolation discipline (no
 
 Append to `docs/07_governance/friction-journal.md` tail. NOTE plan structure:
 
-1. **UF-006 + UF-013 + QUALITY-006 closure citation** — cite specific surfaces closed: LT-03 adminClient import restriction; LT-01(b) custom rule + annotation pass (~14-18 annotations added at S30 = 10 Pattern B + 3 Pattern C/E + 1 Pattern H + 0/4 Pattern G1 per (d) variant; total annotated sites in src/services/ at S30 closeout = 21-25 including the 7 D/G2/I existing at HEAD c47e58d); LT-01(c) narrow-scope formalization per (c-1c-α); LT-01(d) reconciliation per audit inventory; LT-04 per-tool field annotation + drift check + refactor.
+1. **UF-006 + UF-013 + QUALITY-006 closure citation** — cite specific surfaces closed: LT-03 adminClient import restriction; LT-01(b) custom rule + annotation pass (14 annotations added at S30 = 10 Pattern B + 3 Pattern C/E + 1 Pattern H; total annotated sites in src/services/ at S30 closeout = 21 including the 7 D/G2/I existing at HEAD `c47e58d`; G1 sites wrapped via route-handler-check per hot-fix arc `c617f58` + `5d58b36`); LT-01(c) narrow-scope formalization per (c-1c-α); LT-01(d) reconciliation per audit inventory; LT-04 per-tool field annotation + drift check + refactor.
 2. **Brief-creation pre-flight as substrate-fidelity gate (codification graduated at N=3 this session).** Provenance: pre-1 (lint baseline), pre-2 ("Rule 8" framing-gap), pre-3 (updateOrgProfile substrate-finding). Codified shape: brief-creation sessions produce a pre-flight delta inventory as a sibling artifact, surfaced before pre-decisions begin. Pairs with S29a element #3 at the substrate-vs-claim discipline layer; covers the aggregate substrate-fidelity of brief-creation as a process. **Meta-pattern note:** the codification graduated DURING the very brief-creation session that generated the firings — codification firing within the session that produced it is itself a discipline-shape worth marking, and pairs with element #3's "applies recursively at every layer of inheritance" clause at the time-axis layer.
 
    **pre-4: Brief-drafting introducing operator-pending without dialogue ratification.** During brief-drafting, the (c-1c) LT-01(c) scope-extension question was introduced as a fourth operator-pending pre-decision without that having been ratified in dialogue. Sibling shape to pre-1/2/3 but at the brief-drafting cadence (within-session) rather than parent-brief or pre-flight (cross-session). Caught by operator at structural review; resolved at brief-creation as (c-1c-α) narrow-scope ratification. N=1 candidate-shape: substrate-fidelity firings are now visible at every cadence layer (parent-brief framing → pre-flight derivation → brief-drafting decisions → execution-time substrate). The aggregate evidence is that the codified discipline catches inherited-framing drift at progressively finer cadence layers as it matures. **pre-5: Brief-drafting over-claiming substrate-fidelity.** During brief-drafting, pre-flight pre-3's "state 2" finding was asserted as substrate-confirmed without actually reading the cited line range — only a grep returned line numbers; substrate verification was completed post-operator-feedback. Sibling shape to pre-4 at the brief-drafting layer; another fractal-fidelity firing on the brief-drafter's own derivation. Both pre-4 and pre-5 fold into element #2's codification provenance as continuing-firings-after-graduation evidence.
 3. **Conditional task-shape encoding precedent (codification candidate at N=1).** S30 brief encoded (d)/(e) operator-pending decisions as conditional task variants rather than waiting for resolution between sessions. Variant α/β/γ branches with explicit operational semantics ("paused", "annotation rationale only", "annotation absent"). Pairs with un-compressed-rhythm gate-cadence-calibration (S29a element #10) at the open-loop-management layer. N=1; not graduated; future briefs with operator-pending decisions evaluate adoption.
 4. **Annotation-default discipline.** S30's LT-01(b) committed to annotation-everywhere with empty starting allowlist. Allowlist mechanism reserved for future standing-architectural exemptions where rule-scope-refinement isn't viable. Discriminator: "annotation for transient and standing-with-rationale-at-call-site, allowlist for standing-only-when-call-site-annotation-is-structurally-unworkable." Sibling shape to S29a element #15's (γ)-rhythm scope-amend discipline.
 5. **(c4) updateOrgProfile substrate state-2 resolution.** Pre-flight substrate-investigation surfaced that ORG_SCOPED_TOOLS Set semantics are narrower than first-glance reading (state 2: mechanism elsewhere). Field-naming question (orgScoped vs requiresOrchestratorOrgGate vs alternative) resolved at Task 0 Step 0.3 (before lock acquisition) to <field name>. Documented in dedicated module's file-top.
-6. **Variant disposition outcomes.** (d) resolved to Variant <α/β/γ> at <when>; (e) resolved to Variant <α/β> at <when>. <Disposition impact summary>.
+6. **Variant disposition outcomes.** (d) resolved to Variant γ at S30 brief-creation (substrate-grep-first ratification flip) and executed at hot-fix arc (`c617f58` + `5d58b36`); G1 territory closed pre-S30. (e) resolved to Variant <α/β-soft> at <Task 0 Step 0.2 — operator-pending until execution>.
 7. **LT-01(d) audit outcomes.** Time-box adherence: <within / overrun>. Bucket counts: <X auto-resolved silent, Y auto-resolved commit-message-noted, Z surfaced>. Audit inventory at `docs/09_briefs/phase-1.3/session-30-audit-inventory.md`.
 8. **Stash-revert isolation candidate.** If used during Task 9 regression, this is the third firing — graduates per Documentation Routing convention's N=3 threshold.
 9. **Codification candidate updates.** Conditional-task-shape at N=1 (this session); brief-creation-pre-flight-gate at N=∞ (graduated this session); fractal-substrate-fidelity (S29a element #3) continued post-graduation firings if any.
@@ -716,7 +726,7 @@ Subject (under 70 chars): `feat(ci): S30 LT-01 + LT-03 + LT-04 convention-to-CI-
 
 Body covers:
 - LT-03: no-restricted-imports rule for adminClient outside src/services/.
-- LT-01(b): custom ESLint rule services/withInvariants-wrap-or-annotate + annotation pass (~14-25 annotations across Pattern B/C/E/H + conditional G1).
+- LT-01(b): custom ESLint rule services/withInvariants-wrap-or-annotate + annotation pass (14 added at S30: 10 Pattern B + 3 Pattern C/E + 1 Pattern H; 21 total annotated sites in src/services/ at S30 closeout including the 7 D/G2/I existing at HEAD c47e58d). G1 sites wrapped via route-handler-check per hot-fix arc; rule passes via wrap-detection.
 - LT-01(c): per (c-1c) variant disposition.
 - LT-01(d): per audit inventory; <X> auto-resolves silent; <Y> commit-message-noted; <Z> surfaced.
 - LT-04: per-tool {fieldname}: boolean required field on ToolDef; ORG_SCOPED_TOOLS derived in src/agent/tools/orgScopedTools.ts; drift test in tests/unit/agent/.
@@ -763,7 +773,7 @@ S30's exit-criteria map to the Path C arc-summary verification harness Gate 4 (p
 
 **Gate 4: LT-01 + LT-03 + LT-04 closed**
 - `LT-03-adminClient-restriction` — `eslint.config.mjs` carries `no-restricted-imports` rule blocking `@/db/adminClient` outside `src/services/`.
-- `LT-01(b)-wrap-or-annotate` — custom rule registered; rule fires zero false-positives on canonical-annotated sites; 21-25 annotations total across Pattern B/C/E/H + conditional G1.
+- `LT-01(b)-wrap-or-annotate` — custom rule registered; rule fires zero false-positives on canonical-annotated sites; 21 annotations total in src/services/ at S30 closeout: 7 D/G2/I existing at HEAD `c47e58d` + 10 Pattern B + 3 Pattern C/E + 1 Pattern H. G1 absent (sites wrapped via route-handler check per hot-fix arc; rule passes via wrap-detection).
 - `LT-01(c)-no-hardcoded-urls` — per (c-1c) variant.
 - `LT-01(d)-doc-reconciliation` — audit inventory complete; auto-resolved fixes committed; surfaced findings as NOTE/ADR entries.
 - `LT-04-orgScopedTools-drift` — drift test green; per-tool annotation type-system-enforced.
@@ -786,7 +796,12 @@ Nine-element inventory (the running closeout NOTE plan from brief-creation), wit
 8. Stash-revert isolation candidate (graduates if Task 9 fires)
 9. Codification candidate updates
 
-Element count is conservative; closeout will likely add elements per execution-time substrate findings (per S29a precedent: brief-creation projected 11; closeout shipped 19).
+Carry-forward elements from hot-fix arc closeouts (`c617f58` + `5d58b36`) — fold into S30 closeout NOTE per substrate-grep-first closure-execution-evidence framing:
+- **element-pre-6:** substrate-grep-first codification's third firing flip from operator's prior (Variant β) to ratified (Variant γ) executed at hot-fix arc; closure-execution evidence for the codification.
+- **element-pre-7 family:** substrate-fidelity-gate continuing-firings at hot-fix arc cadence layers (lock-acquisition cadence at pre-7; brief-drafting cadence at pre-7-sub-2; brief-drafting deferred-decision cadence at pre-7-sub-3; post-execution-review cadence at sibling fix-forward closeout). Five distinct cadence layers now firing across the hot-fix arc.
+- **Codification candidates from hot-fix arc at N=2:** "Resolved-decision-citation as contract" (service-layer JSDoc + route-handler file-top); "Reconciliation-scope-derivation as substrate-completeness gate" (S29a element #18 + hot-fix route-handler file-top scope-gap).
+
+Element count: 9-element baseline + 3 carry-forward elements from hot-fix arc + N from re-anchor session itself = substrate-derived count post-additions. Closeout will likely add further elements per execution-time substrate findings (per S29a precedent: brief-creation projected 11; closeout shipped 19).
 
 ---
 
@@ -797,7 +812,7 @@ Element count is conservative; closeout will likely add elements per execution-t
 3. LT-02 / S31 (test coverage cluster).
 4. S29b (Patterns C/E design-bearing migration).
 5. Pattern A wrap mechanization (S29a closed).
-6. Element #6 G1 substantive remediation (wrap-or-fix). G1 annotation-only is in-scope under (d) Variant β; G1 substantive remediation under (d) Variant α happens in a sibling session before S30 opens (out-of-scope from S30 itself); Variant γ pauses S30 until hot-fix lands (S30 doesn't open).
+6. Element #6 G1 substantive remediation. RESOLVED pre-S30 via hot-fix arc (`c617f58` + `5d58b36`). G1 territory closed; not in S30 scope because it's already done. (Variants α/β/γ from S30 brief-creation have no remaining S30 implications post-resolution.)
 7. Pattern H removal (dead code; Phase 2 cleanup); annotation only.
 8. docs/INDEX.md or broader docs-tree audit.
 9. Recursive-descent reads from CLAUDE.md citations.
