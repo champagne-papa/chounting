@@ -8,14 +8,18 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
+import { logger } from '@/shared/logger/pino';
 
 // S25 QW-07 / UF-010: PII fields stripped from before_state before
 // the audit_log row is persisted. audit_log is append-only
 // (INV-AUDIT-002 + 20240122000000_audit_log_append_only.sql), so
 // PII captured here cannot be selectively scrubbed later — write-
-// time redaction is the only safe insertion point. Shallow clone
-// only; nested PII is NOT recursed (Phase 2 work — pino REDACT_CONFIG
-// expansion + structured nested support land together as MT-06).
+// time redaction is the only safe insertion point. S28 MT-06
+// extends shallow-clone-only to nested traversal: redactPii
+// recurses into plain objects and arrays up to depth 8; circular
+// references are detected and treated as terminal; depth-limit-
+// exceeded emits log.warn and returns the partially-redacted
+// clone (warn-and-continue per S28 pre-decision 3).
 export const PII_FIELDS = [
   'invited_email',
   'phone',
@@ -24,15 +28,61 @@ export const PII_FIELDS = [
   'display_name',
 ] as const;
 
+const REDACT_DEPTH_LIMIT = 8;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object') return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function redactRecursive(
+  value: unknown,
+  depth: number,
+  visited: WeakSet<object>,
+  warnedAtLimit: { fired: boolean },
+): unknown {
+  if (depth > REDACT_DEPTH_LIMIT) {
+    if (!warnedAtLimit.fired) {
+      logger.warn(
+        { depth_limit: REDACT_DEPTH_LIMIT },
+        'redactPii: depth limit exceeded; partial redaction',
+      );
+      warnedAtLimit.fired = true;
+    }
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    if (visited.has(value)) return value;
+    visited.add(value);
+    return value.map((item) =>
+      redactRecursive(item, depth + 1, visited, warnedAtLimit),
+    );
+  }
+
+  if (isPlainObject(value)) {
+    if (visited.has(value)) return value;
+    visited.add(value);
+    const clone: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if ((PII_FIELDS as readonly string[]).includes(key)) continue;
+      clone[key] = redactRecursive(child, depth + 1, visited, warnedAtLimit);
+    }
+    return clone;
+  }
+
+  return value;
+}
+
 export function redactPii(
   state: Record<string, unknown> | null | undefined,
 ): Record<string, unknown> | null {
   if (!state) return null;
-  const clone = { ...state };
-  for (const field of PII_FIELDS) {
-    delete clone[field];
-  }
-  return clone;
+  const visited = new WeakSet<object>();
+  const warnedAtLimit = { fired: false };
+  const result = redactRecursive(state, 0, visited, warnedAtLimit);
+  return result as Record<string, unknown>;
 }
 
 /**

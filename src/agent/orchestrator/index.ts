@@ -199,7 +199,7 @@ export async function handleUserMessage(
       });
     } catch (err) {
       log.error(
-        { err: String(err), action: 'agent.message_processed' },
+        { err: String(err), action: 'agent.message_processed', audit_emit_failure: true },
         'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
       );
     }
@@ -1285,7 +1285,7 @@ async function executeTool(
         });
       } catch (err) {
         log.error(
-          { err: String(err), action: 'agent.tool_executed', tool_name: toolName },
+          { err: String(err), action: 'agent.tool_executed', tool_name: toolName, audit_emit_failure: true },
           'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
         );
       }

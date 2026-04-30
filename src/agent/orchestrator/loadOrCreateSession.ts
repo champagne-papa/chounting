@@ -173,6 +173,7 @@ export async function loadOrCreateSession(
           action: isOrgSwitch
             ? 'agent.session_org_switched'
             : 'agent.session_created',
+          audit_emit_failure: true,
         },
         'agent audit write failed; continuing (tx-atomicity gap per Clarification F)',
       );

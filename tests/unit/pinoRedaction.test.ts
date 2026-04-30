@@ -123,4 +123,55 @@ describe('CA-83: pino redaction', () => {
     // changing the censor silently breaks those workflows.
     expect(REDACT_CONFIG.censor).toBe('[REDACTED]');
   });
+
+  it('S28 MT-06 single-level-only regression-guard: `*.email` does NOT redact at depth 3 (Phase 2 obligation)', () => {
+    // Substrate-finding from S28 execution Task 4 multi-level
+    // probe: pino's `*.field` intermediate wildcard does NOT
+    // redact at arbitrary depth despite the @pinojs/redact@0.4.0
+    // README claiming "any level" semantics. Documentation-vs-
+    // implementation divergence at the pino-via-pinojs-redact
+    // integration layer: `*.email` covers `{ user: { email } }`
+    // at depth 2 but NOT `{ user: { profile: { email } } }` at
+    // depth 3.
+    //
+    // Side finding: existing financial-PII entries (*.tax_id,
+    // *.bank_account_number, *.account_number_last_four, *.sin,
+    // *.card_number) operate under the same single-level coverage
+    // — silent-broken nested-coverage on those entries; deferred
+    // to Phase 2 per S28 brief OOS list item 5 + closeout NOTE.
+    //
+    // Path (3) ratified at S28 execution operator-decision: ship
+    // with single-level pino + nested redactPii (audit_log surface
+    // only); pino multi-level coverage rolls into Phase 2 alongside
+    // financial-PII path remediation. This test is the
+    // regression-guard: it pins the current single-level limitation
+    // as substrate-confirmed. When Phase 2 introduces multi-level
+    // pino redaction (custom redactor or library upgrade), this
+    // assertion flips and the test surfaces the change.
+    const fixture = {
+      user: { profile: { email: 'SENTINEL_EMAIL_VALUE' } },
+    };
+
+    let captured = '';
+    const sink = new Writable({
+      write(chunk, _enc, done) {
+        captured += chunk.toString();
+        done();
+      },
+    });
+
+    const testLogger = pino({ redact: REDACT_CONFIG }, sink);
+    testLogger.info(fixture, 'multi-level probe (Phase 2 regression guard)');
+
+    const parsed = JSON.parse(captured.trim()) as Record<string, unknown>;
+
+    // Assertion: the email value at depth 3 is NOT redacted —
+    // it remains the literal sentinel. When Phase 2 closes the
+    // multi-level gap, this assertion fails, signaling time to
+    // flip the test to its positive form (.toBe(REDACT_CONFIG.censor)).
+    expect(
+      getAtPath(parsed, ['user', 'profile', 'email']),
+      'expected SENTINEL preserved at user.profile.email — when this fails, Phase 2 multi-level pino landed; flip the assertion',
+    ).toBe('SENTINEL_EMAIL_VALUE');
+  });
 });

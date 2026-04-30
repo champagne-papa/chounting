@@ -37,6 +37,12 @@ export const REDACT_CONFIG = {
     '*.tax_id',
     '*.sin',
     '*.card_number',
+    // PII (S28 MT-06 expansion / UF-010)
+    '*.email',
+    '*.phone',
+    '*.first_name',
+    '*.last_name',
+    '*.display_name',
   ],
   censor: '[REDACTED]',
 };

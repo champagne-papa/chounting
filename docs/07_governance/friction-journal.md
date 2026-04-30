@@ -879,3 +879,179 @@ Categories:
   not regression-shaped). LT-01(b) rule fires zero false-positives.
   Path C arc closure proximity: after S30 + S29b + S31 (LT-02),
   Path C closes; Phase 2 surface expansion gate unblocks.
+- 2026-04-30 NOTE — S28 execution closeout: MT-05 audit-emit
+  observability flag + MT-06 PII redaction expansion (this commit
+  family). Three-element inventory with seven sub-finding
+  categories captured at execution closeout per the s28-reanchor
+  re-framed NOTE plan.
+
+  (1) **UF-008 + UF-010 closure citation.** UF-008 audit-emit
+  observability flag landed at three try/catch sites: site 1
+  (loadOrCreateSession.ts:178 — single-wrap covering
+  agent.session_created + agent.session_org_switched per Hard
+  Constraint A); site 2 (orchestrator/index.ts:202 —
+  emitMessageProcessedAudit arrow's catch per Hard Constraint B);
+  site 3 (orchestrator/index.ts:1289 — executeTool finally-block
+  catch). Each catch carries `audit_emit_failure: true` as the
+  grep-stable structured-log marker. Alert threshold: 1% failure
+  rate over 15-minute rolling window; destination: log-pipeline
+  filter (per pre-decision 2; calibrated against zero deployment
+  data; tunable post-deployment). UF-010 surface closed across two
+  layers: pino REDACT_CONFIG.paths gains 5 new entries (`*.email`,
+  `*.phone`, `*.first_name`, `*.last_name`, `*.display_name`) at
+  single-level coverage; recordMutation.redactPii extended from
+  shallow-clone-only to recursive traversal with depth limit 8 and
+  warn-and-continue at limit (warn message: 'redactPii: depth
+  limit exceeded; partial redaction'). PII_FIELDS const preserved
+  verbatim per Hard Constraint C.
+
+  (2) **Multi-level probe outcome: FAILED — Path (3) ratified.**
+  Task 4 Step 4 multi-level probe surfaced documentation-vs-
+  implementation divergence at the pino-via-pinojs-redact
+  integration layer. @pinojs/redact@0.4.0 README claims "Wildcards:
+  Intermediate: '*.password' (redacts password at any level)";
+  substrate at HEAD shows pino's redaction supports single-level
+  only — `*.email` covers `{ user: { email } }` (depth 2) but NOT
+  `{ user: { profile: { email } } }` (depth 3). The brief's
+  pre-decision 4 cited library standalone-documentation as
+  authoritative for the integrated pino-via-pinojs-redact behavior
+  without execution-time probe at brief-creation. Operator-decision
+  at execution cadence: Path (3) — ship S28 with single-level pino
+  + nested redactPii (audit_log surface only); pino multi-level
+  coverage rolls into Phase 2 alongside the financial-PII path
+  remediation already in OOS list item 5. The 5 new pino paths
+  land regardless (single-level coverage is non-zero value); the
+  multi-level probe test inverts to a regression-guard for the
+  known limitation (asserts SENTINEL preserved at depth 3; flips
+  to positive when Phase 2 closes the gap).
+
+  (3) **Sub-findings surfaced at execution.** Categories per the
+  s28-reanchor NOTE plan section, with execution-time additions:
+
+  i. **Financial-PII silent-broken nested-coverage.** Existing
+  `*.tax_id`, `*.bank_account_number`, `*.account_number_last_four`,
+  `*.sin`, `*.card_number` entries operate under the same
+  single-level coverage as the new PII entries. Substrate-confirmed
+  via the multi-level probe; financial-PII at depth ≥3 leaks
+  through pino redaction. Deferred to Phase 2 per OOS list item 5.
+  Same Phase 2 obligation as multi-level pino remediation; the two
+  surfaces close together (custom redactor or library upgrade).
+
+  ii. **Recursion edge cases on circular references / depth-limit.**
+  redactPii implementation handles both: WeakSet-based visited
+  tracking detects cycles and treats them as terminal; depth limit
+  fires warn-and-continue at depth 9+. Test case (v) verifies the
+  warn message + partial-clone posture. Edge-case enumeration in
+  the test pass clean.
+
+  iii. **Carry-forward drift on full-suite run.** Fresh-post-reset
+  baseline at S28 closeout: 1 failed + 570 passed + 20 skipped
+  (591 total). Compared to brief-expected (1 failed + 590 passed +
+  0 skipped = 591): same total; same failure (verifyAuditCoverageRoundTrip
+  orthogonal); 20 tests skipped instead of passing, matching pre-
+  S30 fresh-run baseline shape. Skip-count fluctuation observed
+  across the S30 arc — env-conditional skip markers (e.g.,
+  agentRealClientSmoke.test.ts skips without ANTHROPIC_API_KEY)
+  vary based on environment state. Not S28-edit-attributable; not
+  regression-shaped. Test Files: 2 failed (1 verifyAuditCoverageRoundTrip
+  individual + 1 file-level setup failure on crossOrgRlsIsolation
+  cascading per S29a element #19c — same Phase 2 obligation as the
+  shared-DB fragility cluster).
+
+  iv. **PII_FIELDS-vs-pino-paths naming-asymmetry** (carry-forward
+  from s28-reanchor pre-flight; substrate-confirmed during
+  execution). recordMutation.PII_FIELDS includes `invited_email`
+  (not `email`); pino REDACT_CONFIG.paths post-S28-MT-06 includes
+  `*.email`. Audit-log before_state capturing a user row with
+  `email` key continues to leak post-S28 even with the nested-
+  recursion extension landing — redactPii's PII_FIELDS list does
+  not include `email`. Disposition at execution cadence: Phase-2-
+  territory (rolls in with the financial-PII + multi-level pino
+  remediation as a unified PII-coverage-closure scope expansion).
+  S28 ships with the asymmetry intact; closeout NOTE flags it as
+  a Phase 2 obligation without remediation in this session.
+
+  v. **Task 2 Convention #8 verify-directly drift on cited
+  file/line numbers** (carry-forward from s28-reanchor leave-as-is
+  + execution-time additions): (a) PII_FIELDS at recordMutation.ts:19-26
+  not :21-27 per brief cite; (b) MT-06 reference comment block at
+  :12-18 not :14-19 per brief cite; (c) reactivate route action-
+  string substrate-bug at :23 not :18 per S30 closeout NOTE
+  element 12 cite; (d) pre-decision 6 vs (f) label typo (pre-S30
+  enumeration scheme inherited from arc-summary lettering; pre-
+  existing at brief-creation 4c8dac0). All four under S29a element
+  #3's "applies recursively at every layer" clause; no fresh
+  codification-graduation.
+
+  vi. **Orphan-reference-review-at-edit-completion N=3 graduation
+  citation** (codification-firing element deferred from
+  s28-reanchor closeout per (re-anchor-1-α) precedent).
+  Documentation Routing convention's N=3 threshold met at
+  s28-reanchor (4a3eafb) via three orphan-fixes: Task 1 Step 2
+  expected-text (orphan G); Task 7 Step 4 expected-text (orphan H);
+  Y2 commit shape bullet [ROUTE?] framing (orphan I). All caught
+  at edit-completion sweep; sibling-precedent S30 re-anchor's
+  orphan G applied. The codification-firing-event happened at
+  4a3eafb; this S28 execution closeout NOTE is the codification-
+  record location per (re-anchor-1-α)'s "no codification-firing
+  elements in re-anchor's own NOTE" clause.
+
+  vii. **NEW codification candidate at N=1: library-documentation-
+  vs-integrated-behavior-divergence as substrate-confirm-required-
+  at-brief-creation.** S28 brief's pre-decision 4 cited @pinojs/
+  redact@0.4.0 README's "any level" wildcard semantics as
+  authoritative for the pino-via-pinojs-redact integrated behavior.
+  Probe at execution surfaced the divergence: library standalone-
+  documentation does not necessarily reflect integrated behavior
+  through the wrapper layer. The substrate-fidelity-gate firing
+  this represents is at the brief-creation cadence layer (post-
+  graduation N=∞ per S30 closeout NOTE element 2); folds under
+  S29a element #3's "applies recursively at every layer" clause.
+  As a sibling-shape codification candidate at N=1 today: future
+  briefs citing library documentation as authoritative for
+  integrated behavior get probed at brief-creation. Documentation
+  Routing convention's N=3 threshold for graduation.
+
+  viii. **NEW: Static-source-verification test pattern at S28 MT-05.**
+  Brief Task 3 Step 4 specified "mock recordMutation to throw...
+  capture log.error invocation (pino mock or test logger)." S28
+  execution adopted static-source verification (read each source
+  file; assert the catch block adjacent to the swallow-message
+  anchor includes `audit_emit_failure: true`) instead of runtime
+  mock harness. Rationale: the three sites live in deep orchestrator
+  paths (loadOrCreateSession, emitMessageProcessedAudit, executeTool
+  finally) where runtime tests require either real DB (violates
+  "no DB dependency") or wide mocking of orchestrator internals
+  (large surface, brittle). Static-source verification is
+  substrate-grounded, mechanical, fast, and meets the brief's
+  exit-criteria ("the structured-flag field appears"). The
+  substrate-shape implementation pattern differs from the brief's
+  specified mock-runtime pattern; this is the (γ)-rhythm scope-
+  amend at execution cadence (S29a element #15 ratified
+  precedent for execution-time substrate findings shaping
+  implementation).
+
+  Brief framing reconciliation per execution-time operator-
+  decision (β2): the brief's MT-06 architecture line 11 framing
+  ("Extend src/shared/logger/pino.ts REDACT_CONFIG.paths to
+  include *.email...") implies coverage at any nesting level via
+  the wildcard semantics. Post-Path-3, this framing is substrate-
+  misleading. Closeout NOTE captures the framing-stale finding;
+  brief unchanged at execution; framing-amend lands at a later
+  cadence (e.g., when Phase 2 obligations get scoped). Sibling-
+  shape to the three leave-as-is findings carried from s28-
+  reanchor.
+
+  Net outcomes this commit family: 3 source files modified
+  (orchestrator/loadOrCreateSession.ts, orchestrator/index.ts,
+  pino.ts, recordMutation.ts); 1 new test file
+  (orchestratorAuditEmitFailure.test.ts; 4 cases passing); 2 test
+  files extended (pinoRedaction.test.ts +1 multi-level
+  regression-guard, total 4 cases; recordMutationPiiRedaction.test.ts
+  +5 nested cases — 1 stale shallow-clone test removed, total 13
+  cases). pnpm typecheck clean; pnpm agent:validate 26/26
+  post-reset; full-suite 570/591 passed (1 failed orthogonal
+  carry-forward; 20 skipped env-conditional; same total as brief-
+  expected). Path C arc closure proximity: S29b unblocked (brief-
+  creation against this S28 closeout SHA next); after S29b + S31
+  (LT-02), Path C closes; Phase 2 surface expansion gate unblocks.
