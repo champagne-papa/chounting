@@ -355,7 +355,11 @@ export const addressService = {
 
   /**
    * Lists all addresses for an org. Read; not withInvariants-wrapped
-   * per OQ-07. RLS gates visibility.
+   * per OQ-07. Authorization is enforced at the route handler via an
+   * explicit caller.org_ids.includes(orgId) check that returns 403
+   * ORG_ACCESS_DENIED on cross-org access. Service uses adminClient
+   * and bypasses RLS; route-handler check is the load-bearing gate.
+   * (S30 hot-fix; element #6 G1 Variant γ closure.)
    */
   async listAddresses(input: { org_id: string }, _ctx: ServiceContext) {
     const db = adminClient();

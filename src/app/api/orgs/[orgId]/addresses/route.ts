@@ -22,6 +22,12 @@ export async function GET(
   try {
     const { orgId } = await params;
     const ctx = await buildServiceContext(req);
+    if (!ctx.caller.org_ids.includes(orgId)) {
+      return NextResponse.json(
+        { error: 'ORG_ACCESS_DENIED', message: `caller is not a member of org ${orgId}` },
+        { status: 403 },
+      );
+    }
     const result = await addressService.listAddresses({ org_id: orgId }, ctx);
     return NextResponse.json(result);
   } catch (err) {

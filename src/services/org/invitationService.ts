@@ -1,9 +1,9 @@
 // src/services/org/invitationService.ts
 //
 // INV-SERVICE-001 export contract: mutating functions (inviteUser, revokeInvitation, resendInvitation) are
-// route-handler-wrapped via withInvariants. Read function listPendingInvitations is currently unwrapped
-// pending Pattern G1 remediation. Token-bearer functions (acceptInvitation, previewInvitationByToken) carry
-// pattern-I skip-org-check annotations per S29a.
+// route-handler-wrapped via withInvariants. Read function listPendingInvitations is route-handler-gated via
+// explicit caller.org_ids.includes(orgId) check (S30 hot-fix; element #6 G1 Variant γ closure). Token-bearer
+// functions (acceptInvitation, previewInvitationByToken) carry pattern-I skip-org-check annotations per S29a.
 //
 // Token flow (OQ-02 RESOLVED): composite format
 // {invitation_id}:{random_hex}. Only bcrypt hash stored. On accept:
@@ -338,6 +338,14 @@ export const invitationService = {
     };
   },
 
+  /**
+   * Lists pending invitations for an org. NOT withInvariants-wrapped
+   * — read-only; service uses adminClient and bypasses RLS.
+   * Authorization is enforced at the route handler via an explicit
+   * caller.org_ids.includes(orgId) check that returns 403
+   * ORG_ACCESS_DENIED on cross-org access. (S30 hot-fix; element #6
+   * G1 Variant γ closure.)
+   */
   async listPendingInvitations(
     input: { org_id: string },
     _ctx: ServiceContext,

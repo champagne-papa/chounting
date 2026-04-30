@@ -14,7 +14,8 @@
 //   - updateOrgProfile (controller-only, audit-logged with full
 //     before_state). Rejects baseCurrency / fiscalYearStartMonth via
 //     .strict() on the patch schema.
-//   - getOrgProfile (read; not withInvariants-wrapped per OQ-07).
+//   - getOrgProfile (read; not withInvariants-wrapped per OQ-07;
+//     route-handler-gated via caller.org_ids check per S30 hot-fix).
 //   - listIndustries (read; any authenticated user).
 
 import { adminClient } from '@/db/adminClient';
@@ -344,10 +345,12 @@ export const orgService = {
 
   /**
    * Reads the full profile of an organization. NOT
-   * withInvariants-wrapped per OQ-07 (resolved 2026-04-15) —
-   * read-only service functions rely on RLS at the DB level.
-   * The route handler should use a userClient or the caller's
-   * org-membership pre-check to gate visibility.
+   * withInvariants-wrapped per OQ-07 (resolved 2026-04-15).
+   * Authorization is enforced at the route handler via an explicit
+   * caller.org_ids.includes(orgId) check that returns 403
+   * ORG_ACCESS_DENIED on cross-org access. Service uses adminClient
+   * and bypasses RLS; route-handler check is the load-bearing gate.
+   * (S30 hot-fix; element #6 G1 Variant γ closure.)
    */
   async getOrgProfile(input: { org_id: string }, _ctx: ServiceContext) {
     const db = adminClient();

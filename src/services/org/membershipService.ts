@@ -224,6 +224,14 @@ export const membershipService = {
     return { membership_id: membership.membership_id as string };
   },
 
+  /**
+   * Lists users in an org with their memberships and profile data.
+   * NOT withInvariants-wrapped — read-only; service uses adminClient
+   * and bypasses RLS. Authorization is enforced at the route handler
+   * via an explicit caller.org_ids.includes(orgId) check that returns
+   * 403 ORG_ACCESS_DENIED on cross-org access. (S30 hot-fix;
+   * element #6 G1 Variant γ closure.)
+   */
   async listOrgUsers(
     input: { org_id: string },
     _ctx: ServiceContext,

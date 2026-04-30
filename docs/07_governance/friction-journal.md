@@ -501,3 +501,131 @@ Categories:
   per element #19). S30 unblocked: brief-creation against this S29a
   closeout SHA. S29b sequences after S30 per the corrigendum's revised
   dependency graph.
+- 2026-04-30 NOTE — S30 hot-fix closeout: G1 cross-org data leak
+  closure (this commit). Element #6 G1 decision-fork resolved via
+  Variant γ; six-element inventory captured at execution closeout.
+
+  (1) **Element #6 G1 closure citation.** Pattern G1's four sites
+  (orgService.getOrgProfile, addressService.listAddresses,
+  membershipService.listOrgUsers, invitationService.listPendingInvitations)
+  are now route-handler-gated via explicit
+  caller.org_ids.includes(orgId) checks returning 403 ORG_ACCESS_DENIED
+  at four GET handlers (/api/orgs/[orgId]/{profile,addresses,users,
+  invitations}). Both element #6 framings ("missing-mechanism" AND
+  "misremembered-OQ-07-resolution") confirmed TRUE at S30
+  brief-creation (d-pre) substrate-grep; this hot-fix closes both.
+  JSDoc reconciliation at four service-layer functions plus
+  invitationService.ts file-top reframe per S29a item (i) closes the
+  misremembered-OQ-07 sub-finding; route-handler check closes the
+  missing-mechanism sub-finding. Four cross-org regression tests at
+  tests/integration/orgGetCrossOrg.test.ts cement the fix as ongoing
+  CI evidence.
+
+  (2) **Substrate-grep-first as ratification-shape (codification
+  graduated at S30 brief-creation N=3; this hot-fix is closure-
+  execution evidence).** S30 brief-creation arc fired three
+  substrate-greps that flipped or grounded operator priors:
+  (a1-sub-1′) Pattern B AST-shape verification; (c4) ORG_SCOPED_TOOLS
+  Set semantics verification; (d-pre) G1 route-handler check
+  verification. (d-pre) was the third firing AND the one that flipped
+  operator's prior (Variant β Phase-2-obligation) to ratified
+  (Variant γ hot-fix) on substrate evidence. This hot-fix is the
+  closure-execution of that flip — pre-flight substrate-evidence-
+  grounded ratification produces the right work product when the
+  operator's prior was substrate-ungrounded. Negative-test-of-the-
+  test confirmed at Task 4 Step 4: reverting one route's check
+  caused that route's regression test to fail (cross-org GET
+  returned non-403); re-applying restored 4/4 green. Direct
+  evidence the regression test catches the bug.
+
+  (3) **Element-pre-7 family closure (substrate-fidelity-gate
+  codification continuing-firings post-graduation).** S30
+  brief-creation graduated brief-creation-pre-flight-as-substrate-
+  fidelity-gate at N=3 (pre-1/2/3) with continuing firings at pre-4
+  (brief-drafting introducing operator-pending without ratification)
+  and pre-5 (brief-drafting over-claiming substrate-fidelity). Hot-
+  fix brief-creation surfaced pre-7 (anchor drift at lock-acquisition;
+  HEAD shifted from 53aa533 to ee35abf via orthogonal .gitignore
+  cleanup), pre-7-sub-1 (parent-brief assumption gap on test-fixture
+  pattern), pre-7-sub-2 (parent-brief speculative lean on (b-shape);
+  three-cadence flow), and pre-7-sub-3 (brief-drafting introduced
+  deferred-to-execution sub-decision without dialogue ratification —
+  sibling shape to S30 pre-4 at hot-fix-brief-drafting cadence;
+  second instance of same shape across briefs). Seven-plus
+  post-codification firings across four distinct cadence layers
+  (brief-creation pre-flight, brief-drafting decision, brief-drafting
+  derivation, lock-acquisition); the codified discipline now has
+  substrate-confirmed firing at every cadence layer it could
+  plausibly fire at. Hot-fix execution surfaced no additional
+  substrate-fidelity-gate firings at the execution-time substrate
+  cadence — Task 1 Step 4 substrate re-verification matched brief-
+  creation pre-flight findings exactly with zero drift across 4
+  routes, 4 services, conversationLoadEndpoint pattern, ORG_ACCESS_DENIED
+  → 403 mapping.
+
+  (4) **Sub-finding: verify-and-halt instruction as load-bearing
+  catch-mechanism.** At pre-7, the prompt's explicit "verify at
+  brief-creation pre-flight; halt on drift" instruction is what made
+  substrate-verify fire at lock-acquisition rather than later.
+  Without that instruction, lock-acquisition would have proceeded
+  silently against stale 53aa533 substrate. Future hot-fix or
+  execution prompts should carry that instruction explicitly when
+  they assert anchor SHA — small prompt-engineering discipline that
+  codifies the catch-shape.
+
+  (5) **OQ-07's resolved-decision integrity.** Pre-this-hot-fix,
+  four service-layer JSDocs cited OQ-07's resolution ("rely on RLS
+  at DB level + route handler check") but neither layer implemented
+  it (services use adminClient bypassing RLS; route handlers had no
+  caller.org_ids check). Element #6 named this discriminator as
+  "missing-mechanism vs misremembered-OQ-07-resolution"; substrate
+  at S30 (d-pre) confirmed BOTH true. Post-this-hot-fix: route-
+  handler check is real; JSDoc cites the route-handler check; OQ-07's
+  resolved decision integrity restored. **Codification candidate at
+  N=1: "Resolved-decision-citation as contract."** When JSDoc cites
+  a resolved-decision document (open question, ADR, OQ-N, etc.), the
+  citation is a contract — code must honor the cited resolution OR
+  the JSDoc must update OR the resolution must explicitly note the
+  divergence. N=1 today (the four G1 sites collapsed into one
+  structural finding); future sites surfacing "JSDoc cites OQ-N;
+  code violates OQ-N" would graduate per Documentation Routing
+  convention's N=3 threshold.
+
+  (6) **(b-shape-1) architectural-layer-clarity disposition.**
+  Operator ratified hand-crafted early-return over throw-and-catch
+  on three architectural-layer counter-considerations: failure-mode-
+  asymmetry between membership check and other route logic;
+  locality-of-readability of the gate; and counter-precedent at
+  existing PATCH paths whose throw-and-catch flow leverages
+  withInvariants Invariant 3 (a middleware-layer gate) — the hot-
+  fix's route-handler-level gate is architecturally distinct and
+  should not be conflated. **Codification candidate at N=1: "Don't
+  conflate uniformity-at-the-wire (response shape) with uniformity-
+  of-control-flow (throw vs early-return)."** The two operate at
+  different architectural layers and should be calibrated
+  independently. N=1 today; future architectural-layer
+  disambiguation decisions would graduate per Documentation Routing
+  convention's N=3 threshold.
+
+  Net outcomes this commit family: 4 GET route handlers gated via
+  caller.org_ids.includes(orgId) check returning 403 ORG_ACCESS_DENIED
+  on cross-org access (Hard constraint B preserved: no withInvariants
+  wrap additions); 4 service-layer JSDoc reconciliations + 1 file-
+  top reframe (Hard constraint D preserved: no service-layer
+  behavior changes); 4 cross-org regression tests passing (Hard
+  constraint C: response shape uniform with PATCH catch-block output);
+  Hard constraint A preserved (no eslint config touches); Hard
+  constraint E satisfied (invitationService file-top reframed from
+  "pending Pattern G1 remediation" to route-handler-gated state);
+  pnpm agent:validate 26/26 post db:reset:clean+seed; pnpm typecheck
+  clean; full suite 557/578 passed (4 new regression tests pass; 3
+  pre-existing carry-forwards unchanged per S29a element #19:
+  verifyAuditCoverageRoundTrip orthogonal, accountLedgerService
+  running-balance ×2 brief-anticipated wrap-driven carry-forward,
+  crossOrgRlsIsolation cascading pollution downstream of the running-
+  balance failures). S30 brief now ready to re-anchor against this
+  commit's HEAD: Pattern G1 row in LT-01(b) annotation pass table
+  removes; LT-01(b) annotation pass count drops by 4; pre-decision
+  (d) section transitions to resolved-at-hot-fix; LT-01(d) audit
+  scope shrinks (this hot-fix's JSDoc reconciliation closes some
+  claims preemptively).
