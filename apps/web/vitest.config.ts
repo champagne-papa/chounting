@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'eslint-rules/__tests__/**/*.test.{js,ts}'],
+    include: ['tests/**/*.test.ts', '../../eslint-rules/__tests__/**/*.test.{js,ts}'],
     setupFiles: ['tests/setup/loadEnv.ts'],
     globalSetup: './tests/setup/globalSetup.ts',
     testTimeout: 15000,

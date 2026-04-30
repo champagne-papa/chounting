@@ -26,7 +26,7 @@
     "db:reset": "supabase db reset --local",
     "db:generate-types": "supabase gen types typescript --local > apps/web/src/db/types.ts",
     "db:seed": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f apps/web/src/db/seed/dev.sql",
-    "db:seed:auth": "dotenv -e apps/web/.env.local -- tsx scripts/seed-auth-users.ts",
+    "db:seed:auth": "pnpm --filter @chounting/web exec dotenv -e .env.local -- tsx scripts/seed-auth-users.ts",
     "db:seed:all": "pnpm db:seed:auth && pnpm db:seed",
     "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all"
   },

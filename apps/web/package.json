@@ -1,0 +1,53 @@
+{
+  "name": "@chounting/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "agent:floor": "vitest run tests/integration/unbalancedJournalEntry tests/integration/lockedPeriodRejection tests/integration/crossOrgRlsIsolation tests/integration/serviceMiddlewareAuthorization tests/integration/reversalMirror",
+    "agent:validate": "pnpm typecheck && pnpm test:no-hardcoded-urls && pnpm agent:floor",
+    "test:no-hardcoded-urls": "! grep -rn 'localhost:54321\\|127.0.0.1:54321' tests/ src/",
+    "verify-audit-coverage": "tsx scripts/audit/verifyAuditCoverage.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.5.0",
+    "@supabase/supabase-js": "^2.103.0",
+    "bcryptjs": "^3.0.3",
+    "decimal.js": "^10.6.0",
+    "next": "^15.0.0",
+    "next-intl": "^3.20.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.72.1",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/typescript-checker": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/ui": "^2.0.0",
+    "eslint-config-next": "^15.0.0",
+    "tailwindcss": "^4",
+    "vitest": "^2.0.0"
+  }
+}

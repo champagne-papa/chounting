@@ -1,36 +1,23 @@
-import { dirname } from "path";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
-import { FlatCompat } from "@eslint/eslintrc";
-import tseslint from "typescript-eslint";
+import baseConfig from "../../eslint.base.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
-const servicesPlugin = require("./eslint-rules/index.js");
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+// Custom services-layer plugin lives at the monorepo root; it is
+// shared infrastructure (LT-01b enforcement) but currently only
+// targets apps/web/src/services/**.
+const servicesPlugin = require(resolve(__dirname, "../../eslint-rules/index.js"));
 
 const eslintConfig = [
-  // .next/ build output is generated; do not lint it. Closes the
-  // ~9,860-error pre-existing baseline pollution surfaced at S30
-  // brief-creation pre-flight pre-1.
-  { ignores: [".next/**"] },
-  ...tseslint.configs.recommended,
-  ...compat.extends("next/core-web-vitals"),
+  ...baseConfig,
   {
     rules: {
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_",
-        caughtErrorsIgnorePattern: "^_",
-      }],
-      // LT-03 / UF-006: adminClient is restricted to src/services/. Route
-      // handlers and other layers must consume services rather than the
-      // admin client directly. Override below re-enables it for the
-      // service layer.
+      // LT-03 / UF-006: adminClient is restricted to src/services/.
+      // Route handlers and other layers must consume services rather
+      // than the admin client directly.
       "no-restricted-imports": ["error", {
         patterns: [{
           group: ["@/db/adminClient", "**/db/adminClient"],
