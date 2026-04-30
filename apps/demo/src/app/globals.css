@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@chounting/tokens/tokens.css";
+
+@source "../../../packages/ui/src";
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
