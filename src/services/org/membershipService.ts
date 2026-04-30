@@ -17,6 +17,7 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 
 export const membershipService = {
+  // withInvariants: skip-org-check (pattern-H: dead code; remove in Phase 2 cleanup)
   async listForUser(
     input: { user_id: string },
     ctx: ServiceContext,
@@ -37,6 +38,7 @@ export const membershipService = {
     return data ?? [];
   },
 
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.role.change'))
   async changeUserRole(
     input: { org_id: string; user_id: string; new_role: string },
     ctx: ServiceContext,
@@ -90,6 +92,7 @@ export const membershipService = {
     return { membership_id: membership.membership_id as string };
   },
 
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.suspend'))
   async suspendUser(
     input: { org_id: string; user_id: string },
     ctx: ServiceContext,
@@ -136,6 +139,7 @@ export const membershipService = {
     return { membership_id: membership.membership_id as string };
   },
 
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.suspend' — substrate-bug per closeout NOTE; route-vs-action-string mismatch flagged for separate fix))
   async reactivateUser(
     input: { org_id: string; user_id: string },
     ctx: ServiceContext,
@@ -178,6 +182,7 @@ export const membershipService = {
     return { membership_id: membership.membership_id as string };
   },
 
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.remove'))
   async removeUser(
     input: { org_id: string; user_id: string },
     ctx: ServiceContext,
@@ -232,6 +237,7 @@ export const membershipService = {
    * 403 ORG_ACCESS_DENIED on cross-org access. (S30 hot-fix;
    * element #6 G1 Variant γ closure.)
    */
+  // withInvariants: skip-org-check (pattern-G1: route-handler-gated via caller.org_ids.includes(orgId) check; not withInvariants-wrapped per S30 hot-fix arc c617f58 + 5d58b36, OQ-07 resolved-decision integrity)
   async listOrgUsers(
     input: { org_id: string },
     _ctx: ServiceContext,

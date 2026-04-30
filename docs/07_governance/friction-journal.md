@@ -691,3 +691,191 @@ Categories:
   addresses, invitations). users/route.ts file-top left as-is per
   chat-side review (neutral; no RLS claim). Sibling fix-forward to
   c617f58; standalone commit per Option A ratification.
+- 2026-04-30 NOTE — S30 execution closeout: Path C arc Gate 4
+  closed (LT-01 + LT-03 + LT-04 + QUALITY-006). Twelve-element
+  inventory captured at execution closeout.
+
+  (1) **UF-006 + UF-013 + QUALITY-006 closure citation.** LT-03:
+  no-restricted-imports rule blocks @/db/adminClient outside
+  src/services/ (eslint.config.mjs); .next/ ignore folded into the
+  same edit (closes ~9,860-error pre-existing baseline). LT-01(b):
+  custom ESLint rule services/withInvariants-wrap-or-annotate +
+  annotation pass (28 added at S30 = 10 brief-enumerated Pattern B
+  + 3 Pattern C/E + 1 Pattern H + 4 Pattern G1 + 10 Pattern B
+  surfaced at execution-time-pre-flight Task 5 verification). 35
+  annotations total in src/services/ at S30 closeout (7 D/G2/I
+  existing + 28 added). G1 sites pass via canonical-form annotation
+  match (route-handler-gate rationale), not wrap-detection — rule
+  scope is service-layer files only. LT-01(c): narrow-scope
+  test:no-hardcoded-urls formalized per (c-1c-α); chains in
+  agent:validate. LT-01(d): CLAUDE.md (186 lines) + AGENTS.md
+  (5 lines) audited within 60-min ceiling (≈23 min); 17 of 20
+  audited claims auto-resolved silent, 1 auto-resolve commit-message-
+  noted, 2 surfaced for operator (CURRENT_STATE.md staleness +
+  "17 invariants" count basis ambiguity); audit inventory at
+  docs/09_briefs/phase-1.3/session-30-audit-inventory.md. LT-04:
+  per-tool `gatedByDispatcherSet: boolean` required field on each
+  ToolDef via defineTool<T extends BaseToolDef> helper at
+  src/agent/tools/types.ts (NEW); ORG_SCOPED_TOOLS derived in
+  src/agent/tools/orgScopedTools.ts (NEW); orchestrator imports
+  the derived Set; drift test at tests/unit/agent/orgScopedTools.
+  test.ts (NEW; 3 tests, all green).
+
+  (2) **Brief-creation pre-flight as substrate-fidelity gate
+  (codification graduated S30 N=3; continuing-firings).** S30
+  brief-creation pre-flight pre-1/2/3 graduated the codification
+  at N=3. Continuing post-graduation firings at S30 brief-drafting
+  (pre-4: introducing operator-pending without dialogue ratification;
+  pre-5: brief-drafting over-claiming substrate-fidelity), S30
+  re-anchor (Item 1 floor-table arithmetic conflation), S30
+  re-anchor-2 prompt-drafting (misapplying S25-S29a-S30 execution-
+  cadence governance precedent to brief-amend cadence; caught by
+  WSL Claude at substrate-confirm of 595556a precedent), and S30
+  execution-time-pre-flight (Pattern B sub-pre-flight count drift,
+  LT-03 architectural-surface count drift, LT-01(b) rule firings
+  on G1 + 10 additional Pattern B sites, ORG_SCOPED_TOOLS line-
+  number-shift FALSE-claim subsequently retracted). The codified
+  discipline now has substrate-confirmed firing at every cadence
+  layer of the brief lifecycle from creation through execution-
+  time substrate-confirm — eight-or-more cadence-layer enumeration
+  in order of first firing: brief-creation pre-flight → brief-
+  drafting decision → brief-drafting derivation → lock-acquisition
+  → brief-drafting deferred-decision → post-execution-review →
+  re-anchor → prompt-drafting → execution-time-pre-flight. Durable
+  evidence the discipline is correctly scoped.
+
+  (3) **Conditional task-shape encoding precedent (codification
+  candidate at N=1 from S30 brief-creation; N=1 holds at S30
+  closeout).** S30 brief encoded (d)/(e) operator-pending decisions
+  as conditional task variants; (d) Variant γ executed at hot-fix
+  arc; (e) Variant α resolved at S30 execution Task 0 Step 0.2.
+  Pattern proved usable across two operator-pending decisions
+  spanning brief-creation through execution. N=1; not graduated;
+  future briefs with operator-pending decisions evaluate adoption.
+
+  (4) **Annotation-default discipline.** S30's LT-01(b) committed
+  to annotation-everywhere with empty starting allowlist. All 35
+  annotated sites carry canonical-form rationale comments at the
+  service-layer property; no allowlist entries. Discriminator
+  ratified: "annotation for transient and standing-with-rationale-
+  at-call-site, allowlist for standing-only-when-call-site-
+  annotation-is-structurally-unworkable." Sibling shape to S29a
+  element #15's (γ)-rhythm scope-amend discipline.
+
+  (5) **(c4) updateOrgProfile substrate state-2 resolution +
+  field-naming.** Pre-flight pre-3 surfaced ORG_SCOPED_TOOLS Set
+  semantics narrower than first-glance reading (state 2: per-tool
+  inline null-org check at orchestrator dispatcher). Field-naming
+  resolved at execution Task 0 Step 0.3 via Option-3-alternative
+  pick: `gatedByDispatcherSet: boolean` (substrate-precise; terser
+  than `requiresOrchestratorOrgGate`; self-documenting — `false`
+  reads as "not gated at the dispatcher Set" rather than the
+  misleading "not org-scoped"). Documented in
+  src/agent/tools/types.ts file-top via BaseToolDef JSDoc.
+
+  (6) **Variant disposition outcomes.** (d) resolved to Variant γ
+  at S30 brief-creation (substrate-grep-first ratification flip)
+  and executed at hot-fix arc (c617f58 + 5d58b36); G1 territory
+  closed pre-S30. (e) resolved to Variant α (deferred to S29b) at
+  Task 0 Step 0.2 of execution per substrate-grounded analysis of
+  arc-summary's S29b scope (design + migration; annotations sunset
+  at S29b commit). (c4) resolved to Option-3-alternative
+  `gatedByDispatcherSet: boolean` + (c4-sub-β) `defineTool` helper
+  at Task 0 Step 0.3.
+
+  (7) **LT-01(d) audit outcomes.** Time-box adherence: ≈23 min of
+  60-min ceiling. Bucket counts: 17 auto-resolved silent (path-
+  existence checks; Agent Ladder rungs; agent:validate composition;
+  skill directories) + 1 auto-resolve commit-message-noted (Phase 1
+  Simplifications partial-picture framing) + 2 surfaced for operator
+  ("17 invariants" count basis ambiguity; CURRENT_STATE.md staleness
+  4+ days behind project state). Audit inventory at
+  docs/09_briefs/phase-1.3/session-30-audit-inventory.md.
+
+  (8) **Stash-revert isolation candidate (S29a discipline at N=2).**
+  Not used at S30 Task 9 regression — fresh-run baseline matched
+  expected post-S30 floor without isolation discipline being needed.
+  N=2 holds; remains a codification candidate.
+
+  (9) **LT-01(b) rule G1 framing correction at execution-time-pre-
+  flight.** S30 brief asserted G1 sites pass via "wrap-detection at
+  the route handler layer." Substrate at execution Task 5 rule
+  registration: rule scope is `files: ['src/services/**/*.ts']`;
+  rule walks AST of service-layer files only. Route-handler-level
+  caller.org_ids checks (the hot-fix's b-shape-1 ratified gate
+  posture) are invisible to the rule. G1 sites passed neither
+  wrap-detection (no withInvariants call at service-layer property)
+  nor annotation match (brief had pre-decision (d) remove G1 from
+  the annotation pass). Rule fired correctly per its predicate;
+  brief's framing conflated rule's wrap-detection mechanism with
+  hot-fix's route-handler-check mechanism. They're architecturally
+  distinct gates per the hot-fix's own b-shape-1 ratification
+  (see hot-fix arc NOTE element #6). Resolution: G1 sites annotated
+  with `(pattern-G1: route-handler-gated via caller.org_ids.includes
+  (orgId) check; not withInvariants-wrapped per S30 hot-fix arc
+  c617f58 + 5d58b36, OQ-07 resolved-decision integrity)`.
+
+  (10) **Read-completeness threshold (codification candidate at
+  N=2).** S30 brief's Pattern B enumeration listed 10 sites
+  (journalEntryService.post + 6 recurringJournalService mutations
+  + 3 invitationService mutations); substrate at execution-time-
+  Task-5 verification surfaced 10 additional Pattern B sites
+  (4 addressService + 4 membershipService + 2 orgService) — 100%
+  count drift. Sibling-shape to the read-completeness-threshold
+  codification candidate from S29 brief-creation (N=1, partial
+  read produced confident-shaped enumeration). N=2 firing of the
+  same shape; one more firing graduates per Documentation Routing
+  convention's N=3 threshold. Resolution: 10 surfaced sites
+  annotated at Task 6 with verbatim action per route-handler
+  wrap-site (substrate-greped via Convention #8 verify-directly).
+
+  (11) **Resolved-decision-citation as contract (codification
+  candidate at N=3 — graduated this session).** Hot-fix arc had
+  N=2 (service-layer JSDoc + route-handler file-top). S30 execution
+  surfaces N=3 firing: G1 service-layer annotations now cite the
+  hot-fix arc's resolved decision (route-handler-gated via
+  caller.org_ids check) at the service-layer property comment. The
+  citation is a contract — code at the route handler must continue
+  to honor the gate; if a future edit removes the route-handler
+  check, the JSDoc citation lies. Substrate-grounded as a
+  Documentation Routing convention graduation per N=3 threshold.
+
+  (12) **Substrate-bug at users/[userId]/reactivate/route.ts:18.**
+  Action string is `'user.suspend'` instead of `'user.reactivate'`.
+  Pre-existing bug; orthogonal to S30 scope. Annotation at
+  membershipService.reactivateUser honors substrate-as-is with
+  inline note: `(action: 'user.suspend' — substrate-bug per closeout
+  NOTE; route-vs-action-string mismatch flagged for separate fix)`.
+  Filed for separate fix in a follow-up session; not S30's scope.
+
+  Codification candidate updates: Conditional-task-shape at N=1 (no
+  change); brief-creation-pre-flight-gate at N=∞ (graduated at S30
+  brief-creation); fractal-substrate-fidelity (S29a element #3)
+  continued post-graduation firings at S30 execution surfaces.
+  Read-completeness-threshold advances N=1 → N=2 (one more firing
+  to graduate). Resolved-decision-citation-as-contract advances
+  N=2 → N=3 (graduates this session). Reconciliation-scope-
+  derivation as substrate-completeness gate stays at N=2. New
+  codification candidate at N=1: action-string-substrate-drift
+  (the reactivate route bug).
+
+  Net outcomes this commit family: 14 service files annotated /
+  modified for canonical-form annotations; eslint.config.mjs +
+  eslint-rules/ (NEW directory + rule + plugin index) + tests for
+  rule; src/agent/tools/types.ts (NEW); src/agent/tools/orgScopedTools.ts
+  (NEW); 10 tool files migrated to defineTool wrapper +
+  gatedByDispatcherSet field; src/agent/orchestrator/index.ts
+  imports the derived Set; tests/unit/agent/orgScopedTools.test.ts
+  (NEW); vitest.config.ts include array extended to pick up
+  eslint-rules/__tests__; docs/09_briefs/phase-1.3/session-30-audit-
+  inventory.md (NEW); docs/09_briefs/phase-1.3/session-30-brief.md
+  amends per S29a element #15 (γ)-rhythm scope-amend precedent.
+  pnpm typecheck clean; pnpm agent:validate 26/26 post-reset; full
+  suite 581/582 passed (1 failed verifyAuditCoverageRoundTrip
+  orthogonal carry-forward; +24 vs pre-S30 fresh-run baseline of
+  557/578 — 4 deliberate test additions [3 orgScopedTools + 1 rule
+  unit test] + 20 formerly-skipped tests now passing without
+  apparent S30-edit causation; substrate-finding worth marking but
+  not regression-shaped). LT-01(b) rule fires zero false-positives.
+  Path C arc closure proximity: after S30 + S29b + S31 (LT-02),
+  Path C closes; Phase 2 surface expansion gate unblocks.

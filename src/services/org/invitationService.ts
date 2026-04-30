@@ -18,6 +18,7 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 
 export const invitationService = {
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.invite'))
   async inviteUser(
     input: { org_id: string; email: string; role: string },
     ctx: ServiceContext,
@@ -188,6 +189,7 @@ export const invitationService = {
     return { org_id: invitation.org_id as string, membership_id: membership.membership_id as string };
   },
 
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'user.invite'))
   async revokeInvitation(
     input: { org_id: string; invitation_id: string },
     ctx: ServiceContext,
@@ -226,6 +228,7 @@ export const invitationService = {
     return { invitation_id: input.invitation_id };
   },
 
+  // withInvariants: skip-org-check (pattern-B: declared in INV-SERVICE-001 export contract; no current route-handler consumer; consumer expected in Phase 2 user-management surface)
   async resendInvitation(
     input: { org_id: string; invitation_id: string },
     ctx: ServiceContext,
@@ -346,6 +349,7 @@ export const invitationService = {
    * ORG_ACCESS_DENIED on cross-org access. (S30 hot-fix; element #6
    * G1 Variant γ closure.)
    */
+  // withInvariants: skip-org-check (pattern-G1: route-handler-gated via caller.org_ids.includes(orgId) check; not withInvariants-wrapped per S30 hot-fix arc c617f58 + 5d58b36, OQ-07 resolved-decision integrity)
   async listPendingInvitations(
     input: { org_id: string },
     _ctx: ServiceContext,

@@ -3,10 +3,12 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { listChartOfAccountsInputSchema } from './schemas/listChartOfAccounts.schema';
+import { defineTool } from './types';
 
-export const listChartOfAccountsTool = {
+export const listChartOfAccountsTool = defineTool({
   name: 'listChartOfAccounts',
   description: 'List the organization\'s chart of accounts. Use when selecting the debit and credit accounts for a journal entry.',
   input_schema: zodToJsonSchema(listChartOfAccountsInputSchema),
   zodSchema: listChartOfAccountsInputSchema,
-} as const;
+  gatedByDispatcherSet: true,
+} as const);

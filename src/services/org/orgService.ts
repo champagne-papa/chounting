@@ -82,6 +82,7 @@ export const orgService = {
    *     populated on the row until the legacy column is dropped in
    *     a follow-up migration (see brief §8).
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.create'))
   async createOrgWithTemplate(
     input: CreateOrgProfileInput,
     ctx: ServiceContext,
@@ -245,6 +246,7 @@ export const orgService = {
    * their existing CoA as-is. A separate Phase 2+ reconciliation
    * flow would be needed to refresh CoA for a new industry.
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.profile.update'); also wrapped per-tool-inline at orchestrator/index.ts dispatcher per (c4) state-2)
   async updateOrgProfile(
     input: { org_id: string; patch: UpdateOrgProfilePatch },
     ctx: ServiceContext,
@@ -352,6 +354,7 @@ export const orgService = {
    * and bypasses RLS; route-handler check is the load-bearing gate.
    * (S30 hot-fix; element #6 G1 Variant γ closure.)
    */
+  // withInvariants: skip-org-check (pattern-G1: route-handler-gated via caller.org_ids.includes(orgId) check; not withInvariants-wrapped per S30 hot-fix arc c617f58 + 5d58b36, OQ-07 resolved-decision integrity)
   async getOrgProfile(input: { org_id: string }, _ctx: ServiceContext) {
     const db = adminClient();
     const { data: row, error } = await db

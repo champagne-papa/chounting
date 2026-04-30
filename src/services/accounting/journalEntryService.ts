@@ -529,7 +529,9 @@ async function get(
 }
 
 export const journalEntryService = {
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'journal_entry.post' + 'journal_entry.adjust' variant); also wrapped service-to-service in recurringJournalService.approveRun for defense-in-depth)
   post,
   list: withInvariants(list),
+  // withInvariants: skip-org-check (pattern-C: deferred to S29b)
   get,
 };

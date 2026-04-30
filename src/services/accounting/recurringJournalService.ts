@@ -772,14 +772,22 @@ async function getRun(
 }
 
 export const recurringJournalService = {
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_template.create'))
   createTemplate,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_template.update'))
   updateTemplate,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_template.deactivate'))
   deactivateTemplate,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_run.generate'))
   generateRun,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_run.approve'))
   approveRun,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_run.reject'))
   rejectRun,
   listTemplates: withInvariants(listTemplates),
+  // withInvariants: skip-org-check (pattern-C: deferred to S29b)
   getTemplate,
   listRuns: withInvariants(listRuns),
+  // withInvariants: skip-org-check (pattern-E: deferred to S29b)
   getRun,
 };

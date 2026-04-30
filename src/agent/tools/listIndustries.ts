@@ -4,10 +4,12 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { listIndustriesInputSchema } from './schemas/listIndustries.schema';
+import { defineTool } from './types';
 
-export const listIndustriesTool = {
+export const listIndustriesTool = defineTool({
   name: 'listIndustries',
   description: 'List all available industries (used to pick a Chart of Accounts template during onboarding).',
   input_schema: zodToJsonSchema(listIndustriesInputSchema),
   zodSchema: listIndustriesInputSchema,
-} as const;
+  gatedByDispatcherSet: false,
+} as const);

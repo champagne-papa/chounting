@@ -107,6 +107,7 @@ export const addressService = {
    * (org_id, address_type) pair is auto-demoted (logical
    * transaction) so the partial unique index does not reject.
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.address.create'))
   async addAddress(
     input: { org_id: string } & AddAddressInput,
     ctx: ServiceContext,
@@ -188,6 +189,7 @@ export const addressService = {
    * type for the org is demoted first (per OQ-06: emits a second
    * audit row for the demotion).
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.address.update'))
   async updateAddress(
     input: { org_id: string; address_id: string; patch: UpdateAddressPatch & { addressType?: unknown } },
     ctx: ServiceContext,
@@ -265,6 +267,7 @@ export const addressService = {
    * Hard-deletes an address. No archival column. Audit row carries
    * full pre-delete state in before_state.
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.address.delete'))
   async removeAddress(
     input: { org_id: string; address_id: string },
     ctx: ServiceContext,
@@ -302,6 +305,7 @@ export const addressService = {
    * (one for the promotion, one for the demotion) so each entity
    * mutation has its own audit row.
    */
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'org.address.set_primary'))
   async setPrimaryAddress(
     input: { org_id: string; address_id: string },
     ctx: ServiceContext,
@@ -361,6 +365,7 @@ export const addressService = {
    * and bypasses RLS; route-handler check is the load-bearing gate.
    * (S30 hot-fix; element #6 G1 Variant γ closure.)
    */
+  // withInvariants: skip-org-check (pattern-G1: route-handler-gated via caller.org_ids.includes(orgId) check; not withInvariants-wrapped per S30 hot-fix arc c617f58 + 5d58b36, OQ-07 resolved-decision integrity)
   async listAddresses(input: { org_id: string }, _ctx: ServiceContext) {
     const db = adminClient();
     const { data, error } = await db

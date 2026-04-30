@@ -44,6 +44,7 @@ import { loadOrCreateSession, type AgentSessionRow } from './loadOrCreateSession
 import { toolsForPersona, type Persona } from './toolsForPersona';
 import { buildSystemPrompt } from './buildSystemPrompt';
 import { respondToUserInputSchema } from '@/agent/tools/schemas/respondToUser.schema';
+import { ORG_SCOPED_TOOLS } from '@/agent/tools/orgScopedTools';
 import { validateParamsAgainstTemplate } from '@/agent/prompts/validTemplateIds';
 import { loadOrgContext } from '@/agent/memory/orgContextManager';
 import {
@@ -1095,13 +1096,9 @@ async function executeTool(
   // session.org_id. Reject with a loud error if session.org_id is
   // null for any org-scoped tool — createOrganization is the only
   // legal null-org tool and it has no org_id field.
-  const ORG_SCOPED_TOOLS = new Set([
-    'listChartOfAccounts',
-    'checkPeriod',
-    'listJournalEntries',
-    'postJournalEntry',
-    'reverseJournalEntry',
-  ]);
+  // ORG_SCOPED_TOOLS is now derived from the tool registry's
+  // `gatedByDispatcherSet` flag; see src/agent/tools/orgScopedTools.ts
+  // (S30 LT-04 / QUALITY-006 closure).
   if (ORG_SCOPED_TOOLS.has(toolName) && session.org_id === null) {
     throw new Error(
       `${toolName} called without an active org (session.org_id is null). ` +

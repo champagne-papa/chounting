@@ -12,10 +12,12 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { PostJournalEntryInputSchema } from '@/shared/schemas/accounting/journalEntry.schema';
+import { defineTool } from './types';
 
-export const postJournalEntryTool = {
+export const postJournalEntryTool = defineTool({
   name: 'postJournalEntry',
   description: `Create a journal entry. ALWAYS use dry_run=true on the first call. The orchestrator replays a second call with dry_run=false only after the user approves the ProposedEntryCard. For entry_date: when the temporal context above provides a "Resolved entry_date for this turn" line, use that exact date. For explicit dates in the prompt, echo them as-is. Do not perform date arithmetic.`,
   input_schema: zodToJsonSchema(PostJournalEntryInputSchema),
   zodSchema: PostJournalEntryInputSchema,
-} as const;
+  gatedByDispatcherSet: true,
+} as const);

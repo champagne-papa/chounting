@@ -4,10 +4,12 @@
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ReversalInputSchema } from '@/shared/schemas/accounting/journalEntry.schema';
+import { defineTool } from './types';
 
-export const reverseJournalEntryTool = {
+export const reverseJournalEntryTool = defineTool({
   name: 'reverseJournalEntry',
   description: 'Reverse an existing journal entry. Requires reverses_journal_entry_id and a non-empty reversal_reason. ALWAYS use dry_run=true on the first call — same confirm seam as postJournalEntry.',
   input_schema: zodToJsonSchema(ReversalInputSchema),
   zodSchema: ReversalInputSchema,
-} as const;
+  gatedByDispatcherSet: true,
+} as const);
