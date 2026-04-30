@@ -12,10 +12,10 @@ export async function GET(
   { params }: { params: Promise<{ orgId: string; templateId: string }> },
 ) {
   try {
-    const { templateId } = await params;
+    const { orgId, templateId } = await params;
     const ctx = await buildServiceContext(req);
     const detail = await recurringJournalService.getTemplate(
-      { recurring_template_id: templateId },
+      { org_id: orgId, recurring_template_id: templateId },
       ctx,
     );
     return NextResponse.json(detail);

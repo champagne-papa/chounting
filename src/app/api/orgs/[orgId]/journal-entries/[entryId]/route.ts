@@ -13,13 +13,17 @@ export async function GET(
     const ctx = await buildServiceContext(req);
 
     const entry = await journalEntryService.get(
-      { journal_entry_id: entryId },
+      { org_id: orgId, journal_entry_id: entryId },
       ctx
     );
 
     // URL/data consistency: verify the entry belongs to the org in the URL.
     // Prevents URL spoofing (/orgs/orgA/journal-entries/entryFromOrgB).
-    // Returns 404 (not 403) to avoid leaking existence.
+    // Returns 404 (not 403) to avoid leaking existence. Post-S29b the
+    // wrap's Invariant 3 already gates org_id consistency against caller's
+    // memberships; this in-handler check defends against URL-vs-result
+    // mismatch when the entry happens to belong to a different org the
+    // caller IS a member of.
     if (entry.org_id !== orgId) {
       return NextResponse.json(
         { error: 'NOT_FOUND', message: 'Journal entry not found' },

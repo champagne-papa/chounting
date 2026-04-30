@@ -1055,3 +1055,147 @@ Categories:
   expected). Path C arc closure proximity: S29b unblocked (brief-
   creation against this S28 closeout SHA next); after S29b + S31
   (LT-02), Path C closes; Phase 2 surface expansion gate unblocks.
+- 2026-04-30 NOTE — S29b execution closeout: MT-03 Patterns
+  C/C-variant/E migration via input-shape refactor (this commit
+  family). Three-element inventory + sub-finding categories
+  captured at execution closeout per the S29b brief NOTE plan.
+
+  (1) **UF-002 broad-scope wrap closure citation.** UF-002's
+  service auth gap fully closed across MT-03 surface: Pattern A
+  closed at S29a (c47e58d); Pattern B closed at hot-fix arc
+  (c617f58 + 5d58b36 — 10 brief-enumerated + 10 surfaced-at-S30-
+  execution = 20 sites annotated at S30); Pattern G1 closed at
+  hot-fix arc; Patterns C/C-variant/E closed here via input-shape
+  refactor (each refactored from `{ entity_id }` to `{ org_id,
+  entity_id }` per pre-decision (a-α); wrapped at export site via
+  `withInvariants(<methodName>)`; canonical-form annotations
+  removed). Route-handler call-sites updated at 2 sites
+  (journal-entries/[entryId] + recurring-templates/[templateId]).
+  Pattern E (getRun) had 0 external callers — refactor at
+  zero-breakage.
+
+  (2) **Pattern E join-FK outcome: substrate-resolved cleanly
+  (single-roundtrip).** PostgREST embed shape
+  `recurring_journal_runs!inner(recurring_journal_templates(org_id))`
+  with `.eq('recurring_journal_templates.org_id', input.org_id)`
+  filter substrate-resolved at execution Task 4 — codebase-wide
+  embed convention (substrate-confirmed at brief-creation:
+  journalEntryService.get's nested embed at lines 466-468 is the
+  precedent) held. Two-step lookup fallback path NOT taken;
+  substrate-resolve was the expected outcome per brief
+  pre-decision (d) framing post-R2 revision. Single DB roundtrip
+  post-refactor (vs current two roundtrips) ratified at execution.
+
+  (3) **Sub-findings surfaced at execution.** Categories per the
+  brief NOTE plan + execution-time additions:
+
+  i. **getRun zero-callers carry-forward.** Pre-flight pre-2
+  substrate-fidelity-gate firing at brief-creation cadence
+  re-confirmed at execution Task 2 Step 3 (caller-surface grep
+  returned 0 hits on `recurringJournalService.getRun(`). Refactor
+  scope at zero-breakage as predicted. Reconciliation-scope-
+  derivation as substrate-completeness gate codification candidate
+  **graduates at parent-shape N=3** with this firing — third
+  firing-shape instance under the parent shape "scope derived
+  from one substrate-layer; missed sibling substrate-layer at
+  scope-completeness-gate" (S29a element #18 + S30 sibling
+  fix-forward NOTE element 1 + S29b getRun finding). **Strict-
+  shape sub-tracking at substrate-honest precision:** prior two
+  firings were reconciliation-scope-sibling shape (file-top +
+  JSDoc layers as siblings of comment-fix scope); S29b's firing
+  is caller-surface-completeness shape (consumer-surface-
+  completeness derived narrower than substrate at scope-
+  derivation, sibling-shape to S28's resendInvitation finding).
+  Both fold under parent-shape; strict-shape distinction noted
+  for future-session-reads of the codification record.
+  Documentation Routing convention's parent-shape N=3 threshold
+  met. **Codification graduates at this S29b execution closeout
+  NOTE.**
+
+  ii. **Existence-leak-prevention-as-error-code-contract
+  codification candidate at N=1** (from S29b brief-creation
+  pre-flight pre-3, ratified at execution). Substrate-coherent
+  existing pattern preserved at S29b: getTemplate's
+  RECURRING_TEMPLATE_NOT_FOUND does dual duty (intra-org-not-
+  found + cross-org-not-found via .in('org_id', ...)-collapsed-
+  rows behavior); mutations use the same code for intra-org-not-
+  found only (cross-org gated by Invariant 3). The semantic
+  distinction across failure modes is load-bearing-architectural-
+  discipline. Pre-decision (b-γ) ratified the pattern at S29b
+  brief-creation; execution preserves verbatim per Hard
+  constraint B. Sibling-shape to S30's "Resolved-decision-
+  citation as contract" graduation. N=1 today; future sites
+  surfacing same shape graduate per N=3 threshold.
+
+  iii. **Carry-forward drift on full-suite run: matches expected
+  baseline exactly.** Fresh-post-reset baseline at S29b closeout:
+  1 failed + 570 passed + 20 skipped (591 total). Compared to
+  brief-expected (1 failed + 570 passed + 20 skipped = 591):
+  IDENTICAL. No drift; no new failures attributable to S29b.
+  verifyAuditCoverageRoundTrip orthogonal carry-forward
+  unchanged per S29a element #19; the 20 skipped are env-
+  conditional skip-fluctuation observed across the S30 arc;
+  Test Files 2 failed = 1 verifyAuditCoverageRoundTrip individual
+  + 1 file-level setup failure on crossOrgRlsIsolation cascading
+  (carry-forward category c).
+
+  iv. **(γ)-rhythm scope-amend NOT fired at execution.**
+  Pre-decision (d)'s join-FK shape substrate-resolved as
+  expected; two-step-lookup fallback path NOT taken. Codification
+  candidate (γ)-rhythm scope-amend remains at N=2 (S29a element
+  #15 + S28 closeout NOTE element viii); S29b execution did NOT
+  surface a third firing. Held; pending future execution-cadence
+  firing for graduation.
+
+  v. **Convention #8 verify-directly drift.** No line-cite drift
+  surfaced at execution; brief's pre-flight-confirmed cites at
+  HEAD `aae6c87` matched substrate exactly (function declarations
+  at journalEntryService.ts:454, recurringJournalService.ts:675
+  + :745; FK at migration 20240131000000:134; route handler call-
+  sites at journal-entries/[entryId]/route.ts:15 + recurring-
+  templates/[templateId]/route.ts:17). No fresh codification-
+  graduation under category v.
+
+  vi. **Anything else surfaced at execution: none.** Clean
+  execution against the pre-decided shape; substrate aligned
+  with brief-creation predictions across all four pre-decisions.
+
+  Net outcomes this commit family: 4 source files modified
+  (journalEntryService.ts signature + export wrap; recurringJournal
+  Service.ts 2 signature changes + export wraps + getRun body
+  refactor to join-FK; 2 route-handler call-site updates).
+  3 canonical-form annotations removed; LT-01(b) ESLint rule
+  fires zero false-positives (35 - 3 = 32 annotations in
+  src/services/ at S29b closeout); pnpm typecheck clean; pnpm
+  agent:validate 26/26 post-reset; full-suite 570/591 passed
+  matching brief-expected baseline exactly. Per-tool
+  gatedByDispatcherSet field on ToolDef (S30 closure) unaffected.
+  No SHA self-reference per S29a element #1 + S28 closeout
+  fix-forward precedent.
+
+  Codification candidate state at S29b closeout:
+  - Substrate-fidelity-gate (graduated S30 N=∞; continuing-
+    firings at brief-creation pre-flight cadence at S29b)
+  - Resolved-decision-citation as contract (graduated S30 N=3)
+  - Orphan-reference-review at edit-completion (graduated S28
+    re-anchor N=3)
+  - Reconciliation-scope-derivation as substrate-completeness
+    gate (**graduated at S29b N=3 — this commit family;** parent-
+    shape graduation with strict-shape sub-tracking distinguishing
+    reconciliation-scope-sibling vs caller-surface-completeness
+    sibling)
+  - (γ)-rhythm scope-amend (N=2 held)
+  - Read-completeness-threshold (N=2 held)
+  - Library-documentation-vs-integrated-behavior-divergence (N=1)
+  - Brief-spec-vs-arc-precedent-substrate-conflict (N=1)
+  - Existence-leak-prevention-as-error-code-contract (N=1; ratified
+    at S29b execution)
+  - Stash-revert isolation (N=2; held)
+  - Action-string-substrate-drift (N=1; observation-only)
+
+  Path C arc closure proximity: Gates 1+2 closed at S28 (e966f30);
+  Gate 3 closes here; Gate 4 closed at S30 (64996b5). After S31
+  (LT-02 test coverage closure), Path C arc closes; Phase 2
+  surface expansion gate unblocks. **S31 unblocked: brief-creation
+  against this S29b closeout SHA opens next as the final session
+  of Path C arc.**

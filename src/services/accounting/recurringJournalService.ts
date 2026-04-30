@@ -673,7 +673,7 @@ async function listTemplates(
 }
 
 async function getTemplate(
-  input: { recurring_template_id: string },
+  input: { org_id: string; recurring_template_id: string },
   ctx: ServiceContext,
 ): Promise<RecurringTemplateDetail> {
   const db = adminClient();
@@ -743,32 +743,35 @@ async function listRuns(
 }
 
 async function getRun(
-  input: { recurring_run_id: string },
-  ctx: ServiceContext,
+  input: { org_id: string; recurring_run_id: string },
+  _ctx: ServiceContext,
 ): Promise<RecurringRunDetail> {
   const db = adminClient();
 
-  const { data: run, error: runErr } = await db
+  // S29b Pattern E migration: replaced two-step lookup with join-FK
+  // single-roundtrip via recurring_journal_runs.recurring_template_id
+  // → recurring_journal_templates(org_id) FK (migration
+  // 20240131000000:134, ON DELETE RESTRICT). The wrap's Invariant 3
+  // already validated input.org_id against caller.org_ids; the inner
+  // template-org_id filter collapses cross-org-not-found and
+  // intra-org-not-found into the generic NOT_FOUND throw
+  // (existence-leak prevention).
+  const { data: run, error } = await db
     .from('recurring_journal_runs')
-    .select('recurring_run_id, recurring_template_id, scheduled_for, status, journal_entry_id, rejection_reason, created_at')
+    .select('recurring_run_id, recurring_template_id, scheduled_for, status, journal_entry_id, rejection_reason, created_at, recurring_journal_templates!inner(org_id)')
     .eq('recurring_run_id', input.recurring_run_id)
+    .eq('recurring_journal_templates.org_id', input.org_id)
     .maybeSingle();
 
-  if (runErr) throw new ServiceError('READ_FAILED', runErr.message);
+  if (error) throw new ServiceError('READ_FAILED', error.message);
   if (!run) throw new ServiceError('NOT_FOUND', 'Recurring run not found');
 
-  // Verify caller has access to the parent template's org.
-  const { data: template, error: tplErr } = await db
-    .from('recurring_journal_templates')
-    .select('org_id')
-    .eq('recurring_template_id', run.recurring_template_id)
-    .maybeSingle();
-  if (tplErr) throw new ServiceError('READ_FAILED', tplErr.message);
-  if (!template || !ctx.caller.org_ids.includes(template.org_id as string)) {
-    throw new ServiceError('NOT_FOUND', 'Recurring run not found');
-  }
-
-  return run as RecurringRunDetail;
+  // The embed result is consumed for filtering only; strip it from
+  // the returned shape so RecurringRunDetail's contract is unchanged.
+  const { recurring_journal_templates: _embed, ...runFields } = run as Record<string, unknown> & {
+    recurring_journal_templates?: unknown;
+  };
+  return runFields as RecurringRunDetail;
 }
 
 export const recurringJournalService = {
@@ -785,9 +788,7 @@ export const recurringJournalService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'recurring_run.reject'))
   rejectRun,
   listTemplates: withInvariants(listTemplates),
-  // withInvariants: skip-org-check (pattern-C: deferred to S29b)
-  getTemplate,
+  getTemplate: withInvariants(getTemplate),
   listRuns: withInvariants(listRuns),
-  // withInvariants: skip-org-check (pattern-E: deferred to S29b)
-  getRun,
+  getRun: withInvariants(getRun),
 };
