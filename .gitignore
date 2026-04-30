@@ -41,7 +41,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 # claude code
-.claude/
+# Directory contents ignored by default; un-ignore the committed project
+# config so it can be reviewed like CI config. settings.local.json is also
+# gitignored globally via ~/.gitignore_global. Note the pattern is `.claude/*`
+# (contents) not `.claude/` (directory) — git can't re-include children of an
+# excluded directory.
+.claude/*
+!.claude/settings.json
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/
