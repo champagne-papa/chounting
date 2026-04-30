@@ -1,0 +1,130 @@
+name: CI
+
+# PR/branch gating for the monorepo. Runs typecheck across all
+# typecheck-bearing workspaces, plus lint and build for surfaces
+# that are currently green.
+#
+# Pre-existing baseline gap (NOT addressed by this CI; see
+# docs/03_architecture/monorepo.md and the @/db/adminClient
+# violations in apps/web/src/app/api/* and src/agent/*): the web
+# app currently has 7 lint errors that block both `pnpm lint` and
+# `next build` for @chounting/web. They predate the Pattern 3
+# migration. Once cleaned up, the lint and build matrix below
+# can include @chounting/web.
+#
+# Security note: this workflow does not consume any user-controlled
+# context (no github.event.issue.*, github.event.pull_request.title,
+# commit message bodies, etc.). Only github.workflow, github.ref,
+# github.sha, and runner.os are referenced — all platform-trusted.
+#
+# The daily verify-audit-coverage workflow runs separately (see
+# .github/workflows/verify-audit-coverage.yml). It needs Supabase
+# and is not duplicated here.
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck (all workspaces)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-typecheck-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-typecheck-
+
+      - name: Type-check
+        run: pnpm exec turbo run type-check
+
+  lint:
+    name: lint (@chounting/demo + packages)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-lint-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-lint-
+
+      # @chounting/web is excluded until the 7 pre-existing
+      # @/db/adminClient lint errors are addressed. Add it back
+      # via `--filter=...` (or remove the filter entirely) once
+      # the baseline is clean.
+      - name: Lint
+        run: pnpm exec turbo run lint --filter=@chounting/demo
+
+  build:
+    name: build (@chounting/demo)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-build-
+
+      # See lint job — @chounting/web build also blocked by the
+      # same 7 lint errors (next build runs ESLint internally).
+      - name: Build
+        run: pnpm exec turbo run build --filter=@chounting/demo
