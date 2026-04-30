@@ -1254,3 +1254,26 @@ Categories:
 
   Recorded post-hoc during Phase B execution; observed during
   the first attempt at a clean Phase A → Phase B handoff.
+
+- 2026-04-30 NOTE — S32 onboarding-posture drift list codified
+  as a precommit guardrail for onboarding revisions. Future
+  onboarding revisions falling into any of the four patterns
+  below are rejected on sight: (1) "quick wins" / dopamine-loop
+  additions; (2) "AI magic moments" / generated-content theater;
+  (3) "empty dashboard hacks" / engagement bait; (4) Puzzle/
+  Pennylane data-first onboarding pattern ("connect bank, system
+  builds books"). The trap these share is turning the product
+  into "AI QuickBooks" — a path `product_vision.md`'s Thesis
+  explicitly rejects. The list serves as a precommit checklist
+  for future onboarding revisions; a proposed change matching
+  any pattern requires explicit override discussion in the
+  friction journal. Provenance: this brief
+  (`docs/09_briefs/phase-1.3/session-32-onboarding-posture-brief.md`);
+  `product_vision.md` Thesis; external consultant review chain
+  (multi-round) that proposed several drift-list patterns and
+  was rejected per Pre-decision 6's "AI QuickBooks" rationale;
+  founder-approved as a precommit guardrail for onboarding
+  revisions; survives until explicitly overruled by a future
+  ADR or session brief. The drift list is durable specifically
+  because an external review proposed each pattern and was
+  overruled.

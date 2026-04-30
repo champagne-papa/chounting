@@ -67,6 +67,13 @@ interface Props {
    * every directive change runs the selection reducer first.
    */
   onNavigate?: CanvasNavigateFn;
+  /**
+   * S32 Pre-decision 5 §B: first-arrival signal from the org-root
+   * page (`?first_arrival=1`). When true and ProductionChat is
+   * empty, render a single sober handoff line above the
+   * SuggestedPrompts empty state.
+   */
+  firstArrival?: boolean;
 }
 
 export function AgentChatPanel({
@@ -77,6 +84,7 @@ export function AgentChatPanel({
   currentUserRole = 'controller',
   canvasContext,
   onNavigate,
+  firstArrival,
 }: Props) {
   if (initialOnboardingState) {
     return (
@@ -94,6 +102,7 @@ export function AgentChatPanel({
       currentUserRole={currentUserRole}
       canvasContext={canvasContext}
       onNavigate={onNavigate}
+      firstArrival={firstArrival}
     />
   );
 }
@@ -108,12 +117,14 @@ function ProductionChat({
   currentUserRole,
   canvasContext,
   onNavigate,
+  firstArrival,
 }: {
   orgId: string | null;
   onCollapse?: () => void;
   currentUserRole: UserRole;
   canvasContext?: CanvasContext;
   onNavigate?: CanvasNavigateFn;
+  firstArrival?: boolean;
 }) {
   const tHeading = useTranslations('agent');
   const tRoot = useTranslations();
@@ -418,6 +429,11 @@ function ProductionChat({
         )}
         {!loading && turns.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-2">
+            {firstArrival && (
+              <div className="text-sm text-neutral-700 mb-3">
+                Workspace ready. Ready when you are — what&apos;s first?
+              </div>
+            )}
             <div className="text-base font-medium text-neutral-700 mb-2">
               {tHeading('emptyState')}
             </div>
@@ -608,7 +624,13 @@ function OnboardingChat({
   const [error, setError] = useState<string | null>(null);
 
   const resolveCompletionHref = useCallback(async (): Promise<string> => {
-    if (onboardingCompletionHref) return onboardingCompletionHref;
+    // (a) Pre-computed Joining-flow href; append first_arrival
+    // signal per S32 Pre-decision 5 §B. Safe to append `?...`
+    // directly: the prop is constructed in welcome/page.tsx as
+    // `/${locale}/${orgId}` (bare path, no existing query-param).
+    // Future welcome-page revisions that add query params would
+    // need URL-aware merging here.
+    if (onboardingCompletionHref) return `${onboardingCompletionHref}?first_arrival=1`;
     try {
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -620,10 +642,13 @@ function OnboardingChat({
         .eq('status', 'active')
         .limit(1)
         .maybeSingle();
-      if (data?.org_id) return `/${locale}/${data.org_id}`;
+      // (b) Membership-query-derived Commissioning-flow href; append signal.
+      if (data?.org_id) return `/${locale}/${data.org_id}?first_arrival=1`;
     } catch {
       // fall through to default
     }
+    // (c) admin-orgs recovery fallback (per 2026-04-20 erratum on
+    // session-5-brief.md). NOT an Arrival surface; no signal append.
     return `/${locale}/admin/orgs`;
   }, [onboardingCompletionHref, locale]);
 

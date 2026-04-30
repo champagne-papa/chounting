@@ -40,9 +40,10 @@ import { reduceSelection } from '@/agent/canvas/reduceSelection';
 interface Props {
   orgId: string;
   initialDirective?: CanvasDirective;
+  firstArrival?: boolean;
 }
 
-export function SplitScreenLayout({ orgId, initialDirective }: Props) {
+export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Props) {
   const [directive, setDirective] = useState<CanvasDirective>(
     initialDirective ?? { type: 'none' },
   );
@@ -117,6 +118,7 @@ export function SplitScreenLayout({ orgId, initialDirective }: Props) {
             currentUserRole={currentUserRole}
             canvasContext={canvasContext}
             onNavigate={handleCanvasNavigate}
+            firstArrival={firstArrival}
           />
         )}
 
