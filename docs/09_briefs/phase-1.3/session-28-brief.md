@@ -19,7 +19,7 @@
 
 ---
 
-**Anchor (parent) SHA:** `4c8dac0` (Path C scoping NOTE) chained from `5775ae6` (Path C arc summary) → `d39ec09` (post-S27 verification-gate corrections). Verify HEAD's parent matches at Task 1 Step 2.
+**Anchor (parent) SHA:** `64996b5` (S30 execution close — LT-01 + LT-03 + LT-04 + QUALITY-006 convention-to-CI-enforcement cluster) chained from `c9fb118` (S30 re-anchor-2) → `595556a` (S30 re-anchor) → `5d58b36` (sibling fix-forward — route-handler file-top reconciliation) → `c617f58` (S30 hot-fix execution — G1 cross-org closure) → `b4f6063` (S30 hot-fix brief) → `ee35abf` (gitignore cleanup) → `53aa533` (S30 brief) → `c47e58d` (S29a closeout) → `bafd4f9` (S29a brief) → corrigendum + arc-summary chain → `d39ec09` (post-S27 verification-gate corrections). Re-anchored at the S28 re-anchor session (sibling-shape to s30-reanchor `595556a` + s30-reanchor-2 `c9fb118`); the original S28 brief commit at `4c8dac0` was authored pre-S29a/S30 substrate. Verify HEAD's parent matches at Task 1 Step 2.
 
 **Upstream authority:**
 - `docs/07_governance/audits/phase-1.2/action-plan.md` — MT-05 (audit-emit alerting), MT-06 (PII redaction expansion). Verbatim "Done when" criteria reproduced in the Exit-criteria matrix below.
@@ -40,9 +40,12 @@
 ## Hard constraints (do not violate)
 
 - **Out of scope (Path C and beyond):**
-  - MT-03 broad-scope service auth wrap (ships in S29).
-  - LT-01 / LT-03 / LT-04 CI-enforcement cluster (ships in S30).
+  - MT-03 Pattern A wrap (closed at S29a, `c47e58d`).
+  - MT-03 Patterns C/E design + migration (ships in S29b after S28; sequences via the path-c-arc-summary's revised dependency graph S30 → S28 → S29b → S31).
+  - Pattern G1 cross-org closure (closed at S30 hot-fix arc, `c617f58` + `5d58b36`).
+  - LT-01 / LT-03 / LT-04 + QUALITY-006 CI-enforcement cluster (closed at S30, `64996b5`).
   - LT-02 test coverage closure (ships in S31).
+  - Substrate-bug at `src/app/api/orgs/[orgId]/users/[userId]/reactivate/route.ts` action-string mismatch (`'user.suspend'` instead of `'user.reactivate'`); pre-existing carry-forward orthogonal to S28's MT-05/MT-06 scope; resolution provenance per S30 execution closeout NOTE element 12 (commit `64996b5`); filed for separate fix in a follow-up session.
   - QW-06 conversation Zod validation (Phase 2).
   - MT-02 canvas refresh (Phase 2).
   - MT-04 conversation rotation observability (Phase 2; sequences with cross-turn caching).
@@ -53,10 +56,10 @@
   - Phase 2 metrics infrastructure / MT-05 Option B counter metric (sequences with MT-04).
   - Financial-PII path depth behavior remediation (separate friction-journal finding only, if pino multi-level probe surprises — see Task 4 Probe Branch).
   - Any orchestrator or prompt-text edits.
-- **Test posture floor.** ALL existing tests green at HEAD post-edit. `pnpm agent:validate` clean. Full suite: any pre-existing carry-forwards documented at HEAD remain unchanged. No new failures attributable to this session.
+- **Test posture floor (run-ordinal-dependent per S30 brief re-anchor-2 framing).** `pnpm agent:validate` 26/26 green at HEAD post-edit; if drift surfaces, run `pnpm db:reset:clean && pnpm db:seed:all` to restore clean baseline per S29a element #16 + S30 execution discipline. Full suite fresh-post-reset baseline at HEAD `64996b5` = 1 failed (`verifyAuditCoverageRoundTrip` orthogonal carry-forward per S29a element #19) + 581 passed + 0 skipped (582 total). Post-S28 edits expected to preserve this baseline plus the deliberate test additions from Tasks 3-5: Task 3 Step 4 NEW `orchestratorAuditEmitFailure` tests (3 cases); Task 4 Step 3 EXTEND `pinoRedaction` (1 multi-level probe case); Task 5 Step 2 EXTEND `recordMutationPiiRedaction` (5 cases). Total expected fresh-run at S28 closeout: 1 failed + 590 passed + 0 skipped (591 total; +9 deliberate additions). State-pollution-dependent reporting per S30 brief re-anchor-2 framing: subsequent runs without DB reset surface accumulated state (`accountLedgerService` running-balance ×2 + `crossOrgRlsIsolation` cascading from `journal_entries_pkey`). Halt criteria per Task 6 Step 3: drift beyond fresh-run baseline (post-`db:reset:clean && db:seed:all`) halts execution; carry-forward stays unchanged.
 - **No schema changes.** S28 is structured-log + redaction work only. No migration files. No type regeneration.
 - **No paid-API spend authorization.** S28 does not invoke the orchestrator or fire any Anthropic call.
-- **Y2 commit shape (single bundled commit, one founder-review gate).** UF-008 + UF-010 closure body single. Friction-journal NOTE appended in the same commit, three required elements (UF-008 + UF-010 closure citation, multi-level probe outcome, any sub-findings). **Session-lock codification element dropped from the NOTE plan** — this session's lock-acquisition was downgraded; the [ROUTE?] thread on documentation-only sessions remains separately open at N=2.
+- **Y2 commit shape (single bundled commit, one founder-review gate).** UF-008 + UF-010 closure body single. Friction-journal NOTE appended in the same commit, three required elements per the NOTE plan section below (UF-008 + UF-010 closure citation, multi-level probe outcome, any sub-findings).
 - **Hard constraint A — single-wrap structural preservation at site 1.** Do NOT split `loadOrCreateSession.ts`'s site 1 try/catch into per-branch try/catch blocks. The four logical actions (`session_created`, `session_org_switched`, `message_processed`, `tool_executed`) span three try/catch sites by design — the single-wrap at site 1 covers both org-switched and freshly-created branches because both invoke `recordMutation` with structurally identical failure modes. The MT-05 flag addition is one structural change inside the single existing catch block; do not refactor the wrap shape.
 - **Hard constraint B — emitMessageProcessedAudit call-site preservation.** Do NOT refactor `emitMessageProcessedAudit`'s call sites. The arrow's multiple firings (OI-2 gate-A short-circuit, success path, failure paths in `handleUserMessage`) are by-design. MT-05's coverage of site 2 is one structural change inside the arrow's catch block; the call-sites all benefit automatically. Do not "fix" the multiple-firing pattern even if it appears redundant on first read.
 - **Hard constraint C — `PII_FIELDS` const preservation.** The `PII_FIELDS` const at `recordMutation.ts:21-27` is preserved verbatim. The nested-recursion extension to `redactPii` references the existing list; do NOT redefine, expand, or relocate the const.
@@ -126,7 +129,7 @@ cat .coordination/session-lock.json
 git log --oneline -5
 ```
 
-Expected: most recent commit is the S28 brief-creation commit (single file: `docs/09_briefs/phase-1.3/session-28-brief.md`); parent is `4c8dac0` (Path C scoping NOTE); grandparent is `5775ae6` (Path C arc summary); great-grandparent is `d39ec09` (post-S27 verification gate). If any drift, halt and surface to operator.
+Expected: most recent commit is the S28 re-anchor commit (single file: `docs/09_briefs/phase-1.3/session-28-brief.md`, subject "docs(briefs): S28 brief re-anchor — chain to 64996b5 + post-S30 substrate"); parent is `64996b5` (S30 execution close); grandparent is `c9fb118` (S30 re-anchor-2). If any drift, halt and surface to operator.
 
 - [ ] **Step 3: Branch posture**
 
@@ -392,7 +395,7 @@ Verify final commit family:
 git log --oneline -3
 ```
 
-Expected: most recent commit is the S28 commit; parent is `4c8dac0`; grandparent is `5775ae6`.
+Expected: most recent commit is the S28 execution commit; parent is the S28 re-anchor commit; grandparent is `64996b5` (S30 execution close).
 
 - [ ] **Step 5: Run agent:validate one final time post-commit**
 
@@ -435,19 +438,26 @@ This brief's exit-criteria map 1:1 to the Path C arc-summary verification harnes
 - `MT-06-nested-redaction` — `redactPii` recurses with documented depth limit; `PII_FIELDS` list unchanged.
 - `MT-06-tests` — extended pino test asserts multi-level redaction; extended recordMutation test asserts nested PII redaction end-to-end.
 
-If any harness check fails at re-verification time post-S31, the failing surface reopens for remediation before Phase 2 surface expansion proceeds.
+Re-anchor note: Gate 4 portions (LT-01 + LT-03 + LT-04 + QUALITY-006) closed at S30 (`64996b5`); S28 closes Gate 1 (MT-05) + Gate 2 (MT-06). At re-verification post-S31 (the arc's ad-hoc verification cadence per `path-c-arc-summary.md` Verification Harness section), if any harness check fails the failing surface reopens for remediation before Phase 2 surface expansion proceeds. Post-S30 the verification-harness's count-language shifted from enumerated-14 to substrate-35 annotations across `src/services/` (S30 closeout NOTE element 1); S28's closure semantics for Gates 1+2 are unaffected by that count shift.
 
 ---
 
-## Friction-journal NOTE plan (collapsed to three elements)
+## Friction-journal NOTE plan
 
-**Note on session-lock element:** The brief-creation session for S28 elected to downgrade rather than acquire the session lock (path (3) per the brief-creation flow). The brief-creation session-lock codification (N=3) does NOT fire from this session; the [ROUTE?] thread on documentation-only sessions remains separately open at N=2. The friction-journal NOTE for S28 closeout therefore carries three elements rather than four:
+**Re-anchor framing.** This brief was originally authored at `4c8dac0` (pre-S29a/S30 substrate); re-anchored at HEAD `64996b5` per the S28 re-anchor session. The original NOTE plan referenced a brief-creation-session-lock codification thread that is not tracked as a codification candidate in the visible friction-journal tail post-S29a (per S28 re-anchor pre-flight substrate-confirm against the friction-journal tail through S30 execution closeout). The S28 brief-creation lock-acquisition outcome (downgrade per path (3) of the brief-creation flow) is captured at `4c8dac0`-era substrate; subsequent brief-creation sessions across the arc (S29a, S30, S30 hot-fix, S30 re-anchor, S30 re-anchor-2) each carry their own lock-acquisition outcomes captured in their respective closeout NOTEs and at their respective re-anchor-or-execution cadences. The S28 closeout NOTE captures S28 execution's lock-acquisition outcome per the friction-journal tail's lineage discipline, not a fire-status prediction for a thread substrate doesn't track.
+
+The friction-journal NOTE for S28 closeout carries three elements:
 
 1. UF-008 + UF-010 closure citation.
-2. Multi-level probe outcome.
-3. Sub-findings surfaced at execution (financial-PII silent-broken if probe failed; recursion edge cases; carry-forward drift; Task 2 verification drift; anything else).
-
-The next brief-creation session (S29 brief) carries the codification opportunity if it acquires the lock cleanly — at that point N=3 fires and the brief-creation session-lock sub-pattern codifies in `docs/04_engineering/conventions.md` or equivalent.
+2. Multi-level probe outcome (PASS or fallback-path-X per Task 4 Probe Branch).
+3. Sub-findings surfaced at execution. Categories include (non-exhaustive):
+   i. Financial-PII silent-broken nested-coverage on existing `*.tax_id` etc. entries (if probe failed).
+   ii. Recursion edge cases on circular references / depth-limit interactions.
+   iii. Carry-forward drift on the full-suite run (orthogonal to S29a element #19 baseline).
+   iv. **`PII_FIELDS`-vs-pino-paths naming-asymmetry** (substrate-confirmed at S28 re-anchor pre-flight): `recordMutation.PII_FIELDS` includes `invited_email` (not `email`); pino `REDACT_CONFIG.paths` post-S28-MT-06 includes `*.email`. Audit-log `before_state` capturing a user row with `email` key continues to leak post-S28 even with the nested-recursion extension landing. Surface as substrate-finding at closeout; whether it's S28-load-bearing remediation or Phase-2-territory disposition is open at execution time. Codification-fire-status: sibling-shape to brief-creation-pre-flight-as-substrate-fidelity-gate's "fires at every cadence layer" clause — this firing is at the re-anchor cadence layer, surfaced for execution-cadence-layer disposition.
+   v. Task 2 Convention #8 verify-directly drift on cited file/line numbers (e.g., `recordMutation.ts:21-27` cite for `PII_FIELDS` vs substrate `:20-26`; `recordMutation.ts:14-19` MT-06 reference cite vs substrate `:12-19`); fold under S29a element #3's "applies recursively at every layer" clause; no fresh codification-graduation.
+   vi. **Orphan-reference-review-at-edit-completion N=3 graduation** (deferred N=2 candidate from S30 re-anchor-2 closeout; N=3 firing at S28 re-anchor's edit-completion sweep per the s28-reanchor commit body). Documentation Routing convention's N=3 threshold met; codification-fire element captured at S28 closeout sub-firing addition (NOT at the re-anchor commit itself — re-anchor commits are brief-creation-shape per (re-anchor-1-α) precedent, no codification-firing elements in the re-anchor's own NOTE).
+   vii. Anything else surfaced during execution that doesn't fit existing categories.
 
 ---
 
