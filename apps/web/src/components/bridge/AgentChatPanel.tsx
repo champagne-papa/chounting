@@ -617,6 +617,7 @@ function OnboardingChat({
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) ?? 'en';
+  const tRoot = useTranslations();
   const [turns, setTurns] = useState<OnboardingTurn[]>([]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -689,10 +690,19 @@ function OnboardingChat({
       }
       const data = await res.json();
       setSessionId(data.session_id);
-      const assistantText =
-        typeof data.response?.template_id === 'string'
-          ? `[${data.response.template_id}]`
-          : '(no response)';
+      let assistantText: string;
+      if (typeof data.response?.template_id === 'string') {
+        try {
+          assistantText = tRoot(
+            data.response.template_id,
+            (data.response.params ?? {}) as never,
+          );
+        } catch {
+          assistantText = data.response.template_id;
+        }
+      } else {
+        assistantText = '(no response)';
+      }
       setTurns((prev) => [...prev, { role: 'assistant', text: assistantText }]);
 
       if (data.onboarding_complete === true) {
@@ -723,8 +733,8 @@ function OnboardingChat({
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
         {turns.length === 0 && (
-          <div className="text-sm text-neutral-500">
-            Let&apos;s get your profile set up. What&apos;s your name?
+          <div className="text-sm text-neutral-700">
+            What should I call you?
           </div>
         )}
         {turns.map((turn, i) => (

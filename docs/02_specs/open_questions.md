@@ -570,28 +570,43 @@ renumbering (five line edits, no code change).
 
 **Source:** Skills migration session, 2026-04-19.
 
-### Q33 — Service-layer placement for the 7 `@/db/adminClient` direct-import sites in apps/web/
+### Q33 — Service-layer placement for the 3 remaining `@/db/adminClient` direct-import sites in apps/web/
 
-The Pattern 3 monorepo migration (2026-04-30) carried forward a
-pre-existing baseline of **7 LT-03 / UF-006 violations** of the
-`no-restricted-imports` rule on `@/db/adminClient`. Each site
-imports the admin client directly into a route handler or agent
-module rather than going through the service layer:
+**Status update 2026-04-30 (partial-resolution arc):** the 4 route-
+handler half of this question was resolved by extracting service-
+layer functions and rewriting the consumers. The 3 agent-runtime
+sites remain deferred per the original rationale below. The
+question now scopes to those 3 sites only.
+
+**Resolved this arc (route-handler half — 4 sites cleared):**
+
+```
+apps/web/src/app/api/agent/confirm/route.ts:21       ← cleared
+apps/web/src/app/api/agent/conversation/route.ts:35  ← cleared
+apps/web/src/app/api/agent/reject/route.ts:28        ← cleared
+apps/web/src/app/api/auth/mfa-status/route.ts:4      ← cleared
+```
+
+Now consume `aiActionsService.{getByIdempotencyKey,
+listByIdempotencyKeys, markConfirmed, markResolved}`,
+`agentSessionService.getMostRecentForUser`,
+`journalEntryService.{getEntryNumber, getEntryNumbersBatch}`, and
+`orgService.getMfaRequirement`. New mutations carry no action key
+pending Q34.
+
+**Remaining (agent-runtime half — 3 sites still deferred):**
 
 ```
 apps/web/src/agent/memory/orgContextManager.ts:17
 apps/web/src/agent/orchestrator/index.ts:39
 apps/web/src/agent/orchestrator/loadOrCreateSession.ts:10
-apps/web/src/app/api/agent/confirm/route.ts:21
-apps/web/src/app/api/agent/conversation/route.ts:35
-apps/web/src/app/api/agent/reject/route.ts:28
-apps/web/src/app/api/auth/mfa-status/route.ts:4
 ```
 
-Verified pre-existing by checkout of `b2bf9f3` (the pre-migration
-HEAD) and running `next lint` — same 7 errors. They were out of
-scope for the migration ("DO NOT modify any existing service,
-agent, schema, or route code in `src/`").
+Verified pre-existing in the original migration via checkout of
+`b2bf9f3` (the pre-migration HEAD) and running `next lint`. The
+4 route-handler sites were the half that decomposed cleanly into
+`src/services/` exports without prejudging agent shape; the 3
+agent-runtime sites remain held for the reasons below.
 
 **Why this is genuine uncertainty (not just an obligations
 entry):** the right service-layer shape for these consumers
@@ -609,21 +624,113 @@ belongs in (or whether a new service shape — e.g. an
 `agentSessionService`, `mfaStatusService` — is warranted) and
 move them in one coherent pass.
 
-**Current containment:**
-- `.github/workflows/ci.yml` filters `@chounting/web` out of the
-  `lint` and `build` jobs via `--filter=@chounting/demo`. CI is
-  green; the violations don't block PRs in any other workspace.
-- `docs/03_architecture/monorepo.md` has the full file:line list
-  in its "Pre-existing baseline" section with the same b2bf9f3
-  verification trail.
-- `apps/web/eslint.config.mjs` keeps the rule active so
-  *new* violations of the same kind would still be caught at
-  PR time once the baseline is cleared.
+**Current containment (post partial-resolution arc):**
+- `apps/web/eslint.config.mjs` carries a narrow `src/agent/**`
+  exemption added 2026-04-30 referencing this question by name.
+  The 4 route handlers and `src/services/**` continue to enforce
+  the rule normally; the exemption scopes to exactly the 3
+  agent-runtime files left here.
+- `.github/workflows/ci.yml` previously filtered `@chounting/web`
+  out of the `lint` and `build` jobs via `--filter=@chounting/demo`.
+  With the exemption in place, that filter can be removed (the
+  `lint` and `build` jobs now pass on `@chounting/web`).
+- `docs/03_architecture/monorepo.md` "Pre-existing baseline"
+  section has been updated to reflect the 7→3 narrowing.
 
-**Blocks:** removing the `--filter=@chounting/demo` flags from
-`.github/workflows/ci.yml`'s lint and build jobs.
+**Blocks:** none currently; the narrowed exemption keeps CI
+unblocked and the 3 deferred sites trackable. When Q33 closes
+(agent-runtime refactor lands), the exemption block is deleted
+and the rule regains full coverage.
 
-**Source:** Pattern 3 monorepo migration, 2026-04-30.
+**Related:** Q34 (filed alongside this update) — should
+`ai_actions` lifecycle mutations have their own permission keys?
+Resolution gated on Q33 closure.
+
+**Source:** Pattern 3 monorepo migration, 2026-04-30; partial
+resolution arc 2026-04-30 (4-of-7 cleared).
+
+### Q34 — Should `ai_actions` lifecycle mutations have their own permission keys?
+
+**Surfaced from Q33's partial-resolution arc (2026-04-30).** When the
+4 route-handler `adminClient` consumers were refactored to consume
+`aiActionsService.markConfirmed` and `aiActionsService.markResolved`,
+the mutations were exported as Pattern A wraps with **no `action`
+key** — `withInvariants(markConfirmed)` rather than
+`withInvariants(markConfirmed, { action: 'agent.action.confirm' })`.
+
+The choice was deliberate. `withInvariants` Invariant 4 (role-based
+authorization via `role_permissions`) requires the action key to
+exist in `ACTION_NAMES` and to be seeded into `role_permissions`.
+Neither `agent.action.confirm` nor `agent.action.resolve` exists
+in either today. The Phase 1.5A "Permission Catalog Count Drift"
+convention is explicit that adding a permission requires updating
+`ACTION_NAMES` AND seeding a permissions row in a migration —
+silently inventing keys is exactly the drift the convention names.
+
+The route-handler-half refactor therefore took the no-action-key
+path: Invariants 1-3 still fire (context shape, caller verified,
+org access), and the meaningful authorization gate is upstream —
+`journal_entry.post` for `confirm` Branch 4 (which already wraps
+`journalEntryService.post`), and "is this caller authenticated and
+a member of `org_id`" via `buildServiceContext` for `markConfirmed`
+and `markResolved` calls outside that branch.
+
+**The open question:** is "the upstream gate is sufficient" the
+right architectural answer, or do these mutations need their own
+permission keys?
+
+**Two candidate answers (leading-but-not-locked):**
+
+- **(a) Add `agent.action.confirm` and `agent.action.resolve`
+  to `ACTION_NAMES`, seed them into `role_permissions`, and
+  upgrade the wraps to carry the action keys.** Defense in depth:
+  even if a future caller path bypasses the upstream gate, the
+  mutation itself remains role-gated. Cost: a migration with a
+  decided role-grant matrix (which roles can confirm, which can
+  resolve, what about edited resolutions vs straight rejections),
+  plus the parity test (CA-27) firing on the catalog count change.
+- **(b) Accept that the upstream gate is the gate.** The
+  `ai_actions` row's lifecycle is a side-effect of the agent
+  conversation's authorization; no caller path reaches
+  `markConfirmed`/`markResolved` without first satisfying the
+  upstream check. Document the pattern in `agent_autonomy_model.md`
+  and leave the wraps action-keyless.
+
+**Why this is genuine uncertainty:** the right answer depends on
+patterns that haven't been observed yet. Specifically, the 3
+agent-runtime sites deferred under Q33 (`orchestrator/index.ts`,
+`loadOrCreateSession.ts`, `orgContextManager.ts`) will, when they
+refactor, define new caller paths into `aiActionsService`. If those
+paths land outside the existing route-handler upstream gates,
+**(a)** becomes obviously correct. If they land inside coordinated
+service boundaries (e.g., a new `agentRuntimeService` that itself
+wraps an `agent.runtime.execute` action key), **(b)** survives.
+
+Locking key names *today* against today's caller surface risks the
+same trap Q33 explicitly avoids — structuring against assumptions
+the agent work later contradicts. The candidate names
+(`agent.action.confirm`, `agent.action.resolve`) are leading but
+not locked; the actual key names should be decided alongside Q33's
+resolution so they reflect the real caller-path shape that the
+Double Entry Agent build produces.
+
+**Resolution timing:** gated on Q33 closure. Q34 stays open as
+long as Q33 stays open.
+
+**Blocks:** none currently. The action-key-less wraps satisfy the
+ESLint `services/withInvariants-wrap-or-annotate` rule (the rule
+only requires the wrap to be present, not that it carry an action
+key); the upstream gates hold authorization. The question is
+forward-looking architectural cleanup, not a present-day blocker.
+
+**Related:** Q33 (the agent-runtime adminClient deferral that
+gates this question). Phase 1.5A "Permission Catalog Count Drift"
+convention (the rule that prohibits inventing keys ad hoc, which
+is why we filed Q34 instead of locking key names today).
+
+**Source:** Q33 partial-resolution arc, 2026-04-30. Surfaced
+during route-handler refactor when `markConfirmed`/`markResolved`
+shape was being decided.
 
 ---
 

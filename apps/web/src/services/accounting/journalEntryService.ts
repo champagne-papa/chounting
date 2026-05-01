@@ -528,9 +528,50 @@ async function get(
   };
 }
 
+// Q33 partial-resolution arc 2026-04-30: narrow reads added to clear
+// the LT-03 / UF-006 baseline for the agent/confirm and agent/conversation
+// route handlers (Branch 2 enrichment + hydration batch lookup).
+async function getEntryNumber(
+  input: { org_id: string; journal_entry_id: string },
+  _ctx: ServiceContext,
+): Promise<number | null> {
+  const db = adminClient();
+  const { data, error } = await db
+    .from('journal_entries')
+    .select('entry_number')
+    .eq('journal_entry_id', input.journal_entry_id)
+    .eq('org_id', input.org_id)
+    .maybeSingle();
+
+  if (error) throw new ServiceError('READ_FAILED', error.message);
+  return data ? (data.entry_number as number) : null;
+}
+
+async function getEntryNumbersBatch(
+  input: { org_id: string; journal_entry_ids: string[] },
+  _ctx: ServiceContext,
+): Promise<Map<string, number>> {
+  if (input.journal_entry_ids.length === 0) return new Map();
+  const db = adminClient();
+  const { data, error } = await db
+    .from('journal_entries')
+    .select('journal_entry_id, entry_number')
+    .eq('org_id', input.org_id)
+    .in('journal_entry_id', input.journal_entry_ids);
+
+  if (error) throw new ServiceError('READ_FAILED', error.message);
+  const out = new Map<string, number>();
+  for (const row of data ?? []) {
+    out.set(row.journal_entry_id as string, row.entry_number as number);
+  }
+  return out;
+}
+
 export const journalEntryService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'journal_entry.post' + 'journal_entry.adjust' variant); also wrapped service-to-service in recurringJournalService.approveRun for defense-in-depth)
   post,
   list: withInvariants(list),
   get: withInvariants(get),
+  getEntryNumber: withInvariants(getEntryNumber),
+  getEntryNumbersBatch: withInvariants(getEntryNumbersBatch),
 };

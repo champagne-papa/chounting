@@ -1,8 +1,11 @@
 // src/app/api/agent/reject/route.ts
 // Phase 1.2 Session 7 Commit 2 — POST /api/agent/reject per
-// sub-brief §4 Commit 2 interaction shapes. Follows the inline
-// adminClient pattern of /api/agent/confirm; no service-layer
-// abstraction (sub-brief §4 "Service-layer decision").
+// sub-brief §4 Commit 2 interaction shapes.
+//
+// Q33 partial-resolution arc 2026-04-30: rewritten to consume
+// aiActionsService.{getByIdempotencyKey, markResolved} instead of
+// importing adminClient directly. State-machine logic is unchanged;
+// only the data-access path moved into the service layer.
 //
 // Five-branch state machine (mirrors confirm.route.ts):
 //
@@ -25,10 +28,10 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminClient } from '@/db/adminClient';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
+import { aiActionsService } from '@/services/agent/aiActionsService';
 
 const rejectRequestSchema = z
   .object({
@@ -46,23 +49,11 @@ export async function POST(req: Request) {
     const json = await req.json();
     const body = rejectRequestSchema.parse(json);
     const ctx = await buildServiceContext(req);
-    const db = adminClient();
 
-    // Look up the ai_actions row via the (org_id, idempotency_key)
-    // UNIQUE constraint.
-    const { data: row, error: readErr } = await db
-      .from('ai_actions')
-      .select('*')
-      .eq('org_id', body.org_id)
-      .eq('idempotency_key', body.idempotency_key)
-      .maybeSingle();
-
-    if (readErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `ai_actions lookup failed: ${readErr.message}`,
-      );
-    }
+    const row = await aiActionsService.getByIdempotencyKey(
+      { org_id: body.org_id, idempotency_key: body.idempotency_key },
+      ctx,
+    );
 
     // Branch 1: not found.
     if (!row) {
@@ -117,26 +108,15 @@ export async function POST(req: Request) {
 
     // Branch 4: pending — perform the state transition.
     if (row.status === 'pending') {
-      const { error: updateErr } = await db
-        .from('ai_actions')
-        .update({
-          status: body.outcome,
-          resolution_reason: body.reason ?? null,
-        })
-        .eq('ai_action_id', row.ai_action_id);
-
-      if (updateErr) {
-        throw new ServiceError(
-          'POST_FAILED',
-          `ai_actions update failed: ${updateErr.message}`,
-        );
-      }
-
-      // ctx is kept in scope so future enrichment (audit emit,
-      // resolving_user_id) has the caller identity available
-      // without widening this route's contract now. ctx.caller
-      // is already validated by buildServiceContext.
-      void ctx;
+      await aiActionsService.markResolved(
+        {
+          org_id: body.org_id,
+          ai_action_id: row.ai_action_id,
+          outcome: body.outcome,
+          reason: body.reason,
+        },
+        ctx,
+      );
 
       return NextResponse.json(
         {

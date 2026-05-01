@@ -2,9 +2,20 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalDependencies": ["**/.env.*local", "tsconfig.base.json"],
+  "globalEnv": [
+    "NODE_ENV",
+    "LOG_LEVEL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "ANTHROPIC_API_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_APP_URL"
+      ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {

@@ -379,6 +379,34 @@ export const orgService = {
    * per OQ-07. Used during org creation, before the user has any
    * membership to scope by.
    */
+  /**
+   * Returns whether the org requires MFA. Narrow read shape — does
+   * not leak the full org row across the boundary. NOT
+   * withInvariants-wrapped per OQ-07; route-handler-gated via
+   * caller.org_ids.includes(orgId) check, mirroring getOrgProfile.
+   *
+   * Q33 partial-resolution arc 2026-04-30: extracted from
+   * /api/auth/mfa-status route handler to clear LT-03 / UF-006
+   * baseline.
+   */
+  // withInvariants: skip-org-check (pattern-G1: route-handler-gated via caller.org_ids.includes(orgId) check; not withInvariants-wrapped per S30 hot-fix arc c617f58 + 5d58b36, OQ-07 resolved-decision integrity)
+  async getMfaRequirement(
+    input: { org_id: string },
+    _ctx: ServiceContext,
+  ): Promise<{ org_requires_mfa: boolean }> {
+    const db = adminClient();
+    const { data, error } = await db
+      .from('organizations')
+      .select('mfa_required')
+      .eq('org_id', input.org_id)
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceError('READ_FAILED', error.message);
+    }
+    return { org_requires_mfa: data?.mfa_required ?? false };
+  },
+
   // withInvariants: skip-org-check (pattern-G2: globally-shared reference data, RLS allows authenticated read)
   async listIndustries(_input: Record<string, never>, _ctx: ServiceContext) {
     const db = adminClient();

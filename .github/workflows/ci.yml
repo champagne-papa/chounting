@@ -6,11 +6,14 @@ name: CI
 #
 # Pre-existing baseline gap (NOT addressed by this CI; see
 # docs/03_architecture/monorepo.md and the @/db/adminClient
-# violations in apps/web/src/app/api/* and src/agent/*): the web
-# app currently has 7 lint errors that block both `pnpm lint` and
-# `next build` for @chounting/web. They predate the Pattern 3
-# migration. Once cleaned up, the lint and build matrix below
-# can include @chounting/web.
+# violations under apps/web/src/agent/*): the web app currently
+# has 3 lint errors that block both `pnpm lint` and `next build`
+# for @chounting/web. The 7-error baseline carried in by the
+# Pattern 3 migration was narrowed to 3 sites on 2026-04-30
+# (route handlers cleared); the remaining 3 are agent-runtime
+# files held under Q33 deferral. Once the agent-runtime sites
+# clear (or a narrow eslint exemption lands), the lint and build
+# matrix below can include @chounting/web.
 #
 # Security note: this workflow does not consume any user-controlled
 # context (no github.event.issue.*, github.event.pull_request.title,
@@ -90,10 +93,13 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-lint-
 
-      # @chounting/web is excluded until the 7 pre-existing
-      # @/db/adminClient lint errors are addressed. Add it back
+      # @chounting/web is excluded until the remaining 3 agent-
+      # runtime @/db/adminClient lint errors are addressed (Q33
+      # deferred half) or a narrow `src/agent/**` eslint exemption
+      # lands. The 4 route-handler sites in the original 7-error
+      # baseline were cleared 2026-04-30. Add @chounting/web back
       # via `--filter=...` (or remove the filter entirely) once
-      # the baseline is clean.
+      # the remaining 3 sites are resolved.
       - name: Lint
         run: pnpm exec turbo run lint --filter=@chounting/demo
 
@@ -125,6 +131,7 @@ jobs:
             turbo-${{ runner.os }}-build-
 
       # See lint job — @chounting/web build also blocked by the
-      # same 7 lint errors (next build runs ESLint internally).
+      # same 3 remaining agent-runtime lint errors (next build
+      # runs ESLint internally).
       - name: Build
         run: pnpm exec turbo run build --filter=@chounting/demo

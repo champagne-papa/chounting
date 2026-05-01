@@ -1354,3 +1354,368 @@ Categories:
     differentiating for variety would be a posture-test
     failure dressed as editorial polish. The repetition is
     doing work.
+
+---
+
+## 2026-04-30 — Q33 partial-resolution arc (4-of-7 cleared, 3 deferred)
+
+Mid-session arc cleared the 4 route-handler half of Q33's 7-site
+LT-03 / UF-006 baseline. The 3 agent-runtime sites stay held
+under Q33's original deferral logic (the Double Entry Agent build
+will reshape those consumers; refactoring before that's
+observable risks structuring against assumptions the agent work
+later contradicts).
+
+**Trigger.** A separate-chat assistant proposed an "all 7 files at
+once" service-layer refactor framed as architecturally correct.
+On review, the proposal had three failure modes: (a) it
+contradicted Q33's deferral rationale (added the same calendar
+day, commit `bf153fc`); (b) it conflated "in the request path" with
+"must be a service consumer," ignoring that the agent endpoints
+already wrap their service calls in `withInvariants` at the route
+boundary, so the orchestrator's adminClient access happens behind
+an authorized gate rather than at one; (c) it asked for
+trust-without-checkpoints + no-test-verification on 600–1000
+lines of agent-runtime + audit-emit + ai_actions-lifecycle code,
+which is exactly the shape that produces durable regressions in
+chounting's full-suite floor.
+
+**Decision.** Split the 7 sites at the architecturally-meaningful
+seam: 4 route handlers (`mfa-status`, `agent/{confirm,
+conversation, reject}`) decompose cleanly into service consumers
+and were the right boundary for UF-006 in the first place; 3
+agent-runtime files (`orchestrator/index.ts`,
+`loadOrCreateSession.ts`, `orgContextManager.ts`) keep their
+direct adminClient access pending Q33 closure.
+
+**Service surface added.** 8 new exports across 4 files. New file
+`agentSessionService.ts` (1 export); `aiActionsService` extended
+with 4 (one read single, one read batch, two mutations);
+`journalEntryService` extended with 2 (single + batch
+entry_number reads); `orgService` extended with 1 (narrow
+`getMfaRequirement` parallel to `getOrgProfile`). All wrapped via
+Pattern A no-action-key, except `orgService.getMfaRequirement`
+which stays unwrapped pattern-G1 to match orgService's local
+precedent. No new permission keys minted (Q34 filed for that
+question, gated on Q33 closure).
+
+**Pattern terminology drift caught and corrected.** A separate-chat
+assistant claimed the codebase had no "Pattern G1" — wrong; G1
+appears in `orgService.ts:357`, `membershipService.ts:240`,
+`invitationService.ts:352`, all as the route-handler-gated read
+annotation. The grep miss was substrate-level; their broader
+recommendation chain proceeded on the false premise. Caught
+before write by re-grepping the canonical files on this side of
+the conversation. Convention candidate (single datapoint):
+*verify-substrate-claims-from-foreign-conversation-context-before-
+acting* — when an assistant in a separate chat surfaces a claim
+about codebase state, re-grep before acting on the derived plan.
+
+**Lint movement.** 7 errors → 3 errors as predicted (the 3
+agent-runtime files unchanged). Typecheck green. The 3 errors
+remain held until either Commit 2's narrowed `src/agent/**`
+exemption ships (planned next, this session) or Q33 closes.
+
+**Three-commit shape.** Per push-readiness-gate per-commit-shape
+discipline: C1 = service additions + 4 route rewrites + doc-sync
+(this commit). C2 = narrow eslint exemption only (revertable as
+pure config change). C3 = Q34 question file. Each independently
+passes typecheck and is independently revertable.
+
+**Convention-candidate-below-threshold.** *Out-of-scope-assistant
+recommendation as falsifiable input.* When work spans separate
+chats / separate assistants and one chat's assistant proposes a
+plan that the other chat's assistant must execute, the executing
+side should treat the proposal as falsifiable — re-verify
+foundational claims (Q-numbered open questions, codebase
+patterns, substrate file:line citations) against the actual repo
+before approving. Single-datapoint observation today; second
+firing required before codification. Adjacent to the
+*Re-verify Environmental Claims at Each Gate* convention from
+Phase 1.2 §C9 but distinct: that one's about the same agent
+re-verifying its own prior claims; this one's about treating a
+foreign-context proposal as a hypothesis-to-test rather than an
+instruction-to-execute.
+
+---
+
+## 2026-05-01 — S33 onboarding integration fixes shipped
+
+S33-onboarding-integration-fixes session closed. Four commits on
+`staging` ahead of `origin/staging`:
+
+- **Commit 1 (`573cff0`)** — `fix(onboarding): wire useTranslations
+  into OnboardingChat (S33 Failure 1)`. Replaces the bracketed-
+  string debug placeholder shipped at Session 5 with the same
+  locale-resolution pattern ProductionChat shipped at Session 7
+  Commit 3.
+- **Commit 2 (`0edf72f`)** — `fix(onboarding): scope first-turn
+  input via opening prompt + suffix discipline (S33 Failure 2)`.
+  Empty-state opening prompt revised to "What should I call you?"
+  (drops Let's-preamble chirpy register; promotes to text-neutral-
+  700 to match S32 first-arrival emphasis). Step-1 suffix gains
+  First-turn-discipline clause in both Commissioning and Joining
+  branches (combined per OQ2 = 2-b at brief review).
+- **Commit 3 (`40d202f`)** — `fix(onboarding): form-escape
+  redirect to /welcome on save (S33 Failure 3)`. Skip-link adds
+  `?from=welcome`; UserProfileEditor reads via useSearchParams,
+  redirects on save success when from===welcome (mirrors S32
+  Pre-decision 5 query-param pattern).
+- **Commit 4 (`4c85221`)** — `fix(onboarding): suffix
+  proscriptive→constructive shift for post-tool-call response
+  shape (S33 Commit 4)`. Atomic scope-expansion: NOT pre-planned
+  in the brief's Y3 shape; surfaced during Task 7 dev-smoke when
+  Commit 2's proscriptive First-turn-discipline clause failed to
+  prevent the agent from emitting `agent.greeting.welcome`
+  standalone. Three sites in `onboardingSuffix.ts` replace
+  proscriptive ("Do NOT emit X") with constructive ("emit Y with
+  combined response shape") post-tool-call instructions.
+
+**Site verification status (epistemic discipline applied).**
+
+| Site | Class | Status |
+|---|---|---|
+| 1 — Step 1 Commissioning post-tool-call | observed-failure-mode | observed-fixed (final Path A re-walk: agent emitted `agent.response.natural` with combined greeting + step-2 company question, exactly as constructive prose prescribed) |
+| 2 — Step 1 Joining post-tool-call | inferred-from-substrate | substrate-grounded; not flow-verified (Joining fixture not exercised this session) |
+| 3 — Step 2 / 3 atomic post-tool-call | anticipated-defensive | clean transition observed (CHOU Collective creation produced `agent.response.natural` with workspace-ready acknowledgment + first-task cue), but NOT verifiable as caused-by-the-prose: clean transition could mean either the prose worked OR the system would have transitioned cleanly anyway |
+
+**Failure 3 (form-escape redirect) NOT exercised** in dev-smoke
+this session (Path B walkthrough deferred due to walkthrough
+fatigue + Site 1 re-walk consuming budget). Substrate-grounded
+confidence only; flow-verification deferred.
+
+**Drift-list codification (per S33 brief Pre-decision 6) —
+DEFERRED.** The S32 closeout NOTE 2026-04-30 already codified
+the four-pattern drift list as a permanent guardrail. S33's
+brief Pre-decision 6 specified placeholder-decay-without-
+tripwire as the new lesson; capturing here as adjacent-but-
+distinct codification candidate (item below).
+
+### Codification candidates from S33
+
+- **Placeholder-decay-without-tripwire (single datapoint).**
+  Failure 1's bracketed-string placeholder shipped at Session 5
+  with intent to be replaced when ProductionChat shipped at
+  Session 7. Replacement landed only in ProductionChat;
+  OnboardingChat retained the placeholder through Sessions 7,
+  S32, and into demo rehearsal. Masked because the rendering
+  surface is exercised only during fresh-user smoke, which each
+  intervening session had a different focus and never re-tested.
+  Lesson: **placeholder code needs a tripwire** — a test, a TODO
+  with a session anchor, or a closeout-NOTE pointer — that fires
+  when the replacement session ships, not later. Adjacent-but-
+  distinct from sprawl-without-tripwire (config-file rule sprawl,
+  per `docs/09_briefs/session-config-cleanup-0430-brief.md`).
+  Generalizes to **any deferral that lacks a tripwire**, including
+  follow-up candidates listed in closeout NOTEs (S32's three
+  follow-up candidates — route split, trust-signal surfacing,
+  Four Questions audit-grammar — are at risk of the same decay
+  mechanism). Periodic "follow-up candidate audit" mitigation
+  flagged for future, out of scope this session.
+
+- **Proscriptive→constructive shift in suffix prose (single
+  datapoint, codification candidate).** Pattern observation
+  abstracted from Commit 4's specific finding: prose-level "Do
+  NOT emit X" instructions don't reliably override Claude's tool-
+  use cycle defaults under interpretive latitude. Constructive
+  replacements ("emit Y with combined response shape") give the
+  agent something to do rather than something to suppress. Commit
+  4 substituted constructive shape at three sites; Site 1's
+  observed re-walk confirms the constructive variant produced the
+  intended response shape where the proscriptive variant did not.
+  Single datapoint at the site-1 level; track for second fire
+  before codification into conventions catalog. Distinguished
+  from Commit 4's commit-message NOTE (which is the finding
+  itself) — this entry is the pattern abstracted from the
+  finding, suitable for catalog elevation if confirmed.
+
+- **Surfaced-by-flawed-verification-path as new epistemic class
+  (codification candidate).** Findings that emerge because the
+  verification approach itself was incomplete or partially blind
+  — distinct from observed (failure-mode reproduced),
+  inferred-from-substrate (mechanism traced from substrate
+  evidence), and anticipated-defensive (prophylactic prose for a
+  hypothesized risk). S33 produced an instance: Site 1's first
+  re-walk attempt was vacuous because the fixture SQL didn't
+  reset `agent_sessions`; the substrate dive at the time queried
+  `agent_sessions` only and missed the cross-table user_profiles
+  divergence. Founder caught the divergence by reading the form
+  screenshots, not by query — substrate-pull discipline had been
+  single-source, and that left a blind spot. Lesson: **multi-
+  source substrate verification as discipline** — single-source
+  pulls are systematically blind to cross-table divergences. When
+  diagnosing a failure mode, query ALL substrate sources tied to
+  the user-visible state (here: `user_profiles` AND
+  `agent_sessions` AND `memberships`), not just the one named in
+  the failure-mode hypothesis.
+
+- **Fixture SQL discipline (codification candidate).** Fresh-shape
+  fixture SQL must cover all state sources tied to the failure-
+  mode, not just the most-obviously-implicated source. S33's
+  initial fixture SQL nulled `user_profiles.display_name` and
+  deleted `memberships`; this was incomplete because the
+  `agent_sessions` row from prior session attempts persisted
+  with `current_step: 2, completed_steps: [1]`, blocking Site 1
+  verification by carrying the user past step 1 before the
+  re-walk could exercise the step-1 suffix. Corrected fixture
+  SQL template for future dev-smoke sessions:
+
+  ```sql
+  UPDATE user_profiles
+    SET display_name = NULL, first_name = NULL, last_name = NULL
+    WHERE user_id IN (
+      SELECT id FROM auth.users WHERE email = '<seed-user-email>'
+    );
+  DELETE FROM memberships
+    WHERE user_id IN (
+      SELECT id FROM auth.users WHERE email = '<seed-user-email>'
+    );
+  DELETE FROM agent_sessions
+    WHERE user_id IN (
+      SELECT id FROM auth.users WHERE email = '<seed-user-email>'
+    );
+  ```
+
+  Notes: `agent_sessions` deletion required (avoids carryover
+  blocking step-1 verification). first/last name nulling
+  required for production parity (seed pre-seed at
+  `apps/web/src/db/seed/dev.sql:109-114` leaks "Exec"/"User"
+  values that real users wouldn't have — see seed-parity gap
+  below).
+
+### Obligations.md candidates surfaced this session
+
+- **Onboarding state integrity check at session-load time
+  (orchestrator-side).** PATCH `/api/auth/me` accepts
+  `displayName: null` without protection
+  (`apps/web/src/shared/schemas/user/profile.schema.ts:31`,
+  verified at NOTE-write: `displayName: z.string().nullable().
+  optional()`, no `.min(1)`, no non-empty constraint). Also,
+  UserProfileEditor's handleSave normalizes via `displayName.
+  trim() || null` so empty input writes null deliberately.
+  Production-reachable divergence path: a fresh user types name
+  in onboarding chat (step 1 completes; `completed_steps: [1]`),
+  navigates to `/settings/profile` (skip-link or any other path),
+  clears the display name field, clicks "Save changes." Result:
+  `display_name = NULL` while `completed_steps = [1]` persists.
+  Orchestrator does not detect divergence at session-load. A
+  clean integrity check at orchestrator load: for any completed
+  step, validate the corresponding substrate state still
+  satisfies the step's success condition; if divergent, reset
+  session state to that step. §8 hard constraint blocks this
+  from S33; obligations.md candidate for separate session.
+
+- **Seed user_profiles parity-with-production gap.**
+  `apps/web/src/db/seed/dev.sql:109-114` pre-seeds first_name
+  ('Exec'/'Controller'/'AP'), last_name ('User'/'User'/'Specialist'),
+  display_name ('Executive User'/etc.). Production fresh users
+  have NULL first/last (Session 5.2 upsert path). The pre-seed
+  leaks values that real users wouldn't have — surfaced in S33
+  dev-smoke when the form rendered "Exec" / "User" alongside the
+  newly-set "Phil Chou" display_name. Future seed-cleanup session
+  should NULL first/last in seed source (or omit the columns
+  from the INSERT) for full parity. Verified no test depends on
+  seed first/last values (search across `apps/web/tests/`
+  produced no consumers of those columns at NOTE-write).
+
+- **Test-isolation refactor for `crossOrgRlsIsolation` +
+  Arc-A item-27.** Sibling cluster, same fix-shape category
+  (test-design pollution; needs test-isolation refactor). S32
+  closeout NOTE framed as "needs reset between runs"; S33 Task 2
+  refines this to **"needs test-isolation refactor within a
+  run"** — even with `pnpm db:reset:clean` between sessions,
+  the within-run mechanism still fires because earlier test
+  files in the same run seed `journal_entries` rows that collide
+  with `crossOrgRlsIsolation`'s hardcoded UUIDs by the time it
+  runs. Refinement is a stronger finding than S32's framing
+  captured. **Arc-A item-27 disappearance under post-reset
+  clean-baseline at S33 Task 2** (accountLedgerService running-
+  balance carry-forward did not fire) is a separate sub-finding
+  — possibly resolved by a post-S32 commit, possibly latent
+  under within-run conditions; investigation deferred.
+
+### Other findings recorded for traceability
+
+- **`origin/staging` parity finding.** The 71-commit-unpushed
+  cite from S32 closeout NOTE 2026-04-30 was point-in-time;
+  everything pushed between S32 close and S33 anchor. At S33
+  Task 2, `origin/staging` was at parity with HEAD (`5a80c43`).
+  S33's four commits create the next held-count (4 ahead of
+  origin at this NOTE-write).
+
+- **Anchor-language phrasing convention — fire status: did not
+  fire this session.** S32 closeout flagged "most recent in-
+  flight Path C anchor" vs "most recent Path C closeout SHA"
+  as a phrasing-convention candidate (fire #1). S33's anchor
+  verdict at Task 1 (`git merge-base --is-ancestor 37a24a0
+  HEAD`) was clean SHA-reachability — the in-flight phrasing
+  ambiguity didn't surface. No fire #2 from S33; pattern stays
+  at single datapoint.
+
+- **`verify-substrate-claims-from-foreign-conversation-context-
+  before-acting` fire #2.** S33 brief revisions log captured
+  the pattern: external review during S33 brief drafting
+  asserted line ranges ("OnboardingChat at ~line 1006") that
+  did not match HEAD. Brief-revision step re-verified against
+  the actual file (`AgentChatPanel.tsx`: OnboardingChat at line
+  608, empty-state at 725–729) and pushed back rather than
+  complying. Fire #1 logged in 2026-04-30 Q33 partial-resolution
+  arc. Two fires now; one more fire reaches codification
+  threshold (3+ per chounting discipline).
+
+- **Session-lock disposition.** All four S33 commits fired the
+  `[coordination] warning: no session lock in use` warning. The
+  kickoff brief's Task 10 includes "session-lock release" as
+  explicit closeout step, implying locks are normally acquired
+  at session start. The Task 7+ continuation in the execution
+  conversation did not run `scripts/session-init.sh` after
+  resuming from the kickoff prompt — the kickoff prompt's pre-
+  warm checklist focused on db/dev/browser warm-up and did not
+  enumerate session-init. **This-session disposition: document
+  the gap honestly; do not retroactively manufacture a lock.**
+  Reasoning: retroactive lock creation would be performative; a
+  lock is a coordination mechanism for concurrent-session
+  discovery, and S33's execution did not have concurrent
+  sessions to discover. The honest record is "ran without lock;
+  no concurrent-session conflict surfaced; gap-of-discipline
+  rather than gap-of-substance." **Future kickoff-template
+  correction:** future kickoff prompts should include `bash
+  scripts/session-init.sh <label>` as the first item in the
+  pre-warm checklist alongside dev-environment warm-up. Approved.
+
+### OQ resolutions
+
+| OQ | Resolution |
+|---|---|
+| OQ 1 — `?from=welcome` query-param for Failure 3 | **Default holds.** Query-param mechanism approved; mirrors S32 Pre-decision 5 ?first_arrival=1 pattern |
+| OQ 3 — Opening-prompt wording ("What should I call you?") | **Default holds.** Posture-test passed; voice-continuity with S32 register intact |
+| OQ 4 — Joining-flow opening prompt same vs branched | **Default holds (substrate not exercised).** Same prompt for both modes; revisit if invited-user UX accumulates divergent surface |
+| OQ 5 — `setTimeout` 500ms hardcoded for Failure 3 redirect | **Default holds.** No reason surfaced to revisit |
+| OQ 6 — Per-commit gates vs end-only | **Moot.** End-only gate landed; Y3+1 commit shape (Commits 1-3 + Commit 4 expansion) absorbed cleanly |
+| OQ 8 — Placeholder-decay applicability to TODOs | **Deferred.** Philosophical, low-priority; surface in future obligations.md pass if relevant |
+
+### Atomic scope expansion: Y3 → Y4
+
+S33 brief framed as Y3 (three commits, one per failure). Commit
+4 was unplanned scope expansion surfaced during Task 7 dev-
+smoke. Operator approved fix-it-fully at the prompt layer rather
+than defer to Phase 2 follow-up. Honest record: S33 grew during
+execution; the closeout NOTE captures the growth as deliberate
+in-session remediation, not undisciplined scope creep. Sessions
+that surface real bugs during dev-smoke are entitled to one-
+commit expansions when the fix is tightly scoped, §8-compliant,
+and the operator explicitly authorizes. S33's Commit 4 satisfies
+all three.
+
+### Session-end housekeeping
+
+- **Orphan organization cleanup.** "CHOU Collective"
+  (`5e3026bf-2695-44b6-9fff-c7b32ad346ba`) created during
+  Task 7 walkthrough remains in `organizations` with no members
+  after fixture cleanup. Operator direction: `pnpm
+  db:reset:clean` at session close.
+- **Kickoff file deletion.**
+  `docs/09_briefs/phase-1.3/session-33-task-7-kickoff.md` slated
+  for deletion per file's own header instruction and Task 9
+  cleanup-list enforcement.
+

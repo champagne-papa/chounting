@@ -7,6 +7,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 
 type Profile = {
   user_id: string;
@@ -24,6 +25,12 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 type ZodIssue = { path: (string | number)[]; message: string };
 
 export function UserProfileEditor() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const locale = (params.locale as string) ?? 'en';
+  const fromWelcome = searchParams.get('from') === 'welcome';
+
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -105,9 +112,20 @@ export function UserProfileEditor() {
         return;
       }
       setSaveState('saved');
-      setTimeout(() => {
-        setSaveState((s) => (s === 'saved' ? 'idle' : s));
-      }, 2000);
+      if (fromWelcome) {
+        // S33 Failure 3 — onboarding-mode redirect. The skip-link
+        // from /welcome appends ?from=welcome; on save success here
+        // we route the user back to /welcome so the state machine
+        // re-evaluates (display_name now populated → step 2). 500ms
+        // visible flash for "Profile updated." before the redirect.
+        setTimeout(() => {
+          router.push(`/${locale}/welcome`);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setSaveState((s) => (s === 'saved' ? 'idle' : s));
+        }, 2000);
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Save failed.');
       setSaveState('error');

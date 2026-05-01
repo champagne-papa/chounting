@@ -54,6 +54,28 @@ const eslintConfig = [
     },
   },
   {
+    // Q33 — agent-runtime adminClient access (UF-006 deferred half).
+    // The agent runtime (orgContextManager, orchestrator/index,
+    // loadOrCreateSession) sits behind already-authorized request
+    // boundaries — every entry point (/api/agent/*) wraps its
+    // service calls in withInvariants at the route. The orchestrator
+    // is an internal mid-tier consumer; wrapping each internal DB
+    // touch as a sub-service call relocates code without adding an
+    // authorization gate, and would have to be redone when the
+    // Double Entry Agent build reshapes these modules. Resolution
+    // timing is tied to that work, not to a calendar — see
+    // docs/02_specs/open_questions.md Q33.
+    //
+    // Same rationale class as tests/** and scripts/** above: an
+    // internal layer that's not a request-handler boundary, where
+    // refactoring against unstable assumptions would create durable
+    // architectural debt.
+    files: ["src/agent/**/*.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
+  {
     // LT-01(b): every property of every `export const <serviceName>
     // = { ... }` literal in src/services/**/*.ts must be either
     // wrapped in withInvariants(...) or preceded by a canonical-form

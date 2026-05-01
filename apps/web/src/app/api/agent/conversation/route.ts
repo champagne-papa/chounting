@@ -3,6 +3,15 @@
 // per sub-brief §4 Commit 3 "Conversation-load endpoint" and
 // Pre-decision 14.
 //
+// Q33 partial-resolution arc 2026-04-30: rewritten to consume
+// agentSessionService.getMostRecentForUser,
+// aiActionsService.listByIdempotencyKeys, and
+// journalEntryService.getEntryNumbersBatch instead of importing
+// adminClient directly. Hydration / reconstruction logic
+// (hydrateTurns, reconstructFromAnthropicMessages) stays in the
+// route — it transforms DB rows into ChatTurn[] presentation types,
+// which would leak across the service boundary if extracted.
+//
 // Contract:
 //   Query param: org_id (uuid, required)
 //   Returns:     { turns: ChatTurn[], session_id: string | null }
@@ -20,23 +29,21 @@
 //      the terminating assistant text for template_id; derive
 //      user turns from user-role messages.
 //   4. No session at all: return empty turns + null session_id.
-//
-// RLS enforcement: adminClient is used for the join semantics
-// (cross-table ai_actions lookup keyed by idempotency_key), but
-// every query is constrained by the request's user_id + org_id,
-// and buildServiceContext verifies the caller's JWT before we
-// enter this path. The org_id the client sends is matched
-// against session.org_id; mismatched requests get no session
-// back.
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Logger } from 'pino';
-import { adminClient } from '@/db/adminClient';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
+import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
 import { loggerWith } from '@/shared/logger/pino';
+import { agentSessionService } from '@/services/agent/agentSessionService';
+import {
+  aiActionsService,
+  type AiActionRecord,
+} from '@/services/agent/aiActionsService';
+import { journalEntryService } from '@/services/accounting/journalEntryService';
 import type {
   CardResolution,
   ChatTurn,
@@ -67,41 +74,24 @@ export async function GET(req: Request) {
       user_id: ctx.caller.user_id,
     });
 
-    const db = adminClient();
-    const ttlCutoff = new Date(
-      Date.now() - TTL_DAYS * 24 * 60 * 60 * 1000,
-    ).toISOString();
-
-    const { data: session, error: sessionErr } = await db
-      .from('agent_sessions')
-      .select('session_id, user_id, org_id, turns, conversation')
-      .eq('user_id', ctx.caller.user_id)
-      .eq('org_id', query.org_id)
-      .gte('last_activity_at', ttlCutoff)
-      .order('last_activity_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (sessionErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `agent_sessions lookup failed: ${sessionErr.message}`,
-      );
-    }
+    const session = await agentSessionService.getMostRecentForUser(
+      { org_id: query.org_id, user_id: ctx.caller.user_id, ttl_days: TTL_DAYS },
+      ctx,
+    );
 
     if (!session) {
       return NextResponse.json({ turns: [], session_id: null });
     }
 
-    const storedTurns = (session.turns as unknown[]) ?? [];
-    const storedConversation = (session.conversation as unknown[]) ?? [];
+    const storedTurns = session.turns;
+    const storedConversation = session.conversation;
 
     // Branch A: post-migration-121 session with structured turns.
     if (storedTurns.length > 0) {
       const hydrated = await hydrateTurns(
         storedTurns as PersistedTurn[],
         query.org_id,
-        db,
+        ctx,
         log,
       );
       return NextResponse.json({
@@ -149,7 +139,7 @@ export async function GET(req: Request) {
 async function hydrateTurns(
   persisted: PersistedTurn[],
   orgId: string,
-  db: ReturnType<typeof adminClient>,
+  ctx: ServiceContext,
   log: Logger,
 ): Promise<ChatTurn[]> {
   // Collect idempotency_keys from assistant turns that carry a
@@ -166,50 +156,43 @@ async function hydrateTurns(
   // buttons normally.
   const resolutionMap = new Map<string, CardResolution>();
   if (idempotencyKeys.length > 0) {
-    const { data: aiActions, error: aiErr } = await db
-      .from('ai_actions')
-      .select(
-        'idempotency_key, status, journal_entry_id, resolution_reason',
-      )
-      .eq('org_id', orgId)
-      .in('idempotency_key', idempotencyKeys);
-    if (aiErr) {
+    let aiActions: AiActionRecord[] = [];
+    try {
+      aiActions = await aiActionsService.listByIdempotencyKeys(
+        { org_id: orgId, idempotency_keys: idempotencyKeys },
+        ctx,
+      );
+    } catch (aiErr) {
       log.warn(
-        { err: aiErr.message },
+        { err: aiErr instanceof Error ? aiErr.message : String(aiErr) },
         'conversation-load: ai_actions join failed, cards will render without card_resolution',
       );
-    } else {
-      // Collect journal_entry_ids for approved rows so entry_number
-      // can land on CardResolution via a single secondary SELECT.
-      const approvedJournalIds = (aiActions ?? [])
-        .filter((r) => r.status === 'confirmed' && r.journal_entry_id)
-        .map((r) => r.journal_entry_id as string);
-      const entryNumberByJournalId = new Map<string, number>();
-      if (approvedJournalIds.length > 0) {
-        const { data: entries, error: jeErr } = await db
-          .from('journal_entries')
-          .select('journal_entry_id, entry_number')
-          .in('journal_entry_id', approvedJournalIds);
-        if (jeErr) {
-          log.warn(
-            { err: jeErr.message },
-            'conversation-load: journal_entries enrichment failed; approved cards will render without entry_number',
-          );
-        } else {
-          for (const je of entries ?? []) {
-            entryNumberByJournalId.set(
-              je.journal_entry_id,
-              je.entry_number as number,
-            );
-          }
-        }
-      }
+    }
 
-      for (const row of aiActions ?? []) {
-        const resolution = deriveResolution(row, entryNumberByJournalId);
-        if (resolution !== undefined) {
-          resolutionMap.set(row.idempotency_key as string, resolution);
-        }
+    // Collect journal_entry_ids for approved rows so entry_number
+    // can land on CardResolution via a single secondary lookup.
+    const approvedJournalIds = aiActions
+      .filter((r) => r.status === 'confirmed' && r.journal_entry_id)
+      .map((r) => r.journal_entry_id as string);
+    let entryNumberByJournalId = new Map<string, number>();
+    if (approvedJournalIds.length > 0) {
+      try {
+        entryNumberByJournalId = await journalEntryService.getEntryNumbersBatch(
+          { org_id: orgId, journal_entry_ids: approvedJournalIds },
+          ctx,
+        );
+      } catch (jeErr) {
+        log.warn(
+          { err: jeErr instanceof Error ? jeErr.message : String(jeErr) },
+          'conversation-load: journal_entries enrichment failed; approved cards will render without entry_number',
+        );
+      }
+    }
+
+    for (const row of aiActions) {
+      const resolution = deriveResolution(row, entryNumberByJournalId);
+      if (resolution !== undefined) {
+        resolutionMap.set(row.idempotency_key, resolution);
       }
     }
   }
@@ -232,11 +215,7 @@ async function hydrateTurns(
 }
 
 function deriveResolution(
-  row: {
-    status: string | null;
-    journal_entry_id: string | null;
-    resolution_reason: string | null;
-  },
+  row: AiActionRecord,
   entryNumberByJournalId: Map<string, number>,
 ): CardResolution | undefined {
   switch (row.status) {
@@ -291,7 +270,7 @@ function reconstructFromAnthropicMessages(
     if (msg.role === 'assistant' && Array.isArray(msg.content)) {
       for (const block of msg.content as Array<Record<string, unknown>>) {
         if (block.type !== 'text' || typeof block.text !== 'string') continue;
-        const match = TERMINATING_TEXT_RE.exec(block.text);
+        const match = block.text.match(TERMINATING_TEXT_RE);
         if (!match) continue;
         const assistantTurn: ChatTurnAssistant = {
           role: 'assistant',
