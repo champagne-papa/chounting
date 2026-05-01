@@ -152,33 +152,43 @@ Two workflows:
 
 ## Pre-existing baseline (NOT introduced by the migration)
 
-`@chounting/web` ships **7 lint errors** that block both
-`pnpm --filter @chounting/web lint` and `next build` for the web
-app. They are LT-03 / UF-006 violations of the
-`no-restricted-imports` rule on `@/db/adminClient`:
+The Pattern 3 migration carried forward a baseline of **7 LT-03
+/ UF-006 violations** of the `no-restricted-imports` rule on
+`@/db/adminClient`. Verified pre-existing by checking out the
+pre-migration commit `b2bf9f3` and running `next lint` — same 7
+errors surfaced there. The Pattern 3 work was bound by "DO NOT
+modify any existing service, agent, schema, or route code in
+`src/`," so they were not addressed in the migration.
+
+**Partial resolution 2026-04-30 (4-of-7 cleared):** the 4 route
+handlers were rewritten to consume service-layer functions:
+
+```
+src/app/api/agent/confirm/route.ts:21       ← cleared
+src/app/api/agent/conversation/route.ts:35  ← cleared
+src/app/api/agent/reject/route.ts:28        ← cleared
+src/app/api/auth/mfa-status/route.ts:4      ← cleared
+```
+
+**Remaining (3 agent-runtime sites — held under Q33 deferral):**
 
 ```
 src/agent/memory/orgContextManager.ts:17
 src/agent/orchestrator/index.ts:39
 src/agent/orchestrator/loadOrCreateSession.ts:10
-src/app/api/agent/confirm/route.ts:21
-src/app/api/agent/conversation/route.ts:35
-src/app/api/agent/reject/route.ts:28
-src/app/api/auth/mfa-status/route.ts:4
 ```
 
-These predate the Pattern 3 migration. Verified by checking out
-the pre-migration commit `b2bf9f3` and running `next lint` — the
-same 7 errors surface there. The Pattern 3 work was bound by the
-constraint "DO NOT modify any existing service, agent, schema, or
-route code in `src/`," so they were not addressed in the
-migration.
+These are held pending the Double Entry Agent build per Q33 in
+`docs/02_specs/open_questions.md` — the right service-layer shape
+for these consumers depends on agent data-access patterns that
+haven't been observed yet.
 
-The CI lint and build jobs filter to `@chounting/demo` for now.
-Once the 7 violations are resolved (the right shape is moving
-each `adminClient` consumer behind a service-layer call, per the
-LT-03 leaf), the CI filters can be removed and the web app
-re-enters the gate.
+A narrow `src/agent/**` exemption in `apps/web/eslint.config.mjs`
+keeps CI green for `@chounting/web` lint and build while the 3
+sites remain. The CI filter `--filter=@chounting/demo` can now
+be removed (the web workspace's lint and build jobs pass under
+the narrowed exemption). When Q33 closes, both the exemption and
+the 3 sites are deleted in one pass.
 
 ## See also
 

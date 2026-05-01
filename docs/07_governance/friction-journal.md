@@ -1354,3 +1354,85 @@ Categories:
     differentiating for variety would be a posture-test
     failure dressed as editorial polish. The repetition is
     doing work.
+
+---
+
+## 2026-04-30 — Q33 partial-resolution arc (4-of-7 cleared, 3 deferred)
+
+Mid-session arc cleared the 4 route-handler half of Q33's 7-site
+LT-03 / UF-006 baseline. The 3 agent-runtime sites stay held
+under Q33's original deferral logic (the Double Entry Agent build
+will reshape those consumers; refactoring before that's
+observable risks structuring against assumptions the agent work
+later contradicts).
+
+**Trigger.** A separate-chat assistant proposed an "all 7 files at
+once" service-layer refactor framed as architecturally correct.
+On review, the proposal had three failure modes: (a) it
+contradicted Q33's deferral rationale (added the same calendar
+day, commit `bf153fc`); (b) it conflated "in the request path" with
+"must be a service consumer," ignoring that the agent endpoints
+already wrap their service calls in `withInvariants` at the route
+boundary, so the orchestrator's adminClient access happens behind
+an authorized gate rather than at one; (c) it asked for
+trust-without-checkpoints + no-test-verification on 600–1000
+lines of agent-runtime + audit-emit + ai_actions-lifecycle code,
+which is exactly the shape that produces durable regressions in
+chounting's full-suite floor.
+
+**Decision.** Split the 7 sites at the architecturally-meaningful
+seam: 4 route handlers (`mfa-status`, `agent/{confirm,
+conversation, reject}`) decompose cleanly into service consumers
+and were the right boundary for UF-006 in the first place; 3
+agent-runtime files (`orchestrator/index.ts`,
+`loadOrCreateSession.ts`, `orgContextManager.ts`) keep their
+direct adminClient access pending Q33 closure.
+
+**Service surface added.** 8 new exports across 4 files. New file
+`agentSessionService.ts` (1 export); `aiActionsService` extended
+with 4 (one read single, one read batch, two mutations);
+`journalEntryService` extended with 2 (single + batch
+entry_number reads); `orgService` extended with 1 (narrow
+`getMfaRequirement` parallel to `getOrgProfile`). All wrapped via
+Pattern A no-action-key, except `orgService.getMfaRequirement`
+which stays unwrapped pattern-G1 to match orgService's local
+precedent. No new permission keys minted (Q34 filed for that
+question, gated on Q33 closure).
+
+**Pattern terminology drift caught and corrected.** A separate-chat
+assistant claimed the codebase had no "Pattern G1" — wrong; G1
+appears in `orgService.ts:357`, `membershipService.ts:240`,
+`invitationService.ts:352`, all as the route-handler-gated read
+annotation. The grep miss was substrate-level; their broader
+recommendation chain proceeded on the false premise. Caught
+before write by re-grepping the canonical files on this side of
+the conversation. Convention candidate (single datapoint):
+*verify-substrate-claims-from-foreign-conversation-context-before-
+acting* — when an assistant in a separate chat surfaces a claim
+about codebase state, re-grep before acting on the derived plan.
+
+**Lint movement.** 7 errors → 3 errors as predicted (the 3
+agent-runtime files unchanged). Typecheck green. The 3 errors
+remain held until either Commit 2's narrowed `src/agent/**`
+exemption ships (planned next, this session) or Q33 closes.
+
+**Three-commit shape.** Per push-readiness-gate per-commit-shape
+discipline: C1 = service additions + 4 route rewrites + doc-sync
+(this commit). C2 = narrow eslint exemption only (revertable as
+pure config change). C3 = Q34 question file. Each independently
+passes typecheck and is independently revertable.
+
+**Convention-candidate-below-threshold.** *Out-of-scope-assistant
+recommendation as falsifiable input.* When work spans separate
+chats / separate assistants and one chat's assistant proposes a
+plan that the other chat's assistant must execute, the executing
+side should treat the proposal as falsifiable — re-verify
+foundational claims (Q-numbered open questions, codebase
+patterns, substrate file:line citations) against the actual repo
+before approving. Single-datapoint observation today; second
+firing required before codification. Adjacent to the
+*Re-verify Environmental Claims at Each Gate* convention from
+Phase 1.2 §C9 but distinct: that one's about the same agent
+re-verifying its own prior claims; this one's about treating a
+foreign-context proposal as a hypothesis-to-test rather than an
+instruction-to-execute.

@@ -25,11 +25,12 @@ interface Props {
 }
 
 const STATUS_PILL: Record<AiActionStatus, string> = {
-  confirmed: 'bg-green-100 text-green-800',
-  rejected:  'bg-red-100 text-red-800',
-  pending:   'bg-blue-100 text-blue-800',
-  stale:     'bg-neutral-100 text-neutral-600',
-  edited:    'bg-amber-100 text-amber-800',
+  confirmed:   'bg-green-100 text-green-800',
+  auto_posted: 'bg-green-100 text-green-800',
+  rejected:    'bg-red-100 text-red-800',
+  pending:     'bg-blue-100 text-blue-800',
+  stale:       'bg-neutral-100 text-neutral-600',
+  edited:      'bg-amber-100 text-amber-800',
 };
 
 function formatTimestamp(iso: string, locale: string): string {

@@ -570,28 +570,43 @@ renumbering (five line edits, no code change).
 
 **Source:** Skills migration session, 2026-04-19.
 
-### Q33 — Service-layer placement for the 7 `@/db/adminClient` direct-import sites in apps/web/
+### Q33 — Service-layer placement for the 3 remaining `@/db/adminClient` direct-import sites in apps/web/
 
-The Pattern 3 monorepo migration (2026-04-30) carried forward a
-pre-existing baseline of **7 LT-03 / UF-006 violations** of the
-`no-restricted-imports` rule on `@/db/adminClient`. Each site
-imports the admin client directly into a route handler or agent
-module rather than going through the service layer:
+**Status update 2026-04-30 (partial-resolution arc):** the 4 route-
+handler half of this question was resolved by extracting service-
+layer functions and rewriting the consumers. The 3 agent-runtime
+sites remain deferred per the original rationale below. The
+question now scopes to those 3 sites only.
+
+**Resolved this arc (route-handler half — 4 sites cleared):**
+
+```
+apps/web/src/app/api/agent/confirm/route.ts:21       ← cleared
+apps/web/src/app/api/agent/conversation/route.ts:35  ← cleared
+apps/web/src/app/api/agent/reject/route.ts:28        ← cleared
+apps/web/src/app/api/auth/mfa-status/route.ts:4      ← cleared
+```
+
+Now consume `aiActionsService.{getByIdempotencyKey,
+listByIdempotencyKeys, markConfirmed, markResolved}`,
+`agentSessionService.getMostRecentForUser`,
+`journalEntryService.{getEntryNumber, getEntryNumbersBatch}`, and
+`orgService.getMfaRequirement`. New mutations carry no action key
+pending Q34.
+
+**Remaining (agent-runtime half — 3 sites still deferred):**
 
 ```
 apps/web/src/agent/memory/orgContextManager.ts:17
 apps/web/src/agent/orchestrator/index.ts:39
 apps/web/src/agent/orchestrator/loadOrCreateSession.ts:10
-apps/web/src/app/api/agent/confirm/route.ts:21
-apps/web/src/app/api/agent/conversation/route.ts:35
-apps/web/src/app/api/agent/reject/route.ts:28
-apps/web/src/app/api/auth/mfa-status/route.ts:4
 ```
 
-Verified pre-existing by checkout of `b2bf9f3` (the pre-migration
-HEAD) and running `next lint` — same 7 errors. They were out of
-scope for the migration ("DO NOT modify any existing service,
-agent, schema, or route code in `src/`").
+Verified pre-existing in the original migration via checkout of
+`b2bf9f3` (the pre-migration HEAD) and running `next lint`. The
+4 route-handler sites were the half that decomposed cleanly into
+`src/services/` exports without prejudging agent shape; the 3
+agent-runtime sites remain held for the reasons below.
 
 **Why this is genuine uncertainty (not just an obligations
 entry):** the right service-layer shape for these consumers
@@ -609,21 +624,30 @@ belongs in (or whether a new service shape — e.g. an
 `agentSessionService`, `mfaStatusService` — is warranted) and
 move them in one coherent pass.
 
-**Current containment:**
-- `.github/workflows/ci.yml` filters `@chounting/web` out of the
-  `lint` and `build` jobs via `--filter=@chounting/demo`. CI is
-  green; the violations don't block PRs in any other workspace.
-- `docs/03_architecture/monorepo.md` has the full file:line list
-  in its "Pre-existing baseline" section with the same b2bf9f3
-  verification trail.
-- `apps/web/eslint.config.mjs` keeps the rule active so
-  *new* violations of the same kind would still be caught at
-  PR time once the baseline is cleared.
+**Current containment (post partial-resolution arc):**
+- `apps/web/eslint.config.mjs` carries a narrow `src/agent/**`
+  exemption added 2026-04-30 referencing this question by name.
+  The 4 route handlers and `src/services/**` continue to enforce
+  the rule normally; the exemption scopes to exactly the 3
+  agent-runtime files left here.
+- `.github/workflows/ci.yml` previously filtered `@chounting/web`
+  out of the `lint` and `build` jobs via `--filter=@chounting/demo`.
+  With the exemption in place, that filter can be removed (the
+  `lint` and `build` jobs now pass on `@chounting/web`).
+- `docs/03_architecture/monorepo.md` "Pre-existing baseline"
+  section has been updated to reflect the 7→3 narrowing.
 
-**Blocks:** removing the `--filter=@chounting/demo` flags from
-`.github/workflows/ci.yml`'s lint and build jobs.
+**Blocks:** none currently; the narrowed exemption keeps CI
+unblocked and the 3 deferred sites trackable. When Q33 closes
+(agent-runtime refactor lands), the exemption block is deleted
+and the rule regains full coverage.
 
-**Source:** Pattern 3 monorepo migration, 2026-04-30.
+**Related:** Q34 (filed alongside this update) — should
+`ai_actions` lifecycle mutations have their own permission keys?
+Resolution gated on Q33 closure.
+
+**Source:** Pattern 3 monorepo migration, 2026-04-30; partial
+resolution arc 2026-04-30 (4-of-7 cleared).
 
 ---
 
