@@ -124,7 +124,7 @@ export default async function WelcomePage({ params }: PageProps) {
     <div className="fixed inset-0 flex flex-col bg-white">
       {showSkipLink && (
         <a
-          href={`/${locale}/settings/profile`}
+          href={`/${locale}/settings/profile?from=welcome`}
           className="fixed top-4 right-4 z-10 text-sm text-neutral-600 hover:text-neutral-900 underline underline-offset-4 decoration-neutral-300"
         >
           Skip to form
