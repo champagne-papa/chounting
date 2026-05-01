@@ -1719,3 +1719,227 @@ all three.
   for deletion per file's own header instruction and Task 9
   cleanup-list enforcement.
 
+---
+
+## 2026-05-01 — Production promotion arc: v0.1.0-mvp → main; env-config gap surfaced post-merge
+
+Fresh session opened against staging tip `5aed597` per the
+production-promotion resume prompt. Three-phase scope: pre-
+merge verification, the merge itself, post-merge verification.
+Phase 4 doc updates split per Option B at session close — this
+entry plus the CURRENT_STATE.md update are the in-session
+deliverables; six other items deferred to a fresh cleanup
+session.
+
+### What landed
+
+- **Merge commit `9f0ebb3`** on main via `gh pr merge 2 --merge
+  --delete-branch=false`. PR body documented all three
+  push-readiness conditions and the merge mechanics. PR
+  preserved for the audit trail; `staging` survives per the
+  flag.
+- **Production deploy `GuG3X5Bd3`** (chounting Vercel project,
+  Production · Current, 42s, Ready) after a one-arc env-var fix
+  cycle. `chounting.chou.ca` now serves `apps/web` from the
+  merge commit. Quick smoke test passed against the four Q33
+  partial-resolution endpoints (`/api/agent/confirm`,
+  `/api/agent/conversation`, `/api/agent/reject`,
+  `/api/auth/mfa-status`).
+- **Annotated tag `v0.1.0-mvp` pushed to origin** at the end of
+  the session. The tag points at `5a80c43`, the
+  Vercel-deploy-infrastructure-unblock commit on staging that
+  retroactively marked MVP demo-readiness.
+
+### What didn't land per plan
+
+The session's actual shape was rougher than the resume prompt's
+five-step Phase 1 anticipated. Three meta-findings worth
+recording.
+
+#### Finding F1 — Phase 1 Step 4 environment-isomorphism gap
+
+The resume prompt asked Phase 1 to verify Vercel infrastructure
+before merging. Phase 1 Step 4 cleared on the strength of "the
+chounting Vercel project's staging deploy at `5aed597` is
+green" — interpreted as strong dress-rehearsal evidence for the
+post-merge production deploy. The interpretation was structurally
+wrong: a Vercel project's staging environment and production
+environment are **independent runtime configurations sharing only
+the project repo**. Code that builds-and-runs in staging-
+environment scope is *not* evidence that the same code will build-
+and-run in production-environment scope. Environment-scoped
+secrets, environment-scoped feature flags, and environment-scoped
+runtime config are all per-environment. **Neither operator nor
+assistant flagged the staging-vs-production environment-scope
+distinction at Phase 1 Step 4** — the interpretation crystallized
+across messages from both sides without challenge.
+
+The actual state at the moment of merge: production environment
+was missing three required env vars
+(`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`,
+`NEXT_PUBLIC_APP_URL`) that staging environment had. The
+codebase's env-validation guard (visible in `apps/web/src/`,
+referenced via `.env.example` and the build-error message)
+fired at `next build`'s page-data-collection step on first
+production deploy attempt (`93RCQ81gm`), terminating the build
+before deployment cutover. `chounting.chou.ca` remained on the
+prior production deploy (Apr 9 `f0fbc97`) — Vercel's standard
+behavior of not promoting failed deploys.
+
+**Pattern name:** *environment isomorphism assumption*. Adjacent
+to the Phase 1.2 §C9 "Re-verify Environmental Claims at Each
+Gate" convention but distinct: that one's about the same agent
+re-verifying its own prior claims; this one's about treating
+two distinct runtime-config environments as if their
+configurations are isomorphic when they're not.
+
+**Codification candidate** at this single firing — extend the
+"Re-verify Environmental Claims at Each Gate" convention with a
+cross-environment-scope sub-clause: "verify each environment's
+runtime configuration independently; staging-green is necessary
+but not sufficient for production-go." Threshold met if a
+second instance fires; track for future production-promotion
+sessions.
+
+**Phase 4 obligation** (deferred to cleanup session): add a
+production-environment-config-checklist item to
+`docs/09_briefs/phase-2/obligations.md` so future
+production-promotion sessions catch the gap pre-flight.
+
+#### Finding F2 — dropped halt at Gate 1 clearance
+
+The session operated a two-gate halt structure for the merge
+(Gate 1 = diff verdict; Gate 2 = Vercel preview deploy + merge
+method confirmation). Gate 2 was settled explicitly. Gate 1 was
+not formally re-confirmed before the merge command ran.
+Operator had reviewed the diff visually (commit list, file tree
+sidebar in the Files-changed tab) and made an implicit "diff is
+clean enough" judgment at the moment of running the merge
+command; assistant did not pause to ratify the implicit
+judgment as an explicit gate clearance.
+
+Defensible from the operator side — the diff content was in
+fact clean, the implicit judgment was correct. But the gate
+structure existed precisely to make implicit judgments
+explicit, and skipping that step at the irreversible action was
+the wrong shape regardless of outcome.
+
+**Lesson**: at irreversible actions, the assistant should
+explicitly request "Gate 1 clearance: confirm diff verdict" as
+its own halt rather than allowing the gate to be settled by
+inference from operator's other actions. Halt cadence at the
+irreversible edge should be tighter, not looser.
+
+#### Finding F3 — Vercel dashboard env-var persistence bug on `NEXT_PUBLIC_*` Sensitive entries
+
+When `NEXT_PUBLIC_APP_URL` was created with the Sensitive
+toggle on (Vercel UI default for new variables), the entry's
+value repeatedly dropped to empty across Save → re-open round-
+trips. Direct evidence: typed `https://chounting.chou.ca` into
+Value field with focus-blur sequence, clicked Save, dialog
+closed, "Updated just now" timestamp updated — but reopening
+the entry showed the placeholder text again, value unset.
+
+Resolved by deleting the entry and recreating with Sensitive
+toggle off. `NEXT_PUBLIC_*` variables are by definition
+non-secret (they're shipped to the browser bundle), so
+Sensitive=on for them is a category error — Vercel's
+encryption path for sensitive values may be incompatible with
+how `NEXT_PUBLIC_*` lookup happens at build time.
+
+**Phase 4 obligation** (deferred): note in operations runbook
+or Phase 4 cleanup brief: "create `NEXT_PUBLIC_*` Vercel
+variables with Sensitive=off."
+
+### Test-suite pollution: new cluster sibling to Arc A item 27
+
+Pre-reset full-suite at staging HEAD showed 5 failures in one
+run, 7 in another at the same HEAD with no code change between.
+Run-to-run variance at the same HEAD is itself the pollution
+signal. Post-reset (`pnpm db:reset:clean && pnpm db:seed:all &&
+pnpm test`): 598/598. Pre-reset failures all confirmed
+pollution by the pre/post diff being conclusive.
+
+Two clusters in play:
+
+- **Arc A item 27 pair**: `accountLedgerService` running-
+  balance, tests 3 and 6. Documented carry-forward; fix shape
+  known (migrate to less-polluted account, 1300 precedent).
+- **New cluster (5 tests across 5 files)**:
+  `orgUsersViewRender` (CA-77), `ownerPartialUnique` (CA-25),
+  `userHasPermissionHelper` (CA-34), `orgProfileEditorAuthz`
+  (CA-76), `aiActionsReviewPageRender` (CA-S8-C2b). Same
+  fix-shape category (test-isolation refactor: per-test
+  trace_id scoping, runtime lookup over hardcoded UUIDs,
+  fixture-SQL discipline per S33's codification candidates).
+  Broader surface than item 27 — multiple files, multiple test
+  families, all under post-Phase-1.5C (membership / permissions
+  / org users / ai_actions review) substrate.
+
+**Phase 4 obligation** (deferred): add an obligations.md row
+under §6 architectural follow-ups, sibling to the existing Arc
+A item 27 row, naming the new cluster's affected tests and the
+fix-shape category they share with item 27.
+
+### Total session shape
+
+PR opened at `https://github.com/champagne-papa/chounting/pull/2`
+via `gh pr create` (after a `gh auth refresh --scopes
+repo,read:org,workflow` because the initial gh auth flow
+defaulted to insufficient scope). Merge fired clean; production
+deploy 1 errored on env vars; env-var fixes applied via Vercel
+dashboard (with one CLI fallback considered but not used);
+production deploy 2 (`GuG3X5Bd3`) succeeded; smoke test passed.
+
+Net duration: substantially longer than a "promote staging to
+main" session would have been if Phase 1 Step 4 had checked
+production-environment scope. Worth recording the lesson while
+the cost is fresh.
+
+### Convention-fire status
+
+- **File-top-comment-staleness pattern (CLAUDE.md Pattern 8)**
+  fired again on `.github/workflows/ci.yml`. The file's
+  comments still describe the eslint exemption ("or a narrow
+  `src/agent/**` eslint exemption lands") as a future
+  conditional, but the exemption shipped in `e719d02` (Q33
+  partial-resolution arc, 2026-04-30). Plus the
+  `--filter=@chounting/demo` filter on the lint and build jobs
+  could now be removed since `@chounting/web` lint passes
+  post-exemption. **4th fire of the pattern** (CLAUDE.md cited
+  3 fires from Arc A); past further-codification threshold.
+  Concrete Phase 4 obligation: at the cleanup session, decide
+  between (a) tooling support — pre-commit grep for stale
+  top-of-file comments citing pre-edit state — or (b)
+  escalation in the convention's CLAUDE.md framing (e.g.,
+  "review file-top comments before committing any edit that
+  changes behavior the comments describe"). Default if no
+  preference: option (b), since (a) requires a tooling-build
+  arc and (b) is a one-line CLAUDE.md edit.
+
+- **GitHub repo default merge method = Squash-and-merge.**
+  Project discipline (per friction-journal Q33 partial-
+  resolution arc and CLAUDE.md push-readiness convention) is
+  merge-commits-preserve-audit-trail. Repo setting and project
+  discipline are misaligned. Phase 4 cleanup target: align repo
+  default to "Create a merge commit." (Mitigated for this
+  merge by using `gh pr merge 2 --merge` which explicitly
+  selects merge-commit; not a regression but worth fixing for
+  future PRs that go through the UI.)
+
+### Carry-forward summary
+
+Six items deferred to a fresh Phase 4 cleanup session (in
+priority-of-impact order, roughly):
+
+1. obligations.md row for production-environment-config
+   validation gap (highest impact: codifies the lesson so it
+   doesn't fire twice).
+2. obligations.md row for the new 5-test pollution cluster.
+3. `.github/workflows/ci.yml` cleanup (filter removal +
+   comment update).
+4. GitHub repo settings: default merge method.
+5. Staging-environment `NEXT_PUBLIC_APP_URL` value cleanup.
+6. Vercel `NEXT_PUBLIC_*`-with-Sensitive-off note for ops
+   runbook.
+
