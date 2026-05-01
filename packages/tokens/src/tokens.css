@@ -15,9 +15,15 @@
  * `@import "tailwindcss"` line. Hardcoded colors / spacing /
  * fonts in app code are a bug — extend the palette here.
  *
- * Placeholder palette: neutral grayscale with a single blue accent.
- * Refine values in this file; do not duplicate the structure.
+ * Palette: cream / parchment surfaces, ink-tier text, semantic
+ * sage / ochre / brick / indigo accents — locked to V.3.1 "The
+ * Bridge" design direction. The 4-level ink hierarchy is named
+ * for the two primary tiers (--foreground / --muted-foreground);
+ * additional tiers come from opacity utilities
+ * (text-foreground/70, text-foreground/40, etc.).
  */
+
+@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @theme inline {
   /* Color palette — Tailwind utility names (--color-*) */
@@ -45,13 +51,26 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
+  /* Semantic accent colors — sage (posted/approved) and ochre
+   * (draft/pending). Brick lives on --destructive; indigo lives
+   * on --primary. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Typography */
+  /* Typography — three families: serif display for headlines and
+   * agent voice, sans for body, mono for ledger / IDs / mono
+   * accents. Naming a family in @theme exposes the matching
+   * font-* utility (font-sans, font-mono, font-display). */
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
 
   /* Border radius scale — anchored to a single --radius variable
    * so the whole scale shifts coherently when the token is tuned. */
@@ -68,44 +87,60 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
 }
 
-/* Light mode (default) */
+/* Light mode (default) — V.3.1 cream / parchment palette */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Surfaces: page bg → muted (canvas card) → card (whitest cream / paper) */
+  --background: oklch(0.972 0.012 82);
+  --foreground: oklch(0.22 0.012 64);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card: oklch(0.985 0.008 84);
+  --card-foreground: oklch(0.22 0.012 64);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover: oklch(0.985 0.008 84);
+  --popover-foreground: oklch(0.22 0.012 64);
 
-  --primary: oklch(0.55 0.18 252);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Primary = indigo (link / agent voice) */
+  --primary: oklch(0.42 0.07 255);
+  --primary-foreground: oklch(0.985 0.008 84);
 
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  /* Secondary / accent: row-hover surface tint */
+  --secondary: oklch(0.935 0.018 74);
+  --secondary-foreground: oklch(0.22 0.012 64);
 
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Muted: canvas-card surface; muted-foreground = ink tier 3 */
+  --muted: oklch(0.955 0.014 78);
+  --muted-foreground: oklch(0.52 0.010 64);
 
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.935 0.018 74);
+  --accent-foreground: oklch(0.22 0.012 64);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  /* Destructive = brick */
+  --destructive: oklch(0.50 0.10 35);
+  --destructive-foreground: oklch(0.985 0.008 84);
 
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.18 252);
+  /* Success = sage (posted / approved) */
+  --success: oklch(0.50 0.06 145);
+  --success-foreground: oklch(0.985 0.008 84);
+
+  /* Warning = ochre (draft / pending) */
+  --warning: oklch(0.62 0.10 75);
+  --warning-foreground: oklch(0.22 0.012 64);
+
+  --border: oklch(0.86 0.018 70);
+  --input: oklch(0.86 0.018 70);
+  --ring: oklch(0.42 0.07 255);
 
   --radius: 0.625rem;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-display: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
 }
 
 /* Dark mode override — toggled by adding `.dark` to <html> or any
- * ancestor of the themed subtree. */
+ * ancestor of the themed subtree. Kept neutral; the V.3.1 cream
+ * direction is light-only — dark variants will be tuned when a
+ * dark-mode design lands. */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -116,7 +151,7 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.65 0.18 252);
+  --primary: oklch(0.62 0.10 255);
   --primary-foreground: oklch(0.145 0 0);
 
   --secondary: oklch(0.269 0 0);
@@ -128,10 +163,16 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
 
-  --destructive: oklch(0.396 0.141 25.723);
+  --destructive: oklch(0.55 0.12 35);
   --destructive-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.60 0.08 145);
+  --success-foreground: oklch(0.145 0 0);
+
+  --warning: oklch(0.70 0.12 75);
+  --warning-foreground: oklch(0.145 0 0);
 
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
-  --ring: oklch(0.65 0.18 252);
+  --ring: oklch(0.62 0.10 255);
 }
