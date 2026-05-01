@@ -21,9 +21,17 @@
  * for the two primary tiers (--foreground / --muted-foreground);
  * additional tiers come from opacity utilities
  * (text-foreground/70, text-foreground/40, etc.).
+ *
+ * Font delivery: this file declares the font-family stacks
+ * (--font-sans / --font-mono / --font-display) but does not load
+ * the WOFFs. Consumers load the typefaces (Source Serif 4, Inter,
+ * JetBrains Mono) — typically by placing a
+ * `@import url("https://fonts.googleapis.com/css2?...")` as the
+ * FIRST line of their entry CSS, or via `next/font` in Next.js
+ * apps. The CSS spec requires URL imports to precede all rules,
+ * so embedding the import inside this file doesn't survive
+ * Tailwind v4's inlining pass cleanly.
  */
-
-@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @theme inline {
   /* Color palette — Tailwind utility names (--color-*) */
