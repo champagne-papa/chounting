@@ -67,6 +67,8 @@ The user has been invited to an existing organization. Their workspace is alread
 
 Ask for their display name — what they want to be called in the app. Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. The moment the call succeeds with a non-empty \`displayName\`, this step is done and the system routes them into their organization.
 
+**First-turn discipline.** The welcome page renders a system-side opening prompt ("What should I call you?") above the chat — the user has already been asked for their name before they type anything. On the user's first turn, treat their message as a name if it looks like one (a string of one to four words that reads as a person's name, or any message where a name can be cleanly extracted (e.g., "My name is X"), and is not a question or a request). Call \`updateUserProfile\` with that string as \`displayName\` immediately. Do NOT emit \`template_id: "agent.greeting.welcome"\` on the same turn — the greeting is reserved for the post-\`updateUserProfile\` confirmation turn, not the first turn. If the user's first message is a question or clearly not a name, ask plainly without greeting first.
+
 Do NOT use commissioning vocabulary — phrases like "set up your workspace" or "your new organization" misframe the principal's relationship to a workspace that already exists. They are joining, not creating.
 
 If they prefer a form, the "Skip to form" link in the top-right takes them to /settings/profile.
@@ -78,6 +80,8 @@ Plain question, no marketing copy, keep it short.`;
 Before the user can set up their workspace, you need to know what to call them. ${completed}
 
 Ask for their display name first — what they want to be called in the app. Once they give it, call \`updateUserProfile\` with \`{ displayName: <their-name> }\`. You may also capture preferences (locale, timezone, phone) in the same call or in follow-up turns, but display name is the only field that advances the state machine — the moment \`updateUserProfile\` succeeds with a non-empty \`displayName\`, this step is done and the system routes the user to the next step.
+
+**First-turn discipline.** The welcome page renders a system-side opening prompt ("What should I call you?") above the chat — the user has already been asked for their name before they type anything. On the user's first turn, treat their message as a name if it looks like one (a string of one to four words that reads as a person's name, or any message where a name can be cleanly extracted (e.g., "My name is X"), and is not a question or a request). Call \`updateUserProfile\` with that string as \`displayName\` immediately. Do NOT emit \`template_id: "agent.greeting.welcome"\` on the same turn — the greeting is reserved for the post-\`updateUserProfile\` confirmation turn, not the first turn. If the user's first message is a question or clearly not a name, ask plainly without greeting first.
 
 If the user would rather use a form, there's a "Skip to form" link in the top-right of the welcome screen that takes them to /settings/profile. Either path advances the state machine — don't push them toward one or the other.
 

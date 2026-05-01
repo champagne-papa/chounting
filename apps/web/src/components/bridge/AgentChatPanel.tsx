@@ -733,8 +733,8 @@ function OnboardingChat({
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
         {turns.length === 0 && (
-          <div className="text-sm text-neutral-500">
-            Let&apos;s get your profile set up. What&apos;s your name?
+          <div className="text-sm text-neutral-700">
+            What should I call you?
           </div>
         )}
         {turns.map((turn, i) => (
