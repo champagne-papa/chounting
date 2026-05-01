@@ -649,6 +649,89 @@ Resolution gated on Q33 closure.
 **Source:** Pattern 3 monorepo migration, 2026-04-30; partial
 resolution arc 2026-04-30 (4-of-7 cleared).
 
+### Q34 — Should `ai_actions` lifecycle mutations have their own permission keys?
+
+**Surfaced from Q33's partial-resolution arc (2026-04-30).** When the
+4 route-handler `adminClient` consumers were refactored to consume
+`aiActionsService.markConfirmed` and `aiActionsService.markResolved`,
+the mutations were exported as Pattern A wraps with **no `action`
+key** — `withInvariants(markConfirmed)` rather than
+`withInvariants(markConfirmed, { action: 'agent.action.confirm' })`.
+
+The choice was deliberate. `withInvariants` Invariant 4 (role-based
+authorization via `role_permissions`) requires the action key to
+exist in `ACTION_NAMES` and to be seeded into `role_permissions`.
+Neither `agent.action.confirm` nor `agent.action.resolve` exists
+in either today. The Phase 1.5A "Permission Catalog Count Drift"
+convention is explicit that adding a permission requires updating
+`ACTION_NAMES` AND seeding a permissions row in a migration —
+silently inventing keys is exactly the drift the convention names.
+
+The route-handler-half refactor therefore took the no-action-key
+path: Invariants 1-3 still fire (context shape, caller verified,
+org access), and the meaningful authorization gate is upstream —
+`journal_entry.post` for `confirm` Branch 4 (which already wraps
+`journalEntryService.post`), and "is this caller authenticated and
+a member of `org_id`" via `buildServiceContext` for `markConfirmed`
+and `markResolved` calls outside that branch.
+
+**The open question:** is "the upstream gate is sufficient" the
+right architectural answer, or do these mutations need their own
+permission keys?
+
+**Two candidate answers (leading-but-not-locked):**
+
+- **(a) Add `agent.action.confirm` and `agent.action.resolve`
+  to `ACTION_NAMES`, seed them into `role_permissions`, and
+  upgrade the wraps to carry the action keys.** Defense in depth:
+  even if a future caller path bypasses the upstream gate, the
+  mutation itself remains role-gated. Cost: a migration with a
+  decided role-grant matrix (which roles can confirm, which can
+  resolve, what about edited resolutions vs straight rejections),
+  plus the parity test (CA-27) firing on the catalog count change.
+- **(b) Accept that the upstream gate is the gate.** The
+  `ai_actions` row's lifecycle is a side-effect of the agent
+  conversation's authorization; no caller path reaches
+  `markConfirmed`/`markResolved` without first satisfying the
+  upstream check. Document the pattern in `agent_autonomy_model.md`
+  and leave the wraps action-keyless.
+
+**Why this is genuine uncertainty:** the right answer depends on
+patterns that haven't been observed yet. Specifically, the 3
+agent-runtime sites deferred under Q33 (`orchestrator/index.ts`,
+`loadOrCreateSession.ts`, `orgContextManager.ts`) will, when they
+refactor, define new caller paths into `aiActionsService`. If those
+paths land outside the existing route-handler upstream gates,
+**(a)** becomes obviously correct. If they land inside coordinated
+service boundaries (e.g., a new `agentRuntimeService` that itself
+wraps an `agent.runtime.execute` action key), **(b)** survives.
+
+Locking key names *today* against today's caller surface risks the
+same trap Q33 explicitly avoids — structuring against assumptions
+the agent work later contradicts. The candidate names
+(`agent.action.confirm`, `agent.action.resolve`) are leading but
+not locked; the actual key names should be decided alongside Q33's
+resolution so they reflect the real caller-path shape that the
+Double Entry Agent build produces.
+
+**Resolution timing:** gated on Q33 closure. Q34 stays open as
+long as Q33 stays open.
+
+**Blocks:** none currently. The action-key-less wraps satisfy the
+ESLint `services/withInvariants-wrap-or-annotate` rule (the rule
+only requires the wrap to be present, not that it carry an action
+key); the upstream gates hold authorization. The question is
+forward-looking architectural cleanup, not a present-day blocker.
+
+**Related:** Q33 (the agent-runtime adminClient deferral that
+gates this question). Phase 1.5A "Permission Catalog Count Drift"
+convention (the rule that prohibits inventing keys ad hoc, which
+is why we filed Q34 instead of locking key names today).
+
+**Source:** Q33 partial-resolution arc, 2026-04-30. Surfaced
+during route-handler refactor when `markConfirmed`/`markResolved`
+shape was being decided.
+
 ---
 
 ## Section 4 — Formalization candidates
