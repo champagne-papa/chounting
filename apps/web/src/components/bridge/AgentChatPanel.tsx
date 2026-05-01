@@ -617,6 +617,7 @@ function OnboardingChat({
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) ?? 'en';
+  const tRoot = useTranslations();
   const [turns, setTurns] = useState<OnboardingTurn[]>([]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -689,10 +690,19 @@ function OnboardingChat({
       }
       const data = await res.json();
       setSessionId(data.session_id);
-      const assistantText =
-        typeof data.response?.template_id === 'string'
-          ? `[${data.response.template_id}]`
-          : '(no response)';
+      let assistantText: string;
+      if (typeof data.response?.template_id === 'string') {
+        try {
+          assistantText = tRoot(
+            data.response.template_id,
+            (data.response.params ?? {}) as never,
+          );
+        } catch {
+          assistantText = data.response.template_id;
+        }
+      } else {
+        assistantText = '(no response)';
+      }
       setTurns((prev) => [...prev, { role: 'assistant', text: assistantText }]);
 
       if (data.onboarding_complete === true) {
