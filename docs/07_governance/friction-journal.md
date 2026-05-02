@@ -2820,3 +2820,153 @@ Commits landed this session, all on origin:
 
 This addendum commit lands as a new staging-side commit; merge
 to main is operator-driven post-review.
+
+---
+
+## 2026-05-02 — Phase 4 doc-work cleanup + item 47 (@chounting/ui eslint flat-config gap closure)
+
+Two-commit thread on staging on top of `f6d8849` (Path A
+addendum tip). Phase 4 doc-work session opened against the
+six items deferred at the 2026-05-01 12:09 PT NOTE in
+`91d5bd3`'s production-promotion arc closeout. Four items
+shipped at `6c4ce42`; two operator-UI items deferred (44
+GitHub repo settings, 45 Vercel staging `NEXT_PUBLIC_APP_URL`).
+A seventh item (item 47) surfaced during item 43's local CI
+verification and shipped at `31972c5`.
+
+### A. What landed
+
+- **`6c4ce42`** — `docs/ci: Phase 4 doc-work — F1/F2
+  obligations, ci.yml partial unfilter, NEXT_PUBLIC sensitive
+  note`. Items 41 (production-environment-config validation
+  gap row in obligations.md §6, F1 codification follow-
+  through), 42 (5-test pollution cluster row, sibling to Arc A
+  item 27), 43 (ci.yml partial — lint job extended to include
+  `@chounting/web` since `e719d02`'s exemption cleared web's
+  lint errors; `@chounting/ui` excluded due to flat-config gap
+  surfaced during local verification), 46 (`NEXT_PUBLIC_*`-
+  with-Sensitive-off subsection added to security.md, F3
+  follow-through). Bonus §8 entries: environment-isomorphism
+  assumption (F1) + halt cadence at irreversible edges (F2)
+  codification candidates at 1 datapoint each. New §6 entry:
+  `@chounting/ui` eslint flat-config gap as discrete future
+  Phase 4 follow-up.
+- **`31972c5`** — `fix(ui): wire eslint flat-config and
+  unfilter ci lint job (item 47)`. New file
+  `packages/ui/eslint.config.mjs` mirroring `apps/demo`'s 5-
+  line passthrough of the shared `eslint.base.mjs`. ci.yml
+  lint job filter removed (`@chounting/ui` now passes 3/3
+  unfiltered); job renamed back to `lint (all workspaces)`;
+  ui-exclusion comment block removed; top-of-file history
+  note extended with item 47 closing chapter. obligations.md
+  §6 entry marked CLOSED with the `31972c5` reference and
+  preserved precedent reasoning (demo over web; `.mjs` vs
+  `.js` filename convention).
+
+### B. Findings worth recording
+
+#### F4. ci.yml top-of-file documentary comments drift faster than inline operational comments — N=2 (sibling-shape to S13 audit-table-row "(this commit)" staleness)
+
+Surfaced 2026-05-02 during operator's substrate verification
+of `6c4ce42`. The top-of-file history note in ci.yml claimed
+"lint and build no longer need a `--filter` to exclude the
+web workspace" while the inline comment at the lint step
+accurately described the narrowed-rather-than-removed shape
+(`@chounting/web` + `@chounting/demo`, ui excluded). The
+top-of-file documentary comment described the e719d02
+motivation correctly but didn't track the scope-narrowing
+mid-edit; the inline operational comment did. **Mechanism:**
+top-of-file comments describe the *why* at the time of
+authorship and don't naturally accompany the line-level
+edits that shape current behavior; inline comments sit
+immediately adjacent to the behavior they describe and get
+revised in the same edit cadence as the behavior. **Sibling-
+shape to S13's audit-table-row "(this commit)" staleness
+pattern from §8** (one datapoint at S13; this is a second
+datapoint of the broader "documentary-comment-staleness-when-
+scope-narrows-mid-cycle" pattern, but in a different
+artifact). Codification threshold for the shared pattern not
+yet defined; track for a third occurrence to determine
+whether to graduate to a single convention or leave as two
+artifact-specific candidates.
+
+#### F5. Pattern 8 fires during execution under worker-extended scope without re-approval — N=1 process observation
+
+During item 47 execution, worker extended ci.yml scope from
+the entry-gate plan's three changes (filter-flag removal,
+comment-block removal, job-name rename) to four changes
+(adding the file-top history-note extension that documents
+item 47's closing chapter of the unfilter story). The
+extension was post-hoc justified under "Pattern 8 file-top
+staleness review fired again." Substrate-real consequence:
+operator's substrate verification flagged the deviation and
+required ratify-or-halt before push. **Mechanism:** Pattern
+8 (CLAUDE.md session-execution-conventions §3) instructs
+worker to "review the file's top-of-file comment for
+staleness — any description of shape, behavior, or contract
+the comment makes that the edit invalidates must be updated
+in the same commit, not deferred." The convention is correct
+but worker-internalized as an in-execution prompt rather
+than a plan-time prompt; the file-top staleness review fires
+*during* the edit cadence, not at the entry-gate plan
+authoring. **Lesson:** when an entry-gate plan enumerates
+specific edits to a file with documentation artifacts (file-
+top comments, inline rationale blocks), the plan should
+explicitly include "Pattern 8 staleness review on the
+file's documentary comments" as its own line item, so any
+expansion-of-scope is plan-time-approved rather than
+execution-time-discovered. One datapoint; codification fires
+on a second occurrence.
+
+### C. Risks A and B — pre-flagged, did not fire
+
+Item 47's entry-gate plan flagged two substrate-real risks:
+
+- **Risk A** — `next/core-web-vitals` may fail to resolve from
+  `packages/ui` because the shared base extends it via
+  FlatCompat and pnpm hoisting may not reach
+  `eslint-plugin-react`/`eslint-plugin-react-hooks`/`@next/
+  eslint-plugin-next` from ui's resolution path. Did not fire:
+  turbo lint counted ui as 3/3 successful with zero module-
+  resolution errors. Pnpm hoisting reached the necessary
+  plugins from the shared root.
+- **Risk B** — `next/core-web-vitals` may emit warnings
+  against `cn.ts` because the preset includes general rules
+  (`import/no-anonymous-default-export`, etc.) that could fire
+  on non-JSX files. Did not fire: zero `@chounting/ui:lint:`
+  output lines in the unfiltered run. The 20 warnings shown
+  were all `@chounting/web:lint:` prefixed and pre-existing
+  (substrate-mathematically proven via `git diff
+  6c4ce42..31972c5 -- apps/web/` showing zero changes).
+
+Both risks resolved cleanly via the demo-mirror precedent.
+Web-mirror would have imported a custom plugin (LT-01b
+withInvariants check) and `no-restricted-imports` patterns
+for an `adminClient` ui never touches; the brief's "minimal
+mirror" framing pointed at demo, and that judgment held.
+
+### D. Carry-forward for future Phase 4 sessions
+
+Items 44 and 45 remain operator-UI deferrals:
+
+- **Item 44** — GitHub repo settings: align default merge
+  method to "Create a merge commit" (substrate-confirmed
+  firing per addendum B10's branch-protection-pushback
+  observation; no doc-side action needed beyond the existing
+  B10 cross-reference at lines 2740-2762).
+- **Item 45** — Vercel staging environment: clean up
+  `NEXT_PUBLIC_APP_URL` per F3 pattern (recreate with
+  Sensitive=off if needed; new security.md guidance covers
+  the recreation discipline).
+
+### E. Session ledger summary
+
+Commits landed this session, both on `origin/staging`:
+
+- `6c4ce42` (Phase 4 doc-work — items 41, 42, 43, 46 + bonus §8)
+- `31972c5` (item 47 — `@chounting/ui` eslint flat-config wired + ci.yml unfiltered)
+
+Phase 4 doc-work session officially closes after this NOTE
+lands and Task 9 housekeeping completes (`pnpm db:reset:clean`
++ `bash scripts/session-end.sh`). No paid-API spend across
+the session. No test changes; vitest suite untouched.
