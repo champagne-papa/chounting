@@ -3023,3 +3023,130 @@ respectively.
 Codification candidates remain at their prior counts (F1/F2
 N=1 each; F4 N=2; F5 N=1) — items 44 and 45 closing operator-
 side does not advance any of the codification trackers.
+
+---
+
+## 2026-05-02 — Claude Code Read-tool consistency bug (codification candidate; preventive discipline)
+
+Operator-reported (filed via GitHub issue, never answered): within
+a single Claude Code session, two Read tool calls against the same
+path (`~/.claude/settings.json`) returned materially different
+content with no on-disk changes. The first Read returned a 131-line
+view containing a full `permissions` block (allow/ask/deny lists +
+`defaultMode: "acceptEdits"` + `disableBypassPermissionsMode:
+"disable"`). Subsequent Reads returned the 24-line on-disk skeleton
+(`enabledPlugins` + `statusLine` only) and runtime permission
+behavior matched the 24-line skeleton — not the 131-line first-Read
+view. Working hypothesis: the Read tool returns an
+effective-config-merged-with-defaults projection at session-start
+and raw on-disk bytes thereafter, but inconsistently and
+undocumented.
+
+### Where this fired (and where it didn't)
+
+This bug did **not** fire during executed work in Path A or the
+Phase 4 doc-work sessions, because no execution touched
+`~/.claude/settings.json`. It is load-bearing for the **unexecuted**
+Session-config-cleanup-0430 brief
+(`docs/09_briefs/session-config-cleanup-0430-brief.md`, untracked
+since 2026-04-30): three of its sections embed claims that depend
+on Read-tool reliability against the global config —
+
+1. The "Upstream authority" section's `~/.claude/settings.json`
+   bullet asserted three permission lists +
+   `defaultMode: "acceptEdits"` + `disableBypassPermissionsMode:
+   "disable"`. Substrate-verified this session via shell-side `cat
+   ~/.claude/settings.json`: the file is the 24-line skeleton; none
+   of those keys exist on disk. The brief's claim was substrate
+   from the fabricated 131-line view of a prior session.
+2. Stage 1 Step 1.2 ("Read full ... `~/.claude/settings.json`
+   (current global) into working memory") implicitly used the Read
+   tool against a substrate the bug makes unreliable.
+3. Pre-decision (c) Class 1 cited `line 109 of
+   ~/.claude/settings.json` as the global `Bash(curl:*)` deny
+   anchor — that line number is from the fabricated 131-line view;
+   no such line exists on the 24-line skeleton.
+
+The brief's Stage 4 (runtime-behavior smoke test against four
+scenarios) is incidentally the load-bearing verification for
+effective permission state, but the brief framed it as a
+confirm-step rather than as the source-of-truth gate.
+
+### Sibling-shape relationship to Path A addendum candidate B5
+
+This pattern is shape-sibling to the Path A addendum's codification
+candidate B5 (operator-confirmation message reliability): both
+involve substrate fabricated by an intermediary layer that does not
+match on-disk reality. B5 caught a confirmation-message divergence
+between operator-as-displayed and operator-as-recorded; the
+Read-tool bug catches a config-content divergence between
+Read-tool-as-displayed and on-disk bytes. Both classes of bug
+require shell-side substrate verification before treating the
+intermediary's view as authoritative.
+
+### Prescriptive discipline (preventive; applies forward)
+
+Three rules apply when any future brief touches permission or config
+state:
+
+1. **Read tool output for config files (especially
+   `~/.claude/settings.json`, project `.claude/settings.json`, and
+   project `.claude/settings.local.json`) MUST be substrate-verified
+   via shell-side `cat` from a fresh terminal before being treated
+   as authoritative.** The Read tool's view may be a merged
+   projection; the on-disk bytes are the source of truth for what
+   the runtime actually loads.
+2. **Briefs that depend on permission-state reasoning MUST cite
+   shell-side reads in their Stage instructions, NOT Read tool
+   reads.** Wherever a stage says "read settings.json into working
+   memory," the prescribed mechanism is `cat <path>` from a fresh
+   shell (or from the dev shell with explicit no-Read-tool framing),
+   captured into the audit substrate.
+3. **Runtime-behavior probes are the load-bearing verification of
+   effective permission state, NOT file reads.** A Stage that runs
+   actual permission probes (e.g., the Session-config-cleanup-0430
+   brief's Stage 4 scenarios — attempt `curl`, attempt `pnpm
+   db:reset`, attempt an in-repo edit) is the only authoritative
+   source of truth for whether the layered config behaves as
+   designed. File-content inspection alone is insufficient under
+   this bug class.
+
+### Codification status
+
+N=1 (this is the first observed firing in chounting work).
+Monitoring; codification fires on a second occurrence OR on
+Anthropic documenting the merge-view surface (which would resolve
+the bug to documented-feature, with its own discipline implications
+for Read tool semantics on config paths).
+
+### Cross-reference
+
+`docs/09_briefs/phase-2/obligations.md` §8 — Read-tool consistency
+bug entry (sibling to F1/F2 entries, preventive-discipline framing
+applied to the Session-config-cleanup-0430 brief).
+
+### Brief amendments shipped this session
+
+Four targeted edits to
+`docs/09_briefs/session-config-cleanup-0430-brief.md` that make the
+brief Read-bug-resilient — the edits are pre-execution preventive
+work; the brief itself is still unexecuted at session close:
+
+- (a) Upstream authority section, `~/.claude/settings.json` bullet
+  — replaced specific claims about `defaultMode` / permission lists
+  / `disableBypassPermissionsMode` with a substrate-verification
+  framing pointing at this NOTE and at Stage 4 as the load-bearing
+  runtime-behavior gate.
+- (b) Stage 1 Step 1.2 — amended to specify shell-side `cat` reads
+  with explicit framing that Read tool view of these paths has been
+  observed unreliable per this NOTE.
+- (c) Pre-decision (c) Class 1 — removed the specific
+  `line 109 of ~/.claude/settings.json` reference (line number was
+  from the fabricated 131-line view); replaced with a Stage-4-runtime-
+  probe framing.
+- (d) Stage 4 introduction — promoted from "smoke test against four
+  named scenarios" framing to "load-bearing runtime-behavior
+  verification of effective permission state," with an explicit
+  sentence naming Stage 4 as the source-of-truth and Stage 1's file
+  reads as audit substrate that file content alone is insufficient
+  to settle.

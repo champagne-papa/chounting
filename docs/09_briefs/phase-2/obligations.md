@@ -501,6 +501,23 @@ fires on a third occurrence.
   (diff verdict) was settled by inference from operator running
   the merge command rather than by explicit ratification. One
   datapoint; codification fires on a second occurrence.
+- **Claude Code Read-tool consistency on global config** —
+  2026-05-02 operator-reported bug (filed via GitHub issue, never
+  answered). Pattern: two Read tool calls against the same path
+  (`~/.claude/settings.json`) within a single session can return
+  materially different content with no on-disk changes; first Read
+  returned an apparent effective-config-merged-with-defaults view,
+  subsequent Reads returned raw on-disk bytes. Runtime permission
+  behavior matches the on-disk bytes, not the merged view. Session-
+  internal-load-bearing for any brief whose stages depend on file-
+  level inspection of permission config; preventive discipline
+  applied to `docs/09_briefs/session-config-cleanup-0430-brief.md`
+  (substrate-reads now use shell-side `cat`; Stage 4 reframed as
+  load-bearing runtime-behavior verification). One datapoint;
+  codification fires on a second occurrence OR on Anthropic
+  documenting the merge-view surface (which would resolve the bug
+  to documented-feature). Source: friction-journal 2026-05-02
+  Read-tool-consistency-bug NOTE.
 
 ---
 
