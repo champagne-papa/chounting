@@ -2496,3 +2496,327 @@ agent endpoints + ~30 org-mutating routes + CORS audit
 + CSRF Origin-check sweep). Phase 2A (PDF-extractor +
 accounting-logic) opens against this carve-out's commit
 as the closest pre-Phase-2A anchor.
+
+---
+
+## 2026-05-01 — Path A carve-out addendum — substrate-confirmed shipping + 12-candidate codification ledger
+
+`path-a-ratelimit` session closeout addendum, separate
+`docs(governance)` commit at session-end. Authored per the
+"separate commit on staging post-smoke-test before merge to
+main" coordination disposition (which subsequently shifted to
+"separate commit post-merge-to-main on main" because the
+staging→main merge happened mid-session for substrate-honest
+deploy reasons). The smoke-test outcome cited in §A below is
+load-bearing for the addendum's "rate-limit shipped" claim;
+without it, this addendum would frame Path A as committed-but-
+unverified rather than committed-and-verified-at-the-wire.
+
+### A. Substrate-confirmed shipping
+
+The Path A carve-out is functionally complete on production.
+Three independent substrate layers confirm:
+
+**A1 — Production smoke test PASS (canonical exit criterion
+per brief Task 8 Step 5).** v3 parallel-firing script ran 31
+near-simultaneous POSTs against
+`https://chounting.chou.ca/api/agent/message` post-merge at
+`cfcf2e7`. Result: **30 × 200 + 1 × 429 + 0 other**. Wall-clock
+21s for all 31 to complete. The 429 fired at request 25
+(parallel-firing race-shape; trip position is Redis-tick-
+determined within the parallel batch, not deterministically at
+N+1). 429 response carried `Retry-After: 12` header and body
+`{"error":"RATE_LIMITED","message":"Too many requests. Please
+slow down.","retry_after_seconds":12}` matching `rateLimit.ts`
+spec verbatim. Strict pass criterion (30 × 200 + 1 × 429)
+exceeded the v3 design's conservative-permissive shape (≥1 ×
+429 + ≥20 × 200 + 0 other).
+
+**A2 — Vercel function trace External APIs panel evidence (the
+diagnostic that resolved the v2 false-pass).** Mid-session
+investigation into v2's "31 × 200" result surfaced the
+External APIs panel showing per-request: POST + GET to
+`ollyqiiwdvbpbngqgjqk.supabase...` (Supabase ops) AND POST to
+`beloved-starfish-112672` (Upstash Redis) at 2ms latency,
+multiple per request. This confirmed Redis is reachable +
+`burstLimit.limit()` + `hourLimit.limit()` actually executing.
+Soft-fail-open path is NOT firing on production. The v2 false-
+pass was sequential-pacing-vs-sliding-window math, not a
+soft-fail-open masking. v3's parallel firing (A1) is what
+substrate-honestly demonstrates the rate-limiter tripping.
+
+**A3 — Full env-and-substrate chain verified end-to-end.**
+Vercel-Marketplace UPSTASH_* vars in Production scope (operator-
+confirmed at session pre-flight). turbo.json allowlist correct
+(`0cfb51e`). env.ts boot validation (`6347c43`) passed at
+deploy time (otherwise build at `cfcf2e7` would have failed
+with the F1-style fatal-startup-message naming missing vars —
+build instead succeeded). rateLimit.ts reads exact var names
+Vercel injects (no `Redis.fromEnv()` library-default
+indirection). Integration test (`apiAgentMessageRateLimit
+.test.ts`) green at 606/606 full-suite.
+
+Spend incurred for A1: 30 successful Anthropic calls; estimated
+$0.30–$1.00 against the operator-set $50 cap (set 2026-05-01).
+Zero spend on the 429 (rate-limit gate sits before orchestrator
+invocation).
+
+### B. Codification ledger — graduation-tracking
+
+#### B1. Candidate-5 (chat-side hallucination on operator-side actions) — N=1 → N=5 graduation within single session
+
+**Original entry** (this session's `df327fe` Path A closeout
+NOTE) was N=1 monitoring with the explicit self-prediction
+that "the catch mechanism is not reliable... under different
+timing or token-budget pressure the auto-narration would have
+shipped intact." The self-prediction was correct. Five same-
+shape firings within this single session, all caught by
+external mechanisms rather than chat-side self-correction:
+
+- **Firing 1 (the original N=1 entry):** mid-Task-2 framing,
+  chat-side response started "I'm doing it now. Stepping out of
+  the WSL session for a moment to handle the operator side:
+  opening Vercel dashboard now..." then caught itself mid-
+  sentence. The mid-sentence self-correction is not a reliable
+  mitigation mechanism — relying on it is silent-failure-
+  shaped.
+- **Firing 2:** substituted brief-default `$200` instead of
+  operator-confirmed `$50` in NOTE prose at Task 7 NOTE-
+  finalization. Chat artifact looked like operator-confirmed
+  state when it wasn't. Caught by operator's direct file read
+  against staged content pre-commit.
+- **Firing 3:** authored draft commit body in chat with
+  markdown-rendered filename auto-links that survived copy-
+  paste into heredoc and corrupted commit body bytes. Chat
+  artifact looked like clean prose when it wasn't. Caught
+  post-commit by `git log` review; required two amend cycles
+  to fix.
+- **Firing 4:** chat-side panic-spiral diagnosing terminal-
+  display rendering as filesystem-corruption. Chat artifact
+  looked like authoritative diagnosis when it was display-
+  corruption-misread-as-ground-truth. Caught when filesystem-
+  read disagreed with terminal output.
+- **Firing 5:** auto-attempted to run smoke-test script in my
+  Bash tool's shell when cookie env vars are operator-shell-
+  only by discipline. Chat-side framing claimed assistant-
+  capable execution when reality differs (different shell
+  processes; env vars don't cross). Caught by the script's own
+  `:?must set` safety gate at zero spend, NOT by chat-side
+  self-correction.
+
+**Graduation:** N=5 firings cross the N=3 codification
+threshold per Documentation Routing convention. Codification-
+fired this session.
+
+**(β)-flavored sub-finding (child of B1, not sibling):**
+session-internal recurrence at N=5 within a single session
+indicates the mitigation-reliability gap is steeper than
+monitoring-cadence assumes. By the time the next session
+opens to read the codified N=1 entry, five firings have
+already shipped through. Future-session implication: chat-
+side artifacts intended for non-chat surfaces need pre-paste
+verification gates that don't depend on chat-side self-
+correction. Concrete instances of effective mitigation that
+actually fired this session: (a) operator's direct file read
+against staged content (caught firing 2); (b) `git log` body
+inspection (caught firing 3); (c) operator's filesystem read
+disagreeing with chat-side narrative (caught firing 4); (d)
+script's `:?must set` safety gate (caught firing 5). All four
+are substrate-design or operator-side-verification mechanisms;
+none are chat-side self-correction. The mitigation pattern that
+worked: bake fail-fast gates into operator-runnable artifacts
+wherever success depends on substrate chat-side cannot verify.
+This sub-finding promotes mitigation-reliability-via-substrate-
+gates as the codification's prescriptive content, not just the
+descriptive "the failure mode is real" content.
+
+#### B2. REQUIRED_SERVER ↔ tests/setup/loadEnv.ts ↔ .env.local coupling — N=1 monitoring
+
+(Already in `df327fe` closeout NOTE; restated here for ledger
+completeness.) Future briefs that add to `REQUIRED_SERVER`
+must mark `.env.local` update as REQUIRED for any session
+that runs Vitest workers. Trigger codification at N=2 when
+next REQUIRED_SERVER addition fires the same gap.
+
+#### B3. Three-tier env-var injection pattern for production-only resources — N=1 strong-prior monitoring
+
+(Already in `df327fe` closeout NOTE; restated here.) F1 is the
+problem-class precedent (env-var divergence between staging
+and production); this session is the first pattern-shape
+firing (real creds in Vercel-managed env scopes; placeholders
+in local `.env.local` exercising soft-fail-open; posture
+documented in helper file header). Trigger codification at
+N=2 when next prod-only-resource integration lands.
+
+#### B4. Marketplace-integration env-var naming differs from upstream library conventions — N=1 monitoring
+
+Discovered post-`df327fe` deploy: Vercel-Marketplace Upstash
+integration produces `UPSTASH_REDIS_KV_REST_API_URL` and
+`UPSTASH_REDIS_KV_REST_API_TOKEN` (KV-naming convention
+regardless of any custom prefix), NOT the
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` that
+`@upstash/redis Redis.fromEnv()` defaults to. Resolved at
+`6347c43` via explicit `new Redis({url, token})` reading the
+substrate-real injected names. Sibling-shape to S28 library-
+documentation-vs-integrated-behavior-divergence. Substrate-
+verify at brief-authoring time, not assumed-from-library-docs.
+Trigger codification at N=2 when next Marketplace-injected
+env-var integration surfaces a similar divergence.
+
+#### B5. Operator-confirmation message reliability — N=1 monitoring
+
+"Step 1 done — Upstash Redis installed; both Production AND
+Preview env vars verified" was confirmed pre-Task-3 but
+turned out not to match substrate (env-vars list view showed
+zero UPSTASH vars after assistant trusted operator's earlier
+"done" report). Symmetric to candidate-5's chat-side framing
+but with different agent producing the claim. Mitigation
+shape: filesystem-verify-after-confirm rather than confirm-
+then-defer. Trigger codification at N=2 when next operator-
+confirmation step produces a substrate-claim-vs-substrate-
+real mismatch.
+
+#### B6. Toolset-drift across long sessions — N=1 monitoring
+
+Operator surfaced mid-session that filesystem tool surface
+shifted ("I now have move_file available where I didn't
+before"). Distinct from candidate-5: candidate-5 is "Claude
+says X about reality, X is wrong"; toolset-drift is "Claude's
+runtime environment changed mid-session in ways Claude didn't
+notice and may have made decisions on stale assumptions
+about." Different mechanism, different mitigation (verify-
+tool-availability before assuming continuity). Trigger
+codification at N=2 when next session surfaces a toolset
+shift adjacent to a Claude decision dependent on tool
+availability.
+
+#### B7. REQUIRED_SERVER ↔ turbo.json tasks.build.env coupling — N=1 monitoring
+
+Discovered post-`6347c43` deploy: Vercel injected env vars
+correctly but Turbo's `tasks.build.env` allowlist filtered
+them out before next build saw them. Build log smoking gun:
+"Warning - the following environment variables are set on
+your Vercel project, but missing from turbo.json". Resolved
+at `0cfb51e`. Sibling-shape to candidate B2 (REQUIRED_SERVER
+↔ .env.local coupling) but at build-time cadence rather than
+test-cadence. Both are env-var-list-coupling patterns;
+neither is detectable from inspecting `env.ts` alone. Future
+briefs that add to `REQUIRED_SERVER` must mark BOTH
+`.env.local` update AND `turbo.json tasks.build.env`
+allowlist update as REQUIRED.
+
+#### B8. Vercel deployment protection on preview/staging URLs requires bypass-token-or-vercel-jwt for non-browser callers — N=1 monitoring
+
+Surfaced during smoke-test execution: chounting staging
+deploy URL has Vercel deployment protection enabled, requiring
+`x-vercel-protection-bypass=$BYPASS_TOKEN&x-vercel-set-bypass-
+cookie=true` query params on first request to receive
+`_vercel_jwt` set-cookie that satisfies subsequent requests.
+v1 smoke test missed this (no auth at all). v2 added bypass-
+token cookiejar plumbing. v3 (prod target) drops the plumbing
+because production has no DP. Brief authoring should account
+for this when scope includes pre-prod smoke tests against
+deployment-protected URLs. Sibling-shape to B4 in the sense
+that both are "Vercel platform substrate produces names/
+behaviors that brief-authoring must verify rather than
+assume." Trigger codification at N=2 when next pre-prod
+smoke test against a DP'd URL surfaces a similar gap.
+
+#### B9. Sliding-window rate-limit smoke tests must fire within ≤½ window-fraction — N=1 monitoring
+
+The v2 false-pass (31 × 200 across 73s wall-clock against a
+60s sliding window) demonstrated that sequential slow-
+orchestrator-call testing is structurally inadequate for
+verifying rate-limit boundary behavior — by the time request
+31 arrived, earliest entries had aged out, freeing tokens.
+v3 parallel firing fires all 31 within ~21s wall-clock, well
+under ½ × 60s. Smoke-test scripts targeting sliding-window
+rate-limiters must fire requests within the smallest-window-
+fraction-needed-to-trip; sequential pacing risks false-pass
+when per-request latency × N exceeds the window. Trigger
+codification at N=2 when next rate-limiter smoke test
+encounters the same shape.
+
+#### B10. (CROSS-REFERENCE — not a fresh codification entry) GitHub branch-protection misalignment with project merge-discipline
+
+The existing Phase 4 doc-work carry-forward item #4 (per
+`91d5bd3` production-promotion arc closeout) named "GitHub
+repo settings: align default merge method with project
+discipline (currently 'Squash and merge'; project doc says
+merge commits preserve audit trail)" as a Phase 4 cleanup
+target. This session's staging→main merge at `cfcf2e7`
+surfaced a related-but-distinct shape: the push to main
+returned warnings ("This branch must not contain merge
+commits" + "Changes must be made through a pull request")
+which were advisory-only at operator's permission level —
+the push succeeded despite the warnings. **Add to the
+existing Phase 4 item's evidence ledger, not as a fresh
+codification candidate.** The merge-method-misalignment
+Phase 4 item now has substrate-confirmed firing on the
+branch-protection-pushback shape: repo settings actively
+push back against the project's merge-commit-preserves-
+audit-trail discipline. Cross-reference shape: candidate B10
+extends Phase 4 item #4's scope from "default merge method
+in UI" to "branch-protection rules at push time" — same
+underlying misalignment, two manifestation surfaces.
+
+#### B11. candidate-5 mitigation reliability via substrate-design fail-fast gates — N=1 monitoring (lifted from B1's (β)-sub-finding's prescriptive content)
+
+Promoted to its own ledger entry because the prescriptive
+content ("bake fail-fast gates into operator-runnable
+artifacts wherever success depends on substrate chat-side
+cannot verify") is reusable beyond candidate-5's specific
+firing surfaces. Concrete instances this session: script's
+`:?must set` (caught candidate-5 firing 5 at zero spend);
+operator's direct-file-read-pre-commit (caught firing 2 + 4);
+`git log %B` body verification post-commit (caught firing 3).
+Brief-authoring discipline: when authoring scripts or
+artifacts that operator runs, identify substrate that chat-
+side cannot verify (env vars, network reachability, file
+contents at operator-side paths) and bake fail-fast gates
+that surface mismatch BEFORE substantive operations.
+Trigger codification at N=2 when next session-design
+introduces a similar fail-fast gate as deliberate
+candidate-5-mitigation rather than incidental.
+
+#### B12. Parallel-firing smoke tests trip rate-limit at Redis-tick-determined position — N=1 monitoring
+
+Promoted from v3 design's inline comment to standalone
+codification candidate. Pass criterion for parallel-fired
+sliding-window rate-limit smoke tests should accept ANY
+tripping position (≥1 × 429 within batch of N+1 requests)
+rather than expecting deterministic N+1-position trip.
+Determined by Redis-tick timing within the parallel batch,
+not the request ordering. v3's actual outcome: 429 fired at
+request 25 of 31 (not request 31). Pass criterion needs to
+be either "≥1 × 429 anywhere in the batch + no other-status
+errors" (v3 design) or relax to "≥1 × 429 + ≥N × 200" with
+N tunable. Trigger codification at N=2 when next parallel-
+firing smoke test surfaces non-N+1 trip position.
+
+### C. Path A scope status (post-smoke-test)
+
+End-to-end verified on production. The carve-out closes one
+sub-finding under the broader Path A umbrella (DND-01 CORS/
+CSRF/rate-limiting per `docs/03_architecture/phase_plan.md`).
+The umbrella row in `docs/09_briefs/phase-2/obligations.md`
+stays as carry-forward — no `obligations.md` row added by
+this carve-out. Post-MVP Path A cleanup is the named home
+for the deferred items (3 other agent endpoints + ~30 org-
+mutating routes + CORS audit + CSRF Origin-check sweep).
+Phase 2A (PDF-extractor + accounting-logic) opens against
+`cfcf2e7` (the merge commit that brought Path A to main) as
+the closest pre-Phase-2A anchor.
+
+### D. Session ledger summary
+
+Commits landed this session, all on origin:
+
+- `1b2ec4b` (S31 close — Path C arc Gate 5; LT-02 closure across five sub-items)
+- `df327fe` (Path A feat — rate-limit /api/agent/message)
+- `6347c43` (Path A fix — align rate-limit env var names with Vercel-Marketplace naming)
+- `0cfb51e` (Path A fix — allowlist UPSTASH env vars in turbo.json)
+- `cfcf2e7` (Merge branch staging into main — Path A carve-out reaches production)
+
+This addendum commit lands as a new staging-side commit; merge
+to main is operator-driven post-review.
