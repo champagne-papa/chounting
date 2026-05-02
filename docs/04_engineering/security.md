@@ -101,6 +101,29 @@ entry point) so the app refuses to start without critical secrets.
 - Recommend a dedicated secrets manager (Doppler or AWS Secrets
   Manager) if the team grows beyond 3 people.
 
+### Vercel-dashboard env-var creation: `NEXT_PUBLIC_*` with Sensitive=off
+
+When creating a `NEXT_PUBLIC_*` env var in the Vercel dashboard,
+**turn the Sensitive toggle off** (the dashboard defaults it on
+for new variables).
+
+`NEXT_PUBLIC_*` variables are by definition non-secret — they
+ship to the browser bundle at build time. Sensitive=on for them
+is a category error: Vercel's encryption path for sensitive
+values is incompatible with how `NEXT_PUBLIC_*` lookup happens
+at build time. Concrete failure mode observed 2026-05-01: with
+Sensitive=on, `NEXT_PUBLIC_APP_URL`'s value silently dropped to
+empty across Save → re-open round-trips in the dashboard UI
+(typed value, focus-blur, click Save, "Updated just now"
+timestamp updated, but reopening the entry showed placeholder
+text again with the value unset). Resolution was to delete the
+entry and recreate with Sensitive=off.
+
+If a `NEXT_PUBLIC_*` variable's value appears to be missing at
+build time despite the dashboard showing it as set, check the
+Sensitive toggle first. Source: friction-journal 2026-05-01
+production-promotion entry, Finding F3.
+
 ---
 
 ## Key Rotation

@@ -326,6 +326,63 @@ deferred from the phase scope.
   shared-DB full-suite; clean under `pnpm db:reset:clean`
   baseline. Resolution unblocks "clean full-suite green"
   framing if Phase 2 push-readiness requires it.
+- **5-test pollution cluster (sibling to Arc A item 27)** —
+  surfaced 2026-05-01 during the v0.1.0-mvp production-
+  promotion arc's pre-merge full-suite run (run-to-run variance
+  at the same staging HEAD: 5 failures one run, 7 failures the
+  next, no code change between). Affected tests:
+  `orgUsersViewRender` (CA-77), `ownerPartialUnique` (CA-25),
+  `userHasPermissionHelper` (CA-34), `orgProfileEditorAuthz`
+  (CA-76), `aiActionsReviewPageRender` (CA-S8-C2b). Same
+  fix-shape category as Arc A item 27 (test-isolation refactor:
+  per-test `trace_id` scoping, runtime lookup over hardcoded
+  UUIDs, fixture-SQL discipline per S33's codification
+  candidates). Broader surface than item 27 — multiple files,
+  multiple test families, all under post-Phase-1.5C
+  (membership / permissions / org users / ai_actions review)
+  substrate. Clean under `pnpm db:reset:clean && pnpm
+  db:seed:all` baseline (598/598). Source: friction-journal
+  2026-05-01 production-promotion entry.
+- **Production-environment-config validation gap (F1
+  codification follow-through)** — surfaced 2026-05-01 during
+  the v0.1.0-mvp production-promotion arc. Phase 1 Step 4
+  cleared on the strength of "staging deploy is green";
+  interpretation was structurally wrong because a Vercel
+  project's staging environment and production environment are
+  independent runtime configurations sharing only the project
+  repo. Production was missing three required env vars
+  (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`,
+  `NEXT_PUBLIC_APP_URL`) at the moment of merge; the env-
+  validation guard fired at `next build`'s page-data-collection
+  step on first deploy attempt. **Fix shape:** future
+  production-promotion sessions add a pre-flight check that
+  enumerates required env vars per environment scope (not
+  cross-environment-isomorphism inference). Either (a) extend
+  the "Re-verify Environmental Claims at Each Gate" convention
+  with a cross-environment-scope sub-clause ("verify each
+  environment's runtime configuration independently; staging-
+  green is necessary but not sufficient for production-go"),
+  or (b) add a per-environment env-var-checklist artifact to
+  the production-promotion brief template. **Codification
+  threshold:** convention amendment fires on a second instance
+  of environment-isomorphism-assumption misfire; tracked in §8
+  as a 1-datapoint process observation pending second firing.
+  Source: friction-journal 2026-05-01 Finding F1.
+- **`@chounting/ui` eslint flat-config gap** — surfaced
+  2026-05-02 during Phase 4 doc-work item 43 (ci.yml
+  unfilter). The package's package.json declares `"lint":
+  "eslint"` but no `eslint.config.(js|mjs|cjs)` file is wired
+  (scaffolded empty at `000d6f7` Step 5; ESLint v9 requires
+  flat-config). Item 43 partial-completion: ci.yml lint job
+  filtered to `@chounting/web` + `@chounting/demo` only;
+  `@chounting/ui` stays excluded until config is wired. Fix
+  shape: add minimal flat-config to `packages/ui/eslint.config.js`
+  mirroring `apps/web`'s shape, scaled to ui's surface
+  (currently `cn` utility plus future component scaffolding).
+  Out-of-scope for the current Phase 4 doc-work session per
+  scope-discipline (touches `packages/ui/` source). Source:
+  friction-journal 2026-05-02 Path A closeout addendum
+  follow-on.
 
 ---
 
@@ -420,6 +477,25 @@ fires on a third occurrence.
   curves (ride-on-prior-hard-work vs. targeted-investigation).
   One datapoint (C9 ride-on-prior-work); awaits a second
   instance.
+- **Environment-isomorphism assumption** — 2026-05-01
+  production-promotion arc Finding F1. Pattern: treating two
+  distinct runtime-config environments (staging vs production)
+  as if their configurations are isomorphic when they're not;
+  staging-green inferred as evidence for production-go without
+  independent per-environment verification. One datapoint;
+  codification fires on a second occurrence by extending the
+  "Re-verify Environmental Claims at Each Gate" convention
+  with a cross-environment-scope sub-clause. See §6 entry for
+  the obligations-side fix shape.
+- **Halt cadence at irreversible edges** — 2026-05-01
+  production-promotion arc Finding F2. Pattern: at irreversible
+  actions (merge to main, force-push, schema migration), the
+  assistant should explicitly request gate clearance as its
+  own halt rather than allowing the gate to be settled by
+  inference from operator's other actions. F2 fired when Gate 1
+  (diff verdict) was settled by inference from operator running
+  the merge command rather than by explicit ratification. One
+  datapoint; codification fires on a second occurrence.
 
 ---
 
