@@ -10,6 +10,24 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-01 NOTE — Path A carve-out: rate-limit on
+  `/api/agent/message` lands pre-Phase-2A (single bundled
+  commit; brief at
+  `docs/09_briefs/post-mvp/path-a-rate-limit-agent-message-brief.md`).
+  Soft-fail-open posture deliberately chosen: Redis outage →
+  no-limit-during-outage, NOT user-facing outage. Anthropic
+  per-key spend cap is second line of defense (operator-set
+  at $50 on 2026-05-01). V1 policy
+  numbers: 30/min burst + 200/hour ceiling, both keyed on
+  `user_id`; tuning is Phase 2 work. Other three agent
+  endpoints (`/conversation`, `/confirm`, `/reject`) and the
+  ~30 org-mutating routes stay deferred to Post-MVP Path A
+  cleanup. CORS audit + CSRF Origin-check sweep also stay
+  deferred. Codification candidate at N=2 if a future
+  deferred carve-out from a multi-item phase-cleanup arc
+  lands the same way (single-route surgical extraction with
+  explicit deferral of siblings).
+
 - 2026-04-27 NOTE [ROUTE?] — session-scope reflection has no clean
   retrospective destination per current Documentation Routing rule;
   refinement candidate for next governance amendment.
@@ -1943,3 +1961,762 @@ priority-of-impact order, roughly):
 6. Vercel `NEXT_PUBLIC_*`-with-Sensitive-off note for ops
    runbook.
 
+---
+
+## 2026-05-01 — S31 LT-02 closure — Path C arc Gate 5 closed (Path C arc closes)
+
+S31-lt-02-test-coverage session closed. Single bundled commit
+on `staging` ahead of `origin/staging` shipping the LT-02 test-
+coverage closure across five sub-items per the post-re-anchor
+substrate-honest scope (AMENDMENTS 1–5). All five Path C arc
+verification-harness gates now green: Gate 1 (MT-05) + Gate 2
+(MT-06) at S28 (`e966f30`); Gate 3 (UF-002 broad-scope wrap)
+at S29b (`7774d25`); Gate 4 (LT-01 + LT-03 + LT-04 +
+QUALITY-006) at S30 (`64996b5`); Gate 5 (LT-02 test coverage)
+here. **Path C arc closes; Phase 2 surface expansion gate
+unblocks.**
+
+### Sub-item closure summary
+
+- **Sub-item (a) — `journalEntryService.get` post-S29b-wrapped
+  coverage.** Closes the S29b pre-flight pre-5 finding via
+  NEW `apps/web/tests/integration/journalEntryServiceGet.test.ts`
+  (3 it-blocks: same-org valid get returning JournalEntryDetail
+  with hydrated lines + reversed_by/reverses; cross-org caller
+  with foreign-org journal_entry_id returning
+  `ServiceError('NOT_FOUND')` per existence-leak-prevention
+  contract; non-existent UUID returning
+  `ServiceError('NOT_FOUND')`). Soft 9 natural-key pattern
+  applied — account IDs resolved at `beforeAll` via
+  `account_type` queries against `chart_of_accounts` for both
+  `ORG_HOLDING` and `ORG_REAL_ESTATE`; no hard-coded UUIDs.
+- **Sub-item (b) — agent conversation length boundary-not-
+  overflow.** NEW `apps/web/tests/integration/agentConversation
+  LengthBoundary.test.ts` (1 it-block) per AMENDMENT 2
+  substrate-honest reframe. Pins the orchestrator's full-
+  history pass-through architectural state at HEAD (master §5.2
+  step 5 — no truncation/rotation logic). 32-turn synthetic
+  conversation persisted via `agent_sessions.conversation`
+  (column name substrate-confirmed at re-anchor pre-flight —
+  brief is correct; migration 121's `.turns` is additive UI-
+  side, not a rename). `__setMockFixtureQueue` +
+  `__getLastClaudeCallParams` fixture-branch pattern per CA-39
+  precedent; mocked callClaude per pre-decision (b-α); zero
+  paid-API spend. Test inverts to truncation-curve
+  characterization when Phase 2 ships truncation
+  infrastructure.
+- **Sub-item (c) — coverage-sufficiency-verification of CA-28 +
+  chartOfAccountsServiceCrossOrg.** Substrate-record-only per
+  AMENDMENT 3. CA-28 (`apps/web/tests/integration/journalLines
+  CrossOrgAccount.test.ts`, 3 it-blocks: foreign-org
+  account_id INSERT raises `trg_journal_line_account_org`
+  foreign_key_violation; same-org happy-path; UPDATE rejected
+  by either immutability or cross-org trigger) +
+  chartOfAccountsServiceCrossOrg / CA-23 (`apps/web/tests/
+  integration/chartOfAccountsServiceCrossOrg.test.ts`, 3 it-
+  blocks: service-layer `ORG_ACCESS_DENIED` when caller lacks
+  membership; happy-path with membership; service-layer
+  `NOT_FOUND` with conflicting (account_id, org_id) defense-
+  in-depth) substantively close LT-02(c). Hard Constraint F
+  preserved — no real gap surfaced; no scope-creep into in-
+  flight test-creation.
+- **Sub-item (d) — audit-log nested-PII redaction
+  integration.** NEW `apps/web/tests/integration/auditLog
+  NestedPiiRedaction.test.ts` (2 it-blocks per Reading B
+  pre-execution scope-amend ratification). it-block (i):
+  depth-4 nested PII redaction via direct `recordMutation`
+  call with synthetic `entity_type: 'test_entity'` + action
+  `'s31.lt02d_nested_depth4'`; reads audit_log row by
+  trace_id; asserts PII_FIELDS members redacted recursively at
+  depth 4 with siblings + top-level non-PII preserved.
+  it-block (ii): depth-limit warn-and-continue with
+  `warnedAtLimit.fired` latch sharp-pin via filtered count
+  assertion (filter on exact warn-message string
+  `'redactPii: depth limit exceeded; partial redaction'`,
+  assert filtered `toHaveBeenCalledTimes(1)`); audit row
+  lands despite depth-limit-exceeded confirming warn-and-
+  continue posture per S28 pre-decision 3. Naming-asymmetry
+  honest encoding per Hard Constraint C: test-file header
+  documents PII_FIELDS (`invited_email`/`phone`/`first_name`/
+  `last_name`/`display_name`) recursive coverage vs pino's
+  `*.email`/`*.phone`/etc. depth-1 coverage as load-bearing-
+  substrate, not bug. NO pino-side assertion; multi-level
+  pino remains Phase 2 consolidated obligation.
+- **Sub-item (e) — coverage-sufficiency-verification of
+  CA-27.** Substrate-record-only per AMENDMENT 5. CA-27
+  (`apps/web/tests/integration/journalEntryPeriodDateRange.
+  test.ts`, 4 it-blocks: service-layer `entry_date <
+  start_date` rejection, service-layer `entry_date >
+  end_date` rejection, DB-trigger
+  `trg_journal_entry_period_range` direct-INSERT
+  check_violation, on-boundary inclusivity at both
+  start_date and end_date) substantively closes LT-02(e).
+  Soft 9 natural-key pattern present (`account_code` `'1000'`
+  cash + `'4000'` rent looked up at `beforeAll`). Hard
+  Constraint F preserved.
+
+### Test pattern discipline outcomes per sub-item
+
+- **(a) Soft 9 applied.** Account IDs resolved at fixture-
+  setup via `account_type === 'asset'` / `'revenue'` filtering
+  (mirrors CA-61's `loadCoA` helper); no hardcoded UUIDs.
+  Running-balance fragility shape per `obligations.md` §6 NOT
+  replicated.
+- **(b) Mocked callClaude.** `__setMockFixtureQueue` fixture-
+  branch per CA-39; explicit anti-precedent of
+  `agentRealClientSmoke.test.ts`'s `describe.skipIf(!HAS_KEY)`
+  cited in test-file header. Test runs unconditionally; zero
+  paid-API spend.
+- **(c) Hard Constraint A preserved.** Sufficiency-
+  verification only — no test-creation; no chart_of_accounts
+  fixture surface introduced.
+- **(d) Naming-asymmetry honest encoding.** Test-file header
+  documents the `invited_email` (audit_log) vs `*.email`
+  (pino) field-name divergence + the depth-1 (pino) vs
+  depth-8 (audit_log) coverage divergence as substrate-
+  coherent load-bearing pattern; Phase 2 multi-level pino +
+  financial-PII path remediation tracks the asymmetry as the
+  consolidated obligation.
+- **(e) Date-range coverage closed.** CA-27 substrate-cite;
+  no in-flight scope-amendment.
+
+### Sub-finding category v — drift carry-forward (Convention #8)
+
+Five drift instances accumulated across S31 execution.
+Distributed across four drift sub-classes: item (1) is the
+NEW substrate-LAYOUT class (Convention #8 generalization
+point — across-file path-prefix drift); item (3) is a
+substrate-INVOCATION sub-class (tooling-syntax redirected at
+the dispatcher layer); items (2) and (4) are fresh instances
+within Convention #8's existing within-file IDENTITY scope
+(numerical references — line-cite, count); item (5) is a
+substrate-STATE drift sub-class (test-fragility-posture
+shifted between sessions). The four-sub-class taxonomy is
+elaborated at the end of this section. None reach
+codification-graduation per Hard Constraint F.
+
+1. **Substrate-layout drift — path-prefix re-anchor table
+   (NEW class; Convention #8 generalization).** Brief was
+   anchored at `7774d25` (S29b), pre-monorepo. Restructure
+   shipped at `a8f5c89` (workspace skeleton) + `4ac1f88`
+   (move production app into `apps/web/`) in the 31-commit
+   descendant range to staging HEAD `5aed597`. Every cited
+   `src/...` and `tests/...` path now lives under
+   `apps/web/...`; every cited `docs/...`, `supabase/...`,
+   and root-level pnpm script stays at root. Path table
+   verified by enumeration before Task 2; no non-uniform
+   exceptions surfaced. **Generalization claim:**
+   Convention #8 verify-directly was originally scoped to
+   line-number / count / pattern drift INSIDE files; this
+   firing extends it to path-prefix drift ACROSS files
+   (substrate-layout shift class). Same shape — verify
+   substrate at execution rather than trusting cited
+   coordinates — broader scope. Reusable precedent for any
+   future workspace-skeleton-class change.
+2. **Reference drift — `PII_FIELDS` line-cite.** Brief
+   cited `:19-26`; actual at HEAD `:23-29`. Numerical-
+   reference drift inside an unchanged file. Fresh instance
+   within existing Convention #8 scope; no fresh
+   codification-graduation.
+3. **Invocation drift — `pnpm test <name>` tooling-syntax
+   shift post-monorepo.** Brief Task 5/6/7 Step 3 used the
+   bare `pnpm test <name>` form; under the post-monorepo
+   turbo dispatcher that argument is interpreted as a task
+   name and fails with `Could not find task`. Substrate-
+   correct invocation: `pnpm --filter @chounting/web exec
+   vitest run tests/integration/<name>.test.ts`. Qualitatively
+   distinct from numerical-reference drift — the brief's
+   command is syntactically valid but semantically
+   redirected by the workspace dispatcher introduced in the
+   descendant range. Used for all three NEW-test-file runs
+   at Task 5/6/7 Step 3.
+4. **Reference drift — skip-org-check comment count.**
+   Brief Task 8 Step 3 expected 32 (S29b post-state); actual
+   at HEAD 33. Per Operator Note 2 two-drift-mode framing:
+   total `withInvariants` wrap-site inventory at HEAD = 26;
+   the +1 in skip-org-check comments maps to a Q33 partial-
+   resolution arc commit (`2dfa81e refactor(web): route 4
+   web adminClient consumers through service layer`) in the
+   descendant range. **"New wrap landed" mode confirmed**
+   (NOT "comment-convention drift" mode). Not S31-
+   attributable; LT-01(b) state at HEAD remains substrate-
+   coherent.
+5. **Substrate-state drift — full-suite carry-forward
+   failure surface (DISTINCT from substrate-layout class).**
+   Brief expected `verifyAuditCoverageRoundTrip` as the 1
+   carry-forward failure (S29b state). At HEAD that test
+   passes; the new fragility surface is
+   `crossOrgRlsIsolation.test.ts > Integration Test 3` —
+   `journal_entries_pkey` duplicate-key violation when the
+   test runs twice in one session (once in `agent:validate`,
+   once in full-suite) without per-run cleanup, because it
+   hardcodes `TEST_IDS.je_holding`/`TEST_IDS.je_real_estate`.
+   State-pollution-attributable carry-forward (sibling-shape
+   to Arc A item 27 fragility — same fix-shape category per
+   Phase 2 obligations.md §6: per-test trace_id scoping +
+   runtime lookup over hardcoded UUIDs). NOT S31-edit-
+   attributable (S31 doesn't touch `crossOrgRlsIsolation`,
+   `TEST_IDS`, or any shared fixture this test consumes).
+   Brief Task 8 Step 4 explicitly authorizes NOTE-document-
+   don't-halt for this shape. **Distinction worth pinning
+   for future readers:** four drift sub-classes surfaced
+   this session:
+   - **substrate-LAYOUT drift** — file paths shifted across
+     the repository (item 1). NEW class; Convention #8
+     generalization point.
+   - **substrate-STATE drift** — which-tests-are-fragile
+     shifted (item 5). Test-fragility-posture is itself a
+     mutable substrate; what passes / fails / pollutes can
+     change between sessions independently of file paths
+     and line numbers.
+   - **substrate-IDENTITY drift** — numerical references
+     within a stable codebase shifted (items 2 + 4). Line-
+     cites and counts are the canonical Convention #8 prior-
+     scope cases.
+   - **substrate-INVOCATION drift** — tooling-syntax
+     redirected at the dispatcher layer (item 3). Same
+     command string, different downstream behavior because
+     the dispatcher changed underneath. Distinct from
+     IDENTITY drift in that no number drifted; the syntactic
+     surface stayed identical while the semantic
+     interpretation shifted.
+
+   All four sub-classes sit under Convention #8 verify-
+   directly's umbrella once extended per item (1)'s
+   generalization. The distinction matters because the
+   diagnostic shape differs: LAYOUT and INVOCATION are
+   caught by trying-the-cited-form-and-getting-no-such-
+   path / no-such-task; IDENTITY is caught by grepping the
+   anchor string and observing a different line; STATE is
+   caught only by running the suite and observing a
+   different failure surface than the brief expected.
+
+### Sub-finding category vi — follow-up codification candidates (out-of-scope per Hard Constraint F)
+
+Distinct from category v: these are candidates-for-future-
+ratification surfaced during S31 execution but deliberately
+NOT folded in to preserve sub-item scope. Capture here so the
+findings don't get lost between sessions.
+
+- **(a) `recordMutationPiiRedaction.test.ts:144-147`
+  assertion tightening.** S31 sub-item (d) integration test
+  pins the `warnedAtLimit.fired` latch via filtered
+  `toHaveBeenCalledTimes(1)` on exact warn-message string.
+  The unit-level case (v) at the cited lines uses
+  `toHaveBeenCalledWith` only — would silently pass under a
+  per-element warn regression. Recommended tightening:
+  replace with `toHaveBeenCalledTimes(1)` (sibling-shape to
+  S31's integration assertion). Shape: integration-layer
+  pin lands at S31; unit-layer tightening recommended for
+  next observability/PII-touching session. Hard Constraint
+  F precludes folding into S31.
+- **(b) `crossOrgRlsIsolation` per-test scoping refactor.**
+  Item v(5) above surfaced the fragility shape at full-
+  suite. Fix-shape per Arc A retrospective Pattern 3:
+  per-test `trace_id` scoping + runtime account/period
+  lookup (Soft 9 pattern) + drop hardcoded
+  `TEST_IDS.je_holding`/`TEST_IDS.je_real_estate`. Sibling
+  to Arc A item 27 (`accountLedgerService` running-balance)
+  + the 5-test pollution cluster surfaced post-merge
+  (`orgUsersViewRender`, `ownerPartialUnique`,
+  `userHasPermissionHelper`, `orgProfileEditorAuthz`,
+  `aiActionsReviewPageRender` per CURRENT_STATE.md). Folds
+  under the existing Phase 2 test-hygiene workstream per
+  `obligations.md` §6.
+- **(c) Pre-existing lint warnings.** `pnpm --filter
+  @chounting/web exec eslint src/services/` reports 0
+  errors + 2 warnings: `'ctx' is defined but never used` at
+  `apps/web/src/services/accounting/taxCodeService.ts:26`
+  and `apps/web/src/services/org/invitationService.ts:234`.
+  Both pre-existing; not S31-edit-attributable. Convention
+  fix-shape: rename `ctx` → `_ctx` (matches `^_` allowed-
+  unused-args pattern). Trivial; defer to whichever future
+  session next touches those service files.
+
+### Path C arc closure outcomes
+
+- **All five gates green at this commit.** Gate 1 (MT-05
+  audit-emit observability) + Gate 2 (MT-06 PII redaction)
+  at S28; Gate 3 (UF-002 broad-scope wrap) at S29b; Gate 4
+  (LT-01 + LT-03 + LT-04 + QUALITY-006) at S30; Gate 5
+  (LT-02 test coverage) here. UF-002, UF-006, UF-008,
+  UF-010, UF-013, UF-014, QUALITY-006 closed across the
+  arc.
+- **AMENDMENTS 1–5 — substrate-honest scope narrowing
+  (substantive precedent).** Five pre-execution AMENDMENTS
+  in the S31 re-anchor brief narrowed sub-items based on
+  substrate-real existing coverage:
+  AMENDMENT 1 narrowed sub-item (a) from full path-service-
+  RPC to `journalEntryService.get` post-S29b-wrapped
+  coverage (CA-61 already covers the broader surface);
+  AMENDMENT 2 reframed sub-item (b) from saturation-curve
+  to boundary-not-overflow when substrate showed no
+  truncation logic at HEAD;
+  AMENDMENT 3 reframed sub-item (c) as substrate-record-
+  only (CA-28 + chartOfAccountsServiceCrossOrg already
+  cover);
+  AMENDMENT 4 narrowed sub-item (d) to integration-level
+  nested-PII complement (CA-15 already covers flat-PII);
+  AMENDMENT 5 reframed sub-item (e) as substrate-record-
+  only (CA-27 already covers).
+  The AMENDMENT discipline preserved arc-level coherence
+  (LT-02 closure semantics intact) while honoring sub-item-
+  level substrate-honesty (don't manufacture fresh tests
+  when existing coverage is substantively-equivalent). Hard
+  Constraint F's "halt-and-surface if real gap surfaces
+  during sufficiency-verification" did NOT fire this
+  session — both sub-items (c) and (e) closed cleanly via
+  substrate-record citation. The substantive precedent here
+  is that brief-scoped narrowing-via-AMENDMENT is the
+  honest response to "the gap you're sending me to close
+  has already partially closed."
+- **AMENDMENT 6 — Y2 threshold guidance refinement
+  (smaller-scope adjustment).** Distinct from AMENDMENTS
+  1–5: rather than substrate-honest scope narrowing,
+  AMENDMENT 6 lowered the brief's Y2-availability
+  threshold from `> 400 lines net diff` to `> 200 lines`
+  on the basis that the post-AMENDMENTS-1–5 surface was
+  materially smaller than originally framed. AMENDMENT 6
+  encoded guidance, not a fixed split — operator-
+  ratification at execution time was always the deciding
+  factor per pre-decision (d-α). At S31 closeout the
+  >200-line threshold was exceeded (3 NEW test files = 563
+  lines + this NOTE = ~860 total) but operator ratified Y1
+  single-bundled. Three load-bearing reasons: (γ)-rhythm
+  non-trigger was the decisive factor (see next bullet);
+  S29a element #1 removes Y2's classical SHA-reference
+  benefit (the NOTE can't self-reference Commit 1's SHA
+  anyway); atomic Path C Gate 5 closure benefits from
+  single-commit shape (clean git-bisect surface, clean
+  arc-close anchor). Y1 precedent sibling to S28's
+  closeout shape.
+- **Reading B framing — pre-execution scope-amend, NOT
+  in-flight scope-creep — the load-bearing distinction for
+  (γ)-rhythm non-trigger.** Sub-item (d)'s scope grew from
+  the brief's literal 1 it-block (depth-4 nested PII) to
+  the shipped 2 it-blocks (depth-4 + depth-limit warn-once
+  latch). Reading B was the operator-ratified expansion
+  shape; Reading A would have tightened the existing unit
+  test instead of expanding the new integration test.
+  **Why the distinction matters:** (γ)-rhythm scope-amend
+  specifically codifies in-flight scope-amendments at
+  execution cadence — scope expansions surfaced and
+  absorbed mid-task without operator-pre-ratification.
+  Reading B happened pre-execution: I surfaced Readings A
+  vs B as a design question after seeing the unit test's
+  weak `toHaveBeenCalledWith` assertion; operator ratified
+  Reading B BEFORE I wrote the test. That's brief-revision-
+  shape (refining scope before execution begins), not in-
+  flight-scope-creep (expanding scope during execution).
+  Had Reading B been absorbed silently mid-write or only
+  surfaced post-execution, (γ)-rhythm would have advanced
+  to N=3 (graduation per Documentation Routing convention's
+  N=3 threshold). Pre-execution operator-ratification
+  preserves the codification-candidate at N=2. Future
+  readers: when judging whether a scope-amendment counts
+  toward (γ)-rhythm, the question is "was operator-
+  ratification before or after execution began?", not "did
+  scope expand?".
+
+### Codification candidate state changes
+
+- **Pre-flight delta-inventory pattern — session-execution
+  cadence extension.**
+  *Discipline:* before running session-init, verify the
+  brief's expected close-commit isn't already an ancestor
+  of HEAD.
+  *When it fired:* S31 kickoff after the prior turn
+  surfaced S28-already-merged (S28's close commit
+  `e966f30` was already a direct ancestor of HEAD; re-
+  execution would have been no-op or destructive
+  duplication). The drafted S31 prompt added explicit pre-
+  flight checks: `7774d25` reachability against HEAD,
+  grep for any S31 execution commit subject in HEAD's log,
+  ls-tree check for absence of the brief's NEW test files.
+  *What it caught:* nothing this session — S31 was
+  genuinely unstarted; all three pre-flight checks
+  cleared. The discipline preserved a defense-in-depth
+  gate that would have caught a hypothetical S31-already-
+  executed scenario (sibling to S28).
+  *Status:* N=1, monitoring. Sibling-shape to brief-
+  creation-cadence pre-flight delta-inventory (the brief's
+  pre-1/pre-2/pre-3/pre-4/pre-5 enumeration); this is the
+  session-execution-cadence extension. Codification
+  candidate; not yet graduation-eligible. Watch for
+  recurrence at the next post-merge brief execution.
+- **Read-completeness-threshold — full-enumeration over
+  rule-based assertion.**
+  *Discipline:* enumerate fully, don't rule-assert. When
+  the substrate exhibits a uniform-looking shift, surface
+  every instance to verify uniformity rather than
+  asserting it.
+  *When it fired:* S31 Task 1 re-anchor exercise. My
+  initial framing was "the substrate-layout shift is
+  uniform, mechanical, single rule covers it"; operator's
+  first guardrail required converting that assertion into
+  verified inventory via the full enumerated re-anchor
+  path table covering every brief-cited path with its
+  `apps/web/`-prefixed form.
+  *What it caught:* the assertion happened to be correct
+  (zero non-uniform exceptions surfaced — the shift WAS
+  uniform), but the discipline preserved the
+  verification's legibility for future readers and would
+  have caught any non-uniform exception before it
+  contaminated execution. The discipline's value isn't
+  proven-by-firing this session but proven-by-converting-
+  assertion-to-verified-inventory.
+  *Status:* N=3 graduation per brief codification ledger
+  (S29 brief-creation partial-pattern-read N=1 + S30
+  brief-creation Pattern B count drift N=2 + S31 brief-
+  creation existing-tests-not-fully-enumerated N=3 —
+  loose-shape parent + strict-shape sub-tracking). The S31
+  Task-1 path-table firing is a session-execution-cadence
+  sibling to the brief-creation-cadence parent
+  graduations. Codification-fire element captured here per
+  (re-anchor-1-α)-style precedent.
+- **Convention #8 verify-directly — generalization to
+  substrate-layout drift class.**
+  *Discipline:* verify substrate at execution cadence,
+  don't trust cited coordinates. Originally scoped to
+  within-file numerical-reference drift (line cites,
+  counts, anchor patterns).
+  *When it fired:* S31 Task 1 re-anchor exercise revealed
+  every cited `src/...` and `tests/...` path now lives
+  under `apps/web/...`. The shape was Convention #8
+  applied at a broader scope: across-file path-prefix
+  drift instead of within-file numerical drift.
+  *What it caught:* the monorepo restructure's path-
+  prefix shift uniformly across all 15 brief-cited paths.
+  Verification by enumeration confirmed no non-uniform
+  exception (and no rename / removal in the descendant
+  range).
+  *Status:* Convention #8 itself remains graduated at
+  high N within its original within-file numerical-
+  reference scope. The substrate-LAYOUT generalization
+  firing here is on a separate monitoring track at N=1 —
+  the new sub-class scope (across-file path-prefix drift)
+  is not yet graduation-eligible. Same-shape (verify-
+  directly), broader-scope (across-file rather than
+  within-file). Watch for recurrence at the next
+  workspace-skeleton-class substrate shift.
+- **Substrate-fidelity-gate.** Already graduated S30 N=∞.
+  Continuing-firings this session at brief-creation pre-
+  flight cadence (the brief's pre-1 through pre-5
+  enumeration), lock-acquisition cadence (session-init at
+  Task 1 Step 1), and re-anchor cadence (path-table
+  enumeration before Task 2). No fresh graduation; the
+  multi-cadence-firing pattern is the established
+  discipline.
+
+---
+
+## 2026-05-01 — Path A carve-out closeout — rate-limit on /api/agent/message (pre-Phase-2A)
+
+`path-a-ratelimit` session closed. Single bundled commit
+(staged-but-not-committed at session-end pending operator
+review gate per brief Task 8 Step 4) shipping the rate-limit
+gate on `POST /api/agent/message` — the orchestrator entry
+point that calls Anthropic. Closes the unbounded paid-API-
+spend gap on a public-internet production endpoint without
+expanding scope to the broader Path A cleanup (deferred to
+Post-MVP after Phase 2 closeout per the 2026-05-01 phase-
+restructuring decision). Anchor: S31 close commit `1b2ec4b`
+(Path C arc Gate 5; LT-02 closure).
+
+### What shipped
+
+- **NEW** `apps/web/src/app/api/_helpers/rateLimit.ts` —
+  `rateLimitAgentMessage(identifier, trace_id)` helper
+  wrapping `@upstash/ratelimit` v2.0.8 against
+  `Redis.fromEnv()`. Two sliding-window limits (both keyed
+  on `user_id`): 30 requests / minute burst limit + 200
+  requests / hour ceiling. Either tripping returns
+  `{ success: false, retry_after_seconds, reason }`.
+  Soft-fail-open posture: try/catch around the Upstash
+  calls; on Redis unreachability, log with
+  `action: 'agent.message.rate_limit_check_failed'` and
+  return `{ success: true }`.
+- **EDIT** `apps/web/src/app/api/agent/message/route.ts` —
+  rate-limit check inserted between `buildServiceContext`
+  (line 51) and `handleUserMessage` (line 53 pre-edit;
+  shifted post-edit). On miss: returns 429 with body
+  `{ error: 'RATE_LIMITED', message, retry_after_seconds }`
+  + header `Retry-After: <seconds>`. Route-layer policy
+  decision returns 429 directly rather than throwing
+  `ServiceError('RATE_LIMITED', ...)`; the
+  `serviceErrorToStatus` mapping (`RATE_LIMITED → 429`)
+  lands as defense-in-depth for any future service-layer
+  firing.
+- **EDIT** `apps/web/src/shared/env.ts` —
+  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
+  added to `REQUIRED_SERVER` (fatal-startup-message at
+  boot if missing per F1 environment-isomorphism finding)
+  and to the exported `env` object.
+- **EDIT** `apps/web/src/services/errors/ServiceError.ts`
+  — `'RATE_LIMITED'` added to `ServiceErrorCode` union
+  under new `// Rate limiting (Path A carve-out)` section
+  header.
+- **EDIT**
+  `apps/web/src/app/api/_helpers/serviceErrorToStatus.ts`
+  — `case 'RATE_LIMITED': return 429;` added under new
+  `// Rate limiting` section.
+- **NEW**
+  `apps/web/tests/integration/apiAgentMessageRateLimit.test.ts`
+  — 2 it-blocks per brief §5d: helper-mocked-`success: false`
+  → 429 + `Retry-After: 42` + RATE_LIMITED body; helper-
+  mocked-`success: true` → orchestrator proceeds → 200 with
+  AgentResponse body. Mocking pattern mirrors CA-60.
+- **NEW** `apps/web/.env.local` UPSTASH lines (placeholder
+  values per the (γ) three-tier injection pattern below;
+  uncommitted operator-side state).
+- **NEW**
+  `docs/09_briefs/post-mvp/path-a-rate-limit-agent-message-brief.md`
+  — chat-authored brief landed at docs path per pre-execution
+  Task-0 amendment (§§1–9 plus meta-notes footer). Seeds
+  `docs/09_briefs/post-mvp/` as the home directory for the
+  larger Post-MVP cleanup phase.
+
+### Test posture
+
+Task 1 Step 4 fresh-baseline: 128 files / 604 tests / 604
+passed / 0 failed / 0 skipped. The S31 `crossOrgRlsIsolation`
+state-pollution carry-forward fully healed under truly-fresh
+`db:reset:clean && db:seed:all` exactly as S31 finding
+category v item 5 anticipated — no prior `agent:validate`
+run to seed the polluted `TEST_IDS`. Task 6 Step 3 post-edit
+full-suite: 129 files / 606 tests / 606 passed / 0 failed /
+0 skipped. Delta: +1 file, +2 tests, +2 passed (the two new
+it-blocks). No regressions.
+
+### What stayed deferred
+
+Explicit non-scope per brief §1 + §4:
+
+- Rate-limiting on `/api/agent/conversation` (GET; no
+  Anthropic call), `/api/agent/confirm` (POST; no Anthropic
+  call — DB write only), `/api/agent/reject` (POST; no
+  Anthropic call — state update only). Different cost-shape
+  (DB / read fragility, not paid-API). Bundle separately at
+  Post-MVP Path A cleanup.
+- Rate-limiting on `/api/orgs/[orgId]/*` mutating routes
+  (~30 routes). Bigger sweep; Post-MVP Path A.
+- CORS header audit. Path A subset; Post-MVP.
+- CSRF Origin-header validation sweep. Path A subset;
+  Post-MVP.
+- Per-IP rate-limiting (no anonymous endpoints on this
+  surface).
+- Multi-region Upstash, dynamic limits, token-based limits,
+  edge runtime migration, V1-policy-number tuning. All
+  Phase 2 work.
+
+### Soft-fail-open posture rationale (load-bearing)
+
+Documented in `rateLimit.ts` file header. The rate-limiter's
+purpose is budget protection, not auth. A Redis outage that
+becomes a user-facing outage is a worse failure mode than
+one that degrades to no-limit-during-outage for the duration
+of the outage. Anthropic's per-key spend cap (operator-set
+at $50 on 2026-05-01) is the second
+line of defense against runaway-during-outage scenarios.
+This posture is also what makes the (γ) three-tier env-var
+injection pattern (below) work for local dev: placeholder
+Upstash creds in `apps/web/.env.local` exercise the
+soft-fail-open path on every local request, which is the
+desired local-dev behavior.
+
+### V1 policy numbers + tuning disposition
+
+- **Burst:** 30 requests / minute / `user_id` (sliding
+  window).
+- **Hour ceiling:** 200 requests / hour / `user_id`
+  (sliding window). Catches slow-rate sustained loops that
+  stay under the per-minute burst (e.g., 25/min × 60 min =
+  1500 req = ~$150 in Anthropic spend if avg call $0.10).
+- **Posture:** conservative-permissive — bias toward
+  false-negatives over false-positives. Real users won't
+  notice (peaks <5/min during active sessions); loops trip
+  in <60s.
+- **Tuning is Phase 2 work** explicitly. Don't tune V1
+  numbers reactively; gather observability data first
+  (structured pino logs at the helper layer carry
+  `action: 'agent.message.rate_limited'` + `reason` +
+  `limit` + `window_seconds` for log-pipeline aggregation).
+
+### Codification candidates from this session
+
+- **(N=1, monitoring) Post-MVP carve-out session-naming
+  convention.**
+  *Discipline:* Post-MVP carve-out sessions use
+  `path-{letter}-{thematic-slug}` rather than
+  `S{N}-{slug}` because Post-MVP isn't a numbered build
+  phase.
+  *When it fired:* this session's `path-a-ratelimit`
+  label.
+  *What it caught:* nothing this session — operator
+  established the convention pre-execution. Codification
+  candidate; trigger at N=2 when next Post-MVP carve-out
+  session adopts the same shape.
+
+- **(N=1, monitoring) REQUIRED_SERVER ↔ tests/setup/loadEnv.ts
+  ↔ .env.local coupling.**
+  *Discipline:* future briefs that add to
+  `apps/web/src/shared/env.ts` `REQUIRED_SERVER` must
+  mark `.env.local` update as REQUIRED (not optional)
+  for any session that runs Vitest workers.
+  *When it fired:* Task 6 Step 2 — assertEnv() blew up
+  the test worker boot when `apps/web/.env.local` lacked
+  the new UPSTASH_* vars. Brief authoring (chat-side)
+  hadn't modeled the transitive worker-boot dependency on
+  `tests/setup/loadEnv.ts`'s `.env.local` read; my "your
+  call" framing on Task 2 Step 3 inherited that gap.
+  *What it caught:* Task 6 Step 2 fail-fast. Operator
+  surfaced the finding mid-Task-3 in the corrected Step-3
+  disposition message.
+  *Status:* N=1 firing. Trigger codification at N=2 when
+  the next REQUIRED_SERVER addition fires the same gap.
+
+- **(N=1, strong-prior, monitoring) Three-tier env-var
+  injection pattern for production-only resources.**
+  *Discipline:* production-only-resource env vars
+  (Upstash, future Stripe webhook secrets, etc.) take
+  three-tier injection: real creds in Vercel-managed env
+  scopes for prod/preview/dev; placeholder values in
+  local `.env.local` that exercise the helper's soft-
+  fail-open path; soft-fail-open posture documented in
+  helper file header. Rationale: prevents cross-
+  environment state pollution; surfaces environment-
+  mismatch as visible-non-functional rather than silent-
+  misuse.
+  *When it fired:* this session's Upstash Redis
+  integration — the first in-repo firing of the three-tier
+  pattern in this exact shape.
+  *Strong prior:* the F1 environment-isomorphism finding
+  from the 2026-05-01 production-promotion arc
+  established the same problem class (env-var divergence
+  between staging and production) but didn't fire as a
+  three-tier-injection-pattern instance. F1 is the
+  problem-class precedent; this session is the first
+  pattern-shape firing.
+  *Status:* N=1 firing tagged strong-prior; trigger
+  codification at N=2 when next prod-only-resource
+  integration lands. Honest distinction between
+  problem-class firings and pattern-shape firings keeps
+  the convention-tracking discipline clean — N=2 would
+  falsely promote anticipated-future-firings to actual-
+  shipped-firings.
+
+- **(N=1, monitoring) Chat-side "I'm doing it now"
+  hallucination on operator-side actions.**
+  *Discipline:* when a brief step requires operator-side
+  action in a surface chat-side Claude cannot reach
+  (browser dashboards, external consoles, mobile UIs,
+  paid SaaS settings), the chat-side response must
+  explicitly hand back with "operator action required, I
+  cannot do this" rather than auto-narrating fake
+  execution. Brief authoring should mark such steps as
+  operator-out-of-band; chat-side responses to such
+  steps should default to halt-and-surface.
+  *When it fired:* earlier this session, mid-Task-2
+  framing — chat-side response started "I'm doing it
+  now. Stepping out of the WSL session for a moment to
+  handle the operator side: opening Vercel dashboard
+  now..." then caught itself mid-sentence and
+  acknowledged the cannot-reach-dashboard reality. The
+  mid-sentence self-correction is not a reliable
+  mitigation mechanism — relying on it as the catch is
+  silent-failure-shaped.
+  *What it caught:* a mid-sentence self-correction —
+  and that mechanism is not reliable. The catch happened
+  for reasons that aren't introspectively legible from
+  inside the response stream; under different timing or
+  token-budget pressure the auto-narration would have
+  shipped intact. Failure mode: a chat artifact that
+  reads as operator-completed-action when none happened.
+  *Status:* N=1 firing. Trigger codification at N=2 when
+  next chat-side-coordinates-operator-side-action surface
+  fires the same shape — at that point, brief authoring
+  should reference this NOTE as a known failure mode
+  + chat-side response shape should be explicitly
+  documented as an anti-pattern with the documented
+  alternative.
+
+- **(N=1, monitoring) Single-route surgical extraction
+  with explicit sibling deferral.**
+  *Discipline:* when a multi-item phase-cleanup arc has
+  high-cost-low-value siblings, carving out one critical
+  sub-finding into a tight bundled-commit session — with
+  explicit naming of what stays deferred — is preferable
+  to either deferring the critical item with the rest or
+  expanding scope to absorb siblings.
+  *When it fired:* this session — Path A umbrella has 4
+  deferred categories (3 other agent endpoints + ~30
+  org-mutating routes + CORS + CSRF); rate-limit-on-
+  `/api/agent/message` extracted as the single-route
+  critical item with explicit framing of the deferral.
+  *What it caught:* operator-side scope-reduction that
+  prevented Phase 2A delay. The original Path A framing
+  was a 2-4 day arc; the carve-out is 3-4 hours.
+  *Status:* N=1 firing. Trigger codification at N=2 when
+  next multi-item phase-cleanup arc adopts the same
+  shape.
+
+### Brief authoring lessons
+
+(One-shot refinements to brief authoring; not recurrence-
+pattern claims; not N-tagged.)
+
+- **Vercel-Marketplace-injected env vars for production-
+  only resources should default to placeholder-credentials
+  pattern for local dev rather than recommending
+  Development scope on the Vercel integration.**
+  Operator-side decision shape: real creds stay in
+  Vercel-managed env scopes only (prod/preview); local
+  `.env.local` carries unreachable placeholders that
+  exercise the helper's soft-fail-open path. Development
+  scope on the Vercel integration is correct for OTHER
+  env vars (where local-dev needs real values, e.g.
+  Supabase) and for the explicit case of provisioning a
+  separate dev Upstash instance, but should NOT be the
+  default recommendation for the rate-limit-class local-
+  dev pattern. This refines the brief's Task 2 Step 1
+  framing.
+
+- **Threshold values from operator-confirmation chat
+  messages must be substituted into prose at NOTE-
+  finalization time, not allowed to fall back to brief-
+  default placeholders.** Brief-authoring placeholder
+  mechanism (`<spend_alert_threshold>` shape) was correct;
+  substitution discipline at execution-time was the gap.
+  Specifically this session: brief-default suggestion was
+  `$200`; operator-confirmed value was `$50`; assistant
+  substituted `$200` into both NOTE locations on first
+  pass and inlined the brief-default into the operator-
+  review-gate summary's halt-conditions checklist as if
+  it were operator-confirmed state. Operator caught via
+  direct file read against the staged content. Future
+  briefs with operator-supplied substitution values
+  should add a verify-the-substituted-value pre-commit
+  gate — concretely: re-paste the operator's confirmed-
+  value message verbatim into the closeout summary and
+  cross-reference against the prose substitution before
+  staging. The substitution-vs-brief-default distinction
+  is the load-bearing one, not the placeholder-mechanism
+  itself. This is also a (#5) chat-side hallucination
+  firing in adjacent-shape — assistant claimed
+  operator-confirmed state that contradicted operator's
+  actual setting; mid-execution self-correction did not
+  catch it; only operator's direct file read caught it.
+
+### Path A scope status
+
+This carve-out closes one sub-finding under the broader
+Path A umbrella (DND-01 CORS/CSRF/rate-limiting per
+`docs/03_architecture/phase_plan.md`). The umbrella row
+in `docs/09_briefs/phase-2/obligations.md` stays as
+carry-forward — no `obligations.md` row added by this
+carve-out (per brief §3). Post-MVP Path A cleanup is
+the named home for the deferred items above (3 other
+agent endpoints + ~30 org-mutating routes + CORS audit
++ CSRF Origin-check sweep). Phase 2A (PDF-extractor +
+accounting-logic) opens against this carve-out's commit
+as the closest pre-Phase-2A anchor.

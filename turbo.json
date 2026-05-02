@@ -14,7 +14,9 @@
         "ANTHROPIC_API_KEY",
         "NEXT_PUBLIC_SUPABASE_URL",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        "NEXT_PUBLIC_APP_URL"
+        "NEXT_PUBLIC_APP_URL",
+        "UPSTASH_REDIS_KV_REST_API_URL",
+        "UPSTASH_REDIS_KV_REST_API_TOKEN"
       ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },

@@ -15,6 +15,7 @@ import { handleUserMessage } from '@/agent/orchestrator';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
+import { rateLimitAgentMessage } from '@/app/api/_helpers/rateLimit';
 import { canvasContextSchema } from '@/shared/schemas/canvas/canvasContext.schema';
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import { onboardingStateSchema } from '@/agent/onboarding/state';
@@ -49,6 +50,31 @@ export async function POST(req: Request) {
     const parsed = agentMessageRequestSchema.parse(json);
 
     const ctx = await buildServiceContext(req);
+
+    // Path A carve-out: user-keyed rate-limit on POST
+    // /api/agent/message. Helper soft-fails open on Redis
+    // unreachability (see rateLimit.ts header). 429 returned
+    // directly here rather than thrown as ServiceError; the
+    // Retry-After header logic is route-layer policy.
+    const rateLimit = await rateLimitAgentMessage(
+      ctx.caller.user_id,
+      ctx.trace_id,
+    );
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          error: 'RATE_LIMITED',
+          message: 'Too many requests. Please slow down.',
+          retry_after_seconds: rateLimit.retry_after_seconds,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retry_after_seconds ?? 60),
+          },
+        },
+      );
+    }
 
     const response = await handleUserMessage(
       {
