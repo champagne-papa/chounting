@@ -10,12 +10,28 @@
 // user-facing outage is a worse failure mode than one that
 // degrades to no-limit-during-outage. The Anthropic console's
 // per-key spend cap is the second line of defense.
+//
+// ENV-VAR NAMING: Vercel-Marketplace Upstash integration uses
+// the KV-naming convention (UPSTASH_REDIS_KV_REST_API_URL /
+// UPSTASH_REDIS_KV_REST_API_TOKEN) regardless of any custom
+// prefix on the integration. Redis.fromEnv() looks for the
+// upstream-library-default UPSTASH_REDIS_REST_URL /
+// UPSTASH_REDIS_REST_TOKEN which differ. Explicit construction
+// reads the actual injected names — substrate-honest match
+// between code and what Vercel actually provides. See friction-
+// journal closeout NOTE for the codification candidate
+// (Marketplace-integration env-var naming differs from upstream
+// library conventions; substrate-verify at brief-authoring time,
+// not assumed-from-library-docs).
 
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { loggerWith } from '@/shared/logger/pino';
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_KV_REST_API_URL!,
+  token: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN!,
+});
 
 const burstLimit = new Ratelimit({
   redis,
