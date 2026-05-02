@@ -2970,3 +2970,56 @@ Phase 4 doc-work session officially closes after this NOTE
 lands and Task 9 housekeeping completes (`pnpm db:reset:clean`
 + `bash scripts/session-end.sh`). No paid-API spend across
 the session. No test changes; vitest suite untouched.
+
+---
+
+## 2026-05-02 — Phase 4 doc-work items 44 + 45 closed (follow-up)
+
+Items 44 and 45 from the Phase 4 doc-work cleanup list — both
+operator-UI deferrals at the time of the prior NOTE — closed
+operator-side post-`a26c6db`:
+
+- **Item 44 (CLOSED)** — GitHub repo settings: default merge
+  method aligned to "Create a merge commit." Resolves the
+  misalignment captured in addendum B10's branch-protection-
+  pushback observation (friction-journal lines ~2740-2762)
+  and the convention-fire status entry in `91d5bd3`'s
+  production-promotion arc closeout. Future PRs through the
+  GitHub UI will preserve merge-commit shape consistent with
+  the project's audit-trail discipline; advisory branch-
+  protection warnings on direct pushes (the surface that B10
+  named) are unaffected by this change but the merge-method
+  default no longer pushes back against the convention.
+- **Item 45 (CLOSED)** — Vercel staging environment:
+  `NEXT_PUBLIC_APP_URL` cleaned up per the F3 pattern (delete
+  + recreate with Sensitive=off when needed). The new
+  guidance shipped in `6c4ce42`'s `security.md` Production
+  Secrets subsection covers the recreation discipline for
+  future occurrences.
+
+### Carry-forward queue cleared
+
+Original Phase 4 doc-work list (six items deferred at
+`91d5bd3`'s 2026-05-01 12:09 PT NOTE): **all six closed.**
+Plus item 47 (`@chounting/ui` eslint flat-config gap)
+discovered + closed during item 43's local CI verification.
+Net: 6 / 6 + 1 discovered subitem all shipped or
+operator-confirmed-done.
+
+### Updated session ledger
+
+Three commits on `origin/staging` from the Phase 4 doc-work
+window:
+
+- `6c4ce42` (items 41/42/43/46 + bonus §8)
+- `31972c5` (item 47 — `@chounting/ui` flat-config + ci.yml unfilter)
+- `a26c6db` (Phase 4 doc-work + item 47 closeout NOTE)
+
+Plus this follow-up NOTE marking items 44 and 45 closed.
+Operator-side actions (44 + 45) are not commits; they live
+in GitHub repo settings and Vercel dashboard configuration
+respectively.
+
+Codification candidates remain at their prior counts (F1/F2
+N=1 each; F4 N=2; F5 N=1) — items 44 and 45 closing operator-
+side does not advance any of the codification trackers.
