@@ -368,19 +368,24 @@ deferred from the phase scope.
   of environment-isomorphism-assumption misfire; tracked in §8
   as a 1-datapoint process observation pending second firing.
   Source: friction-journal 2026-05-01 Finding F1.
-- **`@chounting/ui` eslint flat-config gap** — surfaced
-  2026-05-02 during Phase 4 doc-work item 43 (ci.yml
-  unfilter). The package's package.json declares `"lint":
-  "eslint"` but no `eslint.config.(js|mjs|cjs)` file is wired
-  (scaffolded empty at `000d6f7` Step 5; ESLint v9 requires
-  flat-config). Item 43 partial-completion: ci.yml lint job
-  filtered to `@chounting/web` + `@chounting/demo` only;
-  `@chounting/ui` stays excluded until config is wired. Fix
-  shape: add minimal flat-config to `packages/ui/eslint.config.js`
-  mirroring `apps/web`'s shape, scaled to ui's surface
-  (currently `cn` utility plus future component scaffolding).
-  Out-of-scope for the current Phase 4 doc-work session per
-  scope-discipline (touches `packages/ui/` source). Source:
+- **`@chounting/ui` eslint flat-config gap (CLOSED 2026-05-02
+  as item 47)** — surfaced 2026-05-02 during Phase 4 doc-work
+  item 43 (ci.yml unfilter). The package's package.json
+  declared `"lint": "eslint"` but no `eslint.config.(js|mjs|cjs)`
+  file was wired (scaffolded empty at `000d6f7` Step 5; ESLint
+  v9 requires flat-config). Item 43 shipped at `6c4ce42` as
+  partial-completion (lint job filtered to `@chounting/web` +
+  `@chounting/demo` only). Item 47 closed the gap by adding
+  `packages/ui/eslint.config.mjs` mirroring `apps/demo`'s
+  shape (`apps/web`'s shape would have imported a custom plugin
+  and `no-restricted-imports` patterns for an `adminClient` ui
+  never touches; demo's exact passthrough of the shared base
+  was the right precedent). Filename used `.mjs` for project-
+  convention consistency (sibling configs at `apps/demo/`,
+  `apps/web/`, and the root `eslint.base.mjs` are all `.mjs`;
+  ESLint v9 flat-config reads `.js|.mjs|.cjs` interchangeably).
+  ci.yml lint job now unfiltered (3/3 workspaces); build job
+  also unfiltered (2/2 — ui has no build script). Source:
   friction-journal 2026-05-02 Path A closeout addendum
   follow-on.
 

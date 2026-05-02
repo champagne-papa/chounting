@@ -8,8 +8,12 @@ name: CI
 # web workspace. Those errors were @/db/adminClient violations
 # under apps/web/src/agent/*. The narrow `src/agent/**` eslint
 # exemption shipped in `e719d02` (Q33 partial-resolution arc,
-# 2026-04-30) cleared the path; lint and build no longer need
-# a `--filter` to exclude the web workspace.
+# 2026-04-30) cleared the path. The lint job was subsequently
+# narrowed to web + demo at 6c4ce42 because @chounting/ui had
+# a "lint": "eslint" script declared but no eslint.config.*
+# file wired (scaffolded empty at 000d6f7). Item 47 closed that
+# gap by mirroring apps/demo's flat-config in packages/ui;
+# lint and build now run unfiltered across all workspaces.
 #
 # Security note: this workflow does not consume any user-controlled
 # context (no github.event.issue.*, github.event.pull_request.title,
@@ -63,7 +67,7 @@ jobs:
         run: pnpm exec turbo run type-check
 
   lint:
-    name: lint (@chounting/web + @chounting/demo)
+    name: lint (all workspaces)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -89,11 +93,8 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-lint-
 
-      # @chounting/ui excluded from lint until eslint flat-config is wired
-      # (package.json declares "lint": "eslint" but no eslint.config.* file).
-      # See docs/09_briefs/phase-2/obligations.md §6 for follow-up.
       - name: Lint
-        run: pnpm exec turbo run lint --filter=@chounting/web --filter=@chounting/demo
+        run: pnpm exec turbo run lint
 
   build:
     name: build (all workspaces)
