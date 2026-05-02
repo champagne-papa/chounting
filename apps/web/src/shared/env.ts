@@ -1,6 +1,15 @@
 const REQUIRED_SERVER = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'ANTHROPIC_API_KEY',
+  // Path A carve-out (Post-MVP, pre-Phase-2A): Upstash Redis
+  // for rate-limiting POST /api/agent/message. Injected by the
+  // Vercel-Marketplace Upstash Redis integration into chounting
+  // project env (Production + Preview + Development scopes).
+  // Required at boot per F1 environment-isomorphism finding —
+  // missing-on-deploy must fire fatal-startup-message, not
+  // soft-fail at first request.
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
 ] as const;
 
 const REQUIRED_PUBLIC = [
@@ -40,6 +49,8 @@ export const env = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   ANTHROPIC_API_KEY:         process.env.ANTHROPIC_API_KEY!,
   APP_URL:                   process.env.NEXT_PUBLIC_APP_URL!,
+  UPSTASH_REDIS_REST_URL:    process.env.UPSTASH_REDIS_REST_URL!,
+  UPSTASH_REDIS_REST_TOKEN:  process.env.UPSTASH_REDIS_REST_TOKEN!,
   LOG_LEVEL:                 process.env.LOG_LEVEL ?? 'info',
   NODE_ENV:                  process.env.NODE_ENV ?? 'development',
 } as const;

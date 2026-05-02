@@ -40,6 +40,10 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'AGENT_UNAVAILABLE':
       return 503;
 
+    // Rate limiting (Path A carve-out)
+    case 'RATE_LIMITED':
+      return 429;
+
     // Bad request (malformed or semantically invalid input)
     case 'EXTERNAL_IDS_MALFORMED':
     case 'ADDRESS_VALIDATION_FAILED':

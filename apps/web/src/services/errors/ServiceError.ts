@@ -71,7 +71,13 @@ export type ServiceErrorCode =
   // Recurring journals (Phase 0-1.1 Arc A Step 10)
   | 'RECURRING_TEMPLATE_NOT_FOUND'
   | 'RECURRING_TEMPLATE_INACTIVE'
-  | 'RECURRING_RUN_NOT_PENDING';
+  | 'RECURRING_RUN_NOT_PENDING'
+  // Rate limiting (Path A carve-out)
+  // The route-layer policy decision returns 429 directly without
+  // throwing a ServiceError; this code is added for future
+  // service-layer firings where rate-limiting needs to flow
+  // through the standard ServiceError → HTTP-status mapping.
+  | 'RATE_LIMITED';
 
 export class ServiceError extends Error {
   constructor(
