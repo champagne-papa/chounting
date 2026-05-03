@@ -614,11 +614,31 @@ listed as a class that can never auto-post). Filing for Q45 (in
 ## 10. Phase sequencing
 
 The Document Platform reframe (2026-05-02) restructured phase
-sequencing across two briefs. The full eight-phase plan now
-lives in `docs/09_briefs/phase-2/document_platform_reframe_design.md`
-§3 (Decision summary) — Phases 1–4 are Document Platform
-substrate work, Phases 5–8 are Spend domain work. This brief
-covers Phases 5–8.
+sequencing across two briefs. **Open: spec/plan phase-numbering
+inconsistency to reconcile.** The reframe spec
+(`docs/09_briefs/phase-2/document_platform_reframe_design.md`)
+contains two phase numberings that disagree by one position:
+
+- **§2 + §3.2 migration table:** Phases 1–3 are Document Platform
+  substrate (Storage / Document Core / Document Relationship
+  Graph); **Phase 4 = Spend / AP foundation**; Phases 5–8 are
+  additive Spend work (receipts, retainers, statements, credits).
+- **§7 ADR-table phase column + Phase 0 governance plan
+  (`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
+  §"Subsequent plans needed":** Phases 1–3 substrate; **Phase 4
+  = Relationship Router; Phase 5 = Spend / AP foundation**;
+  Phases 6–8 are additive Spend work.
+
+This brief uses the **8-phase scheme** below (Phase 5 = Spend
+foundation, matching the governance plan's "subsequent plans"
+list) because that's the scheme the Phase 0 governance plan
+schedules subsequent code-implementation plans against. The
+spec §2 vs §7 inconsistency is filed as a post-Session-1
+reconciliation item — either §2 + §3.2 migration table need
+to be amended to match (and one Phase reassigned), or §7 + the
+governance plan need to be amended. The choice does not change
+the work; it changes the numbering only. Until reconciliation,
+this brief's "Phase N" references the 8-phase scheme.
 
 **Phase 0 prerequisite (governance only).** Per the Phase 0
 governance plan (`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
@@ -660,16 +680,21 @@ takes Document-Platform-produced proposals through Spend domain
 services to the ledger. Born-paid bundle workflow ships here
 via `billService.postWithImmediatePayment(...)`.
 
-**Phase E — Controlled Spend auto-post rules. Post-v1.** Promotion
-ceremony UI lands here under the Vendor Template ADR's full
-enforcement portion (drafted post-v1 per spec §11). Always
-Confirm in v1.
+**Post-v1 — Controlled Spend auto-post rules.** Promotion
+ceremony UI lands under the Vendor Template ADR's full
+enforcement portion (drafted post-v1 per reframe spec §11).
+Always Confirm in v1; auto-post explicitly deferred. Phase
+number assigned at the post-v1 brief-drafting cycle, not now.
 
-**Phases F / G / H / I.** Three-way matching, first-class batch
-ingestion, linked Outlook / Gmail OAuth, photo / mobile receipt
-capture — all post-v1, listed for scope clarity. Owned by future
-domain initiatives (Banking, AR, Procurement) or by post-v1
-Spend phases.
+**Post-v1 — Three-way matching, first-class batch ingestion,
+linked Outlook / Gmail OAuth, photo / mobile receipt capture.**
+Listed for scope clarity. Owned by future domain initiatives
+(Banking, AR, Procurement) or by post-v1 Spend phases. Phase
+numbers and ownership assigned at the future brief-drafting
+cycles, not now. The original AP brief used letter-suffixed
+phases (E / F / G / H / I) for these post-v1 items; the reframe
+retires the letter scheme in favor of explicitly-numbered phases
+once each post-v1 initiative drafts its own brief.
 
 The discipline that motivates this sequencing: **do not build
 extraction before Spend exists.** Phase 5 is the domain foundation.
@@ -803,7 +828,7 @@ optional polish, they are exit criteria:
 | Vendor balance view                            | EC-A-5 | Yes |
 | Payment approval queue                         | EC-A-6 | Yes |
 | Paid bills history                             | EC-A-7 | Yes |
-| Exception queue (storage failures, hash mismatches, period-locked posts, etc.) — screenshot-gate index 5 in §11.5 | EC-A-8 | Yes |
+| Exception queue (storage failures, hash mismatches, period-locked posts, etc.) — UI surface owned by Document Platform brief; this row tracks Spend-domain exit criterion EC-A-8 (the *behavioral* requirement that exception routing works for AP-domain failures). The Document Platform brief's §11 owns the UI screenshot gate. | EC-A-8 | Yes (consumed from Document Platform substrate) |
 
 Each surface is computed from `bills`, `bill_lines`,
 `bill_payment_allocations`, and `payments` via SQL — no new
@@ -954,8 +979,8 @@ every preceding section.
 
 ## 16. Friction-journal scope
 
-AP-ingestion entries land under the **AP-ingestion arc** (placeholder
-arc name `arc-AP-ingestion`; final name confirmed at the first
+Spend Initiative entries land under the **Spend Initiative arc**
+(placeholder arc name `arc-spend-initiative`; final name confirmed at the first
 session-kickoff). The arc retrospective at close follows the
 existing retrospective discipline from
 `docs/07_governance/retrospectives/` (Pattern 8 file-top staleness
