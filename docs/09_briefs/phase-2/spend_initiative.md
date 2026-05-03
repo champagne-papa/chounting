@@ -613,35 +613,70 @@ listed as a class that can never auto-post). Filing for Q45 (in
 
 ## 10. Phase sequencing
 
-Ten sequenced phases: a governance-only Phase 0, then Phases A
-through I. Phase 0 blocks all code. Phase A blocks every other
-phase. Within v1: Phase 0 → Phase A → Phase B → (Phase C ∥
-Phase D) → Phase E. Phases C and D are independent of each
-other once B ships and may run in parallel. Outside v1: Phases F
-through I are post-v1, listed here for scope clarity but not in
-scope of this initiative.
+The Document Platform reframe (2026-05-02) restructured phase
+sequencing across two briefs. The full eight-phase plan now
+lives in `docs/09_briefs/phase-2/document_platform_reframe_design.md`
+§3 (Decision summary) — Phases 1–4 are Document Platform
+substrate work, Phases 5–8 are Spend domain work. This brief
+covers Phases 5–8.
 
-| Phase | Scope                                                                                                       | Blocks                                  |
-|---|---|---|
-| **0**   | Q35–Q52 filed; ADR-0007 + AP subdomain ADR + `storage_provider` ADR + vendor-template-as-autonomy-rule ADR drafted and approved. **Blocks all code.** No code commits in this phase.                                                                                                                                          | Phase A                                 |
-| **A**   | AP subdomain shipping: `bills`, `bill_lines`, `payments`, `bill_payment_allocations`, `vendors`, `source_documents`, `bill_attachments`. Manual-bill UI, payment approval queue, AP aging view, exception queue. **No drag-drop, no email, no extraction.** Phase A's exit criteria are §11.            | Everything else                         |
-| **B**   | Tier 2 bill-extraction pipeline. Deterministic TypeScript only. Stages run in-process for the v1 throughput; any single stage exceeding ~200ms p95 defers to a worker (decision deferred to within-phase friction-journal evidence). | Phase C, D                              |
-| **C**   | Drag-drop into Triage Bucket (per `triage_bucket_intake.md`) → Tier 2 pipeline → `ProposedMutation(post_bill)`. UI surface is the triage bucket; orchestration is Tier 2.                                                                                                                                          | Phase E                                 |
-| **D**   | Forwarded-mailbox channel. Internal-sender allowlist per §8.6.                                                                                                                                                                                                                                                                                                  | Phase E                                 |
-| **E**   | Controlled AP auto-post rules. Promotion ceremony UI for the AP-specific calibration if Q35 needs it. **Post-v1.**                                                                                                                                                                                                                                                | —                                       |
-| **F**   | Three-way matching (PO → goods receipt → bill). **Post-v1.**                                                                                                                                                                                                                                                                                                            | —                                       |
-| **G**   | First-class batch ingestion. **Post-v1.**                                                                                                                                                                                                                                                                                                                                | —                                       |
-| **H**   | Linked Outlook / Gmail OAuth ingestion. **Post-v1.**                                                                                                                                                                                                                                                                                                                    | —                                       |
-| **I**   | Photo / mobile receipt capture. **Post-v1.**                                                                                                                                                                                                                                                                                                                              | —                                       |
+**Phase 0 prerequisite (governance only).** Per the Phase 0
+governance plan (`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
+§7, Phase 0 closes when its nine exit criteria are met: two
+ratified briefs (Document Platform + Spend), the Phase 0 ADR set
+ratified (ADR-0007 amendment carried prerequisite + ADR-0011
+through ADR-0019 per Decision 7 of the governance plan, with the
+substrate-only portion of ADR-0017 sufficient for v1), Q53–Q78
+filed in `docs/02_specs/open_questions.md` (Q35–Q52 retired per
+the supersession note), DOC invariant prefix registered in
+`docs/02_specs/invariants.md`, Q28 re-verification expansion
+drafted in `docs/02_specs/agent_architecture_policy.md`, Storage
+Provider and Tier 2 Document Pipeline ADRs resolving the
+substrate decisions. The governance plan §7 is the authoritative
+source on the ratification gating; this brief's Phase 5 cannot
+start code until those gates close.
+
+**Phase 5 — Spend / AP foundation (manual only).** Spend
+subdomain shipping: `bills`, `bill_lines`, `payments`,
+`bill_payment_allocations`, `vendor_prepayments`,
+`vendor_prepayment_applications`, `vendor_credits`,
+`vendor_credit_applications`, `vendors`, `vendor_rules`. Manual
+bill UI, payment approval queue, AP aging view, open bills view,
+vendor balance view, paid bills history, exception queue
+(consumed from Document Platform). **No drag-drop, no email,
+no extraction.** Phase 5 exit criteria are §11.
+
+**Phase 6 — Ingestion channels.** Drag-drop + forwarded mailbox
+land here (per Document Platform brief §3.1). The Spend domain
+consumes the resulting `ProposedMutation` / `ProposedMutationBundle`
+/ `ProposedAttachment` handoffs.
+
+**Phase 7 — Extraction pipeline.** OCR engine + Python sidecar
++ DocumentArtifact contract land here (per Document Platform
+brief §4 and the Tier 2 Document Pipeline ADR).
+
+**Phase 8 — Proposal handoff + Tier 1 commit.** The wiring that
+takes Document-Platform-produced proposals through Spend domain
+services to the ledger. Born-paid bundle workflow ships here
+via `billService.postWithImmediatePayment(...)`.
+
+**Phase E — Controlled Spend auto-post rules. Post-v1.** Promotion
+ceremony UI lands here under the Vendor Template ADR's full
+enforcement portion (drafted post-v1 per spec §11). Always
+Confirm in v1.
+
+**Phases F / G / H / I.** Three-way matching, first-class batch
+ingestion, linked Outlook / Gmail OAuth, photo / mobile receipt
+capture — all post-v1, listed for scope clarity. Owned by future
+domain initiatives (Banking, AR, Procurement) or by post-v1
+Spend phases.
 
 The discipline that motivates this sequencing: **do not build
-extraction before AP exists.** Phase A is the foundation. The
-extraction pipeline (Phase B) and the ingestion channels (C, D)
-have no semantically valid output without the subdomain that
-receives the output. Phase A's manual-bill flow is also the
-fallback path that every later phase preserves — if Phase B's
-pipeline has a bad day, the controller can still create bills the
-hard way.
+extraction before Spend exists.** Phase 5 is the domain foundation.
+The Document Platform brief's substrate phases (1–4) ship before
+Phase 5 begins. Phase 5's manual-bill flow is also the fallback
+path that every later phase preserves — if Phase 7's pipeline has
+a bad day, the controller can still create bills the hard way.
 
 ## 11. Phase A acceptance criteria mapped to INV-IDs
 
@@ -937,28 +972,50 @@ phase that touches it.
 
 - Does not change Phase 1.2 scope, Phase 1.3 Reality Check plan,
   or any prior-phase exit criteria.
-- Does not authorize building any AP code yet. ADR-0007 + the
-  three new ADRs in §13 are hard prerequisites.
-- Does not modify ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006,
-  ADR-0008, ADR-0009, ADR-0010, the Agent Ladder, the Authority
-  Gradient, the Two Laws, the Service Communication Rules, or any
-  existing invariant in `docs/02_specs/invariants.md`.
+- Does not authorize building any v1 Spend code yet. The two
+  Spend-Initiative-owned ADRs (ADR-0015 AP/Spend Subdomain and
+  ADR-0017 Vendor Template substrate) plus the seven Document-
+  Platform-owned ADRs (per `docs/09_briefs/phase-2/document_platform_initiative.md`
+  §16) plus the carried prerequisite ADR-0007 are hard
+  prerequisites. ADR drafted ≠ ADR ratified per Decision 3 of the
+  Phase 0 governance plan; ratification is what releases code.
+- Does not modify ADR-0001, ADR-0002, ADR-0003, ADR-0005,
+  ADR-0006, ADR-0008, ADR-0009, ADR-0010, the Agent Ladder, the
+  Authority Gradient, the Two Laws, the Service Communication
+  Rules, or any existing invariant in `docs/02_specs/invariants.md`.
+- Does not own the substrate. Storage abstraction, document
+  ingestion, document classification, polymorphic source-document
+  links, the Relationship Router, the exception queue, and the
+  Tier 2 Document Pipeline all live in
+  `docs/09_briefs/phase-2/document_platform_initiative.md`. This
+  brief consumes that substrate; it does not duplicate or
+  contradict its decisions.
 - Does not amend `CLAUDE.md` §4 — that work is governance work
   deferred to ADR-0007 per Q27.
 - Does not edit `docs/09_briefs/phase-2/triage_bucket_intake.md`.
-  That brief becomes a UX-surface reference; this brief
-  supersedes it as the planning artifact for the AP initiative.
-  The cross-reference update on the triage-bucket file is a
-  follow-on prompt; not in scope here.
-- Does not edit `docs/02_specs/open_questions.md`. Q35–Q52
-  filing is a separate prompt cycle.
+  That brief is now a UX-surface reference for the **Document
+  Platform** brief (per the 2026-05-02 reframe, the triage bucket
+  is substrate-shaped). The cross-reference update on the
+  triage-bucket file is a follow-on prompt; not in scope here.
+- Does not edit `docs/02_specs/open_questions.md` (filing happens
+  in the Phase 0 governance Stream A). Q35–Q52 are retired per
+  the supersession note in that file's Section 3.
 - Does not edit `docs/09_briefs/phase-2/interaction_model_extraction.md`.
   That file is preserved verbatim per the phase-2 README.
-- Does not commit to an AR initiative or any non-AP subdomain.
-- Does not generalize the storage_provider abstraction beyond
-  Supabase + SharePoint. OneDrive, Box, S3, GCS — out of scope.
-  When a third provider is needed, that initiative writes its own
-  ADR.
+- Does not commit to an AR initiative or any non-Spend subdomain.
+  Banking / AR / Tax / Assets are future initiative briefs that
+  will consume the same Document Platform substrate.
+- Does not commit accounting state from extraction, classification,
+  or routing layers. Only Spend domain services
+  (`billService.post`, `billService.approveForPayment`,
+  `billPaymentService.record`, `vendorPrepaymentService.record`,
+  `vendorPrepaymentService.applyToBill`, `vendorCreditService.post`,
+  `vendorCreditService.applyToBill`, `vendorService.create`,
+  `vendorService.update`) commit. Per Reading B (per
+  `docs/09_briefs/phase-2/document_platform_reframe_design.md` §5),
+  domain services produce ledger operations via the ledger
+  service; the ledger service is the only writer of journal
+  entries.
 
 ## 18. Verification against canonical docs
 
