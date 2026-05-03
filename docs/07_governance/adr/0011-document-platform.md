@@ -17,7 +17,7 @@ ratification 2026-05-03). The 2026-05-02 Document Platform reframe
 established the architectural pivot from "AP Ingestion Initiative"
 to "Document Platform Initiative + Spend Initiative." This ADR is
 the spine of that reframe — the load-bearing dependency root for
-the seven downstream Phase 0 ADRs (ADR-0012 through ADR-0019)
+the eight downstream Phase 0 ADRs (ADR-0012 through ADR-0019)
 that fill in storage, pipeline, bundle, relationship, domain,
 template, router, and confidence specifics.
 
@@ -47,7 +47,7 @@ Domain Boundary Map (Spend vs Banking ownership of bank/card
 transactions).
 
 The spine is intentionally narrow on implementation specifics —
-seven downstream ADRs (ADR-0012 ProposedMutationBundle, ADR-0013
+eight downstream ADRs (ADR-0012 ProposedMutationBundle, ADR-0013
 Storage Provider, ADR-0014 Tier 2 Document Pipeline, ADR-0015
 AP/Spend Subdomain, ADR-0016 Document Relationship Graph,
 ADR-0017 Vendor Template substrate, ADR-0018 Relationship Router,
@@ -143,11 +143,27 @@ which is the contract that one or more downstream ADRs cite.
   Banking domain; bank/card statements route to the exception
   queue.
 
-**Ledger service owns**: `journal_entries`, `journal_lines`,
-`audit_log` (writer of record per INV-AUDIT-001). No Document
-Platform path writes to these tables. No domain service writes
-directly either; domain services route through the ledger service
-per Reading B.
+**Ledger service owns**: `journal_entries`, `journal_lines`. The
+ledger service is the only writer of journal entries and journal
+lines per Reading B — no Document Platform path writes to these
+tables; no domain service writes directly either; domain services
+route through the ledger service.
+
+**Audit-log writer boundary** (separate from journal-entry writer
+boundary). `audit_log` is written through the **canonical
+audit-log writer** (`recordMutation.ts` per INV-AUDIT-001 today;
+any future audit service inherits this role). Both ledger-related
+and document-related mutations route their audit events through
+that canonical writer; no service inserts into `audit_log`
+directly. Specifically: when the Document Platform commits a
+`ProposedAttachment` via `documentLinkService.create()`, the
+create path records a **document-layer audit event**
+(`attachment_link_created`) through the canonical audit-log
+writer — it does **not** write a journal entry, does **not**
+produce a ledger-operation audit event, and does **not** insert
+into `audit_log` directly. This preserves Reading B (no ledger
+write from the Platform) while keeping document-link mutations
+auditable on the document layer.
 
 ### 2. `source_documents` schema and contract
 
@@ -168,12 +184,27 @@ Every uploaded file produces exactly one row. Required fields:
   ADR-0013; this ADR specifies only that the discriminator exists
   and follows ADR-0010's reserved-enum-states discipline.
 - `storage_key` (text) — the provider-scoped path or identifier.
-- `content_hash` (text) — SHA-256 of file bytes at ingestion. The
-  drift-detection mechanism (cadence, scope) is owned by
-  ADR-0013; the Platform contract is that `content_hash` is
-  populated at ingestion and never mutated thereafter.
-- `byte_size` (bigint), `mime_type` (text), `original_filename`
-  (text).
+- `original_content_hash` (text) — SHA-256 of file bytes as
+  originally ingested. **Write-once at ingestion.** The platform
+  contract is that this column is populated at ingestion and never
+  mutated thereafter — even if the document is re-uploaded or
+  drift is detected later. This column is the immutable evidence
+  anchor.
+- `original_byte_size` (bigint) — file size at ingestion.
+  Write-once.
+- `original_filename` (text) — the filename as originally
+  ingested. Write-once.
+- `current_version_id` (uuid, nullable, FK to
+  `source_document_versions`) — pointer to the latest captured
+  version. Null at ingestion (no separate version row exists yet —
+  the original ingestion is the implicit version 1); set when the
+  first re-upload or drift event captures a new version row. May
+  be updated when subsequent versions land. The version row's own
+  `content_hash` is immutable per §9 below; what changes here is
+  which version row is current.
+- `mime_type` (text) — captured at ingestion; not part of the
+  evidence anchor (mime-type detection may improve post-ingestion
+  without invalidating the evidence).
 - `ingest_channel` (enum) — `drag_drop_pdf`, `forwarded_mailbox`,
   `direct_upload`, `api_ingest`. Reserved per ADR-0010 discipline.
 - `ingest_batch_id` (uuid, nullable) — references `ingest_batches`
@@ -181,28 +212,54 @@ Every uploaded file produces exactly one row. Required fields:
 - `received_at` (timestamptz), `created_at` (timestamptz).
 - `created_by` (text or uuid) — `'agent' | <user_id>`.
 
-**Versioning.** When the same logical document is re-uploaded with
-different bytes (a vendor sends a corrected invoice), the platform
-captures a new `source_document_versions` row with
-`(source_document_id, version_number, content_hash, captured_at)`.
-The `source_documents.content_hash` always reflects the latest
-captured version; prior versions are immutable per §9 below.
+**Versioning model — current-pointer with immutable anchor.** The
+schema uses a hybrid of "original-anchor" (preserved on the
+`source_documents` row) and "current-pointer" (via
+`current_version_id`). When the same logical document is
+re-uploaded with different bytes (a vendor sends a corrected
+invoice), or drift detection captures a changed file:
+
+- A new `source_document_versions` row lands with
+  `(id, source_document_id, version_number, content_hash,
+  byte_size, captured_at, capture_reason)`. The version row's
+  `content_hash` and `byte_size` are immutable per §9.
+- `source_documents.current_version_id` updates to point to the
+  new version row. This is the only column on `source_documents`
+  that may change post-ingestion.
+- `source_documents.original_content_hash`,
+  `source_documents.original_byte_size`, and
+  `source_documents.original_filename` are unchanged — the
+  immutable evidence anchor.
+
+Downstream consumers that need "the current bytes" read through
+`current_version_id`. Downstream consumers that need "the
+evidence as ingested" read `original_content_hash` directly.
+Replayability and audit reconstruct from the immutable anchor +
+the versioned history (§9 below).
 
 **Drift detection.** When the storage provider's underlying file
 changes outside the platform's write path (a SharePoint folder's
 file is replaced manually), the platform's drift-detection
-schedule (owned by ADR-0013) recomputes `content_hash` and either
-captures a new version or flags an integrity exception. The
-contract surface here is that drift produces either a new version
-row or an exception-queue entry; the cadence and queue-and-retry
-parameters belong to ADR-0013.
+schedule (owned by ADR-0013) recomputes the bytes' hash and
+compares it to the current version's `content_hash`. A mismatch
+either (a) captures a new `source_document_versions` row and
+updates `current_version_id`, or (b) flags an integrity exception
+in the exception queue, depending on the `capture_reason`
+classification. The contract surface here is that drift never
+mutates `original_content_hash` — drift produces a new version
+row or an exception, not an in-place anchor change. The cadence
+and queue-and-retry parameters belong to ADR-0013.
 
 **Integrity contract.** A `source_document` row's
-`content_hash`, `byte_size`, and `original_filename` are
-write-once at ingestion. Content updates produce a new version,
-not an in-place mutation. This rule is the precondition for
-INV-DOC-001 evidence-completeness (§15 below) and for replayability
-(§9 below).
+`original_content_hash`, `original_byte_size`, and
+`original_filename` are write-once at ingestion and immutable
+thereafter. `current_version_id` may be updated to point to a
+new version row. Each `source_document_versions` row's
+`content_hash` is itself immutable per §9. Content updates
+produce a new version row, not an in-place mutation of either
+the anchor or any prior version. This rule is the precondition
+for INV-DOC-001 evidence-completeness (§15 below) and for
+replayability (§9 below).
 
 ### 3. `document_cases` and `document_case_sources`
 
@@ -256,7 +313,14 @@ archived`. Transitions:
 - `matched → proposed`: automation; produces a `ProposedMutation`,
   `ProposedMutationBundle`, or `ProposedAttachment`.
 - `proposed → approved`: human only (Tier 1 commit-time
-  confirmation per ADR-0007).
+  confirmation per ADR-0007). Note: the case-level `approved`
+  state means **the case's proposed resolution has been
+  approved**, not that the underlying domain mutation has
+  committed. The domain mutation's own `approved` state on
+  `ProposedMutation` (per `intent_model.md`) is a separate
+  state — case-level `approved` is a precondition for
+  `approved → committed`, but the actual ledger commit is the
+  transition that flips the case to `committed`.
 - `approved → committed`: automation (ledger commit succeeds).
 - `proposed → rejected` or `needs_review → rejected`: human only.
 - `needs_review → matched` or `needs_review → proposed`: human
@@ -845,14 +909,21 @@ prefix when the Banking domain phase scopes.
 
 ### What this costs
 
-- **Schema scope.** Eight platform-owned tables ship at v1
-  (source_documents, source_document_versions,
-  source_document_links, document_cases, document_case_sources,
-  document_artifacts, document_relationship_candidates,
-  ingest_batches, ingest_items, document_jobs, plus the immutable
-  ocr_runs and extraction_runs). Each carries reserved enum
-  columns and reservation discipline per ADR-0010. Phase 1
-  Storage / Evidence Core ships the first slice; Phase 2
+- **Schema scope.** The platform-owned table set ships across
+  the first four implementation phases. The set as currently
+  enumerated includes `source_documents`,
+  `source_document_versions`, `source_document_links`,
+  `document_cases`, `document_case_sources`, `document_artifacts`,
+  `document_relationship_candidates`, `ingest_batches`,
+  `ingest_items`, `document_jobs`, plus the immutable `ocr_runs`
+  and `extraction_runs` per §9. The exact final shape of the set
+  (whether `ocr_runs` and `extraction_runs` ship as separate
+  tables or as artifact subtypes, and whether any of the
+  enumerated tables collapse into others as schema design lands)
+  is owned by the Phase 1 / Phase 2 / Phase 3 / Phase 4
+  implementation plans, not by this ADR. Each table carries
+  reserved enum columns and reservation discipline per ADR-0010.
+  Phase 1 Storage / Evidence Core ships the first slice; Phase 2
   Document Core skeleton ships the case + artifact tables;
   Phase 3 Document Relationship Graph ships the link table;
   Phase 4 Relationship Router consumes the candidate table.
