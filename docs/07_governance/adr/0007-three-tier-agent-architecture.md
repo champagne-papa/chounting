@@ -251,7 +251,8 @@ not Zod-validated.
 - Tier 2.5 stages produce Zod-validated output
   (`DocumentRelationshipCandidate`, `DomainIntentCandidate`).
 - Tier 1 re-verifies every Tier 2.5 output at the commit boundary
-  per the expanded Q28 matrix (Part 3 below).
+  per the expanded Q28 matrix (see "Q28 expansion to four
+  re-verification surfaces" in the Amendment section below).
 - Idempotency: Tier 2.5 stages produce the same output for the same
   input across re-runs (ADR-0010 reserved-enum-states discipline
   applies for any new enums introduced).
