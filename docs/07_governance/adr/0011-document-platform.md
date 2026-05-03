@@ -2,8 +2,15 @@
 
 ## Status
 
-Drafted 2026-05-03. Not yet ratified. CTO ratifies + founder
-reviews per Phase 0 governance plan Decision 3.
+Ratified 2026-05-03 by CTO with named follow-ups carried forward
+per D2 ratification package §5. Item A (Q73 narrow closure scope)
+ratified as-is. Item B (INV-DOC-001 shape Q-new) to be filed in
+Session 2B alongside ADR-0015 drafting; Q-numbering starts at Q79.
+Item C (§7 ProposedAttachment audit-log phrasing) ratified as-is
+with optional follow-up tightening to "records a document-layer
+audit event through the canonical audit-log writer per §1." All
+three items accepted per the D2 ratification package's recommended
+path.
 
 ## Date
 
