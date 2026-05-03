@@ -1,33 +1,12 @@
-# AP Ingestion Initiative — Phase 2 Brief
+# Spend Initiative — Phase 2 Brief
 
-**Status:** CTO-reviewed; canonical Phase 2 planning artifact for the AP
-subdomain. Not authorized for code. Translated from the
-"Consolidated Action — AP Ingestion Initiative" CTO document (founder
-paste, 2026-05-01) into chounting spec conventions.
+**Status:** CTO-reviewed; canonical Phase 2 planning artifact for the Spend subdomain (AP bills + payments + vendor prepayments + vendor credits). Renamed from `ap_ingestion_initiative.md` per the 2026-05-02 Document Platform reframe; substrate-shaped sections moved to `document_platform_initiative.md`. Not authorized for code.
 
 **Date:** 2026-05-01
 
-**Resolution path:** Four ADRs and one event before any code lands —
-ADR-0007 (three-tier agent architecture, blocked on Q27–Q31), the AP
-subdomain ADR, the storage-provider abstraction ADR, the
-vendor-template-as-autonomy-rule ADR. Open questions Q35–Q52 file in a
-separate prompt cycle (this brief does not edit
-`docs/02_specs/open_questions.md`).
+**Resolution path:** Two Spend-Initiative-owned ADRs (AP/Spend Subdomain — ADR-0015; Vendor Template substrate reservation — ADR-0017) plus the seven Document-Platform-owned ADRs (per `docs/09_briefs/phase-2/document_platform_initiative.md` §16) before any v1 code lands. Open questions Q35–Q52 are retired (see `docs/02_specs/open_questions.md` Section 3 supersession note); Q53–Q78 are filed; the Spend-domain subset is Q59, Q60, Q61, Q62, Q63, Q64, Q74, Q78.
 
-**Relationship to existing architecture:** Operationalizes
-Simplification 3 from `docs/03_architecture/phase_simplifications.md`
-(AP Agent as the second real agent, informing what shared
-agent-platform infrastructure is actually needed) and the Tier 2
-proposal-path framing in
-`docs/09_briefs/phase-2/agent_architecture_proposal.md`. Adopts the
-existing reserved Phase 2+ tables (`bills`, `bill_lines`, `payments`,
-`vendors`, `vendor_rules`) from `docs/02_specs/data_model.md`. Does
-not change the Authority Gradient, the Agent Ladder, the Two Laws,
-the Service Communication Rules, or any existing invariant in
-`docs/02_specs/invariants.md`. The triage-bucket brief at
-`docs/09_briefs/phase-2/triage_bucket_intake.md` becomes a UX-surface
-reference; this brief supersedes it as the planning artifact for the
-AP initiative.
+**Relationship to existing architecture:** First domain consumer of the Document Platform substrate (per `docs/09_briefs/phase-2/document_platform_initiative.md` and `docs/09_briefs/phase-2/document_platform_reframe_design.md`). Operationalizes Simplification 3 from `docs/03_architecture/phase_simplifications.md` (AP Agent as the second real agent). Adopts the existing reserved Phase 2+ tables (`bills`, `bill_lines`, `payments`, `vendors`, `vendor_rules`) from `docs/02_specs/data_model.md`. Does not change the Authority Gradient, the Agent Ladder, the Two Laws, the Service Communication Rules, or any existing invariant in `docs/02_specs/invariants.md`.
 
 **Section locator note.** A brief-writer scanning by expected
 section number per the T2 review prompt should note three
@@ -45,33 +24,37 @@ checklist; the locator note is the trade-off.
 
 ## 1. Why this initiative exists
 
-The Phase 2 plan (`docs/03_architecture/phase_plan.md`) names the AP
-Agent as the first concrete Phase 2 deliverable — *"AP Agent: email
-ingestion → OCR → chart of accounts suggestion → ProposedEntryCard."*
-Simplification 3 commits to using the AP Agent as the comparison
-point that reveals what shared agent infrastructure is actually
-needed (Phase 2's correction for the v0.4.0 six-agent plan that was
-deferred when Phase 1 shipped one Double Entry Agent instead).
+The Spend Initiative is the first domain consumer of the Document Platform substrate. It implements the AP/Spend subdomain — bills, payments, vendor prepayments, vendor credits, payment evidence — that turns vendor invoices and POS receipts into ledger entries and ledger entries into payments. The Document Platform brief (`docs/09_briefs/phase-2/document_platform_initiative.md`) provides the document-shaped substrate (storage, ingestion, extraction, classification, relationship routing); the Spend Initiative provides the accounting-shaped destination (manual AP foundation first, then automated routing as later phases ship).
 
-The AP Agent has been in the plan since v0.4.0 but never had an
-execution-ready brief. The CTO consolidated-action document
-(2026-05-01) supplies the architectural shape; this file translates
-that shape into chounting conventions, folds in 22 architectural
-changes the CTO mandated, and closes 12 specification gaps the
-review surfaced. The output is the canonical planning artifact
-Phase 2 brief authors will turn into concrete sessions when Phase
-1.3 triage clears and ADR-0007 lands.
+The Phase 2 plan (`docs/03_architecture/phase_plan.md`) names the AP Agent as the first concrete Phase 2 deliverable. Simplification 3 commits to using the AP Agent as the comparison point that reveals what shared agent infrastructure is actually needed. The 2026-05-02 reframe (`docs/09_briefs/phase-2/document_platform_reframe_design.md`) operationalized that simplification by separating the substrate (Document Platform) from the first domain (Spend / AP).
 
-The initiative covers ingestion, but ingestion is downstream
-infrastructure. The substrate question is whether AP — the
-subdomain that turns vendor invoices into ledger entries and
-ledger entries into payments — exists as a first-class part of the
-chounting domain model. It does not exist today (the reserved
-tables are empty in Phase 1.1). This initiative builds it.
+> **Document Platform is the foundation.**
+> **AP/Spend is the first domain.**
+> **Extraction is a feeder.**
+> **Domain services produce ledger operations; the ledger service
+> is the only writer of journal entries.**
+> **Existing CHOUnting mutation and invariant discipline remains
+> the authority.**
 
-> **Extraction is a feeder. AP is the foundation. The payment
+> **History footnote (2026-05-02 reframe).** Prior to the reframe,
+> this brief was the AP Ingestion Initiative and its lede sentence
+> read: *"Extraction is a feeder. AP is the foundation. The payment
 > approval gate is separate. The existing CHOUnting
-> mutation/invariant system remains the authority.**
+> mutation/invariant system remains the authority."* That sentence
+> was correct under the assumption that B2B PDF invoices are the
+> only v1 ingestion shape. The reframe surfaced that receipts,
+> retainers, deposits, vendor statements, credit memos, and other
+> document types do not fit the AP bill lifecycle, regardless of
+> volume. The new five-sentence canonical lede above replaces the
+> old one in all forward-looking work; the original is preserved
+> here for traceability.
+
+## Conceptual anchor
+
+Documents are evidence. Bills, payments, prepayments, credits,
+and applications are accounting/domain objects. The Spend
+Initiative implements the AP/Spend subdomain as the first
+consumer of the Document Platform substrate.
 
 ## 2. Locked v1 scope
 
@@ -127,10 +110,10 @@ The two lifecycles are orthogonal but coupled. A single AP bill
 state transition is produced by a single completed mutation
 lifecycle.
 
-**`ProposedMutation` variants for the AP subdomain.** All three
+**`ProposedMutation` variants for the Spend subdomain.** All variants
 ride the existing `ProposedMutation` shape from
 `docs/02_specs/intent_model.md` §3 — there is no parallel
-`ProposedBill` system. The variants are:
+`ProposedBill` system. The v1 variants are:
 
 ```typescript
 ProposedMutation {
@@ -142,6 +125,22 @@ ProposedMutation {
 }
 ```
 
+**Spend-domain extensions (per the 2026-05-02 reframe).** The
+following intent variants extend the v1 surface beyond the
+original three. Each rides the existing `ProposedMutation` shape;
+`post_bill_with_payment` is a `ProposedMutationBundle` per the
+Document Platform brief; `attach_payment_evidence` is a
+`ProposedAttachment` per the reframe spec §14:
+
+- `record_vendor_prepayment` — record a vendor prepayment / deposit / retainer (creates a `vendor_prepayments` row).
+- `apply_vendor_prepayment_to_bill` — apply an open vendor prepayment to a posted bill (creates a `vendor_prepayment_applications` row).
+- `record_vendor_prepayment_refund` — record a vendor refund of an unused prepayment.
+- `write_off_vendor_prepayment` — write off a forfeited prepayment.
+- `post_vendor_credit` — post a vendor credit memo (creates a `vendor_credits` row).
+- `apply_vendor_credit_to_bill` — apply an open vendor credit to a bill (creates a `vendor_credit_applications` row).
+- `post_bill_with_payment` — born-paid bundle: posts a bill and immediately records its payment in one atomic ProposedMutationBundle. The domain service is `billService.postWithImmediatePayment(...)`. See spec §15 for the receipt-driven workflow that produces this bundle and the manual-born-paid workflow callout.
+- `attach_payment_evidence` (`ProposedAttachment` variant — no ledger mutation; per spec §14): attach a receipt / payment-confirmation document to an already-recorded payment via `documentLinkService.create()`. Distinct from `record_bill_payment` because no journal entry is produced.
+
 Rendering uses **`ProposedBillCard`** as a *specialization* of
 `ProposedEntryCard`, not a replacement. The card honors the Four
 Questions grammar from `intent_model.md` §5 unchanged; what differs
@@ -149,6 +148,9 @@ is the payload shape it renders (vendor, bill number, due date,
 line allocations, attached evidence). Ghost-row rendering of the
 proposed bill (during the Pending and Needs Attention mutation
 states) honors the four-signal contract from ADR-0004 unchanged.
+Sibling specialization cards (`ProposedPrepaymentCard`,
+`ProposedCreditCard`, `ProposedBundleCard`,
+`ProposedAttachmentCard`) ship under the same shape rules.
 
 ### 3.1 The explicit mapping table
 
@@ -158,11 +160,19 @@ The table is the load-bearing reference any future schema or
 service work consults to answer "which mutation produces this
 transition?":
 
-| Mutation `intent_type`       | Mutation lifecycle path                              | AP bill lifecycle transition                                                                |
+| Mutation `intent_type`       | Mutation lifecycle path                              | AP bill / vendor_prepayment / vendor_credit lifecycle transition                                                                |
 |---|---|---|
-| `post_bill`                  | Pending → Approved → Posted (manual or auto)         | `draft` → `posted`                                                                           |
-| `approve_bill_for_payment`   | Pending → Approved → Posted (manual or auto)         | `posted` → `approved_for_payment`                                                            |
-| `record_bill_payment`        | Pending → Approved → Posted (manual or auto)         | `approved_for_payment` → `paid` (full) or `partially_paid` (partial)                         |
+| `post_bill`                  | Pending → Approved → Posted (manual or auto)         | bill: `draft` → `posted`                                                                           |
+| `approve_bill_for_payment`   | Pending → Approved → Posted (manual or auto)         | bill: `posted` → `approved_for_payment`                                                            |
+| `record_bill_payment`        | Pending → Approved → Posted (manual or auto)         | bill: `approved_for_payment` → `paid` (full) or `partially_paid` (partial)                         |
+| `record_vendor_prepayment`   | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_prepayment: (none) → `open` (creates row); `payments` row created with `payment_purpose = 'vendor_prepayment'` |
+| `apply_vendor_prepayment_to_bill` | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_prepayment: `open` → `partially_applied` or `fully_applied`; bill: applied amount reduces open balance via `vendor_prepayment_applications` |
+| `record_vendor_prepayment_refund` | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_prepayment: `open` → `refunded`; `payments` row created with `payment_purpose = 'vendor_refund'` (negative-direction) |
+| `write_off_vendor_prepayment` | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_prepayment: `open` → `written_off` (terminal); JE writes off remaining balance |
+| `post_vendor_credit`         | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_credit: (none) → `open` (creates row); JE recognizes credit per credit-memo path |
+| `apply_vendor_credit_to_bill` | Pending → Approved → Posted (manual; Always Confirm v1) | vendor_credit: `open` → `partially_applied` or `fully_applied`; bill: applied amount reduces open balance via `vendor_credit_applications` |
+| `post_bill_with_payment` (`ProposedMutationBundle`) | Pending → Approved → Posted (manual; Always Confirm v1) | bill: (none) → `paid` atomically via `billService.postWithImmediatePayment(...)`; both legs (Dr Expense / Cr AP, then Dr AP / Cr Bank-or-Card) commit in a single DB transaction |
+| `attach_payment_evidence` (`ProposedAttachment`) | Pending → Approved → Posted (manual; Always Confirm v1) | no entity-state transition; writes `source_document_links` row with `link_role = 'payment_evidence'` against an existing `payments` row |
 
 Three notes on this table:
 
@@ -196,68 +206,46 @@ as Q36 (see §14).
 
 ## 4. Tier 1 / Tier 2 / Tier 3 placement
 
-This initiative is the **first concrete Tier 2 system** under the
-three-tier policy in
-`docs/09_briefs/phase-2/agent_architecture_proposal.md`. The tier
-boundaries and their constraints are repeated here verbatim because
-they are load-bearing for everything that follows. They cannot be
-re-litigated in any AP subdomain session.
+The Spend Initiative consumes the Document Platform's Tier 2 / Tier 2.5 output (extraction artifacts and routed `ProposedMutation` / `ProposedMutationBundle` / `ProposedAttachment` proposals) and commits them at Tier 1. The Tier 1 commit-boundary discussion is load-bearing for everything that follows and cannot be re-litigated in any Spend subdomain session.
 
 **Tier 1 — Commit Path.** The single committing agent and the
 deterministic services it calls (`billService.post`,
-`billService.approveForPayment`, `billService.recordPayment`,
-`vendorService.create`, `vendorService.update`). Every Tier 1
+`billService.postWithImmediatePayment`, `billService.approveForPayment`,
+`billService.recordPayment`, `vendorPrepaymentService.record`,
+`vendorPrepaymentService.applyToBill`, `vendorCreditService.post`,
+`vendorCreditService.applyToBill`, `vendorService.create`,
+`vendorService.update`, `documentLinkService.create`). Every Tier 1
 mutation flows through `withInvariants()` per Service Communication
 Rule 1 (`docs/02_specs/ledger_truth_model.md` §Service Communication
-Rules). The Agent Ladder (Always Confirm / Notify & Auto-Post /
-Silent Auto) governs autonomy on this path — see §9.
+Rules). Every domain service produces ledger operations via the
+ledger service (Reading B per the reframe spec §5) — domain services
+never insert into `journal_entries` or `journal_lines` directly.
+The Agent Ladder (Always Confirm / Notify & Auto-Post / Silent Auto)
+governs autonomy on this path — see §9. Auto-post is deferred past
+v1 per the reframe spec §11; all v1 proposals are Always Confirm.
 
-**Tier 2 — Proposal Path.** The bill-extraction pipeline:
-PDF-to-text extraction, field-extraction, vendor matcher, line-item
-mapper, account suggestor. Stages are stateless typed functions —
-`(typed_input) → typed_output` — with no shared session, no LLM-
-planned orchestration, no direct writes. Each stage's output is
-Zod-validated. The pipeline ends by handing a `ProposedMutation`
-to Tier 1; the `ProposedMutation` carries `intent_type =
-"post_bill"` and the pipeline trace as justification metadata.
+**Tier 1 commit-boundary constraints (Spend brief scope):**
 
-Four constraints (inviolable; cite back to the proposal):
-
-1. **Tier 2 stages cannot import mutating service functions.** The
-   ESLint / build-time lint rule that enforces this is the
-   prerequisite tracked in **Q29**. The rule must land before any
-   Tier 2 module path commits.
-2. **Tier 1 commits via `withInvariants()`** per Service
-   Communication Rule 1 in `ledger_truth_model.md`. Every AP-domain
+1. **Tier 1 commits via `withInvariants()`** per Service
+   Communication Rule 1 in `ledger_truth_model.md`. Every Spend-domain
    service mutation passes through the same wrapper that journal
    entries do today.
-3. **LLM-planned orchestration is prohibited** per **Q31**. The
-   pipeline orchestrator is plain TypeScript that calls stages in a
-   fixed sequence — `runOCR(...) → extractFields(...) →
-   matchVendor(...) → suggestAccounts(...) → buildProposedMutation(...)`.
-   A future contributor cannot introduce an "LLM coordinator" stage
-   that decides which stage runs next.
-4. **Confidence is internal-only** per ADR-0002. Stage-level
-   confidence scores feed the autonomy decision tree but never
-   appear on `ProposedBillCard`, in error messages, or in any export
-   format. The user-facing surface is policy-outcome language — see
-   ADR-0002 Principle 2.
-
-**Pipeline trace storage.** The pipeline produces a
-`pipeline_trace: PipelineStageRecord[]` populated on
-`ProposedMutation.justification.pipeline_trace`. At commit, the
-existing Logic Receipt write path (per `intent_model.md` §6) carries
-the trace into `audit_log.before_state` as part of the structured
-JSON. **No separate `pdf_ingestions` table.** This is **Q30 option
-(a)** — extending `justification` rather than adding a Tier-2-
-specific table. The choice was the CTO mandate; the question
-remains open until ADR-0007 ratifies it.
+2. **Confidence is internal-only** per ADR-0002. Confidence scores
+   from upstream extraction / classification / routing feed the
+   autonomy decision tree but never appear on `ProposedBillCard`,
+   `ProposedPrepaymentCard`, `ProposedCreditCard`, or any other
+   user-facing surface, error message, or export format. The
+   user-facing surface is policy-outcome language — see ADR-0002
+   Principle 2.
 
 **Tier 3 — Interface Path.** The user sees one agent (the same
 "unnamed senior bookkeeper" voice from ADR-0006). The internal
-decomposition does not leak. When extraction has produced a
-`post_bill` proposal, the chat surface presents it as the agent's
-proposal — the Tier 2 stage names never appear in user-facing text.
+decomposition does not leak. When the Document Platform has
+produced a Spend-domain proposal, the chat surface presents it as
+the agent's proposal — Tier 2 stage names never appear in
+user-facing text.
+
+**Tier 2 extraction pipeline.** Moved to `docs/09_briefs/phase-2/document_platform_initiative.md` §4 per the 2026-05-02 reframe. Tier 2 stages (PDF probe, text extraction, OCR, field extraction, table extraction, validation) and the Tier 2 / Tier 2.5 placement question (per Q66) live entirely in the Document Platform brief. The Spend Initiative consumes Tier 2 output via the ProposedMutation / ProposedMutationBundle / ProposedAttachment handoff; Tier 1 commit through `withInvariants()` and the ledger service stays in this brief.
 
 ## 5. Data model
 
@@ -342,47 +330,22 @@ bill's `amount_cad`.
 
 **`vendors` and `vendor_rules`.** Reserved tables ship as-is for v1
 with two new columns each: on `vendors`, `default_storage_path`
-(nullable, used by SharePoint per-vendor folder structure — see §6);
-on `vendor_rules`, `clean_approval_count` (driver of the Q43
-template-as-autonomy-rule mechanism — see §7).
+(nullable, used by SharePoint per-vendor folder structure — owned
+by the Document Platform brief); on `vendor_rules`,
+`clean_approval_count` (driver of the substrate-portion vendor-
+template ADR — see §7).
 
-**`source_documents`** (new table, Phase A migration). The evidence
-chain. Every ingested PDF or forwarded email lands here:
+**`payment_purpose` discriminator on `payments`.** Distinct from `payment_method` (which is a physical channel: cash / cheque / EFT / wire / credit_card / ACH / other). `payment_purpose` is accounting intent: `bill_payment | vendor_prepayment | vendor_refund | customer_payment | employee_reimbursement | owner_reimbursement | tax_payment | other`. A wire can pay a bill or fund a retainer; a credit card charge can be a POS expense or a deposit. Method does not determine accounting intent. Reserved per ADR-0010 discipline.
 
-```sql
-CREATE TABLE source_documents (
-  source_document_id      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id                  uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
-  storage_provider        storage_provider_kind NOT NULL,  -- 'supabase' | 'sharepoint'
-  storage_path            text NOT NULL,
-  content_hash            text NOT NULL,           -- SHA-256 of bytes at ingestion
-  file_size_bytes         bigint NOT NULL,
-  mime_type               text NOT NULL,
-  ingestion_channel       text NOT NULL,           -- 'drag_drop' | 'forwarded_mailbox' | 'manual_upload'
-  attachment_status       text NOT NULL DEFAULT 'attached',
-  -- 'attached' | 'pending_storage_sync' | 'storage_failed' | 'hash_mismatch' | 'missing'
-  version                 integer NOT NULL DEFAULT 1,
-  supersedes_document_id  uuid REFERENCES source_documents(source_document_id),
-  superseded_by_document_id uuid REFERENCES source_documents(source_document_id),
-  correction_reason       text,
-  created_at              timestamptz NOT NULL DEFAULT now()
-);
-```
+**`vendor_prepayments`** (new table, reserved schema seats; manual workflow in v1). Records vendor deposits, retainers, advances, and security deposits paid before the underlying bill exists. Tracks remaining balance, allocation history (via `vendor_prepayment_applications`), and refund / write-off terminal paths. Final shape (active vs reserved type values, status enum) closes on the AP/Spend Subdomain ADR (Q59).
 
-The version columns implement the document-version handling matrix
-in §8.4. `attachment_status` drives the Phase A queue-and-retry
-policy in §6. The CHECK constraint on `attachment_status` is scoped
-under ADR-0010 reserved-enum-states (Phase A ships with `attached`
-as the post-success terminal; the other four values surface
-exception-queue routing — see §11.3).
+**`vendor_prepayment_applications`** (new junction table, reserved schema seats; manual workflow in v1). Allocates open `vendor_prepayments` against posted `bills` through `apply_vendor_prepayment_to_bill`. Service-layer constraint: sum of allocations cannot exceed the prepayment's original amount.
 
-**`bill_attachments`** (new junction table). One bill, many
-attachments. Each row carries the FK to `source_documents` plus
-`role` enum (`primary_invoice`, `supporting`, `correspondence`).
-The primary invoice attachment is required for `post_bill`; this
-constraint is service-layer (the post path rejects bills without a
-primary invoice unless the controller-override path fires — see
-§6.2).
+**`vendor_credits`** (new table, reserved schema seats; manual workflow in v1). Records vendor-issued credit memos (memo-shaped credits issued by the vendor against prior bills, distinct from credit memos that reverse a bill). Tracks remaining balance and allocation history (via `vendor_credit_applications`). Replaces the §8.3 deferral in the original brief; v1 ships the manual workflow.
+
+**`vendor_credit_applications`** (new junction table, reserved schema seats; manual workflow in v1). Allocates open `vendor_credits` against posted `bills` through `apply_vendor_credit_to_bill`. Service-layer constraint: sum of applications cannot exceed the credit's original amount.
+
+**`source_documents` and evidence linking.** Moved to `docs/09_briefs/phase-2/document_platform_initiative.md` per the reframe. The original brief's per-domain `bill_attachments` table is superseded by the polymorphic `source_document_links` table in the Document Platform brief. Spend-domain code consumes `source_document_links` rows where `linked_entity_type IN ('bill', 'payment', 'bill_payment_allocation', 'vendor_prepayment', 'vendor_prepayment_application', 'vendor_credit', 'vendor_credit_application')`.
 
 ### 5.3 Bill autonomy rule shape (`vendor_rules` consumer)
 
@@ -391,103 +354,25 @@ Ladder per `agent_autonomy_model.md`. The matched rule is a
 `vendor_rules` row keyed on `vendor_id` with the Phase 2 columns
 already named in the reservation (`autonomy_tier`, default account
 mappings) plus the new `clean_approval_count` integer. Vendor
-templates promote rules per §7. The rule's autonomy-tier
-calibration for AP bills specifically is Q35 (filed; default lean
-is the existing ladder thresholds — see §9.1).
+templates promote rules per §7. Auto-post is deferred past v1 per
+the reframe spec §11; the substrate ships under ADR-0010 reserved-
+enum-states discipline alone, and the full enforcement / promotion
+/ auto-post calibration ADR is drafted and ratified post-v1.
+
+### 5.4 Multi-entity reservation
+
+Per the reframe spec §17, four entity-related reservations land in v1 Spend schema even though full multi-entity support is post-v1:
+
+- **`bills.legal_entity_id`** (nullable, reserved). The legal entity that owns the AP bill.
+- **`bill_lines.benefiting_entity_id`** (nullable, reserved). Allocation-level entity for line-level intercompany due-to / due-from.
+- **`payments.paying_entity_id`** (nullable, reserved). The entity whose bank account moved cash.
+- **`payments.benefiting_entity_id`** (nullable, reserved). The entity that carries the expense.
+
+Reserved exception type: `wrong_entity_exception` — document addressed to a legal entity not currently configured in the org. Routes to controller review. Full intercompany due-to / due-from postings are post-v1.
 
 ## 6. Storage abstraction
 
-A `storage_provider` discriminator ships day one — not as a Phase 2
-add-on. **Supabase Storage is the default; SharePoint is opt-in
-per-org.** The motivation is Q47-shaped: family-office customers
-already keep evidence in SharePoint or OneDrive; forcing Supabase
-Storage would create either (a) parallel evidence vaults the
-controller has to reconcile or (b) a forced migration of existing
-evidence into chounting's bucket. Both are wrong.
-
-### 6.1 The discriminator and per-provider behavior
-
-`storage_provider_kind` is an enum on `source_documents`; values
-are `'supabase' | 'sharepoint'`. The org-level setting that
-controls which is used lives on `organizations.storage_provider`
-(new column, Phase A migration; default `'supabase'`).
-
-**Supabase Storage path** (default):
-`/{org_id}/AP/{vendor_id}/{YYYY}/{YYYY-MM-DD}_{vendor_slug}_{invoice_number}.pdf`
-
-**SharePoint path** (opt-in):
-`/{org_slug}/AP/{vendor_slug}/{YYYY}/{YYYY-MM-DD}_{vendor_slug}_{invoice_number}.pdf`
-
-The path shape is identical structurally; the leading segment
-differs because Supabase uses UUIDs and SharePoint uses
-human-readable org slugs. The per-vendor folder pattern is the
-shape that SharePoint customers already use; chounting's
-attachment writer matches it rather than imposing a new convention.
-
-**Permission model preference for SharePoint: `Sites.Selected`**
-over `Files.ReadWrite.All`. `Sites.Selected` is per-site granular —
-the chounting Azure AD app has access only to the specific
-SharePoint sites the customer grants. `Files.ReadWrite.All` is
-tenant-wide — the app has access to every file the user can see.
-The per-site model matches the family-office security posture (a
-controller granting access to "the AP folder" should not implicitly
-grant access to the firm's M&A docs). The `Sites.Selected` setup is
-a 5-step admin flow per Microsoft Graph documentation; the AP
-subdomain ADR (§13) carries the full flow specification.
-
-**Drift detection.** SharePoint customers can edit, move, or delete
-files outside chounting (the SharePoint UI, OneDrive sync, a Power
-Automate flow). Periodic drift detection compares
-`source_documents.content_hash` against the file's current SHA-256
-on disk. Mismatches and missing-files route to the exception queue
-per §11.3 and **block** auto-post and auto-pay on any bill with the
-affected attachment. The detection cadence and full filed Q47
-question are in §14.
-
-### 6.2 Storage degradation policy
-
-Storage providers go down. The policy is **queue-and-retry, with
-the bill blocked until evidence storage succeeds**. Concretely:
-
-1. The pipeline produces a `post_bill` `ProposedMutation` and
-   attempts to write the source document via the configured
-   provider.
-2. On provider failure (5xx, timeout, network error), the source
-   document row is created with `attachment_status =
-   'pending_storage_sync'` and the bytes are held in a transient
-   server-side buffer for retry.
-3. Retry is bounded (exponential backoff with cap; specific
-   parameters land in the storage_provider abstraction ADR — see
-   §13). On success, status flips to `attached` and the bill becomes
-   eligible to post.
-4. The `post_bill` mutation **does not commit** while
-   `attachment_status = 'pending_storage_sync'`. The bill stays in
-   `draft` with a Needs Attention trigger ("Evidence storage
-   pending — retry in progress").
-5. On hard failure (retries exhausted), `attachment_status` flips to
-   `storage_failed` and the bill routes to the exception queue with
-   reason "Evidence storage failed; manual attach required."
-
-**Controller-override path.** A controller can post a bill without
-attached evidence by invoking the manual-bill flow with an explicit
-"no evidence available" reason captured in the audit log
-(`audit_log.before_state` carries the reason text). This is the
-escape hatch for genuinely paper-only bills (e.g., a small
-contractor who hand-delivers an invoice). The override is logged
-verbatim per the `before_state` capture convention (ADR-0009);
-auditors querying "which bills shipped without evidence" get a
-deterministic answer.
-
-**Hash-mismatch and missing-file cases.** When drift detection
-finds either, the affected bills route to the exception queue and
-**both auto-post and auto-pay are blocked** on those bills. The
-controller resolves by either (a) replacing the file with one
-matching the recorded hash (likely from a backup), (b) acknowledging
-the divergence and posting a fresh `post_bill` with the new file as
-a versioned successor (see §8.4), or (c) voiding the bill.
-
-The controller-override and hash-mismatch behaviors are **Q52**
-(filed in §14).
+Moved to `docs/09_briefs/phase-2/document_platform_initiative.md` §6 per the 2026-05-02 reframe. The Document Platform brief is the canonical home for the `storage_provider` discriminator, Supabase + SharePoint per-org configuration, drift detection, queue-and-retry policy, and the controller-override path. The Spend Initiative consumes that substrate; bill / payment / prepayment evidence rides through it via `source_documents` and `source_document_links` (also in the Document Platform brief).
 
 ## 7. Vendor onboarding workflow
 
@@ -510,6 +395,16 @@ Both mutation shapes are v1 candidate variants; the final shape is
 **Q50** (filed in §14). The list of variants in §3 is the AP-bill-
 posting subset; the vendor-onboarding subset is filed for Q50
 resolution before code.
+
+> **Hard rule (callout).** Vendor bank-detail changes are Always
+> Confirm / System ceiling. Extracted invoice or payment
+> instructions may suggest a bank-detail change but may never
+> update the vendor master automatically. Independent verification
+> (out-of-band confirmation with the vendor) is required.
+> This is the most important AP fraud control the system has;
+> it deserves callout visibility, not parenthetical visibility.
+> See `docs/02_specs/agent_autonomy_model.md` §6 Item 2 for the
+> System ceiling rule.
 
 **Bank-detail changes are System ceiling — Always Confirm.** Per
 `agent_autonomy_model.md` §6 Item 2, modifications to a vendor's
@@ -884,32 +779,26 @@ projection tables in Phase A.
 Per the UI-session screenshot gate convention codified in
 `CLAUDE.md`, every shipping UI surface in the initiative requires
 the orchestrator to plan a 2–5 shot capture sequence. The bounded
-inventory for the AP initiative is **eleven surfaces**:
+inventory for the Spend initiative is **seven AP/Spend-domain
+surfaces**:
 
 1. Manual bill creation form (Phase A)
 2. `ProposedBillCard` — both in chat and in canvas (Phase B/C)
 3. Payment approval card — exit criterion EC-A-6 in §11.4 (Phase A)
 4. AP aging view — exit criterion EC-A-3 in §11.4 (Phase A)
-5. Exception queue UI — exit criterion EC-A-8 in §11.4; same
-   surface, screenshot-gate index 5 (Phase A)
-6. Triage Bucket / drag-drop zone (Phase C; the bucket itself is
-   from `triage_bucket_intake.md` but the AP-specific routing
-   inside it ships in Phase C)
-7. Auto-post chat notification (Phase E; post-v1)
-8. Forwarded-email arrival notification (Phase D)
-9. Open bills view — exit criterion EC-A-4 in §11.4 (Phase A;
+5. Open bills view — exit criterion EC-A-4 in §11.4 (Phase A;
    tabular, but a distinct view from AP aging because its
    filters and column shape differ)
-10. Vendor balance view — exit criterion EC-A-5 in §11.4 (Phase A)
-11. Paid bills history — exit criterion EC-A-7 in §11.4 (Phase A)
+6. Vendor balance view — exit criterion EC-A-5 in §11.4 (Phase A)
+7. Paid bills history — exit criterion EC-A-7 in §11.4 (Phase A)
 
-Surfaces 9–11 are tabular variants that share styling with surface
+Surfaces 5–7 are tabular variants that share styling with surface
 4 (AP aging) but ship as distinct views; the screenshot gate
 captures each independently to verify column shapes, filter
 controls, and totals on each. The list is bounded so orchestrator
-capture-sequence planning has a known scope to work against. Filed
-as **Q46** (in §14) for confirmation that the inventory is
-complete and correctly named.
+capture-sequence planning has a known scope to work against.
+
+**Substrate-shaped surfaces moved.** Per the reframe, the Triage Bucket / drag-drop zone, Forwarded-email arrival notification, Exception queue UI, and Auto-post chat notification surfaces moved to `docs/09_briefs/phase-2/document_platform_initiative.md` §11. The remaining surfaces in this brief are AP/Spend-domain only.
 
 ### 11.6 Closeout discipline per CLAUDE.md
 
@@ -968,91 +857,49 @@ principle on 2026-04-19.
 
 ## 13. ADRs this initiative produces
 
-Four ADRs land before any AP code commits. The brief names them;
-ADR drafting is a separate prompt cycle and is **not** in scope of
-this brief. ADR numbers are commit-order, so only ADR-0007 (the
-existing reservation in `docs/07_governance/adr/README.md`) is
-pre-assigned. The other three pick up sequential numbers when they
-ship.
+Per `docs/09_briefs/phase-2/document_platform_reframe_design.md` §7,
+two ADRs land in the Spend Initiative scope:
 
-1. **ADR-0007 — three-tier agent architecture.** Existing
-   reservation. Closes Q27–Q31. Sketched in
-   `agent_architecture_proposal.md`. **Blocks all AP code.**
-2. **ADR — AP subdomain.** New. Covers the bill lifecycle, the
-   payment lifecycle, the relationship to the existing reserved
-   `bills` / `payments` tables (per §5.1), the three v1 AP-bill
-   intent_type variants from §3, the two reserved INV-AP-NNN
-   candidates from §11.3 (and a cross-reference to the
-   reclassified INV-AGENT-NNN bank-detail-confirmation candidate),
-   and the v1-vs-deferred boundary from §8. Also formally
-   registers `AP` as a recognized invariant-domain prefix per
-   §11.3. The vendor-onboarding intent_type variants are
-   mentioned but their final shape lives in the autonomy-rule
-   ADR.
-3. **ADR — `storage_provider` abstraction.** New. The first major
-   external-system dependency in chounting. Covers the discriminator
-   from §6.1, the `Sites.Selected` vs. `Files.ReadWrite.All`
-   preference and the rationale, the per-vendor folder structure,
-   the drift-detection mechanism, the queue-and-retry policy and
-   its parameters, and the controller-override path. Also covers
-   the security posture: the SharePoint app's permissions, the
-   secret-handling for the Azure AD client credentials.
-4. **ADR — vendor template = autonomy rule with clean-approval
-   semantics.** New. Resolves Q43. Covers whether the AP-bill
-   autonomy ladder needs calibration that diverges from the
-   journal-entry-style ladder, what "clean approval" means
-   precisely (no edit? no rejection? both?), and the exact
-   relationship between `vendor_rules` and the Agent Ladder
-   promotion path.
+1. **ADR-0015 — AP/Spend Subdomain.** Bill / payment / prepayment / credit lifecycles. Closes Q59 (vendor prepayment shape), Q60 (born-paid bundle approval), Q61 (vendor prepayment approval), Q62 (deposit tax timing), Q63 (vendor balance composition), Q64 (final invoice + prior credit), Q74 (receipt v1 path), Q78 (payment failure lifecycle).
+2. **ADR-0017 — Vendor Template substrate reservation.** Reserves `clean_approval_count` column on `vendor_rules` and the table shape under ADR-0010 reserved-enum-states discipline. Full enforcement / promotion / auto-post calibration ADR is drafted and ratified post-v1 when auto-post lands. Closes Q43 substrate portion.
 
-## 14. Open questions to file (Q35–Q52)
+The seven Document-Platform-owned ADRs (ADR-0011 Document Platform, ADR-0012 ProposedMutationBundle, ADR-0013 Storage Provider, ADR-0014 Tier 2 Document Pipeline, ADR-0016 Document Relationship Graph, ADR-0018 Relationship Router, ADR-0019 Confidence Calibration Policy) live in `docs/09_briefs/phase-2/document_platform_initiative.md` and gate this brief.
 
-Eighteen questions surface from this brief. They file in a
-**separate prompt cycle**; this brief does not edit
-`docs/02_specs/open_questions.md`. The next available Q-number is
-Q35 (verified against the file at brief-creation; current leading
-entry is Q34).
+ADR-0007 (three-tier agent architecture, amended for the reframe) is a carried prerequisite that gates all Phase 0 work.
 
-| Q | Topic | Blocks |
+## 14. Open questions
+
+Q35–Q52 from the original AP brief are **retired** per the 2026-05-02 reframe (see `docs/02_specs/open_questions.md` Section 3 Q35–Q52 supersession note). Q53–Q78 file against the reframe scope; the Spend-domain subset is:
+
+| Q | Topic | Disposition (this Phase 0 cycle) |
 |---|---|---|
-| **Q35** | AP-bill autonomy rung calibration: does the AP ladder need different thresholds than the journal-entry ladder? Decomposes per §9.1.                              | ADR — vendor-template-as-autonomy-rule; Phase E |
-| **Q36** | bill-lifecycle ↔ mutation-lifecycle mapping confirmation: does the §3.1 mapping table cover every transition correctly? Edge cases (`scheduled`, `disputed`).        | ADR — AP subdomain                              |
-| **Q37** | AP control-account convention: which account_id receives the credit on `post_bill` Dr Expense / Cr AP? Default seeded; configurable per org?                          | Phase A schema work                             |
-| **Q38** | intent_model variants for `post_bill` / `approve_bill_for_payment` / `record_bill_payment`: final Zod schemas, payload shapes.                                        | Phase A code; ADR — AP subdomain                |
-| **Q39** | ExtractedBill Zod schema: the typed output of the Tier 2 extraction pipeline before it becomes a `ProposedMutation`.                                                  | Phase B code                                    |
-| **Q40** | Idempotency-key template_set_version bump rules: when the prompt-template set changes, does the existing `ai_actions` slot machinery still de-dupe correctly?         | Phase B code                                    |
-| **Q41** | Forwarded-mailbox provisioning + SPF/DKIM + retention policy. Full sender-policy design (deferred per §8.6 v1 narrowing).                                              | Phase D code                                    |
-| **Q42** | Multi-currency on bills: does v1 ship with bills denominated in something other than CAD? If yes, how does FX rate get attached?                                       | Phase A schema work                             |
-| **Q43** | Vendor template = autonomy rule with clean-approval semantics. The full mechanism, calibration, threshold definitions per §7.                                          | ADR — vendor-template-as-autonomy-rule          |
-| **Q44** | First-time vendor floor amount: per `agent_autonomy_model.md` §6 Item 6, first-time vendors above a floor cannot auto-post. What is the floor for AP bills?           | Phase E code; possibly Phase B                  |
-| **Q45** | Reversal-of-auto-posted-bill routing: confirms the System ceiling per §9.2. Either "yes, exactly the existing reversal path" or "AP-specific override needed."          | Phase A code                                    |
-| **Q46** | Screenshot-gate surface enumeration: confirms the eleven surfaces in §11.5 are complete and correctly named. Orchestrator scope discipline.                              | Every UI-shipping AP session                    |
-| **Q47** | SharePoint storage_provider abstraction: `Sites.Selected` setup flow, drift detection cadence, secret handling. Full ADR scope.                                         | ADR — `storage_provider` abstraction; Phase A   |
-| **Q48** | Receipt-bill match tolerance bands. **Blocks Phase F only.** Listed for completeness; not v1.                                                                            | Phase F                                         |
-| **Q49** | Forwarded-email body content policy v2: when does email body text become evidence vs. transient routing metadata?                                                       | Phase D code; possibly v2                       |
-| **Q50** | Vendor-onboarding mutation shape: the `create_vendor` and `update_vendor` `ProposedMutation` variants from §7. Bank-detail-change System ceiling confirmation.          | Phase A code; ADR — AP subdomain                |
-| **Q51** | Document-version / corrected-invoice handling matrix per §8.4. Edge cases (mid-batch revision, revision-of-revision).                                                    | Phase A schema work                             |
-| **Q52** | SharePoint outage degradation policy + controller-override path per §6.2. The full retry/backoff parameters.                                                              | ADR — `storage_provider` abstraction            |
+| **Q59** | Vendor prepayment object shape | Open — closes on AP/Spend Subdomain ADR ratification |
+| **Q60** | Born-paid bundle approval gate | Open — Always Confirm in v1 per spec §11; full auto-post calibration deferred post-v1 |
+| **Q61** | Vendor prepayment approval gate | Open — closes on AP/Spend Subdomain ADR ratification |
+| **Q62** | Deposit / retainer tax timing | Open — default `review_required` per spec §13 |
+| **Q63** | Vendor balance view composition | Open — closes on AP/Spend Subdomain ADR ratification |
+| **Q64** | Final invoice + prior deposit credit unrecorded | Open — default route to exception with backfill suggestion |
+| **Q74** | Receipt v1 path (decision matrix confirm) | Open — confirm spec §15 matrix or amend |
+| **Q78** | Payment failure / reversal lifecycle | Open — v1-relevance signal flagged; resolution gates Phase 5 code |
+
+Document-Platform-scope questions (Q53, Q54, Q55, Q56, Q57, Q58, Q65, Q66, Q67, Q68, Q69, Q70, Q71, Q72, Q73, Q75, Q76, Q77) live in `docs/09_briefs/phase-2/document_platform_initiative.md` §17.
 
 ## 15. Deferred to post-v1
 
-A consolidated list of items deferred from v1, with their
-intended phase. Phase 2 brief authors who scan this section get
-the full out-of-scope picture without re-reading every preceding
-section.
+A consolidated list of Spend-domain items deferred from v1, with
+their intended phase. Phase 2 brief authors who scan this section
+get the full Spend-domain out-of-scope picture without re-reading
+every preceding section.
 
-- **Auto-pay** (auto-`record_bill_payment`) — Phase E. Decoupled
+- **Auto-pay** (auto-`record_bill_payment`) — post-v1. Decoupled
   from auto-post per §9.1.
-- **Receipt matching / receipt capture** — Phase F (matching),
-  Phase I (capture).
-- **First-class batch ingestion** — Phase G.
-- **Linked OAuth ingestion (Outlook/Gmail)** — Phase H.
-- **Photo / mobile receipt capture** — Phase I.
-- **Three-way matching (PO-receipt-bill)** — Phase F. Schema seat
+- **Auto-post calibration** for AP bills, vendor prepayments,
+  vendor credits, and born-paid bundles — post-v1 per the reframe
+  spec §11. v1 ships all proposals as Always Confirm.
+- **Three-way matching (PO-receipt-bill)** — post-v1. Schema seat
   reserved (`bills.purchase_order_id`).
-- **Vendor credits** (allocation-against-open-bills) — v1 fast-
-  follow if scope permits; otherwise deferred to a post-v1
-  phase.
+- **Vendor credits automation** (auto-application against open
+  bills) — post-v1. v1 ships the manual workflow per §5.2.
 - **Multi-rate tax per line, withholding tax, reverse-charge VAT,
   tax-point/accounting-date split** — per §8.1, all post-v1.
 - **Approval delegation / out-of-office for the controller** —
@@ -1063,23 +910,12 @@ section.
   pipeline — v1 fast-follow if scope permits; otherwise deferred
   to a post-v1 phase (per §8.5).
 - **AR invoices** — Phase 3+. Reserved tables `invoices`,
-  `invoice_lines`, `customers` already in
-  `data_model.md`.
-- **Python OCR sidecar** — explicitly excluded from v1.
-- **EDI / Peppol electronic-invoice exchange** — out of scope for
-  this initiative. Reconsider when international or B2B
-  electronic-invoicing customers cross the threshold.
-- **Vendor portal scraping** (automated login to a vendor's web
-  portal to pull invoices) — out of scope. Security and
-  brittleness concerns; the forwarded-mailbox channel covers the
-  same need with a vendor-side push instead of a chounting-side
-  pull.
-- **LayoutLM and other ML-based OCR/extraction** — explicitly
-  out of v1. Subsumed under the deterministic-TypeScript-only
-  constraint per §2 and §4 constraint 3, but named here because
-  it is the most likely "but couldn't we just…" suggestion. Any
-  ML approach to extraction is post-v1 and lands behind its own
-  ADR.
+  `invoice_lines`, `customers` already in `data_model.md`.
+- **Multi-currency on bills** — v1 ships CAD only.
+- **Full multi-entity intercompany due-to / due-from postings** —
+  post-v1. v1 reserves the four entity columns per §5.4.
+
+**Substrate deferrals moved.** Python OCR sidecar, EDI / Peppol, vendor portal scraping, LayoutLM / ML-based OCR, linked Outlook / Gmail OAuth ingestion, and photo / mobile receipt capture deferrals moved to `docs/09_briefs/phase-2/document_platform_initiative.md` §15 per the reframe.
 
 ## 16. Friction-journal scope
 
