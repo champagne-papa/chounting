@@ -539,8 +539,10 @@ Rules vs templates vs small-model classifier vs LLM fallback vs
 fine-tuned classifier.
 
 **Decision space:** which strategies ship in v1's classifier and the
-fallback ordering. The OCR engine choice (per Q65 / Tier 2 Document
+fallback ordering. The OCR engine choice (per the Tier 2 Document
 Pipeline ADR) is separate from the classification strategy.
+(Q65 covers per-document-type classifier confidence thresholds, not
+OCR engine selection.)
 
 **Blocks:** Tier 2 Document Pipeline ADR.
 
@@ -673,7 +675,11 @@ transition rules (`paid → failed → bill returns to
 approved_for_payment via reversal entry`); the ledger semantics of
 failure (auto-reverse vs proposal-and-confirm); which v1 phase ships
 failure handling (Phase 5 AP foundation has it as an exit-criterion
-vs Phase 5 ships paid-only and failure handling lands post-v1).
+vs Phase 5 ships paid-only and failure handling lands post-v1). The
+v1-relevance signal: the founder + 2 real users will hit payment
+failures within months of going live, so the absence of an explicit
+path means manual reversal entries that violate Reading B (the
+ledger service is the only writer of journal entries).
 
 **Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) code.
 
@@ -1593,6 +1599,32 @@ git rm -r .claude/phase-0-tracking
 git commit -m "phase-0: remove tracking scaffolding"
 ```
 
+### Task Z1.5: Create Q28 Ratification Tracker (post-Phase-0 visibility)
+
+Per round-5 review additional feedback item 2 (Q28 visibility risk). Q28 ratification gates v1 ship, not Phase 1 start. Between Phase 0 close and v1 ship, Q28 ratification could become "drafted and forgotten" — Phase 1+ code work proceeds on substrate that does not depend on the matrix; nobody actively pushes Q28 ratification. This task creates a visible tracker to prevent that drift.
+
+**Files:**
+- Create: `docs/02_specs/q28_ratification_tracker.md`
+
+- [ ] **Step 1: Draft the tracker per the round-5 review template.**
+
+Content structure: status (active tracker; created at Phase 0 close); why-this-tracker-exists prose; coverage requirement (the four re-verification surfaces from ADR-0007 amendment §"Q28 expansion to four re-verification surfaces"); eight commit paths covered initially (`post_bill`, `record_bill_payment`, `post_bill_with_immediate_payment` bundle, `record_vendor_prepayment`, `apply_vendor_prepayment_to_bill`, `post_vendor_credit`, `apply_vendor_credit_to_bill`, `attach_payment_evidence`); per-path drafted/ratified state with date columns; drafting and ratification rules (per-path independent ratification; tracker overall ratifies when all eight paths individually ratify); visibility and review cadence (monthly during Phases 1–4 substrate work; per-ADR-ratification during Phase 5; v1-ship gate confirms all paths ratified and closes Q77); maintenance after v1 ship (new commit paths added post-v1 extend the tracker).
+
+- [ ] **Step 2: Commit the tracker.**
+
+```bash
+git add docs/02_specs/q28_ratification_tracker.md
+git commit -m "specs: create Q28 Ratification Tracker (Phase 0 Task Z1.5)
+
+Per round-5 review additional feedback. ADR-0007 closes Q28 with
+a framework matrix and defers the expanded matrix to
+agent_architecture_policy.md per Q77 (gates v1 ship, not Phase 1
+start). Without a visible tracker, Q28 ratification risks
+drafted-and-forgotten between Phase 0 close and v1 ship. This
+tracker makes ratification dated and accountable across the
+eight initial commit paths."
+```
+
 ---
 
 ## Plan summary
@@ -1606,7 +1638,7 @@ git commit -m "phase-0: remove tracking scaffolding"
 
 **Critical path:** C1 → D1 → C2 → D2 → C3/C4/C5 → D3 → C6/C7/C8 → D4 → C9 → D5 → C10 → D6 → B3/B4 → Z1.
 
-**Total tasks:** 31 (5 A + 4 B + 10 C + 6 D + 5 E + 1 Z).
+**Total tasks:** 32 (5 A + 4 B + 10 C + 6 D + 5 E + 2 Z — Z1 closeout verification + Z1.5 Q28 Ratification Tracker creation).
 
 **Subsequent plans needed (post-Phase-0, separate writing-plans cycles):**
 
