@@ -1031,8 +1031,10 @@ Rules vs templates vs small-model classifier vs LLM fallback vs
 fine-tuned classifier.
 
 **Decision space:** which strategies ship in v1's classifier and the
-fallback ordering. The OCR engine choice (per Q65 / Tier 2 Document
-Pipeline ADR) is separate from the classification strategy.
+fallback ordering. The OCR engine choice (per the Tier 2 Document
+Pipeline ADR) is separate from the classification strategy. (Q65
+covers per-document-type classifier confidence thresholds, not OCR
+engine selection.)
 
 **Blocks:** Tier 2 Document Pipeline ADR.
 
@@ -1137,7 +1139,11 @@ transition rules (`paid → failed → bill returns to
 approved_for_payment via reversal entry`); the ledger semantics of
 failure (auto-reverse vs proposal-and-confirm); which v1 phase ships
 failure handling (Phase 5 AP foundation has it as an exit-criterion
-vs Phase 5 ships paid-only and failure handling lands post-v1).
+vs Phase 5 ships paid-only and failure handling lands post-v1). The
+v1-relevance signal: the founder + 2 real users will hit payment
+failures within months of going live, so the absence of an explicit
+path means manual reversal entries that violate Reading B (the
+ledger service is the only writer of journal entries).
 
 **Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) code.
 
