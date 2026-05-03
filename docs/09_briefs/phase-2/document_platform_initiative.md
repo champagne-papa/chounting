@@ -88,7 +88,7 @@ document is never itself an accounting transaction.
 [Stub — eight ADRs from reframe spec §7; 26 open questions Q53–Q78; four dependent-artifact updates]
 
 ## 16. ADRs this initiative produces
-[Stub — Document Platform ADR (ADR-0011), Storage Provider ADR (ADR-0013), Tier 2 Document Pipeline ADR (ADR-0014), ProposedMutationBundle ADR (ADR-0012), Document Relationship Graph ADR (ADR-0016), Relationship Router ADR (ADR-0018), Confidence Calibration Policy ADR (ADR-0019) — seven Document-Platform-owned ADRs per Decision 7 of the Phase 0 plan]
+[Stub — Document Platform ADR (ADR-0011), ProposedMutationBundle ADR (ADR-0012), Storage Provider ADR (ADR-0013), Tier 2 Document Pipeline ADR (ADR-0014), Document Relationship Graph ADR (ADR-0016), Relationship Router ADR (ADR-0018), Confidence Calibration Policy ADR (ADR-0019) — seven Document-Platform-owned ADRs per Decision 7 of the Phase 0 plan]
 
 ## 17. Open questions (Q53–Q78 filed in open_questions.md)
 [Stub — list per reframe spec §13. Document-Platform-scope subset: Q53, Q54, Q55, Q56, Q57, Q58, Q65, Q66, Q67, Q68, Q69, Q70, Q71, Q72, Q73, Q75, Q76, Q77 (Spend-domain questions Q59, Q60, Q61, Q62, Q63, Q64, Q74, Q78 belong to the Spend brief)]
