@@ -874,6 +874,157 @@ ADR (post-v1 portion).
 
 **Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
 
+### Q61 — Vendor prepayment approval gate
+
+Can AP specialist record a vendor prepayment without controller
+approval if the cash already left the bank (after-the-fact
+classification), vs requiring controller approval for future-cash
+retainer authorization?
+
+**Decision space:** separate approval rule for future-cash retainer
+authorization vs after-the-fact retainer classification. Default lean
+per spec §13: no controller bypass for future cash; bypass allowed for
+after-the-fact reconciliation classification.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q62 — Deposit / retainer tax timing
+
+When a deposit / retainer request includes GST / HST / PST, does
+CHOUnting recognize recoverable tax at deposit payment date, final
+invoice date, or controller-selected date?
+
+**Decision space:** jurisdiction default + per-org override + per-
+document override; default to `review_required` until explicit choice
+is captured.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q63 — Vendor balance view composition
+
+Which components combine into "vendor balance"? Open AP, unapplied
+vendor credits, open vendor deposits / retainers, accrued unbilled.
+
+**Decision space:** which composition the Spend brief specifies for
+v1 reporting and which views surface partial vs net balance.
+
+**Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) reporting.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q64 — Final invoice references prior deposit not in CHOUnting
+
+A final invoice arrives showing "$X paid as deposit, balance owing
+$Y" but no `vendor_prepayment` row exists in CHOUnting (the deposit
+was paid before the org adopted CHOUnting, or via a channel that
+didn't ingest).
+
+**Decision space:** backfill (create back-dated `vendor_prepayment`
+from bank/card transaction), treat as discount, treat as vendor
+credit, or send to review. Default per spec §13: route to exception
+queue with backfill suggestion; do not silently treat as discount.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q65 — Per-document-type classifier confidence thresholds
+
+Per-type calibration, exception-queue routing rules. Subordinate to
+Q57 (confidence calibration governance).
+
+**Decision space:** per-type threshold values for v1 (`vendor_invoice`,
+`receipt`, `payment_confirmation`, `unknown`).
+
+**Blocks:** Tier 2 Document Pipeline ADR; Confidence Calibration
+Policy ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q66 — Relationship Router tier placement (pending ADR-0007 amendment)
+
+Where does the Relationship Router live — amended Tier 2, new
+Tier 2.5, or Tier 1 read-only pre-commit stage?
+
+**Decision space:** (a) amend ADR-0007 to authorize Tier 2 reads
+against committed ledger state with Q28 expansion covering
+relationship-match outcomes; (b) introduce Tier 2.5 with read-only
+ledger access, idempotent, no LLM-planned matching; (c) place in
+Tier 1 as read-only pre-commit shaping. Recommended preference per
+spec §9: (b). Resolved only by ADR-0007 amendment + Relationship
+Router ADR ratification.
+
+**Blocks:** Relationship Router ADR; Q27 wording.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §9, §13.
+
+### Q67 — Domain ownership: `bank_transactions` and `card_transactions`
+
+Which domain owns these entity types? Banking (reconciliation), Spend
+(payments outgoing), or shared?
+
+**Decision space:** ownership, cross-domain protocols, and which ADR
+(Document Platform vs a future Banking Subdomain ADR) decides the
+cut.
+
+**Blocks:** Document Platform ADR (Domain Boundary Map subsection);
+Phase 5 (Spend foundation) and any future Banking domain.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q68 — Exception queue UX
+
+Bulk operations, reclassification flow, document-type-aware
+resolution actions, first-class screenshot gate, SLA / status fields.
+
+**Decision space:** which actions ship as active in v1 vs reserved.
+The full resolution-action enum is (per converged review): `create_bill`,
+`attach_to_existing_bill`, `attach_to_existing_payment`,
+`record_bill_payment`, `create_vendor_prepayment`,
+`apply_vendor_prepayment`, `create_vendor_credit`,
+`apply_vendor_credit`, `mark_duplicate`, `mark_non_accounting`,
+`request_missing_document`, `route_to_manual_entry`,
+`route_to_bank_reconciliation`, `route_to_AR_future`, `reprocess`,
+`archive`. v1 active set is narrow.
+
+**Blocks:** Document Platform ADR; Phase 4 (Router) and Phase 5
+(Spend foundation) UX.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q69 — Replayability: re-running extraction when OCR engine improves
+
+When the OCR engine version changes or a new model version ships,
+existing `source_documents` may benefit from re-extraction.
+
+**Decision space:** `ocr_runs` / `extraction_runs` table separation,
+supersession semantics (auto-supersede vs explicit promotion), and
+whether replays affect already-committed `source_document_links`.
+Per spec §16 immutability rules, replays produce new rows but do not
+mutate prior rows.
+
+**Blocks:** Tier 2 Document Pipeline ADR; Document Platform ADR
+(Replayability subsection).
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13, §16.
+
+### Q70 — Idempotency at the OCR layer
+
+Hash bytes on ingestion, short-circuit duplicate processing.
+
+**Decision space:** short-circuit policy (skip the OCR sidecar
+entirely vs re-run with cached artifact); whether the same hash from
+a different ingestion channel still short-circuits; how the
+short-circuit decision is audited.
+
+**Blocks:** Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
 ---
 
 ## Section 4 — Formalization candidates
