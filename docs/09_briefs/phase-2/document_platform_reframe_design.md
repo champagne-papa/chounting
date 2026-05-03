@@ -101,13 +101,29 @@ when timeline is not a constraint and produces an AP-shaped legacy
 that future domains have to retrofit.
 
 **Important nuance.** Option A does not mean "wait for everything
-before shipping anything." Phases 1–4 (Storage/Evidence Core →
-Document Core skeleton → Document Relationship Graph → Spend/AP
-foundation) ship sequentially with real exit tests. The founder +
-2 real users start using the system at end of Phase 4 (manual AP
-workflow on top of the substrate); receipts, retainers,
-statements, credits arrive in Phases 5–8 as additive capabilities
-on substrate that is already designed to absorb them.
+before shipping anything." Phases 1–5 (Storage/Evidence Core →
+Document Core skeleton → Document Relationship Graph →
+Relationship Router → Spend/AP foundation) ship sequentially with
+real exit tests. The founder + 2 real users start using the
+system at end of Phase 5 (manual AP workflow on top of the
+substrate); receipts, retainers, statements, credits arrive in
+Phases 6–8 as additive capabilities on substrate that is already
+designed to absorb them.
+
+**Phase scheme reconciliation note (2026-05-03 amendment).** This
+spec is the canonical source for the 8-phase scheme used
+throughout: Phase 0 governance (ADRs and briefs); Phase 1 Storage
+/ Evidence Core; Phase 2 Document Core skeleton; Phase 3 Document
+Relationship Graph; Phase 4 Relationship Router; Phase 5
+Spend / AP foundation; Phase 6 Ingestion channels; Phase 7
+Extraction pipeline; Phase 8 Proposal handoff and Tier 1 commit.
+Earlier drafts of this spec used "Phase 4 = Spend/AP foundation"
+(implicitly collapsing Relationship Router into Phase 3); the
+canonical scheme separates Relationship Router as Phase 4 to
+match the Phase 0 governance plan's "Subsequent plans needed"
+list and §7's ADR-table phase-gating column. All §2 / §3.2
+references now use the 8-phase scheme; downstream artifacts
+(briefs, ADRs, plan) cite this scheme.
 
 ## 3. The two-brief split
 
@@ -281,7 +297,7 @@ disposition):
 | §7 Vendor onboarding workflow | **Stay** in Spend brief | Vendor-master mutations are Spend-domain |
 | §8 Subdomain scoping decisions | **Stay** in Spend brief | All eight scoping choices (tax scope, three-way matching, vendor credits, document version handling, i18n, forwarded-mailbox security) are AP/Spend-shaped |
 | §9 Trust thresholds + reversal-of-auto-post | **Stay** in Spend brief | §9.1 (trust thresholds) marked post-v1 per §11 of this spec; §9.2 (reversal visibility) unchanged |
-| §10 Phase sequencing | **Rewrite** in both briefs | Original brief's phase table is replaced by the Phases 1–8 plan in §3 of this spec; Document Platform brief covers Phases 0/1/2/3, Spend brief covers Phases 4/5/6/7/8 |
+| §10 Phase sequencing | **Rewrite** in both briefs | Original brief's phase table is replaced by the Phases 1–8 plan in §3 of this spec (8-phase scheme: Phase 0 governance + Phase 1 Storage + Phase 2 Document Core + Phase 3 Document Relationship Graph + Phase 4 Relationship Router + Phase 5 Spend/AP foundation + Phase 6 Ingestion channels + Phase 7 Extraction + Phase 8 Proposal handoff and Tier 1 commit); Document Platform brief covers Phases 0/1/2/3/4 (substrate including Relationship Router), Spend brief covers Phases 5/6/7/8 (domain) |
 | §11.1–§11.4 Phase A acceptance criteria | **Stay** in Spend brief | INV-ID-mapped acceptance criteria for AP bills, reversal, state transitions, read-side reporting |
 | §11.3 Reserved invariant candidates | **Stay + extend** in Spend brief | INV-AP-001/002 (allocation sums, state transitions) stay; INV-AGENT-NNN (bank-detail-confirmation) stays under AGENT prefix; new INV-DOC-NNN candidate (one-primary-attachment-per-bill / per-case) added per external review's A3 — see invariant-disposition note below |
 | §11.4 AP read-side reporting | **Stay** in Spend brief | Six surfaces unchanged |
