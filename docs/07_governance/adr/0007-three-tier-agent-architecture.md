@@ -2,8 +2,13 @@
 
 ## Status
 
-Drafted 2026-05-03. Not yet ratified. CTO ratifies per Phase 0
-governance plan Decision 3.
+Ratified 2026-05-03 by CTO with named follow-ups applied in this
+commit (Decision-section forward-pointer to Amendment; Tier 2 vs
+Tier 2.5 read-boundary clarification covering reference data,
+transactional state, and vendor control / payment-risk fields).
+Items 3 (prohibition-list duplication) and 5 (Status convention)
+accepted as-is per the D1 ratification package's recommended
+path.
 
 ## Date
 
@@ -154,10 +159,29 @@ change (audit-scan output, report commentary, tax research memos).
 The first Tier 2 system is the AP Agent's ingestion pipeline (per
 the Spend Initiative brief).
 
+**Read boundary — reference data vs transactional state.** Tier 2
+MAY read **reference / master data**: vendor identity-and-matching
+fields (name, aliases, tax ID, email/domain, address, default
+account mapping, historical template association), chart of
+accounts, tax codes, classes / projects / departments. These are
+the lookups vendor matching and account suggestion need; they are
+reference, not state. Tier 2 MUST NOT read **transactional
+committed state**: bills, payments, prepayments, credits, open
+balances, period status, reconciliation candidates — those reads
+require Tier 2.5. Tier 2 also MUST NOT read **vendor
+control / payment-risk fields** (bank account, payment
+instructions, bank-detail-confirmed flag, payment hold status,
+blocked-vendor status) — those are Tier 2.5 territory because they
+are payment-readiness state, and any extractor that reads them
+risks overstepping into payment-risk logic. Tier 1 re-verifies all
+vendor-control fields at commit.
+
 **What it MUST NOT do.** Tier 2 stages MUST NOT call mutating
 service entry points. MUST NOT INSERT / UPDATE / DELETE in any
-table directly. MUST NOT participate in shared sessions. MUST NOT
-plan their own orchestration via LLM coordination.
+table directly. MUST NOT read transactional committed state or
+vendor control / payment-risk fields (per the Read boundary
+above). MUST NOT participate in shared sessions. MUST NOT plan
+their own orchestration via LLM coordination.
 
 **Safety contract (inviolable).** Preserved verbatim from the
 2026-04-19 architecture proposal:
@@ -218,6 +242,11 @@ policy is designed to prevent.
 
 ### Tier 2.5 — Read-Only Ledger-Aware Path (introduced by Document Platform reframe amendment)
 
+The Tier 2.5 addition is introduced here as part of the Decision;
+see the Amendment section below for the three-option deliberation
+(Tier 2 amendment / Tier 2.5 / Tier 1 read-only pre-commit) that
+led to this placement.
+
 **What runs here.** Stateless typed pipeline stages that read
 against committed ledger state to produce relationship-match
 candidates and other ledger-state-aware proposals. The
@@ -233,6 +262,20 @@ applications).
 classification (`DomainIntentCandidate`), and any future workflow
 whose output depends on reading committed ledger state but whose
 output is never a write.
+
+**Read boundary — transactional state and vendor control fields.**
+Tier 2.5 is the only tier authorized to read **transactional
+committed state**: bills, payments, prepayments, credits, open
+balances, period status, reconciliation candidates. Tier 2.5 also
+reads **vendor control / payment-risk fields** (bank account,
+payment instructions, bank-detail-confirmed flag, payment hold
+status, blocked-vendor status) when producing relationship or
+payment-readiness candidates — those fields are payment-state, not
+matching reference data, and Tier 2 is prohibited from touching
+them (see Tier 2's Read boundary above). Tier 2.5 may also read
+the same reference data that Tier 2 reads (vendor matching fields,
+chart of accounts, tax codes, classes / projects / departments) —
+the reference data is not exclusive to Tier 2.
 
 **What it MUST NOT do.** Tier 2.5 stages MUST NOT write. MUST NOT
 INSERT / UPDATE / DELETE. MUST NOT call any mutating service. MUST

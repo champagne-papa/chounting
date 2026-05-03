@@ -100,7 +100,7 @@ not delete it.
 | [ADR-0004](./0004-ghost-rows-visual-contract.md) | Ghost Rows Visual Contract (Four-Signal Defense in Depth) | Accepted | 2026-04-16 |
 | [ADR-0005](./0005-three-path-intent-schema.md) | Three-Path Entry Model with Canonical Intent Schema | Accepted | 2026-04-16 |
 | [ADR-0006](./0006-agent-persona-unnamed.md) | Agent Persona: Senior Bookkeeper, Unnamed | Accepted | 2026-04-16 |
-| [ADR-0007](./0007-three-tier-agent-architecture.md) | Three-Tier Agent Architecture (with Document Platform Reframe Amendment) | **Drafted (pending CTO ratification per Phase 0 governance plan Decision 3)** | 2026-05-03 |
+| [ADR-0007](./0007-three-tier-agent-architecture.md) | Three-Tier Agent Architecture (with Document Platform Reframe Amendment) | Ratified | 2026-05-03 |
 | [ADR-0008](./0008-layer-1-enforcement-modes.md) | Layer 1 Enforcement Modes — Commit-Time (1a) vs. Scheduled Audit (1b) | Accepted | 2026-04-21 |
 | [ADR-0009](./0009-before-state-capture-convention.md) | Audit `before_state` Capture Convention | Accepted | 2026-04-23 |
 | [ADR-0010](./0010-reserved-enum-states.md) | Reserved Enum States for Phase 2 Workflow Affordances | Accepted | 2026-04-29 |
