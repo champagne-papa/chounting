@@ -222,6 +222,25 @@ Agent in Phase 3) can be added by writing only its system prompt, its
 tool definitions, and any new service functions it needs. No edits
 required to existing agents or to the agent infrastructure.
 
+> **Footnote (2026-05-03 — Document Platform reframe).** The
+> 2026-05-02 reframe (per
+> `docs/09_briefs/phase-2/document_platform_reframe_design.md`)
+> operationalizes Simplification 3 rather than amending it. The
+> AP Agent remains the second real agent (after the Phase 1
+> Double Entry Agent); the Document Platform is what the AP
+> Agent's exercise reveals as the right substrate shape once
+> receipts, retainers, statements, credits, and other
+> non-AP-bill document types are in scope. The discipline "no
+> platform abstraction until two systems prove the need" is
+> preserved by treating the receipts / retainers / statements
+> class as the second consumer that the platform must
+> accommodate alongside AP bills. The Phase 2 acceptance
+> criterion above (a new workflow agent adds only its system
+> prompt + tool definitions + new service functions) still
+> applies to the Spend Initiative as the first domain consumer
+> of the Document Platform; future domains (Banking, AR, Tax)
+> consume the same substrate without retrofit.
+
 ### What is NOT simplified
 
 For the avoidance of doubt, these v0.4.0 commitments are unchanged
