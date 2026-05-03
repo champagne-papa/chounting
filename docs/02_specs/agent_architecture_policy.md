@@ -120,16 +120,11 @@ by ADR-0007's framework matrix (§ Closes Q28).
 
 **Section preamble.** Different fields matter for invoices vs
 receipts vs credit memos vs vendor statements; the matrix is
-per-document-type, not generic. The v1 active document-type set
-per ADR-0011 §6 is `vendor_invoice`, `receipt`,
-`payment_confirmation`, `unknown`. Each active type ships a full
-row in this section. Reserved document types (the remaining 14
-values from the ADR-0011 §6 enum) ship lightweight placeholders
-with explicit extension obligation; promoting any reserved type
-to active requires extending this matrix (per §5 below). The row
-shape is the framework-matrix row shape from ADR-0007 § Closes
-Q28: `Field / Source / Re-verification at Tier 1 / Failure mode /
-Layer`.
+per-document-type, not generic. The row shape is the
+framework-matrix row shape from ADR-0007 § Closes Q28: `Field /
+Source / Re-verification at Tier 1 / Failure mode / Layer`.
+
+**Scope note.** v1 active types only — no rows for reserved types. The matrix populates four rows for the v1 active document types (`vendor_invoice`, `receipt`, `payment_confirmation`, `unknown`). The obligation to extend at promotion-time (when a reserved type is promoted from reserved to active in its respective downstream phase) is captured in §5 maintenance discipline, not in the matrix as placeholder rows. This keeps the ratification surface narrow — CTO ratifying the matrix at v1 ship does not accidentally ratify what reserved-type rows should look like.
 
 **Receipt nuance.** Receipt field re-verification is
 document-type-level (merchant / vendor, date, amount, currency,
@@ -223,35 +218,6 @@ ProposedAttachment + ProposedMutation routing; ADR-0015
 
 **Sources.** ADR-0011 §6 v1 active set; ADR-0011 §13 exception
 queue first-class deliverable.
-
-#### 2.1.2 Reserved document types — placeholder rows
-
-Each reserved document type ships a lightweight row with status,
-matrix obligation, owning future ADR/brief, and default v1
-behavior. No field-level checks are defined here; defining them is
-the obligation of the brief that promotes the type from reserved
-to active (per §5 below).
-
-| Document type | Status | Matrix obligation | Owning future ADR / brief | Default v1 behavior |
-|---|---|---|---|---|
-| `credit_memo` | Reserved | Must be expanded before promotion to active | ADR-0015 (AP/Spend Subdomain) when vendor-credit automation lands; classification + manual workflow only in v1 | Exception queue / manual handling (`post_vendor_credit` via AP/Spend domain service form; resolution row not closed via reserved enum) |
-| `vendor_statement` | Reserved | Must be expanded before promotion to active | AP/Spend reconciliation brief (post-v1) | Exception queue / manual reconciliation flow |
-| `purchase_order` | Reserved | Must be expanded before promotion to active | AP/Spend three-way-matching brief (post-v1) | Exception queue / manual handling |
-| `receiving_document` | Reserved | Must be expanded before promotion to active | AP/Spend three-way-matching brief (post-v1) | Exception queue / manual handling |
-| `retainer_request` | Reserved | Must be expanded before promotion to active | ADR-0015 (AP/Spend Subdomain) when vendor-prepayment automation lands; classification + manual workflow only in v1 | Exception queue / manual handling (`record_vendor_prepayment` via AP/Spend domain service form) |
-| `deposit_request` | Reserved | Must be expanded before promotion to active | ADR-0015 (AP/Spend Subdomain) when vendor-prepayment automation lands | Exception queue / manual handling |
-| `bank_statement` | Reserved | Must be expanded before promotion to active | Banking domain ADR (post-v1, not in Phase 0 ADR set per ADR-0011 §14) | Exception queue / manual reconciliation (no Banking domain in v1) |
-| `card_statement` | Reserved | Must be expanded before promotion to active | Banking domain ADR (post-v1) | Exception queue / manual handling |
-| `customer_invoice` | Reserved | Must be expanded before promotion to active | AR domain ADR (post-v1) | Exception queue / manual handling |
-| `customer_remittance` | Reserved | Must be expanded before promotion to active | AR domain ADR (post-v1) | Exception queue / manual handling |
-| `tax_form` | Reserved | Must be expanded before promotion to active | Tax domain ADR (post-v1) | Exception queue / manual handling |
-| `contract` | Reserved | Must be expanded before promotion to active | Contracts brief (post-v1; possibly never if contracts remain attachments only) | Exception queue / attach-only via `ProposedAttachment` |
-| `payroll_document` | Reserved | Must be expanded before promotion to active | Payroll domain ADR (post-v1) | Exception queue / manual handling |
-| `asset_purchase_support` | Reserved | Must be expanded before promotion to active | Fixed-assets domain ADR (post-v1) | Exception queue / manual handling |
-
-**Sources.** ADR-0011 §6 reserved document-type set; ADR-0011 §13
-exception-queue resolution-action enum (v1 active subset);
-ADR-0011 §14 Domain Boundary Map.
 
 ### 2.2 Relationship-claim re-verification matrix
 
@@ -424,13 +390,14 @@ attached to each kind of change in the surrounding system. The
 obligations live with the brief or ADR that introduces the change,
 not with this file alone.
 
-**When new document types ship.** A reserved document type
-promoting to active (per ADR-0011 §6 v1 active set + reserved set
-discipline) extends §2.1 from a placeholder row in §2.1.2 to a
-full field-level row in §2.1.1. The promotion's owning brief or
-ADR (named in the §2.1.2 placeholder row) is responsible for the
-extension. Promotion without matrix extension is a violation of
-the Q77 / Q28 obligation.
+**Reserved document-type promotion rule.** A reserved document type cannot be promoted from reserved to active until this matrix is amended with:
+
+1. Document-type-aware field re-verification rows (§2.1) — what fields matter for this document type, what each field's source is, what Tier 1 re-verifies, what the failure mode is, and which Layer the check fires at.
+2. Relationship-claim rows (§2.2), if the type can match against existing committed state.
+3. Stale-state rows (§2.3), if the type touches committed balances or status.
+4. Bundle rows (§2.4), if the type can produce a `ProposedMutationBundle` (e.g. born-paid variants for new payment-evidence types).
+
+The promoting brief or ADR — typically the one that activates the type for its domain — owns the matrix amendment. Promotion without amendment is a governance violation surfaced by the §4 per-commit-path index review at PR time.
 
 **When new bundle types ship.** A new bundle type beyond born-paid
 (per ADR-0012's bundle-type catalog or the Spend Initiative brief's
