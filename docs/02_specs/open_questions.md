@@ -1025,6 +1025,124 @@ short-circuit decision is audited.
 
 **Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
 
+### Q71 — Document-type classification strategy
+
+Rules vs templates vs small-model classifier vs LLM fallback vs
+fine-tuned classifier.
+
+**Decision space:** which strategies ship in v1's classifier and the
+fallback ordering. The OCR engine choice (per Q65 / Tier 2 Document
+Pipeline ADR) is separate from the classification strategy.
+
+**Blocks:** Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q72 — AI fallback contract
+
+When can AI be called, what artifact + snippets can it see, what JSON
+does it return, how does it feed Q28 re-verification?
+
+**Decision space:** the exact input / output contract, the validation
+gate before AI output enters the proposal pipeline, and the
+re-verification cost budget.
+
+**Blocks:** Tier 2 Document Pipeline ADR; Q28 expansion in
+`agent_architecture_policy.md`.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q73 — Per-org Document Platform configuration
+
+Storage provider, OCR provider, allowed channels, retention policy,
+confidence thresholds, language packs.
+
+**Decision space:** which knobs are per-org vs system-fixed for v1.
+
+**Blocks:** Document Platform ADR; Storage Provider ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q74 — Receipt v1 path
+
+The spec §15 decision matrix splits receipt capabilities. Confirm
+the matrix as the v1 receipt stance: image ingestion ✅, OCR
+extraction ✅ (single engine), receipt-as-payment-evidence
+(Scenario A) ✅ via `ProposedAttachment`, receipt-as-payment-trigger
+(Scenario B) ✅ via `ProposedMutation(record_bill_payment)`, single
+high-confidence one-to-one bill matching ✅, multi-match
+disambiguation conditional on Q56 / Q68, standalone POS receipt
+(Scenario C) → exception with manual born-paid workflow.
+
+**Decision space:** confirm the matrix or amend per-row.
+
+**Blocks:** AP/Spend Subdomain ADR; Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §15.
+
+### Q75 — Document case source cardinality
+
+When is one document case built from multiple source documents? Email
+body + invoice PDF; final invoice + retainer agreement; vendor
+statement + several invoices.
+
+**Decision space:** which patterns ship case-source bundling in v1
+(via the `document_case_sources` table per spec §3.1) vs route to
+manual linking.
+
+**Blocks:** Document Platform ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §3.1, §13.
+
+### Q76 — Re-evaluation policy: immutability vs supersession boundary
+
+When relationships are re-run (per Q56), which decisions are
+immutable, which are superseded with audit, and which require user
+approval to change?
+
+**Decision space:** the immutability boundary per spec §16 and the
+audit-log shape for re-routed decisions. Pre-commit case re-routing
+is allowed; post-commit `source_document_links` require
+reversal/supersession.
+
+**Blocks:** Document Platform ADR; Relationship Router ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13, §16.
+
+### Q77 — Q28 re-verification matrix expansion scope
+
+How does the existing Q28 re-verification matrix expand to cover
+document-type-aware fields, relationship-claim re-verification,
+stale-state TOCTOU checks, and bundle re-verification (per spec §12)?
+
+**Decision space:** matrix shape and which checks are Layer 1 schema
+/ Layer 2 service / Layer 3 review. Matrix lands in
+`agent_architecture_policy.md` before v1 ships (not before v1 codes).
+
+**Blocks:** ADR-0007 amendment ratification; v1 ship gate.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §12, §13.
+
+### Q78 — Payment failure / reversal lifecycle
+
+v1 currently has `paid` as a terminal state and `reversed` for
+corrections, but doesn't address the operational reality that
+payments can fail post-execution: wire bounced (insufficient funds
+at sender, account closed at receiver, KYC hold), ACH returned (NSF,
+account closed), card charge disputed and reversed, cheque bounced,
+bank reversed for compliance.
+
+**Decision space:** whether to add a `failed` payment state with
+transition rules (`paid → failed → bill returns to
+approved_for_payment via reversal entry`); the ledger semantics of
+failure (auto-reverse vs proposal-and-confirm); which v1 phase ships
+failure handling (Phase 5 AP foundation has it as an exit-criterion
+vs Phase 5 ships paid-only and failure handling lands post-v1).
+
+**Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) code.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
 ---
 
 ## Section 4 — Formalization candidates
