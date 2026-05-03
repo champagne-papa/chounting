@@ -734,6 +734,148 @@ shape was being decided.
 
 ---
 
+### Q35–Q52 — Reserved by original AP Ingestion Initiative brief, superseded by reframe (2026-05-02)
+
+The original `ap_ingestion_initiative.md` brief (2026-05-01) reserved Q35–Q52 for filing in a separate prompt cycle that did not run before the brief was superseded by the Document Platform reframe (`docs/09_briefs/phase-2/document_platform_reframe_design.md`, 2026-05-02 / 2026-05-03).
+
+The reframe restructures the architectural scope (Document Platform as foundation, AP/Spend as first domain) and reorganizes the question space accordingly. Questions Q53–Q78 (filed in the section below) supersede the reserved Q35–Q52 numbers. The numbers Q35–Q52 are **retired** — they will not be filed against the original AP brief's scope and will not be reused for new questions, to preserve the integrity of the spec/plan cross-references that already cite Q53 as the next-available number.
+
+Topic-level mapping from reserved-but-never-filed Q35–Q52 to current architecture:
+- Q35 (autonomy rung calibration) → subsumed by Q60 (born-paid bundle approval) + AP/Spend Subdomain ADR
+- Q43 (vendor-template-as-autonomy-rule) → Vendor Template ADR substrate-only portion + post-v1 enforcement portion
+- Other AP-specific questions in the Q35–Q52 range → answered by AP/Spend Subdomain ADR or restructured into Q53–Q78
+
+---
+
+### Phase 2 Document Platform reframe (2026-05-02)
+
+Questions Q53–Q78 file against the Document Platform reframe spec
+(`docs/09_briefs/phase-2/document_platform_reframe_design.md`).
+Filed in three batches per the Phase 0 governance plan
+(`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
+Tasks A2 (Q53–Q60), A3 (Q61–Q70), A4 (Q71–Q78).
+
+### Q53 — Document-type enum: which types are active in v1, which are reserved?
+
+The Document Platform classifier produces a document-type discriminator
+per the Document Platform ADR. The full reserved set per ADR-0010
+discipline includes: `vendor_invoice`, `receipt`, `payment_confirmation`,
+`credit_memo`, `vendor_statement`, `purchase_order`, `receiving_document`,
+`retainer_request`, `deposit_request`, `bank_statement`, `card_statement`,
+`customer_invoice`, `customer_remittance`, `tax_form`, `contract`,
+`payroll_document`, `asset_purchase_support`, `unknown`.
+
+**Decision space:** which types ship classification logic in v1
+(`vendor_invoice`, `receipt`, `payment_confirmation`, others?) and
+which sit reserved-without-classifier-implementation. The
+classification-confidence threshold for routing-to-exception vs
+routing-to-proposal is also v1 calibration.
+
+**Blocks:** Document Platform ADR; Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q54 — Document case lifecycle states: which transitions are guarded?
+
+The document case lifecycle states are: `received → extracting →
+classified → matched → proposed → needs_review → approved → committed →
+rejected → archived`.
+
+**Decision space:** not the state names (those are decided), but which
+transitions get service-layer enforcement vs UI convention. Specifically:
+which transitions can be triggered only by automation, only by humans,
+or by either; and which transitions are reversible.
+
+**Blocks:** Document Platform ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q55 — `source_document_links`: active enums and pair validity
+
+Per spec §6, `linked_entity_type` and `link_role` are both closed enums
+under ADR-0010 reserved-enum-states discipline. Not every
+`(linked_entity_type, link_role)` pair is valid — `retainer_agreement`
+only makes sense linked to `vendor_prepayment`, not to `bank_transaction`.
+
+**Decision space:** the per-pair validity matrix and which pairs the
+`documentLinkService` rejects. Active v1 set is narrow (probably
+`(bill, primary_invoice)`, `(bill, supporting)`, `(payment,
+payment_evidence)`, `(payment, receipt)`); the full matrix is reserved.
+
+**Blocks:** Document Relationship Graph ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §6, §13.
+
+### Q56 — Relationship Router re-evaluation triggers
+
+When a previously unmatched document gets re-classified after new
+domain state lands (a new bill posts that matches a stranded receipt;
+a vendor master gets merged that re-resolves prior matches; a period
+reopens).
+
+**Decision space:** which domain events trigger Router re-runs, the
+audit-trail shape for routing-decision changes, and which decisions
+are immutable post-commit (per spec §16 lifecycle immutability rules).
+
+**Blocks:** Relationship Router ADR; Phase 4 (Router) code.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q57 — Confidence calibration governance
+
+Who calibrates classifier and Router confidence thresholds, against
+what test set, how often, with what audit trail?
+
+**Decision space:** org-configurable vs system-fixed for v1 (cf. Q23
+on agent ladder thresholds); reviewer authority for changes; what
+changes when a threshold moves (re-evaluate prior decisions or not).
+
+**Blocks:** Confidence Calibration Policy ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q58 — ProposedMutationBundle atomicity at the DB transaction layer
+
+How does Tier 1 enforce all-or-nothing bundle commit, and how does
+the Logic Receipt represent bundle children?
+
+**Decision space:** single transaction vs saga with compensating
+reversals; the audit-log shape for bundle commits; the Logic Receipt
+shape when one ProposedMutationBundle produces multiple journal
+entries.
+
+**Blocks:** ProposedMutationBundle ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q59 — Vendor prepayment object shape
+
+Types (`retainer | deposit | advance | security_deposit |
+prepaid_service | inventory_deposit | fixed_asset_deposit | other`),
+statuses, payment-purpose discriminator linkage, application logic.
+
+**Decision space:** which prepayment types ship as active v1 enum
+values vs reserved per ADR-0010.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q60 — Born-paid bill bundle approval gate
+
+Always Confirm at first; later auto-post under what specific rules?
+
+**Decision space:** thresholds, vendor-rule applicability, controller
+authority. Tied to post-v1 auto-post per spec §11. May feed into Q43
+(vendor-template-as-autonomy-rule) when that ADR drafts post-v1.
+
+**Blocks:** AP/Spend Subdomain ADR (v1 portion); Vendor Template
+ADR (post-v1 portion).
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+---
+
 ## Section 4 — Formalization candidates
 
 Distinct category from Sections 1-3. These are NOT architectural
