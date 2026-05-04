@@ -452,21 +452,29 @@ is flagged at v1 schema time with one of three labels:
 
 The matrix is exhaustive — every `(linked_entity_type,
 link_role)` cell is labeled. The full enum membership from items
-1 and 2 above produces a 28-by-26 matrix (28 entity-type values
-× 26 link-role values = 728 cells). Presenting the full 728-cell
-matrix verbatim would be unreadable; the matrix below uses the
-following notation. Each row is a `linked_entity_type`; each
-column is a `link_role`. The cell label is one of:
+1 and 2 above produces a labeled grid covering every
+entity-type × link-role pair; per-table cell counts and the
+combined total are stated in the **Cell count totals** paragraph
+following Tables A and B below, and update mechanically when
+either enum's membership extends in a future amendment.
+Presenting the full grid verbatim would be unreadable; the matrix
+below uses the following notation. Each row is a
+`linked_entity_type`; each column is a `link_role`. The cell
+label is one of:
 
 - `A` = active v1
 - `R` = reserved post-v1
 - `I` = invalid (categorically rejected)
 
-The eight v1 active `linked_entity_type` values are presented in
-their own table with all 26 `link_role` columns; the 20 reserved
-post-v1 `linked_entity_type` values are presented as a separate
-table (every cell in those rows is `R` or `I` — no `A` cells
-appear because the entity type itself is not active in v1).
+The v1 active `linked_entity_type` values are presented in their
+own table (Table A) with the full closed `link_role` column set;
+the reserved post-v1 `linked_entity_type` values are presented
+as a separate table (Table B) — every cell in those rows is `R`
+or `I` (no `A` cells appear because the entity type itself is
+not active in v1). Per-table row and column counts are stated in
+each table's section header and in the **Cell count totals**
+paragraph after Table B, and update mechanically when either
+enum's membership extends.
 
 **Table A: v1 active `linked_entity_type` rows (8 rows × 27 columns = 216 cells)**
 
