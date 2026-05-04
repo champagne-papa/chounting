@@ -149,7 +149,7 @@ Three substantive carry-forwards that ADR-0014 names for downstream work but doe
 
 Three options modeled on the D1 / D2 ratification-options pattern.
 
-**Option 1 — Ratify-as-is.** Of the 13 discoverability notes, 11 ratify-as-is on the recommended path; 2 are CTO calls (notes 3 and 8) that can be tagged ratify-with-named-follow-up at D3 wording time without blocking ratification. Note 5 (`storageProviderService` / `withInvariants()` wording) is ratify-with-named-follow-up with CTO's exact tightening wording captured. Notes 2 and 6 are future-notes (Session 2B hygiene; operator-drift caveat) — neither requires action at D3.
+**Option 1 — Ratify-as-is.** Of the 13 discoverability notes, 8 are tagged ratify-as-is in the §5 table; on the recommended path, 11 land as ratify-as-is at D3 close (the 8 plus the 2 CTO calls if CTO accepts defaults plus note 5 ratified with the captured tightening wording). The remaining 2 are future-notes.
 
 **Option 2 — Ratify-with-named-revisions.** If the CTO requests:
 - One-paragraph AI-fallback parent/child clarification (note 8) — small wording cleanup commit before D3 closes. Sub-stage interpretation gets explicit framing in ADR-0014 item 8.
