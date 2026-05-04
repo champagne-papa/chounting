@@ -281,6 +281,7 @@ ownership per ADR-0011 §1).**
 vendor_rules (
   id                            uuid primary key,
   org_id                        uuid not null references orgs,
+  legal_entity_id               uuid null references legal_entities, -- multi-entity reservation per ADR-0011 §10; v1 fills with org_id
   vendor_id                     uuid not null references vendors,
   bundle_type                   bundle_type not null,             -- closed enum from ADR-0012 §12
   current_rung                  vendor_rule_rung not null
@@ -297,15 +298,30 @@ vendor_rules (
   created_at                    timestamptz not null default now(),
   created_by                    text not null,                    -- 'agent' or user_id
   trace_id                      uuid not null,
-  unique (org_id, vendor_id, bundle_type)
+  unique (org_id, legal_entity_id, vendor_id, bundle_type)
 );
 ```
 
 **Column rationale.**
 
 - `id`, `org_id`, `vendor_id` — the natural composite-key shape:
-  one rule row per (org, vendor, bundle_type). The `vendor_id`
-  references the AP/Spend-owned `vendors` table per ADR-0011 §1.
+  one rule row per (org, legal_entity, vendor, bundle_type) — see
+  `legal_entity_id` rationale below for the multi-entity dimension.
+  The `vendor_id` references the AP/Spend-owned `vendors` table
+  per ADR-0011 §1.
+- `legal_entity_id` — multi-entity reservation per ADR-0011 §10.
+  Nullable at the schema level for post-v1 multi-entity workflows;
+  v1 service path (`vendorRuleService.create()`) populates with
+  `org_id` so the unique constraint composes mechanically — same
+  pattern as ADR-0011 §10's `source_documents.legal_entity_id`
+  ("Defaults to `org_id` in v1 where the org-entity mapping is
+  1-1"). Post-v1 multi-entity service path resolves the actual
+  legal_entity_id from the bundle's child mutations (a born-paid
+  bundle whose bill posts to legal_entity X carries
+  legal_entity_id=X on its vendor_rules row). The column exists
+  at v1 schema time so post-v1 activation does not require a
+  schema migration; rule history accumulated in v1 carries the
+  multi-entity-ready key shape from the start.
 - `bundle_type` — references the closed `bundle_type` enum from
   ADR-0012 §12. v1 active value is `born_paid_bill`; reserved
   values (`final_invoice_with_applied_deposit`,
@@ -370,17 +386,19 @@ substrate-tier schema alongside `source_documents` /
 rejected — see Alternative 3 below.
 
 **Why a separate table (not columns on `vendors` directly).** The
-per-vendor-per-bundle-type cardinality forecloses materializing
-the substrate inside `vendors` directly: one vendor may have
-multiple bundle-type rules (the v1 active set is one bundle type,
-`born_paid_bill`; the reserved set per ADR-0012 §12 includes
-`final_invoice_with_applied_deposit` and
-`vendor_credit_applied_to_bill`; post-v1 activation may add more).
-A `vendors`-direct materialization would either (a) flatten the
-rule set into per-bundle-type column families with explosive
-column count growth, or (b) lose the per-bundle-type discrimination
-entirely. The separate table is the natural shape — see
-Alternative 1 below.
+per-(legal-entity, vendor, bundle-type) cardinality forecloses
+materializing the substrate inside `vendors` directly: one vendor
+may have multiple bundle-type rules (the v1 active set is one
+bundle type, `born_paid_bill`; the reserved set per ADR-0012 §12
+includes `final_invoice_with_applied_deposit` and
+`vendor_credit_applied_to_bill`; post-v1 activation may add more)
+across one or more legal entities (post-v1 multi-entity per
+ADR-0011 §10's reservation pattern; v1 collapses to the org's
+single legal entity). A `vendors`-direct materialization would
+either (a) flatten the rule set into per-bundle-type-per-entity
+column families with explosive column count growth, or (b) lose
+the per-bundle-type or per-entity discrimination entirely. The
+separate table is the natural shape — see Alternative 1 below.
 
 ### 2. Single-writer rule per `vendorRuleService`
 
@@ -680,8 +698,9 @@ audit the schema scope of ADR-0017 from this section alone.
 **New tables (1):**
 
 - `vendor_rules` — AP/Spend-domain ownership per ADR-0011 §1; column
-  set per item 1 above; unique constraint on `(org_id, vendor_id,
-  bundle_type)`.
+  set per item 1 above (including nullable `legal_entity_id`
+  multi-entity reservation per ADR-0011 §10); unique constraint
+  on `(org_id, legal_entity_id, vendor_id, bundle_type)`.
 
 **New columns on existing tables: none.** ADR-0017 does NOT add
 any columns to existing tables. Specifically, no columns are
@@ -1014,13 +1033,15 @@ load-bearing boundary callouts.
 
 ### What this costs
 
-- **Schema scope.** One new table (`vendor_rules`) with 17 columns
-  and one unique constraint; two new closed enums
-  (`vendor_rule_rung`, `vendor_rule_promotion_authority`) shipping
-  with full reserved membership at v1 schema time per ADR-0010.
-  No column additions to existing tables; no schema modifications
-  outside the new table and the two new enums. Migration cost is
-  bounded by the new-table footprint.
+- **Schema scope.** One new table (`vendor_rules`) with the v1
+  substrate column set including the `legal_entity_id`
+  multi-entity reservation per ADR-0011 §10 and one unique
+  constraint; two new closed enums (`vendor_rule_rung`,
+  `vendor_rule_promotion_authority`) shipping with full reserved
+  membership at v1 schema time per ADR-0010. No column additions
+  to existing tables; no schema modifications outside the new
+  table and the two new enums. Migration cost is bounded by the
+  new-table footprint.
 - **Reserved-enum migrations.** Both enums introduced by ADR-0017
   ship at v1 with full reserved membership; activation of reserved
   values is a future ADR amendment, not a schema migration.
@@ -1199,6 +1220,29 @@ framing is the correct shape.
   (e.g., a substrate that requires ongoing mutation by v1
   service code is not a substrate-now-enforcement-later
   candidate).
+
+- **Multi-entity reservation pattern (ADR-0011 §10 precedent).**
+  ADR-0017 follows ADR-0011 §10's multi-entity reservation pattern
+  by including a nullable `legal_entity_id` column on
+  `vendor_rules` at v1 schema time. The column ships nullable so
+  post-v1 multi-entity service paths can populate it with the
+  resolved legal_entity_id from the bundle's child mutations; v1
+  service path (`vendorRuleService.create()`) populates with
+  `org_id` per the ADR-0011 §10 "Defaults to `org_id` in v1 where
+  the org-entity mapping is 1-1" pattern, so the
+  `(org_id, legal_entity_id, vendor_id, bundle_type)` unique
+  constraint composes mechanically without NULL-uniqueness
+  pathology. The reservation is essentially free at v1 schema
+  time; a post-v1 retrofit (adding the column to a populated
+  `vendor_rules` table after rule history accumulates) would be
+  expensive — same reasoning ADR-0011 §10 invokes for
+  `source_documents.legal_entity_id` and the ADR-0015 schema's
+  `bills.legal_entity_id` / `bill_lines.benefiting_entity_id` /
+  `payments.paying_entity_id` / `payments.benefiting_entity_id`
+  reservations. A future contributor who proposes removing
+  `legal_entity_id` from `vendor_rules` ("v1 doesn't need it") is
+  proposing a multi-entity-readiness regression; the reservation
+  is the right shape for substrate.
 
 - **System ceiling preservation discipline.** A future contributor
   proposing that vendor template substrate authorize any mutation
