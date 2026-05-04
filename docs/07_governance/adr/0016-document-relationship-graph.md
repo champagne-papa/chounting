@@ -925,11 +925,11 @@ explicit + Layer 1 / Layer 2 / Layer 3 defenses).
   `vendor_credit_application`). Reserved post-v1: 20 values
   enumerated in item 1.
 - **`link_role`** (closed enum on `source_document_links` per
-  ADR-0011 §6) — full reserved set per item 2 above (26
-  values); v1 active subset is 4 values (`primary_invoice`,
-  `payment_evidence`, `receipt`, `supporting` — the four
-  values ADR-0015 §10 declared its consumption of). Reserved
-  post-v1: 22 values enumerated in item 2.
+  ADR-0011 §6) — full reserved set per item 2 above; v1 active
+  subset is 4 values (`primary_invoice`, `payment_evidence`,
+  `receipt`, `supporting` — the four values ADR-0015 §10
+  declared its consumption of). Reserved post-v1: full
+  membership minus the v1 active subset, enumerated in item 2.
 - **`link_status`** (closed enum on `source_document_links`)
   — narrow status vocabulary per item 5: `created` (default
   at insert), `reversed` (single one-way transition from
@@ -979,7 +979,7 @@ referenced from items 1, 2, and 5):
 | Enum | Full membership | v1 active subset |
 |---|---|---|
 | `linked_entity_type` | 28 values per item 1 | `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`, `vendor_credit`, `vendor_credit_application` (8 values) |
-| `link_role` | 26 values per item 2 | `primary_invoice`, `payment_evidence`, `receipt`, `supporting` (4 values) |
+| `link_role` | full reserved set per item 2 | `primary_invoice`, `payment_evidence`, `receipt`, `supporting` (4 values) |
 | `link_status` | `created`, `reversed` | `created`, `reversed` (2 values; both active) |
 
 Reserved values ship in the enum at v1 schema time per ADR-0010
@@ -1180,7 +1180,7 @@ from `docs/02_specs/open_questions.md`:
 
 | Q | Closure scope | Disposition |
 |---|---|---|
-| **Q55** | `source_document_links` active enums and pair validity | **Closed.** (a) `linked_entity_type` enum membership — full reserved set (28 values per item 1) + v1 active subset (8 values: `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`, `vendor_credit`, `vendor_credit_application`). (b) `link_role` enum membership — full reserved set (26 values per item 2) + v1 active subset (4 values: `primary_invoice`, `payment_evidence`, `receipt`, `supporting` — the four values ADR-0015 §10 declared its consumption of). (c) `(linked_entity_type, link_role)` per-pair validity matrix — full 728-cell 2D matrix with each cell flagged active v1 (`A`) / reserved post-v1 (`R`) / invalid (`I`); 15 active v1 cells, remainder reserved or invalid. (d) `documentLinkService` rejection rules — invalid pairs raise `ServiceError` `PAIR_INVALID`; reserved pairs raise `ServiceError` `PAIR_RESERVED_POST_V1`; integrity-check failures raise `ServiceError` `LINKED_ENTITY_NOT_FOUND`; three-layer defense (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3 service emission) per ADR-0010 reserved-enum-states discipline. (e) Cascade behavior per `linked_entity_type` — post-commit immutability per ADR-0011 §16 (status flip to `reversed` via `documentLinkService.reverseLinkedEntityLink()`); pre-commit re-routing allowed per ADR-0011 §13 (discard prior candidate, create new candidate, emit `pre_commit_link_rerouted` audit event). (f) Pre-commit vs post-commit boundary — schema-side enforcement of ADR-0011 §16 lifecycle immutability via (i) `documentLinkService.create()` is the only INSERT path and refuses to insert post-commit, (ii) `source_document_links` carries no UPDATE permission for service-role clients on most columns; only `link_status` may transition, and only in the `created → reversed` direction. Per items 1–6 above. |
+| **Q55** | `source_document_links` active enums and pair validity | **Closed.** (a) `linked_entity_type` enum membership — full reserved set per item 1 + v1 active subset (8 values: `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`, `vendor_credit`, `vendor_credit_application`). (b) `link_role` enum membership — full reserved set per item 2 + v1 active subset (4 values: `primary_invoice`, `payment_evidence`, `receipt`, `supporting` — the four values ADR-0015 §10 declared its consumption of). (c) `(linked_entity_type, link_role)` per-pair validity matrix — labeled grid with each cell flagged active v1 (`A`) / reserved post-v1 (`R`) / invalid (`I`); 15 active v1 cells, remainder reserved or invalid; per-table cell counts and combined total stated in the **Cell count totals** paragraph after Tables A and B in item 3. (d) `documentLinkService` rejection rules — invalid pairs raise `ServiceError` `PAIR_INVALID`; reserved pairs raise `ServiceError` `PAIR_RESERVED_POST_V1`; integrity-check failures raise `ServiceError` `LINKED_ENTITY_NOT_FOUND`; three-layer defense (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3 service emission) per ADR-0010 reserved-enum-states discipline. (e) Cascade behavior per `linked_entity_type` — post-commit immutability per ADR-0011 §16 (status flip to `reversed` via `documentLinkService.reverseLinkedEntityLink()`); pre-commit re-routing allowed per ADR-0011 §13 (discard prior candidate, create new candidate, emit `pre_commit_link_rerouted` audit event). (f) Pre-commit vs post-commit boundary — schema-side enforcement of ADR-0011 §16 lifecycle immutability via (i) `documentLinkService.create()` is the only INSERT path and refuses to insert post-commit, (ii) `source_document_links` carries no UPDATE permission for service-role clients on most columns; only `link_status` may transition, and only in the `created → reversed` direction. Per items 1–6 above. |
 
 **Explicitly NOT closed by ADR-0016:**
 
@@ -1295,12 +1295,12 @@ callout.
   supersession path (algorithm-side ownership in ADR-0018) and
   the schema-side enforcement here ensures the supersession
   cannot bypass the immutability rules.
-- **The 728-cell pair-validity matrix is a future-amendment
-  target with explicit activation discipline.** Activating a
-  reserved cell follows a clear pattern (entity-type active,
-  role active, semantic brief, label flip from `R` to `A`,
-  defense extension). The discipline prevents silent activation
-  of pairs that have not been semantically vetted; every cell
+- **The pair-validity matrix is a future-amendment target with
+  explicit activation discipline.** Activating a reserved cell
+  follows a clear pattern (entity-type active, role active,
+  semantic brief, label flip from `R` to `A`, defense
+  extension). The discipline prevents silent activation of
+  pairs that have not been semantically vetted; every cell
   flip is an auditable amendment with provenance.
 - **Cascade behavior preserves audit-trail visibility on
   reversals.** Post-commit reversal flips `link_status` to
