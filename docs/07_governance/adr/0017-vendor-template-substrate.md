@@ -2,7 +2,7 @@
 
 ## Status
 
-Drafted 2026-05-04; awaiting D4 ratification.
+Ratified 2026-05-04 by CTO with named follow-ups per D4 ratification package §3.3.
 
 ## Date
 
