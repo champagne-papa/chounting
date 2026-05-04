@@ -1244,7 +1244,7 @@ callout.
 
 - **The document relationship graph schema ships in v1 with a
   complete validity contract.** All eight v1-active entity types,
-  all four v1-active link roles, the full 22-cell active-pair
+  all four v1-active link roles, the full 15-cell active-pair
   matrix, the cascade behavior per entity type, and the
   pre-commit / post-commit boundary all carry structured
   schema-side enforcement at v1 schema time per ADR-0010

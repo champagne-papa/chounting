@@ -688,7 +688,7 @@ Any mutation to `vendor.bank_account`, `vendor.payment_instructions`, or `vendor
 
 | Category | Configurable | Examples |
 |---|---|---|
-| **System** | Never | Locked periods, intercompany, equity, reversals, period-end adjustments, first-time vendors above floor |
+| **System** | Never | Locked periods, intercompany, equity, reversals, period-end adjustments, first-time vendors above floor, vendor bank-detail changes (INV-AGENT-006 / `agent_autonomy_model.md` §6 row 7) |
 | **Policy** | By owner | Per-transaction limits, per-day aggregate, rung assignment, promotion criteria (v2+) |
 
 ### Decision Tree (compact)

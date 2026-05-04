@@ -682,10 +682,8 @@ bank-detail-confirmed flag. The Relationship Router (ADR-0018) at
 Tier 2.5 may read those fields when producing
 payment-readiness candidates. Tier 1 re-verifies at commit per
 the expanded Q28 matrix. The System-ceiling rule for vendor
-bank-detail changes (per
-`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
-pending registration in `agent_autonomy_model.md` §6 — Session 2A
-closeout item) stands: vendor bank-detail changes are Always
+bank-detail changes (INV-AGENT-006 / `agent_autonomy_model.md`
+§6 row 7) stands: vendor bank-detail changes are Always
 Confirm / System ceiling regardless of rung, limit, or rule
 maturity.
 
@@ -1267,9 +1265,8 @@ types rather than quadratically.
   for §8 (three-layer separation).
 - **`docs/09_briefs/phase-2/document_platform_reframe_design.md`**
   §15 — the System-ceiling rule for vendor bank-detail changes
-  (pending registration in `agent_autonomy_model.md` §6 — Session
-  2A closeout item). Cross-referenced from §11 (vendor-matcher
-  read boundary).
+  (INV-AGENT-006 / `agent_autonomy_model.md` §6 row 7).
+  Cross-referenced from §11 (vendor-matcher read boundary).
 - **`docs/03_architecture/phase_simplifications.md`** —
   Simplification 3 ("AP Agent as the second real agent informing
   what shared agent-platform infrastructure is actually

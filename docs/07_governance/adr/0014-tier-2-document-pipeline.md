@@ -793,10 +793,9 @@ and MUST NOT read vendor control / payment-risk fields (bank
 account, payment instructions, bank-detail-confirmed flag,
 payment hold, blocked-vendor status). The latter restriction is
 the bank-detail fraud-control surface; the System-ceiling rule
-for vendor bank-detail changes (per
-`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
-pending registration in `agent_autonomy_model.md` §6 — Session 2A
-closeout item) governs vendor bank-detail commits. Tier 1
+for vendor bank-detail changes (INV-AGENT-006 /
+`agent_autonomy_model.md` §6 row 7) governs vendor bank-detail
+commits. Tier 1
 re-verifies all vendor-control fields at commit per the System-
 ceiling discipline; ADR-0014's matcher does not touch those
 fields at the Tier 2 stage at all.
@@ -1756,11 +1755,12 @@ substantial isolation benefit.
   Pending; transition rules unchanged from
   `mutation_lifecycle.md`.
 - **`docs/02_specs/agent_autonomy_model.md`** §6 — System
-  ceiling concept (System table; vendor bank-detail row pending
-  registration per Session 2B amendment brief). Cited at item
-  9 — Tier 1 re-verifies all vendor-control fields at commit
-  per the System-ceiling rule for vendor bank-detail changes;
-  the matcher's Tier 2 read boundary preserves the surface.
+  ceiling concept (System table; vendor bank-detail changes
+  INV-AGENT-006 / row 7, registered at commit `84691d5`).
+  Cited at item 9 — Tier 1 re-verifies all vendor-control
+  fields at commit per the System-ceiling rule for vendor
+  bank-detail changes; the matcher's Tier 2 read boundary
+  preserves the surface.
 - **`docs/02_specs/agent_architecture_policy.md`** — Q28 matrix
   authoritative source. ADR-0014 produces output that the
   matrix consumes (per-document-type field rows, relationship-

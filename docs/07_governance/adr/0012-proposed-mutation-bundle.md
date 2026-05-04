@@ -537,10 +537,8 @@ bank-detail change is a **separate System-ceiling proposal**. It
 is not silently absorbed into the born-paid bundle. The born-paid
 bundle may not reduce, mask, or average the ceiling of any
 proposal presented alongside it. The System-ceiling rule for
-vendor bank-detail changes (per
-`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
-pending registration in `agent_autonomy_model.md` §6 — Session 2A
-closeout item) governs the separate proposal.
+vendor bank-detail changes (INV-AGENT-006 / `agent_autonomy_model.md`
+§6 row 7) governs the separate proposal.
 
 **Composition-bypass prevention.** Not redundant with ADR-0007 —
 this is a real failure mode the bundle ADR is in the best position
@@ -999,10 +997,9 @@ queue per ADR-0011 §13.
   siblings. The max-of-child-ceilings rule blocks that path.
   Vendor bank-detail change is itself a separate System-ceiling
   proposal, not a bundle child (per §9 reframe); the System-
-  ceiling rule for vendor bank-detail changes (per
-  `docs/09_briefs/phase-2/document_platform_reframe_design.md`
-  §15; pending registration in `agent_autonomy_model.md` §6 —
-  Session 2A closeout item) governs that separate proposal.
+  ceiling rule for vendor bank-detail changes (INV-AGENT-006 /
+  `agent_autonomy_model.md` §6 row 7) governs that separate
+  proposal.
 
 - **AP-nets-to-zero generic phrasing — debit side is child/domain
   logic owned by ADR-0015.** ADR-0012 specifies that the AP control

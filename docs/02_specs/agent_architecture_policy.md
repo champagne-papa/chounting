@@ -160,16 +160,15 @@ documents whose type is undetermined.
 | `account_code` (per line) | Tier 2 account-suggestion stage | Must exist in `listChartOfAccounts(org_id)` and be active; cross-reference `vendor.default_account_mapping` | Reject if absent or inactive | Layer 1a (FK) + Layer 2 pre-flight |
 | `tax_code_id` (per line, if present) | LLM extraction from document | Must exist in seeded `tax_codes` for `org_id`; jurisdiction-match per ADR-0015's tax scope | Reject if absent or wrong jurisdiction | Layer 1a (FK) + Layer 2 pre-flight |
 | `due_date` | LLM extraction; falls back to vendor terms | Verify `due_date >= accounting_date`; warn if `> 365` days out (likely OCR error) | Soft reject with operator override on warn; hard reject on `< accounting_date` | Layer 2 |
-| `bank_detail`-related fields (account number, routing, etc.) | **Never sourced by Tier 2** per ADR-0007 Tier 2 Read boundary; Tier 2.5 may surface in payment-readiness candidates | Tier 1 re-verifies all vendor-control fields at commit per ADR-0007 § Tier 2 Read boundary; vendor master is **not** auto-updated from extracted invoice content. Always Confirm / System ceiling (per reframe spec §15; pending registration in `agent_autonomy_model.md` §6) | Reject any auto-update path; route to controller out-of-band confirmation | Layer 2 (`vendorService.update()`) + Layer 4 discipline |
+| `bank_detail`-related fields (account number, routing, etc.) | **Never sourced by Tier 2** per ADR-0007 Tier 2 Read boundary; Tier 2.5 may surface in payment-readiness candidates | Tier 1 re-verifies all vendor-control fields at commit per ADR-0007 § Tier 2 Read boundary; vendor master is **not** auto-updated from extracted invoice content. Always Confirm / System ceiling (INV-AGENT-006 / `agent_autonomy_model.md` §6 row 7) | Reject any auto-update path; route to controller out-of-band confirmation | Layer 2 (`vendorService.update()`) + Layer 4 discipline |
 
 **Sources.** Field set from `intent_model.md` §3
 (`ProposedMutation` shape) projected onto the bill domain; row
 shape from ADR-0007 § Closes Q28; bank-detail rule is the
-System-ceiling rule for vendor bank-detail changes (per
-`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
-pending registration in `agent_autonomy_model.md` §6 — Session 2A
-closeout item) plus ADR-0007 Tier 2 Read boundary; uniqueness
-guard from ADR-0015 (forthcoming, AP/Spend Subdomain).
+System-ceiling rule for vendor bank-detail changes (INV-AGENT-006
+/ `agent_autonomy_model.md` §6 row 7) plus ADR-0007 Tier 2 Read
+boundary; uniqueness guard from ADR-0015 (forthcoming, AP/Spend
+Subdomain).
 
 ##### `receipt`
 
@@ -275,16 +274,15 @@ mechanism / Failure mode / Layer`.
 | (b) `vendor_prepayment` row still has the same `remaining_balance` (not applied by another mutation in the meantime) | `apply_vendor_prepayment_to_bill` commit path (manual-only in v1) | Re-call `getVendorPrepayment(prepayment_id) FOR UPDATE`; verify `remaining_balance >= application_amount` at commit; the application row insert + balance recompute happen in the same transaction | Reject with `PREPAYMENT_INSUFFICIENT_BALANCE`; case re-routes | Layer 2 (inside `withInvariants()`); INV-AP-001 (allocation sums per ADR-0015) backstops at Layer 2 |
 | (c) `vendor_credit` row still has unapplied balance | `apply_vendor_credit_to_bill` commit path (manual-only in v1) | Re-call `getVendorCredit(credit_id) FOR UPDATE`; verify `unapplied_balance >= application_amount` | Reject with `CREDIT_INSUFFICIENT_BALANCE`; case re-routes | Layer 2 (inside `withInvariants()`); INV-AP-001 backstops |
 | (d) Ledger period containing the bill's `accounting_date` is still open | Every commit path that posts to a fiscal period (`post_bill`, `record_bill_payment`, `post_bill_with_payment`, `post_vendor_credit`, `record_vendor_prepayment`, `apply_vendor_prepayment_to_bill`, `apply_vendor_credit_to_bill`) | DB trigger `trg_enforce_period_not_locked` runs `SELECT ... FOR UPDATE` on the `fiscal_periods` row at insert time; service-layer pre-flight `checkPeriod(accounting_date)` for ergonomics | Reject with `PERIOD_LOCKED` (`check_violation` at DB; pre-flight at service) | **Layer 1a** (`trg_enforce_period_not_locked`, INV-LEDGER-002) + Layer 2 pre-flight |
-| (e) Vendor's `bank_detail_confirmed` flag has not flipped (since the proposal was generated) | Every payment commit path that targets a vendor with bank-detail-dependent payment method (eft, wire, ach) | Re-call `getVendor(vendor_id)` at commit; verify `bank_detail_confirmed_at` is non-null and not invalidated since the proposal was generated; verify no pending bank-detail change in `vendor_change_proposals` (the controller-confirmation path per reframe spec §15; pending registration in `agent_autonomy_model.md` §6) | Reject with `VENDOR_BANK_DETAIL_UNCONFIRMED` or `VENDOR_BANK_DETAIL_PENDING`; route to controller out-of-band confirmation | Layer 2 (inside `withInvariants()` of `paymentService.recordBillPayment()` and adjacent commit paths) |
+| (e) Vendor's `bank_detail_confirmed` flag has not flipped (since the proposal was generated) | Every payment commit path that targets a vendor with bank-detail-dependent payment method (eft, wire, ach) | Re-call `getVendor(vendor_id)` at commit; verify `bank_detail_confirmed_at` is non-null and not invalidated since the proposal was generated; verify no pending bank-detail change in `vendor_change_proposals` (the controller-confirmation path per INV-AGENT-006 / `agent_autonomy_model.md` §6 row 7) | Reject with `VENDOR_BANK_DETAIL_UNCONFIRMED` or `VENDOR_BANK_DETAIL_PENDING`; route to controller out-of-band confirmation | Layer 2 (inside `withInvariants()` of `paymentService.recordBillPayment()` and adjacent commit paths) |
 
 **Sources.** ADR-0007 Amendment §"Q28 expansion" surface 3;
 INV-LEDGER-002 (`docs/02_specs/ledger_truth_model.md` Layer 1a)
 for the DB-level period-lock trigger; INV-AP-001 (forthcoming,
 ADR-0015) for allocation-sum invariant; the System-ceiling rule
-for vendor bank-detail changes (per
-`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
-pending registration in `agent_autonomy_model.md` §6 — Session 2A
-closeout item) for the Always Confirm / System ceiling hard rule.
+for vendor bank-detail changes (INV-AGENT-006 /
+`agent_autonomy_model.md` §6 row 7) for the Always Confirm /
+System ceiling hard rule.
 
 ### 2.4 Bundle re-verification matrix
 

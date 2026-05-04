@@ -1014,7 +1014,7 @@ load-bearing boundary callouts.
 
 ### What this costs
 
-- **Schema scope.** One new table (`vendor_rules`) with 14 columns
+- **Schema scope.** One new table (`vendor_rules`) with 17 columns
   and one unique constraint; two new closed enums
   (`vendor_rule_rung`, `vendor_rule_promotion_authority`) shipping
   with full reserved membership at v1 schema time per ADR-0010.
