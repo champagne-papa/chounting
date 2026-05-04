@@ -341,9 +341,9 @@ reserved-enum-states discipline:
 `vendor_statement_excerpt`, `purchase_order`,
 `receiving_document`, `retainer_agreement`, `deposit_request`,
 `bank_statement_excerpt`, `card_statement_excerpt`,
-`reconciliation_evidence`, `customer_invoice_attachment`,
-`customer_remittance`, `tax_form`, `contract`,
-`payroll_document`, `asset_purchase_support`,
+`reconciliation_evidence`, `failure_notice`,
+`customer_invoice_attachment`, `customer_remittance`, `tax_form`,
+`contract`, `payroll_document`, `asset_purchase_support`,
 `prior_period_evidence`, `correction_memo`,
 `controller_override_memo`, `audit_evidence`, `email_thread`.
 
@@ -358,9 +358,9 @@ service write path):**
 `vendor_statement_excerpt`, `purchase_order`,
 `receiving_document`, `retainer_agreement`, `deposit_request`,
 `bank_statement_excerpt`, `card_statement_excerpt`,
-`reconciliation_evidence`, `customer_invoice_attachment`,
-`customer_remittance`, `tax_form`, `contract`,
-`payroll_document`, `asset_purchase_support`,
+`reconciliation_evidence`, `failure_notice`,
+`customer_invoice_attachment`, `customer_remittance`, `tax_form`,
+`contract`, `payroll_document`, `asset_purchase_support`,
 `prior_period_evidence`, `correction_memo`,
 `controller_override_memo`, `audit_evidence`, `email_thread`.
 
@@ -468,20 +468,20 @@ post-v1 `linked_entity_type` values are presented as a separate
 table (every cell in those rows is `R` or `I` — no `A` cells
 appear because the entity type itself is not active in v1).
 
-**Table A: v1 active `linked_entity_type` rows (8 rows × 26 columns = 208 cells)**
+**Table A: v1 active `linked_entity_type` rows (8 rows × 27 columns = 216 cells)**
 
-| linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `bill` | A | I | A | A | I | R | R | R | R | R | R | R | I | I | I | I | I | R | R | I | R | R | R | R | R | R |
-| `bill_line` | I | I | I | A | I | R | I | I | I | R | I | I | I | I | I | I | I | I | I | I | R | I | R | I | R | I |
-| `payment` | I | A | A | A | I | R | I | I | I | I | I | I | R | R | R | I | I | I | I | I | I | I | R | R | R | R |
-| `bill_payment_allocation` | I | A | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
-| `vendor_prepayment` | I | A | A | A | I | R | I | I | I | I | R | R | I | I | I | I | I | R | R | I | I | I | R | R | R | R |
-| `vendor_prepayment_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
-| `vendor_credit` | I | I | I | A | I | R | R | R | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
-| `vendor_credit_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
+| linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | failure_notice | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `bill` | A | I | A | A | I | R | R | R | R | R | R | R | I | I | I | I | I | I | R | R | I | R | R | R | R | R | R |
+| `bill_line` | I | I | I | A | I | R | I | I | I | R | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I | R | I |
+| `payment` | I | A | A | A | I | R | I | I | I | I | I | I | R | R | R | R | I | I | I | I | I | I | I | R | R | R | R |
+| `bill_payment_allocation` | I | A | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
+| `vendor_prepayment` | I | A | A | A | I | R | I | I | I | I | R | R | I | I | I | I | I | I | R | R | I | I | I | R | R | R | R |
+| `vendor_prepayment_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
+| `vendor_credit` | I | I | I | A | I | R | R | R | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
+| `vendor_credit_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
 
-**Table B: reserved post-v1 `linked_entity_type` rows (20 rows × 26 columns = 520 cells)**
+**Table B: reserved post-v1 `linked_entity_type` rows (20 rows × 27 columns = 540 cells)**
 
 Every cell in these rows is either `R` (reserved post-v1; the
 entity type itself is not active in v1, so any link to it is
@@ -491,36 +491,38 @@ semantic validity rules as Table A — invalid pairs in Table B
 are pairs whose role-to-entity semantic mapping is incoherent
 regardless of when the entity type activates.
 
-| linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `bank_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | R | I | R | I | I | I | I | I | I | R | R | I | R | R |
-| `card_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | I | R | R | I | I | I | I | I | I | R | R | I | R | R |
-| `bank_account` | I | I | I | R | I | I | I | I | I | I | I | I | R | I | R | I | I | I | R | I | I | I | I | R | R | I |
-| `card_account` | I | I | I | R | I | I | I | I | I | I | I | I | I | R | R | I | I | I | R | I | I | I | I | R | R | I |
-| `customer_invoice` | I | R | R | R | I | R | I | I | R | R | R | R | I | I | I | R | R | R | R | I | R | R | R | R | R | R |
-| `customer_invoice_line` | I | I | I | R | I | R | I | I | I | R | I | I | I | I | I | I | I | I | I | I | R | I | R | I | R | I |
-| `customer_payment` | I | R | R | R | I | R | I | I | I | I | I | I | R | R | R | I | R | I | I | I | I | I | R | R | R | R |
-| `customer_credit` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
-| `vendor_statement_line` | I | I | I | R | I | R | I | R | I | I | I | I | I | I | R | I | I | I | I | I | I | I | R | I | R | I |
-| `bank_reconciliation` | I | I | I | R | I | R | I | I | I | I | I | I | R | I | R | I | I | I | I | I | I | I | R | R | R | I |
-| `card_reconciliation` | I | I | I | R | I | R | I | I | I | I | I | I | I | R | R | I | I | I | I | I | I | I | R | R | R | I |
-| `fixed_asset` | I | R | R | R | I | R | I | I | R | R | I | I | I | I | I | I | I | R | R | I | R | R | R | R | R | R |
-| `tax_filing` | I | R | R | R | I | R | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R | R |
-| `payroll_run` | I | R | R | R | I | R | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I | I | R | R | R | R |
-| `payroll_employee` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | R | R | R | I | I | R | R | R | R |
-| `journal_entry` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | R | R |
-| `journal_line` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
-| `vendor_master` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | R | R |
-| `customer_master` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | R | R |
-| `period_close` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | R | R |
+| linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | failure_notice | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `bank_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | R | I | R | R | I | I | I | I | I | I | R | R | I | R | R |
+| `card_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | I | R | R | R | I | I | I | I | I | I | R | R | I | R | R |
+| `bank_account` | I | I | I | R | I | I | I | I | I | I | I | I | R | I | R | I | I | I | I | R | I | I | I | I | R | R | I |
+| `card_account` | I | I | I | R | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | I | I | I | I | R | R | I |
+| `customer_invoice` | I | R | R | R | I | R | I | I | R | R | R | R | I | I | I | I | R | R | R | R | I | R | R | R | R | R | R |
+| `customer_invoice_line` | I | I | I | R | I | R | I | I | I | R | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I | R | I |
+| `customer_payment` | I | R | R | R | I | R | I | I | I | I | I | I | R | R | R | R | I | R | I | I | I | I | I | R | R | R | R |
+| `customer_credit` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
+| `vendor_statement_line` | I | I | I | R | I | R | I | R | I | I | I | I | I | I | R | I | I | I | I | I | I | I | I | R | I | R | I |
+| `bank_reconciliation` | I | I | I | R | I | R | I | I | I | I | I | I | R | I | R | R | I | I | I | I | I | I | I | R | R | R | I |
+| `card_reconciliation` | I | I | I | R | I | R | I | I | I | I | I | I | I | R | R | R | I | I | I | I | I | I | I | R | R | R | I |
+| `fixed_asset` | I | R | R | R | I | R | I | I | R | R | I | I | I | I | I | I | I | I | R | R | I | R | R | R | R | R | R |
+| `tax_filing` | I | R | R | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R | R |
+| `payroll_run` | I | R | R | R | I | R | I | I | I | I | I | I | I | I | I | R | I | I | R | I | R | I | I | R | R | R | R |
+| `payroll_employee` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | I | I | R | R | R | R |
+| `journal_entry` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | R | R |
+| `journal_line` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
+| `vendor_master` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | R | R |
+| `customer_master` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | R | R |
+| `period_close` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | R | R |
 
-**Cell count totals.** Table A: 208 cells (8 rows × 26 columns).
-Table B: 520 cells (20 rows × 26 columns). Combined: 728 cells.
+**Cell count totals.** Table A: 216 cells (8 rows × 27 columns).
+Table B: 540 cells (20 rows × 27 columns). Combined: 756 cells.
 Active v1 (`A`): 15 cells (all in Table A, all in the four
 v1-active link-role columns of Table A — `bill` 3, `bill_line` 1,
 `payment` 3, `bill_payment_allocation` 2, `vendor_prepayment` 3,
 `vendor_prepayment_application` 1, `vendor_credit` 1,
-`vendor_credit_application` 1). Reserved post-v1 (`R`): varies;
+`vendor_credit_application` 1; the `failure_notice` column is
+reserved post-v1 per the post-D4 mini-decision dispatch and
+contributes no `A` cells). Reserved post-v1 (`R`): varies;
 ships at v1 schema time per ADR-0010 discipline as the seat for
 post-v1 activation. Invalid (`I`): the remainder; the pair is
 rejected categorically by `documentLinkService` at any phase.
@@ -1594,6 +1596,54 @@ permitted path.
   already inside a `withInvariants()` transaction and has the
   link target in scope. Resist the temptation; route through
   `documentLinkService`.
+
+- **Evidence-link coordination forward-pointers (post-D4
+  mini-decision per
+  `docs/09_briefs/phase-2/2026-05-04-evidence-link-coordination.md`).**
+  Two evidence-attachment gaps were surfaced during D4 review
+  and resolved by deferring activation to post-v1:
+
+  **1. `failure_notice` link-role (Question 2 Option 2A).**
+  Reserved post-v1 in §2 above; ships in the enum at v1 schema
+  time per ADR-0010 reserved-enum-states discipline; v1 emits
+  the value via no service path. Activation expected with the
+  post-v1 Banking domain ADR; the activation amendment follows
+  the §3 validity-matrix activation discipline (semantic brief
+  for each cell flip; Layer 1 / Layer 2 / Layer 3 defense
+  extension; v1-active subset extension on `link_role`). The
+  v1-active cells expected to flip from `R` to `A` at
+  activation time include `(payment, failure_notice)` (AP-side)
+  and the post-v1-active `(customer_payment, failure_notice)`
+  (AR-side). Reserved entity-type cells for
+  `bank_transaction` / `card_transaction` /
+  `bank_reconciliation` / `card_reconciliation` /
+  `payroll_run` join the activation when their respective
+  post-v1 domains scope.
+
+  **2. Bank-detail-evidence link-target (Question 1
+  Option 1C).** No ADR-0016 schema delta at this time; the
+  bank-detail-evidence attachment surface (vendor master vs
+  vendor_change_proposal entity) is an architectural decision
+  forward-pointed to a post-Phase-0 ADR. When the resolution
+  lands, the activation amendment will be substantively larger
+  than the failure_notice activation: depending on chosen path,
+  either (a) a new `linked_entity_type` value
+  (`vendor_change_proposal`) PLUS a new entity table
+  (ownership decision pending: ADR-0011 §1 platform-substrate
+  vs ADR-0015 §1 AP/Spend-domain) PLUS a new `link_role` value
+  (`bank_detail_evidence`) PLUS one matrix cell activation; or
+  (b) activation of `vendor_master` in the v1-active
+  entity-type subset (contradicting the current "Notable
+  absences" framing in §1 above) PLUS a new `link_role` value
+  PLUS one matrix cell activation. The activation brief at
+  that time should re-verify whether either option's framing
+  has shifted given post-v1 Banking-domain context.
+
+  Both forward-pointers are post-D4 named follow-ups from the
+  Tier 4 ratification package (D4 at commit `e71ecc1`); the
+  mini-decision dispatch ratified the deferral path; this Notes
+  entry preserves the resolution context for the activation
+  amendment authors.
 
 - **The `link_status` vocabulary distinction from
   mutation-lifecycle is load-bearing.** Item 5's distinction

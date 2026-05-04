@@ -1781,6 +1781,30 @@ Reading B preservation explicitly.
   Q60 post-v1 portion takes); but auto-reverse without the
   calibration substrate is rejected categorically.
 
+- **Failure-notice link-role gap (forward-pointed to post-v1
+  Banking domain ADR).** A bank/card failure event per item 8
+  produces a notice document (ACH return notice, wire-bounce
+  notification, NSF letter, card chargeback report, etc.). v1
+  has no typed `link_role` for this attachment: the notice
+  either attaches via `payment_evidence` (semantically incorrect
+  — `payment_evidence` describes "the payment occurred," not
+  "the payment failed") or remains unattached, with the
+  controller pasting a free-form pointer into the
+  `payment_failure_reversed` audit event's `failure_reason`
+  field. Per the post-D4 mini-decision dispatch
+  (`docs/09_briefs/phase-2/2026-05-04-evidence-link-coordination.md`,
+  Question 2 Option 2A ratified), `link_role = 'failure_notice'`
+  is reserved post-v1 in ADR-0016 §2; v1 emits the value via no
+  service path. Activation lands when the post-v1 Banking domain
+  ADR scopes — at which point `paymentService.commitFailureReversal()`
+  extends to include a `ProposedAttachment(attach_failure_notice)`
+  step in the proposal lifecycle. v1 cohort volume (estimated
+  fewer than five payment failures across v1 duration) makes the
+  inline-pointer interim path operationally tractable. A future
+  contributor implementing post-v1 Banking domain enforcement
+  who sees this gap should activate `failure_notice` at that
+  time per ADR-0016's validity-matrix activation discipline.
+
 - **Manual + automated path uniformity (per ADR-0012 §11).**
   ADR-0015 inherits the rule: manual born-paid workflows run
   through the same `billService.postWithImmediatePayment(bundle)`
@@ -1848,3 +1872,35 @@ Reading B preservation explicitly.
   surface. This is the same pattern as Q60: governance amendment
   first (in `agent_autonomy_model.md`), domain ADR amendment
   second (in ADR-0015) — never in reverse order.
+
+- **Bank-detail-evidence link-target gap (forward-pointed to
+  post-Phase-0 ADR).** A controller authoring a vendor
+  bank-detail change per item 9 has out-of-band verification
+  documentation (an email confirming new bank details with the
+  vendor; a screenshot of a phone-call confirmation; a signed
+  change form). v1 has no defined attachment target for this
+  documentation in the link graph: the
+  `vendor_bank_detail_change_confirmed` audit event captures
+  the controller_user_id, prior values, new values,
+  out-of-band-verification claim timestamp, and trace_id, but
+  the supporting source document attaches inline-in-form only
+  (controller pastes verification context into the audit
+  event's `description` field, or attaches the document through
+  ad-hoc means outside the structured link graph). Per the
+  post-D4 mini-decision dispatch
+  (`docs/09_briefs/phase-2/2026-05-04-evidence-link-coordination.md`,
+  Question 1 Option 1C ratified), the architectural decision
+  between (a) introducing a `vendor_change_proposal` entity
+  with its own attachment surface, and (b) activating
+  `vendor_master` in the v1 active `linked_entity_type` subset
+  with a new `bank_detail_evidence` link-role, is forward-
+  pointed to a post-Phase-0 ADR (likely the Banking domain ADR
+  or a vendor-master-workflow ADR). v1 cohort volume (estimated
+  fewer than ten bank-detail changes across v1 duration) makes
+  the inline-in-form interim path operationally tractable. The
+  v1 INV-AGENT-006 fraud control gate is mechanical regardless
+  of structured-link evidence presence — the missing typed link
+  is an audit-trail polish gap, not a fraud-control gap. A
+  future contributor implementing the post-Phase-0 vendor-
+  master-workflow ADR should resolve the entity-vs-direct-link
+  question at that time with full Banking-domain context.
