@@ -945,7 +945,11 @@ Policy ADR.
 
 **Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
 
-### Q66 — Relationship Router tier placement (pending ADR-0007 amendment)
+### Q66 — Relationship Router tier placement (~~pending ADR-0007 amendment~~ — ADR-0007 amendment ratified 2026-05-03 at D1)
+
+**Status update 2026-05-03:** ADR-0007 ratified the architectural placement class for Relationship Router as Tier 2.5: a read-only, ledger-aware path between Tier 2 and Tier 1. ADR-0011 inherits that placement. ADR-0018 remains responsible for closing the detailed Relationship Router contract: readable state, candidate shape, ambiguity handling, re-evaluation triggers, stale-candidate invalidation, and Tier 1 re-verification obligations.
+
+[Original decision-space content preserved below for historical context.]
 
 Where does the Relationship Router live — amended Tier 2, new
 Tier 2.5, or Tier 1 read-only pre-commit stage?
@@ -1148,6 +1152,22 @@ ledger service is the only writer of journal entries).
 **Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) code.
 
 **Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+---
+
+## Phase 0 governance closeout-surfaced questions
+
+Questions surfaced during Phase 0 ADR governance execution (Sessions 2A onwards). Source: ratification packages and brainstorm-side review of D-task closeout work.
+
+### Q79 — INV-DOC-001 shape
+
+ADR-0011 §15 reserved INV-DOC-001 (Document Platform invariant prefix) without specifying the invariant's enforcement shape. The actual prefix registration is post-D3 closeout work (per D3 §3) and lands in `docs/02_specs/invariants.md` when enforcement code lands.
+
+**Decision space:** what does INV-DOC-001 enforce — schema constraint on `source_documents` integrity? Service-layer ceiling check on document-platform writes? Both? The shape determines whether the prefix lands as a single invariant or a family.
+
+**Blocks:** Task E1 (DOC prefix registration in `docs/02_specs/invariants.md`); first Document Platform code that needs to cite the invariant.
+
+**Source:** Session 2A D3 ratification, 2026-05-03 (D3 ratification package §3 clarifying note on DOC prefix awaiting Task E1 registration).
 
 ---
 

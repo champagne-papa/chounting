@@ -480,7 +480,7 @@ added by this reframe.
 |---|---|---|---|---|---|
 | 1 | ADR-0007 — three-tier agent architecture (existing reservation; possibly amended per §9 below for Tier 2/2.5 scope and Q27 wording) | Carried prerequisite | All Phase 1+ work | — | Q27–Q31 |
 | 2 | Document Platform ADR (includes Domain Boundary Map for Spend vs Banking ownership) | Document Platform | Phases 1–8 | ADR-0007 | new |
-| 3 | Storage Provider ADR (carried from original brief) | Document Platform | Phase 1 (Storage/Evidence Core) | Document Platform ADR | Q47, Q52 |
+| 3 | Storage Provider ADR (carried from original brief) | Document Platform | Phase 1 (Storage/Evidence Core) | Document Platform ADR | Q73 (storage-provider portion; closes at D3 ratification 2026-05-03 per ADR-0013). Note: Q47/Q52 retired per the Q35–Q52 supersession notice in `docs/02_specs/open_questions.md`. |
 | 4 | Tier 2 Document Pipeline ADR | Document Platform | Phases 6–7 (Ingestion + Extraction) | Document Platform ADR, ADR-0007 | new — supersedes the Tier 2 extraction pipeline language in the original brief §4 |
 | 5 | ProposedMutationBundle ADR (includes bundle atomicity — DB-transaction-atomic enforcement is part of the bundle semantics) | Document Platform | Phase 8 (Proposal handoff) and onward | Document Platform ADR | new |
 | 6 | Document Relationship Graph ADR | Document Platform | Phase 3 onward | Document Platform ADR, Storage Provider ADR | new — covers polymorphic links, schema discipline per §6 |
