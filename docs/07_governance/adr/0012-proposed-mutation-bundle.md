@@ -21,8 +21,10 @@ DB-transaction-atomic enforcement is part of the bundle semantics)"),
 so this ADR carries one mechanism — the bundle envelope — and three
 specifications attached to that mechanism: atomicity at the DB
 transaction layer, lifecycle of a bundle through the six canonical
-states from `mutation_lifecycle.md`, and Logic Receipt shape for
-compound mutations. The first concrete consumer is the born-paid bill
+states from `mutation_lifecycle.md` (Pending, Needs Attention,
+Approved, Posted (auto), Posted (manual), Finalized), plus the
+terminal states Rejected and Rejected-with-reversal where
+applicable, and Logic Receipt shape for compound mutations. The first concrete consumer is the born-paid bill
 bundle (`post_bill` + `record_bill_payment`) per spec §15 and the
 Spend Initiative brief; ADR-0015 specifies which bundle types ship in
 v1 and per-bundle-type child composition. This ADR specifies the
@@ -236,14 +238,27 @@ the hash composition. The contract this ADR establishes:
 - The key is computed at proposal time, not commit time.
 - The key is stored on the bundle row alongside `id`.
 - Bundle service first checks `(org_id, bundle_idempotency_key)` in
-  the bundle ledger before opening the transaction; a duplicate match
-  returns the prior bundle's outcome (Posted, Voided, or pending) and
-  does not retry the commit.
+  the bundle ledger before opening the transaction.
 - The check rides the same pattern as the existing `ai_actions`
   `(org_id, idempotency_key)` constraint. Operational retry mechanics
   live in `ledger_truth_model.md`'s existing trace_id + idempotency_key
   pattern; this ADR inherits that pattern unchanged and adds the
   bundle-level key as a parallel check.
+
+**Proposal-idempotency vs commit-retry-idempotency.** The two are
+distinct and must not be conflated:
+
+> A duplicate proposal request with the same bundle idempotency key
+> returns the existing bundle row. It does not create a second
+> bundle.
+>
+> A commit retry for the same existing bundle is allowed when the
+> bundle has no prior committed or terminal outcome. The bundle
+> service locks the existing bundle row, verifies that no prior
+> commit succeeded, and then opens a fresh transaction. If a prior
+> commit already produced a Posted (manual) / Posted (auto) /
+> Finalized / Rejected / Rejected-with-reversal outcome, the
+> service returns that outcome and does not post again.
 
 **Child keys still apply.** Each `ProposedMutation` child carries its
 own idempotency key per the standard pattern. Bundle-level
@@ -255,12 +270,27 @@ pattern but the discipline costs nothing to preserve).
 
 ### 5. Bundle lifecycle
 
-A bundle has a single shared `bundle_lifecycle_state` field mapping
-to the six canonical states from `mutation_lifecycle.md`:
+A bundle reuses the canonical lifecycle states from
+`mutation_lifecycle.md`: Pending, Needs Attention, Approved,
+Posted (auto), Posted (manual), and Finalized, plus the terminal
+Rejected and Rejected-with-reversal states where applicable.
+
+Bundle-specific labels such as "voided," "partially reversed," or
+"fully reversed" are derived audit/display statuses computed from
+reversal/audit events, not new canonical lifecycle states unless
+`mutation_lifecycle.md` is amended.
+
+A born-paid bundle's path through the canonical states:
 
 ```
 Pending → (may go to Needs Attention) → Approved (transient) →
-Posted → (may later become Voided or Reversed)
+Posted (manual) → Finalized           [v1 — Always Confirm]
+
+Pending → (may go to Needs Attention) → Approved (transient) →
+Posted (auto) → Finalized              [post-v1 per Q60 deferral]
+
+Posted (auto) → Rejected-with-reversal [if undone within the
+                                        24-hour reversible window]
 ```
 
 The state transitions:
@@ -268,38 +298,49 @@ The state transitions:
 - **Pending → Approved.** Human approves on the
   ProposedBundleCard. Per §13, born-paid bundles are Always
   Confirm in v1. Approved is **transient** (milliseconds before
-  Posted); the state exists so the audit log records approval as
-  a separate event from commit.
+  Posted (manual) / Posted (auto)); the state exists so the audit
+  log records approval as a separate event from commit.
 - **Pending → Needs Attention.** Per `mutation_lifecycle.md` §4
   triggers (limit violation, ceiling flag, novel pattern,
   stale-state detection). The bundle's ceiling is bundle-effective
   per §9; a child's ceiling-flag elevates the whole bundle.
 - **Needs Attention → Approved.** Human resolves and approves.
-- **Approved → Posted.** Atomic across all children per §3.
+- **Approved → Posted (manual).** Atomic across all children per
+  §3. The v1 path for human-approved bundles. Transitions
+  immediately to **Posted (manual) → Finalized** with no
+  reversible window (per `mutation_lifecycle.md`).
+- **Approved → Posted (auto).** Atomic across all children per
+  §3. The post-v1 path per Q60 / ADR-0017 (auto-post calibration).
+- **Posted (auto) → Finalized.** After the 24-hour reversible
+  window elapses (per `mutation_lifecycle.md` timing rules).
+- **Posted (auto) → Rejected-with-reversal.** Within the 24-hour
+  reversible window, any controller can undo via one click; the
+  undo creates reversal entries per ADR-0001 and the original
+  bundle's `Posted (auto)` row transitions to this terminal state
+  per `mutation_lifecycle.md`'s transitions table. Per-child vs
+  bundle-level reversal strategy is owned by ADR-0015 / ADR-0001
+  (ADR-0012 names the distinction in §8).
 - **Pending or Needs Attention → Rejected.** Human rejects.
   Terminal; no children commit.
-- **Posted → Voided.** Per `mutation_lifecycle.md`'s
-  rejected-with-reversal terminal state, applies within the
-  24-hour reversible window. The undo creates reversal entries
-  per ADR-0001; per-child vs bundle-level reversal strategy is
-  owned by ADR-0015 / ADR-0001 (ADR-0012 names the distinction
-  in §8).
-- **Posted → Reversed.** Per ADR-0001, applies post-window or to
-  manually-posted bundles. Per-child reversal of an individual
-  child within a committed bundle is allowed (reversals are
-  individual ledger operations); the bundle lifecycle reflects
-  the reversal status. Bundle-level reverse-all is an ADR-0015
-  convenience.
+
+**Post-Finalized correction.** Reversal of an individual child
+mutation post-Finalized follows ADR-0001 reversal semantics: a new
+`journal_entries` row is created with swapped debits/credits and
+non-empty `reversal_reason`. The bundle's lifecycle state row is
+not mutated; the bundle's reversal status is reflected in audit
+events and in derived display statuses (e.g., "partially
+reversed," "fully reversed"). Bundle-level reverse-all is an
+ADR-0015 convenience.
 
 **Per-child lifecycle states are NOT separate audit surfaces.** The
 audit log records bundle-level state transitions (`bundle_proposed`,
 `bundle_approved`, `bundle_committed`, `bundle_rejected`,
-`bundle_commit_attempt_failed`, `bundle_voided`) and per-child commit
-details inside the same audit event (the per-child journal-entry
-references, the per-child invariant results). A child within a bundle
-does not carry an independent `lifecycle_state` field that drifts from
-the bundle's; the bundle's state is the canonical state for all its
-children.
+`bundle_commit_attempt_failed`, `bundle_rejected_with_reversal`,
+`bundle_finalized`) and per-child commit details inside the same
+audit event (the per-child journal-entry references, the per-child
+invariant results). A child within a bundle does not carry an
+independent `lifecycle_state` field that drifts from the bundle's;
+the bundle's state is the canonical state for all its children.
 
 The exception is **post-Posted reversal**. After successful commit,
 an individual child's underlying journal entry can be reversed per
@@ -307,10 +348,21 @@ ADR-0001 — at which point the bundle's lifecycle reflects "one or
 more children reversed" via the audit trail, not via per-child
 lifecycle drift.
 
-**Lifecycle state is immutable post-commit per ADR-0011 §9.** A
-committed bundle's audit trail is immutable; subsequent reversals
-produce new audit events, not in-place state mutations on the prior
-bundle row.
+**Bundle commit event is immutable post-commit.** The bundle
+commit event is immutable post-commit. Later reversal activity
+produces new reversal entries (per ADR-0001) and audit events. A
+read model may derive display statuses such as "partially
+reversed" or "fully reversed" from those events, but the original
+bundle commit record is not rewritten. The
+`Posted (auto) → Rejected-with-reversal` transition (within the
+24-hour reversible window per `mutation_lifecycle.md`) is the
+canonical lifecycle path for an auto-posted bundle that gets
+undone; reversal of an individual child mutation post-Finalized is
+per ADR-0001 reversal semantics and produces a new ledger entry
+rather than mutating the bundle row. (ADR-0011 §9's immutability
+rule governs `source_document_links` row immutability, not bundle
+lifecycle state on the mutation; the cross-reference is preserved
+where it applies.)
 
 ### 6. Logic Receipt for bundles
 
@@ -430,11 +482,21 @@ FK miss, or deferred-constraint-trigger fail:
   (typed `ServiceError` code) and per-child error details — not
   a `bundle_committed` event. The event lives on the
   document/bundle layer, not on `journal_entries`.
-- Bundle `lifecycle_state` returns to `Pending` (not stuck in
-  `Approved`); `approved_at` is preserved as historical record.
-- Retry uses a fresh transaction with the same
-  `bundle_idempotency_key` (§4); the idempotency check finds no
-  prior commit and the retry runs.
+- On pre-commit failure after approval, the bundle exits Approved
+  and transitions to **Needs Attention** with a typed failure
+  reason (stale vendor, locked period, FK miss, invariant
+  violation, vendor bank-detail-confirmed flag changed, etc.).
+  The prior `approved_at` timestamp is preserved as historical
+  evidence, but the approval is no longer active; the controller
+  must re-approve after remediation. The audit log records the
+  `Approved → Needs Attention` transition with the failure reason
+  and the original approval's `approved_at`.
+- Retry of the commit is allowed once the bundle re-enters
+  Approved post-remediation; the bundle service locks the
+  existing bundle row, verifies that no prior commit succeeded
+  (per §4 commit-retry-idempotency discipline), and opens a fresh
+  transaction. The `bundle_idempotency_key` (§4) is unchanged —
+  it identifies the bundle, not the commit attempt.
 
 **Post-commit reversal** — the bundle posts successfully and is
 later discovered wrong (wrong vendor, wrong amount, wrong period,
@@ -447,8 +509,12 @@ fraudulent receipt, etc.):
   owned by **ADR-0015 / ADR-0001**. Per ADR-0001, reversals are
   individual ledger operations; whether AP/Spend exposes a
   bundle-level reverse-all convenience is an ADR-0015 choice.
-- Bundle `lifecycle_state` reflects reversal status (Posted with
-  one-or-more-children-reversed, or Reversed if all reversed).
+- The bundle's underlying lifecycle row is not rewritten;
+  reversal status is reflected via audit events and via derived
+  display statuses (e.g., "partially reversed" if one or more
+  children reversed; "fully reversed" if all reversed). These
+  display labels are derived from reversal/audit events and are
+  not new canonical lifecycle states.
 - Q78 cross-reference: payment failure (wire bounced, ACH
   returned, card disputed) is a post-commit reversal scenario
   whose lifecycle is owned by ADR-0015.
@@ -459,23 +525,36 @@ fraudulent receipt, etc.):
 inherit the strictest approval / autonomy requirement of any child.
 
 **A bundle may never reduce, mask, or average child-level ceiling
-requirements.** A bundle whose children include an `update_vendor`
-mutation that changes bank-detail fields is **System ceiling** per
-`agent_autonomy_model.md` §6 Item 2 — the bundle inherits the
-ceiling. Always Confirm at the bundle level. The controller (Tier 1
-human) confirms the bundle on the ProposedBundleCard, and the
-confirmation transitively confirms the bank-detail change.
+requirements.**
+
+**Vendor bank-detail change is a separate proposal, not a bundle
+child.** If document extraction detects a vendor bank-detail
+change while also proposing a born-paid bill bundle, the
+bank-detail change is a **separate System-ceiling proposal**. It
+is not silently absorbed into the born-paid bundle. The born-paid
+bundle may not reduce, mask, or average the ceiling of any
+proposal presented alongside it. The System-ceiling rule for
+vendor bank-detail changes (per
+`docs/09_briefs/phase-2/document_platform_reframe_design.md` §15;
+pending registration in `agent_autonomy_model.md` §6 — Session 2A
+closeout item) governs the separate proposal.
 
 **Composition-bypass prevention.** Not redundant with ADR-0007 —
 this is a real failure mode the bundle ADR is in the best position
-to prevent. The hazard: a bundle advertised as "low-ceiling" (a
-routine born-paid bill) could hide a high-ceiling child (an
-`update_vendor` that flips the bank account number), bypassing
-System-ceiling enforcement through composition. The rule:
-`bundle_effective_ceiling` is mechanically computed as the maximum
-of child ceilings, enforced at both proposal time (bundle is
-classified at max child ceiling) and commit time (the approval-gate
-check uses the max, not the nominal `bundle_type` ceiling).
+to prevent. The hazard: a bundle could hide a high-ceiling child
+among lower-ceiling siblings, bypassing System-ceiling enforcement
+through composition. The rule: `bundle_effective_ceiling` is
+mechanically computed as the maximum of child ceilings, enforced
+at both proposal time (bundle is classified at max child ceiling)
+and commit time (the approval-gate check uses the max, not the
+nominal `bundle_type` ceiling).
+
+**Forward-compatibility for non-ledger children.** If a future
+ADR expands bundles to include non-ledger ProposedMutation
+children, the same composition-ceiling rule applies:
+`bundle_effective_ceiling = max(child ceilings)`. A bundle cannot
+bypass System-ceiling enforcement by hiding a ceiling-rated child
+mutation among lower-ceiling children.
 
 ### 10. Stale-state re-verification (Q28 surface 3) per child
 
@@ -658,9 +737,9 @@ proposals.
   `ai_actions` `(org_id, idempotency_key)` pattern.
 - A bundle-level audit-event vocabulary (`bundle_proposed`,
   `bundle_approved`, `bundle_committed`,
-  `bundle_commit_attempt_failed`, `bundle_voided`,
-  `bundle_rejected`) routed through the canonical audit-log
-  writer.
+  `bundle_commit_attempt_failed`, `bundle_rejected`,
+  `bundle_rejected_with_reversal`, `bundle_finalized`) routed
+  through the canonical audit-log writer.
 - A new ProposedBundleCard rendering surface implementing
   aggregate Four Questions grammar.
 - Integration tests for transactional rollback — fail one child
@@ -803,10 +882,12 @@ queue per ADR-0011 §13.
 
 - **ADR-0001** (`0001-reversal-semantics.md`) — post-commit
   reversal/correction mechanics. Cited by §5 (lifecycle —
-  Posted → Voided / Reversed transitions), §8 (post-commit reversal
-  path uses reversal-as-mirror discipline), §13 (per-child reversal
-  is an individual ledger operation per ADR-0001), and Alternative 3
-  (the rejected per-child-transactions path's reversal mechanics).
+  `Posted (auto) → Rejected-with-reversal` within the 24-hour
+  window; post-Finalized reversal produces new ledger entries),
+  §8 (post-commit reversal path uses reversal-as-mirror
+  discipline), §13 (per-child reversal is an individual ledger
+  operation per ADR-0001), and Alternative 3 (the rejected
+  per-child-transactions path's reversal mechanics).
 - **ADR-0007** (`0007-three-tier-agent-architecture.md`) — Tier 1
   commit-path inheritance (every bundle commit happens at Tier 1
   inside `withInvariants()`); Q28 surface 4 inheritance (bundle
@@ -849,17 +930,24 @@ queue per ADR-0011 §13.
   Primitive 1 (Proposal) per spec §20 with composite payload — no
   new primitive.
 - **`docs/02_specs/mutation_lifecycle.md`** — six canonical states
-  (Pending / Needs Attention / Approved / Posted / Voided /
-  Reversed). Bundle lifecycle reuses these states unchanged (§5).
+  (Pending / Needs Attention / Approved / Posted (auto) / Posted
+  (manual) / Finalized) plus terminal states Rejected and
+  Rejected-with-reversal. Bundle lifecycle reuses these states
+  unchanged (§5). Bundle-specific labels such as "voided,"
+  "partially reversed," or "fully reversed" are derived
+  audit/display statuses, not new canonical lifecycle states.
 - **`docs/02_specs/ledger_truth_model.md`** — Service Communication
   Rules; `withInvariants()` discipline; trace_id + idempotency_key
   pattern; INV-LEDGER-001 (per-child balance enforced at Layer 1a);
   INV-LEDGER-002 (period-lock trigger fires per child during
   INSERT); INV-AUDIT-001 (audit-log row in same transaction).
-- **`docs/02_specs/agent_autonomy_model.md`** §6 — System ceiling
-  list. Cited by §9 (composition-ceiling discipline; vendor
-  bank-detail rule per §6 Item 2 — Always Confirm / System
-  ceiling).
+- **`docs/02_specs/agent_autonomy_model.md`** §6 (System table —
+  bank-detail row pending registration per Session 2B amendment
+  brief) — System ceiling list. Cited by §9 (composition-ceiling
+  discipline; vendor bank-detail rule per
+  `docs/09_briefs/phase-2/document_platform_reframe_design.md`
+  §15, pending registration in `agent_autonomy_model.md` §6 —
+  Session 2A closeout item — Always Confirm / System ceiling).
 - **`docs/02_specs/agent_architecture_policy.md`** — Q28 matrix
   authoritative source for surfaces 1–3; ADR-0012 is the
   authoritative source for surface 4 (bundle re-verification)
@@ -904,10 +992,14 @@ queue per ADR-0011 §13.
   "smart" formula (averaging, discounting for trusted types,
   overriding by `bundle_type` metadata) is a composition-bypass
   vulnerability. The hazard is real: a born-paid-bundle classifier
-  could plausibly include an `update_vendor` mutation that flips
-  bank-detail (System ceiling per `agent_autonomy_model.md` §6 Item
-  2) as a side-effect of vendor-master extraction. The max-of-child-
-  ceilings rule blocks that path.
+  could plausibly hide a System-ceiling child among lower-ceiling
+  siblings. The max-of-child-ceilings rule blocks that path.
+  Vendor bank-detail change is itself a separate System-ceiling
+  proposal, not a bundle child (per §9 reframe); the System-
+  ceiling rule for vendor bank-detail changes (per
+  `docs/09_briefs/phase-2/document_platform_reframe_design.md`
+  §15; pending registration in `agent_autonomy_model.md` §6 —
+  Session 2A closeout item) governs that separate proposal.
 
 - **AP-nets-to-zero generic phrasing — debit side is child/domain
   logic owned by ADR-0015.** ADR-0012 specifies that the AP control
@@ -925,5 +1017,18 @@ queue per ADR-0011 §13.
   ADR-0001 — a new `journal_entries` row with
   `reverses_journal_entry_id` FK and non-empty `reversal_reason`.
   The audit-log shape distinguishes the two
-  (`bundle_commit_attempt_failed` vs `bundle_voided` / reversal
-  events); future implementations preserve the distinction.
+  (`bundle_commit_attempt_failed` vs reversal events); future
+  implementations preserve the distinction.
+
+- **Bundle-specific `Approved → Needs Attention` path on
+  commit-attempt failure.** §8 specifies that a pre-commit failure
+  after approval transitions the bundle from Approved to **Needs
+  Attention** with a typed failure reason (not silently to a
+  Pending-equivalent quiet state); the prior `approved_at` is
+  preserved as historical evidence and re-approval is required
+  after remediation. This introduces a bundle-specific
+  `Approved → Needs Attention` path on commit-attempt failure that
+  is not currently in `mutation_lifecycle.md`'s transitions table.
+  Do not amend `mutation_lifecycle.md` from ADR-0012. If this
+  failure path proves common across non-bundle mutations, file a
+  future amendment to `mutation_lifecycle.md`.
