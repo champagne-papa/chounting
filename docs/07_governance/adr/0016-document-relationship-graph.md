@@ -700,25 +700,33 @@ functions on `documentLinkService` (specifically
 `reverseLinkedEntityLink()`), not by triggers, not by direct
 SQL from a domain service.
 
-The `source_document_links` row's lifecycle vocabulary is
-**distinct from** the canonical mutation lifecycle vocabulary
-in `mutation_lifecycle.md`. The canonical mutation states
-(Pending, Needs Attention, Approved, Posted, Finalized,
-Rejected) describe the lifecycle of a `ProposedMutation` or a
+The `source_document_links` row's `link_status` vocabulary is
+**a link-row state, not a mutation-lifecycle state**. The
+canonical mutation-lifecycle vocabulary in `mutation_lifecycle.md`
+(Pending, Needs Attention, Approved, Posted (auto), Posted
+(manual), Finalized; terminal Rejected and Rejected-with-reversal)
+describes the lifecycle of a `ProposedMutation` or
 `ProposedAttachment` — the proposal's progress from generation
-through commit. The link row itself carries its own narrow
-lifecycle vocabulary on the `link_status` column:
+through commit. The link row itself carries a separate, narrow
+audit-lifecycle vocabulary on the `link_status` column:
 
-- `created` — the link row is committed and active. (This is
-  the default state at insert time.)
-- `reversed` — the link row's underlying linked entity has
-  been reversed; the link row is no longer "active" in the
-  domain sense but remains queryable for audit purposes.
+- `created` — the link row is committed and active. (Default
+  state at insert time.)
+- `reversed` — the link row's underlying linked entity has been
+  reversed; the link row is no longer "active" in the domain
+  sense but remains queryable for audit purposes.
 
-This distinction mirrors ADR-0015's payment-state-vs-mutation-
-lifecycle-state distinction (`payments.payment_state = 'failed'`
-is a domain entity state on `payments`, NOT a mutation-lifecycle
-state). The link-status vocabulary is its own narrow set and
+The vocabulary distinction matches ADR-0015's
+payment-state-vs-mutation-lifecycle-state distinction
+(`payments.payment_state = 'failed'` is a domain-entity state on
+`payments`, NOT a mutation-lifecycle state) and ADR-0017's
+`vendor_rule_rung`-vs-mutation-lifecycle-state distinction
+(`vendor_rules.current_rung` is an agent-ladder vocabulary, NOT
+a mutation-lifecycle state). All three vocabularies — link-row
+state, payment-state, vendor-rule rung — live on domain or
+substrate entities and use narrow per-entity transitions; the
+canonical mutation-lifecycle vocabulary in `mutation_lifecycle.md`
+governs proposal lifecycle only and is unchanged by any of them.
 ADR-0016 does NOT extend `mutation_lifecycle.md`.
 
 **Per-`linked_entity_type` cascade matrix.** For each v1 active

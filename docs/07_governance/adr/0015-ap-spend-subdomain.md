@@ -290,6 +290,25 @@ is immutable post-insert (Layer 1 CHECK); changing the meaning of
 a recorded payment requires reversing the original payment and
 recording a new one with the corrected `payment_purpose`.
 
+**`payment_purpose` per-flow assignment.** The four v1 active
+values (`bill_payment`, `vendor_prepayment`, `vendor_refund`,
+`other`) bind to specific flow paths: `bill_payment` is the
+default for `paymentService.record(bill_id, ...)` (the canonical
+bill-payment flow per item 7 Scenario B); `vendor_prepayment` is
+the value emitted by `vendorPrepaymentService.create()` per the
+discriminator linkage above; `vendor_refund` is the value emitted
+by the refund flow on `vendorPrepaymentService.refund(...)` (the
+refund creates a new `payments` row with negative cash movement
+and `payment_purpose = vendor_refund`); `other` is the explicit
+controller-stamped value for cash movements that don't fit the
+first three (an out-of-scope deposit per item 6 path 2's
+`bill_recorded_with_out_of_scope_deposit` audit event may
+correspond to a manually-recorded `payments` row with
+`payment_purpose = other`). Each flow's `payment_purpose`
+emission is governed at Layer 3 by the corresponding service
+function; the immutability post-insert (Layer 1 CHECK) prevents
+silent reclassification across flows.
+
 **Application logic.** `apply_vendor_prepayment_to_bill` is a
 `ProposedMutation` variant that creates a
 `vendor_prepayment_applications` row inside the ledger transaction
@@ -1001,6 +1020,28 @@ a Reading-boundary violation and must be rejected unless ADR-0007
 / ADR-0011 §11 amend their respective read-boundary contracts
 first.
 
+**No silent vendor bank-detail mutation rule.** Per INV-AGENT-006
++ `agent_autonomy_model.md` §6 row 7, NO code path may mutate
+`vendor.bank_account`, `vendor.payment_instructions`, or
+`vendor.bank_detail_confirmed_flag` without (a) flowing through
+`vendorService.update()`, (b) presenting the controller approval
+surface with the explicit out-of-band-verification checkbox, (c)
+emitting the `vendor_bank_detail_change_confirmed` audit event.
+This rule is mechanical at the architectural layer: extracted
+invoice data MAY suggest a bank-detail change in a
+ProposedMutation payload, but the bank-detail change ITSELF
+proposes through `vendorService.proposeBankDetailChange()` and
+commits through `vendorService.confirmBankDetailChange()` only
+after controller out-of-band verification — never as a side
+effect of any other proposal commit. A future contributor
+implementing a vendor-update flow that mutates bank-detail
+columns inside any other service path (e.g., a "smart vendor
+update" that infers bank details from the latest invoice
+extraction and writes them in `billService.post()`) is proposing
+a System ceiling reduction that is out of scope for ADR-0015
+amendments. The rule is the load-bearing fraud control surface
+preservation per Constraints 1–3 above.
+
 **Audit treatment for vendor master mutations.** Every
 vendorService write emits an audit event through the canonical
 audit-log writer per ADR-0011 §1. The events: `vendor_created`,
@@ -1672,6 +1713,23 @@ Reading B preservation explicitly.
   fragment the substrate / domain boundary that ADR-0011's
   three-layer Reading B preservation depends on.
 
+- **AP/Spend intent map (which Decision item closes which
+  Q-number).** The eight Q-closures map to Decision items as
+  follows: Q59 → item 1 (vendor prepayment object shape); Q60
+  v1 portion → item 2 (born-paid bundle approval gate v1);
+  Q61 → item 3 (vendor prepayment approval gate, bifurcated);
+  Q62 → item 4 (deposit / retainer tax timing); Q63 → item 5
+  (vendor balance view composition); Q64 → item 6 (final invoice
+  with prior deposit not in CHOUnting); Q74 AP/Spend domain-rows
+  portion → item 7 (receipt v1 path Scenarios A / B / C); Q78 →
+  item 8 (payment failure / reversal lifecycle, proposal-and-
+  confirm). Items 9–11 carry cross-cutting concerns (item 9
+  vendor master integration with INV-AGENT-006; item 10 schema
+  deltas; item 11 reserved enums and audit events) that span
+  multiple Q-closures. A future contributor reviewing ADR-0015's
+  Q-closure provenance can read this map for an at-a-glance index
+  before diving into the Decision items themselves.
+
 - **Future-amendment expectations.** ADR-0015 is expected to
   receive amendments as the post-v1 phases scope. The expected
   amendment vectors:
@@ -1735,6 +1793,27 @@ Reading B preservation explicitly.
   divergence; the divergence creates the failure mode where the
   same scenario taken twice (once manual, once automated)
   produces structurally different ledger states.
+
+- **Manual born-paid workflow uses existing
+  `route_to_manual_entry` resolution-action with subtype
+  payload.** A future contributor implementing Scenario C's
+  manual workflow (item 7) might be tempted to introduce a new
+  `manual_born_paid_workflow` value on ADR-0011 §13's
+  exception-queue resolution-action enum to discriminate the
+  manual born-paid case from other manual-entry cases. **Do not
+  extend the resolution-action enum for this purpose.** The
+  manual born-paid workflow is a UI / form discriminator, not a
+  new resolution-action category: the queue routes to manual
+  entry via the existing `route_to_manual_entry` resolution
+  action; the form subtype payload (e.g.,
+  `manualBornPaidBundleEntry`) determines that the manual entry
+  is a born-paid bundle; the form commit produces the canonical
+  `billService.postWithImmediatePayment(bundle)` path per
+  ADR-0012 §11 manual + automated path uniformity. ADR-0011 §13
+  closed its v1 active resolution-action subset; extending that
+  subset to add a UI-discriminator value would re-litigate D2
+  ratification's enum-membership decision. The form-subtype
+  payload is the correct extension point.
 
 - **The `failed` payment-state vs mutation-lifecycle state
   distinction is load-bearing.** Item 8's distinction — `failed`

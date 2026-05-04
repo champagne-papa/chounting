@@ -419,11 +419,27 @@ traceId)`. The function inserts a row with `current_rung =
 'always_confirm'`, all counter columns at default 0, all audit
 anchor columns null, and emits a `vendor_rule_created` audit
 event per item 5 below. The v1 fire condition is the first
-`born_paid_bill` proposal for a `(vendor_id, 'born_paid_bill')`
-pair that does not already have a `vendor_rules` row (idempotent
-seed); the seed exists for substrate-presence purposes (post-v1
+`born_paid_bill` proposal for a `(org_id, vendor_id,
+'born_paid_bill')` triple that does not already have a
+`vendor_rules` row (idempotent seed); v1 fills `legal_entity_id`
+with `org_id` per item 1's multi-entity reservation pattern.
+The seed exists for substrate-presence purposes (post-v1
 enforcement assumes a row exists for every active vendor) and is
 not consumed by any v1 autonomy decision.
+
+**Seed timing.** The seed fires at proposal time (when a
+`born_paid_bill` proposal lands in the Always Confirm gate per
+ADR-0015 §2), NOT at proposal commit time. The intent: every
+vendor with a `born_paid_bill` proposal — whether the proposal
+ultimately commits or rejects — generates a `vendor_rules` row.
+Post-v1 enforcement consumes both the audit corpus (controller
+accept / reject decisions per `bundle_approved` / `bundle_rejected`
+events) AND the substrate row presence; seeding at proposal time
+ensures the substrate row exists before the audit decision lands,
+giving the post-v1 enforcement a stable join target. Idempotency
+ensures no duplicate seeds for the same `(org_id, legal_entity_id,
+vendor_id, bundle_type)` quadruple — the unique constraint per
+item 1 makes this mechanical at the database layer.
 
 **Post-v1 service surface (forward-pointed).** Post-v1
 enforcement adds `incrementCleanApprovalCount(...)`,
@@ -433,6 +449,23 @@ the §4.1 promotion ceremony), `demote(...)` (which performs the
 in v1. The promotion / demotion functions consume
 `agent_autonomy_model.md` §4.1 / §4.2 / §4.3 contracts that do
 not yet exist as v1 service code.
+
+**Idempotency contract.** `vendorRuleService.create()` is
+idempotent over the `(org_id, legal_entity_id, vendor_id,
+bundle_type)` quadruple per the unique constraint in item 1: a
+second call for the same quadruple is a no-op (the function
+detects the existing row and returns the existing
+`vendor_rule_id` without inserting). Idempotency is mechanical at
+the database layer — the unique constraint prevents duplicate
+inserts; the service function catches the unique-violation error
+and returns the existing row. Post-v1 increment functions
+(`incrementCleanApprovalCount`, `incrementRejectionCount`) are
+NOT idempotent over single calls (each call increments the
+counter by 1); they ARE idempotent over the `(audit_event_id,
+vendor_rule_id)` pair via a derived idempotency key per the audit
+corpus consumption in item 4 — the post-v1 enforcement ADR
+specifies the derivation. v1 ships only `create()`; idempotency
+discipline for the post-v1 increment functions is forward-pointed.
 
 ### 3. v1 read posture (no autonomy decisions consume `vendor_rules`)
 
@@ -527,6 +560,24 @@ All four enforcement surfaces consume `vendor_rules` columns at
 runtime. **None ship in v1.** ADR-0017's substrate is the schema
 seat; the enforcement is the runtime that the future ADR will
 specify against.
+
+**Audit corpus source for post-v1 enforcement.** The post-v1
+enforcement work derives `clean_approval_count` and
+`rejection_count` from the canonical audit log per ADR-0011 §1
+audit-log writer boundary — specifically from `bundle_approved`
+and `bundle_rejected` events emitted by the bundle approval gate
+per ADR-0012 §13 + ADR-0015 §2. The audit corpus is the
+canonical source of truth; the `vendor_rules` counter columns
+(`clean_approval_count`, `last_clean_approval_at`,
+`rejection_count`, `last_rejection_at`) are denormalized
+fast-lookup mirrors that post-v1 enforcement writes back via
+`vendorRuleService.incrementCleanApprovalCount(...)` /
+`vendorRuleService.incrementRejectionCount(...)` (forward-pointed
+post-v1 functions per item 2). A future enforcement contributor
+who proposes deriving the count from `vendor_rules` columns
+without verifying against the audit corpus is proposing a
+single-source-of-truth violation: the audit corpus is canonical;
+the counter columns are cached.
 
 ### 5. Closed enums introduced (per ADR-0010 reserved-enum-states discipline)
 
@@ -672,14 +723,22 @@ bank-detail-confirmed flag, payment hold status, blocked-vendor
 status — those columns live on `vendors` and are governed by the
 ADR-0011 §11 third-category restriction).
 
-**v1 matcher does not currently read `vendor_rules` for autonomy
+**v1 matcher does not read `vendor_rules` for autonomy
 purposes.** Per item 3 above, no v1 service path consumes
 `vendor_rules` columns for autonomy decisions; the matcher is no
-exception. Per item 4 above, post-v1 enforcement may add matcher
+exception. Post-v1 enforcement may add **advisory-only** matcher
 reads of `vendor_rules.current_rung` and
 `vendor_rules.clean_approval_count` for promotion-eligibility
-scoring; that read fits within the ADR-0011 §11 identity-and-matching
-category and does NOT require a read-boundary expansion.
+scoring per item 4 above; "advisory-only" means the matcher's
+read does NOT bypass any approval gate or commit-time
+re-verification — the Tier 1 commit path still re-verifies all
+vendor-control fields per ADR-0007 + ADR-0011 §11 regardless of
+what the matcher's score suggested. The matcher's read fits
+within the ADR-0011 §11 identity-and-matching category and does
+NOT require a read-boundary expansion. A future contributor who
+proposes the matcher's `vendor_rules` read as a gate-bypass
+(skipping Tier 1 re-verification when the matcher score is high)
+is proposing a Reading-boundary violation; the rejection is hard.
 
 **ADR-0017 does NOT propose any new read-boundary categories.**
 The three-category split per ADR-0007 / ADR-0011 §11 (reference /
@@ -725,6 +784,28 @@ migration — the values ship in the enums at v1; activation flips
 the active subset and adds runtime emission per the post-v1
 enforcement ADR. Migrations beyond the v1 schema-time addition
 are zero unless a future amendment activates a reserved value.
+
+**v1-safe CHECK constraints.** Per ADR-0010 reserved-enum-states
+discipline, the `vendor_rules` table ships with three scoped
+CHECK constraints at v1 schema time: (1) a CHECK on
+`current_rung` restricting v1 emission to the active subset
+(`current_rung = 'always_confirm'`) — rejects any v1 row attempting
+a reserved value at the database layer; (2) a CHECK on
+`promotion_authority` enforcing the v1 null-only invariant
+(`promotion_authority IS NULL`) — rejects any v1 row attempting
+to populate the column with a reserved value; (3) a CHECK on the
+audit-anchor columns enforcing v1 null-only on
+`promoted_at`, `promoted_by`, `demoted_at`, `demoted_by`,
+`last_clean_approval_at`, `last_rejection_at` — these columns
+ship at v1 schema time but no v1 service path populates them
+(the reserved post-v1 functions are the only writers). Post-v1
+activation requires loosening the CHECK constraints (extending
+the IN list for `current_rung`, removing the IS NULL constraint
+on `promotion_authority`, removing the IS NULL constraints on
+the audit anchors) as part of the same migration that ships the
+post-v1 enforcement. The constraints are the Layer 1 backstop
+under the Layer 2 Zod boundary and Layer 3 service emission
+filter per ADR-0010 three-layer defense.
 
 ## Reserved enums and audit events
 
@@ -1339,6 +1420,16 @@ framing is the correct shape.
   `current_rung` is a separate lifecycle on a separate entity
   (the vendor-rule rule, not the proposal). Both lifecycles apply
   to the same proposal but at different levels of abstraction.
+
+  In plain language: the proposal asks "what's happening to the
+  ledger right now?" (mutation-lifecycle); the vendor-rule asks
+  "how much autonomy does this rule currently have?"
+  (rung-lifecycle); the link row asks "is this evidence still
+  active?" (link-status). Three distinct questions, three
+  distinct vocabularies on three distinct entities. A unified
+  vocabulary would force one lifecycle to answer all three
+  questions, which produces conceptual ambiguity at every
+  state transition.
 
 - **The Tier 4 trio (ADR-0015, ADR-0016, ADR-0017) ratifies as a
   package; do not propose isolated ADR-0017 ratification.** Per
