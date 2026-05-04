@@ -2,8 +2,11 @@
 
 ## Status
 
-Drafted 2026-05-03. Not yet ratified. CTO ratifies per Phase 0
-governance plan Decision 3.
+Ratified 2026-05-03 by CTO with named follow-ups per D3
+ratification package §5. Item 1 (audit-event renaming bundle_voided
+→ bundle_rejected_with_reversal + bundle_finalized added) ratified
+as-is per D3 §5 tagging — naming-alignment delta only, no new
+canonical lifecycle states introduced.
 
 ## Date
 

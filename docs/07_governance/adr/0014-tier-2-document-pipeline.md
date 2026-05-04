@@ -2,8 +2,17 @@
 
 ## Status
 
-Drafted 2026-05-03. Not yet ratified. CTO ratifies per Phase 0
-governance plan Decision 3.
+Ratified 2026-05-03 by CTO with named follow-ups per D3
+ratification package §5. Carry-forwards accepted on the recommended
+path: Item 7 (length 1951 vs 1100–1400 calibration target) ratified
+as-is — overage concentrated in load-bearing CTO-named inheritance
+content; Item 8 (AI-fallback pipeline_trace parent/child ambiguity)
+ratified as-is with sub-stage interpretation — AI fallback emits
+a child sub-stage record under parent classify_document_type or
+extract_fields (child names ai_fallback_classify or
+ai_fallback_extract); Item 9 (C5a cleanup applied) ratified — 12
+reserved org_settings.* columns reconciled with Closes Q73
+canonical; Items 10-13 ratified as-is.
 
 ## Date
 

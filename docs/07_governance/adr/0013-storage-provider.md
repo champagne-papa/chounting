@@ -2,8 +2,17 @@
 
 ## Status
 
-Drafted 2026-05-03. Not yet ratified. CTO ratifies per Phase 0
-governance plan Decision 3.
+Ratified 2026-05-03 by CTO with named follow-ups per D3
+ratification package §5. Carry-forwards accepted on the recommended
+path: Item 2 (reframe spec §7 Q47/Q52 stale references) future-note
+Session 2B hygiene; Item 3 (source_documents.original_storage_key
+schema delta vs ADR-0011 §2) ratified as-is — derivative inference
+required by implicit-version-1 read-resolution path; Item 4
+(orphan-blob-on-rollback policy) ratified as-is — v1 accepts
+orphan-blob risk; GC owned by ADR-0014; Item 5 (storageProviderService
+/ withInvariants conceptual tightening) ratify-with-named-follow-up
+— CTO-captured wording applies at next amendment cycle; Item 6
+(operator-drift caveat for supabase_storage exemption) future-note.
 
 ## Date
 
