@@ -4,7 +4,7 @@
 
 Ratified 2026-05-03 by CTO with named follow-ups per D3
 ratification package §5. Carry-forwards accepted on the recommended
-path: Item 7 (length 1951 vs 1100–1400 calibration target) ratified
+path: Item 7 (length 2003 vs 1100–1400 calibration target) ratified
 as-is — overage concentrated in load-bearing CTO-named inheritance
 content; Item 8 (AI-fallback pipeline_trace parent/child ambiguity)
 ratified as-is with sub-stage interpretation — AI fallback emits
