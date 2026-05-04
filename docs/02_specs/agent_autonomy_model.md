@@ -395,6 +395,19 @@ Items 3–6 are reserved enforcement points that will become part
 of INV-AGENT-001 when the agent orchestrator's ceiling check
 lands (Phase 1.2 partial, Phase 2 full).
 
+Item 7 is structurally distinct from items 3–6: it has its own
+reserved invariant (INV-AGENT-006, see §10) rather than rolling
+into INV-AGENT-001, and its enforcement surface is the domain
+service `vendorService.update()` rather than the agent
+orchestrator's ceiling check. The distinction matters because the
+bank-detail / payment-instruction / `bank_detail_confirmed_flag`
+columns can be mutated by direct user action (a controller editing
+the vendor record) as well as by an agent proposal — both paths
+must hit the same ceiling gate, which is why the gate lives at the
+service-layer write path rather than at the agent orchestrator.
+INV-AGENT-006's enforcement registers when the vendor-master
+service lands per its §10 entry.
+
 The system boundary is not configurable. An owner cannot remove
 intercompany entries from the ceiling list. The ceiling list can
 only be extended (by adding new classes in a migration), never
