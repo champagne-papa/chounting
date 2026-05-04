@@ -388,6 +388,7 @@ agent, regardless of rung, limit, or rule maturity.
 | 4 | Period-end adjustments | **Reserved** | Becomes INV-AGENT-001 partial — ceiling check on `entry_type = 'adjusting'` |
 | 5 | Equity account postings | **Reserved** | Becomes INV-AGENT-001 partial — ceiling check on `account_type = 'equity'` |
 | 6 | First-time vendors above floor | **Reserved** | Becomes INV-AGENT-001 partial — ceiling check on vendor match |
+| 7 | Vendor bank-detail change | **Reserved** → INV-AGENT-006 | System ceiling on `update_vendor` mutations that change `bank_account`, `payment_instructions`, or the `bank_detail_confirmed_flag` column |
 
 Items 1–2 are already enforced at Layer 1 by existing invariants.
 Items 3–6 are reserved enforcement points that will become part
@@ -655,6 +656,12 @@ approval flow — demotion is a safety valve.
 
 **Layer:** Layer 2 (service enforcement). To be registered when
 the re-probate action lands.
+
+### INV-AGENT-006 — Vendor bank-detail changes are System ceiling
+
+Any mutation to `vendor.bank_account`, `vendor.payment_instructions`, or `vendor.bank_detail_confirmed_flag` is System ceiling, requiring controller confirmation. Out-of-band verification (independent confirmation with the vendor through a separate channel) is required for the controller to proceed. Extracted invoice or payment instructions may suggest a bank-detail change but may never update the vendor master automatically.
+
+**Layer:** Layer 2 (service enforcement via `vendorService.update`'s ceiling check). To be registered when the vendor-master service lands.
 
 ---
 
