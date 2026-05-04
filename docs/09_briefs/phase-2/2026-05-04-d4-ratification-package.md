@@ -4,7 +4,7 @@
 
 Three-ADR Tier 4 ratification package. Covers ADR-0015 (AP/Spend Subdomain at `c036c31`), ADR-0016 (Document Relationship Graph at `ccfc6da`), ADR-0017 (Vendor Template Substrate at `c7b7eef`). All three drafted-not-ratified per Phase 0 plan; D4 is the ratification gate that closes Tier 4 of the eight-ADR Phase 0 set.
 
-Also covers Cleanup Commit 1 (`0c0224c`, 13 mechanical edits across 7 files restoring canonical Form A citation uniformity post-INV-AGENT-006 amendment) and Cleanup Commit 2 (`5cf8e36`, single judgment edit harmonizing `agent_autonomy_model.md` §6 prose for row 7 / INV-AGENT-006 structural distinctness).
+Also covers Cleanup Commit 1 (`0c0224c`, 13 mechanical edits across 7 files restoring canonical Form A citation uniformity post-INV-AGENT-006 amendment), Cleanup Commit 2 (`5cf8e36`, single judgment edit harmonizing `agent_autonomy_model.md` §6 prose for row 7 / INV-AGENT-006 structural distinctness), and Cleanup Commit 3 (`3577484`, six edits adding nullable `legal_entity_id` multi-entity reservation to ADR-0017's `vendor_rules` substrate per ADR-0011 §10 precedent).
 
 ## §2 Tier 4 trio commit chain
 
@@ -19,9 +19,10 @@ ccfc6da ADR-0016: Document Relationship Graph (1644 lines)
 c7b7eef ADR-0017: Vendor Template Substrate (1328 lines)
 0c0224c Cleanup pass: post-INV-AGENT-006 citation tightening (13 edits / 7 files)
 5cf8e36 Cleanup Commit 2 (judgment-1): §6 prose harmonization for row 7
+3577484 Cleanup Commit 3 (judgment-2): ADR-0017 multi-entity reservation per ADR-0011 §10 precedent
 ```
 
-9 commits since `a14d939`. Tier 4 trio drafted, reviewed, cleanup applied (citation uniformity restored, §6 prose harmonized).
+10 commits since `a14d939`. Tier 4 trio drafted, reviewed, cleanup applied (citation uniformity restored, §6 prose harmonized, ADR-0017 multi-entity reservation per ADR-0011 §10 precedent).
 
 ## §3 Per-ADR ratification verdicts
 
@@ -53,9 +54,9 @@ c7b7eef ADR-0017: Vendor Template Substrate (1328 lines)
 - **Reading B / single-writer rule:** `vendorRuleService` is sole writer of `vendor_rules`; third instance of the pattern (`ledgerService` / `documentLinkService` / `vendorRuleService`); future substrate tables expected to follow same pattern
 - **System ceiling preservation:** explicit at item 6; bank-detail INV-AGENT-006 uncappable; substrate cannot extend autonomy across any of the seven System ceiling rows
 - **Substrate-now-enforcement-later pattern:** named explicitly as fourth Phase 0 application (after ADR-0014 Tier B, Q23 thresholds, Q57 calibration); load-bearing precedent for future ADRs
-- **Schema deltas:** one new table (`vendor_rules`) with 17 columns per Cleanup Commit 1 fix; two new closed enums; zero new columns on existing tables
-- **Cleanup applied:** Cleanup Commit 1 fixed Consequences "14 columns" → "17 columns"
-- **Verdict:** ratify-as-is. No C9a dedicated cleanup commit needed (folded into Cleanup Commit 1).
+- **Schema deltas:** one new table (`vendor_rules`) with the v1 substrate column set including nullable `legal_entity_id` multi-entity reservation per ADR-0011 §10; two new closed enums per ADR-0010; zero new columns on existing tables; unique constraint on `(org_id, legal_entity_id, vendor_id, bundle_type)`
+- **Cleanup applied:** Cleanup Commit 1 reconciled Consequences column-count to substrate-spec at §1; Cleanup Commit 3 added the nullable `legal_entity_id` multi-entity reservation (per ADR-0011 §10 precedent) and switched Consequences to scope-based wording per Z1 #7 (no hard column counts)
+- **Verdict:** ratify-as-is. No C9a dedicated cleanup commit needed beyond Cleanup Commits 1 and 3.
 
 ## §4 Anti-overscope cross-check across Tier 4 trio
 
@@ -87,9 +88,10 @@ Per the Z1 framing applied across Tier 3/Tier 4 reviews: length is calibration n
 
 1. ADR-0015 ratifies as-is (Q60 v1 portion closed; AP/Spend domain ownership boundary established with INV-AGENT-006 enforcement at `vendorService.update()`)
 2. ADR-0016 ratifies as-is (Q55 closed in full; document relationship graph schema substrate established with single-writer rule)
-3. ADR-0017 ratifies as-is (Q60 post-v1 substrate portion closed; substrate-now-enforcement-later pattern's fourth Phase 0 application; full enforcement deferred)
+3. ADR-0017 ratifies as-is with Cleanup Commit 3 applied (Q60 post-v1 substrate portion closed; substrate-now-enforcement-later pattern's fourth Phase 0 application; multi-entity reservation per ADR-0011 §10 included; full enforcement deferred)
 4. Cleanup Commit 1 (`0c0224c`) ratifies as-is — citation uniformity restored across 7 files using canonical Form A (per ADR-0015's most-recent ratified-state precedent)
 5. Cleanup Commit 2 (`5cf8e36`) ratifies as-is — §6 prose harmonized for row 7 / INV-AGENT-006 structural distinctness
+6. Cleanup Commit 3 (`3577484`) ratifies as-is — ADR-0017 nullable `legal_entity_id` multi-entity reservation added per ADR-0011 §10 precedent; substrate column set adopts scope-based wording per Z1 #7 (no hard column counts)
 
 ## §6 Discoverability notes (12 carried forward)
 
@@ -126,9 +128,9 @@ ADR-0016 item 5 documents the rare-path where a `source_documents` row is genuin
 
 ADR-0016 Consequences "22-cell" → "15-cell" cleanup applied at `0c0224c`. Subagent caught and corrected three other instances of the same drift pre-commit (Closes table, Layer 1 CHECK, Test surface); the fourth instance was missed and folded into Cleanup Commit 1. Lessons-extended pattern from C5/C7 review precedent (recap-arithmetic verification habit).
 
-### §6.7 ADR-0017 Cleanup Commit 1 column-count reconciliation
+### §6.7 ADR-0017 Cleanup Commit 1 column-count reconciliation + Cleanup Commit 3 scope-based wording
 
-ADR-0017 Consequences "14 columns" → "17 columns" cleanup applied at `0c0224c`. C9a-folded fix; reconciles Consequences §What this costs with Decision item 1's actual schema spec. Same pattern as ADR-0016's 22→15 drift.
+ADR-0017 Consequences "14 columns" → "17 columns" cleanup applied at `0c0224c`. C9a-folded fix; reconciles Consequences §What this costs with Decision item 1's actual schema spec. Same pattern as ADR-0016's 22→15 drift. Cleanup Commit 3 (`3577484`) subsequently switched the Consequences wording from a hard column count to scope-based wording ("the v1 substrate column set including nullable `legal_entity_id` multi-entity reservation") per Z1 #7 — counts drift; scope descriptions don't. Z1 #7 paid for itself on first application: would have forced a Cleanup Commit 4 if the 18-column count (post-`legal_entity_id` addition) had been hard-coded again.
 
 ### §6.8 Cleanup Commit 1 (0c0224c) Form A canonical citation
 
@@ -166,7 +168,7 @@ Per the Phase 0 governance discipline that decisions ratified in earlier turns a
 - **From D3 ratification:** ADR-0012 (ProposedMutationBundle atomicity + lifecycle + Logic Receipt); ADR-0013 (Storage Provider abstraction); ADR-0014 (Tier 2 Document Pipeline — PaddleOCR v1, Modal v1, AI fallback OCR'd-text-only NEVER raw image bytes max 2 calls/doc, Q65 confidence thresholds vendor_invoice 0.85 / receipt 0.80 / payment_confirmation 0.85 / unknown always exception, Tier A+C+D classification with Tier B reserved post-v1, orphan-blob GC daily cadence + 24-hour threshold supabase_storage only).
 - **From bank-detail amendment (`84691d5`):** INV-AGENT-006 registered; `agent_autonomy_model.md` §6 row 7 active; vendor bank-detail changes uncappable across the System ceiling.
 
-**Newly proposed for D4 ratification:** ADR-0015 + ADR-0016 + ADR-0017 + Cleanup Commit 1 + Cleanup Commit 2.
+**Newly proposed for D4 ratification:** ADR-0015 + ADR-0016 + ADR-0017 + Cleanup Commit 1 + Cleanup Commit 2 + Cleanup Commit 3.
 
 ## §8 Ratification ask
 
@@ -174,9 +176,10 @@ CTO + founder confirm:
 
 1. **ADR-0015 ratified as-is** — AP/Spend domain ownership; Q60 v1 portion closed (Always Confirm for `born_paid_bill`); Q78 closed with proposal-and-confirm framing; INV-AGENT-006 enforcement at `vendorService.update()` per §9; `payment_state` vocabulary vs mutation-lifecycle vocabulary distinction held; born-paid bundle workflow with manual+automated path uniformity.
 2. **ADR-0016 ratified as-is** — Document Relationship Graph schema substrate; Q55 closed in full (`linked_entity_type` 28-value enum, `link_role` 26-value enum, 728-cell pair-validity matrix, cascade behavior per `linked_entity_type`, pre/post-commit boundary); Q56 explicitly NOT-closed (ADR-0018 territory); single-writer rule for `source_document_links` established as Reading B analog.
-3. **ADR-0017 ratified as-is** — Vendor Template Substrate (substrate-only v1); Q60 post-v1 portion closed; `vendor_rules` table with 17 columns + 2 closed enums per ADR-0010; `vendorRuleService` single-writer rule established; substrate-now-enforcement-later pattern named as Phase 0 lesson; full enforcement (auto-post calibration, promotion ceremonies, demotion-trigger rules, learning-loop governance) deferred past Phase 0.
+3. **ADR-0017 ratified as-is** — Vendor Template Substrate (substrate-only v1); Q60 post-v1 portion closed; `vendor_rules` table with the v1 substrate column set including nullable `legal_entity_id` multi-entity reservation per ADR-0011 §10 + 2 closed enums per ADR-0010; unique constraint `(org_id, legal_entity_id, vendor_id, bundle_type)`; `vendorRuleService` single-writer rule established; substrate-now-enforcement-later pattern named as Phase 0 lesson; full enforcement (auto-post calibration, promotion ceremonies, demotion-trigger rules, learning-loop governance) deferred past Phase 0.
 4. **Cleanup Commit 1 (`0c0224c`) ratified as-is** — 13 mechanical edits across 7 files restoring canonical Form A citation uniformity; Z1 #1 attempt-all-then-rollback-atomically discipline validated 3×.
 5. **Cleanup Commit 2 (`5cf8e36`) ratified as-is** — §6 prose harmonization for row 7 / INV-AGENT-006 structural distinctness vs INV-AGENT-001 consolidation; service-layer enforcement justification captured.
+6. **Cleanup Commit 3 (`3577484`) ratified as-is** — ADR-0017 multi-entity reservation per ADR-0011 §10 precedent; nullable `legal_entity_id` column added to `vendor_rules`; unique constraint extended; v1 service path populates with `org_id` per ADR-0011 §10 pattern (avoids NULL-uniqueness pathology); Z1 #7 (scope-based wording over count-based) applied to Consequences §What this costs.
 
 **Status updates after D4 ratification (mechanical, applied post-CTO-verdict):**
 
