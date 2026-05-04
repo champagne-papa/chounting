@@ -816,7 +816,10 @@ exception queue with `route_to_manual_entry` resolution per
 ADR-0011 §13. The `candidate_alternatives` field surfaces in the
 exception queue UI for controller selection. Per-org
 configurability of the vendor-match threshold is reserved post-v1
-per Q73's OCR portion.
+per Q73's OCR portion. The reserved column
+(`org_settings.vendor_match_threshold`) ships at v1 schema time
+per ADR-0010 reserved-enum-states discipline with NOT NULL
+DEFAULT to the v1-fixed value (`0.80`).
 
 ### 10. Orphan-blob garbage collection mechanism (CTO carry-forward from ADR-0013 item 1)
 
@@ -1232,16 +1235,9 @@ emission shape is owned by ADR-0012.
   `document_artifacts`, `ocr_runs`, `extraction_runs`); the
   schema-decision discipline (Notes item e) requires any addition
   to surface as a D3 schema delta, not a silent introduction.
-  The reserved `org_settings.*` columns for post-v1
-  configurability (per Q73's OCR portion narrow closure) ship at
-  v1 schema time per ADR-0010 discipline:
-  `org_settings.dedup_policy`,
-  `org_settings.classification_fallback_order`,
-  `org_settings.ai_fallback_budget`,
-  `org_settings.gc_cadence`,
-  `org_settings.gc_threshold_hours`. Each carries NOT NULL
-  DEFAULT to the v1-fixed values and the configurability switch
-  flips post-v1.
+  Per-org configurability columns reserved at v1 schema time per
+  ADR-0010 discipline; full list per the Closes Q73 closure scope
+  above.
 - **Implementation surface.** The pipeline ships in Phase 7
   (Extraction) with the full stage set: byte fetch (calls
   ADR-0013's `storageProviderService.fetch()`), OCR via Modal
@@ -1346,36 +1342,95 @@ questions from `docs/02_specs/open_questions.md`:
 
 - **Q73 — Per-org Document Platform configuration (OCR /
   retention / language portions only).** Closed per items 2, 5,
-  6, 7, 8, 10 above. Closure scope:
-  - **OCR engine choice.** v1: system-fixed PaddleOCR. Per-org
-    override is reserved post-v1; reserved column
-    `org_settings.ocr_engine` ships at v1 schema time per ADR-0010
-    discipline with NOT NULL DEFAULT to `'paddleocr'`.
-  - **Replay cadence.** v1: manual or controller-triggered; no
-    scheduled job. Post-v1: scheduled (per-org cadence
-    configurable). Reserved column `org_settings.replay_cadence`
-    ships at v1 schema time per ADR-0010 discipline.
-  - **Classification fallback ordering.** v1: system-fixed
-    Tier A + Tier C + Tier D. Per-org override is reserved
-    post-v1; reserved column
-    `org_settings.classification_fallback_order` ships at v1
-    schema time per ADR-0010 discipline.
-  - **AI fallback budget.** v1: system-fixed max 2 calls per
-    document. Per-org configurable post-v1; reserved column
-    `org_settings.ai_fallback_budget` ships at v1 schema time
-    per ADR-0010 discipline.
-  - **Retention policy.** v1: indefinite retention (no automated
-    deletion of `source_documents`, `document_artifacts`,
-    `ocr_runs`, or `extraction_runs` rows). Per-org
-    configurability is reserved post-v1; reserved columns
-    `org_settings.retention_source_documents`,
-    `org_settings.retention_artifacts`,
-    `org_settings.retention_runs` ship at v1 schema time per
-    ADR-0010 discipline with NOT NULL DEFAULT to `'indefinite'`.
-  - **Language packs.** v1: PaddleOCR English + French. Per-org
-    configurability is reserved post-v1; reserved column
-    `org_settings.language_packs` ships at v1 schema time per
-    ADR-0010 discipline with NOT NULL DEFAULT to `'en,fr'`.
+  6, 7, 8, 9, 10 above. Closure scope (canonical authoritative
+  enumeration of reserved `org_settings.*` columns ADR-0014
+  introduces; the Consequences §"What this costs" and
+  Cross-references §ADR-0010 entry cite this list rather than
+  re-enumerating):
+  - **`org_settings.ocr_engine`** — per-org OCR engine choice
+    (item 2); **v1-fixed default**: `'paddleocr'`. Per ADR-0010
+    reserved-enum-states discipline, the column ships at v1
+    schema time as NOT NULL with the v1-fixed default; per-org
+    configurability switches on post-v1 by allowing the column
+    value to vary per org.
+  - **`org_settings.replay_cadence`** — per-org replay cadence
+    when scheduled-job replay activates (item 5.3); **v1-fixed
+    default**: `'manual'` (controller-triggered only; no
+    scheduled job in v1). Per ADR-0010 reserved-enum-states
+    discipline, the column ships at v1 schema time as NOT NULL
+    with the v1-fixed default; per-org configurability switches
+    on post-v1 by allowing the column value to vary per org.
+  - **`org_settings.dedup_policy`** — per-org dedup-by-hash
+    behavior (item 6); **v1-fixed default**: system-fixed (every
+    ingestion runs the org-scoped hash check). Per ADR-0010
+    reserved-enum-states discipline, the column ships at v1
+    schema time as NOT NULL with the v1-fixed default; per-org
+    configurability switches on post-v1 by allowing the column
+    value to vary per org.
+  - **`org_settings.classification_fallback_order`** — per-org
+    classification tier ordering (item 7); **v1-fixed default**:
+    system-fixed Tier A + Tier C + Tier D. Per ADR-0010
+    reserved-enum-states discipline, the column ships at v1
+    schema time as NOT NULL with the v1-fixed default; per-org
+    configurability switches on post-v1 by allowing the column
+    value to vary per org.
+  - **`org_settings.ai_fallback_budget`** — per-org cap on AI
+    fallback calls per source document (item 8); **v1-fixed
+    default**: `2`. Per ADR-0010 reserved-enum-states discipline,
+    the column ships at v1 schema time as NOT NULL with the
+    v1-fixed default; per-org configurability switches on post-v1
+    by allowing the column value to vary per org.
+  - **`org_settings.vendor_match_threshold`** — per-org
+    vendor-matcher confidence threshold (item 9); **v1-fixed
+    default**: `0.80`. Per ADR-0010 reserved-enum-states
+    discipline, the column ships at v1 schema time as NOT NULL
+    with the v1-fixed default; per-org configurability switches
+    on post-v1 by allowing the column value to vary per org.
+  - **`org_settings.gc_cadence`** — per-org orphan-blob GC
+    cadence (item 10); **v1-fixed default**: `'daily'`. Per
+    ADR-0010 reserved-enum-states discipline, the column ships
+    at v1 schema time as NOT NULL with the v1-fixed default;
+    per-org configurability switches on post-v1 by allowing the
+    column value to vary per org.
+  - **`org_settings.gc_threshold_hours`** — per-org orphan-blob
+    GC age threshold in hours (item 10); **v1-fixed default**:
+    `24`. Per ADR-0010 reserved-enum-states discipline, the
+    column ships at v1 schema time as NOT NULL with the v1-fixed
+    default; per-org configurability switches on post-v1 by
+    allowing the column value to vary per org.
+  - **`org_settings.retention_source_documents`** — per-org
+    retention policy for `source_documents` rows; **v1-fixed
+    default**: `'indefinite'` (no automated deletion in v1). Per
+    ADR-0010 reserved-enum-states discipline, the column ships
+    at v1 schema time as NOT NULL with the v1-fixed default;
+    per-org configurability switches on post-v1 by allowing the
+    column value to vary per org.
+  - **`org_settings.retention_artifacts`** — per-org retention
+    policy for `document_artifacts` rows; **v1-fixed default**:
+    `'indefinite'` (no automated deletion in v1). Per ADR-0010
+    reserved-enum-states discipline, the column ships at v1
+    schema time as NOT NULL with the v1-fixed default; per-org
+    configurability switches on post-v1 by allowing the column
+    value to vary per org.
+  - **`org_settings.retention_runs`** — per-org retention policy
+    for `ocr_runs` and `extraction_runs` rows; **v1-fixed
+    default**: `'indefinite'` (no automated deletion in v1). Per
+    ADR-0010 reserved-enum-states discipline, the column ships
+    at v1 schema time as NOT NULL with the v1-fixed default;
+    per-org configurability switches on post-v1 by allowing the
+    column value to vary per org.
+  - **`org_settings.language_packs`** — per-org PaddleOCR
+    language-pack selection; **v1-fixed default**: `'en,fr'`
+    (English + French). Per ADR-0010 reserved-enum-states
+    discipline, the column ships at v1 schema time as NOT NULL
+    with the v1-fixed default; per-org configurability switches
+    on post-v1 by allowing the column value to vary per org.
+
+  These reserved columns ship at v1 schema time per ADR-0010
+  reserved-enum-states discipline; per-org configurability
+  switches on post-v1. Consequences §"What this costs" and
+  Cross-references §ADR-0010 cite this list rather than
+  re-enumerating.
 
   *Closure-venue rationale (for future ADR writers):* Q73 closes
   in four pieces by four ADRs. ADR-0011 closed the platform-
@@ -1607,11 +1662,8 @@ substantial isolation benefit.
   reserved `tesseract`, `claude_vision`, future engines);
   exception-queue resolution-action enum extension (reserved
   `resolve_pipeline_unavailable` per item 12.2; ADR-0011 §13
-  owns enum membership); `org_settings.*` columns for post-v1
-  configurability (`ocr_engine`, `replay_cadence`,
-  `classification_fallback_order`, `ai_fallback_budget`,
-  `retention_*`, `language_packs`, `dedup_policy`, `gc_cadence`,
-  `gc_threshold_hours`).
+  owns enum membership); reserved `org_settings.*` columns
+  enumerated per Closes Q73 closure scope above.
 - **ADR-0011** (`0011-document-platform.md`) — the spine.
   ADR-0014 inherits §1 (entity ownership boundary), §5
   (`document_artifacts` engine-agnostic contract — verbatim, no
