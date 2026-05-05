@@ -33,7 +33,7 @@ committed domain state. ADR-0007 §Tier 2.5 ratified the Router's
 tier placement (closing Q66); ADR-0011 §1 reserved
 `document_relationship_candidates` at the entity-ownership
 boundary and explicitly forward-pointed Router behavior to this
-ADR; ADR-0014 §6 closed the Tier A+C+D classifier output that
+ADR; ADR-0014 §7 closed the Tier A+C+D classifier output that
 this Router consumes; ADR-0015 §7 named the three Scenarios
 (A/B/C) whose proposal generation the Router drives; ADR-0016 §3
 ratified the schema-side validity matrix that this Router's
@@ -82,7 +82,7 @@ A future contributor who adds a new `linked_entity_type` /
 `link_role` value or activates a reserved cell in the validity
 matrix is amending ADR-0016. A future contributor who changes
 the per-document-type confidence threshold value or the
-calibration governance is amending ADR-0014 §6 (Q65 provisional
+calibration governance is amending ADR-0014 §7 (Q65 provisional
 values) or ADR-0019 (Confidence Calibration Policy), not
 ADR-0018.
 
@@ -132,10 +132,10 @@ substrate. The following are **not redrafted** here:
 - **Tier 2 classifier output** — the
   `(document_type, confidence, rationale)` tuple plus extracted
   fields per `agent_architecture_policy.md` §2.1 row shapes.
-  Owned by ADR-0014 §6 (Q71) and §8 (Q72).
+  Owned by ADR-0014 §7 (Q71) and §8 (Q72).
 - **Per-document-type confidence threshold values** —
   `vendor_invoice` 0.85 / `receipt` 0.80 / `payment_confirmation`
-  0.85 / `unknown` always-exception. Owned by ADR-0014 §6 (Q65
+  0.85 / `unknown` always-exception. Owned by ADR-0014 §7 (Q65
   v1 provisional values); calibration governance forward-pointed
   to ADR-0019.
 - **Validity matrix for `(linked_entity_type, link_role)`
@@ -306,7 +306,7 @@ is restated here to make the Subsystem 1 ownership unambiguous.
    field-extraction shape from `agent_architecture_policy.md`
    §2.1. v1-active document types: `vendor_invoice`, `receipt`,
    `payment_confirmation`, `unknown`. (`unknown` short-circuits
-   to exception queue per ADR-0014 §6 — Subsystem 1 is not
+   to exception queue per ADR-0014 §7 — Subsystem 1 is not
    invoked for `unknown`.)
 2. Committed AP/Spend domain state at read time. The Router
    reads (per item 5 below):
@@ -460,7 +460,7 @@ ADR establishes is:
   range.
 - The exact weights and the composition formula are
   implementation-owned at v1, ratified at v1 ship time per the
-  same provisional-pending-v1-ship pattern as ADR-0014 §6 (Q65
+  same provisional-pending-v1-ship pattern as ADR-0014 §7 (Q65
   values) and ADR-0007 §Q77 (Q28 matrix). ADR-0019 (Confidence
   Calibration Policy, forthcoming) owns the calibration
   governance for ongoing post-ratification adjustment of weights
@@ -478,7 +478,7 @@ candidates below the per-document-type threshold from ADR-0014
 - `receipt` candidates below 0.80 → drop.
 - `payment_confirmation` candidates below 0.85 → drop.
 - `unknown` document type — Subsystem 1 is not invoked; the
-  case routes directly to exception queue per ADR-0014 §6.
+  case routes directly to exception queue per ADR-0014 §7.
 
 If the post-filter candidate set is empty, Subsystem 2 routes
 the case to the exception queue per item 3 below. If the
@@ -575,7 +575,7 @@ Policy). The contract this ADR establishes:
 - The provisional v1 value is the Router implementation's
   default; ADR-0019 ratifies the value at v1 ship time
   alongside the per-document-type confidence thresholds.
-- The same provisional-pending-v1-ship pattern as ADR-0014 §6
+- The same provisional-pending-v1-ship pattern as ADR-0014 §7
   (Q65) and ADR-0007 §Q77 (Q28 matrix): drafted now, ratified
   at ship; calibration governance for ongoing
   post-ratification adjustment is forward-pointed to ADR-0019.
@@ -857,7 +857,7 @@ boundary verbatim quotation). Restated and made specific:
 
 (e) Source documents with `original_content_hash`, `mime_type`,
    `document_type`, `classification_confidence` per ADR-0011 §2
-   and ADR-0014 §6. The Router reads classification metadata to
+   and ADR-0014 §7. The Router reads classification metadata to
    decide which Subsystem 1 candidate-generation flow to invoke.
 
 (f) Existing `source_document_links` rows for the case's source
@@ -1014,7 +1014,7 @@ thresholds:
 
 (i) **Candidate filtering in Subsystem 1.** Per-document-type
     threshold drops candidates below the threshold. v1
-    provisional values per ADR-0014 §6 (Q65):
+    provisional values per ADR-0014 §7 (Q65):
     `vendor_invoice` 0.85 / `receipt` 0.80 /
     `payment_confirmation` 0.85 / `unknown` always-exception
     (Subsystem 1 not invoked for `unknown`).
@@ -1038,7 +1038,7 @@ thresholds:
 **Threshold values vs calibration governance — the split.**
 
 - **Threshold values** for per-document-type confidence are
-  owned by ADR-0014 §6 (Q65 v1 provisional values).
+  owned by ADR-0014 §7 (Q65 v1 provisional values).
 - **Ambiguity-margin threshold value** is provisional in this
   ADR, pending ADR-0019 ratification.
 - **Calibration governance** — who calibrates, against what
@@ -1209,7 +1209,7 @@ event-payload values but no v1 service write path emits them
   forward-pointer for confidence calibration governance.
   ADR-0019 owns Q57 closure (calibration governance) and the
   ratification process for the per-document-type threshold
-  values (jointly with ADR-0014 §6 Q65) and the ambiguity-
+  values (jointly with ADR-0014 §7 Q65) and the ambiguity-
   margin threshold value introduced by this ADR. Tier 6
   dependent ADR (depends on this Tier 5 ADR).
 - **`docs/02_specs/intent_model.md`** — `ProposedMutation` and
@@ -1329,7 +1329,7 @@ integration point.
   avoid count-drift across amendments.
 
 - **Confidence threshold values and calibration governance** →
-  threshold values for per-document-type owned by ADR-0014 §6
+  threshold values for per-document-type owned by ADR-0014 §7
   (Q65 v1 provisional values); calibration governance owned by
   ADR-0019 (forthcoming, Q57 closure). ADR-0018 consumes
   thresholds at three decision points (item 7) — candidate
@@ -1634,7 +1634,7 @@ orchestration in one place.
 - **The provisional ambiguity-margin value is a pre-v1-ship
   obligation.** ADR-0019 must ratify the value at v1 ship
   time per the Q77 v1-ship-gate pattern. The same provisional-
-  pending-v1-ship pattern as ADR-0014 §6 (Q65 values) and
+  pending-v1-ship pattern as ADR-0014 §7 (Q65 values) and
   ADR-0007 §Q77 (Q28 matrix). If ratification adjusts the
   value, ADR-0018 amends to match — a routine maintenance
   step, not a re-litigation.
