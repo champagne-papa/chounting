@@ -2720,3 +2720,148 @@ agent endpoints + ~30 org-mutating routes + CORS audit
 + CSRF Origin-check sweep). Phase 2A (PDF-extractor +
 accounting-logic) opens against this carve-out's commit
 as the closest pre-Phase-2A anchor.
+
+## 2026-05-04 — Phase 0 governance arc closeout (Sessions 2A-2F, D1-D6 ratification chain)
+
+Six-session brainstorm-side + WSL-side two-sided architecture closed
+the Document Platform reframe through eight ADR ratifications
+(ADR-0011 Document Platform spine; ADR-0012 ProposedMutationBundle;
+ADR-0013 Storage Provider; ADR-0014 Tier 2 Document Pipeline;
+ADR-0015 AP/Spend Subdomain; ADR-0016 Document Relationship Graph;
+ADR-0017 Vendor Template Substrate; ADR-0018 Relationship Router;
+ADR-0019 Confidence Calibration Policy) plus two amendments
+(ADR-0007 Tier 2.5 amendment; ADR-0010 Variants A/B/C amendment
+codifying substrate-now-enforcement-later). Arc shape: 68 commits
+since `cfcf2e7` (main descent point), 27 questions filed in Q53-Q79
+range with 25 closed + 2 open as deferred-implementation-gate
+triggers, 12 closure-verification surfaces all closed at substantive
+level. Two initiative briefs ratified at B3-Lite (Document Platform
+Initiative + Spend Initiative) with substantive content sections
+deferred to phase-aligned implementation work. Closure verification
+artifact at
+`docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`
+(commit `0ce668e`); closeout summary at
+`docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` (commit
+`a432994`).
+
+### Z1 discipline catalog state changes
+
+- **Z1 #11.a codified** — multi-line oldText anchor handling: prefer
+  Read-confirmation-of-block over grep-only. Codified at Session 2F
+  closeout (Observation 6 path α). Mechanism: grep-only verification
+  of multi-line oldText anchors underspecifies whitespace +
+  line-continuation handling; a Read of the target block confirms
+  the exact bytes that the Edit tool will match against. Z1 #11
+  sub-pattern.
+- **Z1 #15 codified** — bidirectional iterative-catching with
+  canonical-evidence-anchor termination. Codified at Session 2F
+  closeout (Observation 3 path α). Mechanism: when two sides
+  iteratively catch each other's drift, the loop terminates not at
+  "agreement" but at canonical-evidence-anchor — on-disk artifacts
+  + commit history. Closeout artifacts + commit history are the
+  anchors; transcript inheritance is not load-bearing.
+- **Cumulative Z1 #12 fire count: 27** under canonical
+  manifestation-counting + Observation 5 path β on-disk-vs-authoring
+  boundary (authoring-layer drifts count individually; retrospective
+  on-disk drift discovered in one verification pass counts as one
+  underlying-gap fire).
+
+### Substrate-now-enforcement-later cross-pattern codified
+
+Phase 0 governance lesson codified at D6 §6.8 + ADR-0010 Variant A
+precedent at commit `797db40`. Mechanism: schema-level reservations
+land at substrate-ratification time; the enforcement code (lint
+rules, runtime checks, migrations against the reserved enum values)
+lands at implementation time when the first consuming code path
+forces the question. Avoids two failure modes: (a) over-specifying
+enforcement before consumer code shape is known (premature
+lock-in); (b) under-specifying substrate so that consumer code
+drifts from intended shape (under-constrained migration cliff). The
+cross-pattern is the load-bearing Phase 0 → Phase 1 transition
+framework; three deferred-obligation triggers (Q29 ESLint rule
+design; Q79 INV-DOC-001 shape + DOC prefix registration; Q77 Q28
+matrix v1-ship-gate) follow this pattern with
+implementation-time-coupled / v1-ship-time-coupled triggers, not
+pre-code-time gates.
+
+### Two-sided governance architecture as durable convention
+
+Brainstorm-side (chat-UI Claude without WSL access; design + review
++ adjudication framing) plus WSL-side (Claude with WSL filesystem +
+git access; execution + verification + commits + dispatch reports)
+plus founder (adjudicates path-α/β/γ surfaces; locks verdicts) was
+load-bearing for Phase 0 governance work where adjudication shape
+was contested at every D-gate. Pattern collapses to single-sided
+for Phase 1 implementation work because substrate is ratified;
+two-sided overhead has no proportional benefit. If a substantive
+governance gap surfaces mid-Phase-1 (per closeout artifact §13
+anti-pattern guardrail), two-sided re-instates ad-hoc for that
+surface only.
+
+### Convention-fire status
+
+- **Multi-stage governance milestone narrative discipline**
+  codified across Sessions 2A-2F: D-gate ratifications + closure
+  verification + closeout artifacts as sequence; each milestone
+  artifact serves dual role of terminal record + next-session
+  opening prompt. N=6 across the arc (D1 through D6 + closure
+  verification + closeout). Past codification threshold; codified
+  at closeout artifact §6.
+- **Path I sequencing** (ADR amendments via separate
+  single-purpose commits, not in-place edits to ratified ADRs)
+  fired across multiple amendments in the arc; durability evidence
+  accumulated. Not separately codified here; lives in closeout
+  artifact's Standing Operational Rules section.
+- **Length-as-calibration (Z1 #9)**: ADR-0019 at 1708 lines is the
+  upper-band exception case driven by content necessity (full
+  calibration policy); ADR-0010 amendment at 474 lines is mid-band;
+  most Phase 0 ADRs landed mid-lower band. Discipline held across
+  the arc.
+
+### Carry-forward summary
+
+- **Q29 ESLint rule design** — fires when first lint-rule-violating-path
+  code under `src/agent/pipelines/**/*` lands; closure work lands in
+  `docs/02_specs/agent_architecture_policy.md` §6.2 placeholder slot.
+  Phase 1.Storage does NOT trigger (storage layer is below
+  agent-tier boundary).
+- **Q79 INV-DOC-001 shape + DOC prefix registration** — fires when
+  first DOC-citing code lands; closure work lands in
+  `docs/02_specs/invariants.md`. May fire mid-Phase-1 implementation
+  if a genuine INV-DOC gap surfaces; if so, surface to founder for
+  adjudication rather than inventing invariant unilaterally.
+- **Q77 Q28 matrix v1-ship-gate** — fires when v1 ship triggers;
+  closure work per ADR-0007 §Amendment framing.
+- **Two ratified initiative briefs' substantive content**: Document
+  Platform Initiative §1-§14, §16, §18-§20 fill alongside Phase 1
+  implementation work consuming corresponding ADR content; Spend
+  Initiative substantive content fills at Phase 5 (Spend / AP
+  foundation).
+
+### Codification candidates from this arc
+
+- **(N=1, monitoring) Two-sided governance architecture
+  convention.** Brainstorm-side + WSL-side + founder three-role
+  pattern with collapse-on-implementation-phase transition. Phase 0
+  was the first explicit firing in this repo's history. Strong-prior
+  status: arc-A retrospective documented analogous orchestrator +
+  wsl-claude two-sided pattern in 2026-04-24 closeout, but Phase 0's
+  framing as deliberate brainstorm-side + WSL-side + founder triple
+  is the first explicit shape. N=1 firing tagged strong-prior;
+  trigger codification at N=2 when next governance arc adopts the
+  same shape.
+- **(N=1, monitoring) Substrate-now-enforcement-later as
+  Phase-transition framework.** Phase 0 → Phase 1 transition
+  codified the pattern at D6 §6.8 + ADR-0010 Variant A. Pattern
+  fires at three explicit triggers (Q29, Q77, Q79). N=1 firing as a
+  phase-transition framework (vs the spec-level pattern in
+  ADR-0010); trigger codification at N=2 when next phase transition
+  uses the same framework.
+- **(N=6, codified) Multi-stage governance milestone narrative
+  discipline.** Already codified at closeout artifact §6; flagged
+  here for cross-reference traceability.
+
+Phase 1 (Storage / Evidence Core) code start AUTHORIZED following
+this closeout. Brainstorm-side + WSL-side collapse to single-sided
+implementation work; first shipping piece is `storageProviderService`
+per ADR-0013 (chunk 1 of Phase 1.Storage sub-arc).
