@@ -72,6 +72,16 @@ export type ServiceErrorCode =
   | 'RECURRING_TEMPLATE_NOT_FOUND'
   | 'RECURRING_TEMPLATE_INACTIVE'
   | 'RECURRING_RUN_NOT_PENDING'
+  // Storage (Phase 1.Storage; ADR-0013 §7 / §8 / §9).
+  // The first three codes are verbatim ADR cites. STORAGE_OPERATION_FAILED
+  // is a repo-convention catchall (not in ADR text) for unexpected storage
+  // operation failures not classified by the §7 three-way matrix —
+  // implementations should reach for the verbatim codes first; the catchall
+  // exists only when none of the three classify the failure.
+  | 'STORAGE_KEY_MALFORMED'                // ADR-0013 §7 — malformed key, illegal chars, path-too-long
+  | 'INTEGRITY_VERIFY_FAILED'              // ADR-0013 §7 + §9 — hash mismatch on integrity check
+  | 'STORAGE_PROVIDER_TRANSIENT_EXHAUSTED' // ADR-0013 §8 — retry budget exhausted on transient failure
+  | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future
