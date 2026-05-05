@@ -1,10 +1,10 @@
 # Spend Initiative — Phase 2 Brief
 
-**Status:** CTO-reviewed; canonical Phase 2 planning artifact for the Spend subdomain (AP bills + payments + vendor prepayments + vendor credits). Renamed from `ap_ingestion_initiative.md` per the 2026-05-02 Document Platform reframe; substrate-shaped sections moved to `document_platform_initiative.md`. Not authorized for code.
+**Status:** Ratified per Phase 0 closure verification 2026-05-04 (Session 2F). Canonical Phase 2 planning artifact for the Spend subdomain (AP bills + payments + vendor prepayments + vendor credits). Renamed from `ap_ingestion_initiative.md` per the 2026-05-02 Document Platform reframe; substrate-shaped sections moved to `document_platform_initiative.md`. NOT authorized for code outside Phase 5 (Spend / AP foundation) scope per the Phase 0 closure verification artifact's Phase 1 code-start gate authorization framing.
 
 **Date:** 2026-05-01
 
-**Resolution path:** Two Spend-Initiative-owned ADRs (AP/Spend Subdomain — ADR-0015; Vendor Template substrate reservation — ADR-0017) plus the seven Document-Platform-owned ADRs (per `docs/09_briefs/phase-2/document_platform_initiative.md` §16) before any v1 code lands. Open questions Q35–Q52 are retired (see `docs/02_specs/open_questions.md` Section 3 supersession note); Q53–Q78 are filed; the Spend-domain subset is Q59, Q60, Q61, Q62, Q63, Q64, Q74, Q78.
+**Resolution path:** Two Spend-Initiative-owned ADRs (AP/Spend Subdomain — ADR-0015; Vendor Template Substrate — ADR-0017) plus the seven Document-Platform-owned ADRs (per `docs/09_briefs/phase-2/document_platform_initiative.md` §16) ratified across D1–D6 gates 2026-05-03 / 2026-05-04. Open questions Q35–Q52 are retired (see `docs/02_specs/open_questions.md` Section 3 supersession note); Q53–Q79 are filed; the Spend-domain subset is Q59, Q60, Q61, Q62, Q63, Q64, Q74, Q78 (closed by ADR-0015 D4 ratification 2026-05-04).
 
 **Relationship to existing architecture:** First domain consumer of the Document Platform substrate (per `docs/09_briefs/phase-2/document_platform_initiative.md` and `docs/09_briefs/phase-2/document_platform_reframe_design.md`). Operationalizes Simplification 3 from `docs/03_architecture/phase_simplifications.md` (AP Agent as the second real agent). Adopts the existing reserved Phase 2+ tables (`bills`, `bill_lines`, `payments`, `vendors`, `vendor_rules`) from `docs/02_specs/data_model.md`. Does not change the Authority Gradient, the Agent Ladder, the Two Laws, the Service Communication Rules, or any existing invariant in `docs/02_specs/invariants.md`.
 
@@ -921,7 +921,7 @@ Per `docs/09_briefs/phase-2/document_platform_reframe_design.md` §7,
 two ADRs land in the Spend Initiative scope:
 
 1. **ADR-0015 — AP/Spend Subdomain.** Bill / payment / prepayment / credit lifecycles. Closes Q59 (vendor prepayment shape), Q60 (born-paid bundle approval), Q61 (vendor prepayment approval), Q62 (deposit tax timing), Q63 (vendor balance composition), Q64 (final invoice + prior credit), Q74 (receipt v1 path), Q78 (payment failure lifecycle).
-2. **ADR-0017 — Vendor Template substrate reservation.** Reserves `clean_approval_count` column on `vendor_rules` and the table shape under ADR-0010 reserved-enum-states discipline. Full enforcement / promotion / auto-post calibration ADR is drafted and ratified post-v1 when auto-post lands. Closes Q43 substrate portion.
+2. **ADR-0017 — Vendor Template Substrate.** Ratified D4 (2026-05-04). Reserves `clean_approval_count` column on `vendor_rules` and the table shape under ADR-0010 reserved-enum-states discipline. Full enforcement / promotion / auto-post calibration ADR is drafted and ratified post-v1 when auto-post lands. Closes Q43 substrate portion.
 
 The seven Document-Platform-owned ADRs (ADR-0011 Document Platform, ADR-0012 ProposedMutationBundle, ADR-0013 Storage Provider, ADR-0014 Tier 2 Document Pipeline, ADR-0016 Document Relationship Graph, ADR-0018 Relationship Router, ADR-0019 Confidence Calibration Policy) live in `docs/09_briefs/phase-2/document_platform_initiative.md` and gate this brief.
 
@@ -931,18 +931,18 @@ ADR-0007 (three-tier agent architecture, amended for the reframe) is a carried p
 
 Q35–Q52 from the original AP brief are **retired** per the 2026-05-02 reframe (see `docs/02_specs/open_questions.md` Section 3 Q35–Q52 supersession note). Q53–Q78 file against the reframe scope; the Spend-domain subset is:
 
-| Q | Topic | Disposition (this Phase 0 cycle) |
+| Q | Topic | Disposition (Phase 0 closure 2026-05-04) |
 |---|---|---|
-| **Q59** | Vendor prepayment object shape | Open — closes on AP/Spend Subdomain ADR ratification |
-| **Q60** | Born-paid bundle approval gate | Open — Always Confirm in v1 per spec §11; full auto-post calibration deferred post-v1 |
-| **Q61** | Vendor prepayment approval gate | Open — closes on AP/Spend Subdomain ADR ratification |
-| **Q62** | Deposit / retainer tax timing | Open — default `review_required` per spec §13 |
-| **Q63** | Vendor balance view composition | Open — closes on AP/Spend Subdomain ADR ratification |
-| **Q64** | Final invoice + prior deposit credit unrecorded | Open — default route to exception with backfill suggestion |
-| **Q74** | Receipt v1 path (decision matrix confirm) | Open — confirm spec §15 matrix or amend |
-| **Q78** | Payment failure / reversal lifecycle | Open — v1-relevance signal flagged; resolution gates Phase 5 code |
+| **Q59** | Vendor prepayment object shape | Closed by ADR-0015 D4 ratification (2026-05-04) |
+| **Q60** | Born-paid bundle approval gate | Closed by ADR-0015 D4 ratification (Always Confirm in v1; full auto-post calibration deferred post-v1) |
+| **Q61** | Vendor prepayment approval gate | Closed by ADR-0015 D4 ratification |
+| **Q62** | Deposit / retainer tax timing | Closed by ADR-0015 D4 ratification (default `review_required`) |
+| **Q63** | Vendor balance view composition | Closed by ADR-0015 D4 ratification |
+| **Q64** | Final invoice + prior deposit credit unrecorded | Closed by ADR-0015 D4 ratification (route to exception with backfill suggestion) |
+| **Q74** | Receipt v1 path (decision matrix confirm) | Closed by ADR-0015 D4 ratification |
+| **Q78** | Payment failure / reversal lifecycle | Closed by ADR-0015 D4 ratification |
 
-Document-Platform-scope questions (Q53, Q54, Q55, Q56, Q57, Q58, Q65, Q66, Q67, Q68, Q69, Q70, Q71, Q72, Q73, Q75, Q76, Q77) live in `docs/09_briefs/phase-2/document_platform_initiative.md` §17.
+Document-Platform-scope questions (Q53, Q54, Q55, Q56, Q57, Q58, Q65, Q66, Q67, Q68, Q69, Q70, Q71, Q72, Q73, Q75, Q76, Q77, Q79) live in `docs/09_briefs/phase-2/document_platform_initiative.md` §17.
 
 ## 15. Deferred to post-v1
 
@@ -1189,3 +1189,18 @@ AP-subdomain ADR + storage_provider ADR + autonomy-rule ADR
 cycles, (4) Phase A session brief. This brief is item zero in
 that sequence; nothing in items 1–4 happens before this brief
 lands.
+
+- **2026-05-04** — Ratified at Phase 0 closure verification
+  (Session 2F). Status header updated from CTO-reviewed-pre-
+  finalization to Ratified-per-Phase-0-closure framing. Resolution
+  path corrected for ADR-0017 content-naming drift ("substrate
+  reservation" → "Substrate" matching on-disk filename
+  `0017-vendor-template-substrate.md`) + Q53–Q79 filing range +
+  D1–D6 ratification chain. §13 ADR-0017 entry corrected for the
+  same content-naming drift + Ratified D4 status added. §14 Q-
+  disposition table refined to mark Q59–Q64 + Q74 + Q78 closed by
+  ADR-0015 D4 ratification (2026-05-04); Document-Platform-scope
+  question list updated to include Q79 (filed post-skeleton at
+  Session 2B `29aacf5`). NOT authorized for code outside Phase 5
+  (Spend / AP foundation) scope per the Phase 0 closure verification
+  artifact's Phase 1 code-start gate authorization framing.
