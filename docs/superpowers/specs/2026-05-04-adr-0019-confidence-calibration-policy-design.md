@@ -29,7 +29,7 @@ ADR-0019 sits at Tier 6 of Phase 0's eight-ADR architecture. Depended on by ADR-
 
 **Q57's filed framing cross-references Q23 + Q24:** Q23 ("agent ladder thresholds — fixed at the system level for v1") supports Path γ's system-fixed-only-at-v1 shape; Q24 ("limit change authorization: controller-direct vs controller-proposes/owner-approves vs owner-only") informs the post-v1 per-org-activation authorization pattern (forward-pointed; not ratified in v1). ADR-0019 *completes* Q23 by specifying the system-level update authority Q23 left unspecified.
 
-**Reading B preservation — refined Framing 2 (no new service):** ADR-0019 introduces NO new write service. Calibration governance operates through (a) the canonical audit-log writer per ADR-0011 §1 for the 3 new audit-event types; (b) the existing `org_settings.*` writer (Sub-verification 1 deferred to Phase 0 closure verification surface); (c) a platform-team-executed cycle process (runbook + script) at month 6 + post-v1 cadence. The four prior single-writer-rule applications stand unchanged at four (`ledgerService` / `documentLinkService` / `vendorRuleService` / Router for `document_relationship_candidates`).
+**Reading B preservation — refined Framing 2 (no new service):** ADR-0019 introduces NO new write service. Calibration governance operates through (a) the canonical audit-log writer per ADR-0011 §1 for the 4 new audit-event types; (b) the existing `org_settings.*` writer (Sub-verification 1 deferred to Phase 0 closure verification surface); (c) a platform-team-executed cycle process (runbook + script) at month 6 + post-v1 cadence. The four prior single-writer-rule applications stand unchanged at four (`ledgerService` / `documentLinkService` / `vendorRuleService` / Router for `document_relationship_candidates`).
 
 ---
 
@@ -132,9 +132,10 @@ Audit events emitted through canonical audit-log writer per ADR-0011 §1:
 
 1. `calibration_test_set_published` — emitted at test-set publication time, BEFORE cycle execution.
 2. `calibration_run_completed` — emitted at cycle completion, AFTER computation, BEFORE threshold-change ratification.
-3. `confidence_threshold_calibrated` — emitted **per surface that crossed the 0.02 floor** (zero-to-four events per cycle), AFTER `calibration_run_completed`, AFTER CTO + Controller threshold-change ratification, BEFORE the corresponding ADR amendment cascade single-purpose commit.
+3. `confidence_threshold_calibrated` — emitted **per surface that crossed the 0.02 floor** (zero-to-four events per cycle), AFTER `calibration_run_completed`, AFTER CTO + Controller threshold-change ratification, BEFORE the corresponding ADR amendment cascade single-purpose commit. Records the governance-anchor (ratification) timestamp; does NOT record the operational-anchor (deployment) timestamp.
+4. `confidence_threshold_deployed` — emitted **per surface whose new value is picked up by the running pipeline**, AFTER the deployment system rolls out the new value to production runtime. Records the operational-anchor (deployment) timestamp. Emitted by the deployment system through the canonical audit-log writer per ADR-0011 §1, NOT through post-emission enrichment of Event 3 (which would violate INV-AUDIT-002 append-only).
 
-If no surface crosses the 0.02 floor, **no `confidence_threshold_calibrated` event is emitted**; the empty `amendment_cascades_fired` array on `calibration_run_completed` is the canonical no-change record. The cycle still emits Event 1 + Event 2; only Event 3 is conditional.
+If no surface crosses the 0.02 floor, **no `confidence_threshold_calibrated` event is emitted** and **no `confidence_threshold_deployed` event is emitted**; the empty `amendment_cascades_fired` array on `calibration_run_completed` is the canonical no-change record. The cycle still emits Event 1 + Event 2; Events 3 and 4 are conditional.
 
 ### 4.5 Amendment cascade
 
@@ -205,9 +206,9 @@ ADR-0019 owns the calibration-cycle authority shapes + the ratified-parameter li
 
 ## §6 Audit + Reproducibility
 
-### 6.1 Three audit events
+### 6.1 Four audit events
 
-All three flow through canonical audit-log writer per ADR-0011 §1; durable per INV-AUDIT-002 append-only. All three events carry `schema_version: "v1"` field.
+All four flow through canonical audit-log writer per ADR-0011 §1; durable per INV-AUDIT-002 append-only. All four events carry `schema_version: "v1"` field.
 
 **Event 1 — `calibration_test_set_published` (13 fields)**
 
@@ -217,9 +218,17 @@ All three flow through canonical audit-log writer per ADR-0011 §1; durable per 
 
 `event_id`, `event_type`, `event_emitted_at`, `cycle_number`, `scheduled_at`, `executed_at`, `test_set_version`, `test_set_published_event_id`, `prior_value_set` (JSON), `recommended_value_set` (JSON, UN-rounded operating-curve recommendations), `new_value_set` (JSON, after 0.02 floor), `amendment_cascades_fired` (enum array), `operating_curve_summary` (JSON), `executed_by`, `trace_id`, `schema_version`.
 
-**Event 3 — `confidence_threshold_calibrated` (18 fields)**
+**Event 3 — `confidence_threshold_calibrated` (17 fields)**
 
-`event_id`, `event_type`, `event_emitted_at`, `cycle_number`, `surface_id` (enum), `prior_value` (numeric), `recommended_value` (numeric, UN-rounded), `new_value` (numeric, ratified), `amendment_cascade_target` (enum: `ADR_0014` or `ADR_0018`), `cto_ratifier_id`, `controller_ratifier_id`, `founder_review_requested` (boolean), `founder_ratifier_id` (nullable), `justification` (text), `calibration_run_completed_event_id`, `deployment_at` (nullable; populated by deployment system after runtime picks up new value), `trace_id`, `schema_version`.
+`event_id`, `event_type`, `event_emitted_at`, `cycle_number`, `surface_id` (enum), `prior_value` (numeric), `recommended_value` (numeric, UN-rounded), `new_value` (numeric, ratified), `amendment_cascade_target` (enum: `ADR_0014` or `ADR_0018`), `cto_ratifier_id`, `controller_ratifier_id`, `founder_review_requested` (boolean), `founder_ratifier_id` (nullable), `justification` (text), `calibration_run_completed_event_id`, `trace_id`, `schema_version`.
+
+Records the governance-anchor (ratification) timestamp via `event_emitted_at`. The operational-anchor (deployment) timestamp is recorded on Event 4, NOT post-emission enriched onto Event 3 — append-only INV-AUDIT-002 forbids post-emission field mutation.
+
+**Event 4 — `confidence_threshold_deployed` (10 fields)**
+
+`event_id`, `event_type`, `event_emitted_at`, `cycle_number`, `surface_id` (enum), `confidence_threshold_calibrated_event_id`, `deployed_value` (numeric), `deployed_by` (deployment_system_actor_id), `trace_id`, `schema_version`.
+
+Emitted by the deployment system after the running pipeline picks up the new value. `event_emitted_at` is the operational-anchor timestamp per §7.1 two-anchor effective-time contract. `confidence_threshold_calibrated_event_id` cites the ratification provenance via Framing α (audit-event ID; hash verifiable via §6.3 citation discipline). `deployed_value` is recorded explicitly to permit future contributor verification that the deployed value matches the ratified value (defensive cross-check; in normal operation `deployed_value == new_value` from Event 3).
 
 ### 6.2 Calibration test-set artifact format (v1)
 
@@ -285,11 +294,11 @@ Audit log is single source of truth; the citation references canonical state.
 
 ### 6.4 Cycle-wide trace_id discipline
 
-All three audit events for a cycle share `trace_id` (UUID). Generated at cycle start when `calibration_test_set_published` emits; propagated to all subsequent events. Allows querying full cycle's event chain by `trace_id`. Structurally parallel to ADR-0012's `bundle_id` and ADR-0018's Subsystem 3 dispatcher `trace_id`.
+All four audit events for a cycle share `trace_id` (UUID). Generated at cycle start when `calibration_test_set_published` emits; propagated to all subsequent events including Event 4 which may emit substantially later (post-deployment) than Events 1–3. Allows querying full cycle's event chain by `trace_id`. Structurally parallel to ADR-0012's `bundle_id` and ADR-0018's Subsystem 3 dispatcher `trace_id`.
 
 ### 6.5 Q30 byte-for-byte reproducibility
 
-8-step replay procedure:
+9-step replay procedure:
 
 1. Query `calibration_test_set_published` event by `trace_id` → retrieve `test_set_version` + `test_set_hash`.
 2. Fetch test-set artifact by `test_set_version`; verify content hash.
@@ -299,8 +308,9 @@ All three audit events for a cycle share `trace_id` (UUID). Generated at cycle s
 6. Apply 0.02 adjustment-rule floor; verify `new_value_set`.
 7. Cross-reference `confidence_threshold_calibrated` events; verify per-surface `new_value`.
 8. Verify ADR-0014 / ADR-0018 amendment commits' `audit_event_content_hash` citations match audit log.
+9. Cross-reference `confidence_threshold_deployed` events to the corresponding `confidence_threshold_calibrated` events via `confidence_threshold_calibrated_event_id`; verify per-surface `deployed_value` matches Event 3 `new_value` (defensive cross-check) and verify `event_emitted_at` is the operational-anchor timestamp per §7.1.
 
-Sub-verification 2 (3-audit-event reproducibility sufficiency for Q30) closes via this 8-step procedure.
+Sub-verification 2 (4-audit-event reproducibility sufficiency for Q30) closes via this 9-step procedure.
 
 ---
 
@@ -401,7 +411,7 @@ Cumulative Z1 #12 fire count across Session 2C arc + Session 2D arc combined: **
 | # | Verification surface | Status | Rationale |
 |---|---|---|---|
 | 1 | `org_settings.*` writer ownership | Deferred to Phase 0 closure | Section 1 refined Framing 2: ADR-0019 introduces no new service; existing org-administration writer handles `org_settings.*` writes. Verification confirms the existing-writer assumption against `ledger_truth_model.md` Service Communication Rules + ADR-0011 §1 entity ownership boundary. |
-| 2 | 3-audit-event reproducibility sufficiency for Q30 | **Closed** at Section 6.5 | 8-step replay procedure provides complete state. |
+| 2 | 4-audit-event reproducibility sufficiency for Q30 | **Closed** at Section 6.5 | 9-step replay procedure provides complete state. |
 | 3 | ADR-0018 audit-recording sufficiency for `subsystem_1_candidate_set` reconstruction | Deferred to Phase 0 closure | Section 6.2 calibration test-set artifact carries `subsystem_1_candidate_set` for Subsystem 2 ambiguity-margin calibration; verification determines whether the candidate set can be reconstructed from existing ADR-0018 audit logs OR requires an ADR-0018 amendment to capture it. |
 | 4 | `pipeline_trace` threshold-value capture sufficiency | Deferred to Phase 0 closure | Section 7.5 audit-trail invariance assumes pipeline_trace records carry threshold values used at classification/routing time. Verification determines whether values are explicitly captured OR inferred from timestamp cross-referenced against ADR amendment commit chain. |
 
