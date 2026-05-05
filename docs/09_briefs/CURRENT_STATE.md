@@ -1,4 +1,103 @@
-# Where I am as of 2026-04-26 (Phase 1.2 — The Double Entry Agent CLOSED via C12 under Reading B; OI-3 + Class 2 fix-stack carry to Phase 2; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; full-suite 534/536 at HEAD on this commit, 2 failing on Arc A item 27 running-balance shared-DB fragility — fix shape known)
+# Where I am as of 2026-05-01 (v0.1.0-mvp + S33 + Q34 promoted to main; chounting.chou.ca serving real app from `9f0ebb3`; production-environment-config gap surfaced post-merge and resolved; Phase 1.2 closed 2026-04-26 via C12, Phase 2 named workstreams open; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; clean-baseline full-suite 598/598 under `pnpm db:reset:clean`, shared-DB pollution surface expanded with new 5-test cluster sibling to Arc A item 27)
+
+## Production promotion (2026-05-01)
+
+`v0.1.0-mvp` (tag at `5a80c43`) plus six post-tag commits
+(573cff0, 0edf72f, 40d202f, 4c85221, acf9398, 5aed597) plus the
+two pre-tag Q33 partial-resolution-arc commits already on
+staging (2dfa81e, e719d02) merged to main via PR #2 as a merge
+commit. Merge commit: **`9f0ebb3`**. Command:
+`gh pr merge 2 --merge --delete-branch=false`.
+
+`chounting.chou.ca` now serves the real app from `apps/web` for
+the first time. Previous production state was the Apr 9 commit
+`f0fbc97` ("Housekeeping: env example, gitignore, mcp config"),
+pre-monorepo. Vercel project deploy: `GuG3X5Bd3` (Production ·
+Current, 42s build, Ready). Quick smoke test passed against the
+four refactored endpoints from the Q33 partial-resolution arc
+(`/api/agent/{confirm,conversation,reject}`,
+`/api/auth/mfa-status`).
+
+`staging` branch preserved per the `--delete-branch=false`
+flag. Future releases continue to merge `staging → main` via
+the same pattern.
+
+**Surfaces revealed during the promotion arc:**
+
+- **Production-environment-config gap.** The chounting Vercel
+  project's production environment was missing three required
+  env vars (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`,
+  `NEXT_PUBLIC_APP_URL`). Phase 1's Vercel-staging-green
+  clearance treated staging-environment scope as evidence for
+  production-environment scope, which is wrong: staging and
+  production are independent runtime configurations sharing
+  only the project repo. First production deploy (`93RCQ81gm`)
+  errored at `next build`'s page-data-collection step with the
+  codebase's env-validation guard naming the missing vars.
+  Resolved during this session: `NEXT_PUBLIC_APP_URL` set to
+  `https://chounting.chou.ca` (Production-only scope);
+  `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY` scope
+  broadened to include Production (single Supabase project,
+  single Anthropic key shared with staging). Failed deploy did
+  not cut over; chounting.chou.ca remained on `f0fbc97` until
+  the redeploy (`GuG3X5Bd3`) landed Ready.
+
+- **Vercel UI env-var persistence wrinkle.** The Production
+  `NEXT_PUBLIC_APP_URL` entry repeatedly failed to persist its
+  value across the dashboard's Save → re-open round-trip when
+  created with the Sensitive toggle on. Likely interaction
+  between the Sensitive flag and `NEXT_PUBLIC_*` variables (which
+  are by definition non-secret). Resolved by deleting and
+  recreating with Sensitive off. Phase 4 carry-forward
+  consideration (item 6 in obligations.md queue): for
+  `NEXT_PUBLIC_*` vars, always create non-sensitive.
+
+- **Test-suite pollution surface expanded.** Pre-reset full-
+  suite at staging HEAD (`5aed597`) showed 5–7 failures
+  depending on test order; post-reset 598/598. Two clusters
+  surfaced: the documented Arc A item 27 pair
+  (`accountLedgerService` running-balance) and a new 5-test
+  cluster (`orgUsersViewRender`, `ownerPartialUnique`,
+  `userHasPermissionHelper`, `orgProfileEditorAuthz`,
+  `aiActionsReviewPageRender`) — same fix-shape category
+  (test-isolation refactor; runtime lookup over hardcoded
+  UUIDs; per-test trace_id scoping), broader surface than item
+  27. Phase 2 obligations.md follow-up.
+
+- **`chounting-demo` Vercel project Apr 30 build failure
+  resolved on merge.** The `feat(demo)` push to main (commit
+  `d1f85e5`) on 2026-04-30 had triggered failed deploys on
+  both Vercel projects (chounting + chounting-demo) because
+  main's tree at that SHA didn't yet contain `apps/demo` (or
+  `apps/web`) — the monorepo restructure shipped only on
+  staging. This merge resolves both. Confirmed for `chounting`
+  (Production · Current); `chounting-demo` confirmation
+  separate-project, deferred check.
+
+**Phase 4 doc-work carry-forward (deferred to a fresh session):**
+
+1. CI workflow cleanup at `.github/workflows/ci.yml`: remove
+   `--filter=@chounting/demo` from lint and build jobs now that
+   `e719d02` shipped the eslint exemption; update the file-top
+   comment to past-tense framing. (4th fire of Pattern 8
+   file-top-comment-staleness — codify or note threshold reached.)
+2. GitHub repo settings: align default merge method with project
+   discipline (currently "Squash and merge"; project doc says
+   merge commits preserve audit trail).
+3. Staging-environment `NEXT_PUBLIC_APP_URL` value cleanup
+   (currently empty; staging signin/MFA/invitation flows
+   presumably broken in their own way; preexisting, not a
+   regression from today).
+4. obligations.md row for the new 5-test pollution cluster.
+5. obligations.md row for the production-environment-config
+   validation gap (checklist item for future
+   production-promotion sessions).
+6. Vercel UI quirk: `NEXT_PUBLIC_*` variables should be created
+   with Sensitive toggle off to avoid the value-drop-on-save
+   bug.
+
+**Tag pushed.** `git push origin v0.1.0-mvp` confirms the
+annotated tag is on origin alongside the merge commit.
 
 ## Phase 1.2 — Closed (2026-04-26 via C12)
 

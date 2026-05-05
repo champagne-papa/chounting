@@ -11,7 +11,7 @@ flag it in `docs/02_specs/open_questions.md` — do not guess.
 
 ## Navigation — tier-1 always-relevant
 
-- **`docs/02_specs/ledger_truth_model.md`** — the 17 invariants.
+- **`docs/02_specs/ledger_truth_model.md`** — the 20 invariants.
   Full leaves, Phase 2 evolution notes, interactions. Tiebreaker
   for ledger legality.
 - **`docs/02_specs/agent_autonomy_model.md`** — the agent
@@ -158,6 +158,89 @@ commonly when a session's scope is narrow (fix-the-body only)
 and the comment is adjacent-but-not-explicitly-in-scope. See
 `docs/07_governance/retrospectives/arc-A-retrospective.md` §3
 Pattern 8 for mechanism details.
+
+### Multi-line Edit anchor confirmation (Z1 #11.a)
+
+When an Edit's `oldText` anchor spans multiple lines, grep-only
+verification of the anchor underspecifies whitespace and line-
+continuation handling. The Edit tool matches against exact bytes
+including trailing whitespace, line-break characters, and any
+soft-wrap artifacts that grep normalization elides. The discipline:
+before dispatching a multi-line Edit, Read the target block to
+confirm the exact bytes the Edit will match against, then construct
+`oldText` from that read rather than from grep output or memory.
+
+Mechanism: grep returns line-content matches; Edit operates on
+byte-level matches that include line terminators and surrounding
+context. The two views diverge whenever the file uses inconsistent
+trailing whitespace, mixed line-endings, or wrap-discipline
+variations across paragraphs.
+
+Trigger: any Edit whose `oldText` spans more than one line.
+Single-line `oldText` does not require the discipline; grep
+verification of single-line uniqueness remains sufficient.
+
+Precedent: Phase 0 governance arc Sessions 2A-2F. Codified at
+Session 2F closeout (Observation 6 path α) as Z1 #11 sub-pattern.
+Full Z1 catalog at
+`docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` §4.
+
+### Bidirectional iterative-catching termination (Z1 #15)
+
+When two-sided work involves iterative drift-catching between
+sides, the loop terminates not at "agreement" but at canonical-
+evidence-anchor: the on-disk artifacts and commit history that
+both sides can verify against independently. Transcript inheritance
+between sessions is not load-bearing; the canonical artifacts are.
+
+Mechanism: agreement-as-termination produces convergence on shared
+mistakes when both sides drift toward the same misreading.
+Anchor-as-termination forces both sides to verify against
+artifacts that exist outside either side's working memory, which
+breaks the shared-drift mode.
+
+Trigger: any two-sided arc where iterative catching surfaces
+multiple drift candidates. Sessions that resolve cleanly on first-
+pass verification do not require the discipline.
+
+Precedent: Phase 0 governance arc Sessions 2A-2F. Codified at
+Session 2F closeout (Observation 3 path α). Full Z1 catalog at
+`docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` §4.
+
+### Substrate-now-enforcement-later cross-pattern
+
+When ratifying substrate (schema reservations, enum members,
+interface contracts, invariant placeholders), the enforcement
+code (lint rules, runtime checks, migrations against reserved
+values, invariant-content writeup) does not need to land at
+substrate-ratification time. Enforcement lands at implementation
+time when the first consuming code path forces the question.
+
+Mechanism: substrate at ratification time fixes the shape; the
+shape is verifiable from spec + the closed-enum / reserved-value
+discipline (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3
+service no-emit per ADR-0010). Enforcement at implementation time
+fixes the runtime behavior; runtime behavior is verifiable from
+code + tests. Conflating the two timing surfaces produces two
+failure modes:
+- Over-specifying enforcement before consumer code shape is known
+  produces premature lock-in that the first consumer has to work
+  around.
+- Under-specifying substrate so consumer code drifts from intended
+  shape produces a migration cliff when the discrepancy surfaces.
+
+Trigger: any ratification-time decision that names a slot
+(reserved enum value, INV-ID placeholder, lint-rule placeholder,
+matrix v1-ship-gate). Substrate lands now; enforcement gate fires
+at the first consumer.
+
+Precedent: Phase 0 → Phase 1 transition. Codified at D6 §6.8 +
+ADR-0010 Variant A precedent (commit `797db40`). Three deferred-
+obligation triggers carry this pattern into Phase 1: Q29 (ESLint
+rule design fires at first `src/agent/pipelines/**/*` code), Q79
+(INV-DOC-001 shape + DOC prefix fire at first DOC-citing code),
+Q77 (Q28 matrix fires at v1 ship). Full Phase 0 closeout at
+`docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`.
 
 ## Phase 1 Simplifications
 

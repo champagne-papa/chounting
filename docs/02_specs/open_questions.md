@@ -734,6 +734,443 @@ shape was being decided.
 
 ---
 
+### Q35–Q52 — Reserved by original AP Ingestion Initiative brief, superseded by reframe (2026-05-02)
+
+The original `ap_ingestion_initiative.md` brief (2026-05-01) reserved Q35–Q52 for filing in a separate prompt cycle that did not run before the brief was superseded by the Document Platform reframe (`docs/09_briefs/phase-2/document_platform_reframe_design.md`, 2026-05-02 / 2026-05-03).
+
+The reframe restructures the architectural scope (Document Platform as foundation, AP/Spend as first domain) and reorganizes the question space accordingly. Questions Q53–Q78 (filed in the section below) supersede the reserved Q35–Q52 numbers. The numbers Q35–Q52 are **retired** — they will not be filed against the original AP brief's scope and will not be reused for new questions, to preserve the integrity of the spec/plan cross-references that already cite Q53 as the next-available number.
+
+Topic-level mapping from reserved-but-never-filed Q35–Q52 to current architecture:
+- Q35 (autonomy rung calibration) → subsumed by Q60 (born-paid bundle approval) + AP/Spend Subdomain ADR
+- Q43 (vendor-template-as-autonomy-rule) → Vendor Template ADR substrate-only portion + post-v1 enforcement portion
+- Other AP-specific questions in the Q35–Q52 range → answered by AP/Spend Subdomain ADR or restructured into Q53–Q78
+
+---
+
+### Phase 2 Document Platform reframe (2026-05-02)
+
+Questions Q53–Q78 file against the Document Platform reframe spec
+(`docs/09_briefs/phase-2/document_platform_reframe_design.md`).
+Filed in three batches per the Phase 0 governance plan
+(`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
+Tasks A2 (Q53–Q60), A3 (Q61–Q70), A4 (Q71–Q78).
+
+### Q53 — Document-type enum: which types are active in v1, which are reserved?
+
+The Document Platform classifier produces a document-type discriminator
+per the Document Platform ADR. The full reserved set per ADR-0010
+discipline includes: `vendor_invoice`, `receipt`, `payment_confirmation`,
+`credit_memo`, `vendor_statement`, `purchase_order`, `receiving_document`,
+`retainer_request`, `deposit_request`, `bank_statement`, `card_statement`,
+`customer_invoice`, `customer_remittance`, `tax_form`, `contract`,
+`payroll_document`, `asset_purchase_support`, `unknown`.
+
+**Decision space:** which types ship classification logic in v1
+(`vendor_invoice`, `receipt`, `payment_confirmation`, others?) and
+which sit reserved-without-classifier-implementation. The
+classification-confidence threshold for routing-to-exception vs
+routing-to-proposal is also v1 calibration.
+
+**Blocks:** Document Platform ADR; Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q54 — Document case lifecycle states: which transitions are guarded?
+
+The document case lifecycle states are: `received → extracting →
+classified → matched → proposed → needs_review → approved → committed →
+rejected → archived`.
+
+**Decision space:** not the state names (those are decided), but which
+transitions get service-layer enforcement vs UI convention. Specifically:
+which transitions can be triggered only by automation, only by humans,
+or by either; and which transitions are reversible.
+
+**Blocks:** Document Platform ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q55 — `source_document_links`: active enums and pair validity
+
+Per spec §6, `linked_entity_type` and `link_role` are both closed enums
+under ADR-0010 reserved-enum-states discipline. Not every
+`(linked_entity_type, link_role)` pair is valid — `retainer_agreement`
+only makes sense linked to `vendor_prepayment`, not to `bank_transaction`.
+
+**Decision space:** the per-pair validity matrix and which pairs the
+`documentLinkService` rejects. Active v1 set is narrow (probably
+`(bill, primary_invoice)`, `(bill, supporting)`, `(payment,
+payment_evidence)`, `(payment, receipt)`); the full matrix is reserved.
+
+**Blocks:** Document Relationship Graph ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §6, §13.
+
+### Q56 — Relationship Router re-evaluation triggers
+
+When a previously unmatched document gets re-classified after new
+domain state lands (a new bill posts that matches a stranded receipt;
+a vendor master gets merged that re-resolves prior matches; a period
+reopens).
+
+**Decision space:** which domain events trigger Router re-runs, the
+audit-trail shape for routing-decision changes, and which decisions
+are immutable post-commit (per spec §16 lifecycle immutability rules).
+
+**Blocks:** Relationship Router ADR; Phase 4 (Router) code.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q57 — Confidence calibration governance
+
+Who calibrates classifier and Router confidence thresholds, against
+what test set, how often, with what audit trail?
+
+**Decision space:** org-configurable vs system-fixed for v1 (cf. Q23
+on agent ladder thresholds); reviewer authority for changes; what
+changes when a threshold moves (re-evaluate prior decisions or not).
+
+**Blocks:** Confidence Calibration Policy ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q58 — ProposedMutationBundle atomicity at the DB transaction layer
+
+How does Tier 1 enforce all-or-nothing bundle commit, and how does
+the Logic Receipt represent bundle children?
+
+**Decision space:** single transaction vs saga with compensating
+reversals; the audit-log shape for bundle commits; the Logic Receipt
+shape when one ProposedMutationBundle produces multiple journal
+entries.
+
+**Blocks:** ProposedMutationBundle ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q59 — Vendor prepayment object shape
+
+Types (`retainer | deposit | advance | security_deposit |
+prepaid_service | inventory_deposit | fixed_asset_deposit | other`),
+statuses, payment-purpose discriminator linkage, application logic.
+
+**Decision space:** which prepayment types ship as active v1 enum
+values vs reserved per ADR-0010.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q60 — Born-paid bill bundle approval gate
+
+Always Confirm at first; later auto-post under what specific rules?
+
+**Decision space:** thresholds, vendor-rule applicability, controller
+authority. Tied to post-v1 auto-post per spec §11. May feed into Q43
+(vendor-template-as-autonomy-rule) when that ADR drafts post-v1.
+
+**Blocks:** AP/Spend Subdomain ADR (v1 portion); Vendor Template
+ADR (post-v1 portion).
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q61 — Vendor prepayment approval gate
+
+Can AP specialist record a vendor prepayment without controller
+approval if the cash already left the bank (after-the-fact
+classification), vs requiring controller approval for future-cash
+retainer authorization?
+
+**Decision space:** separate approval rule for future-cash retainer
+authorization vs after-the-fact retainer classification. Default lean
+per spec §13: no controller bypass for future cash; bypass allowed for
+after-the-fact reconciliation classification.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q62 — Deposit / retainer tax timing
+
+When a deposit / retainer request includes GST / HST / PST, does
+CHOUnting recognize recoverable tax at deposit payment date, final
+invoice date, or controller-selected date?
+
+**Decision space:** jurisdiction default + per-org override + per-
+document override; default to `review_required` until explicit choice
+is captured.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q63 — Vendor balance view composition
+
+Which components combine into "vendor balance"? Open AP, unapplied
+vendor credits, open vendor deposits / retainers, accrued unbilled.
+
+**Decision space:** which composition the Spend brief specifies for
+v1 reporting and which views surface partial vs net balance.
+
+**Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) reporting.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q64 — Final invoice references prior deposit not in CHOUnting
+
+A final invoice arrives showing "$X paid as deposit, balance owing
+$Y" but no `vendor_prepayment` row exists in CHOUnting (the deposit
+was paid before the org adopted CHOUnting, or via a channel that
+didn't ingest).
+
+**Decision space:** backfill (create back-dated `vendor_prepayment`
+from bank/card transaction), treat as discount, treat as vendor
+credit, or send to review. Default per spec §13: route to exception
+queue with backfill suggestion; do not silently treat as discount.
+
+**Blocks:** AP/Spend Subdomain ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q65 — Per-document-type classifier confidence thresholds
+
+Per-type calibration, exception-queue routing rules. Subordinate to
+Q57 (confidence calibration governance).
+
+**Decision space:** per-type threshold values for v1 (`vendor_invoice`,
+`receipt`, `payment_confirmation`, `unknown`).
+
+**Blocks:** Tier 2 Document Pipeline ADR; Confidence Calibration
+Policy ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q66 — Relationship Router tier placement (~~pending ADR-0007 amendment~~ — ADR-0007 amendment ratified 2026-05-03 at D1)
+
+**Status update 2026-05-03:** ADR-0007 ratified the architectural placement class for Relationship Router as Tier 2.5: a read-only, ledger-aware path between Tier 2 and Tier 1. ADR-0011 inherits that placement. ADR-0018 remains responsible for closing the detailed Relationship Router contract: readable state, candidate shape, ambiguity handling, re-evaluation triggers, stale-candidate invalidation, and Tier 1 re-verification obligations.
+
+[Original decision-space content preserved below for historical context.]
+
+Where does the Relationship Router live — amended Tier 2, new
+Tier 2.5, or Tier 1 read-only pre-commit stage?
+
+**Decision space:** (a) amend ADR-0007 to authorize Tier 2 reads
+against committed ledger state with Q28 expansion covering
+relationship-match outcomes; (b) introduce Tier 2.5 with read-only
+ledger access, idempotent, no LLM-planned matching; (c) place in
+Tier 1 as read-only pre-commit shaping. Recommended preference per
+spec §9: (b). Resolved only by ADR-0007 amendment + Relationship
+Router ADR ratification.
+
+**Blocks:** Relationship Router ADR; Q27 wording.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §9, §13.
+
+### Q67 — Domain ownership: `bank_transactions` and `card_transactions`
+
+Which domain owns these entity types? Banking (reconciliation), Spend
+(payments outgoing), or shared?
+
+**Decision space:** ownership, cross-domain protocols, and which ADR
+(Document Platform vs a future Banking Subdomain ADR) decides the
+cut.
+
+**Blocks:** Document Platform ADR (Domain Boundary Map subsection);
+Phase 5 (Spend foundation) and any future Banking domain.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q68 — Exception queue UX
+
+Bulk operations, reclassification flow, document-type-aware
+resolution actions, first-class screenshot gate, SLA / status fields.
+
+**Decision space:** which actions ship as active in v1 vs reserved.
+The full resolution-action enum is (per converged review): `create_bill`,
+`attach_to_existing_bill`, `attach_to_existing_payment`,
+`record_bill_payment`, `create_vendor_prepayment`,
+`apply_vendor_prepayment`, `create_vendor_credit`,
+`apply_vendor_credit`, `mark_duplicate`, `mark_non_accounting`,
+`request_missing_document`, `route_to_manual_entry`,
+`route_to_bank_reconciliation`, `route_to_AR_future`, `reprocess`,
+`archive`. v1 active set is narrow.
+
+**Blocks:** Document Platform ADR; Phase 4 (Router) and Phase 5
+(Spend foundation) UX.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q69 — Replayability: re-running extraction when OCR engine improves
+
+When the OCR engine version changes or a new model version ships,
+existing `source_documents` may benefit from re-extraction.
+
+**Decision space:** `ocr_runs` / `extraction_runs` table separation,
+supersession semantics (auto-supersede vs explicit promotion), and
+whether replays affect already-committed `source_document_links`.
+Per spec §16 immutability rules, replays produce new rows but do not
+mutate prior rows.
+
+**Blocks:** Tier 2 Document Pipeline ADR; Document Platform ADR
+(Replayability subsection).
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13, §16.
+
+### Q70 — Idempotency at the OCR layer
+
+Hash bytes on ingestion, short-circuit duplicate processing.
+
+**Decision space:** short-circuit policy (skip the OCR sidecar
+entirely vs re-run with cached artifact); whether the same hash from
+a different ingestion channel still short-circuits; how the
+short-circuit decision is audited.
+
+**Blocks:** Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q71 — Document-type classification strategy
+
+Rules vs templates vs small-model classifier vs LLM fallback vs
+fine-tuned classifier.
+
+**Decision space:** which strategies ship in v1's classifier and the
+fallback ordering. The OCR engine choice (per the Tier 2 Document
+Pipeline ADR) is separate from the classification strategy. (Q65
+covers per-document-type classifier confidence thresholds, not OCR
+engine selection.)
+
+**Blocks:** Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q72 — AI fallback contract
+
+When can AI be called, what artifact + snippets can it see, what JSON
+does it return, how does it feed Q28 re-verification?
+
+**Decision space:** the exact input / output contract, the validation
+gate before AI output enters the proposal pipeline, and the
+re-verification cost budget.
+
+**Blocks:** Tier 2 Document Pipeline ADR; Q28 expansion in
+`agent_architecture_policy.md`.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q73 — Per-org Document Platform configuration
+
+Storage provider, OCR provider, allowed channels, retention policy,
+confidence thresholds, language packs.
+
+**Decision space:** which knobs are per-org vs system-fixed for v1.
+
+**Blocks:** Document Platform ADR; Storage Provider ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+### Q74 — Receipt v1 path
+
+The spec §15 decision matrix splits receipt capabilities. Confirm
+the matrix as the v1 receipt stance: image ingestion ✅, OCR
+extraction ✅ (single engine), receipt-as-payment-evidence
+(Scenario A) ✅ via `ProposedAttachment`, receipt-as-payment-trigger
+(Scenario B) ✅ via `ProposedMutation(record_bill_payment)`, single
+high-confidence one-to-one bill matching ✅, multi-match
+disambiguation conditional on Q56 / Q68, standalone POS receipt
+(Scenario C) → exception with manual born-paid workflow.
+
+**Decision space:** confirm the matrix or amend per-row.
+
+**Blocks:** AP/Spend Subdomain ADR; Tier 2 Document Pipeline ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §15.
+
+### Q75 — Document case source cardinality
+
+When is one document case built from multiple source documents? Email
+body + invoice PDF; final invoice + retainer agreement; vendor
+statement + several invoices.
+
+**Decision space:** which patterns ship case-source bundling in v1
+(via the `document_case_sources` table per spec §3.1) vs route to
+manual linking.
+
+**Blocks:** Document Platform ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §3.1, §13.
+
+### Q76 — Re-evaluation policy: immutability vs supersession boundary
+
+When relationships are re-run (per Q56), which decisions are
+immutable, which are superseded with audit, and which require user
+approval to change?
+
+**Decision space:** the immutability boundary per spec §16 and the
+audit-log shape for re-routed decisions. Pre-commit case re-routing
+is allowed; post-commit `source_document_links` require
+reversal/supersession.
+
+**Blocks:** Document Platform ADR; Relationship Router ADR.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13, §16.
+
+### Q77 — Q28 re-verification matrix expansion scope
+
+How does the existing Q28 re-verification matrix expand to cover
+document-type-aware fields, relationship-claim re-verification,
+stale-state TOCTOU checks, and bundle re-verification (per spec §12)?
+
+**Decision space:** matrix shape and which checks are Layer 1 schema
+/ Layer 2 service / Layer 3 review. Matrix lands in
+`agent_architecture_policy.md` before v1 ships (not before v1 codes).
+
+**Blocks:** ADR-0007 amendment ratification; v1 ship gate.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §12, §13.
+
+### Q78 — Payment failure / reversal lifecycle
+
+v1 currently has `paid` as a terminal state and `reversed` for
+corrections, but doesn't address the operational reality that
+payments can fail post-execution: wire bounced (insufficient funds
+at sender, account closed at receiver, KYC hold), ACH returned (NSF,
+account closed), card charge disputed and reversed, cheque bounced,
+bank reversed for compliance.
+
+**Decision space:** whether to add a `failed` payment state with
+transition rules (`paid → failed → bill returns to
+approved_for_payment via reversal entry`); the ledger semantics of
+failure (auto-reverse vs proposal-and-confirm); which v1 phase ships
+failure handling (Phase 5 AP foundation has it as an exit-criterion
+vs Phase 5 ships paid-only and failure handling lands post-v1). The
+v1-relevance signal: the founder + 2 real users will hit payment
+failures within months of going live, so the absence of an explicit
+path means manual reversal entries that violate Reading B (the
+ledger service is the only writer of journal entries).
+
+**Blocks:** AP/Spend Subdomain ADR; Phase 5 (Spend foundation) code.
+
+**Source:** `docs/09_briefs/phase-2/document_platform_reframe_design.md` §13.
+
+---
+
+## Phase 0 governance closeout-surfaced questions
+
+Questions surfaced during Phase 0 ADR governance execution (Sessions 2A onwards). Source: ratification packages and brainstorm-side review of D-task closeout work.
+
+### Q79 — INV-DOC-001 shape
+
+ADR-0011 §15 reserved INV-DOC-001 (Document Platform invariant prefix) without specifying the invariant's enforcement shape. The actual prefix registration is post-D3 closeout work (per D3 §3) and lands in `docs/02_specs/invariants.md` when enforcement code lands.
+
+**Decision space:** what does INV-DOC-001 enforce — schema constraint on `source_documents` integrity? Service-layer ceiling check on document-platform writes? Both? The shape determines whether the prefix lands as a single invariant or a family.
+
+**Blocks:** Task E1 (DOC prefix registration in `docs/02_specs/invariants.md`); first Document Platform code that needs to cite the invariant.
+
+**Source:** Session 2A D3 ratification, 2026-05-03 (D3 ratification package §3 clarifying note on DOC prefix awaiting Task E1 registration).
+
+---
+
 ## Section 4 — Formalization candidates
 
 Distinct category from Sections 1-3. These are NOT architectural
