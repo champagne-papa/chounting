@@ -5487,3 +5487,206 @@ hygiene amendment). Phase 1.Storage implementation arc + closeout
 cycle both terminated on origin/staging. Phase 2 brief-creation
 arc opens next session as primary work product per delivery-
 model.md cadence.
+
+---
+
+### Phase 2 brief-creation arc — chunk B2-1 commit (2026-05-06)
+
+Chunk B2-1 ships substantive content for §1-§4 of
+`docs/09_briefs/phase-2/document_platform_initiative.md`
+(motivation + locked v1 scope + architecture overview + Tier
+placement). Single direct-commit on staging at `5a00671` per
+single-purpose-commit-discipline; pushed to origin per Option 3
+milestone-grain §5.7 condition (b) authorization
+(`b900bdd..5a00671` on 2026-05-06).
+
+#### Substantive output
+
+564 insertions / 4 deletions. Per-section delta:
+
+- **§1 Why this initiative exists** (58 lines) — hybrid narrative
+  + verbatim citation blocks per (α-3) lock. Cites ADR-0011
+  `## Context → Why a Document Platform substrate exists`
+  (lines 33-66) for the load-bearing reframe finding; preserves
+  canonical "AP is not the foundation. The Document Platform
+  is the foundation." callout; closes with Reading B
+  preservation framing per ADR-0011 inheritance discipline.
+- **§2 Locked v1 scope** (176 lines) — three-category
+  enumeration (in-scope / out-of-scope / reserved-but-not-
+  emitted) per (β) lock. Substrate-now-enforcement-later
+  cross-pattern cited via D6 ratification package §6.8 +
+  ADR-0010 amendment Variant A composition. 9 reserved-but-
+  not-emitted categories enumerated: document-type discriminator
+  (14 reserved), resolution-action enum (8 reserved), document-
+  case-source role enum (2 reserved), storage status enum (5
+  reserved), OCR engine enum (2 reserved), 12 reserved
+  `org_settings.*` columns, multi-entity reservations (5
+  columns), `wrong_entity_exception` flag, DOC invariant
+  prefix, re-evaluation triggers T7+T9.
+- **§3 Architecture overview** (195 lines) — (γ-1) prose flow
+  only per pattern-parity verify-from-disk (reframe-spec uses
+  prose + tables; zero diagrams across all 21 sections).
+  6-layer narrative: Storage / Evidence Core → Document Core
+  → Tier 2 Document Pipeline → Relationship Router (Tier 2.5)
+  → Domain handoff → Tier 1 commit gate. Pipeline-as-Layer-3
+  distinction from Document Core substrate at Layer 2
+  preserved (substrate stores case state; pipeline orchestrates
+  extraction-to-proposal flow).
+- **§4 Tier 1/2/2.5/3 placement** (135 lines) — Tier-by-
+  component enumeration per (δ) lock at 11 components (vs ~9
+  initial frame): 1 below-agent-tier (Storage provider), 6
+  single-Tier (Document Core / pipeline orchestrator / Tier A /
+  Tier C / vendor matcher / matchAgainstExistingState), 1 Tier
+  2.5 (Relationship Router), 2 split-framing (Exception queue
+  + Logic Receipt), 1 boundary (ProposedMutation handoff).
+
+#### Three contested-framing adjudication
+
+Three framings surfaced post-subagent distillation as
+candidates for interpretive overlay vs ADR verbatim. All three
+locked honoring ADR text verbatim:
+
+- **δ-1-i Storage provider** — data-access layer below the
+  agent-tier boundary per ADR-0013 (NOT "Tier 2 substrate").
+  Storage is structurally orthogonal to agent tiers; agent
+  tiers consume storage through `storageProviderService`.
+- **δ-2-i Exception queue** — split-framing: substrate Tier 2
+  (ADR-0011 §1 + §13) + UI surface Tier 3 (ADR-0007 §Tier 3
+  Interface Path). Substrate ownership distinct from UI surface
+  rendering.
+- **δ-3-i Logic Receipt** — split-framing: production Tier 1
+  (INV-AGENT-002 + ADR-0007 §Tier 1) + `pipeline_trace`
+  populated by Tier 2 stages (ADR-0007 Tier 2 safety contract
+  item 5).
+
+Convergence shape: WSL-side initial leans + brainstorm-side
+verify-from-disk on ADR text + founder explicit verdict bundle
+all converged on (i) framings via canonical-evidence-anchor
+grounding paths. Z1 #15 termination criterion preserved via
+on-disk artifact convergence, not agreement-as-termination.
+
+#### Flag 3 surfacing — `wrong_entity_exception` cross-enum inconsistency
+
+ADR-0011 §10 names `wrong_entity_exception` as reserved "in
+the exception-routing enum (per §13 below)," but ADR-0011 §13's
+16-value `resolution_action` enum does NOT list it.
+
+Reading A (most likely): two distinct enums conflated under
+"exception-routing" — exception-TYPE enum (input categorization;
+why the case landed in queue) vs resolution-action enum (output
+disposition; what the human chose). The first enum doesn't
+exist in any ratified Phase 0 ADR.
+
+Inline accommodation in §2 reserved-but-not-emitted enumeration
++ Phase 2 carry-forward governance question framing per founder
+verdict. Warrants either ADR-0011 amendment introducing the
+exception-TYPE enum + adding `wrong_entity_exception` to it,
+OR downstream-ADR ratification (potential ADR-0016 / ADR-0018
+candidate). Founder-domain triage timing.
+
+Cross-section verbatim re-read at brief-creation gate caught
+this inconsistency (sub-shape candidate under Z1 #11.b at
+substrate-level; mirror-shape to chunk-N+M misattribution
+sub-shape at code-comment gate from prior arc).
+
+#### Sub-shape candidates accumulated
+
+Four sub-shape candidates accumulated this session at varying
+N counts:
+
+- **#16-i positive instance** (executor judgment grounds in
+  canonical-evidence-anchor reads → output convergence on
+  contested-framing leans). Within-session N=2 fires (chunk
+  B2-1 onset Sub-Q convergence + next-step Option 3 → Option 2
+  convergence). Cross-arc N=2 graduates; within-session N=2
+  advances cumulative count for monitoring, does not graduate.
+- **#16-iii bundled-verdict-with-restate-window** (founder
+  explicit bundled verdict + executor restate-for-correction-
+  window; silence-as-acceptance ratification mechanism).
+  Distinct from #16-ii (no founder verdict at all) and from
+  per-anchor explicit verdict (correction-window-as-mechanism).
+  Multi-fire within-session (~5 fires across session-start
+  anchors + chunk B2-1 onset Sub-Q lock + contested-framing
+  bundle + drafting authorize + next-step bundle). Cross-arc
+  N=2 graduates.
+- **Z1 #9 length-as-calibration overshoot at brief-creation
+  grain**. Chunk B2-1 ran 1.6-2.3x estimate (564 lines vs
+  250-350 estimate). Sub-shape framing: brief-creation chunks
+  tend to overshoot length estimates because Sub-Q verdicts
+  driving substantive density are pre-locked but estimate-
+  density was framed pre-verify-from-disk on actual ADR
+  content. N=1 monitoring; cross-arc N=2 (future brief-
+  creation arc, e.g., chunk B2-2 / B2-3 / B2-4) graduates.
+- **#17-iii main-vs-worktree-lock-state divergence** advances
+  within-arc N=4 at chunk B2-1 commit + N=5 at chunk B2-1 push
+  (5 fires under foreign label `phase-1-document-platform-
+  2026-05-06` across two sessions: chunks 1-4 + chunk N + chunk
+  N+M + closeout cycle skeleton + closeout cycle density at
+  b900bdd + chunk B2-1 commit + chunk B2-1 push). Cross-arc
+  graduation defers per discipline.
+
+#### Foreign session-lock disposition
+
+α-equivalent precedent extended this session at `5a00671`
+commit + push. Foreign session-lock disposition reopens at
+next-session start as founder-domain election; lock held at
+`phase-1-document-platform-2026-05-06`.
+
+#### Subagent dispatch shape
+
+Layer 2 fired 4 parallel general-purpose subagents per Z1 #11.b
+preventive verbatim re-read discipline before drafting:
+
+1. ADR-0011 §1 + §3 + §6 + §13 + §15 + §17 (re-anchored as §10)
+   + ADR-0010 amendment Variant A precedent (bundled per
+   brainstorm-side recommendation)
+2. ADR-0014 motivation + §1 (Pipeline architecture overview)
+   + §2 (OCR engine selection) + §3 (Modal sidecar topology)
+   + §7 (classification strategy) + Closes Q73 (12 reserved
+   org_settings columns canonical enumeration)
+3. ADR-0007 amendment Tier 2.5 + Q66 closure + three-category
+   vendor read split distributed across Tier 2 + Tier 2.5
+   read boundaries + Status section's named-follow-up reference
+   + Q28 expansion surfaces 2-3
+4. ADR-0018 §1-§6 (Tier placement at Decision item 1; not §6)
+   + ADR-0013 §1-§5 (data-access layer below agent-tier
+   boundary; no single "Tier placement" section)
+
+Subagents returned 10 substantive Discrepancy flags (citation-
+anchor corrections + 1 substantive Flag 3 surfacing). 9
+citation-anchor corrections inlined silently per discipline; 1
+substantive flag (Flag 3) surfaced inline + carry-forward.
+
+Subagent dispatch shape preserved as forward-pattern for chunks
+B2-2 / B2-3 / B2-4: Z1 #11.b fires preventive verbatim re-read
+before drafting via parallel general-purpose subagents (NOT
+Explore subagents per Explore-tool description prohibition on
+design-doc auditing); subagent prompts self-contained for
+zero-context dispatch; output shape includes verbatim citation
+blocks + distilled summaries + Discrepancy flag surfacing.
+
+#### Carry-forward to next session
+
+- **Chunks B2-2 / B2-3 / B2-4** — primary next-session work
+  product. Substantive content stubs at §5-§9 (data model +
+  storage abstraction + polymorphic links + Relationship Router
+  + Proposal types) / §10-§13 (immutability + exception queue
+  + multi-entity + receipt v1 matrix) / §14, §16, §18-§20
+  (Phase A acceptance + ADRs produced + friction-journal scope
+  + non-goals + verification).
+- **Hygiene-cycle 3 deferred fixes** — γ-hygiene (DEFERRED to
+  subsequent session per founder Anchor 2 election). Folds
+  into chunk B2-N cadence OR defers further per founder elect.
+- **Flag 3 governance question** — `wrong_entity_exception`
+  cross-enum inconsistency triage timing founder-domain.
+- **Sub-shape candidates** — 4 candidates at N=1 / N=2 /
+  multi-fire monitoring; cross-arc N=2 graduations defer.
+- **Memory pickup file refresh** — renamed to
+  `project_phase_2_brief_creation_pending.md` (from
+  `project_phase_1_storage_closeout_pending.md` per state
+  reflection); content reflects post-chunk-B2-1 state.
+
+Phase 2 brief-creation arc continues at next-session opening.
+Substrate-decision-integrity preserved across chunk B2-1
+substantive output; next-chunk onset adjudication fires at next
+session.
