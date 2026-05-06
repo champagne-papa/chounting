@@ -116,7 +116,7 @@ const eslintConfig = [
     files: ["src/**/*.{ts,tsx}"],
     plugins: { architecture: architecturePlugin },
     rules: {
-      "architecture/agent-first-import-boundaries": "off",
+      "architecture/agent-first-import-boundaries": "error",
     },
   },
 ];
