@@ -80,3 +80,21 @@ BEGIN
   RETURN v_entry_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- =============================================================
+-- Phase 1.Storage chunk N+M hygiene: idempotent bucket presence.
+--
+-- Migration 20240136000000_storage_buckets.sql creates the
+-- 'documents' bucket on db:reset; this addition guards against
+-- the gap when a test (e.g., bucket-not-found in
+-- storageProviderIntegration.test.ts under Sub-Q D (b) drop-
+-- and-recreate) drops the bucket and afterAll cleanup fails
+-- (process killed mid-test, network blip), leaving the bucket
+-- absent for subsequent vitest runs without an intervening
+-- db:reset. Idempotent INSERT mirrors the migration's shape
+-- verbatim so a stale bucket row never blocks recreation.
+-- =============================================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', false)
+ON CONFLICT (id) DO NOTHING;
