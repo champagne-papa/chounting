@@ -3654,6 +3654,8 @@ two items deferred to B.5:
   comes from `vendor_rules.current_rung` (substrate per ADR-0017)
   + the promotion ceremony per `agent_autonomy_model.md` §4.1,
   not from a feature flag's value. Carry to B.5 / Phase 2.
+  Absorbed: 2026-05-06 in B.5 rules-substrate session into
+  `docs/04_engineering/delivery-model.md`.
 
 - 2026-05-05 NOTE — Verified `scripts/session-init.sh` writes
   to relative `.coordination/session-lock.json` (line 18:
@@ -3668,3 +3670,88 @@ two items deferred to B.5:
   allows concurrent work on different branches in different
   worktrees without one session's lock blocking another's
   unrelated work. Carry to B.5's `worktree-rules.md`.
+  Absorbed: 2026-05-06 in B.5 rules-substrate session into
+  `docs/04_engineering/worktree-rules.md`.
+
+## 2026-05-06 — B.5 rules-substrate session
+
+The rules-substrate counterpart to ADR-0020 (Session 1
+architecture-substrate, PR #3 merged 2026-05-06 at `7c38622`).
+Codifies how the project operates around the source tree:
+repo shape, worktree discipline, delivery model, product map,
+vocabulary.
+
+### Files added
+
+- `docs/04_engineering/repo-rules.md`
+- `docs/04_engineering/worktree-rules.md`
+- `docs/04_engineering/delivery-model.md`
+- `docs/00_product/product-map.md`
+
+### Files extended
+
+- `docs/02_specs/glossary.md` — Product Vocabulary and
+  Delivery Vocabulary subsections; Stage / Workflow Phase /
+  Delivery Phase clarification paragraph.
+- `docs/04_engineering/conventions.md` — phase branch naming
+  bullet; `core/` extraction sub-bullet under "New service
+  function"; cross-reference table at end of Contribution
+  Conventions.
+- `CLAUDE.md` — Project rules and vocabulary navigation block
+  between Navigation tier-1 and On-demand rules sections.
+- `.claude/skills/README.md` — rules-vs-skills paragraph after
+  the existing four-layer architecture statement.
+- `docs/INDEX.md` — `product-map.md` (00_product);
+  `repo-rules.md` / `worktree-rules.md` / `delivery-model.md`
+  (04_engineering); ADR backfill 0011-0019 (0020 already
+  entered from Session 1).
+- `docs/07_governance/friction-journal.md` — this entry; the
+  two 2026-05-05 founder-review NOTEs marked Absorbed
+  (originals preserved as historical record).
+
+### Scope confirmation
+
+No source code touched (no `.ts` / `.tsx` files modified; no
+files under `apps/` / `packages/` / `eslint-rules/`). No new
+ADR. No tool schema migration. The three pre-existing
+untracked files in `docs/09_briefs/phase-2/`
+(`*.pre-phase0-draft.bak` and `ap_ingestion_initiative.md`)
+remain untouched per the kickoff's operator-judgment-cleanup
+deferral.
+
+The 2026-05-05 founder-review NOTEs (flag-naming caution +
+session-lock per-worktree verification) are absorbed into
+`docs/04_engineering/delivery-model.md` and
+`docs/04_engineering/worktree-rules.md` respectively and marked
+Absorbed in their original entries; the originals stay as
+historical record. The 2026-05-05 carry-forward note flagging
+ADRs 0011-0019 missing from `docs/INDEX.md` is resolved by
+this session's INDEX backfill.
+
+### Codification status
+
+- **Worktree rules at N=1.** Phase 0 governance arc was the
+  single observed fire. Pre-emptive codification justified per
+  the substrate-now-enforcement-later cross-pattern; amend in
+  place if Phase 1+ usage diverges.
+- **Delivery model at N=multiple.** Phase 0 ratification gates
+  + Phase 1.2 phase branch + Phase 1.5 sub-phase pattern +
+  Phase 1 chunk shape; codifying observed practice into one
+  navigation home.
+- **Product map at N=tentative.** Module names are working
+  vocabulary; graduation per the tentative-until-evidenced
+  rule (`docs/00_product/product-map.md`).
+- **Repo rules at N=current-state.** Codifies what is already
+  on disk; navigation doc for canonical sources, no new rules
+  introduced.
+
+### Observations
+
+- ADR-0007 (`three-tier-agent-architecture.md`) exists on
+  disk but is missing from `docs/INDEX.md`'s ADR list.
+  Surfaced as a pre-existing gap; out of B.5 scope (kickoff
+  backfill scope was 0011-0019). Carry as a separate INDEX
+  hygiene item.
+- DEV_WORKFLOW.md and the 04_engineering README.md exist on
+  disk but are not entered in `docs/INDEX.md`. Pre-existing
+  gap; out of B.5 scope. Carry as INDEX hygiene.

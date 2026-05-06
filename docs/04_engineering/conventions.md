@@ -16,9 +16,22 @@ is agent-specific and lives in
 
 - **Branch naming:** `feat/[ticket-id]-short-description`,
   `fix/[ticket-id]-description`
+- **Phase branches:** `phase/N-short-description` (e.g.,
+  `phase/1-storage-evidence-core`). Long-lived; merge at phase
+  ratification with `--no-ff` to preserve arc topology. Existing
+  phase branches (`worktree-phase-0-governance`, etc.) retain
+  their current names — forward-applying convention only.
 - **Conventional Commits:** `feat:`, `fix:`, `chore:`, `docs:`
 - **New service function** →
   `src/services/[module]/[entity]Service.ts`
+  - Per ADR-0020 (Decision item 6), pure deterministic logic
+    that doesn't touch DB or I/O may be extracted into
+    `src/core/[area]/` and called from the service. The
+    service remains the entry point for cross-cutting concerns
+    (transactions, audit, authorization). Extraction is
+    opportunistic — when a service file is naturally edited
+    and a pure-logic block is identified, that block can move.
+    Pre-emptive extraction is not required.
 - **New agent tool** → `src/agent/tools/[toolName].ts`
 - **New Zod schema** →
   `src/shared/schemas/[module]/[entity].schema.ts`, then imported by
@@ -29,6 +42,21 @@ is agent-specific and lives in
 - **Direct database calls outside `src/services/` are rejected at
   code review.** No exceptions, no urgency override
   (INV-SERVICE-001 enforcement).
+
+### Cross-references
+
+| For | See |
+|---|---|
+| Repo shape | `docs/04_engineering/repo-rules.md` |
+| Worktree discipline | `docs/04_engineering/worktree-rules.md` |
+| Delivery model | `docs/04_engineering/delivery-model.md` |
+| Source-tree architecture | `docs/03_architecture/folder-structure.md` + ADR-0020 |
+| Authority Gradient | `docs/03_architecture/authority-gradient.md` |
+| Workflow vocabulary | `docs/02_specs/glossary.md` Workflow Vocabulary |
+| Product vocabulary | `docs/02_specs/glossary.md` Product Vocabulary |
+| Delivery vocabulary | `docs/02_specs/glossary.md` Delivery Vocabulary |
+| Product modules | `docs/00_product/product-map.md` |
+| Workflow ↔ Code mapping | `docs/03_architecture/product-workflow-delivery-mapping.md` |
 
 ---
 
