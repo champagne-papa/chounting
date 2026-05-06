@@ -37,12 +37,23 @@ export type StorageProviderEnum =
 // PutInput — bytes + minimal metadata required for the storage write.
 //
 // Storage layer is data-access infrastructure; the document-platform
-// caller owns source_documents row metadata (ingest_channel,
-// original_filename, etc.). Per ADR-0013 §1: storage layer concerns
-// itself with "all blob bytes I/O" — only what's needed to write bytes
-// lives here. Other source_documents fields are populated by the
+// caller owns source_documents row metadata. Per ADR-0013 §1:
+// storage layer concerns itself with "all blob bytes I/O" — only what's
+// needed to write bytes lives here. Other source_documents fields
+// (ingest_channel, received_at, etc.) are populated by the
 // document-platform service that calls put() and then INSERTs the
 // source_documents row in its own withInvariants-wrapped transaction.
+//
+// Chunk 4 amendment: source_document_id and original_filename were
+// added to align with ADR-0013 §14 verbatim path pattern
+// (org_{org_id}/sources/{source_document_id}/{filename}). The §14
+// pattern enables dedup-by-hash logic per §10 and post-v1 garbage
+// collection per §1's orphan-blob framing through structured prefix
+// enumeration. Caller pre-generates source_document_id (UUID) before
+// calling put() and uses the same UUID for the source_documents.id
+// INSERT after put() succeeds; original_filename is also stored on
+// source_documents.original_filename, the storage layer just receives
+// it for path construction.
 export interface PutInput {
   // The bytes to write. Uint8Array is the platform-neutral common
   // denominator across provider SDKs (Supabase Storage, S3,
@@ -61,13 +72,28 @@ export interface PutInput {
   mime_type: string;
 
   // The org under which to scope the storage key. Storage layer scopes
-  // paths by org_id (e.g., supabase storage path = `${org_id}/${uuid}`)
-  // to mirror RLS-scoped read semantics on source_documents. Storage
-  // layer does NOT validate org_id against caller's memberships — that
-  // is withInvariants's responsibility on the calling service per
+  // paths by org_id (per ADR-0013 §14: org_{org_id}/...) to mirror
+  // RLS-scoped read semantics on source_documents. Storage layer does
+  // NOT validate org_id against caller's memberships — that is
+  // withInvariants's responsibility on the calling service per
   // ADR-0013 §1 (storage runs at the data-access layer; invariants
   // apply to the calling domain layer).
   org_id: string;
+
+  // Caller-pre-generated UUID for the source_documents row. Used as
+  // the {source_document_id} segment of the §14 path pattern. Caller
+  // uses the same UUID for the source_documents.id INSERT after
+  // put() succeeds. Pre-generation in app code (crypto.randomUUID())
+  // matches the established journalEntries write-order pattern.
+  source_document_id: string;
+
+  // Original filename as supplied by the caller. Used as the
+  // {filename} segment of the §14 path pattern (after sanitization
+  // to strip path separators / control chars / parent-dir refs).
+  // The unsanitized form is preserved by the document-platform
+  // caller on source_documents.original_filename for display
+  // purposes; the storage path uses the sanitized form.
+  original_filename: string;
 }
 
 // PutResult — what put() returns on success.
@@ -110,20 +136,26 @@ export interface FetchResult {
 
 // PreviewOptions — caller-supplied options for preview URL generation.
 //
-// ADR-0013 §1 names the `options` parameter without enumerating fields;
-// §12 (preview/download URL behavior) specifies the full surface.
-// Chunk 2 ships a minimum shape (ttl_seconds) per substrate-now-
-// enforcement-later — chunk 4 expands as the supabase implementation
-// or a §12 verbatim re-read at consumer-code time forces additional
-// fields (e.g., download-disposition headers, signed-url scope, content-
-// disposition for inline-vs-attachment behavior).
+// Per ADR-0013 §12 verbatim: "options is a typed object with optional
+// fields: { ttl_seconds?: number, mode?: 'preview' | 'download' }".
+// Chunk 2 shipped ttl_seconds only per substrate-now-enforcement-later;
+// chunk 4 added mode after the §12 verbatim re-read at supabase
+// implementation drafting time.
 export interface PreviewOptions {
-  // Time-to-live for the preview URL in seconds. Per ADR-0013 §Closes
-  // Q73, org_settings.preview_url_default_ttl and
-  // org_settings.preview_url_max_ttl bound the value post-v1; v1 uses
-  // system-fixed bounds because org_settings is deferred to a later
-  // sub-arc (per chunk 1 Sub-Q4 a-prime adjudication).
+  // Time-to-live for the preview URL in seconds. Per ADR-0013 §12,
+  // v1 system-fixed: default 300 seconds (5 minutes), upper bound
+  // 1800 seconds (30 minutes). Per-org configurability of default
+  // and bound is reserved post-v1 per Q73 storage portion (in
+  // org_settings.preview_url_default_ttl / preview_url_max_ttl,
+  // deferred to org_settings sub-arc per chunk 1 Sub-Q4 a-prime).
   ttl_seconds?: number;
+
+  // Content-Disposition control. Per ADR-0013 §12: 'preview' returns
+  // a URL the browser will render inline; 'download' returns a URL
+  // with attachment disposition. Default if omitted: 'preview' (the
+  // implementation treats undefined as inline-render). v1 supabase
+  // supports both modes.
+  mode?: 'preview' | 'download';
 }
 
 // PreviewResult — what previewUrl() returns on success.
