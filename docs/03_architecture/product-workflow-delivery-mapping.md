@@ -3,13 +3,10 @@
 The four maps that describe CHOUnting from four different
 angles, and how they relate to each other.
 
-> **Vocabulary formalization in `glossary.md` is follow-on (B.5
-> session).** This doc names the four maps and shows how they
-> cross-reference; the canonical definitions (Stage / Workflow
-> Stage / Module / Workflow Phase / Delivery Phase) live in
-> `docs/02_specs/glossary.md` once the B.5 rules-substrate session
-> formalizes them. The conceptual distinctions are introduced
-> here for traceability; the glossary entries are deferred.
+> **Vocabulary formalization landed in `glossary.md` per the B.5
+> rules-substrate session (PR #4, merged 2026-05-06).** The
+> Product Vocabulary and Delivery Vocabulary subsections plus
+> the Stage/Phase clarification are now canonical.
 
 This doc consolidates CTO Handoff v2 §9 (the four-maps matrix)
 and serves as the bridge between planning artifacts (product map,
@@ -143,7 +140,7 @@ Feature Flag
 **Examples:**
 
 - Feature Flag: `evidence_storage_v1`,
-  `agent_ledger_posting_tool_enabled`, `agent_ladder_rung_2_enabled`
+  `agent_ledger_posting_tool_enabled`, `agent_autonomy_controls_ui_enabled`
 - Cohort: alpha users; controllers-only; 10% rollout; full
   rollout
 - Ramp: 0% → 1% → 10% → 50% → 100%
@@ -253,15 +250,15 @@ specific source slice (per CTO Handoff v2 §9). Examples:
 | Document Core | Document Upload | Upload bank statement | `uploadDocument` | `storeDocumentEvidenceService` | `evidenceMetadataRules` | Phase 1 | `document_upload_enabled` |
 | Double Entry | Post entry to ledger | Approve / post transaction | `postJournalEntry` | `journalEntryService` | `postingRules` | Phase 1.2 (shipped) | `ledger_posting_enabled` |
 | Double Entry | Debit/Credit Validation | Validate entry before posting | n/a (service-internal) | `journalEntryService` | `balanceDebitsAndCredits` | Phase 1.1 (shipped) | `balanced_entry_required_for_posting` |
-| Agent Control Surface | Tool Permissioning | Agent attempts action | all tools | service boundary | n/a | Phase 2 | `agent_ladder_rung_2_enabled` |
+| Agent Control Surface | Tool Permissioning | Agent attempts action | all tools | service boundary | n/a | Phase 2 | `agent_autonomy_controls_ui_enabled` |
 | AP Automation | Vendor Bill Approval | Approve AP bundle | `approveBundle` | `bundleApprovalService` (forthcoming) | `bundleEffectiveCeiling` (per ADR-0012 §9) | Phase 5 (Spend) | `ap_bundle_approval_enabled` |
 
 The matrix is the auditor-facing artifact: given any one cell,
 one can trace through to the others. It does NOT live in this
 doc as the canonical matrix; it lives in
-`docs/00_product/product-map.md` (forward-looking; B.5
-follow-on session creates the file). This doc names the matrix
-and shows the connection shape.
+`docs/00_product/product-map.md` (created 2026-05-06 in the
+B.5 rules-substrate session). This doc shows the cross-map
+relationship and representative rows.
 
 ## Vocabulary distinctions (introduced conceptually only)
 
@@ -269,7 +266,7 @@ The four-maps framing surfaces five distinct uses of "stage" /
 "phase" / "module" — terms that overlap colloquially but carry
 specific meanings in the CHOUnting framework. These distinctions
 are **introduced conceptually here**; the canonical glossary
-entries are **deferred to the B.5 follow-on session**.
+entries landed in B.5 (PR #4).
 
 | Term | Map | Granularity | Example |
 |---|---|---|---|
@@ -279,11 +276,10 @@ entries are **deferred to the B.5 follow-on session**.
 | **Workflow Phase** | Workflow map | NOT a standard term in this framework; if used, means a longer Stage spanning multiple Workflow Sessions | (informal) |
 | **Delivery Phase** | Delivery map | top-level (Delivery Phase → Phase Branch) | Phase 0 (Governance); Phase 1 (Storage); Phase 2 (Interaction Model) |
 
-The clarifications follow-on (B.5) session formalizes these into
-glossary entries with cross-references and authoritative
-disambiguation. This doc holds the conceptual placeholder; do
-NOT treat the table above as canonical until glossary
-formalization lands.
+B.5 (PR #4) formalized these into `glossary.md` with
+cross-references and authoritative disambiguation. The glossary
+entries are canonical; this doc holds the conceptual
+introduction.
 
 ## Why the four maps stay separate
 
@@ -332,12 +328,7 @@ roles.
 
 ## Out of scope for the 2026-05-05 substrate session
 
-- **Glossary formalization** of Stage / Workflow Stage / Module /
-  Workflow Phase / Delivery Phase terms — deferred to B.5
-  follow-on session (`feat/arch-rules-2026-05-05`).
-- **Canonical four-maps matrix** at
-  `docs/00_product/product-map.md` — deferred to B.5.
 - **Workflow map document** at `docs/01_workflows/workflow-map.md`
-  — deferred to a workflow-mapping session post-B.5.
+  — deferred to a workflow-mapping session post-Phase-1.
 - **`packages/flags/` package introduction** — deferred until
   Phase 2 needs it.

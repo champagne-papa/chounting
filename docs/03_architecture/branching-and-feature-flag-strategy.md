@@ -52,9 +52,9 @@ Rules:
   ratification, preferably `--no-ff` to preserve arc topology.
 - Work happens in a dedicated worktree.
 - Commits are small and frequent.
-- Active phase branches regularly merge **from** `staging`
-  (rebase-then-fast-forward or merge-back, per session needs) to
-  prevent late-stage divergence.
+- Active phase branches regularly merge **from** `staging` via
+  `git merge staging` (per Branch sync rules below) to prevent
+  late-stage divergence.
 - Incomplete runtime behavior is feature-flagged.
 - `staging` → `main` happens periodically at release tags.
 - `main` remains the canonical ratified state.
@@ -272,9 +272,14 @@ domain prefix:
 - `document_upload_enabled`
 - `agent_document_upload_tool_enabled`
 - `agent_ledger_posting_tool_enabled`
-- `agent_ladder_rung_2_enabled`
+- `agent_autonomy_controls_ui_enabled`
 - `ledger_posting_enabled`
 - `balanced_entry_required_for_posting`
+
+Per the flag-naming rule in `delivery-model.md`, flag names
+expose rollout / UI surfaces, never determine authority. A flag
+like `agent_ladder_rung_2_enabled` would conflate rollout with
+the Agent Ladder's promotion ceremony and is forbidden.
 
 ## How a phase touches the authority layers
 

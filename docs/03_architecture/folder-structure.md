@@ -100,12 +100,7 @@ components (excepting canvas / surface integration).
 ```
 agent/
 ├── orchestrator/                # session resolution, persona, tool eligibility
-├── tools/                       # tool definitions organized by capability
-│   ├── ledger/                  # journal entry operations
-│   ├── onboarding/              # first-run org setup
-│   ├── document/                # document-level operations
-│   ├── evidence/                # evidence-handling operations
-│   └── reference/               # read-only lookups
+├── tools/                       # tool definitions organized by capability (subdirs forward-looking — see prose below)
 ├── policies/                    # cognitive policy layer
 │   └── agent-ladder/            # autonomy model implementation (empty home; Phase 2)
 ├── prompts/                     # system prompt construction
@@ -134,12 +129,7 @@ contracts may NOT import services, agent, app, or db.
 
 ```
 contracts/
-├── agent-tools/                 # tool input / output / approval metadata
-│   ├── ledger/                  # capability subdirs created on first use
-│   ├── onboarding/
-│   ├── document/
-│   ├── evidence/
-│   └── reference/
+├── agent-tools/                 # tool input / output / approval metadata (capability subdirs created on first use — see prose below)
 ├── api/                         # external API contracts (REST / webhook surfaces)
 ├── events/                      # event-bus contracts (audit events; Phase 2 events table)
 └── public/                      # public-API contracts (forward-looking)
