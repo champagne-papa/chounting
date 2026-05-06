@@ -24,6 +24,30 @@ flag it in `docs/02_specs/open_questions.md` — do not guess.
   (ADRs, data model, glossary, phase simplifications,
   architecture, engineering, briefs).
 
+## Project rules and vocabulary
+
+Canonical sources for project-wide rules across concerns
+(repo shape, worktrees, delivery, vocabulary):
+
+- `docs/04_engineering/repo-rules.md` — repo shape, four-layer
+  architecture, cross-reference table.
+- `docs/04_engineering/worktree-rules.md` — when to use a
+  worktree, where they live, per-worktree session-lock detail.
+- `docs/04_engineering/delivery-model.md` — phase lifecycle,
+  merge rules, branch sync, flag posture.
+- `docs/03_architecture/folder-structure.md` — source-tree
+  architecture (ADR-0020).
+- `docs/03_architecture/authority-gradient.md` — the four-
+  layer authority framing.
+- `docs/02_specs/glossary.md` — product / workflow / delivery
+  vocabulary.
+- `docs/04_engineering/conventions.md` — branch naming and
+  contribution rules.
+
+When starting work, identify which concern your task touches
+and read the canonical source. Do not re-derive these rules
+from conversation context.
+
 ## On-demand rules — load when touching the relevant area
 
 Skills in `.claude/skills/` summarize and point; canonical leaves

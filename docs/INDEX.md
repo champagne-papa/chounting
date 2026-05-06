@@ -16,6 +16,7 @@ rules and points here for everything else.
 
 - `product_vision.md` — the thesis ("deterministic financial engine with a probabilistic interface"), product boundaries, non-negotiable constraints, locked-in stack.
 - `personas.md` — the three equal-class user personas (Executive, Controller, AP Specialist) and what each needs from the product.
+- `product-map.md` — the Product map (modules / features / requirements / tasks). Documentation, not source-folder structure; per ADR-0020 source code is organized by authority layer. Tentative-until-evidenced module names; cross-references to data model, ADRs, and the four-maps mapping doc. Added 2026-05-06 per B.5 rules-substrate session.
 
 ## 01_prd — product requirements
 
@@ -55,6 +56,9 @@ deletion criterion.
 
 - `developer_setup.md` — prerequisites, local setup, seed flow, troubleshooting recipes.
 - `conventions.md` — branch/commit naming, contribution rules, coding conventions (camelCase API ↔ snake_case DB, permission/audit key naming, etc.). Also carries the Phase 1.5A and Phase 1.2 codified-convention catalogs and the `## Documentation Routing` convention (routing rule, write-time tripwires including the 10-second rule and `[ROUTE?]` fallback, codification thresholds, hygiene cadence, archival rule, deprecation model; codified 2026-04-26).
+- `repo-rules.md` — operational rules for the chounting monorepo: where things live, what does NOT live in the repo root, the four-layer architecture statement (root / docs / skills / scripts), and a cross-reference table mapping concerns to canonical sources. Complements `03_architecture/monorepo.md`. Added 2026-05-06 per B.5 rules-substrate session.
+- `worktree-rules.md` — when to use git worktrees and when not to; where they live (target `~/projects/chounting-worktrees/`; grandfathered `.claude/worktrees/phase-0-governance/`); creation / cleanup commands; gotchas (node_modules / hooks / env / dev-server); the load-bearing per-worktree session-lock clarification; worktree-vs-lock comparison table. Codified at N=1 (Phase 0 governance arc). Added 2026-05-06 per B.5.
+- `delivery-model.md` — how chounting moves work from idea to production: trunk language (`main` / `staging`), phase lifecycle, ratification gates, what gets feature-flagged (with the 2026-05-05 flag-naming rule), merge rules (`--no-ff`, hotfix flow R7, branch sync R9), commit cadence, phase numbering. Added 2026-05-06 per B.5.
 - `testing_strategy.md` — what to test and how; Category A floor table; env-var cascade for test DB URLs.
 - `security.md` — Canadian-region hosting constraint, env var handling, logging hygiene rules.
 
@@ -91,6 +95,15 @@ for the deletion criterion.
 - `adr/0008-layer-1-enforcement-modes.md` — Layer 1 invariant enforcement modes (CHECK constraint vs deferred constraint vs trigger).
 - `adr/0009-before-state-capture-convention.md` — `before_state` capture convention for `audit_log` rows; locked to Phase 1.5A's six-service rollout.
 - `adr/0010-reserved-enum-states.md` — reserved enum states with Phase 2 corrections; Phase 1 simplifications use placeholder values that Phase 2 fills.
+- `adr/0011-document-platform.md` — substrate spine and domain boundary map for the Document Platform reframe; forward-points storage / pipeline / bundle / relationship / AP-spend / vendor-template / router / confidence specifics to eight downstream ADRs.
+- `adr/0012-proposed-mutation-bundle.md` — atomicity envelope for multi-mutation workflows (e.g., born-paid bill); DB-transaction-atomic commitment; canonical six-state lifecycle.
+- `adr/0013-storage-provider.md` — storage abstraction enabling multi-backend (Supabase v1; SharePoint / S3 / external reserved); drift detection and integrity-check contract.
+- `adr/0014-tier-2-document-pipeline.md` — end-to-end OCR + sidecar topology + classification (Tier A rule-based + Tier C AI fallback in v1) + dedup-by-hash + vendor matcher + orphan-blob GC + replay policy.
+- `adr/0015-ap-spend-subdomain.md` — vendor prepayment lifecycle, born-paid bundle approval gate, tax-timing, balance view, receipt v1 path, payment failure lifecycle (proposal-and-confirm, not auto-reverse).
+- `adr/0016-document-relationship-graph.md` — schema for `source_document_links`; closed `linked_entity_type` and `link_role` enums; pair-validity matrix; cascade behavior; lifecycle immutability enforcement.
+- `adr/0017-vendor-template-substrate.md` — substrate-only v1: `vendor_rules` table schema, closed enums (`vendor_rule_rung` mirrors Agent Ladder; `vendor_rule_promotion_authority`), single-writer rule; enforcement deferred post-Phase-0.
+- `adr/0018-relationship-router.md` — three-subsystem algorithm (Ledger-State Candidate Completion + Ambiguity Resolution + Re-Evaluation Logic) consuming classifier output and relationship-graph state.
+- `adr/0019-confidence-calibration-policy.md` — calibration governance for v1 confidence-threshold values; per-org reserved-seat substrate; bounded-substantive-in-v1 path; system-fixed-only-at-v1 with per-org reserved.
 - `adr/0020-agent-first-authority-gradient-source-architecture.md` — agent-first source-tree organization per CTO Handoff v2 (`docs/07_governance/CTO_HANDOFF_V2.md`); 9 decision items including folder layout, `core/` not `domain/`, import boundary rules in Appendix A, ESLint rule scaffold-not-firing, and the skills tracking gap correction. Substrate-only at v1; ESLint rule activates at Phase 1 chunk 1. Ratified 2026-05-05.
 
 ### 07_governance/audits — audit framework

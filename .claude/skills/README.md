@@ -7,6 +7,15 @@ areas load on demand instead of occupying token budget in every
 session. Each skill opens with a pointer to its canonical source in
 `docs/`; the skill summarizes, the canonical doc is authoritative.
 
+Project-wide rules (repo shape, worktree discipline, delivery
+model, product / workflow / delivery vocabulary) live in `docs/`,
+not in skills. Skills specialize on technical areas (services,
+agent tools, audit scans, journal entries, integration tests).
+The rules a skill summarizes always have a canonical source in
+`docs/`; the skill is a token-economy summary, the doc is
+authoritative. See `docs/04_engineering/repo-rules.md` for the
+canonical-source cross-reference table.
+
 ## Index
 
 | Skill | Trigger |
