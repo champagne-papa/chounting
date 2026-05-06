@@ -36,6 +36,9 @@ import type {
 } from '@/shared/types/chatTurn';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: agent; Source: orchestrator/index.ts; Target: @/db/adminClient
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { adminClient } from '@/db/adminClient';
 import { getMembership } from '@/services/auth/getMembership';
 import type { UserRole } from '@/services/auth/canUserPerformAction';

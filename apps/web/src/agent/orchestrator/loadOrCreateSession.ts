@@ -7,6 +7,9 @@
 // no RLS changes in 118).
 
 import type { Logger } from 'pino';
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: agent; Source: orchestrator/loadOrCreateSession.ts; Target: @/db/adminClient
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';

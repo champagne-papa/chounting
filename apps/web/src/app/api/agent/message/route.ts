@@ -11,6 +11,9 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: app; Source: api/agent/message/route.ts; Target: @/agent/orchestrator
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { handleUserMessage } from '@/agent/orchestrator';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
@@ -18,6 +21,9 @@ import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
 import { rateLimitAgentMessage } from '@/app/api/_helpers/rateLimit';
 import { canvasContextSchema } from '@/shared/schemas/canvas/canvasContext.schema';
 import type { CanvasContext } from '@/shared/types/canvasContext';
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: app; Source: api/agent/message/route.ts; Target: @/agent/onboarding/state
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { onboardingStateSchema } from '@/agent/onboarding/state';
 
 const agentMessageRequestSchema = z
