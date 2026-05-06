@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(pnpm --filter @chounting/*:*)",
+      "Bash(pnpm agent:floor)",
+      "Bash(pnpm agent:validate)",
+      "Bash(pnpm db:generate-types)",
+      "Bash(pnpm db:migrate)",
+      "Bash(pnpm db:start)",
+      "Bash(pnpm db:stop)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm test:no-hardcoded-urls)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm verify-audit-coverage:*)",
+      "Bash(supabase migration list:*)",
+      "Bash(supabase status:*)"
+    ],
+    "ask": [
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm db:reset)",
+      "Bash(pnpm db:reset:clean)",
+      "Bash(pnpm db:seed:*)",
+      "Bash(supabase db reset:*)",
+      "Bash(supabase migration:*)"
+    ],
+    "deny": [
+      "Read(**/supabase/.branches/**)",
+      "Read(**/supabase/.temp/**)",
+      "Read(.mcp.json)",
+      "Read(tests/e2e/.auth/**)"
+    ]
+  }
+}

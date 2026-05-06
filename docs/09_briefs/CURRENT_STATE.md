@@ -1,5 +1,66 @@
 # Where I am as of 2026-05-01 (v0.1.0-mvp + S33 + Q34 promoted to main; chounting.chou.ca serving real app from `9f0ebb3`; production-environment-config gap surfaced post-merge and resolved; Phase 1.2 closed 2026-04-26 via C12, Phase 2 named workstreams open; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; clean-baseline full-suite 598/598 under `pnpm db:reset:clean`, shared-DB pollution surface expanded with new 5-test cluster sibling to Arc A item 27)
 
+## Architecture substrate ratified — 2026-05-05
+
+ADR-0020 (Agent-First Authority-Gradient Source Architecture)
+ratified per CTO Handoff v2 (`docs/07_governance/CTO_HANDOFF_V2.md`,
+co-landed in this commit). Six architecture docs added under
+`docs/03_architecture/` (`authority-gradient.md`,
+`agent-tool-architecture.md`, `agent-ladder.md`,
+`folder-structure.md`, `branching-and-feature-flag-strategy.md`,
+`product-workflow-delivery-mapping.md`). ESLint rule
+`agent-first-import-boundaries` registered in
+`apps/web/eslint.config.mjs` at `severity: 'off'`. Empty homes
+created at `apps/web/src/agent/policies/agent-ladder/`,
+`apps/web/src/core/`, `apps/web/src/core/evidence/`, and
+`apps/web/src/contracts/agent-tools/` with READMEs;
+`apps/web/src/services/storage/`, `services/evidence/`, and
+`db/repositories/` with `.gitkeep` placeholders.
+
+No existing files renamed or moved. Phase 1 (Storage / Evidence
+Core) is the first consumer; first storage code lands under
+`services/storage/` and `core/evidence/` per ADR-0013.
+
+**Skills tracking gap correction (governance correction).**
+Pre-flight discovered that `.claude/skills/` had been silently
+gitignored since the 2026-04-19 skills migration. CLAUDE.md
+treats skills as load-bearing project infrastructure
+("Skills in `.claude/skills/` summarize and point"); `.gitignore`
+treated them as ephemeral. This commit corrects with two-line
+addition (`!.claude/skills/` + `!.claude/skills/**`) plus
+first-time tracking of 5 skill folders (agent-tool-authoring,
+audit-scans, integration-test-rules, journal-entry-rules,
+service-architecture), `.claude/skills/README.md`, and
+`.claude/settings.json`. Friction-journal NOTE entry records the
+discovery.
+
+Sub-verifications deferred to Phase 1 closure:
+
+1. First Phase 1 storage code lands under `services/storage/`
+   and `core/evidence/`.
+2. When first Phase 1 storage code lands, that session enables
+   the ESLint rule as `'error'` in `apps/web/eslint.config.mjs`
+   as part of its validation gate.
+3. No file renames in this session; `git show --stat HEAD`
+   shows only additions (with the 6 first-time-tracked skill
+   files appearing as new files via the gitignore correction).
+4. `.claude/skills/` is tracked; `git check-ignore
+   .claude/skills/service-architecture/SKILL.md` returns no
+   output; `git ls-files .claude/skills/ | wc -l` returns at
+   least 6.
+
+Phase 0 governance arc closeout (Sessions 2A-2F, eight ADRs
+ratified, two amendments) merged to staging at `45ba684` on
+2026-05-04 — the immediate predecessor state to this substrate
+commit.
+
+Rules substrate (B.5) deferred to follow-on session
+`feat/arch-rules-2026-05-05` after ADR-0020 ratifies. B.5 ships
+`repo-rules.md`, `worktree-rules.md`, `delivery-model.md`,
+`product-map.md`, glossary additions for Stage / Workflow Stage /
+Module / Workflow Phase / Delivery Phase vocabulary, and
+conventions.md / CLAUDE.md cross-reference updates.
+
 ## Production promotion (2026-05-01)
 
 `v0.1.0-mvp` (tag at `5a80c43`) plus six post-tag commits
