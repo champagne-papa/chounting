@@ -1910,6 +1910,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_source_document_with_audit: {
+        Args: { p_audit: Json; p_source_document: Json }
+        Returns: string
+      }
       get_account_balance: {
         Args: { p_account_id: string; p_as_of_date: string; p_org_id: string }
         Returns: {
