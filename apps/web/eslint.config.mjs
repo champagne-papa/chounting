@@ -11,6 +11,21 @@ const require = createRequire(import.meta.url);
 // targets apps/web/src/services/**.
 const servicesPlugin = require(resolve(__dirname, "../../eslint-rules/index.js"));
 
+// ADR-0020 (2026-05-05) — agent-first authority-gradient import
+// boundaries. Substrate-only at v1: rule is registered at severity
+// 'off' below; activation flips to 'error' when Phase 1's first
+// storage code lands, per ADR-0020 Sub-verification 2. Pattern
+// matches Q29 ESLint rule deferral and the no-restricted-imports
+// rule on @/db/adminClient above.
+const architecturePlugin = {
+  rules: {
+    "agent-first-import-boundaries": require(resolve(
+      __dirname,
+      "../../eslint-rules/agent-first-import-boundaries.js"
+    )),
+  },
+};
+
 const eslintConfig = [
   ...baseConfig,
   {
@@ -84,6 +99,24 @@ const eslintConfig = [
     plugins: { services: servicesPlugin },
     rules: {
       "services/withInvariants-wrap-or-annotate": "error",
+    },
+  },
+  {
+    // ADR-0020 Appendix A — agent-first authority-gradient import
+    // boundaries. Each authority layer (agent / services / core /
+    // db / app / contracts) has a defined allowed-import set;
+    // crossings outside the allowed set produce a diagnostic.
+    //
+    // Severity is 'off' for the 2026-05-05 substrate session.
+    // Phase 1's first storage code session enables this as 'error'
+    // in this file as part of its validation gate (ADR-0020
+    // Sub-verification 2).
+    //
+    // Rule logic at eslint-rules/agent-first-import-boundaries.js.
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { architecture: architecturePlugin },
+    rules: {
+      "architecture/agent-first-import-boundaries": "off",
     },
   },
 ];

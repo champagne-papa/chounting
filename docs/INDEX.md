@@ -44,6 +44,12 @@ deletion criterion.
 - `request_lifecycle.md` — the three request paths (manual / agent / confirmation) from browser to DB and back.
 - `agent_interface.md` — durable, phase-agnostic agent contract: one voice, typed tools, structured outputs, persona discipline, onboarding flow. Phase-specific mechanics live under `09_briefs/`.
 - `ui_architecture.md` — split-screen shell (chat + Contextual Canvas + Mainframe rail), `canvas_directive` contract, component shapes, reversal UI flow.
+- `agent-ladder.md` — pointer doc for the autonomy model. Three rungs (Always Confirm / Notify & Auto-Post / Silent Auto), forward-references `docs/02_specs/agent_autonomy_model.md` (canonical) and `apps/web/src/agent/policies/agent-ladder/` (Phase 2 implementation home). Added 2026-05-05 per ADR-0020.
+- `agent-tool-architecture.md` — the canonical agent → contracts → services → core → db call chain. Per-seam defenses (Zod three-layer, `withInvariants`, idempotency, audit emission). Added 2026-05-05 per ADR-0020.
+- `authority-gradient.md` — the four-layer framing (DB / Services / Agent / Governance) and how they compose at runtime. Cross-references INV-SERVICE-001/002, INV-AUTH-001, the Two Laws, ADR-0007, ADR-0011 §14. Added 2026-05-05 per ADR-0020.
+- `branching-and-feature-flag-strategy.md` — phase-scoped trunk-compatible development; trunk language (`main` / `staging`); branch naming; `--no-ff` merge discipline; worktree strategy (current `.claude/worktrees/`, aspirational `~/projects/chounting-worktrees/`); feature-flag posture (rollout control, not authority). Added 2026-05-05 per ADR-0020.
+- `folder-structure.md` — canonical `apps/web/src/` tree with one-line semantic descriptions per CTO Handoff v2 §3 + ADR-0020 Decision item 1. Added 2026-05-05.
+- `product-workflow-delivery-mapping.md` — the four-maps matrix (Product / Workflow / Delivery / Runtime rollout) and how features traverse all four. Stage / Module / Phase vocabulary distinctions introduced conceptually; canonical glossary entries deferred to B.5 follow-on session. Added 2026-05-05 per ADR-0020.
 
 ## 04_engineering — from clone to running
 
@@ -85,6 +91,7 @@ for the deletion criterion.
 - `adr/0008-layer-1-enforcement-modes.md` — Layer 1 invariant enforcement modes (CHECK constraint vs deferred constraint vs trigger).
 - `adr/0009-before-state-capture-convention.md` — `before_state` capture convention for `audit_log` rows; locked to Phase 1.5A's six-service rollout.
 - `adr/0010-reserved-enum-states.md` — reserved enum states with Phase 2 corrections; Phase 1 simplifications use placeholder values that Phase 2 fills.
+- `adr/0020-agent-first-authority-gradient-source-architecture.md` — agent-first source-tree organization per CTO Handoff v2 (`docs/07_governance/CTO_HANDOFF_V2.md`); 9 decision items including folder layout, `core/` not `domain/`, import boundary rules in Appendix A, ESLint rule scaffold-not-firing, and the skills tracking gap correction. Substrate-only at v1; ESLint rule activates at Phase 1 chunk 1. Ratified 2026-05-05.
 
 ### 07_governance/audits — audit framework
 

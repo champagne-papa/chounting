@@ -49,8 +49,19 @@ next-env.d.ts
 # gitignored globally via ~/.gitignore_global. Note the pattern is `.claude/*`
 # (contents) not `.claude/` (directory) — git can't re-include children of an
 # excluded directory.
+#
+# 2026-05-05 (ADR-0020 substrate session): re-included .claude/skills/ as
+# load-bearing project infrastructure per CLAUDE.md ("Skills in
+# .claude/skills/ summarize and point"). The `.claude/skills/` directory
+# was silently gitignored from 2026-04-19 (skills migration) until the
+# 2026-05-05 architecture-substrate session's pre-flight surfaced the gap.
+# Both `!.claude/skills/` and `!.claude/skills/**` are required because
+# git can't re-include children of an excluded directory without first
+# re-including the directory itself plus its recursive contents.
 .claude/*
 !.claude/settings.json
+!.claude/skills/
+!.claude/skills/**
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/

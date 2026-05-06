@@ -3519,3 +3519,152 @@ Phase 1 (Storage / Evidence Core) code start AUTHORIZED following
 this closeout. Brainstorm-side + WSL-side collapse to single-sided
 implementation work; first shipping piece is `storageProviderService`
 per ADR-0013 (chunk 1 of Phase 1.Storage sub-arc).
+
+## 2026-05-05 — Architecture substrate ratification (ADR-0020); skills tracking gap discovery
+
+ADR-0020 (Agent-First Authority-Gradient Source Architecture)
+ratified per CTO Handoff v2
+(`docs/07_governance/CTO_HANDOFF_V2.md`, co-landed in this
+commit). The substrate session ratifies the agent-first
+source-tree organizing axis: folder layout per v2 §3, import
+boundary rules per v2 §11, ESLint rule scaffold-not-firing,
+empty target homes for `agent/policies/agent-ladder/`, `core/`,
+`core/evidence/`, `contracts/agent-tools/`, plus `.gitkeep`
+placeholders for `services/storage/`, `services/evidence/`,
+`db/repositories/`. Six architecture docs added under
+`docs/03_architecture/` (`authority-gradient.md`,
+`agent-tool-architecture.md`, `agent-ladder.md`,
+`folder-structure.md`, `branching-and-feature-flag-strategy.md`,
+`product-workflow-delivery-mapping.md`). Two skills
+(service-architecture, agent-tool-authoring) and the skills
+README received light ADR-0020 cross-reference paragraphs. No
+file migration; no rename; ESLint rule at `severity: 'off'`
+until Phase 1 chunk 1 activates it as `'error'` per ADR-0020
+Sub-verification 2.
+
+### Skills tracking gap discovery (gitignore correction)
+
+- 2026-05-05 NOTE — Pre-flight for arch-substrate session
+  discovered `.claude/skills/` has been silently gitignored since
+  the 2026-04-19 skills migration. The gitignore rule
+  `.claude/*` plus `!.claude/settings.json` re-included only
+  settings.json, not the skills tree. CLAUDE.md treats skills as
+  load-bearing project infrastructure ("Skills in
+  `.claude/skills/` summarize and point"); .gitignore treated
+  them as ephemeral. Phase 0's six-session governance arc
+  (Sessions 2A-2F across D1-D6 gates) loaded these skills
+  repeatedly, and none of those Phase 0 commits include the
+  skills as part of the ratified state. Every fresh clone of the
+  repo has been losing the skills entirely; only the local
+  checkout where the skills were created on 2026-04-19 has had
+  them. ADR-0020 substrate commit corrects the gap with a
+  two-line addition to `.gitignore` (`!.claude/skills/` +
+  `!.claude/skills/**`; both required because git can't
+  re-include children of an excluded directory without first
+  re-including the directory itself plus its recursive contents)
+  plus first-time tracking of 5 skill folders
+  (agent-tool-authoring, audit-scans, integration-test-rules,
+  journal-entry-rules, service-architecture),
+  `.claude/skills/README.md`, and `.claude/settings.json`
+  (currently un-ignored but never staged). This is a governance
+  correction, not a new architectural decision: the skills are
+  already referenced by CLAUDE.md as load-bearing project
+  infrastructure; tracking them merely matches what the
+  architectural statement already claimed. Codification
+  candidate at N=2 if a future "doc/config exists on disk but
+  isn't tracked" finding lands the same way.
+
+### Substrate-now-enforcement-later cross-pattern (post-Phase-0 application)
+
+ADR-0020 is the post-Phase-0 application of the
+substrate-now-enforcement-later cross-pattern (codified at Phase
+0 D6 §6.8 + ADR-0010 Variant A precedent at commit `797db40`) at
+the **source-code-layout axis**. Prior Phase 0 applications were
+at the schema axis (ADR-0017 `vendor_rules`), the autonomy axis
+(Q23 v1-fixed promotion thresholds), the data-pipeline axis
+(ADR-0014 Tier B reservation), and the calibration-policy axis
+(ADR-0019 forward-pointer). ADR-0020's specific substrate /
+enforcement split: substrate ships at v1 (folder layout, ESLint
+rule scaffold, empty target homes); enforcement defers to
+first-consumer time (Phase 1 chunk 1's `storageProviderService`
+per ADR-0013 enables the ESLint rule as `'error'` as part of its
+validation gate per ADR-0020 Sub-verification 2). The pattern
+extends across five distinct axes now; each application matches
+the same shape (substrate at v1; enforcement at first-consumer
+time).
+
+### Validation gate — post-reset note
+
+- 2026-05-05 NOTE — arch-substrate session validation Step 3
+  initially failed (2 actual + 24 cascade-skip) on shared-DB
+  pollution cluster sibling to Arc A item 27 per
+  `docs/09_briefs/CURRENT_STATE.md` 2026-05-01 note
+  ("test-suite pollution surface expanded"). Failure mode:
+  `period!.period_id` accessing null on a `fiscal_periods` query
+  filtered by `is_locked: false` — textbook seed-state
+  divergence from a polluted prior test run. `pnpm
+  db:reset:clean && pnpm db:seed:all` restored clean baseline;
+  `pnpm agent:floor` 5/5 pass (26/26 individual tests)
+  confirmed substrate-session changes are runtime-clean. No
+  pollution cluster expansion observed beyond the documented
+  Arc A item 27 cluster. The run shape (substrate-only changes
+  + initial polluted-state failure + clean-baseline pass)
+  matches the standard chounting workflow for shared-DB test
+  hygiene; no codification fire from this session.
+
+### Carry-forward
+
+- **B.5 rules-substrate session** (`feat/arch-rules-2026-05-05`)
+  — deferred follow-on. Ships `repo-rules.md`,
+  `worktree-rules.md`, `delivery-model.md`, `product-map.md`,
+  glossary additions for Stage / Workflow Stage / Module /
+  Workflow Phase / Delivery Phase vocabulary, and conventions.md
+  / CLAUDE.md cross-reference updates.
+- **Phase 1 chunk 1** (`storageProviderService` per ADR-0013) —
+  next session after B.5; first consumer of the ADR-0020
+  substrate; enables ESLint rule as `'error'` as part of its
+  validation gate.
+- **Worktree relocation** to `~/projects/chounting-worktrees/` —
+  flagged aspirational in
+  `branching-and-feature-flag-strategy.md`; not actioned in this
+  session; trigger is operational pressure from concurrent phase
+  work.
+- **`packages/flags/` introduction** — deferred until Phase 2
+  needs the shared package.
+- **INDEX.md gap noticed** — ADRs 0011 through 0019 are not
+  currently in `docs/INDEX.md`'s ADR list (existing list ends at
+  ADR-0010). ADR-0020 added per ADR-0020 scope; the 0011-0019
+  backfill is out-of-session and a candidate for B.5 hygiene
+  scope or a separate INDEX hygiene session.
+
+### Founder-review NOTEs (B.5 carry-forward)
+
+The 2026-05-05 founder review of the substrate session surfaced
+two items deferred to B.5:
+
+- 2026-05-05 NOTE — Reviewer flagged
+  `agent_ladder_rung_2_enabled` (used as an example flag in
+  `docs/03_architecture/branching-and-feature-flag-strategy.md`)
+  as conflating rollout with Agent Ladder authority. When the
+  real flag is named in Phase 2, use a name like
+  `notify_auto_post_rollout_enabled` or
+  `agent_autonomy_controls_ui_enabled`. Rule: flags expose
+  rollout / UI surfaces, never determine a rule's rung or
+  bypass the promotion ceremony. The Agent Ladder's authority
+  comes from `vendor_rules.current_rung` (substrate per ADR-0017)
+  + the promotion ceremony per `agent_autonomy_model.md` §4.1,
+  not from a feature flag's value. Carry to B.5 / Phase 2.
+
+- 2026-05-05 NOTE — Verified `scripts/session-init.sh` writes
+  to relative `.coordination/session-lock.json` (line 18:
+  `LOCK=".coordination/session-lock.json"`; line 29: `mkdir -p
+  .coordination`). The lock is therefore **per-checkout**, not
+  shared across worktrees: each worktree has its own
+  `.coordination/` directory in its working tree. B.5's
+  `worktree-rules.md` must use the safer wording: "Each
+  worktree has its own `.coordination/session-lock.json`. The
+  lock prevents commit-interleave within a single checkout,
+  not across worktrees." This is a feature, not a bug — it
+  allows concurrent work on different branches in different
+  worktrees without one session's lock blocking another's
+  unrelated work. Carry to B.5's `worktree-rules.md`.
