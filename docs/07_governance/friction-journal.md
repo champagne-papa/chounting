@@ -10,6 +10,25 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
+  Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
+  at drafting time. Counter-evidence: Web Crypto's BufferSource type
+  requires ArrayBuffer-backed views (excludes SharedArrayBuffer);
+  Uint8Array parameters can't statically prove this in TypeScript
+  strict mode, surfacing as TS2345 at compile time. Two paths
+  surfaced: (α) switch to Node crypto.createHash with sync API; (β)
+  keep Web Crypto with a type assertion. Path α locked. Reasoning:
+  the portability claim toward Web Crypto was speculative (codebase
+  is committed Next.js on Node); type assertion in Path β would be
+  load-bearing at every crypto.subtle callsite and accumulate; sync
+  API matches SHA-256-over-a-buffer's actual CPU-bound nature; Node
+  crypto.createHash matches the established repo convention. Cost
+  of reversing if a future chunk genuinely needs Edge runtime is a
+  one-file rewrite — same size as today's rewrite — so no
+  compounding cost. Path α applied at chunk 3 commit. The
+  Uint8Array parameter type from chunk 2 contract preserved
+  (Path α is implementation choice, orthogonal to interface type).
+
 - 2026-05-01 NOTE — Path A carve-out: rate-limit on
   `/api/agent/message` lands pre-Phase-2A (single bundled
   commit; brief at
