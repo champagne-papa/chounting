@@ -54,7 +54,9 @@ deletion criterion.
 
 ## 04_engineering — from clone to running
 
+- `README.md` — folder context: what goes here (developer setup, scripts reference, coding conventions, branch naming, contribution rules) and what does NOT (system design → `03_architecture/`, invariants → `02_specs/`, per-phase execution → `09_briefs/`).
 - `developer_setup.md` — prerequisites, local setup, seed flow, troubleshooting recipes.
+- `DEV_WORKFLOW.md` — operational discipline accrued across Sessions 15-22 (operational tendencies, less prescriptive than `conventions.md`; patterns graduate to `conventions.md` at ≥3 fires per Documentation Routing). Calibrated for solo-operator development model. Audience: returning operator + synthesis Claude + WSL Claude.
 - `conventions.md` — branch/commit naming, contribution rules, coding conventions (camelCase API ↔ snake_case DB, permission/audit key naming, etc.). Also carries the Phase 1.5A and Phase 1.2 codified-convention catalogs and the `## Documentation Routing` convention (routing rule, write-time tripwires including the 10-second rule and `[ROUTE?]` fallback, codification thresholds, hygiene cadence, archival rule, deprecation model; codified 2026-04-26).
 - `repo-rules.md` — operational rules for the chounting monorepo: where things live, what does NOT live in the repo root, the four-layer architecture statement (root / docs / skills / scripts), and a cross-reference table mapping concerns to canonical sources. Complements `03_architecture/monorepo.md`. Added 2026-05-06 per B.5 rules-substrate session.
 - `worktree-rules.md` — when to use git worktrees and when not to; where they live (target `~/projects/chounting-worktrees/`; grandfathered `.claude/worktrees/phase-0-governance/`); creation / cleanup commands; gotchas (node_modules / hooks / env / dev-server); the load-bearing per-worktree session-lock clarification; worktree-vs-lock comparison table. Codified at N=1 (Phase 0 governance arc). Added 2026-05-06 per B.5.
@@ -92,6 +94,7 @@ for the deletion criterion.
 - `adr/0004-ghost-rows-visual-contract.md` — four-signal defense-in-depth for ghost rows (proposed-but-unapproved mutations); prevents "transient overlay mistaken for posted data."
 - `adr/0005-three-path-intent-schema.md` — chat / palette / Mainframe all produce the same `Intent` object; single intent schema prevents three bespoke routers.
 - `adr/0006-agent-persona-unnamed.md` — the agent is a senior bookkeeper, unnamed. No anthropomorphization in UI copy.
+- `adr/0007-three-tier-agent-architecture.md` — three-tier agent architecture; Tier 2 vs Tier 2.5 read-boundary clarification (reference data / transactional state / vendor control + payment-risk fields). Tier 1 gating prerequisite for Phase 1+ Document Platform code. Ratified 2026-05-03 with Document Platform Reframe amendment.
 - `adr/0008-layer-1-enforcement-modes.md` — Layer 1 invariant enforcement modes (CHECK constraint vs deferred constraint vs trigger).
 - `adr/0009-before-state-capture-convention.md` — `before_state` capture convention for `audit_log` rows; locked to Phase 1.5A's six-service rollout.
 - `adr/0010-reserved-enum-states.md` — reserved enum states with Phase 2 corrections; Phase 1 simplifications use placeholder values that Phase 2 fills.
