@@ -3774,3 +3774,325 @@ this session's INDEX backfill.
 - DEV_WORKFLOW.md and the 04_engineering README.md exist on
   disk but are not entered in `docs/INDEX.md`. Pre-existing
   gap; out of B.5 scope. Carry as INDEX hygiene.
+
+## 2026-05-06 — Phase 1.Storage chunks 1-4 + B.5 sync arc closeout
+
+Multi-session arc continuing the Phase 0 → Phase 1 transition closed
+at 2026-05-04. Phase 1.Storage substrate (chunks 1-4) shipped as four
+single-purpose commits + one chunk-3-specific friction-journal NOTE,
+landing on staging via PR #5 (commit range `825b5e8..7b85fe1` →
+staging at `45ba684..407b8cf`). Adjacent to PR #5 in time but on a
+parallel sub-arc, B.5 rules-substrate session ratified ADR-0020 +
+the operational rule substrate (`docs/04_engineering/repo-rules.md`,
+`worktree-rules.md`, `delivery-model.md`,
+`docs/03_architecture/folder-structure.md`, `authority-gradient.md`)
+landing at staging via PR #4. PR #6 (commit `17885dc`) closed
+ADR-0020 Sub-verification 2 by activating
+`architecture/agent-first-import-boundaries` ESLint rule from `'off'`
+to `'error'` with 6 carry-forward disable directives at pre-existing
+violation sites. Staging at session close: `e8cb3dd` (chunks 1-4
+merged at `407b8cf` + PR #6 ESLint flip merged at `a97abc1` +
+cleanup commit `e8cb3dd` shipping consistency pass on 3 architecture
+docs aligning to post-B.5 state).
+
+The arc surfaced 13 codification candidates across multiple
+discipline grains (12 from chunks 1-4 + B.5 sync + ESLint flip;
+1 from the cleanup pass closeout); this entry adjudicates their
+disposition.
+
+### What landed
+
+**Phase 1.Storage chunks 1-4** (PR #5, merged):
+
+- **Chunk 1** (`825b5e8`): storage substrate migration
+  (`20240135000000_storage_substrate.sql`) shipping
+  `source_documents` + `source_document_versions` tables, 4 closed
+  enums (`storage_provider`, `storage_status`, `capture_reason`,
+  `ingest_channel`), circular-FK between tables, RLS Pattern A
+  per `journal_entries` precedent, immutability triggers per
+  `20240133` precedent, REVOKE TRUNCATE per ADR-0010 three-layer
+  defense. Plus `apps/web/src/db/types.ts` regen against the
+  applied schema.
+- **Chunk 2** (`7a1e075`): `StorageProvider` interface contract +
+  shared types (`PutInput`, `PutResult`, `FetchResult`,
+  `PreviewOptions`, `PreviewResult`, `IntegrityResult`) +
+  4 storage-domain ServiceError codes (3 ADR-verbatim:
+  `STORAGE_KEY_MALFORMED`, `INTEGRITY_VERIFY_FAILED`,
+  `STORAGE_PROVIDER_TRANSIENT_EXHAUSTED`; 1 repo-convention
+  catchall: `STORAGE_OPERATION_FAILED`). `withInvariants`
+  non-wrap discipline documented per ADR-0013 §1 verbatim:
+  storage operations run at data-access layer, NOT wrapped in
+  `withInvariants()`.
+- **Chunk 3** (`f413bd3`): failure classification + retry +
+  integrity helpers per ADR-0013 §7 + §8 + §9. Discriminated
+  union `FailureClassification` with all 3 categories
+  (transient/permanent_malformed/provider_unavailable) + `| null`
+  orthogonal slot for unclassifiable errors. `withRetry<T>`
+  with v1 system-fixed retry params (3 attempts, 500ms base,
+  2x factor, ±20% jitter, ~3.5s budget). `computeHash` +
+  `verifyHash` separate helpers; sync API; lowercase-hex SHA-256.
+  34 unit tests across 3 test files.
+- **Chunk 3 NOTE** (`ae61761`): standalone friction-journal NOTE
+  documenting Path α drafting-time switch from Web Crypto to
+  Node `crypto.createHash` after TS2345 surfaced on
+  `BufferSource` type narrowness. Counter-evidence chain
+  documented at `integrity.ts` header.
+- **Chunk 4** (`7b85fe1`): Supabase provider implementation +
+  resolver + bucket provisioning. `createSupabaseStorageProvider`
+  factory implementing the 6-method `StorageProvider` interface
+  using `adminClient()` service-role I/O. Path pattern
+  `org_{org_id}/sources/{source_document_id}/{sanitized_filename}`
+  per ADR-0013 §14 verbatim. PutInput amended at chunk 4 to add
+  `source_document_id` + `original_filename` per Sub-Q C
+  (path-matches-§14 lock). PreviewOptions `mode` field added per
+  §12 verbatim re-read. `documents` bucket provisioning via
+  `20240136000000_storage_buckets.sql` migration; RLS deny-by-
+  absence per Sub-Q J-ii.
+
+**B.5 rules-substrate** (PR #4, merged in parallel session):
+ADR-0020 + repo-rules.md + worktree-rules.md + delivery-model.md +
+folder-structure.md + authority-gradient.md + glossary updates.
+Phase taxonomy reframe: "Phase 1.DocumentPlatform" sub-arc framing
+invalidated; document-platform consumer is Phase 1 chunk N within
+the same phase per ADR-0013's "Storage Provider as first consumer"
+framing.
+
+**ESLint flip closure** (PR #6, merged): ADR-0020 Sub-verification 2
+gate closed retroactively. Rule activated at `'error'`; 6 disable
+directives at pre-existing violation sites with
+`TODO(adr-0020-decision-6)` carry-forward markers; opportunistic
+refactoring per ADR-0020 Decision 6.
+
+**Doc-consistency cleanup** (commit `e8cb3dd`, direct-to-staging
+per small-hygiene carve-out): three architecture docs realigned
+to post-B.5 state. branching-and-feature-flag-strategy.md branch-
+sync rule updated to `git merge staging` per delivery-model.md;
+`agent_ladder_rung_2_enabled` removed from active-rule sites,
+preserved at 4 anti-example/historical sites; product-workflow-
+delivery-mapping.md vocabulary forward-looking framings reframed
+as past-tense (B.5 landed); folder-structure.md tree blocks for
+`agent/tools/` and `contracts/agent-tools/` simplified by removing
+speculative subdir lines (forward-looking prose disclaimer below
+the trees carries the meaning).
+
+### Z1 discipline catalog state changes
+
+- **Z1 #11.b graduates to codification** — verbatim re-read of
+  ADR-cited content before drafting; working-memory reconstruction
+  unreliable for code names, method signatures, exact wording,
+  count metrics, anchor SHAs, audit event names, enum values cited
+  in text vs schema. Codified at this closeout. Sibling pattern to
+  Z1 #11.a (verbatim re-read of file blocks before Edit anchors);
+  both are sub-patterns under Z1 #11 (verify-before-cite). Within-
+  arc fire count: N=5 explicit fires: (1) chunk 2 §1 read; (2)
+  chunk 2 §7 read; (3) chunk 2 §8/§9/§16 read; (4) chunk 4 §12
+  verbatim re-read; (5) chunk N prep ADR-0020 §validation-gate
+  verification. Each fire caught working-memory drift that would
+  have shipped if not re-read.
+- **Cumulative Z1 #12 fire count: 32** under canonical
+  manifestation-counting + Observation 5 path β on-disk-vs-
+  authoring boundary. Five new fires this arc: (1) merge runbook
+  used `git status -uno` instead of full `git status`, missing
+  untracked-files surface; (2) gh pr create dispatched from main
+  repo CWD on staging branch initially failed because staging is
+  the PR target, not head; required CWD switch to Phase 1
+  worktree; (3) prior-session-close enumeration missed B.5 sync
+  question; (4) brainstorm-side ESLint flip prediction inverted by
+  verbatim re-read; (5) chunk 4 file size estimate undercounted
+  due to DB resolver helpers + §12 mode field addition not in
+  prior-turn surface plan.
+- **Z1 #15 fired throughout**: bidirectional iterative-catching
+  with canonical-evidence-anchor termination held across all
+  multi-stage adjudications. Cross-session canonical-evidence-
+  anchor reconstruction worked cleanly at chunks 1-4 → chunk 4
+  closeout → B.5 substrate sync transition.
+
+### Substrate-now-enforcement-later cross-pattern firings
+
+The cross-pattern fired at multiple grains during this arc,
+demonstrating it operates not just at phase-grain but recursively
+at smaller scopes:
+
+- **Phase-grain** (Phase 0 → Phase 1 transition; from prior arc):
+  Q29 / Q77 / Q79 deferred-obligation triggers fire at
+  implementation-time / v1-ship-time. Q29 explicitly did NOT fire
+  during chunks 1-4 (storage layer below agent-tier boundary per
+  chunk 3 NOTE).
+- **Sub-arc-grain** (org_settings.* configurability):
+  per ADR-0013 §Closes Q73, the 8 reserved storage-config columns
+  on `org_settings` deferred to a separate org_settings sub-arc
+  rather than landing in chunk 1. Sub-Q4 a-prime lock at chunk 1
+  drafting time codified the deferral.
+- **Chunk-grain** (PreviewOptions mode field):
+  chunk 2 shipped minimum shape (`ttl_seconds?: number` only) per
+  substrate-now-enforcement-later applied at chunk-level. Chunk 4's
+  consumer code (Supabase implementation calling `createSignedUrl`)
+  forced the §12 verbatim re-read which surfaced the `mode` field.
+  Cross-pattern firing at chunk-grain demonstrates the discipline
+  scales recursively.
+- **Tooling-template-grain** (typegen template drift):
+  chunk 1's `pnpm db:generate-types` regen against current Supabase
+  CLI tooling surfaced template-level drift (DatabaseWithoutInternals
+  type alias; Constants export; PublicSchema → DefaultSchema rename).
+  Tooling drift behaves as substrate-now-enforcement-later at the
+  tooling layer: the new template materializes only when consumer
+  code (chunk 1 regen) forces typegen.
+- **Lint-rule-grain** (ESLint flip + 6 disable carry-forwards):
+  PR #6 activates the rule at `'error'` (substrate); the 6
+  pre-existing violations carry disable markers (deferred
+  enforcement); refactoring fires at opportunistic-natural-edit
+  time per ADR-0020 Decision 6. Cross-pattern at lint-rule-grain.
+
+### Convention-fire status
+
+- **Chunk-as-commit-unit** held cleanly across 4 chunks: each chunk
+  = one logical deliverable = one commit. Chunk 3 NOTE landed as
+  separate single-purpose commit per single-purpose-commit-
+  discipline. PR-per-arc held across PR #5 + PR #6.
+- **Single-purpose-commit-discipline at PR grain** introduced at
+  PR #6: governance correction (ESLint flip) shipped as its own
+  small PR rather than bundled into chunk N's worktree. New
+  precedent: PR-grain single-purpose discipline applies to
+  governance-correction work distinct from implementation work.
+- **Explicit-authorization gate (standing rule §5.7) preserved
+  cross-session**. Within-session, three pushes encountered the
+  gate; founder responded with "go with recommendation" each time.
+  Brainstorm-side held the gate twice; the third surface
+  introduced Path C session-scoped lift acknowledging the pattern
+  while preserving the cross-session rule. Path C was a session-
+  scoped operational accommodation, not a standing-rule amendment.
+  The cross-session explicit-authorization gate remains unchanged.
+- **Length-as-calibration (Z1 #9)**: chunks 1-4 commits trended
+  upper-mid-band (chunk 1 at 463 migration lines + types regen;
+  chunk 4 at 692 lines including DB resolver helpers + amendments).
+  Mid-lower-band discipline did not hold strictly; comment-header
+  + cross-ADR-resolution-citation expansions account for most of
+  the overshoot. Acceptable at chunk-implementation grain where
+  comment density is load-bearing for future readers.
+
+### Carry-forward summary
+
+- **Naming convention after B.5**: "Phase 1.Storage" remains the
+  current implementation arc; document-platform service shell is
+  the next chunk within that arc, not a new phase or sub-arc.
+  Prior framings of "document-platform sub-arc" or
+  "Phase 1.DocumentPlatform" are invalidated per ADR-0020.
+- **Chunks 5-6 phase-taxonomy reframe**: per B.5, document-platform
+  is Phase 1 chunk N within Phase 1.Storage's same phase, not a
+  separate sub-arc. Chunk 5 (was: audit emission via document-
+  platform layer) reframes as chunk N+1 (audit emission wiring at
+  the document-platform service). Chunk 6 (integration tests)
+  remains scoped but lands at chunk N+M after document-platform
+  ships.
+- **Three integration-test edge cases** captured for chunk N+M
+  onset: bucket-not-found scenario; signed-URL TTL boundary tests;
+  hash-mismatch-on-real-bytes round-trip. Landing target: chunk
+  N+M integration-test chunk (where N is document-platform service
+  shell, N+1 is audit emission wiring, N+M is integration tests).
+- **6 ESLint disable directives** carry forward as
+  `eslint-disable-next-line architecture/agent-first-import-boundaries`
+  + `TODO(adr-0020-decision-6)` markers. Refactoring fires when
+  each site's surrounding code is naturally edited per ADR-0020
+  Decision 6 "opportunistic migration only" framing. Owner:
+  natural editor of each touched file. Trigger: surrounding code
+  is naturally edited per ADR-0020 Decision 6.
+- **Phase 1 chunk N onset**: document-platform service shell + first
+  source_documents INSERT path. New worktree at
+  `~/projects/chounting-worktrees/phase-1-document-platform/` on
+  `phase/1-document-platform` branch off staging at `e8cb3dd` per
+  B.5 worktree-rules.md convention. Pre-drafting reads scope locked:
+  ADR-0011 §1+§2 + §9+§10, ADR-0014, ADR-0013 §16, ADR-0020 verbatim.
+
+### Codification candidates from this arc
+
+Thirteen surfaces evaluated; dispositions adjudicated below.
+
+**Graduated to codification:**
+
+- **(N=5 within-arc) Z1 #11.b verbatim re-read of ADR-cited
+  content before drafting**. Codified above.
+
+**Codification candidates at split-trigger threshold (monitoring):**
+
+- **(N=2+) "Land schema with consumer code" chunk-discipline
+  pattern**. Fired at Sub-Q2 (ingest_batch_id deferral) + Sub-Q4
+  (org_settings.* deferral) at chunk 1; fired at Sub-Q J (RLS
+  deny-by-absence) at chunk 4. Within-arc N=3+. Trigger
+  codification at next-arc firing.
+- **(N=2+) Substrate-now-enforcement-later at chunk grain** (vs
+  phase grain). Fired at PreviewOptions §12 mode field addition
+  + ESLint flip + others enumerated above. Trigger codification
+  at next-arc firing.
+
+**Monitoring (single-fire; await N=2):**
+
+- `git status` (full, not `-uno`) for pre-merge state-confirm.
+  N=1 firing; Phase 0 → Phase 1 merge runbook miss.
+- Untracked-files-on-merge-target as pre-Step-4 verification.
+  N=1 firing; same merge.
+- Typegen template drift surfaces via consumer-code regen as
+  substrate-now-enforcement-later at tooling-grain. N=1 firing;
+  chunk 1 typegen regen.
+- Brainstorm-side push recommendations frame as explicit
+  founder-authorize sub-questions, not default-leans embedded in
+  surfaces. N=3+ within-session; Path C session-scoped lift
+  established as session-level resolution. Cross-session rule
+  preserved; N=2+ across future sessions triggers Path B (rule
+  amendment).
+- Trunk-advancement-state-confirm: multi-session arcs must
+  state-confirm against trunk-branch advancement before resuming
+  work. N=1 firing this arc; trunk advanced 5 commits past chunks
+  1-4 merge base via parallel B.5 PR.
+- Framing-assumption-state-confirm: trunk substrate may reframe
+  taxonomy in ways that invalidate prior session's framing
+  assumptions (B.5 reframed "document-platform sub-arc" to
+  "Phase 1 chunk N"). Adjacent to trunk-advancement but distinct.
+  N=1 firing this arc.
+- vi.mock for service-test isolation when modules transitively
+  load env-validating dependencies. N=1 firing; chunk 4 resolver
+  test.
+- Brainstorm-side high-confidence predictions on ADR trigger
+  conditions still require verbatim verification. N=2 within-arc
+  if counted distinctly (chunk 4 PreviewOptions §12 + chunk N
+  prep ADR-0020 §validation-gate); brainstorm-side leans
+  counting as one underlying-pattern fire of Z1 #11.b.
+- External-review-mixed-with-stale-content pattern + founder-
+  triage discipline. External reviewer caught 4 real defects +
+  flagged stale items relative to current on-disk state. Founder
+  triage produced commit `e8cb3dd` shipping the 4 real fixes;
+  stale items confirmed already-aligned. Discipline name:
+  "External reviews require triage against current on-disk
+  state before action; reviewer's claims may be stale relative
+  to the artifact's evolution since the review's reading point."
+  N=1 firing this arc. Adjacent to but distinct from Z1 #11.b:
+  #11.b is brainstorm-side's own working-memory drift; #13 is
+  reviewer drift relative to current on-disk artifacts. Both
+  fall under the broader "verify-against-current-state-before-
+  acting" discipline. Trigger codification at N=2.
+
+**Absorbed by B.5:**
+
+- Flag naming rule (B.5 codified).
+- Session-lock-per-worktree clarification (B.5 codified).
+
+### Phase 1 chunk N onset note
+
+Document-platform service shell is the next deliverable. Sub-arc
+opens with Path 3 onset (now reframed: "Phase 1 chunk N" rather
+than "document-platform sub-arc"). New worktree per B.5 convention
+at `~/projects/chounting-worktrees/phase-1-document-platform/` on
+`phase/1-document-platform` branch off staging at `e8cb3dd`.
+
+Chunk N scope-locking happens at chunk N onset post-this-friction-
+journal-entry. Chunk N first commit may include the Q29 ESLint
+flip closure work IF document-platform service shell adds code
+under `src/agent/pipelines/**/*` (which is unlikely; document-
+platform service lands at `apps/web/src/services/document-platform/`
+per ADR-0020 authority gradient). If Q29 trigger condition
+materializes during chunks N+x, closure work folds in at that
+chunk per substrate-now-enforcement-later.
+
+Chunk N starts under the B.5 worktree-rules / delivery-model /
+authority-gradient substrate ratified by ADR-0020. This is where
+these rules stop being "governance docs" and start shaping
+implementation behavior.
