@@ -4097,245 +4097,1393 @@ authority-gradient substrate ratified by ADR-0020. This is where
 these rules stop being "governance docs" and start shaping
 implementation behavior.
 
-## 2026-05-06 — Phase 1.Storage closeout (chunk N + chunk N+1 closure-without-implementation + chunk N+M) — SKELETON
-
-> **Skeleton entry.** Per founder Frame 1 forward-sequencing
-> recommendation, this entry ships in skeleton form with carry-forward
-> inventory at the section-headers level; full evidence-anchor density
-> populates at next session opening under fresh context. Section
-> headers + 2-5 sentence inventories name what needs density without
-> compressing the density itself. Pattern parity with fb45abe (chunks
-> 1-4 + B.5 sync arc closeout).
+## 2026-05-06 — Phase 1.Storage closeout (chunk N + chunk N+1 closure-without-implementation + chunk N+M)
 
 The arc continuation from fb45abe through Phase 1.Storage's last
-implementation chunk. Chunk N (document-platform service shell +
-atomic INSERT-with-audit RPC) shipped at PR #7 → staging at `366454a`.
-Chunk N+1 (audit emission for `storage_status_changed`) closed
-WITHOUT implementation per Reading C lock at chunk-N+1-A adjudication
-(brainstorm-side / WSL-side reading divergence preserved as load-
-bearing finding). Chunk N+M (integration tests against real Supabase
-+ DB + audit) shipped at PR #8 → staging at `389adbb`, closing the
-implementation arc. Closeout cycle: this entry (skeleton → density
-next session) + Phase 1.Storage worktree retention lock at `592dff5`
-joining f73f4a4 (Phase 0) + 7b85fe1 (chunks 1-4) forensic anchors.
+implementation chunk. Three commits land on staging via three
+distinct paths: chunk N as PR #7 (`366454a`) shipping the
+document-platform service shell + atomic INSERT-with-audit RPC;
+chunk N+1 closed WITHOUT implementation per Reading C lock at
+chunk-N+1-A adjudication (brainstorm-side / WSL-side reading
+divergence preserved as load-bearing finding); chunk N+M as PR #8
+(`389adbb`) shipping 14 integration tests + bucket-hygiene
+addition. Closeout cycle: skeleton landed at `f05d27e`; pre-
+positioning notes at `1a2aec7`; this density-population at
+[next-commit-SHA-after-this-entry-lands]. Phase 1.Storage worktree
+retention lock at `592dff5` joins existing forensic anchors
+`f73f4a4` (Phase 0) + `7b85fe1` (chunks 1-4 evidence-core). Three
+retention worktrees locked until v1 ship.
+
+The arc surfaced 6 codification candidates across multiple
+discipline grains plus 2 graduations from prior arcs at N=3.
+Z1 #11.b graduated subpattern fired at multiple chunk + phase +
+cycle completion gates with sub-shape catalogue extending. Two-
+sided + founder triple architecture demonstrated discipline
+preservation under five substantive substrate-decision surfaces
+without proxy-collapse: Reading C lock at chunk-N+1-A; Path 1 vs
+Path 2 at chunk N+M onset; Path α election at pre-commit gate;
+WP2 verify-from-disk at closeout-cycle gate; joint position on
+closeout-cycle defer.
 
 ### What landed
 
-[Density target next session.] Chunk N RPC migration
-(`20240137000000_create_source_document_with_audit_rpc.sql`) +
-service `documentPlatformService.createSourceDocument` shipping
-JSONB-payload atomic INSERT (mirrors `20240134000000` precedent).
-Chunk N+1 closure-without-implementation per Reading C lock; ADR-0013
-§11 `ingestion_initial_set` reading ambiguity carries to v1-ship-gate.
-Chunk N+M shipped 14 tests across 3 files (8 storage provider + 4
-RPC rollback + 2 service end-to-end) + bucket-hygiene `INSERT INTO
-storage.buckets` idempotent addition to `test_helpers.sql`. PR #8
-merged at `389adbb`. Phase 1.Storage worktree
-(`phase-1-document-platform`) becomes forensic anchor at `592dff5`
-joining f73f4a4 (Phase 0) + 7b85fe1 (chunks 1-4) retention locks
-per chunks-1-4 retention precedent.
+**Chunk N** (PR #7 → staging at `366454a`; commit `45895fb`):
+`documentPlatformService.createSourceDocument` shipping the
+INV-SERVICE-001 canonical-writer contract for `source_documents`
++ `audit_log source_document_created` per ADR-0011 §1 entity
+ownership + ADR-0013 §16 audit emission. Backed by RPC migration
+`20240137000000_create_source_document_with_audit_rpc.sql`
+implementing same-transaction INSERT-pair atomicity per the
+`20240134000000` journalEntries precedent (JSONB-payload pattern;
+`SECURITY INVOKER`; granted to `service_role`; mirrors comment-
+header + rollback-paths-block density verbatim). Service uses
+`withInvariants` Pattern A export-site wrapping per
+journalEntryService.list/get precedent — no `opts.action`
+argument since `createSourceDocument` has no action-permission
+variants in v1. INV-SERVICE-002 adminClient discipline preserved
+(every database access goes through `adminClient()`; no
+userClient import; no direct supabase-js construction).
+
+Service flow per chunk N D-revised lock: (1) `crypto.randomUUID()`
+pre-generates `source_document_id` for §14 storage path
+construction; (2) `getStorageProvider(V1_STORAGE_PROVIDER)`
+resolves to chunk 4 supabase implementation; (3) `storage.put`
+runs upload + verify-readback per ADR-0013 §9 (orphan-blob
+acceptance window per ADR-0013 §1 if step 5 fails); (4) service
+constructs `sourceDocumentPayload` + `auditPayload` per ADR-0011
+§2 schema + ADR-0013 §16 audit shape; (5) `db.rpc(create_source_document_with_audit, ...)`
+executes INSERT-pair atomically; (6) service catches RPC error
+and re-throws as `ServiceError('STORAGE_OPERATION_FAILED')`. The
+`recordMutation.ts` helper is NOT called here — audit_log INSERT
+lives inside the RPC body so before_state-omission for INSERT
+events lands at the SQL layer rather than the service layer.
+
+7 unit tests via `vi.mock` envelope discipline (chunk 3
+classification helpers + chunk 4 resolver-and-provider mocked at
+test-time; service-layer logic exercised in isolation from
+storage I/O). Cumulative chunks-1-N unit-test surface: 45/45 at
+chunk N close.
+
+**Chunk N+1** closed WITHOUT implementation per Reading C lock at
+chunk-N+1-A adjudication. ADR-0013 §11's `ingestion_initial_set`
+trigger value for `storage_status_changed` audit event surfaced
+three readings at chunk N+1 onset:
+- **Reading A**: ingestion is a tracked transition; chunk N
+  missing emission of `storage_status_changed` with
+  `trigger=ingestion_initial_set` alongside the
+  `source_document_created` event.
+- **Reading B**: `source_document_created` captures initial state
+  implicitly; `storage_status_changed` fires only on UPDATE-time
+  transitions.
+- **Reading C** (founder-locked): `ingestion_initial_set` is
+  reserved-but-not-emitted in v1; intended for post-v1 reserved-
+  provider ingest paths (SharePoint / S3 / external_url) where
+  drift detection makes initial-set audit useful for drift-
+  baselining. v1 supabase_storage is drift-exempt per §5, so
+  initial-set audit isn't needed.
+
+Founder lock: Reading C + δ-2 (defer `storage_status_changed`
+v1-active emission per substrate-now-enforcement-later default)
++ δ-3-lite addendum (document the §11 reading ambiguity as
+v1-ship-gate-gated obligation candidate per Q77-pattern parity).
+No retroactive edit to fb45abe (per (δ-i) lock from chunk 3 NOTE
+precedent). No commit shipped (substrate-already-ratified at
+fb45abe; consumer-code-defer; substrate-now-enforcement-later
+applied at chunk-grain). §11 reading-ambiguity carries forward
+to v1-ship-gate.
+
+**Chunk N+M** (PR #8 → staging at `389adbb`; commit `592dff5`):
+14 integration tests across 3 files exercising real Supabase
+Storage + DB + `audit_log` round-trip:
+
+- `tests/integration/storageProviderIntegration.test.ts` (8
+  tests): TTL boundary clamping per Sub-Q F (6 cases —
+  `undefined→300`, `0→1`, `1→1`, `300→300`, `1800→1800`,
+  `3600→1800` — with tolerance-window `expires_at` assertions
+  capturing `Date.now()` before+after the call); `verifyIntegrity`
+  hash-mismatch via direct bucket upsert that corrupts bytes
+  while leaving `source_documents.original_content_hash` reflecting
+  the pre-corruption hash; bucket-not-found via Sub-Q D (b)
+  drop-and-recreate (`adminClient.storage.deleteBucket` in
+  `beforeAll`; idempotent recreate in `afterAll`). Bucket-not-
+  found describe runs LAST in declaration order so earlier
+  describes execute with bucket present.
+- `tests/integration/createSourceDocumentRpcRollback.test.ts` (4
+  tests): mirrors `postJournalEntryRpcRollback.test.ts` S27
+  precedent. Test 1 [LOAD-BEARING] FK violation on `org_id`
+  (absent-from-organizations UUID; PostgrestError code `23503`)
+  rolls back source_documents + audit_log atomically via
+  `captureCounts` before/after delta assertions; Test 2 CHECK
+  violation via `'permission_loss'` storage_status (valid enum
+  value failing v1 active subset CHECK; code `23514`); Test 3
+  NOT NULL violation via omitted `original_storage_key` (code
+  `23502`); Test 4 happy-path sanity baseline (+1/+1 delta;
+  per-run `crypto.randomUUID()` for trace_id to guard against
+  cross-vitest-run accumulation — fix landed inline at drafting
+  time per discipline observation below).
+- `tests/integration/documentPlatformServiceIntegration.test.ts`
+  (2 tests): end-to-end happy path verifying bytes round-trip
+  + `source_documents` row + audit_log row all populated; orphan-
+  blob via Sub-Q B (a) FK violation on absent org_id with
+  crafted ServiceContext (`makeTestContext({ org_ids: [absentUuid] })`)
+  to bypass `withInvariants` Invariant 3 (membership-list
+  check, NOT DB-existence check, per
+  `withInvariants.ts:59-70`); bytes left in bucket per ADR-0013
+  §1 v1 acceptance window; cleanup via `adminClient.storage.from('documents').remove([key])`.
+
+Plus `tests/setup/test_helpers.sql` idempotent
+`INSERT INTO storage.buckets ('documents', 'documents', false) ON CONFLICT (id) DO NOTHING`
+hygiene addition guarding bucket-presence across vitest runs
+when Sub-Q D (b) `afterAll` cleanup fails (process killed,
+network blip). Mirrors the `20240136000000_storage_buckets.sql`
+shape verbatim. Single-purpose-commit at chunk arc grain bundled
+the hygiene addition with the test files (cross-file commit
+permitted per discipline; bucket-hygiene IS load-bearing for
+chunk N+M's reliability contract).
+
+Verification gates clean from clean state (`pnpm db:reset:clean`
+preceding each invocation): `pnpm test` 665/665 (137 test files);
+`pnpm agent:validate` 26/26 (5 floor test files); `pnpm typecheck`
+clean; `pnpm lint` clean on chunk N+M files (1 unused-import
+fixed inline; 20 pre-existing warnings on other files unchanged).
+
+**Closeout cycle** ships in skeleton-then-density form per
+founder Frame 1 forward-sequencing recommendation:
+- `f05d27e` Phase 1.Storage closeout SKELETON (243 insertions;
+  section headers + 2-5 sentence carry-forward inventories).
+- `1a2aec7` Phase 2 brief-creation pre-positioning notes (347
+  insertions; onset-cycle artifact at
+  `docs/09_briefs/phase-2/2026-05-06-phase-2-brief-pre-positioning-notes.md`).
+- This entry's density-population (this commit) consolidates the
+  skeleton bracketed inventories into fb45abe-band evidence-
+  anchor density per Z1 #15 canonical-evidence-anchor termination
+  criterion.
+
+**Phase 1.Storage worktree retention** at `phase-1-document-platform`
+becomes forensic anchor at `592dff5` (= chunk N + chunk N+M base
+directory) per chunks-1-4 retention precedent. Joins existing
+forensic anchors `f73f4a4` (Phase 0 governance) + `7b85fe1`
+(chunks 1-4 evidence-core). Three retention worktrees locked
+until v1 ship per Phase 0 + Phase 1.Storage retention precedent.
 
 ### Z1 discipline catalog state changes
 
-[Density target next session.] Z1 #11.b graduated to codification
-at fb45abe (N=5 explicit fires within chunks-1-4 arc). This arc
-saw additional sub-shape firings: chunk N+1 closeout fired the
-subpattern at chunk-completion / phase-completion gates (codified
-addition in chunk N+1 closure framing); chunk N+M verify dispatches
-for Sub-Q B + Sub-Q F surfaced 4 sub-findings (Invariant 3
-membership-list-vs-DB-existence semantics; `clampTtl` verbatim impl;
-`buildStorageKey` path scheme; `expires_at` clock arithmetic). Z1
-#15 canonical-evidence-anchor termination held across all multi-
-stage adjudications including the methodology-shift turn at chunk
-N+M onset (Path 1 vs Path 2 challenge resolved by Path 1 election).
-Skeleton-now-density-later for THIS closeout entry itself is a Z1
-#15 application: on-disk skeleton + carry-forward memory entry are
-the canonical-evidence-anchors that next-session reads, not
-transcript inheritance.
+**Z1 #11.b** (verbatim re-read of ADR-cited content before drafting)
+graduated to codification at fb45abe with N=5 explicit fires within
+the chunks-1-4 arc. The codification text per fb45abe: "Before
+drafting text that cites or implements ADR/spec content, verbatim
+re-read the cited content. Working-memory reconstruction is
+unreliable for code names, method signatures, exact wording, count
+metrics, anchor SHAs, audit event names, and enum values cited in
+text vs. schema." Sibling pattern to Z1 #11.a (verbatim re-read of
+file blocks before Edit anchors); both are sub-patterns under Z1 #11
+(verify-before-cite).
+
+**This arc's sub-shape firings under Z1 #11.b** (each caught
+working-memory drift that would have shipped if not re-read):
+
+1. **Chunk N+1 closeout subpattern application at chunk-completion
+   / phase-completion gates** — codified addition to Z1 #11.b at
+   chunk N+1 closure framing: "Verbatim re-reads of all ADR sections
+   naming deferred obligations / sub-verifications / reading-
+   ambiguous clauses fire at chunk-completion + phase-completion
+   gates." Applied at chunk N+M onset and at this closeout-cycle
+   gate. The §11 reading ambiguity surface itself was the substantive
+   driver that produced the codified extension (had brainstorm-side
+   not re-read §11 verbatim at chunk N+1 onset, the Reading C
+   surface would not have crystallized).
+
+2. **Chunk N+M verify dispatches for Sub-Q B + Sub-Q F surfaced 4
+   sub-findings** at drafting-time, each a Z1 #11.b sub-shape catch:
+   - `withInvariants` Invariant 3 = membership-list check against
+     `ctx.caller.org_ids`, NOT DB-existence check against
+     organizations table (`withInvariants.ts:59-70`). Load-bearing
+     for Sub-Q B (a) reachability — without verify-from-disk, the
+     orphan-blob test mechanism would have been wrongly rejected as
+     unreachable from service-layer caller.
+   - `clampTtl` verbatim implementation:
+     `Math.min(Math.max(1, ttl ?? 300), 1800)` with constants
+     `PREVIEW_TTL_DEFAULT_SECONDS=300`, `PREVIEW_TTL_MAX_SECONDS=1800`
+     (`supabaseStorageProvider.ts:95-99`). Matches handoff §5 claim
+     verbatim; confirmed before drafting Sub-Q F boundary cases.
+   - `buildStorageKey` path scheme:
+     `org_${orgId}/sources/${sourceDocumentId}/${sanitizeFilenameForStoragePath(filename)}`
+     (`supabaseStorageProvider.ts:86-93`). Load-bearing for orphan-
+     blob test cleanup (test reconstructs key with filename needing
+     no sanitization for predictable cleanup).
+   - `expires_at` clock arithmetic:
+     `new Date(Date.now() + ttl * 1000).toISOString()`
+     (`supabaseStorageProvider.ts:394`). Drove the tolerance-window
+     pattern in TTL boundary tests (capture `before` and `after`
+     `Date.now()`; assert `expiresMs ∈ [before+ttl*1000, after+ttl*1000+100]`).
+
+3. **WP2 verify-from-disk at closeout-cycle gate** caught
+   brainstorm-side's working-memory-lag on the fb45abe Branch 4 INDEX
+   hygiene gap. Brainstorm-side's prior-turn surfacing assumed the 3
+   originally-flagged items (ADR-0007, DEV_WORKFLOW.md,
+   04_engineering/README.md) were still gaps per the fb45abe note.
+   Verify-from-disk via filesystem MCP confirmed all three were
+   already in INDEX.md (lines 57, 59, 97); `git log fb45abe..HEAD --
+   docs/INDEX.md` returned no commits. The fb45abe note pre-dated
+   their addition or reflected stale state. **New Z1 #11.b sub-shape:
+   working-memory of friction-journal entries can lag on-disk state
+   when intervening commits silently address carry-forward items.**
+   Sub-shape applies at every cycle-completion gate where
+   carry-forward inventory references prior-arc journal entries.
+
+4. **ADR-0013 §16 misattribution** at chunk N RPC migration comment
+   block (cites "in the same transaction" verbatim incorrectly;
+   phrase not present in §16). Sub-shape under Z1 #11.b at N+1
+   within-arc post-codification. Chunk-N-D-revised lock correctly
+   motivated by INV-AUDIT-001 leaf + journalEntries `20240134000000`
+   precedent, not §16 verbatim. Observation-not-codification at this
+   firing; sees N=2+ across future arcs to graduate as a distinct
+   discipline shape.
+
+**Cumulative within-arc sub-shape catalogue under Z1 #11.b post-
+codification: 6 firings** (the 4 verify-from-disk catches at
+chunk N+M Sub-Q dispatches + the WP2 working-memory-lag correction
++ the ADR-0013 §16 misattribution). Each preserved substrate-
+decision integrity.
+
+**Z1 #15** (bidirectional iterative-catching with canonical-
+evidence-anchor termination) held across all multi-stage
+adjudications this arc:
+
+- Reading C lock at chunk-N+1-A — termination via founder verdict +
+  on-disk audit-event reservation + closeout-entry framing rather
+  than transcript inheritance.
+- Path 1 vs Path 2 at chunk N+M onset — termination via founder
+  Path 1 election + on-disk Sub-Q decomposition lock.
+- Path α election at pre-commit gate — termination via founder
+  α verdict + on-disk commit `592dff5` + this entry's path α
+  precedent section.
+- WP2 verify-from-disk at closeout-cycle gate — termination via
+  filesystem-MCP-confirmed on-disk INDEX.md state + this entry's
+  Branch 4 observation section.
+- Joint position on closeout-cycle defer (path 2c) — termination
+  via memory pickup file + on-disk skeleton at f05d27e + on-disk
+  pre-positioning notes at 1a2aec7 + this density-population entry.
+
+**Skeleton-now-density-later for THIS closeout entry itself is a
+Z1 #15 application at session-grain.** Per Frame 1 forward-
+sequencing recommendation, the on-disk skeleton + carry-forward
+memory entry (`project_phase_1_storage_closeout_pending.md`) +
+pre-positioning notes file constituted the canonical-evidence-
+anchors that next-session reads at session-start. Transcript
+inheritance is NOT load-bearing — at session-start gate, WSL-side
++ brainstorm-side both reload from on-disk artifacts via
+filesystem MCP / Read tool dispatches. The discipline preserves
+substrate-decision integrity across session boundaries: any drift
+between transcript memory and on-disk state surfaces at session-
+start verify-from-disk and gets corrected before density-population
+fires.
 
 ### Substrate-now-enforcement-later cross-pattern firings
 
-[Density target next session.] Chunk N+1 closure-without-
-implementation itself fires the cross-pattern at chunk-grain
-(substrate-already-ratified at fb45abe via ADR-0013 §11 closed
-enum + audit-event reservation; consumer-code defer per Reading C
-lock; v1 supabase_storage drift-exempt per §5 makes initial-set
-audit unnecessary in v1). ADR-0013 §11 reading-ambiguity defer to
-v1-ship-gate. Closeout-entry-defer this session itself fires the
-cross-pattern at session-grain (skeleton-now; full-density-when-
-fresh-context-forces-accuracy per "do not compress" framing).
-Cross-pattern operates recursively at phase / sub-arc / chunk /
-tooling-template / lint-rule / session grains — fb45abe's catalog
-extended.
+The cross-pattern fired at multiple grains during this arc,
+extending fb45abe's catalogue (which had documented firings at
+phase / sub-arc / chunk / tooling-template / lint-rule grains).
+This arc adds session-grain + discipline-grain firings:
+
+**Chunk N+1 closure-without-implementation at chunk-grain.**
+Substrate already ratified at fb45abe via ADR-0013 §11 closed
+enum (`storage_status` v1 active subset = `available` +
+`pending_initial_verify`; reserved values `permission_loss`,
+`missing_file`, `hash_mismatch`, `provider_unavailable`,
+`verification_pending_retry` per ADR-0010 reserved-enum-states
+discipline) + §16 audit-event reservation (`storage_status_changed`
+event named with reserved trigger values). Consumer-code defer
+per Reading C lock — v1 `supabase_storage` is drift-exempt per
+§5 (platform's own RLS-scoped storage; no drift detection
+needed), so initial-set audit emission isn't needed in v1.
+First consumer code path that would force `storage_status_changed`
+emission (post-v1 reserved-provider activation: SharePoint /
+S3 / external_url) does not exist in v1. Cross-pattern firing:
+substrate ships at fb45abe schema time; enforcement (audit
+emission) lands when first reserved-provider consumer code
+materializes post-v1. Chunk N+1 was the first explicit
+"closure-without-implementation" surface in chounting; the
+discipline shape — close the chunk by ratifying the deferral,
+not by emitting placeholder code — preserves the cross-pattern
+at chunk-grain.
+
+**ADR-0013 §11 reading-ambiguity defer to v1-ship-gate at
+discipline-grain.** The §11 reading ambiguity (Reading A vs B
+vs C) itself is a discipline-grain substrate-now-enforcement-
+later firing. Substrate (the §11 closed-enum + reserved trigger
+values) ratified at fb45abe; enforcement (which reading governs
+emission semantics) deferred to v1-ship-gate per Q77-pattern
+parity. The deferral is documented in this entry's "Brainstorm-
+side / WSL-side reading divergence" section and carried in
+chunk N+1 closeout's δ-3-lite addendum. v1 ship-gate ratification
+will lock whichever reading governs at activation time — that's
+when the first reserved-provider consumer code forces the
+question.
+
+**Closeout-entry-defer this session at session-grain.** The
+prior session's Frame 1 verdict ("do not compress or rush —
+substantial evidence-anchor artifact") + this session's
+density-population fired the cross-pattern at session-grain.
+Substrate (the closeout skeleton + section headers + carry-
+forward inventory at 2-5 sentence density) ships at session
+boundary; enforcement (full evidence-anchor density per
+fb45abe-band) lands at next-session opening under fresh
+context. Substrate-now-enforcement-later applied to the closeout
+entry itself: the skeleton names what needs density without
+compressing the density itself. Discipline-shape preservation
+across session boundaries is the load-bearing property — the
+on-disk skeleton + memory pickup file + pre-positioning notes
+constitute canonical-evidence-anchors for next-session pickup
+per Z1 #15.
+
+**Path α election at pre-commit gate as discipline-grain.** The
+foreign session-lock disposition surface produced a discipline-
+grain substrate-now-enforcement-later firing at chunk N+M push
+gate. Substrate (the pre-commit hook's COORD_SESSION env-var
+check; the per-checkout session-lock per B.5 worktree-rules.md)
+ratified at B.5; enforcement (lock-label-rotation prescription
+when worktree is reused for sequential chunks) deferred to first
+substantive lock-label-divergence surface — which materialized at
+chunk N+M push gate as the path α election. Codification
+candidate #17 sibling sub-shape (lock-label-rotation
+prescription gap) emerged from this firing; the cross-pattern
+operating at discipline-grain is what produced the codification
+candidate, not the substrate-grain enforcement gap.
+
+**Branch 4 INDEX hygiene scope-classification defer to closeout
+density at cycle-grain.** The Class A/B classification surface
+(16 unindexed files: 4 Class A durable artifacts + 12 Class B
+transient session-arc artifacts) ratified at this closeout
+density section as a routing-policy adjudication; enforcement
+(Class A INDEX entries amendment + Class B umbrella-entry-or-
+explicit-routing-rule) lands as part of this same commit's
+INDEX hygiene amendment. Cross-pattern operating at cycle-grain
+within the closeout cycle itself: the prior session's "broader
+gap deferred" framing was the substrate; this density's Class
+A/B adjudication is the enforcement-time consumer.
+
+The cross-pattern's recursive operation across grains is not
+incidental; it's the structural property that makes
+substrate-now-enforcement-later load-bearing. Each grain has
+its own substrate-then-consumer cadence; the discipline applies
+the same shape at each grain. **Phase 1.Storage closeout adds
+two new grains to fb45abe's catalogue: session-grain (closeout
+entry density-defer) + cycle-grain (Branch 4 scope-classification
+defer).** Future arcs will extend further.
 
 ### Brainstorm-side / WSL-side reading divergence
 
-[Density target next session.] Chunk-N+1-A adjudication: WSL-side
-leaned Reading A (`ingestion_initial_set` is tracked transition;
-chunk N missing emission of `storage_status_changed` with this
-trigger). Brainstorm-side leaned Reading C (reserved-but-not-
-emitted in v1; intended for post-v1 reserved-provider drift-
-baselining; v1 supabase_storage drift-exempt per §5). Founder-
-locked Reading C + δ-2 + δ-3-lite addendum. Two-sided architecture
-re-instated ad-hoc per fb45abe anti-pattern guardrail when
-substantive governance gap surfaced — single-sided-integration's
-first substantive divergence in this arc. The reading-divergence-
-as-load-bearing-finding pattern: divergent voices on the same
-surface catch substrate-decision-integrity drift that aligned
-voices would miss; ad-hoc two-sided re-instation discipline
-preserved.
+**Chunk-N+1-A adjudication** was the first substantive
+brainstorm-side / WSL-side reading divergence within single-
+sided-integrated mode after the (γ) verdict at Phase 0 closure
+collapsed the prior two-sided architecture into a single
+integrated role. The surface: ADR-0013 §11's `ingestion_initial_set`
+trigger value for the `storage_status_changed` audit event.
+Three readings surfaced at chunk N+1 onset:
+
+- **Reading A** (WSL-side lean): "ingestion is a tracked
+  transition; chunk N is missing the emission. The §11 trigger
+  enum verbatim names `ingestion_initial_set` as one of the
+  values that fires `storage_status_changed`. v1 supabase_storage
+  emits this event when storage_status transitions from default
+  `'pending_initial_verify'` to `'available'` post-put-and-verify,
+  and that transition IS what `source_document_created` already
+  captures implicitly. Therefore chunk N should emit BOTH events:
+  `source_document_created` AND `storage_status_changed` with
+  `trigger=ingestion_initial_set`."
+
+- **Reading B**: "`source_document_created` captures initial
+  state implicitly; `storage_status_changed` fires only on
+  UPDATE-time transitions of an existing row. Initial INSERT is
+  not a transition; it's a creation. The two events serve
+  different purposes — creation event vs. mutation event —
+  and v1 should emit only the creation event at INSERT time."
+
+- **Reading C** (brainstorm-side lean; founder-locked):
+  "`ingestion_initial_set` is reserved-but-not-emitted in v1;
+  intended for post-v1 reserved-provider ingest paths
+  (SharePoint / S3 / external_url) where drift detection makes
+  initial-set audit useful for drift-baselining. v1
+  supabase_storage is drift-exempt per ADR-0013 §5 (platform's
+  own RLS-scoped storage; no external drift surface), so
+  initial-set audit isn't needed in v1. The §11 enum is
+  authored anticipating the reserved-provider activation; v1
+  consumer code path doesn't trigger emission."
+
+**Founder lock**: Reading C + δ-2 (defer
+`storage_status_changed` v1-active emission per substrate-now-
+enforcement-later default posture) + δ-3-lite addendum (document
+the §11 reading ambiguity in next friction-journal entry as
+v1-ship-gate-gated obligation candidate per Q77-pattern parity).
+No retroactive edit to fb45abe per (δ-i) lock from chunk 3 NOTE
+precedent + chunk N+1 lock reinforcement.
+
+**Why the divergence was load-bearing.** Reading A is
+mechanically defensible — §11's enum literally names the trigger
+value, and chunk N's INSERT IS a state-change in the sense that
+`storage_status` flips from default to `'available'`. Reading C
+requires reading the §11 enum in the context of §5's drift-exempt
+framing for v1 supabase_storage AND the ADR-0010 reserved-enum-
+states discipline (closed enums anticipate post-v1 activation
+without emitting reserved values in v1). Without explicit reading
+adjudication, a single-sided implementer landing chunk N would
+likely take Reading A (the mechanically-defensible reading), ship
+the `storage_status_changed` emission, and quietly lock Reading A
+as v1 emission semantics. That lock would constrain post-v1
+reserved-provider activation: if drift-baselining at SharePoint
+ingestion needs `ingestion_initial_set` for a different purpose
+than v1's INSERT-time emission, the v1 emission becomes a
+substrate-decision-integrity drift surface that's hard to roll
+back without a migration that prunes audit_log rows (which
+INV-AUDIT-001 forbids).
+
+**The reading-divergence-as-load-bearing-finding pattern.** When
+two voices on the same single-sided implementation arrive at
+different readings of an ADR clause, the divergence itself is
+the finding — not a bug to resolve quickly, but a substrate-
+decision surface to surface to founder for adjudication. The
+divergence catches the under-specified clause that aligned voices
+would have silently locked. fb45abe's anti-pattern guardrail
+explicitly anticipated this: "Two-sided re-instates ad-hoc only
+if substantive governance gap surfaces." Chunk N+1-A is the first
+substantive instance triggering ad-hoc two-sided re-instation in
+single-sided-integrated mode. Discipline preserved.
+
+**Implications for future arcs.** Three carry-forward shapes:
+
+1. **Reading-divergence as health signal**, not failure mode.
+   Ad-hoc two-sided re-instation should fire whenever the same
+   surface produces structurally different reads from the two
+   voices. The discipline is to surface the divergence, not
+   collapse to one side's lean.
+2. **§11 reading-ambiguity carries to v1-ship-gate** as Q77-
+   pattern-parity obligation. v1-ship ratification will lock
+   whichever reading governs at first reserved-provider
+   activation. Until then, `storage_status_changed` v1-active
+   emission stays deferred per Reading C.
+3. **Reading C + δ-2 + δ-3-lite locked** as the canonical
+   chunk-N+1-A adjudication shape. Future arcs can cite this
+   precedent for "close-without-implementation per substrate-
+   already-ratified-at-prior-arc + consumer-code-defer + reading-
+   ambiguity-carry-forward-to-future-gate."
+
+**Brainstorm-side / WSL-side concurrence at this density**:
+both voices on record concurring on Reading C at founder lock.
+The divergence at chunk-N+1-A onset was substantive and load-
+bearing; the convergence at lock-time was complete. No residual
+divergence carried into chunk N+M or closeout cycle.
 
 ### Methodology-shift state-preservation (codification candidate #16)
 
-[Density target next session.] Chunk N+M onset Path 1 vs Path 2
-methodology challenge: founder elected Path 1 (preserve trajectory).
-Sub-Q D drift surfaced — WSL-side reverted to its own pre-counter-
-lean (a) test-time monkey-patch without preserving brainstorm-side
-counter-lock (b) drop-and-recreate from the unshown intermediate
-turn between fb45abe and this session's opening. Founder
-adjudication caught the drift and locked (b) on substantive grounds
-(integration-test purity; vi.spyOn at integration layer = mock-
-injection structurally equivalent to rejected (c)). Codification
-candidate **#16 — methodology-shift state-preservation**: when
-methodology-shift turns occur, prior-turn locks must be re-stated
-verbatim at next surface-back, not regenerated from leans;
-regeneration risks accidentally reverting brainstorm-side counter-
-locks. N=1 monitoring; N=2 cross-arc triggers graduation.
+**Chunk N+M onset surfaced a methodology-shift challenge.** The
+prior chunk-N session had operated under a specific cadence
+shape (Path 1: continuous Sub-Q decomposition + leans-as-tentative-
+locks shape; founder adjudication at substantive divergence
+points). Chunk N+M's WSL-side surface-back at session opening
+proposed switching to brainstorming-skill's one-Sub-Q-per-turn
+cadence (Path 2: each Sub-Q surface explicitly framed +
+multiple-choice + lean-with-reasoning + founder-verdict, then
+next Sub-Q). The Path 2 framing came from invoking
+`/superpowers:brainstorming` at chunk N+M's session start,
+which triggered the brainstorming-skill machinery's default
+discipline.
+
+**Founder elected Path 1** ("preserve trajectory; finish the
+adjudication started in prior session"). Reasoning: the chunk-N
+session had already produced brainstorm-side leans-as-locks on
+Sub-Qs A/C/D/E/G with founder concurrence shape; only B and F
+needed verify-from-disk dispatches. Re-posing Sub-Q A from
+scratch under Path 2 would have produced the same lock with no
+new information. The methodology cost without the methodology
+benefit.
+
+**Sub-Q D drift surfaced as the substantive consequence of the
+methodology-shift turn.** During the Path 1 trajectory, an
+unshown intermediate turn between fb45abe and chunk N+M session
+opening had produced brainstorm-side counter-lock on Sub-Q D
+(bucket-not-found mechanism): brainstorm-side counter-leaned
+**(b) drop-and-recreate** against WSL-side's earlier lean
+**(a) test-time monkey-patch via vi.spyOn**. The counter-lock
+reasoning: (a) and (c) [service-layer mock] are structurally
+identical mock-injection at integration-test layer; (c) was
+rejected for integration-test purity; therefore consistency
+requires rejecting (a) too. fileParallelism: false makes (b)
+safe.
+
+When chunk N+M opened in this session, the WSL-side surface-back
+restated Sub-Q D at the original (a) lean, NOT the brainstorm-
+side counter-locked (b). The drift mechanism: WSL-side voice in
+single-sided integration regenerated the lean from its own
+prior-session memory rather than re-stating the brainstorm-side
+counter-lock from canonical-evidence-anchor (which was the
+unshown intermediate turn — but the canonical-evidence-anchor
+should have been retrievable from the methodology-shift turn's
+content where the counter-lock appeared).
+
+**Founder adjudication caught the drift** explicitly: "WSL-side's
+surface-back doesn't address my counter-lean. The prior turn's
+adjudication was deferred B + F (with verifies dispatched) but
+A/C/D/E/G were locked. My lock on D was counter to WSL-side's
+lean (a); I locked (b)." Founder framed this as "an active
+disagreement on Sub-Q D that needs founder adjudication" and
+identified the drift as a Z1 #11.b sub-finding shape:
+"methodology-shift state-preservation discipline candidate."
+
+**Lock at (b) on substantive grounds** (founder verdict): (1)
+purity consistency — (a) and (c) ARE structurally identical
+mock-injection; consistency requires rejecting (a); (2) layer-
+correctness on the chunk 4 mocking cite — the "chunk 4 mocking
+discipline" was for unit tests (vi.mock), not integration tests;
+transferring the unit-test pattern is category-error; (3) safety
+under harness config — fileParallelism: false + within-file
+sequential test order + afterAll restore makes (b) safe; (4)
+precedent shape — 116 existing integration tests use afterAll
+DB-state-mutation-with-restore; (b) extends precedent, (a)
+introduces new pattern. WSL-side voice acknowledged the drift
++ concurred with (b) on substantive grounds.
+
+**Codification candidate #16 — methodology-shift state-
+preservation**:
+
+> When a methodology-shift turn occurs (e.g., proposed-cadence-
+> change challenged and elected), prior-turn locks must be
+> re-stated verbatim at the next surface-back, not regenerated
+> from leans. Regeneration risks accidentally reverting
+> brainstorm-side counter-locks (or WSL-side counter-locks in
+> mirror cases). Canonical-evidence-anchor for the prior locks is
+> the methodology-shift turn's content + any preceding
+> adjudication artifacts; surface-back authors re-read those
+> artifacts at re-statement time rather than reconstructing from
+> working memory.
+
+**Mechanism trigger**: methodology-shift turns where the
+methodology challenge is elected (Path 2 challenged → Path 1
+elected, or analogous cadence-change patterns). The discipline
+fires at the next surface-back IMMEDIATELY after the methodology-
+shift verdict. Re-statement scope: all prior-turn locks reachable
+from the canonical-evidence-anchor; the discipline is exhaustive
+re-statement, not partial.
+
+**Within-arc N=1 monitoring; N=2 cross-arc triggers graduation.**
+Chunk N+M's Sub-Q D drift is the founding firing. Future arcs
+that exhibit similar methodology-shift-then-state-loss patterns
+graduate the candidate. Pattern parity with hardcoded-UUID-test-
+fragility umbrella graduation shape (one codification surface;
+multiple manifestations).
+
+**Discipline-test in this session (closeout cycle)**: the WP2
+surface-back at closeout-cycle gate had the discipline-test
+opportunity — the Class A/B INDEX hygiene scope-classification
+question could have been adjudicated mid-session-close (paths 2a
+amend + 2b separate small-hygiene commit), which would have been
+scope-creep on the locked-defer surface. Both sides + founder
+elected path 2c (defer to closeout density next session) — the
+discipline-test passed: no scope-creep on locked-defer, even
+within the same session that codified #16. The candidate's
+substantive shape is validated by within-arc discipline-
+preservation under load.
+
+**Implications for future arcs.** When this session's density-
+population fires, density-population is itself a high-volume
+surface-back. The discipline applies: every section in this
+entry restates prior-arc / prior-session locks verbatim from
+canonical-evidence-anchor (memory pickup file + skeleton on disk
++ pre-positioning notes file + filesystem MCP verify-from-disk),
+not from working-memory regeneration. The session's pre-flight
+reads at session-start gate were the canonical-evidence-anchor
+load that grounds this density's load-bearing claims.
 
 ### Path α election precedent (codification candidate #17 sibling)
 
-[Density target next session.] Pre-commit gate adjudication
-(α/β/γ) at chunk N+M push surface. Initial shared-abstain per
-`feedback_coord_lock_hostile_takeover.md` memory citation (foreign
-session-lock held at `phase-1-document-platform-2026-05-06` from
-chunk N session). Founder explicit request for recommendation
-lifted shared-abstain (analysis-on-request not equivalent to
-proxy-decision; the discipline framework holding within proper
-scope and lifting at founder's explicit ask). Brainstorm-side
-surfaced explicit lean to (α) on substantive grounds: no actor
-displacement (path α doesn't mutate lock state), pattern parity
-with chunks 1-4 (single worktree, single lock, sequential commits),
-structurally distinct from hostile-takeover surface the memory
-protects against. Founder lock at α; commit `592dff5` logged under
-`phase-1-document-platform-2026-05-06` lock label while branch was
-`phase/1-storage-integration-tests`. Lock-label-divergence as
-documented-not-eliminated cost. Codification candidate **#17
-sibling sub-shape — lock-label-rotation prescription gap**: per-
-checkout discipline gap surfacing during sequential-chunk-on-same-
-worktree work; sibling under per-checkout-discipline-completeness
-umbrella with #17's env-file propagation manifestation.
+**Pre-commit gate adjudication (α / β / γ) at chunk N+M push
+surface.** The foreign session-lock at
+`phase-1-document-platform-2026-05-06` (held from chunk N session;
+started 2026-05-06T08:56:06Z; pid 4014149) blocked chunk N+M's
+`session-init.sh` from claiming a fresh label. Three paths
+surfaced:
+
+- **(α)** Continue under existing lock label by setting
+  `COORD_SESSION='phase-1-document-platform-2026-05-06'` for the
+  commit. Operationally clean; commit lands without lock-state
+  mutation. Semantic inaccuracy: lock label = chunk N session;
+  current work = chunk N+M.
+- **(β)** Founder releases foreign lock via `session-end.sh`;
+  WSL-side session-inits under `phase-1-storage-integration-tests-2026-05-06`.
+  Semantically clean; requires founder-side action.
+- **(γ)** Other founder-elected (founder-explicit COORD_SESSION
+  override; founder-deferred lock cleanup; founder-rotates lock
+  label; etc.).
+
+**Initial shared-abstain.** Per memory citation
+`feedback_coord_lock_hostile_takeover.md` ("on a held foreign
+session-lock, acknowledge and defer; don't propose clearing,
+release, or PID investigation"), both brainstorm-side and
+WSL-side declined to lean on the path election. The shared-
+abstain framing: "the lock is observed-and-surfaced; not
+investigated, not proposed-for-clearing, not adjudicated by
+either side as proper-action." Path β specifically involves
+founder-side lock-release action; the memory's hostile-takeover
+discipline anticipates this surface and prescribes deferral to
+founder-domain.
+
+**Founder explicit request for recommendation lifted shared-
+abstain.** Founder's surface: "Brainstorm-side has been
+declining to lean on path α/β/γ per shared-abstain discipline
+citing memory feedback_coord_lock_hostile_takeover.md. Founder
+is now asking for a recommendation." Brainstorm-side framed the
+lift: "the shared-abstain discipline doesn't preclude surfacing
+analysis when founder explicitly requests it; the discipline
+precludes brainstorm-side proxy-locking on session-lock surfaces.
+Founder asking for a recommendation is the inverse — explicit
+request for input that founder will then adjudicate." Discipline
+framework holding within proper scope and lifting at founder's
+explicit ask.
+
+**Brainstorm-side surfaced explicit lean to (α)** on three
+substantive grounds (each verified-from-disk or from memory-
+citation):
+
+1. **No actor displacement.** Path α sets the COORD_SESSION env
+   var to match the existing lock; it does NOT mutate lock
+   state. Lock holder unchanged; lock label unchanged; lock file
+   unchanged. The hostile-takeover memory protects against lock-
+   state mutation by non-lock-holders; path α is structurally
+   distinct from that surface. The shared-abstain on (β) is
+   about lock-release mechanism (founder-side action that
+   mutates lock state); shared-abstain on (α) was over-conservative.
+
+2. **Pre-commit hook purpose preserved under α.** The hook's
+   purpose is to prevent commit-interleave within a single
+   checkout. Under α, the lock is held by the active session in
+   this worktree; setting COORD_SESSION matches the lock; the
+   hook gate fires correctly. The semantic-inaccuracy concern
+   is about label-content, not hook-mechanism — the hook is
+   doing exactly what it's designed to do.
+
+3. **Pattern parity with chunks 1-4.** Chunks 1-4 shipped under
+   one Phase 1.Storage worktree with one session lock; chunks
+   1, 2, 3, 4 each committed under that lock without per-chunk
+   lock rotation. Chunk N + chunk N+M is the same pattern at the
+   document-platform worktree (sequential commits in same
+   worktree directory, same arc). Path α preserves pattern
+   parity; path β introduces per-chunk-rotation that wasn't
+   observed in chunks 1-4.
+
+Brainstorm-side flagged moderate (not strong) lean strength.
+Counter-considerations for β: substrate addition is load-bearing
+for future sequential-chunk-on-same-worktree work; codification
+candidate strengthening. Founder valued operational-simplicity
+over substrate-addition-now and locked α.
+
+**Founder lock at α.** Commit `592dff5`
+(test(integration): chunk N+M — Phase 1.Storage integration tests)
+logged under lock label `phase-1-document-platform-2026-05-06`
+while branch was `phase/1-storage-integration-tests`. Pre-commit
+hook passed (COORD_SESSION matched). Push proceeded; PR #8
+opened against staging; merge landed at `389adbb`.
+
+**Lock-label-divergence as documented-not-eliminated cost.**
+Future readers grepping for chunk N+M commit by lock-label-
+search find it under chunk N session label. Without this
+closeout entry's framing, the divergence is opaque. With this
+framing, the divergence is named, the path α election is
+substantively justified, and the codification candidate names
+the substrate addition that closes the gap.
+
+**Codification candidate #17 sibling sub-shape: lock-label-
+rotation prescription gap.** The discipline gap surfaced by
+path α election: B.5 worktree-rules.md prescribes per-checkout
+session locks but does not prescribe lock-label rotation when a
+worktree is reused across sequential chunks. The substrate
+addition: explicit step in worktree-rules.md naming "for
+sequential-chunk-on-same-worktree pattern, lock label may
+remain at first-chunk session label OR rotate per-chunk;
+discipline-shape decision recorded at first reuse and held
+across the arc." Per-checkout-discipline-completeness umbrella
+holds three sibling sub-shapes:
+
+1. **Env-file propagation gitignore-accident** (N=1; chunk N+M
+   verification gate). `.env.local` not propagated to worktrees
+   by `session-init.sh` (gitignored; per-checkout copy step
+   missing). Manual `cp` from main repo resolved this session.
+2. **Lock-label-rotation prescription gap** (N=1; this section).
+   B.5 worktree-rules.md per-checkout discipline complete on
+   lock acquisition + cleanup but underspecified on lock-label
+   rotation across sequential chunks.
+3. **Main-vs-worktree-lock-state divergence** (N=1; observed at
+   WP1 cherry-pick + WP3 commit in main repo on staging). Main
+   repo has no `.coordination/session-lock.json` (foreign lock
+   is in worktree); pre-commit hook issued
+   `[coordination] warning: no session lock in use` on both
+   commits. Warning not blocking; commits succeeded with
+   COORD_SESSION env var set to match foreign worktree lock.
+   The main-vs-worktree-lock-state divergence is the third
+   per-checkout-discipline-completeness manifestation —
+   each checkout (worktree or main repo) has independent
+   lock state; per-checkout discipline applies separately at
+   each checkout.
+
+**N=1 each manifestation; N=3+ across siblings within this arc.**
+Pattern parity with hardcoded-UUID-test-fragility umbrella (one
+codification surface, multiple manifestations); umbrella graduates
+when one or more manifestations cross N=2 cross-arc OR when the
+umbrella shape itself fires N=3 cross-arc. Within-arc N=3 across
+siblings is monitoring; cross-arc graduation deferred.
+
+**WP3-as-Class-B consistency check** (separate but adjacent to
+#17 umbrella at this density's Branch 4 section): the routing-
+policy adjudication for transient-arc artifacts at INDEX scope
+applies to WP3 pre-positioning notes itself — see "Branch 4 INDEX
+hygiene observation" section below.
 
 ### Codification candidate accounting
 
-[Density target next session.] **14 candidates carry forward from
-fb45abe**, of which 1 graduated this arc (Z1 #11.b at N=5+ within
-fb45abe's chunks-1-4 arc).
+**Inheritance from fb45abe.** 14 candidates carried forward from
+the chunks-1-4 + B.5 sync arc closeout. Of these, 1 graduated
+within fb45abe's arc itself (Z1 #11.b verbatim re-read of ADR-
+cited content before drafting; codified at fb45abe per N=5
+explicit fires within that arc). The remaining 13 distributed
+across split-trigger threshold (monitoring; awaiting cross-arc
+firings) and substrate-fix-deferred categories.
+
+The 13 carrying forward (paraphrased; verbatim list at fb45abe):
+
+1. `git status` (full, not `-uno`) for pre-merge state-confirm.
+2. Untracked-files-on-merge-target as pre-Step-4 verification.
+3. "Land schema with consumer code" chunk-discipline pattern
+   (split-trigger threshold; observed N=2+ within fb45abe arc).
+4. Typegen template drift via consumer-code regen.
+5. Substrate-now-enforcement-later at chunk grain (split-trigger
+   threshold; observed N=2+ within fb45abe arc).
+6. vi.mock service-test isolation (env-validating dependencies).
+7. Trunk-advancement-state-confirm.
+8. Framing-assumption-state-confirm.
+9. Verbatim verification stronger than prediction confidence
+   (sub-shape under Z1 #11.b).
+10. External-review-mixed-with-stale-content + founder-triage.
+11. Service-helper docstring atomicity claims may mislead vs
+    runtime (chunk N RPC + chunk 4 storage atomicity at N=2).
+12. Brainstorm-side push recommendations frame as explicit
+    founder-authorize sub-questions (N=3+ within session;
+    Path C session-scoped lift; cross-session rule preserved).
+13. (Various sub-shapes under fb45abe's monitoring catalogue
+    that did not fire substantively within this arc.)
 
 **Three new candidates this arc:**
-- **#15 NaN-guard (`clampTtl`)**: `clampTtl(NaN) → NaN` propagating
-  to `Invalid Date` in `expires_at`; `Math.max(1, NaN) → NaN`,
-  `Math.min(NaN, 1800) → NaN`. N=1 monitoring; defer fix to
-  hygiene commit per substrate-now-enforcement-later default
-  posture; verify Zod-coverage of `PreviewOptions.ttl_seconds` at
-  hygiene-commit time.
-- **#16 methodology-shift state-preservation**: per above; N=1.
-- **#17 worktree per-checkout state-propagation umbrella** with
-  two sibling manifestations: (i) **env-file propagation gitignore-
-  accident** (N=1; `.env.local` not propagated to worktrees by
-  `session-init.sh`; manual `cp` from main repo resolved this
-  session); (ii) **lock-label-rotation prescription gap** (N=1;
-  path α election precedent surfaces). Pattern parity with
-  hardcoded-UUID-test-fragility umbrella shape: one codification
-  surface, two manifestations under per-checkout-discipline-
-  completeness umbrella.
+
+**#15 — NaN-guard (`clampTtl`).** Surface: `clampTtl(NaN) → NaN`
+propagating to `Invalid Date` in `expires_at`. Mechanism:
+`Math.max(1, NaN) → NaN`; `Math.min(NaN, 1800) → NaN`;
+`new Date(Date.now() + NaN * 1000).toISOString()` throws
+`RangeError: Invalid time value`. N=1 monitoring at chunk N+M
+Sub-Q F verify dispatch. Reachability: `PreviewOptions.ttl_seconds`
+typed as `number | undefined`; whether NaN reaches `clampTtl`
+depends on Zod boundary coverage at API/service layer (verify-
+from-disk question deferred to hygiene-commit time per founder
+disposition (α) at chunk N+M). Defer fix to hygiene commit per
+substrate-now-enforcement-later default posture; the codification
+substrate is the "monitor unguarded NaN paths in clamp/cap
+helpers across storage + retry + integrity layers" framing.
+N=2 cross-arc triggers graduation (e.g., similar unguarded NaN
+in retry budget or hash-byte-count helpers).
+
+**#16 — Methodology-shift state-preservation.** Surface: chunk
+N+M onset Sub-Q D drift (per Methodology-shift state-preservation
+section above). Mechanism: methodology-shift turn (Path 2
+proposed → Path 1 elected) caused WSL-side voice in single-
+sided integration to regenerate Sub-Q D lean from working
+memory rather than re-stating brainstorm-side counter-lock from
+canonical-evidence-anchor. N=1 monitoring at chunk N+M onset.
+**Discipline-test passed within-session at WP2 closeout-cycle
+gate** (path 2c defer locked; no scope-creep on locked-defer in
+the same session that codified #16). Codification text per
+Methodology-shift section above. N=2 cross-arc triggers
+graduation.
+
+**#17 — Per-checkout-discipline-completeness umbrella.** Surface:
+B.5 worktree-rules.md per-checkout discipline complete on lock
+acquisition + cleanup + worktree directory placement, but
+underspecified on three per-checkout state-propagation surfaces
+that emerged this arc. Three sibling manifestations:
+
+- **(i) Env-file propagation gitignore-accident** (N=1; chunk
+  N+M verification gate). `.env.local` (gitignored; carries
+  service-role key) not propagated to worktrees by
+  `session-init.sh`. Manual `cp` from main repo to worktree
+  resolved this session. Substrate fix shape: per-checkout
+  env-file copy step in `session-init.sh` for files in a
+  `.session-init-copy-list` (or similar) — gitignored items
+  the script propagates from main repo to fresh worktree at
+  init time.
+
+- **(ii) Lock-label-rotation prescription gap** (N=1; path α
+  election precedent at chunk N+M push gate). B.5 worktree-
+  rules.md prescribes per-checkout session locks but does not
+  prescribe lock-label rotation when a worktree is reused
+  across sequential chunks. Substrate fix shape: explicit step
+  in worktree-rules.md naming "for sequential-chunk-on-same-
+  worktree pattern, lock label may remain at first-chunk
+  session label OR rotate per-chunk; discipline-shape decision
+  recorded at first reuse."
+
+- **(iii) Main-vs-worktree-lock-state divergence** (N=1; WP1
+  cherry-pick + WP3 commit in main repo on staging). Main
+  repo has no `.coordination/session-lock.json` (foreign lock
+  is in worktree); pre-commit hook issued
+  `[coordination] warning: no session lock in use` on both
+  commits. Warning not blocking; COORD_SESSION env var set to
+  foreign worktree label allowed commits to proceed. Substrate
+  fix shape: per-checkout-discipline-completeness should name
+  "main repo treated as a checkout that requires its own lock
+  per discipline shape OR explicit per-checkout discipline-
+  exemption for main-repo direct-commit patterns."
+
+Pattern parity with hardcoded-UUID-test-fragility umbrella
+shape: one codification surface, multiple manifestations under
+per-checkout-discipline-completeness umbrella. Within-arc N=3
+across siblings; cross-arc graduation defers (umbrella graduates
+when one or more manifestations cross N=2 cross-arc OR when
+umbrella shape fires N=3 cross-arc).
 
 **Two graduations from prior arcs at N=3:**
-- **Hardcoded-UUID-or-non-unique-signature-test-isolation
-  umbrella**: covers `find()`-without-trace_id-scoping (2026-04-27
-  N=2 candidate from `accountLedgerService.test.ts`) +
-  hardcoded-UUID-trace_id (chunk N+M Test 4 finding at N=3). Test
-  4 fix landed inline at drafting time (per-run
-  `crypto.randomUUID()` + comment naming the cross-vitest-run
-  accumulation guard rationale).
-- **Cross-vitest-invocation accumulation pattern**: covers
-  post-seed snapshot fragility (2026-04-27 NOTE on
-  `soft8EntryEightReplay.test.ts`) + crossOrgRlsIsolation cascading
-  (2026-04-29 S29a element #19) + agent:validate-after-pnpm-test
-  state-pollution gap (chunk N+M verification at N=3). Phase 2
-  obligation per S29a element #19 carry-forward strengthened
-  ("characterize value-drift vs collision-drift").
+
+**Hardcoded-UUID-or-non-unique-signature-test-isolation
+umbrella.** Covers two manifestations:
+- `find()`-without-trace_id-scoping (2026-04-27 N=2 candidate
+  from `accountLedgerService.test.ts` tests 3 + 6 finding
+  pattern — `.find()` lookup by non-unique-signature attribute
+  produces wrong row when prior-run residue creates ambiguity).
+- Hardcoded-UUID-trace_id (chunk N+M Test 4 finding at N=3 —
+  hardcoded `00000000-0000-0000-0000-000000000bbb` for
+  happy-path test trace_id; second vitest run sees 2 accumulated
+  audit rows under that ID).
+Test 4 fix landed inline at drafting time: per-run
+`crypto.randomUUID()` + comment naming the cross-vitest-run
+accumulation guard rationale ("(a) keep its audit row separable
+from rollback tests' (where no audit rows should ever exist),
+and (b) avoid cross-vitest-run accumulation when this test
+runs without an intervening pnpm db:reset").
+
+The umbrella codification text:
+> Test isolation requires per-run-unique signatures for
+> queryable attributes when row uniqueness is asserted. Two
+> failure modes: (1) `.find()` against a non-unique attribute
+> picks wrong row; (2) hardcoded UUIDs in test data accumulate
+> across vitest runs without `pnpm db:reset` and produce
+> length-assertion failures. Both addressed by per-run
+> randomUUID-shaped values for query-relevant attributes.
+
+Graduates at N=3. Carry-forward enforcement: future test files
+audited against hardcoded-UUID-or-non-unique-signature patterns
+at code-review time.
+
+**Cross-vitest-invocation accumulation pattern.** Covers three
+manifestations:
+- Post-seed snapshot fragility (2026-04-27 NOTE on
+  `soft8EntryEightReplay.test.ts` — post-seed snapshot UUIDs
+  sensitive to `pnpm db:reset:clean` cycle).
+- crossOrgRlsIsolation cascading (2026-04-29 S29a element #19 —
+  cascading pollution downstream of accountLedgerService
+  failure-state polluting `journal_entries` with rows whose
+  UUIDs collide with `crossOrgRlsIsolation`'s `beforeAll` setup
+  INSERT).
+- agent:validate-after-pnpm-test state-pollution gap (chunk N+M
+  verification at N=3 — `crossOrgRlsIsolation.test.ts` failed
+  in second vitest invocation under same DB state because of
+  hardcoded `journal_entries.journal_entry_id` values that
+  conflict with prior-run accumulation; workaround: db:reset:clean
+  between each test invocation).
+
+The umbrella codification text:
+> Multiple vitest invocations against the same DB state without
+> intervening `pnpm db:reset:clean` accumulate row residue. Tests
+> that hardcode UUID-shaped IDs in `beforeAll` or fixture-shape
+> patterns are vulnerable. Two operational disciplines: (1) use
+> per-run `crypto.randomUUID()` for queryable IDs in tests; (2)
+> documented harness behavior naming "agent:validate after pnpm
+> test requires db:reset:clean between" until tests are migrated.
+
+Graduates at N=3. **Phase 2 obligation per S29a element #19
+carry-forward strengthened**: "characterize value-drift vs
+collision-drift" — Phase 2 work product naming whether the
+fragility is value-drift (test data values drifting per run) or
+collision-drift (hardcoded values colliding with accumulated
+state). Founder verdict at Phase 2 brief-creation will scope
+the substrate fix.
+
+**Codification candidate ledger total at this density:**
+- 14 fb45abe carry-forward (1 graduated within fb45abe + 13
+  carrying forward to monitoring or split-trigger threshold)
+- 3 new this arc (#15 + #16 + #17 with three sibling sub-shapes)
+- 2 graduations this arc at N=3 (hardcoded-UUID umbrella + cross-
+  vitest accumulation pattern)
+- 1 substantive enforcement carry-forward (Phase 2 obligation
+  strengthening per S29a #19)
+
+**Z1 #11.b sub-shape catalogue post-this-arc** (cumulative within-
+arc + carried-forward sub-shapes): 6 sub-shapes including the
+new working-memory-lag-on-fb45abe-note shape from WP2
+verify-from-disk gate (per Z1 discipline catalog state changes
+section above).
+
+Total active codification surface count: 17 candidates +
+multiple sub-shapes + 3 graduated codifications (Z1 #11.b at
+fb45abe; hardcoded-UUID umbrella here; cross-vitest accumulation
+here).
 
 ### ADR cite findings
 
-[Density target next session.] **ADR-0013 §16 misattribution at
-chunk N RPC migration comment block**: cites "in the same
-transaction" verbatim incorrectly; phrase not present in §16.
-Chunk-N-D-revised lock correctly motivated by INV-AUDIT-001 leaf +
-journalEntries precedent (`20240134000000`), not §16 verbatim.
-Sub-shape under Z1 #11.b at N+1 within-arc post-codification;
-observation-not-codification. Plus **`recordMutation.ts:122-127`
-atomicity-claim docstring observation**: "same client = same
-transaction" via shared SupabaseClient parameter is technically
-misleading at JS-client layer (PostgREST request-level
-transactions); chounting's actual atomicity pattern is RPC-based
-per `20240134000000` precedent. Codification candidate **#13
-strengthening at N=2** (chunk N RPC + chunk 4 storage atomicity
-implication).
+Two ADR-cite observations surfaced during chunk N implementation
++ chunk N+M verify-from-disk dispatches. Both are
+observation-not-codification at this density; the second
+strengthens a fb45abe carry-forward candidate (#13).
+
+**ADR-0013 §16 misattribution at chunk N RPC migration comment
+block.** Migration `20240137000000_create_source_document_with_audit_rpc.sql`
+header cites:
+
+> Per ADR-0013 §16 verbatim:
+>   "source_document_created audit event fires in the same
+>    transaction as the source_documents INSERT."
+
+But the phrase "in the same transaction" is NOT present in §16
+verbatim. §16's actual text describes audit emission shape +
+event names + reserved triggers; it does not name the
+transactional discipline at the cited "verbatim" level. The
+chunk-N-D-revised lock for atomic INSERT-pair RPC was correctly
+motivated by:
+
+- **INV-AUDIT-001 leaf** (per `ledger_truth_model.md`): audit
+  log INSERTs commit atomically with the entity INSERT they
+  audit. The invariant text at the leaf level prescribes the
+  atomicity discipline.
+- **JournalEntries precedent** at `20240134000000_write_journal_entry_atomic_rpc.sql`:
+  the established RPC pattern that ships single-transaction
+  INSERT-pair atomicity at the SQL boundary.
+
+Sub-shape under Z1 #11.b at N+1 within-arc post-codification: a
+verbatim citation that didn't survive verbatim re-read. The
+comment block author (single-sided integration during chunk N
+authoring) reconstructed §16's content from working memory,
+which produced a phrase that captures the discipline's intent
+correctly but doesn't exist in §16. The correction at this
+density: rewrite the migration header citation to
+"INV-AUDIT-001 leaf + journalEntries `20240134000000`
+precedent" rather than "§16 verbatim." Fix scope: comment
+block edit; non-functional. Defer to hygiene-commit alongside
+#15 NaN-guard fix per substrate-now-enforcement-later.
+
+**`recordMutation.ts:122-127` atomicity-claim docstring
+observation.** The helper's comment block claims:
+
+> If you pass the same client object to multiple service
+> functions, those calls will run in the same transaction.
+
+This is technically misleading at the JS-client layer.
+Supabase's `SupabaseClient` is a wrapper over PostgREST HTTP
+calls; each HTTP call is its own request-level transaction at
+the database. Sharing a `SupabaseClient` instance across
+multiple `.insert()` / `.update()` / `.from()...` calls does
+NOT bind those calls into a single Postgres transaction. The
+"same client = same transaction" framing is a category error.
+
+chounting's actual atomicity pattern is RPC-based: a Postgres
+function (e.g., `write_journal_entry_atomic`,
+`create_source_document_with_audit`) wraps multiple INSERTs
+inside a `BEGIN/COMMIT` envelope at the PL/pgSQL function body
+boundary. The function executes as one atomic unit; PostgREST
+exposes it as a single RPC call; the JS client invokes via
+`db.rpc('function_name', payload)`. Atomicity is bound to the
+function body, not the JS-client object lifetime.
+
+The chunk N session noted this observation at N=1 firing
+(during recordMutation review). Chunk 4 storage atomicity
+implication strengthens at N=2: storage-layer atomicity (put
++ verify-readback per ADR-0013 §9) is also NOT bound by
+`SupabaseClient` instance lifetime — it's bound by the
+sequential `await` of the put operation followed by the
+verify-readback download. If the JS process crashes between
+the two operations, partial state remains (uploaded bytes
+without verify confirmation); the helper-level "atomicity"
+framing was misleading there too.
+
+**Codification candidate #13 strengthening at N=2.** Per
+fb45abe carry-forward: "Service-helper docstring atomicity
+claims may mislead vs runtime." Chunk N RPC + chunk 4 storage
+atomicity implication = N=2 within-arc. Cross-arc N=3 triggers
+graduation. Substrate fix shape: audit `recordMutation.ts` +
+similar helper docstrings for atomicity-claim accuracy at next
+hygiene-commit cycle; replace "same client = same transaction"
+with "RPC body = same transaction; sequential `.insert()` calls
+are NOT bound." Defer to next hygiene-commit per substrate-now-
+enforcement-later default posture.
+
+**Both findings are observation-not-codification at this
+density.** The corrections are documentation-shape (migration
+comment + helper docstring) — non-functional. Substrate fix
+shapes recorded; enforcement (the actual edits) lands at next
+hygiene-commit cycle, not this closeout cycle.
 
 ### Convention-fire status
 
-[Density target next session.] Single-purpose-commit-discipline at
-chunk grain held cleanly across PR #7 (chunk N) + PR #8 (chunk N+M
-+ bucket-hygiene bundled per cross-file-single-purpose at chunk
-arc grain). Chunk N+1 closure-without-implementation not a commit
-(substrate-already-ratified; consumer-code-defer); did not fire
-commit-grain discipline. PR-per-arc held. Length-as-calibration
-(Z1 #9): chunk N at ~218 lines; chunk N+M at 784 insertions across
-4 files (mid-upper-band per integration-test density). Explicit-
-authorization gate (§5.7) preserved cross-session: per-action
-authorization shape this session; no Path C lift extension; founder
-verdicts at every push surface. Path α election was the substantive
-exception within the discipline (lifted shared-abstain on founder
-explicit request).
+**Single-purpose-commit-discipline at chunk grain held cleanly
+across PR #7 + PR #8.**
+- **PR #7** (chunk N): one chunk = one logical deliverable
+  (`createSourceDocument` service + atomic INSERT-with-audit
+  RPC + 7 unit tests) = one commit (`45895fb`) = one PR.
+- **PR #8** (chunk N+M): one chunk = three test files +
+  bucket-hygiene addition to test_helpers.sql = ONE commit
+  (`592dff5`) per cross-file-single-purpose at chunk arc grain.
+  Bucket-hygiene IS load-bearing for chunk N+M's reliability
+  contract (Sub-Q D (b) `afterAll`-failure recovery); cross-
+  file commit permitted per discipline. Single-purpose-commit-
+  discipline at chunk grain holds even when the chunk's
+  purpose spans multiple files.
+
+**Chunk N+1 closure-without-implementation did not fire commit-
+grain discipline.** Substrate-already-ratified at fb45abe;
+consumer-code-defer per Reading C lock. No code commit shipped
+for chunk N+1; the closure is a friction-journal artifact + δ-2
++ δ-3-lite addendum surface, not a code-grain commit. New
+precedent shape: chunks may close without commits when substrate
+is fully ratified at prior arc and consumer code is deferred to
+post-v1 activation. Carry-forward to future closure-without-
+implementation surfaces (e.g., reserved-provider activations).
+
+**PR-per-arc held.** Each chunk shipped as one PR; merge-commit
+per chounting precedent. PR #7 → `366454a`; PR #8 → `389adbb`.
+Squash not used (per delivery-model.md substrate / governance
+prefer merge for audit trail).
+
+**Length-as-calibration (Z1 #9).** Chunk N implementation:
+~218 lines (`documentPlatformService.ts` + RPC migration +
+unit tests). Mid-band. Chunk N+M implementation: 784
+insertions across 4 files (mid-upper-band per integration-test
+density; 14 tests + bucket-hygiene). Closeout cycle skeleton
+(`f05d27e`): 243 insertions. Closeout cycle pre-positioning
+notes (`1a2aec7`): 347 insertions. Closeout cycle density-
+population (this commit): ~1100+ insertions (upper-band per
+substantive evidence-anchor density; matches founder Frame 1
+"do not compress" framing).
+
+**Explicit-authorization gate (§5.7) preserved cross-session
++ within-session.** Per-action authorization shape held this
+session AND prior session: founder verdicts at every push
+surface (commit, push, PR creation, merge). No Path C lift
+extension this session OR prior session. The standing-rule
+shape is intact.
+
+**Path α election was the substantive exception within the
+discipline** — at chunk N+M push surface, brainstorm-side's
+shared-abstain per memory citation was lifted at founder's
+explicit analysis-request. The discipline framework holding
+within proper scope (no proxy-locking) and lifting at founder's
+explicit ask. Per Z1 #11.b sub-shape framing: the discipline
+holds even when both voices abstain by design, not just when
+they diverge.
+
+**Closeout-cycle-defer (Frame 1) as session-grain convention
+firing.** Prior session's Frame 1 verdict ("do not compress
+or rush — substantial evidence-anchor artifact") + this
+session's density-population produced a session-grain firing
+of substrate-now-enforcement-later. The convention shape:
+when a session approaches close with a substantial evidence-
+anchor work product pending, the work product ships in
+skeleton form at session boundary; full density populates at
+next-session opening under fresh context. fb45abe-band density
+preserved by deferring rather than compressing.
+
+**Closure-cycle commits as direct-commit-on-staging per small-
+hygiene carve-out.** WP1 (closeout skeleton) + WP3 (pre-
+positioning notes) shipped as direct commits on staging via
+cherry-pick (initial wrong-branch correction) + main-repo
+direct-commit. Pattern parity with fb45abe + e8cb3dd
+precedent for friction-journal entries that don't require
+worktree. No PR; no merge gate; small-hygiene carve-out at
+cycle grain. This density-population (WP A + WP B bundled)
+ships under same shape.
+
+**Brainstorm-side / WSL-side concurrence shape on close.**
+Both sides on record at session close concurring on close;
+both sides on record at session-start concurring on session-
+start anchors (Reading 2 + path-α-equivalent + per-action
+auth + Frame 1'). Two-sided + founder triple architecture
+intact through both session boundaries.
 
 ### Carry-forward to next session
 
-[Density target next session.] **Closeout entry full evidence-anchor
-density populates at next-session opening under fresh context.**
-Each section above expands to fb45abe-style mid-band density
-(~80-150 lines per section depending on substrate). Phase 2 brief-
-creation arc opens (separate work product per delivery-model.md
-cadence; Phase 2 = Document Core: cases + artifacts + exception
-queue per ADR-0011 §3 + §5 + §13). Pre-positioning notes for Phase
-2 land this session at `docs/09_briefs/phase-2/2026-05-06-phase-2-
-brief-pre-positioning-notes.md` (separate Phase 2 onset-cycle
-artifact). Foreign session-lock disposition for next session:
-founder-domain (α-equivalent / β-equivalent / other); brainstorm-
-side abstains per shared-abstain on session-lock disposition.
+**Density-population this session closes the closeout cycle for
+Phase 1.Storage arc.** After this commit lands, Phase 1.Storage
+implementation arc + closeout cycle are both fully terminated
+on origin/staging. Three carry-forward shapes for the session
+that opens next:
 
-### Branch 4 INDEX hygiene observation
+**1. Phase 2 brief-creation arc opens next session as primary
+work product.** Per delivery-model.md cadence (brief opens
+phase). Phase 2 = Document Core (cases + artifacts + exception
+queue per ADR-0011 §3 + §5 + §13) + Tier 2 Document Pipeline
+(per ADR-0014). Phase 5 = AP foundation (consumer of Phase 2
+substrate per ADR-0015). Pre-positioning notes at
+`docs/09_briefs/phase-2/2026-05-06-phase-2-brief-pre-positioning-notes.md`
+(landed at `1a2aec7`) anchor the brief-creation arc with
+substantive scope distilled from ADR-0011 §3+§5+§6+§13 +
+ADR-0014 + ADR-0015 + delivery-model.md + existing brief
+skeleton. Brief-creation fills the substantive content stub
+sections (§1-§14, §16, §18-§20) at
+`docs/09_briefs/phase-2/document_platform_initiative.md`
+(currently substantive-content-deferred per substrate-now-
+enforcement-later cross-pattern at Phase 0 closure).
 
-[Density target next session.] Branch 4 INDEX hygiene scope as
-originally specified per fb45abe note (ADR-0007 +
-`DEV_WORKFLOW.md` + `04_engineering/README.md`) **verified empty
-this session**: all three already present in `docs/INDEX.md`
-(lines 57, 59, 97); `git log fb45abe..HEAD -- docs/INDEX.md`
-returned no commits. The fb45abe note pre-dated their addition or
-reflected stale state. Broader hygiene gap surfaced this session:
-14+ phase-2 transient arc artifacts (D1-D6 ratification packages,
-session opening/closeout prompts, evidence-link coordination,
-phase-0 closure verification, 2026-05-03 agent-autonomy bank-
-detail amendment, class-2-scope-decision, session-22-brief) +
-`CTO_HANDOFF_V2.md` + `ec-2-prompt-set.md` in `07_governance/`
-not in INDEX. Classification of which transient-arc artifacts are
-INDEX-worthy vs deliberately-not-indexed defers to next session
-scoping; out of skeleton-closeout scope.
+**Phase 2 chunk-decomposition candidates** (per pre-positioning
+notes; not locked; final decomposition at Phase 2 chunk 1
+onset adjudication): Document Core schema migration; Tier 2
+pipeline orchestrator skeleton; Modal sidecar implementation;
+Tier A classifier; Tier C AI fallback; vendor matcher;
+field extraction per document type; match-against-existing-
+state subsystem; proposal builder; exception queue UI; orphan-
+blob GC; Logic Receipt emission; replay/idempotency. Likely
+8-15 chunks given substrate breadth.
+
+**Open governance questions** that surface at Phase 2 brief-
+creation: Q29 ESLint rule design (fires at first
+`src/agent/pipelines/**/*` code); Q65 confidence thresholds at
+v1 ship (per ADR-0019 ratification); Q68 exception queue UI
+scope (UI implementation surface); AI fallback budget per-org
+configurability post-v1; replay cadence post-v1; Tier B
+classifier activation threshold; document-type discriminator
+routing-suggestion banners; INV-DOC-001 enforcement gate
+(Phase-1-implementation-gate per Q79 path β; fires when first
+DOC-citing code lands).
+
+**2. Hygiene-commit cycle for deferred fixes.** Three deferred
+substrate-fix surfaces accumulated during Phase 1.Storage
+arc; all defer to next hygiene-commit cycle per substrate-
+now-enforcement-later default posture:
+
+- **#15 NaN-guard fix** at `clampTtl` in
+  `supabaseStorageProvider.ts:95-99`. Add NaN guard:
+  `if (Number.isNaN(ttl)) return PREVIEW_TTL_DEFAULT_SECONDS;`
+  before the `Math.max/Math.min` clamp. Plus verify-from-disk
+  on `PreviewOptions.ttl_seconds` Zod boundary coverage at
+  API/service layer; if Zod rejects NaN, defect is unreachable
+  in production but bypassable in tests.
+- **ADR-0013 §16 misattribution** in
+  `supabase/migrations/20240137000000_create_source_document_with_audit_rpc.sql`
+  comment header. Replace "§16 verbatim" citation with
+  "INV-AUDIT-001 leaf + journalEntries `20240134000000`
+  precedent" framing.
+- **`recordMutation.ts:122-127` docstring** atomicity-claim
+  rephrasing. Replace "same client = same transaction" with
+  "RPC body = same transaction; sequential `.insert()` calls
+  are NOT bound."
+
+Hygiene-commit cycle fires at next session opening if budget
+permits; otherwise carries to subsequent cycle. Single direct-
+commit on staging per small-hygiene carve-out shape.
+
+**3. Class A INDEX hygiene amendment** ships bundled with this
+density-population commit (per Phase 4 in session sequencing +
+locked Branch 4 bundling). Future readers see the Class A
+artifacts (CTO_HANDOFF_V2.md, ec-2-prompt-set.md, class-2-
+scope-decision.md, 2026-05-03-agent-autonomy-bank-detail-
+amendment.md) indexed at this density's commit; Class B
+artifacts (per Branch 4 INDEX hygiene observation section
+below) covered by routing-policy adjudication, not individually
+indexed.
+
+**Foreign session-lock disposition for session opening that
+follows next.** Lock held at
+`phase-1-document-platform-2026-05-06`; founder-domain. Three
+options enumerated:
+- (α-equivalent) Continue under existing label (this session's
+  pattern; pattern parity with chunk N+M)
+- (β-equivalent) Founder releases; new session-init under
+  appropriate label
+- (other) Founder-elected
+
+Both sides abstain per shared-abstain on session-lock
+disposition + memory `feedback_coord_lock_hostile_takeover.md`.
+
+**Memory pickup mechanism.** This session opens with
+`project_phase_1_storage_closeout_pending.md` indexed in
+`MEMORY.md`. After density-population lands, the memory file
+gets refreshed (or replaced with `project_phase_2_brief_creation_pending.md`
+or similar) to reflect the new session-boundary state: closeout
+cycle complete; Phase 2 brief-creation arc primary work product
+for next session opening. Memory pickup is the canonical-
+evidence-anchor for cross-session continuity per Z1 #15.
+
+### Branch 4 INDEX hygiene observation + Class A/B classification
+
+**WP2 (Branch 4 INDEX hygiene) at fb45abe-original-scope verified
+empty.** The three originally-specified items (ADR-0007 +
+`DEV_WORKFLOW.md` + `04_engineering/README.md`) were already
+present in `docs/INDEX.md` at session-start of the prior session:
+- ADR-0007 at line 97
+- `DEV_WORKFLOW.md` at line 59
+- `04_engineering/README.md` at line 57
+
+Verification mechanism: `git log fb45abe..HEAD -- docs/INDEX.md`
+returned no commits. INDEX.md hasn't been modified since fb45abe.
+The fb45abe note pre-dated their addition (silently backfilled
+during chunks 1-4 substrate work or B.5 sync arc) or reflected
+stale state at fb45abe authoring time.
+
+**Z1 #11.b sub-shape (new this arc): working-memory-lag on
+friction-journal entries can lag on-disk state when intervening
+commits silently address carry-forward items.** Brainstorm-side's
+prior-turn surfacing assumed the 3 fb45abe-flagged items were
+still gaps per the fb45abe note. WSL-side's surface-back claimed
+"WP2 verified empty at original scope" — verify-from-disk via
+filesystem MCP confirmed WSL-side's claim correct. The discipline:
+when working-memory of a friction-journal entry's claims is the
+basis for current-session adjudication, verify-from-disk before
+relying on the working-memory framing. Sub-shape applies at every
+cycle-completion gate where carry-forward inventory references
+prior-arc journal entries. Sub-shape under Z1 #11.b cumulative
+within-arc count; awaits cross-arc N=2 for graduation.
+
+**Broader INDEX hygiene gap surfaced this session.** Filesystem
+MCP enumeration produced 16 files on-disk-but-not-in-INDEX:
+
+**`07_governance/` (2 files):**
+- `CTO_HANDOFF_V2.md` (cited by ADR-0020 Appendix A; load-bearing
+  architectural recommendation)
+- `ec-2-prompt-set.md` (audit prompt set; no fb45abe reference;
+  worth investigation before indexing)
+
+**`09_briefs/phase-2/` (14 files):**
+- `2026-05-03-agent-autonomy-bank-detail-amendment.md` (referenced
+  in friction-journal at fb45abe; durable amendment)
+- `2026-05-03-d1-ratification-package.md`
+- `2026-05-03-d2-ratification-package.md`
+- `2026-05-03-d3-ratification-package.md`
+- `2026-05-04-d4-ratification-package.md`
+- `2026-05-04-d5-ratification-package.md`
+- `2026-05-04-d6-ratification-package.md`
+- `2026-05-04-evidence-link-coordination.md`
+- `2026-05-04-phase-0-closure-verification.md`
+- `2026-05-04-session-2d-opening-prompt.md`
+- `2026-05-04-session-2f-opening-prompt.md`
+- `2026-05-04-session-2f-closeout.md`
+- `class-2-scope-decision.md` (referenced indirectly by
+  `phase-1.2/oi-3-class-2-fix-stack-scoping.md`)
+- `session-22-brief.md`
+
+Plus `2026-05-06-phase-2-brief-pre-positioning-notes.md` (WP3
+landed at `1a2aec7` this closeout cycle; structurally a transient
+session-arc artifact).
+
+**Routing-policy adjudication: Class A vs Class B distinction.**
+The 16-file gap (+ WP3) separates into two classes per
+Documentation Routing convention's transient-handling pattern:
+
+**Class A — durable artifacts that warrant individual INDEX
+entries (4 files):**
+- `07_governance/CTO_HANDOFF_V2.md` — cited by ADR-0020 Appendix
+  A; load-bearing architectural recommendation source for the
+  Phase 1+ source-tree organization. Ship index entry: "the CTO
+  Handoff v2 input that ADR-0020 operationalizes; agent-first
+  authority-gradient source architecture per Decision items 1-9."
+- `07_governance/ec-2-prompt-set.md` — pre-existing audit prompt
+  set; standalone artifact. Ship index entry: "(stub: investigate
+  scope at first edit)" or skip per per-investigation-deferral
+  shape.
+- `09_briefs/phase-2/class-2-scope-decision.md` — referenced
+  indirectly by `phase-1.2/oi-3-class-2-fix-stack-scoping.md`
+  ("first concrete application of Meta A and Meta B at scoping
+  time"); load-bearing scope artifact. Ship index entry.
+- `09_briefs/phase-2/2026-05-03-agent-autonomy-bank-detail-amendment.md` —
+  referenced in friction-journal at fb45abe; durable amendment
+  to ADR-0007 Tier 2.5 read-boundary clarification. Ship index
+  entry.
+
+**Class B — transient session-arc artifacts (12 files + WP3):**
+- D1-D6 ratification packages (6 files) — Phase 0 governance
+  arc gates' ratification artifacts. Their content is preserved
+  at the gate-time snapshot; arc closeout (fb45abe) absorbs the
+  load-bearing claims into ratified ADRs + this friction-journal.
+- Session 2D + 2F opening prompts + 2F closeout prompt (3 files)
+  — session-arc-scoped framing artifacts.
+- Phase 0 closure verification (1 file) — 12-surface disposition
+  artifact at Phase 0 closure; absorbed into ADR ratifications +
+  fb45abe.
+- Evidence-link coordination (1 file) — Phase 0 governance arc
+  coordination artifact.
+- Session-22 brief (1 file) — session-arc-scoped brief.
+- WP3 pre-positioning notes
+  (`2026-05-06-phase-2-brief-pre-positioning-notes.md`) — Phase
+  2 onset-cycle anchor artifact at this closeout cycle; structurally
+  parallel to Phase 0 governance plan + Phase 0 closure verification
+  artifacts (date-prefixed phase-2 onset artifact).
+
+**Routing-policy lock**: Class B is **deliberately-not-individually-
+indexed per Documentation Routing convention's transient-handling
+pattern.** These are session-arc-scoped artifacts that accumulate
+within the arc and become forensic-anchor-only post-closure;
+individually indexing them inflates `docs/INDEX.md` density without
+proportional discoverability benefit. The friction-journal-archive
+routing pattern (closed phases archive to `friction-journal/phase-X.md`
+per Documentation Routing convention's archival rule) is the
+sibling-shape for journal artifacts; Phase 2 transient artifacts
+get analogous treatment via "preserved on-disk + not individually
+indexed" disposition.
+
+**WP3-as-Class-B consistency check passes.** WP3 is structurally
+parallel to Class B artifacts (date-prefixed phase-2 onset
+artifact; analogous to `2026-05-03-phase-0-governance-plan.md`
+which IS individually indexed in the existing INDEX). The
+existing INDEX precedent on `2026-05-03-phase-0-governance-plan.md`
+indexing surfaces a refinement question: phase-N onset-plan
+artifacts MAY be individually indexed if they carry forward as
+load-bearing pickup anchors for the phase work product. WP3
+qualifies — it's the canonical pickup anchor for Phase 2 brief-
+creation. **WP3 reclassifies as Class A on this refinement**:
+indexed individually as "Phase 2 brief-creation pre-positioning
+notes; anchor for Phase 2 onset-cycle pickup."
+
+Refined Class A inventory (5 files):
+1. `CTO_HANDOFF_V2.md` (07_governance)
+2. `ec-2-prompt-set.md` (07_governance) — investigate-deferral
+3. `class-2-scope-decision.md` (09_briefs/phase-2)
+4. `2026-05-03-agent-autonomy-bank-detail-amendment.md` (09_briefs/phase-2)
+5. `2026-05-06-phase-2-brief-pre-positioning-notes.md` (09_briefs/phase-2; refined Class A per pickup-anchor shape)
+
+Refined Class B inventory (12 files; deliberately-not-individually-
+indexed):
+- D1-D6 ratification packages (6)
+- Session 2D opening + 2F opening + 2F closeout prompts (3)
+- Phase 0 closure verification (1)
+- Evidence-link coordination (1)
+- Session-22 brief (1)
+
+**INDEX amendment shape (this commit).** Add 5 Class A entries
+to `docs/INDEX.md` at the appropriate sections per existing
+INDEX format. Class B not addressed in INDEX (deliberately-
+not-individually-indexed per routing-policy lock). Closeout
+cycle bundle: this density-population entry + Class A INDEX
+entries amendment = ONE direct-commit on staging.
+
+**Documentation Routing convention strengthening at this density.**
+The transient-arc handling pattern surfaces a refinement: phase-
+N onset-plan + closeout-anchor artifacts qualify for Class A
+treatment if they're load-bearing pickup anchors; mid-arc
+ratification packages + opening/closeout prompts qualify for
+Class B treatment as session-arc-scoped artifacts. The
+refinement codifies as a sub-shape of the Documentation Routing
+convention; future arcs apply at session-arc-artifact-creation
+time.
 
 ---
 
-**Skeleton entry. Full density populates next session under fresh
-context per Frame 1 forward-sequencing.** Closeout cycle continues:
-Phase 1.Storage worktree retention lock at `592dff5` joins existing
-forensic anchors (f73f4a4, 7b85fe1); Phase 2 pre-positioning notes
-land separately as Phase 2 onset-cycle artifact; foreign session-
-lock disposition founder-domain for next-session start.
+**Density-population complete.** This entry consolidates the
+chunk N + chunk N+1 closure-without-implementation + chunk N+M
+arc + closeout cycle into a single fb45abe-band evidence-anchor
+artifact. Closeout cycle work products on origin: skeleton at
+`f05d27e`; pre-positioning notes at `1a2aec7`; this density-
+population at [next-commit-SHA] (with bundled Class A INDEX
+hygiene amendment). Phase 1.Storage implementation arc + closeout
+cycle both terminated on origin/staging. Phase 2 brief-creation
+arc opens next session as primary work product per delivery-
+model.md cadence.
