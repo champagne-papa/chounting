@@ -1,0 +1,44 @@
+-- =============================================================
+-- 20240136000000_storage_buckets.sql
+-- Phase 1.Storage chunk 4 — bucket provisioning for the
+-- 'documents' bucket consumed by supabaseStorageProvider.
+--
+-- Per ADR-0013 §14:
+--   "Implementation uses the existing Supabase client. Org-scoped
+--    paths follow the pattern org_{org_id}/sources/{source_document_id}/
+--    {filename}. RLS policies enforce org isolation: the platform's
+--    service role is the only writer; the per-user session role can
+--    only read its own org's paths."
+--
+-- v1 RLS posture per Sub-Q J-ii (verified at chunk 4 onset):
+--   storage.objects RLS is ENABLED by Supabase default (verified
+--   on-disk: SELECT rowsecurity FROM pg_tables WHERE schemaname =
+--   'storage' AND tablename = 'objects' returns true).
+--   Zero policies on storage.objects + service_role's BYPASSRLS
+--   attribute = deny-by-absence for authenticated and anon roles,
+--   with service_role write/read access.
+--
+-- v1 read path is signed URLs (via storageProviderService.previewUrl
+-- per ADR-0013 §12); signed URLs bypass RLS by encoding authorization
+-- in the URL itself. Per-user-session-role direct reads are not
+-- exercised in v1.
+--
+-- §14's full SELECT policy (user_has_org_access parsed from path
+-- prefix) lands when the first per-user-session-role direct-read
+-- consumer materializes (post-v1; substrate-now-enforcement-later
+-- applied at the storage RLS layer per chunk 4 Sub-Q J).
+--
+-- Bucket name: 'documents' (per chunk 4 Sub-Q I; Document Platform
+-- spirit per ADR-0011 §1; broader than any single table).
+--
+-- public = false: signed-URL access only per §12; bucket is not
+-- publicly listable; objects require a signed URL (or service-role
+-- access) to retrieve.
+--
+-- ON CONFLICT DO NOTHING: idempotent on db reset cycles. If a prior
+-- reset already created the bucket, this migration is a no-op.
+-- =============================================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', false)
+ON CONFLICT (id) DO NOTHING;

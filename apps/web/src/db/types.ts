@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          operationName?: string
           extensions?: Json
-          variables?: Json
+          operationName?: string
           query?: string
+          variables?: Json
         }
         Returns: Json
       }
@@ -1583,6 +1583,139 @@ export type Database = {
           },
         ]
       }
+      source_document_versions: {
+        Row: {
+          byte_size: number
+          capture_reason: Database["public"]["Enums"]["capture_reason"]
+          captured_at: string
+          content_hash: string
+          created_at: string
+          id: string
+          source_document_id: string
+          storage_key: string
+          storage_provider: Database["public"]["Enums"]["storage_provider"]
+          supersedes_version_id: string | null
+          version_number: number
+        }
+        Insert: {
+          byte_size: number
+          capture_reason: Database["public"]["Enums"]["capture_reason"]
+          captured_at: string
+          content_hash: string
+          created_at?: string
+          id?: string
+          source_document_id: string
+          storage_key: string
+          storage_provider: Database["public"]["Enums"]["storage_provider"]
+          supersedes_version_id?: string | null
+          version_number: number
+        }
+        Update: {
+          byte_size?: number
+          capture_reason?: Database["public"]["Enums"]["capture_reason"]
+          captured_at?: string
+          content_hash?: string
+          created_at?: string
+          id?: string
+          source_document_id?: string
+          storage_key?: string
+          storage_provider?: Database["public"]["Enums"]["storage_provider"]
+          supersedes_version_id?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_versions_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_document_versions_supersedes_version_id_fkey"
+            columns: ["supersedes_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_document_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_documents: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          id: string
+          ingest_channel: Database["public"]["Enums"]["ingest_channel"]
+          legal_entity_id: string | null
+          mime_type: string
+          org_id: string
+          original_byte_size: number
+          original_content_hash: string
+          original_filename: string
+          original_storage_key: string
+          received_at: string
+          storage_provider: Database["public"]["Enums"]["storage_provider"]
+          storage_status: Database["public"]["Enums"]["storage_status"]
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_version_id?: string | null
+          id?: string
+          ingest_channel: Database["public"]["Enums"]["ingest_channel"]
+          legal_entity_id?: string | null
+          mime_type: string
+          org_id: string
+          original_byte_size: number
+          original_content_hash: string
+          original_filename: string
+          original_storage_key: string
+          received_at: string
+          storage_provider: Database["public"]["Enums"]["storage_provider"]
+          storage_status?: Database["public"]["Enums"]["storage_status"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_version_id?: string | null
+          id?: string
+          ingest_channel?: Database["public"]["Enums"]["ingest_channel"]
+          legal_entity_id?: string | null
+          mime_type?: string
+          org_id?: string
+          original_byte_size?: number
+          original_content_hash?: string
+          original_filename?: string
+          original_storage_key?: string
+          received_at?: string
+          storage_provider?: Database["public"]["Enums"]["storage_provider"]
+          storage_status?: Database["public"]["Enums"]["storage_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_documents_current_version_id_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "source_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       tax_codes: {
         Row: {
           code: string
@@ -1778,109 +1911,71 @@ export type Database = {
     }
     Functions: {
       get_account_balance: {
-        Args: {
-          p_as_of_date: string
-          p_org_id: string
-          p_account_id: string
-        }
+        Args: { p_account_id: string; p_as_of_date: string; p_org_id: string }
         Returns: {
           balance_cad: number
         }[]
       }
       get_account_ledger: {
-        Args: {
-          p_org_id: string
-          p_account_id: string
-          p_period_id?: string
-        }
+        Args: { p_account_id: string; p_org_id: string; p_period_id?: string }
         Returns: {
-          journal_entry_id: string
-          entry_number: number
-          description: string
-          debit_amount: number
-          credit_amount: number
           amount_cad: number
-          running_balance: number
+          credit_amount: number
+          debit_amount: number
+          description: string
           entry_date: string
+          entry_number: number
+          journal_entry_id: string
+          running_balance: number
         }[]
       }
       get_accounts_by_type: {
-        Args: {
-          p_org_id: string
-          p_account_type: string
-          p_period_id?: string
-        }
+        Args: { p_account_type: string; p_org_id: string; p_period_id?: string }
         Returns: {
-          account_id: string
           account_code: string
+          account_id: string
           account_name: string
-          debit_total_cad: number
           credit_total_cad: number
+          debit_total_cad: number
         }[]
       }
       get_balance_sheet: {
-        Args: {
-          p_as_of_date: string
-          p_org_id: string
-        }
+        Args: { p_as_of_date: string; p_org_id: string }
         Returns: {
-          total_cad: number
           account_type: string
+          total_cad: number
         }[]
       }
       get_profit_and_loss: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-        }
+        Args: { p_org_id: string; p_period_id: string }
         Returns: {
           account_type: string
-          debit_total_cad: number
           credit_total_cad: number
+          debit_total_cad: number
         }[]
       }
       get_trial_balance: {
-        Args: {
-          p_org_id: string
-          p_period_id: string
-        }
+        Args: { p_org_id: string; p_period_id: string }
         Returns: {
-          account_type: string
+          account_code: string
+          account_id: string
           account_name: string
+          account_type: string
           credit_total_cad: number
           debit_total_cad: number
-          account_id: string
-          account_code: string
         }[]
       }
-      user_has_org_access: {
-        Args: {
-          target_org_id: string
-        }
-        Returns: boolean
-      }
+      user_has_org_access: { Args: { target_org_id: string }; Returns: boolean }
       user_has_permission: {
-        Args: {
-          target_permission_key: string
-          target_org_id: string
-        }
+        Args: { target_org_id: string; target_permission_key: string }
         Returns: boolean
       }
-      user_is_controller: {
-        Args: {
-          target_org_id: string
-        }
-        Returns: boolean
-      }
+      user_is_controller: { Args: { target_org_id: string }; Returns: boolean }
       write_journal_entry_atomic: {
-        Args: {
-          p_audit: Json
-          p_entry: Json
-          p_lines: Json
-        }
+        Args: { p_audit: Json; p_entry: Json; p_lines: Json }
         Returns: {
-          journal_entry_id: string
           entry_number: number
+          journal_entry_id: string
         }[]
       }
     }
@@ -1904,8 +1999,21 @@ export type Database = {
         | "trust"
         | "non_profit"
         | "other"
+      capture_reason:
+        | "vendor_corrected_invoice"
+        | "reformatted_pdf"
+        | "accessibility_replacement"
+        | "drift_auto_supersession"
+        | "drift_controller_override"
+        | "drift_rejected_kept_original"
+        | "unknown_drift"
       confidence_level: "high" | "medium" | "low" | "novel"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
+      ingest_channel:
+        | "drag_drop_pdf"
+        | "forwarded_mailbox"
+        | "direct_upload"
+        | "api_ingest"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       journal_entry_source: "manual" | "agent" | "import"
       membership_status: "active" | "invited" | "suspended" | "removed"
@@ -1923,6 +2031,19 @@ export type Database = {
         | "posted"
         | "rejected"
       report_basis: "accrual" | "cash"
+      storage_provider:
+        | "supabase_storage"
+        | "sharepoint_drive"
+        | "s3_bucket"
+        | "external_url"
+      storage_status:
+        | "available"
+        | "pending_initial_verify"
+        | "permission_loss"
+        | "missing_file"
+        | "hash_mismatch"
+        | "provider_unavailable"
+        | "verification_pending_retry"
       user_role: "executive" | "controller" | "ap_specialist"
     }
     CompositeTypes: {
@@ -1931,27 +2052,33 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1959,20 +2086,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1980,20 +2111,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -2001,30 +2136,119 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      account_type: ["asset", "liability", "equity", "revenue", "expense"],
+      accounting_framework: ["aspe", "ifrs", "us_gaap", "other"],
+      address_type: ["mailing", "physical", "registered", "payment_stub"],
+      adjustment_status: ["posted", "pending_approval", "approved", "rejected"],
+      ai_action_status: [
+        "pending",
+        "confirmed",
+        "rejected",
+        "auto_posted",
+        "stale",
+        "edited",
+      ],
+      autonomy_tier: ["always_confirm", "notify_auto", "silent"],
+      business_structure: [
+        "sole_prop",
+        "partnership",
+        "corporation",
+        "trust",
+        "non_profit",
+        "other",
+      ],
+      capture_reason: [
+        "vendor_corrected_invoice",
+        "reformatted_pdf",
+        "accessibility_replacement",
+        "drift_auto_supersession",
+        "drift_controller_override",
+        "drift_rejected_kept_original",
+        "unknown_drift",
+      ],
+      confidence_level: ["high", "medium", "low", "novel"],
+      entry_type: ["regular", "adjusting", "closing", "reversing"],
+      ingest_channel: [
+        "drag_drop_pdf",
+        "forwarded_mailbox",
+        "direct_upload",
+        "api_ingest",
+      ],
+      invitation_status: ["pending", "accepted", "expired", "revoked"],
+      journal_entry_source: ["manual", "agent", "import"],
+      membership_status: ["active", "invited", "suspended", "removed"],
+      org_industry: [
+        "healthcare",
+        "real_estate",
+        "hospitality",
+        "trading",
+        "restaurant",
+        "holding_company",
+      ],
+      org_status: ["active", "trial", "suspended", "archived", "closed"],
+      recurring_run_status: [
+        "pending_approval",
+        "approved",
+        "posted",
+        "rejected",
+      ],
+      report_basis: ["accrual", "cash"],
+      storage_provider: [
+        "supabase_storage",
+        "sharepoint_drive",
+        "s3_bucket",
+        "external_url",
+      ],
+      storage_status: [
+        "available",
+        "pending_initial_verify",
+        "permission_loss",
+        "missing_file",
+        "hash_mismatch",
+        "provider_unavailable",
+        "verification_pending_retry",
+      ],
+      user_role: ["executive", "controller", "ap_specialist"],
+    },
+  },
+} as const
 
