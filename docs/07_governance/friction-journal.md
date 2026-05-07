@@ -5690,3 +5690,288 @@ Phase 2 brief-creation arc continues at next-session opening.
 Substrate-decision-integrity preserved across chunk B2-1
 substantive output; next-chunk onset adjudication fires at next
 session.
+
+---
+
+### Phase 2 brief-creation arc — chunk B2-2 commit (2026-05-07) + (R-iii) gate-class-dependent shape codifiable refinement
+
+Chunk B2-2 ships substantive content for §5-§9 of
+`docs/09_briefs/phase-2/document_platform_initiative.md` (data
+model + storage abstraction + polymorphic links + Relationship
+Router + ProposedMutation/Bundle/Attachment). Single direct-
+commit on staging at `83dd6d1` per single-purpose-commit-
+discipline; **bundled commit + push** per (C-ii) bundled-
+explicit founder verdict at clean-termination gate per refined
+(R-iii) — `0d052c1..83dd6d1` advanced on origin/staging
+2026-05-07.
+
+#### Substantive output
+
+1097 insertions / 5 deletions. Per-section delta:
+
+- **§5 Data model** (190 lines) — (ε-3) hybrid: verbatim row-
+  shape for 5 substrate-load-bearing tables (`source_documents`
+  + `source_document_versions` + `document_cases` +
+  `document_case_sources` + `document_artifacts`); summary +
+  cross-reference for 6 downstream-ADR-owned tables
+  (`source_document_links` → ADR-0016 / `document_classifications`
+  → ADR-0014 / `document_relationship_candidates` → ADR-0011 §1
+  + ADR-0018 / `ingest_batches` + `ingest_items` + `document_jobs`
+  → ADR-0014); `ocr_runs` + `extraction_runs` row shapes
+  deferred to ADR-0014 per ADR-0011 §9 cross-reference to Q69.
+  Index strategy + reserved-but-not-emitted column accounting
+  subsections close per substrate-now-enforcement-later cross-
+  pattern.
+- **§6 Storage abstraction** (166 lines) — (ζ-3) hybrid:
+  reframe-spec §3.1 substrate-bullet enumeration + ADR-0013
+  ratified-substrate operational detail (6-method contract
+  surface; 3-discipline-constraint pattern mirroring reframe-
+  spec §6 polymorphic-pattern; v1-active subset; reserved
+  providers post-v1; storage-of-truth discipline; 5 audit
+  events). Citation-anchor correction inlined: reframe-spec §6
+  is "Polymorphic source-document links" NOT storage
+  abstraction; storage substrate enumeration lives in reframe-
+  spec §3.1 substrate-bullet.
+- **§7 Polymorphic source-document links** (215 lines) — (η-3)
+  hybrid: verbatim closed enum lists (`linked_entity_type` 28-
+  reserved / 8-active; `link_role` 27-reserved / 4-active;
+  `link_status` 2 v1-active); 756-cell pair-validity matrix
+  shape + 15 active-v1 cells enumerated explicitly + matrix
+  detail cross-ref to ADR-0016 Decision item 3; 3-layer
+  ADR-0010 defense; 8-row × 3-column cascade matrix; 4 audit
+  events. Citation-anchor correction inlined: ADR-0016
+  organizes content as 6 numbered Decision items + 6 named top-
+  level sections (NOT 12 numbered top-level sections).
+- **§8 Relationship Router** (270 lines) — (θ-3) hybrid: per-
+  Subsystem prose (1 Ledger-State Candidate Completion / 2
+  Ambiguity Resolution / 3 Re-Evaluation Logic Q56 closure);
+  verbatim Tier 2.5 safety contract from ADR-0007; verbatim
+  T1-T10 trigger list (v1-active 8 / reserved 2: T7 vendor-
+  master-merge + T9 document-supersession); Tier 2.5 read-
+  boundary; stale-state TOCTOU at Q28 surface 3; ADR-0019
+  integration 3 decision points. Citation-anchor correction
+  inlined: ADR-0018 organizes content as 7 Decision items
+  under single `## Decision` header (NOT §1-§9 numbered top-
+  level sections); cross-ADR boundary with ADR-0014 documented
+  at Decision item 2 opening (NOT standalone §2).
+- **§9 ProposedMutation/Bundle/Attachment** (261 lines) —
+  (ι-3) hybrid: per-proposal-type prose contract; verbatim
+  TypeScript type for ProposedMutationBundle; bundle children
+  = ProposedMutations only (NOT ProposedAttachments) per
+  ADR-0012 §2; bundle atomicity 4-condition invariant per
+  ADR-0012 §7; 5 v1 ProposedAttachment variants; verbatim Four
+  Questions canonical phrasing from `intent_model.md`
+  `## The Four Questions Grammar` heading + per-proposal-type
+  adaptation; Reading B preservation walk-through;
+  `intent_model.md` Primitive 1 mapping for all three proposal
+  types. Citation-anchor correction inlined: `intent_model.md`
+  `## The Four Questions Grammar` heading is text-anchored, not
+  numbered; shorthand "intent_model.md §5" references the 5th
+  `##` heading.
+
+#### 9 Discrepancy flag corrections inlined
+
+5-subagent dispatch surfaced citation-anchor corrections + 1
+substantive observation (Tier 2.5 safety contract appears in 3
+places in ADR-0007 — all consistent). Corrections inlined
+silently across §5-§9 with explicit surface where pattern-
+parity-divergence warrants future-reader awareness:
+
+1. ADR-0011 §-numbering (§1 Entity ownership / §2
+   source_documents row-shape / §3 cases lifecycle +
+   case_sources combined / §4 polymorphic links discipline /
+   §10 multi-entity reservation NOT §17)
+2. Reframe-spec §6 misattribution (storage abstraction lives
+   in §3.1, not §6)
+3. ADR-0013 §-numbering (§7 failure-classification, §9
+   integrity-check, §11 storage_status, §12 preview-URL, §13
+   storage-of-truth, §16 audit logging)
+4. ADR-0016 6-Decision-items + 6-named-sections structure
+5. ADR-0018 7-Decision-items structure (ADR-0014 boundary at
+   item 2; Tier 2.5 read-boundary at item 5; stale-state
+   TOCTOU at item 6; ADR-0019 integration at item 7)
+6. `intent_model.md` `## The Four Questions Grammar` heading
+   text-anchor
+7. ADR-0012 §6 paraphrase vs canonical Four Questions phrasing
+8. Bundle children = ProposedMutations only (ADR-0012 §2)
+9. Storage status enum 7 values / v1-active 2
+
+#### Substantive locks honored across §5-§9
+
+- Reading B preservation reaffirmed in §5 + §6 + §7 + §8 + §9
+- Single-writer rules: `documentLinkService` for
+  `source_document_links` (§7); `ledgerService` for
+  `journal_entries` via domain services (§9)
+- Three-layer ADR-0010 defense applied at storage substrate
+  (§6) + polymorphic links substrate (§7)
+- Tier 2.5 safety contract verbatim from ADR-0007 (§8)
+- Schema-vs-algorithm split (ADR-0016 owns schema substrate;
+  ADR-0018 owns runtime matching algorithm) preserved at §7
+  + §8
+
+#### (R-iii) gate-class-dependent shape — codifiable refinement candidate
+
+Most substantive carry-forward this session: refinement of
+#16-iii from monitoring sub-shape (bundled-verdict-with-
+restate-window) to **(R-iii) gate-class-dependent operating
+model**:
+
+- **Intermediate gates** (Sub-Q locks, drafting authorize,
+  next-step adjudication, contested-framing bundles, drafting
+  review, "execute" instruction surfaces, session-start
+  anchor locks): bundled-verdict-with-restate-window per
+  #16-iii. Founder operating model per founder behavior
+  across 3 consecutive bundled-accepts at session-start
+  anchor locks indicates session-start IS intermediate-class
+  in founder operating model (Possibility 1 taxonomy
+  refinement).
+- **Clean-termination / irreversible gates** (push gates,
+  session-close acknowledgments, codification commits): per-
+  anchor explicit verdict. Founder fired explicit verdicts at
+  chunk B2-1 / B2-2 commit + push gates per (C-ii) bundled-
+  explicit shape — bundled-explicit IS itself per-anchor-
+  explicit at clean-termination if founder names the action
+  explicitly.
+
+The taxonomy refinement holds going forward: session-start
+anchor locks reclassify from clean-termination to
+intermediate-class per founder operating model; push gates +
+session-close acknowledgments + codification commits remain
+clean-termination class per per-anchor explicit verdict
+requirement.
+
+Cross-arc N=2 graduation criterion: pending future session
+opening with same operating model. Within-session (R-iii)
+advancement counts toward codification refinement;
+codification at session-close gate alongside other carry-
+forwards.
+
+#### (C-ii) bundled-explicit commit+push at chunk B2-2 commit gate
+
+Founder verdicted (C-ii) bundled-explicit commit+push at chunk
+B2-2 commit gate per refined (R-iii) clean-termination class.
+Brainstorm-side recommendation rationale across three anchors:
+operational-tempo fit at chunk-N milestone grain (single-
+purpose commit closing coherent milestone; commit + push
+together close the milestone) + codification-candidate signal
+value (bundled-explicit-at-clean-termination at chunks B2-2 /
+B2-3 / B2-4 commit gates produces N=3 datapoint for refining
+(R-iii) clean-termination sub-class) + precedent alignment
+with chunk B2-1 tempo-adjacent commit+push. Both sides
+converged on (C-ii) via independent canonical-evidence-anchor
+grounding paths.
+
+#### Sub-shape candidates accumulated this session
+
+- **#16-i positive instance**: within-session N=5 fires (chunk
+  B2-1 contested-framing convergence + next-step Option 3 →
+  Option 2 convergence + chunk B2-2 onset Sub-Q convergence +
+  chunk B2-2 drafting review convergence + commit-gate (C-ii)
+  recommendation convergence). Cross-arc N=2 graduates;
+  within-session count accumulates monitoring without
+  graduating.
+- **(R-iii) gate-class-dependent shape REFINED** (codifiable
+  refinement candidate per above; substantive elevation from
+  monitoring to candidate-codification surface).
+- **Z1 #9 length-as-calibration overshoot at brief-creation
+  grain**: chunk B2-2 ran 1.6-2.7x estimate (1102 lines vs
+  400-700 estimate). Within-session N=2 (chunk B2-1 1.6-2.3x +
+  chunk B2-2 1.6-2.7x); cross-arc N=2 graduates; within-
+  session monitoring continues. Sub-shape framing holds across
+  both chunks.
+- **#17-iii main-vs-worktree-lock-state divergence**: advances
+  within-arc to N=8 at chunk B2-2 commit + N=9 at chunk B2-2
+  push. Cumulative across both sessions: 9+ fires under
+  foreign label `phase-1-document-platform-2026-05-06`.
+  Cross-arc graduation defers per discipline.
+- **(NEW) chunk-as-natural-session-pause-boundary candidate**:
+  within-arc N=2 of "pause-at-chunk-boundary-for-clean-
+  session-close" pattern (prior session paused at chunk B2-1
+  + closeout cycle; this session pauses at chunk B2-2 +
+  closeout cycle). Signal toward chunk-decomposition-shape (b)
+  operationalization — chunks ARE the natural session-pause
+  boundaries, not just structural decomposition units.
+  N=1 monitoring; cross-arc N=2 graduates.
+
+#### Foreign session-lock disposition
+
+α-equivalent precedent extended this session at `83dd6d1`
+commit + push. Foreign session-lock disposition reopens at
+next-session start as founder-domain election; lock held at
+`phase-1-document-platform-2026-05-06`.
+
+#### Subagent dispatch shape
+
+Layer 2 fired 5 parallel general-purpose subagents per Z1 #11.b
+preventive verbatim re-read discipline before drafting:
+
+1. ADR-0011 §2-§9 (entity ownership + cases lifecycle +
+   polymorphic links discipline + artifacts engine-agnostic
+   contract + document-type discriminator + ProposedMutation/
+   Bundle/Attachment handoff + Reading B preservation +
+   lifecycle immutability)
+2. ADR-0013 §1-§17 (storage provider abstraction full contract
+   + drift detection + failure classification + retry +
+   integrity check + storage_status enum + preview-URL + audit
+   logging + per-provider implementation skeletons +
+   replayability) + reframe-spec §6 (verify-from-disk catch:
+   §6 is polymorphic links not storage)
+3. ADR-0016 §1-§12 (linked_entity_type/link_role/link_status
+   enums + 756-cell pair-validity matrix + three-layer defense
+   + cascade behavior + pre-commit/post-commit boundary +
+   audit events)
+4. ADR-0018 §1-§9 (Router scope + Tier 2.5 placement + three-
+   subsystem decomposition + ledger-state candidate completion
+   + ambiguity resolution + re-evaluation logic Q56 closure
+   with T1-T10 + Tier 2.5 read-boundary + stale-state TOCTOU
+   + ADR-0019 integration) + ADR-0007 amendment (Tier 2.5
+   safety contract verbatim + Q66 closure framing)
+5. ADR-0012 §1-§13 (ProposedMutationBundle full contract +
+   atomicity + lifecycle + Logic Receipt + Q28 surface 4 +
+   bundle types) + ADR-0011 §7 (three-proposal-type handoff
+   vocabulary) + `intent_model.md` `## The Four Questions
+   Grammar` (canonical phrasing)
+
+Subagent dispatch shape preserved as forward-pattern for
+chunks B2-3 / B2-4: Z1 #11.b fires preventive verbatim re-
+read before drafting via parallel general-purpose subagents
+(NOT Explore subagents per Explore-tool-description
+prohibition on design-doc auditing); subagent prompts self-
+contained for zero-context dispatch; output shape includes
+verbatim citation blocks + distilled summaries + Discrepancy
+flag surfacing.
+
+#### Carry-forward to next session
+
+- **Chunks B2-3 / B2-4** — primary next-session work product.
+  Substantive content stubs at §10-§13 (B2-3: lifecycle
+  immutability + exception queue + multi-entity + receipt v1
+  matrix) / §14, §16, §18-§20 (B2-4: Phase A acceptance +
+  ADRs produced + friction-journal scope + non-goals +
+  verification).
+- **Hygiene-cycle 3 deferred fixes** — γ-hygiene (DEFERRED
+  per founder Anchor 2 election from prior session). Folds
+  into chunk B2-N cadence OR defers further per founder elect.
+- **Flag 3 governance question** — `wrong_entity_exception`
+  cross-enum inconsistency triage timing founder-domain.
+  Inline accommodation at §2 reserved-but-not-emitted
+  continues to honor.
+- **(R-iii) refinement codification candidate** — gate-class-
+  dependent shape elevated from monitoring to codifiable;
+  cross-arc N=2 graduation criterion pending future session
+  datapoint.
+- **Sub-shape candidates** — 5 candidates at varying
+  cumulative monitoring counts; cross-arc N=2 graduations
+  defer.
+- **Memory pickup file refresh** — `project_phase_2_brief_
+  creation_pending.md` content reflects post-chunk-B2-2 state
+  (filename retained per filename-stability convention).
+- **Foreign session-lock disposition** — α-equivalent /
+  β-equivalent / other; founder-domain election at next-
+  session start.
+
+Phase 2 brief-creation arc continues at next-session opening.
+Substrate-decision-integrity preserved across chunks B2-1 +
+B2-2 substantive output (1666 lines aggregate / 50% arc-
+completion boundary at clean termination); next-chunk onset
+adjudication fires at next session.
