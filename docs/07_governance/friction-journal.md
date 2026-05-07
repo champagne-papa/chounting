@@ -6662,3 +6662,572 @@ preserved across chunks B2-1 + B2-2 + B2-3 + B2-4 substantive
 output (~2756 lines aggregate / 100% arc-completion-substantive
 at clean termination); arc-grain codification opens fresh next
 session.
+
+---
+
+### Phase 2 brief-creation arc-closeout retrospective entry (2026-05-08) + 8 firing decisions outcomes + arc-class first-instance status framing + Phase 2 → Phase 5 transition planning forward-pointers
+
+This entry is the arc-grain documentary record for the Phase 2
+brief-creation arc-closeout cycle (Stage 5 retrospective entry
+per founder-provided 7-stage framework). Closes the Phase 2
+brief-creation arc with all 8 firing decisions locked + ancillary
+observations integrated + arc-class first-instance status framing
+applied. Arc-closeout cycle fires this session as 5th session per
+(arc-close-next-session) founder verdict at chunk B2-4 next-step
+election gate.
+
+#### Aggregate arc metrics
+
+Phase 2 brief-creation arc — **first multi-chunk brief-creation
+arc in chounting's history**. 4 substantive chunks + 4 chunk-grain
+closeout entries shipped across 4 sessions; arc-closeout cycle
+fires this session as 5th session.
+
+| Chunk | Sections | Substantive commit | Closeout commit | Lines drafted |
+|---|---|---|---|---|
+| B2-1 | §1-§4 | `5a00671` 2026-05-06 | `0d052c1` 2026-05-06 | 564 |
+| B2-2 | §5-§9 | `83dd6d1` 2026-05-07 | `bdb0dce` 2026-05-07 | 1102 |
+| B2-3 | §10-§13 | `d06d227` 2026-05-07 | `ccca74c` 2026-05-07 | 624 |
+| B2-4 | §14, §16, §18-§20 | `ab0c350` 2026-05-07 | `35367a9` 2026-05-07 | 466 |
+| **Aggregate** | **§1-§21 substantive** | | | **~2756** |
+
+Brief at 2944 lines / 0 stubs remaining; full §1-§21 substantive
+content shipped. Arc-closeout cycle this session ships 2 commits
+per (stage-β-i) split-same-session shape: retrospective entry
+(this commit) + codification artifacts (subsequent commit).
+
+#### 8 firing decisions outcomes
+
+Per founder-provided 7-stage framework, 8 firing decisions locked
+across Stages 2 + 3 + 4 (graduations + sub-shape codifications +
+governance triage). Outcomes recorded below per-decision with
+locked verdicts + codified forms + refinements absorbed.
+
+##### Decision 7 — refined (R-iii) gate-class-dependent shape graduation (Stage 2a)
+
+**Verdict**: GRADUATED from codifiable refinement candidate to
+codified discipline.
+
+**Graduation criterion satisfaction**: cross-arc N=2 satisfied via
+within-session N=14 coherent gate fires (chunk B2-4 substantive
+content session) + (β-i) operational-shape stability evidence
+(N=2 commit fires + cross-session-boundary persistence
+verification this session).
+
+**Codified form (with refinements 1 + 3 absorbed)**:
+
+- **Intermediate gates** → bundled-verdict-with-restate-window
+  (silence-as-acceptance ratification mechanism)
+- **Clean-termination gates** → per-anchor explicit verdict OR
+  (C-ii) bundled-explicit at multi-action-tempo-adjacent gates
+- **Gate-class-discrimination criterion** (refinement 1
+  absorbed): clean-termination class fires for irreversible
+  actions; intermediate class fires for reversible/correctable
+  surfaces. Irreversibility surfaces in two shapes:
+  - **Decision-irreversibility** — verdict lock that subsequent
+    gates inherit (e.g., Stage 2 graduations; Sub-Q axis lock;
+    arc-close split election)
+  - **Artifact-irreversibility** — filesystem-state change that
+    future verify-from-disk inherits (e.g., commit + push;
+    codification artifact write; pickup file refresh)
+  - Both shapes are clean-termination class; refined (R-iii)
+    accommodates both (refinement 3 absorbed)
+- **Arc-class first-instance status framing**: codified
+  discipline as forward-pointer to subsequent brief-creation arcs
+  rather than pattern-stable codification across multiple arcs
+
+##### Decision (d) — Z1 #9 refined-refined sub-shape graduation via candidate (e) meta-pathway codification (Stage 2b)
+
+**Verdict**: GRADUATED Z1 #9 refined-refined sub-shape via
+candidate (e) meta-pathway; (e) codified by first operational use
+(graduation-via-demonstrated-use shape).
+
+**Graduation criterion satisfaction**: within-arc N=4 datapoint
+refinement-evidence basis:
+
+| Chunk | Density driver | Multiplier |
+|---|---|---|
+| B2-1 | Enum density (§2 reserved-but-not-emitted) | 1.6-2.3x fires |
+| B2-2 | Matrix density (§7 polymorphic links 756-cell matrix) | 1.6-2.7x fires |
+| B2-3 | None (bounded-substrate) | 0.7-1.3x doesn't fire |
+| B2-4 | Synthesis density (§14) + verification-list density (§20) | 1.17-2.33x fires |
+
+3 fire (B2-1 + B2-2 + B2-4) + 1 doesn't fire (B2-3); pattern
+preserves (e) shape-refinement-via-within-arc-evidence-basis
+meta-pathway graduation criterion.
+
+**Codified form**:
+
+**Z1 #9 refined-refined sub-shape (codified)**:
+- Length-as-calibration overshoot fires when chunk includes ANY
+  density driver (enum / matrix / synthesis / verification-list);
+  bounded-substrate without any density driver → no overshoot
+- **Traversal-multiplication meta-pattern**: each density-driver
+  shape decomposes to "section-internal-content-multiplication
+  via traversal over a structured input"
+  - Enum density: substrate = single enum; content = per-value
+    enumeration with framing per row
+  - Matrix density: substrate = single matrix definition; content
+    = per-cell enumeration with framing per cell
+  - Synthesis density: substrate = multiple distributed sources;
+    content = per-source treatment with cross-axis weighting
+  - Verification-list density: substrate = single canonical-doc
+    list; content = per-entry path + verification note + §-cross-
+    reference
+- **Translation-gap operational-discipline** (refinement
+  candidate logged): at Sub-Q surfacing time, surface traversal-
+  axis + estimate per-element-content-density + multiply for
+  length-budget projection (vs deferring length-projection to
+  drafting-time reactively)
+
+**Candidate (e) meta-pathway (codified by demonstrated use)**:
+- Shape-refinement graduations (refining existing shape rather
+  than introducing new shape) may satisfy graduation criterion
+  via within-arc N≥3 datapoints (≥2 confirming pattern + ≥1
+  predicting pattern OR ≥3 confirming pattern)
+- New-shape graduations require cross-arc N=2 criterion
+- Distinction: shape-refinement preserves the shape's identity
+  through refinement; new-shape introduces a structurally
+  distinct shape
+- Codification-by-demonstrated-use (refinement 2 absorbed): (e)
+  is codified BY first operational use (Z1 #9 refined-refined
+  graduation this gate) rather than abstract specification —
+  preserves substrate-decision-integrity
+
+##### Decision arc-cadence — meta-codification bundled (Stage 2c)
+
+**Verdict**: CODIFIED arc-cadence meta-shape as bundled meta-
+codification covering 4 internal components + implicit sub-
+component + forward-pointer reception observation.
+
+**Codified components**:
+
+1. **Single-chunk-per-session at brief-creation grain** (within-
+   arc N=3 transitions: B2-1→B2-2, B2-2→B2-3, B2-3→B2-4; each
+   transition is session-boundary-respecting)
+2. **Substantive-then-closeout alternating commit pattern within-
+   chunk** (within-arc N=4 chunks: each chunk = substantive
+   commit + closeout commit; uniform alternating)
+3. **Chunk-grain vs arc-grain codification tiering** (within-arc
+   N=1 arc-completion fire validating: chunk-grain absorbs chunk-
+   scope content; arc-grain absorbs arc-scope content; pickup
+   file's "Anchor C tiering" framing operationalized)
+4. **Pickup file dual-function at arc-completion-pending state**
+   (within-arc N=1 arc-completion fire: pre-arc-closeout
+   scaffolding + arc-completion documentary record)
+
+**Implicit sub-component**: founder deference + joint substantive
+grounds → executor election under documented grounds operates
+within (1) at executor-election abstraction level; absorbed
+implicitly into bundled meta-codification.
+
+**Forward-pointer reception observation**: subsequent brief-
+creation arcs (Phase 5 first-domain consumer brief; subsequent
+phases' briefs) will encounter arc-cadence codification as
+established operational shape at arc-onset; cross-arc N=2
+graduation criterion for arc-cadence as pattern-stable
+codification accumulates over time.
+
+Per arc-class first-instance status: codified shape framed as
+forward-pointer; future arcs may refine.
+
+##### Decision (a) — Tier 2 substrate sense-disambiguation (Stage 3a)
+
+**Verdict**: CODIFIED Tier 2 substrate sense-disambiguation as
+brief glossary entry + friction-journal codification (paths a +
+b). ADR-0007 amendment (path c) absorbed via Stage 4 path (a)
+bundling per cross-ADR governance review window opening.
+
+**Codified form (with refinement 1 absorbed — cross-reference
+structure)**:
+
+Two senses codified at `docs/02_specs/glossary.md`:
+
+- **Tier 2 (data-layer entity ownership)**: where the entity
+  columns live in the Document Platform data layer per ADR-0011
+  §1 entity ownership boundary. NOT to be confused with Tier 2
+  (agent-tier execution).
+- **Tier 2 (agent-tier execution)**: which agent tier executes a
+  write per ADR-0007 §Tier 2 strict no-write rule. NOT to be
+  confused with Tier 2 (data-layer entity ownership).
+
+ADR-0007 amendment shape: **Candidate A inline at §Tier 2** (per
+joint Stage 3a Observation 2 lock) — sense-disambiguation IS
+clarification within existing tier; lighter shape adequate;
+pattern-parity with §Read boundary / §Safety contract inline
+lead-ins. Amendment placement: new bolded lead-in inserted within
+§Tier 2 section.
+
+**3rd sense observation** (per Subagent 2 Flag 4): ADR-0007 line
+21 uses "Tier 2" in a 3rd sense (governance-plan task ordering).
+Per Stage 4 narrow-scope discipline + Observation 1 (scope-α)
+verdict, 3rd sense logged as carry-forward observation; not
+absorbed into amendment scope.
+
+##### Decision (c) — ADR Decision-item-vs-§-numbering convention (Stage 3b)
+
+**Verdict**: CODIFIED ADR Decision-item-vs-§-numbering convention
+as friction-journal codification + ADR README addendum (refinement
+2 absorbed). NO retroactive retrofit per δ-i preservation.
+
+**Codified form**:
+
+Convention codified:
+- New ADRs going forward use **Decision-item numbering** (under a
+  single `## Decision` header) per ADR-0012 / 0015 / 0016 / 0018
+  / 0019 precedent
+- Existing ADRs preserved in current form (§-numbering preserved
+  as historical artifact in ADRs 0007 / 0011 / 0013 / 0014)
+- δ-i preservation: NO retroactive retrofit; convention applies
+  forward-only
+
+**Codification scope**:
+- Friction-journal: this entry codifies temporal pattern (4 §-
+  numbering ADRs in Phase 0 D1-D3 + 5 Decision-item ADRs from
+  Phase 0 D3 forward) + forward-only convention shift
+- ADR README addendum: ~5-line addition at
+  `docs/07_governance/adr/README.md` documenting Decision-item
+  numbering convention for new ADRs (Option α flowing paragraph
+  within `## Format` section after fenced template per Subagent 3
+  finding; or Option β `### Decision section structure` sub-
+  header per drafting election)
+
+##### Decision (f) — Sub-Q axis taxonomy refinement (Stage 3c)
+
+**Verdict**: CODIFIED Sub-Q axis taxonomy refinement as concrete-
+shape codification at brief-creation grain with substrate-state
+discrimination criterion (refinement 3 absorbed).
+
+**Codified form**:
+
+Sub-Q axis taxonomy expansion when stubs carry pre-stub-
+prefiguration text:
+
+| Stub substrate-state | Applicable Sub-Q axis | Precedent |
+|---|---|---|
+| Bare stubs | verbatim-vs-summary | chunks B2-1 / B2-2 / B2-3 |
+| Stub-prefiguration text present | verbatim-vs-expand | chunk B2-4 §16 / §19 |
+| Partial-stub patterns | candidate-content-vs-discard | (forward-pointing pattern) |
+| Stub points to naming precedent | naming-convention election | chunk B2-4 §18 |
+| Stub points to precedent shape | precedent-honoring-vs-deviation | chunk B2-4 §20 |
+| Stub spans multiple substrate sources | compositional-weighting | chunk B2-4 §14 |
+
+Cross-references candidate (e) meta-pathway as concrete-instance
+pointer (Sub-Q axis taxonomy refinement IS an instance of (e)'s
+within-arc-evidence-basis graduation pathway operating).
+
+Per arc-class first-instance status: chunk B2-4 first-instance
+under this candidate; codification framed as forward-pointer to
+subsequent brief-creation arcs which may encounter similar stub-
+prefiguration patterns.
+
+##### Decision (b) — Cross-enum-consistency governance triage path (a) elected (Stage 4)
+
+**Verdict**: PATH (a) ELECTED — ADR-0011 §13 enum extension to
+add `manual_born_paid_workflow` (16 → 17 values). Stage 3a path
+(c) ADR-0007 amendment for Tier 2 substrate sense-disambiguation
+BUNDLED via cross-ADR governance review window opening. Scope
+NARROW (manual_born_paid_workflow + Tier 2 sense-disambiguation
+only); broader Phase 0 review deferred.
+
+**Path election grounds** (under abstention-lift):
+
+- Operational accessibility for future readers (favors paths (a)
+  / (b) which preserve self-contained enum reading)
+- Substrate-decision-integrity-density (favors paths (a) / (b) /
+  (d) which formalize the canonical-vs-distributed enum
+  question)
+- First-arc-instance precedent-setting weight: path (a) doesn't
+  just close THIS gap; it sets the response shape for similar
+  future cases. Path (a) avoids path (d)'s long-horizon
+  substrate-decision-integrity erosion (forest-of-inline-notes
+  trajectory).
+- Within-arc evidence weight: Flag 3 + Flag 4 cumulative N=6+
+  within-arc surface count materially anchors a substantive
+  amendment response; favors active-amendment paths over
+  deferral or consumer-side reversion.
+
+**Bundling decision grounds**:
+
+- Stage 3a conditional-deferral framing: "Path c (ADR-0007
+  amendment) remains conditionally deferred contingent on Stage
+  4 cross-enum governance triage's amendment-arc election." Path
+  (a) IS the amendment-arc election that opens the contingency.
+- Bundling activates the contingency at the natural firing-point;
+  alternative (defer indefinitely) violates implicit conditional-
+  deferral framing intent.
+
+**Narrow scope grounds**:
+
+- Session-budget realism: broad scope would re-open entire Phase
+  0 governance substrate for amendment review at arc-closeout
+- Concrete substrate evidence specificity: path (a) closes the
+  specific surfaced gap (manual_born_paid_workflow) + bundles
+  Stage 3a path (c) only
+- Arc-class first-instance status defers broader review to
+  subsequent governance opportunities (Phase 5 onset OR
+  subsequent brief-creation arcs)
+- Defer-broader-review preserves narrow-scope-fires-now
+  operational momentum
+
+**ADR-0011 amendment shape** (per joint Stage 3a Observation 3
+lock + title-line stability refinement):
+
+- **Dedicated `## Amendment` block** appended to ADR-0011
+  (resolves `## Updates` declarative-line conflict cleanly per
+  δ-i preservation; `## Updates` declares pre-amendment state;
+  `## Amendment` block declares amendment event)
+- Title-line stability: NO title-line revision (preserves ADR
+  identifier consistency; ADR-0011 first-amendment-ever sets
+  clean precedent)
+- Status-header update (small): records amendment date + scope
+- Cross-reference to ADR-0015 §7 emission point for
+  manual_born_paid_workflow registration acknowledgment
+
+#### Ancillary observations (10 items integrated)
+
+Per memory pickup file's ancillary observations section + this
+session's surfaces:
+
+1. **Closeout-entry line-count progression non-monotonicity**
+   (~250 / 285 / 262 / 425 across chunks B2-1 / B2-2 / B2-3 /
+   B2-4) at arc-completion — structurally-driven by (arc-close-
+   next-session) absorption per arc-cadence meta-codification
+   scope.
+2. **Bimodal distribution at arc-completion chunks structural
+   pattern** — chunk B2-4 §14 + §20 = 71% of aggregate vs §16 +
+   §18 + §19 = 29%; arc-grain content-axis (§14 across-arc
+   substrate; §20 across-arc citation graph) vs chunk-grain
+   content-axis distribution refinement.
+3. **Reading B preservation density at arc-completion** (8+
+   explicit references across §1 / §6 / §7 / §9 / §10 / §11 /
+   §13 / §14 / §19) as arc-output-quality property — readers can
+   reconstruct Reading B discipline from any chunk's substantive
+   content without arc-history dependency.
+4. **(β-i) operational-shape stability** across N=2 commit fires
+   prior session + cross-session-boundary persistence verification
+   this session (foreign session-lock bit-identical state across
+   boundary). Reinforces (R-iii) graduation evidence.
+5. **Within-session #16-i count progression across arc** (N≈4 →
+   N≈5 → N≈6 → N=14 → N=12+ this session) signaling arc-
+   completion-session density vs chunk-onset-session density;
+   arc-completion sessions warrant higher within-session #16-i
+   tolerance per arc-cadence meta-codification scope.
+6. **Arc-class first-instance status framing for sub-shape
+   candidates** (forward-pointers vs pattern-stable codifications)
+   — affects how arc-closeout codification candidates are framed
+   at firing-point.
+7. **Stale subject-name ref carry-forward observation** (line 4
+   §1 motivation per chunk B2-1; "AP/Spend Initiative" vs
+   canonical "Spend Initiative"; (line-4-i) Z1 #11.b discipline
+   observation if drafting-time inadvertent vs (line-4-ii)
+   subject-naming-convention observation if drafting-time
+   deliberate composite framing) — δ-i preservation precludes
+   retroactive edit; resolution-path optional at arc-closeout
+   discretion.
+8. **Subagent dispatch within-arc cumulative count = 19** (4 +
+   5 + 4 + 3 + 3 = 19; chunk B2-1 4 + B2-2 5 + B2-3 4 + B2-4 3 +
+   arc-closeout cycle 3) as Z1 #11.b operational validation
+   evidence-anchor at arc-completion grain.
+9. **Substantive commit + closeout commit alternating uniform
+   cadence** across all 4 chunks as arc-cadence meta-
+   codification's operational manifestation; substrate-decision-
+   integrity evidence for arc-cadence shape.
+10. **Codify-via-demonstrated-use vs codify-via-abstract-
+    specification pathway choice** (Stage 2b candidate (e) meta-
+    pathway via first operational use rather than abstract
+    specification) — substrate-decision-integrity-preserving
+    codification shape.
+
+**Plus this session's additional observations**:
+
+- **Verification methodology for graduation-status questions**
+  (verify-from-disk against (a) session-start brief framing + (b)
+  memory pickup file candidate inventory + (c) memory pickup file
+  forward-pattern notes) — small operational pattern surfaced at
+  Z1 #11.b graduation status disambiguation gate prior session.
+- **Cross-session-boundary persistence as load-bearing evidence**
+  for (β-i) operational shape — bit-identical foreign session-
+  lock state across boundary verified at Stage 0 reinforces
+  (β-i) operational shape's robustness.
+- **Lean-update under brainstorm-side concrete-substrate-evidence
+  pattern** (Stage 5 Observation 4 (stage-α) → (stage-β-i) shift
+  via cycle-grain symmetry framing) — operational pattern under
+  candidate (e) shape-refinement-via-within-arc-evidence-basis
+  meta-pathway operating cleanly at sub-election grain.
+
+#### Arc-class first-instance status framing
+
+Phase 2 brief-creation arc is the **first multi-chunk brief-
+creation arc in chounting's history** (Phase 1.Storage was
+implementation arc; Phase 0 was governance arc; both shipped per
+their own discipline-shapes). Arc-output-quality properties
+surfaced this arc are **first-instance observations**, NOT
+pattern-stable observations.
+
+**Codification framing implications**:
+
+- Codification candidates surfaced this arc are **forward-
+  pointers for FUTURE brief-creation arcs** (Spend Initiative
+  implementation arc producing Spend brief refinements;
+  subsequent phases' briefs)
+- NOT pattern-stable codifications across multiple brief-creation
+  arcs — pattern-stability evidence accumulates as subsequent
+  arcs operate under codified shapes
+- Cross-arc N=2 graduation criterion for arc-cadence + Z1 #9 +
+  candidate (e) + candidate (f) accumulates over time;
+  subsequent arc-closeout cycles re-evaluate codifications at
+  higher pattern-stability grade
+
+**Forward-pointer reception expectation**: subsequent brief-
+creation arcs encounter codified shapes (refined (R-iii) +
+arc-cadence + Z1 #9 refined-refined + Sub-Q axis taxonomy + Tier
+2 sense-disambiguation + ADR §-numbering convention) as
+established operational substrate at arc-onset; arcs operate
+under codified shapes; pattern-stability evidence accumulates
+across operational fires.
+
+#### (γ-ii) Phase 2 → Phase 5 transition planning forward-pointers
+
+Per Stage 5 retrospective entry's transition planning placement
+((γ-ii) absorbed Stage 5 retrospective forward-pointers): actual
+transition fires at next-arc-onset, NOT at this arc-closeout.
+
+**Transition planning documentary record**:
+
+Phase 2 brief-creation arc substantive output COMPLETE this
+session per arc-closeout cycle. Phase 5 first-domain consumer
+arc (Spend Initiative implementation per ADR-0015) opens at
+subsequent session-onset OR Phase 1.Storage re-open if
+implementation arcs interleave (per Anchor 4 hygiene-cycle 3
+defer-further targeting — whichever fires first).
+
+**Phase 5 onset trigger**: Phase 5 first-domain consumer arc
+opens when Spend Initiative implementation work commences per
+ADR-0015 Phase 5 first-domain-consumer ratification. Brief
+contains Phase A acceptance criteria + ADR-0015 consumption shape
++ substrate-now-enforcement-later cross-pattern framing
+informing Phase 5 implementation gates.
+
+**Phase 1.Storage re-open trigger**: Phase 1.Storage
+implementation arc may re-open if implementation gaps surface
+post-Phase-2-brief-creation arc per arc-cadence meta-codification's
+implementation-vs-brief-creation arc-class distinction.
+
+**γ-hygiene-cycle 3 deferred fixes**: 3 items defer-further to
+Phase 5 first-domain consumer arc onset OR Phase 1.Storage
+re-open (whichever fires first) per Anchor 4 lock from chunk B2-4
+substantive content session:
+
+1. **#15 NaN-guard fix** at `clampTtl` in
+   `apps/web/src/services/storage/providers/supabaseStorageProvider.ts:95-99`
+2. **ADR-0013 §16 misattribution correction** in
+   `supabase/migrations/20240137000000_create_source_document_with_audit_rpc.sql`
+   comment header
+3. **`recordMutation.ts:122-127` docstring** atomicity-claim
+   rephrasing
+
+NOT indefinite deferral; defer-further targets specific natural
+firing-point (whichever consumer arc fires first).
+
+#### Discrepancy flags surfaced this arc-closeout cycle
+
+Per Z1 #11.b dispatch findings this Stage 5 cycle:
+
+1. **Subagent 2 Flag 1**: ADR-0011 NOT cross-referenced from
+   ADR-0007 — entity-ownership-Tier-2 sense not pointed-to from
+   agent-tier-Tier-2 sense in ADR-0007's `## Cross-references`
+   section. Stage 3a glossary entry resolves at glossary grain
+   (cross-reference structure between two senses); ADR-0007
+   amendment includes inline cross-reference to ADR-0011 §1 per
+   joint preliminary lean.
+2. **Subagent 2 Flag 2**: Sense-overload not flagged anywhere in
+   ADR-0007 prior to this amendment. The amendment IS the first
+   acknowledgment per Stage 3a path (c) codification work.
+3. **Subagent 2 Flag 3**: Existing "Tier 2 vs Tier 2.5 read-
+   boundary clarification" follow-up wording in ADR-0007 Status
+   block — care needed to distinguish from new sense-
+   disambiguation amendment. Recommendation: amendment title
+   "Tier 2 sense-disambiguation" (NOT "Tier 2 clarification")
+   to disambiguate from existing follow-up scope.
+4. **Subagent 2 Flag 4**: ADR-0007 line 21 uses "Tier 2" in a
+   THIRD sense (governance-plan task ordering: "Phase 0
+   governance plan Task C2 (Tier 2 — depends on ADR-0007"). Per
+   Stage 4 narrow-scope discipline + Observation 1 (scope-α)
+   verdict, 3rd sense logged as carry-forward observation; not
+   absorbed into amendment scope.
+5. **Adjacent staleness flag** (outside arc-closeout scope):
+   `docs/02_specs/glossary.md` lines 31-32 reference "ADR-001 is
+   currently the only ADR" — stale relative to current 19+ ADR
+   set. Logged for future glossary maintenance opportunity; not
+   blocking for arc-closeout codification artifacts.
+
+#### Carry-forward to subsequent arcs
+
+Items deferred from this arc-closeout cycle to subsequent
+governance / implementation arcs:
+
+- **γ-hygiene-cycle 3 deferred fixes** — defer-further to Phase 5
+  first-domain consumer arc onset OR Phase 1.Storage re-open
+  (whichever fires first) per Anchor 4 lock; NOT indefinite
+- **3rd "Tier 2" sense (governance-plan task ordering)** —
+  logged as carry-forward observation per Stage 4 narrow-scope
+  discipline; potential cross-arc discussion at next governance
+  arc if surfaces operationally
+- **Broader Phase 0 review opportunity at next governance arc**
+  — full Phase 0 ADR review for cross-ADR enum gaps + ADR-0011
+  §10 multi-entity reservation refinement candidates + ADR-0015
+  cross-reference notation refinement candidates; deferred per
+  narrow-scope discipline
+- **Cross-enum future cases under path (a) precedent** — future
+  cross-ADR enum gaps follow path (a) ADR-0011 amendment
+  precedent (per Stage 4 path (a) election as response shape for
+  similar future cases); first-arc-instance precedent applies
+- **Stale subject-name ref at chunk B2-1 §1 motivation line 4**
+  — δ-i preservation precludes retroactive edit; (line-4-i)
+  vs (line-4-ii) interpretation paths logged; resolution-path
+  optional at next governance arc
+- **Adjacent glossary staleness** (line 31-32 ADR-001 reference)
+  — future glossary maintenance opportunity
+- **Phase 5 first-domain consumer arc onset framing** — Spend
+  Initiative implementation arc opens at next-arc-onset; brief
+  Phase A acceptance criteria + ADR-0015 consumption shape
+  inform implementation gates
+
+#### Subagent dispatch shape (this cycle)
+
+Layer 2 fired 3 parallel general-purpose subagents per Z1 #11.b
+preventive verbatim re-read discipline before drafting at Stage 5:
+
+1. ADR-0011 §13 + amendment-process precedent (mandatory for
+   ADR-0011 amendment substrate)
+2. ADR-0007 §Tier 2 + Tier 2.5 amendment shape precedent
+   (mandatory for ADR-0007 amendment substrate + Candidate A vs
+   B placement decision)
+3. ADR README + glossary.md current structure (mandatory for
+   addendum + glossary entry placement)
+
+Within-arc cumulative dispatch count: 4 (B2-1) + 5 (B2-2) + 4
+(B2-3) + 3 (B2-4) + 3 (arc-closeout cycle) = **19 subagents
+fired across arc preventively**. Z1 #11.b graduated codification
+operationally validated across the arc + arc-closeout cycle —
+within-arc 19-fire cumulative + cross-session pattern-stability
+evidence basis demonstrates discipline-shape stability across
+chunk-grain AND arc-closeout-cycle-grain.
+
+Phase 2 brief-creation arc CLOSED at this retrospective entry.
+Codification artifacts (4 files: ADR-0011 §13 amendment + ADR-0007
+§Tier 2 inline amendment + ADR README addendum + `glossary.md`
+Tier 2 entries) ship under subsequent commit per (stage-β-i)
+split-same-session shape. Stage 6 final session-close gate fires
+after Commit 2 push completes.
+
+Closes Phase 2 brief-creation arc-closeout retrospective entry
+under (C-ii) bundled-explicit founder verdict at clean-termination
+gate per refined (R-iii) graduated form. Substrate-decision-
+integrity preserved across full arc execution + arc-closeout
+cycle execution. Aggregate arc contribution: ~2756 lines drafted
+across 4 chunks; full §1-§21 substantive content shipped at brief;
+8 firing decisions locked at arc-closeout; 5 codification
+artifacts ship across this retrospective + subsequent codification
+commit.
