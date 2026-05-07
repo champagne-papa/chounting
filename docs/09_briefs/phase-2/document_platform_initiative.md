@@ -619,19 +619,1106 @@ the commit through the appropriate domain service. The handoff
 shape is non-negotiable per ADR-0011 §8 Reading B preservation.
 
 ## 5. Data model
-[Stub — source_documents, source_document_versions, source_document_links, document_cases, document_case_sources, document_artifacts, document_classifications, document_relationship_candidates, ingest_batches, ingest_items, document_jobs]
+
+The Document Platform owns 13 substrate-tier tables per ADR-0011
+§1 entity ownership boundary. Per Sub-Q B2-1-δ Tier-by-component
+framing, the substrate sits at Tier 2 substrate (canonical writer
+authority via the document-platform service). Domain services
+(AP/Spend per ADR-0015; Banking and AR post-v1) own their own
+entity types separately; ledger service owns `journal_entries` /
+`journal_lines`.
+
+### Substrate-load-bearing tables (verbatim row shape)
+
+**`source_documents`** (per ADR-0011 §2 — note: the row-shape
+content lives at §2, not §1 which is "Entity ownership boundary").
+The evidence anchor. Every uploaded file produces exactly one row.
+
+- `id` (uuid primary key)
+- `org_id` (uuid, FK, RLS-scoped)
+- `legal_entity_id` (uuid, nullable, reserved per ADR-0011 §10
+  multi-entity reservation; defaults to `org_id` in v1's 1-1
+  mapping)
+- `storage_provider` (closed enum per ADR-0013 §2; v1-active
+  `supabase_storage`; reserved `sharepoint_drive`, `s3_bucket`,
+  `external_url`)
+- `storage_key` (text — provider-scoped path or identifier)
+- `original_content_hash` (text — SHA-256 of file bytes at
+  ingestion; **write-once**, never mutated)
+- `original_byte_size` (bigint — write-once)
+- `original_filename` (text — write-once)
+- `current_version_id` (uuid, nullable, FK to
+  `source_document_versions`; pointer to latest captured version;
+  null at ingestion implying implicit version 1; **only column
+  on this row mutable post-ingestion**)
+- `mime_type` (text)
+- `ingest_channel` (closed enum: `drag_drop_pdf`,
+  `forwarded_mailbox`, `direct_upload`, `api_ingest`)
+- `ingest_batch_id` (uuid, nullable, FK to `ingest_batches`)
+- `received_at` (timestamptz)
+- `created_at` (timestamptz)
+- `created_by` (text or uuid; `'agent' | <user_id>`)
+
+INV-DOC-001 evidence-completeness depends on the immutability of
+`original_content_hash` per Q79 path β deferral.
+
+**`source_document_versions`** (per ADR-0011 §2 versioning model).
+Captured version history when content_hash drift requires a new
+version row.
+
+- `id` (uuid primary key)
+- `source_document_id` (uuid, FK)
+- `version_number` (int)
+- `content_hash` (text — SHA-256; **immutable per row** per
+  ADR-0011 §9 rule 2)
+- `byte_size` (bigint)
+- `captured_at` (timestamptz)
+- `capture_reason` (closed enum per ADR-0013 §6: 7 values; v1-
+  active 3 — `vendor_corrected_invoice`, `reformatted_pdf`,
+  `accessibility_replacement`; reserved 4 for drift activation
+  post-v1)
+
+**`document_cases`** (per ADR-0011 §3 — combined section with
+`document_case_sources`, NOT split across §3/§4 as the brief
+skeleton's stub suggested). Workflow item created from one or
+more source documents.
+
+- `id` (uuid primary key)
+- `org_id` (uuid, FK, RLS-scoped)
+- `legal_entity_id` (uuid, nullable, reserved per ADR-0011 §10)
+- `lifecycle_state` (closed enum, 10 states per ADR-0011 §3:
+  `received → extracting → classified → matched → proposed →
+  needs_review → approved → committed → rejected → archived`).
+  All transitions service-layer-enforced (Layer 2) since they
+  encode workflow-actor authority that schema CHECKs cannot
+  express.
+- `current_relationship_candidate_id` (uuid, nullable, FK to
+  `document_relationship_candidates`; mutable pre-commit per
+  ADR-0011 §9 rule 4)
+- `document_type` (closed enum per ADR-0011 §6: 18 reserved /
+  4 v1-active)
+- `classification_confidence` (numeric)
+- Workflow metadata (created_at, etc.)
+
+**`document_case_sources`** (per ADR-0011 §3 — combined with
+case lifecycle in same ADR section). Many-source-to-one-case
+modeling.
+
+- `(document_case_id, source_document_id, role)` composite key
+- `role` (closed enum per ADR-0011 §3: 6 reserved values;
+  v1-active 4 — `primary`, `supporting`, `email_body`,
+  `payment_evidence`; reserved-but-not-emitted —
+  `superseded_source`, `related_prior_document`)
+
+**`document_artifacts`** (per ADR-0011 §5). The engine-agnostic
+contract. Every consumer of OCR output reads this table, NOT raw
+engine output — this is the contract that swaps OCR engine
+choice without consumer-code churn (ADR-0014 owns engine swap
+mechanism).
+
+- `id` (uuid primary key)
+- `source_document_id` (uuid, FK)
+- `ocr_run_id` (uuid, FK to `ocr_runs`; immutable per ADR-0011
+  §9 rule 1)
+- `extraction_run_id` (uuid, FK to `extraction_runs`; immutable
+  per ADR-0011 §9 rule 2)
+- `engine` (text — e.g., `paddleocr`, `tesseract`,
+  `claude_vision_3_5` per ADR-0014 §2 reserved engines)
+- `engine_version` (text — replay capture)
+- `pages` (jsonb — page-level: page #, rotation, dimensions,
+  page-level confidence)
+- `lines` (jsonb — line-level: text, bounding box, per-line
+  confidence)
+- `words` (jsonb — word-level: token text, bounding box,
+  per-word confidence)
+- `quality_flags` (text[] — closed enum: `low_resolution`,
+  `skewed`, `partial_page`, `noise_threshold`)
+- `pipeline_trace` (jsonb — per-stage record array per ADR-0007
+  Q30: `stage_name`, `input_hash`, `output_hash`, `model`,
+  `timestamp`)
+- `confidence` (numeric — overall artifact-level)
+- `created_at` (timestamptz)
+
+**`ocr_runs`** and **`extraction_runs`**. Row shapes owned by
+ADR-0014 (the immutability boundary at platform-substrate is
+owned per ADR-0011 §9 rules 1-2; full row shapes are ADR-0014's
+domain per §9 cross-reference to Q69 in that ADR). Both tables
+are immutable per ADR-0011 §9: re-extraction produces new rows
+that supersede prior rows via `supersedes_*_id`; no row is
+updated or deleted in place.
+
+### Downstream-ADR-owned tables (summary + cross-reference)
+
+- **`source_document_links`** — polymorphic many-to-many between
+  source documents and accounting entities. ADR-0011 §4 owns the
+  spine and three discipline constraints (closed enum on
+  `linked_entity_type` + closed enum on `link_role` + service-
+  layer integrity validation in `documentLinkService`); ADR-0016
+  owns the full enum membership (28-value `linked_entity_type`,
+  27-value `link_role`, 2-value `link_status`), the
+  `(entity_type, role)` pair-validity matrix (756 cells; 15 active
+  v1), and per-`linked_entity_type` cascade behavior. See §7
+  below for full detail.
+- **`document_classifications`** — classification metadata per
+  case. Row shape and ratification details owned by ADR-0014
+  (Tier 2 Document Pipeline classification strategy at §7).
+- **`document_relationship_candidates`** — Relationship Router's
+  match candidates. Row shape owned by ADR-0011 §1 reservation +
+  ADR-0018 Decision item 2 Subsystem 1 (algorithmic
+  ratification). Versioned per ADR-0011 §9 rule 3 (re-runs
+  produce new candidate row referencing prior via
+  `supersedes_candidate_id`).
+- **`ingest_batches`** and **`ingest_items`** — ingestion-channel
+  abstraction. Row shapes owned by ADR-0014 (ingest channels +
+  batch processing).
+- **`document_jobs`** — work-queue rows that drive extraction
+  and classification. Row shape owned by ADR-0014 (pipeline
+  orchestration).
+
+### Index strategy (Phase 2 implementation onset)
+
+Index strategy is not pre-positioned at substrate-decision-
+integrity grain. Per substrate-now-enforcement-later cross-
+pattern (D6 §6.8 + ADR-0010 amendment Variant A), Phase 2
+implementation onset ratifies index strategy at the first
+migration consuming each table. Known load-bearing indexes from
+Phase 1.Storage shipping reality:
+
+- `source_documents` carries indexes on `(org_id,
+  original_content_hash)` for SHA-256 dedup-by-hash (per ADR-0014
+  §6) and `(org_id, current_version_id)` for current-version
+  resolution (per ADR-0013 §3).
+- `source_document_versions` carries an index on
+  `(source_document_id, version_number)` for version chain
+  walking.
+
+Future tables' index strategies fire at chunk-onset adjudication
+per chunk-decomposition cadence; Phase 2 implementation arc
+ratifies operational indexes as needed without ADR amendment.
+
+### Reserved-but-not-emitted column accounting
+
+Per ADR-0010 amendment Variant A precedent + the substrate-now-
+enforcement-later cross-pattern at D6 §6.8, the substrate carries
+columns reserved at v1 schema time with NULL-default forward-
+compatibility. The reserved-column inventory enumerated at §2
+(this brief) covers `source_documents.legal_entity_id`,
+`document_cases.legal_entity_id`, the 12 reserved
+`org_settings.*` columns owned by ADR-0014 Closes Q73, and the
+multi-entity reservation columns on AP/Spend tables (per
+ADR-0011 §10).
 
 ## 6. Storage abstraction
-[Stub — fill from reframe spec; carries forward the original AP brief §6]
+
+Storage operations run at the data-access layer below the agent-
+tier boundary per Sub-Q B2-1-δ-1-i lock and ADR-0013 framing
+(`## Triggered by` + Phase 0 dependency context). Storage is
+infrastructure substrate that all agent tiers consume through
+`storageProviderService`; storage is structurally orthogonal to
+agent tiers, not itself a tier.
+
+### Substrate enumeration (per reframe-spec §3.1)
+
+Note on citation: reframe-spec §6 is "Polymorphic source-document
+links — schema discipline" (NOT storage abstraction). The
+storage substrate enumeration lives in the reframe-spec §3.1
+substrate-bullet:
+
+> `source_documents`, `source_document_versions`,
+> `storage_provider` discriminator, content-hash integrity, drift
+> detection, queue-and-retry degradation policy.
+
+Phase 1 (Storage / Evidence Core) closed at PR #8 / `b900bdd` on
+2026-05-06 with this substrate as shipping code. ADR-0013 owns
+the operational-detail ratification.
+
+### `storageProviderService` contract surface (per ADR-0013 §1)
+
+Six typed methods that every provider implementation must satisfy:
+
+- `put(input: PutInput, ctx: ServiceContext): Promise<PutResult>`
+  — write bytes; computes SHA-256 hash pre-write; writes bytes;
+  re-reads to verify hash; returns `{ storage_key, content_hash,
+  byte_size, provider }`.
+- `fetch(source_document_id, ctx): Promise<FetchResult>` — read
+  bytes for the current version (resolves `current_version_id`
+  per ADR-0013 §3).
+- `fetchVersion(source_document_version_id, ctx)` — read bytes
+  for a specific version row.
+- `previewUrl(source_document_id, options, ctx)` — return
+  `{ url, expires_at, provider }` per ADR-0013 §12 (5-minute
+  default TTL; 30-minute upper bound; per-org configurability
+  reserved post-v1 in `org_settings.preview_url_default_ttl` /
+  `org_settings.preview_url_max_ttl`).
+- `delete(source_document_id, ctx)` — rare path; controller
+  authority required per ADR-0011 §4. Storage-layer delete is
+  the bytes-removal step; the `source_documents` row cascade
+  lives in the document-platform service layer.
+- `verifyIntegrity(source_document_id, ctx)` — recompute hash
+  from bytes; compare against current version's `content_hash`;
+  drives drift detection (ADR-0013 §5).
+
+`storageProviderService` runs at the data-access layer and is
+**not** wrapped in `withInvariants()` — invariants apply to
+ledger and domain mutations, not to blob I/O. Callers that need
+transactional coupling to a `source_documents` INSERT (the
+ingestion path) wrap the storage call inside the document-
+platform service's `withInvariants()` block: `put` succeeds
+first, then the INSERT runs in the transaction; on INSERT failure,
+bytes already written remain (orphan-blob GC handles cleanup per
+ADR-0014).
+
+### Three-discipline-constraint pattern (mirrored from reframe-spec §6 polymorphic-pattern)
+
+Per the reframe-spec §6 polymorphic-discipline pattern (which
+applies canonically to source_document_links substrate; see §7),
+the same three-constraint shape applies at storage abstraction
+grain:
+
+1. **Closed enum CHECK constraints with ADR-0010 reserved-enum-
+   states discipline.** Three closed enums govern storage
+   substrate: `storage_provider` (4 values; v1-active 1 —
+   `supabase_storage`); `capture_reason` (7 values; v1-active 3
+   — `vendor_corrected_invoice`, `reformatted_pdf`,
+   `accessibility_replacement`); `storage_status` (7 values;
+   v1-active 2 — `available`, `pending_initial_verify`;
+   reserved-but-not-emitted 5 — `permission_loss`,
+   `missing_file`, `hash_mismatch`, `provider_unavailable`,
+   `verification_pending_retry` — unlock when reserved providers
+   activate per ADR-0013 §11).
+2. **Write-time integrity validation at service-layer.**
+   `storageProviderService.put()` performs SHA-256 pre-write +
+   re-read verification before the `source_documents` INSERT
+   runs (ADR-0013 §9). Layer 1 DB CHECK admits only v1-active
+   enum values; Layer 2 Zod boundary validates write input;
+   Layer 3 service emits typed `ServiceError` on integrity
+   failure (`STORAGE_KEY_MALFORMED`, `INTEGRITY_VERIFY_FAILED`).
+3. **Explicit failure-classification matrix** per ADR-0013 §7
+   (note: §7 is failure-classification, NOT integrity-check —
+   integrity is at §9). Three categories:
+   - **(a) transient retryable** (network timeout, provider 5xx,
+     throttling) → exponential backoff per ADR-0013 §8 (max 3
+     attempts, base 500ms, factor 2x, ±20% jitter, ~3.5s total
+     budget). Exhausted retries surface
+     `STORAGE_PROVIDER_TRANSIENT_EXHAUSTED`.
+   - **(b) provider-unavailable / persistent** (auth-invalid,
+     bucket-missing, OAuth-token-expired) → no retry; route to
+     exception queue with reserved `resolve_provider_unavailable`
+     resolution-action.
+   - **(c) permanent malformed** (corrupted PDF, illegal
+     characters) → no retry; fail fast; no row created.
+
+### v1 active subset (per ADR-0013 §14 + Phase 1 shipping reality)
+
+- **`supabase_storage`** is the sole v1 active provider. Org-
+  scoped paths follow `org_{org_id}/sources/{source_document_id}/
+  {filename}` with RLS service-role-write / session-role-read
+  isolation.
+- **Drift detection exempt by construction** for
+  `supabase_storage` per ADR-0013 §5. The platform is the sole
+  writer under RLS-scope; no out-of-platform code path can
+  modify bytes; drift is impossible by construction. v1 ships
+  the drift-detection UI surface (controller-trigger "Verify
+  integrity" action) but the action is inert against the only
+  active provider — produces no-op result `{ status:
+  'exempt_provider', provider: 'supabase_storage' }`. UI ships
+  in v1 even though it never fires in practice; this preserves
+  the action shape so reserved providers activating post-v1 do
+  not require UI retrofit.
+
+### Reserved providers (post-v1 per ADR-0013 §14)
+
+`sharepoint_drive`, `s3_bucket`, `external_url` ship under
+their own activation briefs post-v1. Each activation brief
+documents which native integrity guarantee replaces (or
+complements) hash-verify-on-put per ADR-0013 §9 reserved-
+provider treatment. Per-document storage-provider migration is
+post-v1 — existing v1 docs stay at their original provider
+when an org's default changes.
+
+### Storage-of-truth discipline (per ADR-0013 §13)
+
+> The storage provider holds the original bytes. CHOUnting keeps
+> `source_document_id`, the provider reference, the hashes, the
+> versions, the document cases, the document links, and the
+> audit trace. Storage holds bytes; CHOUnting holds meaning.
+
+Treating SharePoint-mode documents as "owned by SharePoint" is a
+category error and a path to wrong accounting. The split is
+exact and non-negotiable. Post-v1, when SharePoint activates,
+this framing stands between the system and a class of failure
+where a SharePoint-deleted file silently invalidates a bill
+commit — the audit trail and version row both survive even
+when underlying bytes are out-of-band-deleted; `storage_status =
+'missing_file'` flag fires; exception queue routes controller
+to resolution; accounting record persists.
+
+### Audit emission (per ADR-0013 §16)
+
+Five audit events on storage state changes route through canonical
+audit-log writer per ADR-0011 §1 — no service inserts into
+`audit_log` directly:
+
+- `source_document_created` (at successful ingestion after
+  put-and-verify)
+- `source_document_version_captured` (when new version row
+  lands)
+- `storage_status_changed` (every transition per ADR-0013 §11)
+- `controller_override_resolution` (when controller approves
+  drift-detection exception)
+- `drift_exception_created` (when drift detection produces
+  exception, post-v1 when drift activates)
+
+URL mints + pure read operations are NOT audited individually
+(would explode audit table for limited forensic value); they
+live in pino logs with `trace_id` correlation per Service
+Communication Rule 5, not in `audit_log`.
 
 ## 7. Polymorphic source-document links — schema discipline
-[Stub — closed enum for linked_entity_type, closed enum for link_role, (entity_type, role) pair-validity matrix, service-layer integrity validation, orphan/cascade behavior]
+
+`source_document_links` is the polymorphic many-to-many between
+source documents and accounting entities. ADR-0011 §4 owns the
+spine and three discipline constraints (closed enum on both
+columns + service-layer integrity validation); ADR-0016 owns
+full enum membership, the `(entity_type, role)` pair-validity
+matrix, and per-`linked_entity_type` cascade behavior.
+
+The schema-vs-algorithm split is intentional and load-bearing:
+ADR-0016 owns the schema substrate (what can be stored, what
+gets accepted at insert time); ADR-0018 owns the runtime
+matching algorithm. Note: ADR-0016 organizes content as 6
+numbered Decision items + 6 named top-level sections (NOT 12
+numbered top-level sections); citations below reference Decision
+items + named section headings.
+
+### Single-writer rule
+
+Per ADR-0016:
+
+> `documentLinkService` is the only function that inserts rows
+> into `source_document_links`. No domain service path writes to
+> the table directly. No Tier 2 stage writes to the table
+> directly. No agent tool writes to the table directly.
+
+Consumers propose link creations through the ProposedAttachment
+handoff per ADR-0011 §7; the proposal commits via
+`documentLinkService.create()`; the service applies the pair-
+validity matrix, the integrity check (referenced entity exists),
+and the post-commit immutability rule before inserting.
+
+### Closed enum membership (per ADR-0016 Decision items 1-2 + 5)
+
+**`linked_entity_type`** (closed enum on `source_document_links`).
+**28 reserved values total; v1-active subset 8.**
+
+v1-active (8): `bill`, `bill_line`, `payment`,
+`bill_payment_allocation`, `vendor_prepayment`,
+`vendor_prepayment_application`, `vendor_credit`,
+`vendor_credit_application`. Constrained by ADR-0011 §1 entity
+ownership boundary.
+
+Reserved post-v1 (20): `bank_transaction`, `card_transaction`,
+`bank_account`, `card_account`, `customer_invoice`,
+`customer_invoice_line`, `customer_payment`, `customer_credit`,
+`vendor_statement_line`, `bank_reconciliation`,
+`card_reconciliation`, `fixed_asset`, `tax_filing`,
+`payroll_run`, `payroll_employee`, `journal_entry`,
+`journal_line`, `vendor_master`, `customer_master`,
+`period_close`. Anticipates Banking, AR, payroll, tax filing
+phases. `vendor_master` / `customer_master` reserved (NOT v1-
+active) — vendor-master changes flow through `audit_log`, not
+link rows.
+
+**`link_role`** (closed enum on `source_document_links`).
+**27 reserved values total; v1-active subset 4.**
+
+v1-active (4): `primary_invoice`, `payment_evidence`, `receipt`,
+`supporting`. Per ADR-0015 §10 declared consumption.
+
+Reserved post-v1 (23): `duplicate_arrival`, `superseded_version`,
+`vendor_credit_memo`, `vendor_statement_excerpt`,
+`purchase_order`, `receiving_document`, `retainer_agreement`,
+`deposit_request`, `bank_statement_excerpt`,
+`card_statement_excerpt`, `reconciliation_evidence`,
+`failure_notice`, `customer_invoice_attachment`,
+`customer_remittance`, `tax_form`, `contract`,
+`payroll_document`, `asset_purchase_support`,
+`prior_period_evidence`, `correction_memo`,
+`controller_override_memo`, `audit_evidence`, `email_thread`.
+`controller_override_memo` reserved for INV-DOC-001 override
+path.
+
+**`payment_evidence` vs `receipt` distinction** (per ADR-0016
+Decision item 2): `payment_evidence` is the role for a document
+attached to a `payment` row as proof that the payment occurred
+(Scenario A in ADR-0015 §7); `receipt` is the role for a
+document attached to a `bill` row as the standalone receipt
+that triggered the bill record (Scenario C in ADR-0015 §7).
+
+**`link_status`** (closed enum on `source_document_links`).
+**2 values; both v1-active.**
+
+- `created` (default at insert)
+- `reversed` (single one-way transition from `created` permitted
+  post-commit; CHECK constraint enforces directionality)
+
+`link_status` vocabulary is a link-row state, NOT a mutation-
+lifecycle state per ADR-0016 Decision item 5 — distinct from the
+canonical mutation-lifecycle vocabulary in `mutation_lifecycle.md`.
+
+### `(linked_entity_type, link_role)` pair-validity matrix
+
+Per ADR-0016 Decision item 3, the full matrix has **756 cells**
+(2 tables: 8 v1-active entity rows × 27 roles = 216 cells in
+Table A; 20 reserved entity rows × 27 roles = 540 cells in Table
+B). Cell labels: `A` (active v1, **15 cells**, all in Table A),
+`R` (reserved post-v1), `I` (categorically invalid).
+
+The 15 active-v1 cells (concentrated in the 4 v1-active link-
+role columns of the 8 v1-active entity-type rows):
+
+- `(bill, primary_invoice)`, `(bill, receipt)`,
+  `(bill, supporting)` — 3
+- `(bill_line, supporting)` — 1
+- `(payment, payment_evidence)`, `(payment, receipt)`,
+  `(payment, supporting)` — 3
+- `(bill_payment_allocation, payment_evidence)`,
+  `(bill_payment_allocation, supporting)` — 2
+- `(vendor_prepayment, payment_evidence)`,
+  `(vendor_prepayment, receipt)`,
+  `(vendor_prepayment, supporting)` — 3
+- `(vendor_prepayment_application, supporting)` — 1
+- `(vendor_credit, supporting)` — 1
+- `(vendor_credit_application, supporting)` — 1
+
+Examples of categorical invalidity: `(bill, duplicate_arrival)`
+invalid because `duplicate_arrival` describes an arrival event,
+not a bill relationship; `(payment, primary_invoice)` invalid
+because `primary_invoice` describes the dominant invoice for a
+bill, not a payment.
+
+Activation discipline gates reserved-cell flips per ADR-0016
+Decision item 3 with a 5-step process: (a) entity active, (b)
+role active, (c) semantic brief explaining activation, (d) label
+flip from `R` to `A`, (e) extending three-layer defenses.
+
+Full Table A + Table B + per-cell detail live canonically in
+ADR-0016 Decision item 3; this brief cites by reference rather
+than re-embedding the 756-cell grid.
+
+### Three-layer ADR-0010 defense (per ADR-0016 Decision item 4)
+
+Per the polymorphic-discipline-constraint pattern (reframe-spec
+§6):
+
+- **Layer 1 — DB CHECK constraints** (3 constraints): column
+  CHECK on `linked_entity_type` (8-value IN list); column CHECK
+  on `link_role` (4-value IN list); pair-validity CHECK
+  (disjunction over the 15 active-v1 cells).
+- **Layer 2 — Zod boundary validation** (3 rejection modes):
+  reserved-entity-type rejection; reserved-link-role rejection;
+  pair-validity `.refine()` rejection.
+- **Layer 3 — Service emission** with typed `ServiceError`:
+  `LINKED_ENTITY_NOT_FOUND` (integrity-check failed; named
+  entity does not exist in named table); `PAIR_RESERVED_POST_V1`
+  (Layer 2 backstop with cell coordinates); `PAIR_INVALID`
+  (Layer 2 backstop with cell coordinates).
+
+Phase 2 upgrade: migrations loosen CHECKs by extending IN lists
+or disjunctions; no backfill needed because all v1 rows are in
+active pairs by construction.
+
+### Cascade behavior per `linked_entity_type` (per ADR-0016 Decision item 5)
+
+Cascade matrix shape: 8 rows (one per v1-active
+`linked_entity_type`) × 3 columns (Reversal trigger | Pre-commit
+behavior | Post-commit behavior). Pattern across all 8 rows:
+
+- **Pre-commit**: link row discarded via
+  `documentLinkService.discardPreCommitLink()`; case re-routes
+  via Router (ADR-0018) or exception queue (ADR-0011 §13);
+  `pre_commit_link_rerouted` audit event emitted.
+- **Post-commit**: `link_status` flips to `reversed` via
+  `documentLinkService.reverseLinkedEntityLink()`; document
+  evidence preserved for audit; `source_document_link_reversed`
+  audit event emitted. **No in-place mutation of any other
+  column.**
+
+`source_document` deletion is the rare exception path
+(controller authority + structured deletion reason; FK `ON
+DELETE CASCADE`; emits `source_document_link_cascade_deleted`).
+
+### Pre-commit vs post-commit boundary (per ADR-0016 Decision item 6)
+
+Boundary anchored to `document_cases.lifecycle_state`. **Pre-
+commit states** `{received, extracting, classified, matched,
+proposed, needs_review, approved}`: re-routing permitted via
+discard + create. **Post-commit states** `{committed, rejected,
+archived}`: in-place mutation forbidden; only `link_status` flip
+via cascade.
+
+Two schema-side enforcement mechanisms:
+
+1. `documentLinkService.create()` is the **sole INSERT path**;
+   refuses post-commit insertion. Case state flip + link insert
+   in same `withInvariants()` transaction.
+2. UPDATE permission restricted to `link_status` column only,
+   with one-way CHECK (`created → reversed`).
+
+### Audit events (per ADR-0016 named section "Reserved enums and audit events")
+
+4 new event types route through canonical audit-log writer per
+ADR-0011 §1:
+
+- `source_document_link_created` — fields: `org_id`,
+  `source_document_link_id`, `source_document_id`,
+  `linked_entity_type`, `linked_entity_id`, `link_role`,
+  `case_id`, `proposal_id`, `created_by`, `trace_id`
+- `source_document_link_reversed` — fields: `org_id`,
+  `source_document_link_id`, `source_document_id`,
+  `linked_entity_type`, `linked_entity_id`, `link_role`,
+  `reversal_reason`, `reversed_by`, `trace_id`
+- `pre_commit_link_rerouted` — fields: `org_id`, `case_id`,
+  `prior_candidate_target_entity_type`, `prior_candidate_target_id`,
+  `prior_candidate_link_role`, `new_candidate_target_entity_type`,
+  `new_candidate_target_id`, `new_candidate_link_role`,
+  `re_routing_trigger`, `trace_id`. Trigger from ADR-0018 Q56
+  (Re-Evaluation Logic).
+- `source_document_link_cascade_deleted` — fields: `org_id`,
+  `source_document_link_id`, `source_document_id`,
+  `linked_entity_type`, `linked_entity_id`, `controller_user_id`,
+  `deletion_reason`, `trace_id`
 
 ## 8. Relationship Router — three subsystems
-[Stub — match-against-existing-state engine, ambiguity resolution, re-evaluation logic]
+
+The Relationship Router runs at Tier 2.5 per ADR-0007 §Tier 2.5
+— Read-Only Ledger-Aware Path + ADR-0007 §Amendment (Q66 closure
+option (b)). ADR-0018 owns the algorithmic specification;
+ADR-0011 §1 reserved the `document_relationship_candidates`
+table; ADR-0016 Decision items 3 + 5 ratified the schema-side
+validity matrix and the `pre_commit_link_rerouted` audit event
+the Router emits when re-evaluation produces a new candidate.
+
+The split is intentional and load-bearing: ADR-0016 owns the
+schema substrate (what can be stored, what gets accepted at
+insert time); ADR-0018 owns the algorithm (how candidates are
+produced, scored, and re-evaluated). Note: ADR-0018 organizes
+content as 7 Decision items under a single `## Decision` header
+(NOT §1-§9 numbered top-level sections); citations below
+reference Decision items.
+
+### Tier 2.5 safety contract (verbatim from ADR-0007 §Tier 2.5)
+
+The Tier 2.5 safety contract — restated in ADR-0018 Decision
+item 1 verbatim from ADR-0007 — is the load-bearing constraint:
+
+> - The Router MAY read from the committed ledger state and from
+>   `source_documents` / `document_artifacts` / existing
+>   `source_document_links`.
+> - The Router MUST NOT write. No INSERT / UPDATE / DELETE / call
+>   to any mutating service.
+> - The Router MUST be deterministic TypeScript orchestration.
+>   LLM-planned matching is prohibited per Q31 (the same rule
+>   that applies to Tier 2 stages applies to Tier 2.5).
+> - The Router produces Zod-validated output
+>   (`DocumentRelationshipCandidate`).
+> - Tier 1 re-verifies every Router output at the commit boundary
+>   per the expanded Q28 matrix.
+> - The Router is idempotent: the same input (classifier output +
+>   committed domain state at read time) produces the same
+>   candidate set across re-runs.
+
+The Router NEVER writes to either `journal_entries` /
+`journal_lines` (ledger service domain) or `source_document_links`
+(`documentLinkService` domain). The Router produces
+`DocumentRelationshipCandidate` objects; Tier 1 commit paths
+consume those candidates after re-verification; the
+`documentLinkService` is the only path that translates a ratified
+candidate into a `source_document_links` row.
+
+### Three-subsystem decomposition (per ADR-0018 Decision item 1)
+
+The Router decomposes into three subsystems with distinct
+concerns and failure modes — conflating them into a single
+"matching algorithm" loses the distinct testability and audit-
+event-shape obligations of each.
+
+#### Subsystem 1 — Ledger-State Candidate Completion (Decision item 2)
+
+Consumes ADR-0014 §11's incomplete-candidate handoff (the
+**cross-ADR boundary** is documented at the opening of ADR-0018
+Decision item 2, not as a standalone section). Reads committed
+accounting state (open bills in
+`('approved_for_payment', 'partially_paid')`; payments in
+`('pending', 'paid')`; vendor prepayments in
+`('open', 'partially_applied')`; vendor credits in
+`('open', 'partially_applied')`; existing
+`source_document_links` rows) and produces zero or more
+completed `DocumentRelationshipCandidate` rows carrying:
+
+- `linked_entity_type` (one of 8 v1-active values per ADR-0016
+  Decision item 1)
+- `linked_entity_id` (matched row's primary key)
+- `link_role` (one of 4 v1-active values per ADR-0016 Decision
+  item 2)
+- `confidence_score` (number in [0, 1])
+- `candidate_features` (Zod-typed object capturing match
+  features — e.g., `{vendor_match: 'exact', amount_match:
+  'within_0.01', date_match: 'within_3_days'}`)
+
+The pair `(linked_entity_type, link_role)` MUST be one of the 15
+active-v1 cells in ADR-0016 Decision item 3 Table A. **Defense-
+in-depth alignment**: Subsystem 1 never proposes a candidate
+that the `documentLinkService.create()` Layer 1/2/3 defenses
+would reject.
+
+**Failure mode**: missed match (stranded document) or spurious
+match (low-confidence noise). Per-document-type confidence
+threshold (ADR-0014 §7 Q65 v1 provisional values: vendor_invoice
+0.85, receipt 0.80, payment_confirmation 0.85) drops below-
+threshold candidates; if post-filter set is empty, Subsystem 2
+routes to exception queue.
+
+**Cross-ADR boundary with ADR-0014.** ADR-0014 §11 produces
+incomplete candidates inside the Tier 2 read boundary (vendor
+identity, chart of accounts, tax codes, classes). ADR-0018
+Subsystem 1 completes them inside the Tier 2.5 read boundary
+(open bills, payments, prepayments, credits,
+source_document_links). The handoff is mechanical: ADR-0014
+hands an incomplete candidate; ADR-0018 returns a completed
+candidate or routes to exception.
+
+#### Subsystem 2 — Ambiguity Resolution (Decision item 3)
+
+Three-branch decision tree when Subsystem 1 produces ≥1
+candidate above threshold:
+
+- **(a) Propose-the-best** — single high-confidence candidate
+  with margin over runner-up exceeding ambiguity-margin
+  threshold. Emits winning candidate as proposal target;
+  resulting proposal shape determined by `(linked_entity_type,
+  link_role)` pair + document type per ADR-0015 §7 Scenarios.
+- **(b) Propose-with-ambiguity-flag** — multiple candidates
+  within ambiguity margin. Tier 1 review surface
+  (`ProposedEntryCard`) presents disambiguation UI listing
+  candidates with feature vectors and scores. Proposal's
+  `justification.rule_id` is null (novel pattern — multiple
+  plausible matches); `pipeline_trace` records carry full
+  candidate set so rejection-of-runners-up is reconstructable
+  from audit trail.
+- **(c) Route-to-exception-queue** — no candidate clearly wins
+  OR cluster too tight to disambiguate. Routes per ADR-0011 §13
+  with v1-active resolution actions (`attach_to_existing_bill`,
+  `attach_to_existing_payment`, `record_bill_payment`,
+  `mark_duplicate`, `mark_non_accounting`,
+  `route_to_manual_entry`, `reprocess`, `archive`).
+
+**Failure mode**: ghost match (silently picking wrong candidate
+when multiple plausible candidates exist). Ambiguity-margin
+threshold is provisional in v1 pending ADR-0019 ratification.
+
+#### Subsystem 3 — Re-Evaluation Logic (Decision item 4 — Q56 closure)
+
+Runs in response to typed domain events that may invalidate or
+improve a Subsystem 1 candidate set. **Scope: pre-commit cases
+only** — post-commit `source_document_links` rows go through
+ADR-0016 Decision item 5 supersession-via-reversal+recreation
+pattern. The Router NEVER silently re-evaluates post-commit.
+
+The dispatcher is a deterministic TypeScript function that
+consumes typed trigger events from the AP/Spend domain services
+(post-v1: from other domains per ADR-0011 §14 Domain Boundary
+Map). The dispatcher is NOT LLM-planned per Q31 — a future
+contributor proposing "use an LLM to decide which trigger fires
+when" is proposing a Q31 violation.
+
+**Closed v1 trigger list T1-T10** (v1-active 8; reserved 2):
+
+- **T1** — New bill posts (v1-active). `billService.post()`
+  emits typed `bill_posted` event after successful
+  `withInvariants()` commit; dispatcher re-runs Subsystem 1
+  against open exception-queue cases for bill's vendor.
+  `re_routing_trigger = 'T1_new_bill'`.
+- **T2** — New payment posts (v1-active). Symmetric to T1 for
+  stranded receipts attaching to new payments.
+  `re_routing_trigger = 'T2_new_payment'`.
+- **T3** — New `vendor_prepayment` posts (v1-active).
+  `vendorPrepaymentService.create()` → re-runs Subsystem 1
+  against open exception-queue cases for prepayment's vendor.
+  Per ADR-0015 §1 (Q59 closure) + §6 (Q64 closure), creating
+  the prepayment may backfill linkage for a final-invoice case
+  routed to exception. `re_routing_trigger =
+  'T3_new_vendor_prepayment'`.
+- **T4** — New `vendor_credit` posts (v1-active). Symmetric to
+  T3 for credit memos.
+  `re_routing_trigger = 'T4_new_vendor_credit'`.
+- **T5** — Bill state transition (v1-active). When a bill
+  leaves `('approved_for_payment', 'partially_paid')` states
+  (via `markPaid()` / `void()` / `cancel()` per ADR-0015 bill
+  lifecycle); pre-commit candidates pointing at that bill are
+  invalidated. Cascade matrix in ADR-0016 Decision item 5
+  governs post-commit treatment.
+  `re_routing_trigger = 'T5_bill_state_transition'`.
+- **T6** — Payment state transition (v1-active). Symmetric to
+  T5 for stranded `payment_evidence` candidates pointing at
+  payments transitioning to `failed` per ADR-0015 §8.
+  `re_routing_trigger = 'T6_payment_state_transition'`.
+- **T7** — Vendor master merge (**reserved post-v1**).
+  Activates when vendor-master domain ships merge semantics.
+  ADR-0015 §9 vendor master integration does not introduce
+  merge semantics in v1.
+  `re_routing_trigger = 'T7_vendor_master_merge'` reserved.
+- **T8** — Period reopen (v1-active, narrow scope). When a
+  closed fiscal period reopens; pre-commit candidates with
+  `accounting_date` in the reopened period re-validate. v1
+  active behavior is "re-run Subsystem 1 with current state"
+  — typically a no-op since candidates were valid before
+  period close.
+  `re_routing_trigger = 'T8_period_reopen'`.
+- **T9** — Document supersession (**reserved post-v1**).
+  Activates when `superseded_version` `link_role` becomes
+  v1-active in a future ADR-0016 amendment. v1 captures
+  supersession through `current_version_id` pointer on
+  `source_documents` rather than through a link-role row.
+  `re_routing_trigger = 'T9_document_supersession'` reserved.
+- **T10** — Manual operator override (v1-active). Controller-
+  initiated re-route from exception queue UI per
+  `resolution_action = 'reprocess'`.
+  `re_routing_trigger = 'T10_manual_override'`.
+
+**Failure mode**: stale exception (document permanently stranded
+in exception queue because trigger that should re-route never
+fires).
+
+Each trigger emits `pre_commit_link_rerouted` audit event per
+ADR-0016 Decision item 5 with `re_routing_trigger` carrying the
+trigger identifier. The audit event lands inside the dispatcher's
+transaction so re-routing is atomic with the new candidate row's
+creation per ADR-0011 §9.
+
+### Tier 2.5 read-boundary specifics (per ADR-0018 Decision item 5)
+
+Vendor-control / payment-risk reads are Tier 2.5 territory
+(ADR-0007 §Tier 2.5): `bank_account_last4`,
+`payment_instructions`, `bank_detail_confirmed_at`,
+`payment_hold_status`, `blocked_vendor_status`. The Router MAY
+read these when producing payment-readiness candidates; Tier 2
+stages (the classifier and extraction pipeline per ADR-0014)
+MAY NOT read these fields. Tier 1 re-verifies vendor-control
+fields at commit per `agent_architecture_policy.md` §2.3 row
+(e). The Router does NOT make payment authorization decisions
+— those are domain commit decisions per ADR-0015 §9.
+
+### Stale-state TOCTOU obligations (per ADR-0018 Decision item 6 — Q28 surface 3)
+
+The Router does NOT perform stale-state checks itself. The
+Router's reads are not locked, so committed state may change
+between Router invocation and Tier 1 commit. **Tier 1 closes
+the TOCTOU window** inside `withInvariants()` with `FOR UPDATE`
+row locks (or DB triggers for period constraints) per
+`agent_architecture_policy.md` §2.3.
+
+Five sub-cases inherited from ADR-0007 §Q28 expansion surface 3:
+
+- (a) bill state still consistent with proposal expectation
+- (b) `vendor_prepayment.remaining_balance` ≥ application_amount
+- (c) `vendor_credit.unapplied_balance` ≥ application_amount
+- (d) ledger period containing `accounting_date` still open
+- (e) vendor's `bank_detail_confirmed_at` not invalidated
+
+Pushing stale-state checks into the Router would conflate
+proposal-time and commit-time concerns. The correct division of
+labor: Router proposes; Tier 1 re-verifies inside
+`withInvariants()` with row locking that actually closes the
+TOCTOU window. This is the same architectural reasoning that
+motivated the Tier 2.5 split per ADR-0007 §Amendment.
+
+### Confidence threshold integration with ADR-0019 (per ADR-0018 Decision item 7)
+
+The Router consumes thresholds at three decision points:
+
+1. **Candidate filtering in Subsystem 1** — per-document-type
+   threshold (ADR-0014 §7 Q65 v1 provisional values:
+   `vendor_invoice` 0.85 / `receipt` 0.80 /
+   `payment_confirmation` 0.85 / `unknown` always-exception).
+2. **Propose-vs-exception routing in Subsystem 2** — empty
+   post-filter set routes to exception queue (Subsystem 2
+   branch (c)).
+3. **Ambiguity-margin in Subsystem 2** — single calibrated
+   value applied to top-vs-runner-up score difference. Margin
+   ≥ threshold → propose-the-best (branch (a)); margin <
+   threshold → propose-with-ambiguity-flag (branch (b)) or
+   route-to-exception-queue (branch (c)) depending on candidate
+   cluster size.
+
+Per-document-type confidence threshold values are owned by
+ADR-0014 §7 (Q65). Ambiguity-margin threshold value is
+provisional in this ADR pending ADR-0019 ratification.
+ADR-0019 (Confidence Calibration Policy) owns calibration
+governance for post-v1 tuning; ADR-0018 specifies algorithmic
+decision points where thresholds gate behavior, not threshold
+values beyond inheriting ADR-0014's.
 
 ## 9. ProposedMutation / ProposedMutationBundle / ProposedAttachment
-[Stub — fill from reframe spec §14; ProposedAttachment for no-ledger-effect attaches]
+
+The Document Platform produces three kinds of proposal objects.
+All three flow through the same proposal queue and use the same
+Four Questions grammar; they differ in commit-path semantics.
+ADR-0011 §7 owns the handoff vocabulary; ADR-0012 owns the
+bundle envelope mechanism (atomicity, lifecycle, Logic Receipt
+shape); `intent_model.md` `## The Four Questions Grammar` heading
+owns the canonical user-facing rendering contract (citation note:
+shorthand "intent_model.md §5" references the 5th `##` heading
+in that file; the heading is text-anchored, not numbered).
+
+### Three-proposal-type contract (per ADR-0011 §7)
+
+**`ProposedMutation`** is the canonical mutation object from
+`intent_model.md`. Maps to one ledger-touching change. Commits
+through a domain service that produces ledger operations via
+`ledgerService.post(...)` per Reading B. Examples:
+`record_bill_payment`, `post_vendor_credit`,
+`apply_vendor_prepayment_to_bill`. ADR-0011 does not modify the
+`ProposedMutation` contract — shape is unchanged from
+`intent_model.md`.
+
+**`ProposedMutationBundle`** is a composite proposal that carries
+multiple `ProposedMutation` children which must commit
+all-or-nothing. The first concrete consumer is the born-paid bill
+bundle per ADR-0015. DB-transaction-atomic enforcement and
+Logic Receipt shape for compound mutations are owned by ADR-0012.
+
+**`ProposedAttachment`** is the sibling concept introduced for
+proposals that produce no ledger operation. Flows through the
+same proposal queue as a `ProposedMutation` and renders the same
+Four Questions, but **commits via `documentLinkService.create()`
+and produces no journal entry, no ledger operation, no
+`audit_log` entry on accounting state**. Document-layer audit
+event `attachment_link_created` lands as the link-creation
+mutation's own audit event.
+
+### `ProposedMutationBundle` — bundle envelope (per ADR-0012 §1)
+
+Verbatim TypeScript type:
+
+```typescript
+type ProposedMutationBundle = {
+  id: string;                              // UUID, bundle-level
+  bundle_type: BundleType;                 // closed enum
+  proposed_at: string;                     // ISO 8601
+  approved_at: string | null;              // set on Approved (transient)
+  posted_at: string | null;                // set on Posted
+
+  bundle_lifecycle_state: LifecycleState;  // single shared state
+  effective_ceiling: CeilingTier;          // = max(child ceilings)
+  bundle_idempotency_key: string;
+
+  justification: {
+    rule_id: string | null;                // null = novel pattern
+    pipeline_trace: PipelineStageRecord[];
+    bundle_rationale: string;
+    source_document_ids: string[];
+    user_utterance: string | null;
+  };
+
+  children: ProposedMutation[];            // ordered; ordering is semantic
+};
+```
+
+**Children compose `ProposedMutation` only** (per ADR-0012 §2;
+NOT `ProposedAttachment`). The two have different commit paths;
+bundling them would conflate ledger-write atomicity with
+polymorphic-link-write and break the all-or-nothing promise at
+the level the bundle commits. If a workflow needs both — for
+example, a born-paid bundle whose classifier-routed receipt
+should also attach as `payment_evidence` to the resulting bill
+— the attachment commit happens **after** the bundle commit
+succeeds, not as part of the bundle's transaction. If post-bundle
+attachment fails, the bundle is already committed; attachment
+failure routes to exception queue per ADR-0011 §13.
+
+### Bundle atomicity (per ADR-0012 §3)
+
+All children of a bundle commit inside a single Postgres database
+transaction. The bundle commit method (e.g.,
+`billService.postWithImmediatePayment(bundle)`) opens one
+transaction, runs each child's domain-service commit logic in
+declared order inside `withInvariants()`, and either commits the
+whole transaction or rolls back the whole transaction. **No
+partial commits.** Postgres rollback is the mechanical all-or-
+nothing guarantee — service-layer code wraps but cannot replace
+it.
+
+The bundle-level invariant (per ADR-0012 §7 — the authoritative
+source for Q28 surface 4 — bundle re-verification) fires at
+commit time inside `withInvariants()` and evaluates four
+conditions:
+
+1. Each child entry balances per-child INV-LEDGER-001.
+2. The bundle as a whole balances (sum of all child journal-line
+   debits = sum of all child journal-line credits).
+3. The control account net effect is zero for the bundle's
+   primary subject (for born-paid: AP).
+4. The payment-side credit equals the total payment amount
+   (catches extraction errors where receipt total doesn't match
+   bill amount).
+
+### Bundle types — closed enum (per ADR-0012 §12)
+
+**v1-active (1)**: `born_paid_bill`. Children: `post_bill`
+followed by `record_bill_payment`. Per-bundle-type child
+composition owned by ADR-0015.
+
+**Reserved (ratified by ADR-0015 in Tier 4)**:
+`final_invoice_with_applied_deposit` (final invoice arrives, prior
+`vendor_prepayment` row applies; balance-check sub-rule that
+prepayment has remaining balance sufficient for application
+amount); `vendor_credit_applied_to_bill` (bill posting alongside
+application of existing vendor credit).
+
+**Reserved post-v1 candidates** (forward-pointers; schema
+reservation lands when their respective ADRs scope, not in v1):
+`intercompany_due_to_due_from`; `multi_entity_payment_split`;
+`vendor_credit_with_refund`.
+
+ADR-0012 names the discriminator + v1 active value; per-bundle-
+type child-mutation composition lives in ADR-0015.
+
+### Bundle lifecycle (per ADR-0012 §5)
+
+Bundle reuses the six canonical states from
+`mutation_lifecycle.md`: Pending, Needs Attention, Approved,
+Posted (auto), Posted (manual), Finalized — plus terminal
+Rejected / Rejected-with-reversal where applicable. Per-child
+lifecycle states are NOT separate audit surfaces; the bundle's
+state is canonical for all its children.
+
+v1 born-paid path (Always Confirm per reframe spec §11; auto-
+post deferred past v1):
+
+```
+Pending → (may go to Needs Attention) → Approved (transient) →
+Posted (manual) → Finalized           [v1 — Always Confirm]
+```
+
+### `ProposedAttachment` — v1 variants (per ADR-0011 §7)
+
+5 v1-active variants:
+
+- `attach_payment_evidence` — Scenario A: receipt is supporting
+  evidence for a payment that is already recorded.
+- `attach_invoice_to_existing_bill` — invoice arrives after a
+  manual bill was created without evidence.
+- `attach_supporting_document_to_bill` — secondary documents
+  (correspondence, contracts, delivery notes).
+- `attach_statement_to_vendor_reconciliation` — vendor statement
+  in reconciliation flow.
+- `attach_retainer_agreement_to_prepayment` — retainer agreement
+  evidence for an existing `vendor_prepayment` row.
+
+**v1 approval policy.** Always Confirm, **except** the user-
+initiated direct-upload variant (a user dragging a file into a
+specific bill's attach slot is implicitly approving by upload
+action; no separate confirmation gate). All other variants —
+agent-routed, forwarded-mailbox, classifier-routed — flow
+through Always Confirm.
+
+### Four Questions grammar (per `intent_model.md` `## The Four Questions Grammar`)
+
+Every confirmation surface in The Bridge answers these four
+questions, in this order, in the same visual position. This is
+a product-wide UI contract, not a component.
+
+Canonical phrasing (verbatim):
+
+1. **What changed?** The delta. Rendered from
+   `ProposedMutation.delta`.
+2. **Why?** The rule that matched, or "novel pattern — no rule."
+   Rendered from `ProposedMutation.justification.rule_id`.
+3. **Track record?** Rendered from
+   `ProposedMutation.justification.historical_match_count` and
+   the rule's recent approval rate.
+4. **What if I reject?** Explicit consequence language.
+
+The contract applies to every confirmation surface — single-
+mutation card, bulk approve dialog, promotion ceremony, reversal
+form, period close confirmation, ProposedBundleCard,
+ProposedAttachmentCard. **No surface may omit a question or
+reorder the sequence.**
+
+### Per-proposal-type Four Questions adaptation
+
+**`ProposedMutation` rendering**: Canonical phrasing applied
+verbatim. Q1 renders debit/credit table; Q2 renders rule_id; Q3
+renders historical match count + approval rate; Q4 renders
+journal-entry rejection consequence ("The entry will not be
+posted. You can edit and resubmit, or discard.").
+
+**`ProposedMutationBundle` rendering** (per ADR-0012 §6 Layer 3
+aggregate; canonical phrasing preserved): Aggregate Four Questions
+at bundle level (NOT N stacked single-mutation cards).
+
+- Q1 renders combined debit/credit table with subtotals per
+  child + single bundle-level total
+- Q2 renders one bundle-level rule_id explanation (e.g., "Born-
+  paid bill: invoice arrived with payment receipt")
+- Q3 renders single bundle-level attribution per existing
+  `created_by` pattern
+- Q4 renders bundle-level rejection consequence
+
+A naive implementation that stacks N single-mutation cards
+inside a bundle dialog violates this contract — the user makes
+one bundle-level approval decision and the UI must reflect that.
+
+**`ProposedAttachment` rendering** (per ADR-0011 §7 verbatim
+adaptation):
+
+- **Q1 What changed?** Renders the link delta — which document,
+  which entity, which `link_role`. **No debit/credit table; no
+  balance shift.**
+- **Q2 Why?** Renders the rule that proposed the attachment (or
+  "novel pattern — no rule") per the same `justification.rule_id`
+  shape.
+- **Q3 Track record?** Same template as `ProposedMutation`.
+- **Q4 What if I reject?** "The document will not be linked. You
+  can edit and resubmit, or discard."
+
+### Reading B preservation (per ADR-0011 §8 + ADR-0012 inheritance)
+
+All three proposal types preserve Reading B by construction. The
+Document Platform proposes; domain services produce ledger
+operations; the ledger service is the sole writer of journal
+entries.
+
+- `ProposedMutation` commits through a domain service that calls
+  `ledgerService.post(...)` per Reading B.
+- `ProposedMutationBundle` commits through a domain service that
+  orchestrates each child inside one `withInvariants()`
+  transaction; no bundle commit path bypasses
+  `ledgerService.post(...)`.
+- `ProposedAttachment` commits via `documentLinkService.create()`
+  and produces no ledger operation at all.
+
+A future contributor who proposes any proposal-type commit path
+that calls `ledgerService.post(...)` directly (bypassing the
+domain service) is proposing a Reading B violation — mechanical,
+not conventional.
+
+### Mapping to `intent_model.md` Primitive 1 (per ADR-0011 §7 + spec §20)
+
+All three proposal types are `intent_model.md` Primitive 1
+(Proposal):
+
+- `ProposedMutation` — Primitive 1 with the canonical mutation
+  payload from `intent_model.md` §3.
+- `ProposedMutationBundle` — Primitive 1 with composite payload
+  (no new primitive introduced).
+- `ProposedAttachment` — Primitive 1 with non-mutating composite
+  payload (no new primitive introduced).
+
+The same proposal queue surfaces handle all three without bespoke
+routing per the canonical rule from `intent_model.md` ("No entry
+path has bespoke routing").
 
 ## 10. Document lifecycle immutability rules
 [Stub — fill from reframe spec §16; ocr_runs immutable, extraction_runs immutable, candidates versioned, post-commit links require supersession]
