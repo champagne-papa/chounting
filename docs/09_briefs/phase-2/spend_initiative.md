@@ -980,9 +980,10 @@ every preceding section.
 ## 16. Friction-journal scope
 
 Spend Initiative entries land under the **Spend Initiative arc**
-(placeholder arc name `arc-spend-initiative`; final name confirmed at the first
-session-kickoff). The arc retrospective at close follows the
-existing retrospective discipline from
+(arc identifier `arc-spend-initiative` confirmed at first
+session-kickoff 2026-05-07 per Phase 5 first-domain consumer
+arc-onset planning-lock). The arc retrospective at close follows
+the existing retrospective discipline from
 `docs/07_governance/retrospectives/` (Pattern 8 file-top staleness
 review applies; Pattern 2 UI screenshot gate applies).
 
