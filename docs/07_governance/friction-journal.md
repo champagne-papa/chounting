@@ -6237,3 +6237,428 @@ B2-2 + B2-3 substantive output (2290 lines aggregate / 75%
 arc-completion boundary at clean termination); chunk B2-4 +
 arc-level closeout cycle fires next session per Anchor B
 deferral.
+
+---
+
+### Phase 2 brief-creation arc — chunk B2-4 commit (2026-05-07) + arc substantive output complete + 8 firing decisions opening at arc-closeout next session
+
+Chunk B2-4 ships substantive content for §14 + §16 + §18-§20 of
+`docs/09_briefs/phase-2/document_platform_initiative.md` (Phase A
+acceptance criteria + ADRs this initiative produces inventory +
+friction-journal scope + non-goals + verification against
+canonical docs). Single direct-commit on staging at `ab0c350` per
+single-purpose-commit-discipline; **bundled commit + push** per
+(C-ii) bundled-explicit founder verdict at clean-termination gate
+per refined (R-iii) — `ccca74c..ab0c350` advanced on
+origin/staging 2026-05-07.
+
+**Phase 2 brief-creation arc substantive output COMPLETE.** Brief
+skeleton 0 stubs remaining; full §1-§21 substantive content
+shipped across 4 chunks. Aggregate arc contribution: ~2756 lines
+drafted across chunks B2-1 (564) + B2-2 (1102) + B2-3 (624) +
+B2-4 (466). Arc-level closeout cycle (arc retrospective + 8
+firing decisions) opens fresh next session per
+**(arc-close-next-session)** founder verdict at next-step
+election gate.
+
+#### Substantive output
+
+471 insertions / 5 deletions (5 deletions = 5 stub `[Stub — ...]`
+lines replaced; chunk B2-4 commit is purely additive-with-stub-
+replacement). Per-section delta:
+
+- **§14 Phase A acceptance criteria** (~199 lines) — (ξ-locked)
+  compositional-weighting across three substrate axes: verbatim
+  spine-acceptance from distributed ADR-0011 sources (Closes
+  Q-closures Q53/Q54/Q67/Q68/Q73/Q75/Q76 + What this constrains
+  5 non-negotiable rules + §12 Q28 matrix v1 ship gate per Q77 +
+  §13 exception queue first-class deliverable + What this costs
+  Phase distribution); summary consumption-shape from ADR-0015
+  (7 consumption surfaces + 3 consumed-but-not-owned via
+  ADR-0016 / ADR-0018 / ADR-0019); cross-reference framing-
+  pattern from D6 §6.8 substrate-now-enforcement-later cross-
+  pattern (6-instance Phase 0 robustness + 3 Phase 1 deferred-
+  obligation triggers Q29 / Q77 / Q79).
+- **§16 ADRs this initiative produces** (~91 lines) — (ο-locked)
+  verbatim-keep-and-expand 7-ADR inventory with γ-1 forward-
+  looking per-ADR descriptions. ADR-0011 row carries (o-1-α)
+  per-row inline amendment-status note with substrate-anchored
+  framing referencing concrete ADR-0011 §13 ↔ ADR-0015 §7 (Q74
+  Scenario C closure) `manual_born_paid_workflow` registration
+  gap.
+- **§18 Friction-journal scope** (~14 lines) — (π-locked)
+  "Document Platform Initiative" arc name with placeholder slug
+  `arc-document-platform-initiative`; first operational instance
+  of `<Subject> Initiative` template at friction-journal grain
+  (Spend Initiative arc has not started; precedent lives in
+  Spend brief §16 placeholder).
+- **§19 What this initiative does NOT do** (~31 lines) —
+  (ρ-locked) verbatim-preserve 5 core non-goals + silent-
+  correction "AP/Spend brief content" → "Spend brief content" +
+  1 load-bearing addition: explicit non-goal capturing Reading B
+  preservation surface ("does not execute ledger-side substrate
+  writes — Document Platform proposes mutations; domain services
+  produce ledger operations; ledgerService is sole writer of
+  `journal_entries` and `journal_lines`"). Total 6 non-goals.
+- **§20 Verification against canonical docs** (~135 lines;
+  drafted LAST per within-chunk sequencing dependency) — (σ-1
+  locked) precedent-honoring derivation per Spend brief §18
+  shape: flat per-canonical-doc list with absolute paths +
+  verification notes + §-cross-references; ordering by
+  canonical-doc location; lead-in clause matches Spend brief
+  precedent verbatim; trailing summary; "direct read" attestation
+  per file. 35 canonical-doc entries; all paths verified on disk
+  pre-commit.
+
+Brief total post-chunk-B2-4: 2944 lines (was 2478 pre-B2-4).
+
+#### Citation-anchor corrections inlined silently
+
+Per chunk B2-1 / B2-2 / B2-3 silent-correction precedent:
+
+- **AP brief filename = `spend_initiative.md`** (NOT
+  `ap_spend_initiative.md` / `ap_ingestion_initiative.md`;
+  renamed 2026-05-02 per Document Platform reframe). Subject =
+  "Spend" (NOT "AP/Spend Subdomain" — the AP/Spend Subdomain
+  label survives as ADR-0015 ratified-name only). Cross-
+  references to AP brief in §19 + §20 use canonical filename.
+- **Spend brief §18 = "Verification against canonical docs"**
+  (deliberate departure from §1-§21 default layout per Spend
+  brief preamble). Document Platform brief §20 retains §1-§21
+  default layout shape (verification at §20, not §18).
+
+#### Substantive Flag surfacings
+
+- **Concrete substrate evidence: `manual_born_paid_workflow`
+  registration gap** surfaced concretely at §16 ADR-0011 row
+  inline amendment-status note. Cross-enum-consistency cumulative
+  within-arc N=6 (Flag 3 `wrong_entity_exception` N=3 chunks
+  B2-1 §2 + B2-3 §11 + B2-3 §12; Flag 4
+  `manual_born_paid_workflow` N=3 chunks B2-3 §11 + B2-3 §13 +
+  B2-4 §16). Resolution paths carry-forward to arc-closeout
+  governance triage (4 paths total):
+
+  - **(a)** ADR-0011 amendment to extend the enum — full enum
+    extension (lifts editorial-gap reading)
+  - **(b)** ADR-0015 amendment to drop the value — alternate
+    path
+  - **(c)** New inter-ADR registration discipline — codifies
+    cross-reference reading as governance pattern
+  - **(d)** ADR-0011 §13 amended with inline cross-reference
+    note ("extensions cross-referenced from downstream ADRs
+    (ADR-0015 emits `manual_born_paid_workflow` per Decision
+    item 7)") without enum-membership amendment — lighter than
+    (a) full enum extension; codifies (a) reading via
+    amendment-via-clarification
+
+  Path (d) added during chunk B2-4 onset Sub-Q surfacing per
+  brainstorm-side parallel input.
+
+- **Stale subject-name ref carry-forward** — chunk B2-1 §1
+  motivation (line 4) carries "AP/Spend Initiative" subject-name
+  ref where canonical naming is "Spend Initiative". Per δ-i
+  preservation NO retroactive edit; carry-forward governance
+  observation for arc-closeout discussion. Two interpretation
+  paths:
+  - **(line-4-i)** Drafting-time inadvertent stale ref —
+    chunk B2-1's Z1 #11.b dispatch may not have covered AP
+    brief canonical filename verification (because chunk B2-1's
+    §1-§4 substrate didn't directly require AP brief
+    reference). Z1 #11.b discipline observation if true.
+  - **(line-4-ii)** Drafting-time deliberate composite framing
+    — "AP/Spend" as composite reference for the broader
+    subdomain. Subject-naming-convention observation if true.
+
+  Disposition optional at arc-closeout founder discretion.
+
+#### Substantive interpretive clarifications
+
+- **§16 ADR-0011 row substrate-anchored note framing** — count-
+  specific (with N=6+) vs count-omitted vs substrate-anchored
+  framing options were surfaced during chunk B2-4 onset Sub-Q
+  surfacing. WSL-side updated lean from count-omitted to
+  substrate-anchored per concrete substrate finding. Substrate-
+  anchored framing references verifiable ADR-vs-ADR registration
+  gap rather than abstract within-arc cumulative-signal
+  accounting; preserves §16's per-row signal-completeness without
+  arc-history dependency.
+
+#### Substantive locks honored across §14 / §16 / §18 / §19 / §20
+
+- **Reading B preservation** reaffirmed in §14 (no Document
+  Platform write to ledger tables non-negotiable rule) + §19
+  (does not execute ledger-side substrate writes; sole-writer
+  rule cited). Within-arc Reading B preservation count at arc-
+  completion: **8+ explicit references** across §1 motivation
+  through §19 non-goal — substantive substrate-decision-
+  integrity-density. Readers can reconstruct Reading B
+  discipline from any chunk's substantive content without
+  dependency on arc-history.
+- **Single-writer rules**: `documentLinkService` for
+  `source_document_links` (§16 ADR-0016 row); `ledgerService`
+  for `journal_entries` via domain services (§14, §19);
+  `storageProviderService` for storage backends (§16 ADR-0013
+  row).
+- **Substrate-now-enforcement-later cross-pattern (D6 §6.8)**
+  framing in §14 with 6-instance Phase 0 robustness + 3 Phase 1
+  deferred-obligation triggers (Q29 ESLint at first
+  `src/agent/pipelines/**/*` code; Q79 INV-DOC-001 at first
+  DOC-citing code; Q77 Q28 matrix at v1 ship).
+- **Three-layer ADR-0010 defense** applied at §16 ADR-0013 /
+  ADR-0014 / ADR-0019 inventory rows (reserved-enum-states
+  discipline inheritance).
+
+#### Length-as-calibration NEW datapoint — within-arc N=4 evidence basis
+
+Chunk B2-4 fired **moderate overshoot** (1.17-2.33x against
+200-400 line aggregate naive estimate; midpoint ~1.55x). Despite
+session-start projection of bounded-substrate within-estimate
+firing, two density-drivers fired overshoot:
+
+- **§14 synthesis-density** (~199 lines) — 3 substrate axes × 5
+  distributed ADR-0011 sources × 7 ADR-0015 consumption surfaces
+  + 6-instance cross-pattern enumeration + 3 Phase 1 deferred-
+  obligation triggers
+- **§20 verification-list-density** (~135 lines) — 35 canonical-
+  doc entries × per-entry path + verification note + §-cross-
+  reference
+
+Combined §14 + §20 = 334 lines = 71% of chunk B2-4 aggregate;
+§16 + §18 + §19 = 136 lines = 29%. Distribution **bimodal** —
+not uniform.
+
+**Refined-refined Z1 #9 sub-shape candidate**: "Z1 #9 length-as-
+calibration overshoot fires when chunk includes ANY density
+driver (enum / matrix / synthesis / verification-list); bounded-
+substrate without any density driver → no overshoot."
+
+**Within-arc N=4 datapoint table**:
+
+| Chunk | Estimate | Actual | Multiplier | Density driver |
+|---|---|---|---|---|
+| B2-1 | 250-350 | 564 | 1.6-2.3x | Enum density (§2 reserved-but-not-emitted) |
+| B2-2 | 400-700 | 1102 | 1.6-2.7x | Matrix density (§7 polymorphic links 756-cell matrix) |
+| B2-3 | 470-850 | 624 | 0.7-1.3x | None (bounded-substrate) |
+| B2-4 | 200-400 | 466 | 1.17-2.33x | Synthesis density (§14) + verification-list density (§20) |
+
+3 fire (B2-1 + B2-2 + B2-4) + 1 doesn't fire (B2-3). Pattern
+preserves (e) shape-refinement-via-within-arc-evidence-basis
+meta-pathway graduation criterion.
+
+**Traversal-multiplication meta-pattern** — the four density-
+driver shapes decompose into a structural pattern: each is
+"section-internal-content-multiplication via traversal over a
+structured input":
+
+- Enum density: substrate = single enum; content = per-value
+  enumeration with framing per row
+- Matrix density: substrate = single matrix definition; content
+  = per-cell enumeration with framing per cell
+- Synthesis density: substrate = multiple distributed sources;
+  content = per-source treatment with cross-axis weighting
+- Verification-list density: substrate = single canonical-doc
+  list; content = per-entry path + verification note + §-cross-
+  reference
+
+Bounded-substrate sections without traversal-multiplication
+produce content proportional to substrate size; sections with
+traversal-multiplication produce content proportional to
+substrate-size × per-element-content-density.
+
+**Translation-gap discipline-shape refinement candidate** —
+traversal-axis-recognition exists at Sub-Q surfacing time
+(chunk B2-4 §14 synthesis-traversal recognized at Sub-Q ξ;
+chunk B2-4 §20 verification-list-traversal recognized at Sub-Q
+σ) but length-budget translation deferred to drafting time,
+producing reactive overshoot. Discipline-shape refinement that
+prevents reactive overshoot operates at Sub-Q surfacing gate:
+surface traversal-axis + estimate per-element-content-density +
+multiply for length-budget projection. Integrates Z1 #9 length-
+projection into Sub-Q surfacing operationally rather than
+treating it as separate post-Sub-Q activity.
+
+Logged for arc-closeout codification scope as candidate (d)
+refined-refined sub-shape graduation framing.
+
+#### β-equivalent rotation event at Anchor 2 lock
+
+Foreign session-lock disposition at Phase 0 anchor lock fired as
+**β-equivalent rotation per (β-i) conceptual-only operational
+shape**. Operational interpretation:
+
+- WSL-side rotated local session-posture to fresh label-
+  equivalent stance; foreign session-lock at
+  `chounting-worktrees/phase-1-document-platform/.coordination/
+  session-lock.json` (held under `phase-1-document-platform-
+  2026-05-06`) NOT modified, NOT cleared, NOT PID-investigated
+- No local session-lock artifact created in main worktree per
+  (β-i) "conceptual-only" framing — no filesystem-state
+  correlate
+- Documentary record absorbed at chunk B2-4 closeout entry
+  chunk-grain firing-point per (β-i) discipline
+
+α-equivalent precedent count at session-start: N=16+ cumulative
+across three sessions. β-rotation event at Anchor 2 lock closes
+the α-equivalent stance for this session; arc-completion records
+under β-equivalent stance going forward this session.
+
+**Soft session-lock warning expected per-commit under (β-i)** —
+the coordination hook surfaces "no session lock in use; consider
+running scripts/session-init.sh <label>" warning at every commit
+this session because no local artifact exists. This is
+structurally precise per (β-i) framing — "conceptual-only" means
+coordination hook reads no local lock. Non-blocking; expected
+behavior under locked operational shape. Logged as observation;
+not surfaced as separate codification candidate.
+
+#### Arc-completion observations (forward-pointers for arc-closeout codification)
+
+- **Bimodal distribution at arc-completion chunks structural
+  pattern** — chunk B2-4's §14 + §20 = 71% of aggregate vs §16
+  + §18 + §19 = 29%. Brainstorm-side observation: arc-completion
+  chunks may structurally favor bimodal distribution because
+  their content-axis spans across-arc-scope (§14 acceptance
+  synthesizes across arc-wide substrate; §20 verifies across
+  arc-wide canonical-doc citation graph) rather than within-
+  chunk-scope. Both sections operate at arc-grain even though
+  they ship in chunk-grain commit. Possibly relevant under
+  candidate (f) Sub-Q axis taxonomy refinement scope.
+
+- **Reading B preservation density at arc-completion** — 8+
+  explicit references across all 4 chunks (B2-1 §1 + B2-2 §6 /
+  §7 / §9 + B2-3 §10 / §11 / §13 + B2-4 §14 / §19) anchor
+  Reading B discipline at multiple natural firing-points. Brief
+  produces Reading B preservation evidence at arc-grain via
+  chunk-grain section coverage — arc-output-quality property
+  worth flagging. Possibly relevant under arc-cadence meta-
+  codification candidate.
+
+- **Arc-class first-instance status framing** — Phase 2 brief-
+  creation arc is the first multi-chunk brief-creation arc in
+  chounting's history (Phase 1.Storage was implementation arc;
+  Phase 0 was governance arc; both shipped per their own
+  discipline-shapes). Arc-output-quality properties surfaced
+  this arc are first-instance observations, NOT pattern-stable
+  observations. Codification candidates surfaced this arc are
+  forward-pointers for FUTURE brief-creation arcs (Spend
+  Initiative implementation arc; subsequent phases' briefs),
+  not pattern-stable codifications across multiple brief-
+  creation arcs. Brainstorm-side preliminary lean: at arc-
+  closeout codification, frame candidates explicitly as "first-
+  arc-instance pattern observations forward-pointing to
+  subsequent brief-creation arcs" rather than "pattern-stable
+  codifications." Preserves substrate-decision-integrity by
+  acknowledging within-arc-evidence-basis nature without
+  overclaiming pattern-stability.
+
+#### Subagent dispatch shape
+
+Layer 2 fired 3 parallel general-purpose subagents per Z1 #11.b
+preventive verbatim re-read discipline before drafting:
+
+1. ADR-0011 acceptance-equivalent distributed sources (mandatory
+   for §14 verbatim spine-acceptance axis) + amendment-status
+   framing context for §16 ADR-0011 row
+2. ADR-0015 Document Platform consumption shape (mandatory for
+   §14 summary axis) + ADR-0012 / ADR-0013 / ADR-0014 / ADR-0016
+   / ADR-0018 / ADR-0019 inventory-row description anchors for
+   §16 γ-1 forward-looking per-ADR descriptions
+3. D6 §6.8 substrate-now-enforcement-later (mandatory for §14
+   cross-reference framing-pattern axis) + AP Ingestion
+   Initiative arc-name precedent verification (Sub-Q π fast-path
+   confirmation) + AP brief §18 precedent shape verification
+   (§20 derivation-mechanics substrate)
+
+Subagent dispatch within-arc cumulative count: 4 (B2-1) + 5
+(B2-2) + 4 (B2-3) + 3 (B2-4) = **16 subagents fired across arc**
+preventively. Z1 #11.b graduated codification (per memory carry-
+forward + session-start standing rules) operationally validated
+across the arc — within-arc 16-fire cumulative + cross-session
+pattern-stability evidence basis demonstrates discipline-shape
+stability.
+
+#### 8 firing decisions opening at arc-closeout next session
+
+Per (arc-close-next-session) founder verdict at next-step
+election gate, arc-grain codification surface opens fresh next
+session. Firing decisions accumulated this arc:
+
+1. **(a) Tier 2 substrate sense-disambiguation** — brief
+   glossary entry + friction-journal codification at arc-
+   closeout. ADR-0007 amendment (path c) deferred as conditional-
+   future-action contingent on cross-arc closeout amendment-arc
+   election.
+2. **(b) Cross-enum-consistency governance question (Flag 3 +
+   Flag 4 joint)** — within-arc cumulative N=6; concrete
+   substrate evidence at §16 ADR-0011 row inline note. 4
+   resolution paths (a / b / c / d) for arc-closeout governance
+   triage; founder-domain election scope.
+3. **(c) ADR Decision-item-vs-§-numbering convention** —
+   friction-journal codification scope; convention-going-forward
+   applies to NEW ADRs only per δ-i preservation; NO retroactive
+   retrofit.
+4. **(d) Z1 #9 refined-refined sub-shape** — any-density-driver
+   framing (enum / matrix / synthesis / verification-list);
+   within-arc N=4 datapoint refinement-evidence basis (3 fire +
+   1 doesn't fire). Cross-arc graduation candidate via shape-
+   refinement-via-within-arc-evidence-basis pathway. Translation-
+   gap discipline-shape refinement sub-candidate logged.
+5. **(e) Shape-refinement-via-within-arc-evidence-basis meta-
+   codification candidate** — graduation-pathway shape
+   codification; distinct from Z1 #9 refinement itself. Founder-
+   domain election scope.
+6. **(f) (NEW) Sub-Q axis taxonomy refinement when stubs carry
+   pre-stub-prefiguration text** — concrete-shape codification
+   at brief-creation grain. Chunk B2-4 first-instance under this
+   candidate; cross-references (e) meta-pathway.
+7. **(R-iii) gate-class-dependent shape graduation** — cross-arc
+   N=2 graduation criterion validated this session via within-
+   session N=11 coherent gate fires. Graduates at arc-closeout
+   from codifiable refinement candidate to codified discipline.
+8. **Arc-cadence meta-codification candidate** — single-chunk-
+   per-session at brief-creation grain + chunk-closeout + arc-
+   closeout codification tiering. Within-arc N=4 stable cadence
+   (chunks B2-1 + B2-2 + B2-3 + B2-4 = 4 chunks, 4 sessions, +
+   pending arc-closeout 5th session).
+
+Plus carry-forward governance items:
+
+- **Cross-enum-consistency governance triage** — founder-domain
+  election at arc-closeout (4 paths a/b/c/d)
+- **Foreign session-lock disposition next-session** — arc-
+  closeout retrospective records arc-closure under "N=16 α-
+  equivalent cumulative + β-rotation event at Anchor 2 lock"
+  per (β-i) conceptual-only documentary record
+- **Hygiene-cycle 3 deferred fixes** — γ-hygiene; defer-further
+  to Phase 5 first-domain consumer arc onset OR Phase 1.Storage
+  re-open (whichever fires first) per Anchor 4 lock
+
+#### Carry-forward to next session — arc-closeout cycle
+
+- **Arc retrospective** — full Phase 2 brief-creation arc across
+  4 chunks; aggregate ~2756 lines drafted; cross-arc patterns
+  observed; arc-class first-instance framing for subsequent
+  brief-creation arcs
+- **8 firing decisions** — per inventory above; founder-domain
+  triage timing
+- **(R-iii) graduation decision** — cross-arc N=2 graduation
+  criterion validated; codifies as discipline at arc-closeout
+- **Cross-enum-consistency governance question triage timing**
+  — founder-domain election (paths a/b/c/d)
+- **Foreign session-lock disposition next-session election** —
+  Anchor D shape; β-equivalent / continue-β-equivalent / other
+- **Hygiene-cycle 3 deferred fixes** — defer-further to Phase 5
+  first-domain consumer arc onset OR Phase 1.Storage re-open
+  per Anchor 4 lock
+- **Memory pickup file refresh** — `project_phase_2_brief_
+  creation_pending.md` content reflects post-arc-substantive-
+  output state pending arc-closeout
+
+Phase 2 brief-creation arc substantive output complete; arc-
+level closeout cycle (arc retrospective + 8 firing decisions)
+fires next session per (arc-close-next-session) founder verdict
+at next-step election gate. Substrate-decision-integrity
+preserved across chunks B2-1 + B2-2 + B2-3 + B2-4 substantive
+output (~2756 lines aggregate / 100% arc-completion-substantive
+at clean termination); arc-grain codification opens fresh next
+session.
