@@ -1721,16 +1721,628 @@ routing per the canonical rule from `intent_model.md` ("No entry
 path has bespoke routing").
 
 ## 10. Document lifecycle immutability rules
-[Stub — fill from reframe spec §16; ocr_runs immutable, extraction_runs immutable, candidates versioned, post-commit links require supersession]
+
+Replayability is a load-bearing capability of the Document
+Platform: re-running extraction when the OCR engine improves,
+re-running the Relationship Router when new domain state lands,
+must produce new rows that supersede prior rows rather than
+mutating prior rows. The four rules per ADR-0011 §9, verbatim:
+
+1. **`ocr_runs` (extraction artifact rows) are immutable.** A
+   re-extraction produces a new `ocr_runs` row that supersedes
+   the prior one via `supersedes_ocr_run_id`. The prior row is
+   never updated or deleted.
+
+2. **`extraction_runs` (TS extraction result rows) are immutable
+   per `(source_document_id, ocr_run_id, extraction_version)`
+   tuple.** Re-running TS extraction against a new `ocr_runs`
+   row produces a new `extraction_runs` row.
+
+3. **`document_relationship_candidates` are versioned.** When the
+   Relationship Router re-runs (per ADR-0018), it produces a new
+   candidate row that references the prior via
+   `supersedes_candidate_id`. The prior row is preserved.
+
+4. **`document_case.current_relationship_candidate_id` may
+   change before commit.** Pre-commit, the case can re-route as
+   the Router learns more (a new bill posts that matches an
+   unmatched receipt). **Post-commit, committed
+   `source_document_links` rows require reversal or supersession
+   to change** — the link row itself is updated only via a
+   structured supersession that preserves the prior row's
+   `link_status` per ADR-0016 Decision item 5.
+
+### Schema-layer + service-layer enforcement (per ADR-0011 §9)
+
+Per ADR-0011 §9, immutability enforces at two layers:
+
+- **Schema layer** — immutable tables (`ocr_runs`,
+  `extraction_runs`); supersession columns
+  (`supersedes_ocr_run_id`, `supersedes_extraction_run_id`,
+  `supersedes_candidate_id`); no UPDATE permission on immutable
+  rows for service-role clients.
+- **Service layer** — no UPDATE statements against immutable
+  rows; only INSERT-of-successor (re-extraction produces new
+  rows) or soft-delete-via-`status`-flip (`link_status` flips
+  to `reversed` per ADR-0016 Decision item 5).
+
+The two-layer enforcement preserves replayability under both
+correct service-layer code AND adversarial-or-buggy code paths
+that might attempt direct UPDATE: schema-layer denial fires
+even when service-layer guards fail.
+
+### Q69 forward-pointer to ADR-0014
+
+Per ADR-0011 §9, the operational policy on **when replays
+auto-supersede vs require explicit promotion** (Q69) is owned
+by ADR-0014 (Tier 2 Document Pipeline). ADR-0011 §9 owns the
+immutability *boundary* itself (immutable tables + supersession
+columns + no-UPDATE rules); ADR-0014 owns the *cadence* (manual
+controller-triggered v1; auto-supersession heuristics post-v1
+per per-org `org_settings.replay_cadence` reserved column).
+
+This split preserves substrate-decision-integrity at the
+boundary-vs-cadence axis: the immutability shape is platform
+substrate (ADR-0011 §9); the firing-cadence is pipeline
+operational policy (ADR-0014). Future readers editing replay
+behavior amend ADR-0014; future readers editing the
+immutability boundary amend ADR-0011 §9.
+
+### Cross-references
+
+- **ADR-0011 §9** — canonical anchor for the 4 immutability
+  rules
+- **ADR-0011 §3** — `document_cases.lifecycle_state` (post-
+  commit states `{committed, rejected, archived}`)
+- **ADR-0014** — Q69 operational replay-supersession policy
+  (auto-supersede vs explicit promotion)
+- **ADR-0016 Decision item 5** — `link_status` cascade for
+  post-commit `source_document_links`
 
 ## 11. Exception queue — first-class deliverable
-[Stub — fill from reframe spec §10; document-type-aware actions, reclassification, bulk operations, screenshot gate]
+
+Per ADR-0011 §13, the exception queue is the bulk of v1's
+user-visible work. Founder + 2 real users will spend most of
+their time there, not on the happy path. The queue ships as a
+**first-class workflow tool, NOT a deferral mechanism**.
+
+### Reframe (per ADR-0011 §13 verbatim)
+
+> Under this reframe, v1 routes credit memos, vendor statements,
+> deposit requests, retainer requests, bank statements, card
+> statements, customer invoices, employee reimbursements, POs,
+> receiving documents, tax forms, and unknown documents to the
+> exception queue. The exception queue is the bulk of v1's
+> user-visible work — the founder + 2 real users will spend most
+> of their time there, not on the happy path. The queue therefore
+> ships as a first-class workflow tool, not as a deferral
+> mechanism.
+
+12 of 18 document types route to the exception queue in v1
+(per the document-type discriminator at §2 above).
+
+### First-class deliverable requirements (per ADR-0011 §13 verbatim)
+
+Four requirements lock the first-class deliverable framing:
+
+- **Document-type-aware actions.** A credit memo in the queue
+  lets the user record the credit manually (record vendor credit
+  via the AP/Spend domain service); a vendor statement lets the
+  user open a reconciliation view; a bank statement routes to a
+  manual-classification flow that does not pretend automation
+  exists yet.
+- **Reclassification workflows.** A document misclassified as
+  exception is easily moved to the right type. The classification
+  is editable, not a permanent label.
+- **Bulk operations.** Filter by document type, vendor, date
+  range; bulk-approve, bulk-route, bulk-reclassify.
+- **First-class screenshot-gate coverage.** The exception queue
+  UI ships with the screenshot-gate ratification per CLAUDE.md.
+
+### Resolution-action enum — 16-value full closed enum (per ADR-0011 §13 verbatim, Q68 closure)
+
+> **Resolution-action enum (Q68 closed by this ADR — see Closes
+> below).** The full closed enum per ADR-0010 reserved-enum-states
+> discipline:
+>
+> `create_bill`, `attach_to_existing_bill`,
+> `attach_to_existing_payment`, `record_bill_payment`,
+> `create_vendor_prepayment`, `apply_vendor_prepayment`,
+> `create_vendor_credit`, `apply_vendor_credit`, `mark_duplicate`,
+> `mark_non_accounting`, `request_missing_document`,
+> `route_to_manual_entry`, `route_to_bank_reconciliation`,
+> `route_to_AR_future`, `reprocess`, `archive`.
+
+**v1-active subset (8 values per ADR-0011 §13)**:
+`attach_to_existing_bill`, `attach_to_existing_payment`,
+`record_bill_payment`, `mark_duplicate`, `mark_non_accounting`,
+`route_to_manual_entry`, `reprocess`, `archive`.
+
+**Reserved-but-not-emitted (8 values; full-16 minus active-8)**:
+`create_bill`, `create_vendor_prepayment`,
+`apply_vendor_prepayment`, `create_vendor_credit`,
+`apply_vendor_credit`, `request_missing_document`,
+`route_to_bank_reconciliation`, `route_to_AR_future`. Reserved
+per ADR-0010 reserved-enum-states discipline — defined in the
+enum, not emitted by any v1 service write path.
+
+### Reserved-value handling for v1 manual workflows (per ADR-0011 §13 verbatim)
+
+> v1 manual workflows that conceptually correspond to
+> reserved values (record vendor credit, create vendor prepayment,
+> apply vendor credit) are accessible from the queue UI but route
+> the user to the AP/Spend domain service's manual entry form
+> rather than emitting a queue-resolution row with the reserved
+> action; the row is not closed via the resolution enum until the
+> domain service completes the underlying mutation.
+
+This pattern preserves substrate-decision-integrity at the
+substrate-vs-emission axis: the reserved enum value exists at
+v1 schema time per ADR-0010 discipline (substrate ratified);
+emission gates on domain-service implementation availability
+(enforcement landing at Phase 5 AP/Spend domain shipping per
+substrate-now-enforcement-later cross-pattern from D6 §6.8 +
+ADR-0010 amendment Variant A).
+
+### Substrate-vs-domain placement boundary (per ADR-0011 §13 verbatim)
+
+> The exception queue lives in the Document Platform brief (it's
+> substrate). The domain-specific manual workflows it triggers
+> (record vendor credit, open vendor statement reconciliation,
+> file employee reimbursement) live in the Spend Initiative brief
+> or future domain briefs.
+
+### Tier-capability framing (split per chunk B2-1 §4 δ-2-i lock + ADR-0007 Tier semantics)
+
+Per chunk B2-1 §4 δ-2-i lock, the exception queue carries
+split-framing: substrate at Tier 2 (data-layer entity ownership)
++ UI surface at Tier 3 (user-facing Interface Path). This brief
+clarifies the semantic distinction inline:
+
+- **Substrate (data-layer entity ownership): Tier 2 per
+  ADR-0011 §1 + §13.** Resolution-action enum, document-type-
+  aware action contract, reclassification workflow contract,
+  bulk-operation contract live at the substrate. **"Tier 2"
+  here means *where the entity columns live* (Document Platform
+  data-layer entity ownership), NOT *which agent tier executes
+  the write*.**
+- **Write-path execution: Tier 1 per ADR-0007 §Tier 1.** Per
+  ADR-0007 §Tier 2 strict no-write rule ("Tier 2 stages MUST
+  NOT call mutating service entry points. MUST NOT INSERT /
+  UPDATE / DELETE in any table directly"), substrate-metadata
+  writes (e.g., `mark_duplicate`, `mark_non_accounting`,
+  `archive` updating queue-row state) route through Tier 1
+  commits via `withInvariants()`. The writes are non-financial-
+  state but still Tier-1-executed.
+- **UI surface: Tier 3 per ADR-0007 §Tier 3.** The exception
+  queue UI surface (rendering, interaction, document-type-aware
+  action affordances, reclassification workflows, bulk
+  operations, screenshot-gate ratification) is Tier 3 user-
+  facing Interface Path. ADR-0007 §Tier 3 explicitly names
+  "exception explanation" as Tier 3 ownership. Tier 3 MUST NOT
+  expose internal pipeline complexity (no internal stage names,
+  sub-agent identifiers, intermediate Zod outputs); the user
+  sees "the agent" surface per ADR-0006, not "the AP Agent's
+  vendor-matcher stage rev 3."
+
+### Resolution-action capability mapping
+
+Per ADR-0007 framing + ADR-0011 §13 resolution-action
+semantics:
+
+- **Tier 1 capability dependent (state-changing actions)**:
+  `record_bill_payment`, `create_bill`, `create_vendor_credit`,
+  `create_vendor_prepayment`, `apply_vendor_prepayment`,
+  `apply_vendor_credit` — financial-state changes route through
+  Tier 1 `withInvariants()` commits via domain services per
+  Reading B (`paymentService.record(...)`,
+  `billService.post(...)`, etc.).
+- **Tier 1 substrate-metadata writes (non-financial-state)**:
+  `mark_duplicate`, `mark_non_accounting`, `archive` — update
+  case-row metadata via Tier 1 commits but produce no journal
+  entry.
+- **Tier 3 routing decisions (UI workflow routing)**:
+  `route_to_manual_entry`, `route_to_bank_reconciliation`,
+  `route_to_AR_future`, `reprocess`, `request_missing_document`
+  — the user-facing routing decision is Tier 3 façade (per
+  ADR-0007 §Tier 3 "exception explanation" ownership); the
+  actual workflow target then becomes a Tier 1 commit when the
+  user takes the routed action.
+- **Cross-domain handoff**: `attach_to_existing_bill`,
+  `attach_to_existing_payment` — AP/Spend domain consumption of
+  ProposedAttachment per ADR-0011 §7.
+
+### Flag 3 — `wrong_entity_exception` cross-enum inconsistency (carry-forward governance question)
+
+Per chunk B2-1 §2 substrate flag (carried forward to chunk B2-3
+§11 surface): ADR-0011 §10 names `wrong_entity_exception` as
+reserved "in the exception-routing enum (per §13 below)," but
+§13's 16-value `resolution_action` enum does NOT list it.
+
+Reading A (most likely): two distinct enums conflated under
+"exception-routing" — exception-TYPE enum (input
+categorization; why the case landed in queue) vs resolution-
+action enum (output disposition; what the human chose). The
+first enum doesn't exist in any ratified Phase 0 ADR.
+
+**Status**: Phase 2 carry-forward governance question per
+founder Path (a) defer verdict. Warrants either ADR-0011
+amendment introducing the exception-TYPE enum OR downstream-ADR
+ratification (potential ADR-0016 / ADR-0018 candidate).
+Founder-domain triage timing.
+
+### Flag 4 (NEW) — `manual_born_paid_workflow` cross-enum question
+
+Per ADR-0015 Decision item 7 Scenario C (see §13 below), a
+sibling cross-enum inconsistency: ADR-0015 cites
+`resolution_action = manual_born_paid_workflow` as "a reserved
+value per ADR-0010; full enum membership owned by ADR-0011
+§13," but ADR-0011 §13's 16-value `resolution_action` enum
+does NOT list `manual_born_paid_workflow` either.
+
+Possible interpretations: (a) `manual_born_paid_workflow` is
+subsumed under `route_to_manual_entry` (the v1-active
+resolution action for Scenario C routing) and ADR-0015
+Decision item 7's reference is a sub-route nomenclature;
+(b) ADR-0011 §13's enum is incomplete and
+`manual_born_paid_workflow` should be added; (c) drafting
+drift between ADR-0011 §13 and ADR-0015 Decision item 7.
+
+**Status**: Phase 2 carry-forward governance question parallel
+to Flag 3 (chunk B2-1 §2 + chunk B2-3 §11 + chunk B2-3 §13
+surfaces); warrants either ADR-0011 amendment OR ADR-0015
+Decision item 7 clarification. Founder-domain triage timing.
+
+### Cross-references
+
+- **ADR-0011 §1 + §13** — entity ownership + first-class
+  deliverable framing (substrate)
+- **ADR-0007 §Tier 1, §Tier 2, §Tier 3** — Tier-capability
+  framing (write-path execution + UI surface; "exception
+  explanation" Tier 3 ownership at line 313 + line 343)
+- **ADR-0010** — reserved-enum-states discipline
+- **D6 §6.8 + ADR-0010 amendment Variant A** — substrate-now-
+  enforcement-later cross-pattern
+- **ADR-0015** — domain-specific manual workflows triggered
+  from queue (record vendor credit, vendor statement
+  reconciliation, employee reimbursement)
+- **ADR-0011 §10** — cross-enum reference for Flag 3
+  `wrong_entity_exception`
+- **ADR-0015 Decision item 7** — cross-enum reference for
+  Flag 4 `manual_born_paid_workflow`
 
 ## 12. Multi-entity reservation
-[Stub — fill from reframe spec §17; legal_entity_id / paying_entity_id / benefiting_entity_id reservations]
+
+Multi-entity setups (family-office, multi-subsidiary) are post-
+v1. Adding entity reservations now is cheap; retrofitting is
+expensive. Per ADR-0011 §10 (citation-anchor: §10, NOT §17 —
+§17 is the reframe-spec anchor; ADR-0011 re-anchored at §10),
+the platform reserves five nullable columns at v1 schema time.
+
+### Five reserved nullable columns (per ADR-0011 §10 verbatim)
+
+> - `source_documents.legal_entity_id` (uuid, nullable, reserved).
+>   The legal entity the document is addressed to. May differ from
+>   `org_id` in multi-entity setups. Defaults to `org_id` in v1.
+> - `bills.legal_entity_id` (nullable, reserved). The legal entity
+>   that owns the AP bill. Owned by ADR-0015's schema; named here
+>   for cross-reference because the document-to-bill link must
+>   preserve the entity association.
+> - `bill_lines.benefiting_entity_id` (nullable, reserved).
+>   Allocation-level entity. Owned by ADR-0015's schema.
+> - `payments.paying_entity_id` and
+>   `payments.benefiting_entity_id` (nullable, reserved). Owned by
+>   ADR-0015's schema.
+
+v1's 1-1 mapping defaults `source_documents.legal_entity_id` to
+`org_id`. Bills, bill_lines, and payments columns ship as
+nullable reserved per ADR-0015's schema.
+
+### `wrong_entity_exception` reservation (per ADR-0011 §10)
+
+> The platform also reserves the **`wrong_entity_exception` value**
+> in the exception-routing enum (per §13 below). A document
+> addressed to a legal entity not currently configured in the org
+> routes to controller review with manual override available.
+
+(Note: Flag 3 cross-enum inconsistency surface at §11 above —
+`wrong_entity_exception` referenced in ADR-0011 §10 not present
+in ADR-0011 §13's 16-value `resolution_action` enum;
+carry-forward governance question per founder Path (a) defer.)
+
+### Out-of-scope framing (per ADR-0011 §10 verbatim)
+
+> Intercompany due-to / due-from postings are post-v1 and out of
+> scope for this ADR. The reservations let the platform absorb
+> multi-entity workflows without retrofit when the post-v1 phase
+> lands.
+
+### Substrate-now-enforcement-later cross-pattern
+
+Per D6 ratification package §6.8 + ADR-0010 amendment Variant A
+(NULL-default forward-compatible config-column reservation),
+the 5 reserved nullable entity columns operationalize the
+substrate-now-enforcement-later cross-pattern at column-grain:
+
+- **Substrate at v1**: 5 nullable columns ship at v1 schema
+  time (per ADR-0011 §10; per ADR-0015's schema for the
+  domain-owned columns).
+- **Enforcement at Phase 5 (or later)**: when AP/Spend domain
+  ships (Phase 5 first-domain consumer per ADR-0015), the
+  enforcement landing point fires for `bills.legal_entity_id`,
+  `bill_lines.benefiting_entity_id`, `payments.paying_entity_id`,
+  `payments.benefiting_entity_id` per AP/Spend domain
+  multi-entity logic.
+- **Multi-entity activation**: when multi-entity setups
+  activate (post-v1 phase), `source_documents.legal_entity_id`
+  begins emitting non-`org_id` values per multi-entity routing
+  logic.
+
+Three-layer ADR-0010 defense applies across all 5 columns:
+Layer 1 DB CHECK admits NULL-or-legal-value (uuid format);
+Layer 2 Zod boundary rejects non-NULL at v1 (until activation
+phase); Layer 3 service emission filter prevents non-NULL
+writes at v1.
+
+### Cross-references
+
+- **ADR-0011 §10** — canonical anchor (note: §10, NOT §17 —
+  §17 is reframe-spec anchor; ADR-0011 re-anchored at §10 per
+  chunk B2-1 §2 substrate-flag-and-correction precedent)
+- **ADR-0015** — schema ownership for `bills.legal_entity_id`,
+  `bill_lines.benefiting_entity_id`,
+  `payments.paying_entity_id`, `payments.benefiting_entity_id`
+  columns
+- **ADR-0010 amendment Variant A** — NULL-default forward-
+  compatible reservation discipline
+- **D6 ratification package §6.8** — substrate-now-enforcement-
+  later cross-pattern codification
 
 ## 13. Receipt v1 decision matrix
-[Stub — fill from reframe spec §15; per-capability split]
+
+Per ADR-0015 Decision item 7 (citation-anchor: **Decision item
+7, NOT §15** — ADR-0015 organizes content as numbered Decision
+items under `## Decision`; the phrase "§15" inside ADR-0015
+refers to **reframe-spec §15**, not an ADR-0015 §15-numbered
+section). Receipt v1 path covers Scenarios A / B / C with the
+classifier-side `payment_confirmation` document-type
+discriminator handling cross-referenced to ADR-0014 §6/§7.
+
+### Scenario A — Receipt as payment evidence (v1 active)
+
+Per ADR-0015 Decision item 7 verbatim:
+
+> The receipt arrives after a payment is already recorded in
+> CHOUnting. The classifier identifies the receipt as a
+> `payment_confirmation` document type; the Relationship Router
+> matches the receipt to the existing `payments` row by amount,
+> date, vendor, and (when available) authorization/reference
+> number. The output is a
+> `ProposedAttachment(attach_payment_evidence)` per ADR-0011 §7.
+> No ledger mutation — the attachment commit goes through
+> `documentLinkService.create()` and produces a
+> `source_document_links` row with `link_role = payment_evidence`.
+> The bill itself, the payment row, and the journal entries are
+> all unchanged. v1 active per the reframe spec §15 matrix.
+
+**Contract:**
+- **Input:** receipt arrives **after** payment already recorded
+- **Classifier output:** `document_type = payment_confirmation`
+- **Relationship Router match key:**
+  `payments.{amount, date, vendor, authorization/reference}`
+- **Proposal type:** `ProposedAttachment(attach_payment_evidence)`
+  per ADR-0011 §7
+- **Commit path:** `documentLinkService.create()` →
+  `source_document_links` row with `link_role =
+  payment_evidence`
+- **Ledger effect:** none (bill, payment row, JE unchanged)
+
+### Scenario B — Receipt as payment trigger (v1 active)
+
+Per ADR-0015 Decision item 7 verbatim:
+
+> The receipt arrives for a bill that is already recorded in
+> CHOUnting but not yet marked paid. The classifier identifies
+> the receipt as a `payment_confirmation` or `receipt`; the
+> Relationship Router matches the receipt to an open bill
+> (`bills.lifecycle_state IN ('approved_for_payment',
+> 'partially_paid')`) by vendor, amount, date, and supporting
+> context. The output is a
+> `ProposedMutation(record_bill_payment)` that produces a
+> `payments` row, a `bill_payment_allocations` row, and the
+> corresponding journal entry (`Dr AP / Cr Bank-or-Card`)
+> through `paymentService.record(...)` which routes the ledger
+> operation through `ledgerService.post(...)` per Reading B.
+> The receipt itself attaches as `payment_evidence` via the
+> same proposal flow (the proposal carries both the mutation
+> and the attachment as a post-commit step per ADR-0012 §2 —
+> attachments are not bundle children). v1 active per the
+> reframe spec §15 matrix.
+
+**Contract:**
+- **Input:** receipt arrives for bill already recorded but not
+  yet paid
+- **Classifier output:** `document_type = payment_confirmation`
+  or `receipt`
+- **Relationship Router match key:** open bill
+  (`bills.lifecycle_state IN ('approved_for_payment',
+  'partially_paid')`) by vendor + amount + date + supporting
+  context
+- **Proposal type:**
+  `ProposedMutation(record_bill_payment)`
+- **Commit path:** `paymentService.record(...)` →
+  `ledgerService.post(...)` (Reading B compliance) → produces
+  `payments` row + `bill_payment_allocations` row + JE
+  `Dr AP / Cr Bank-or-Card`
+- **Attachment side:** receipt attaches as `payment_evidence`
+  in same proposal flow as post-commit step per ADR-0012 §2
+  (attachments are NOT bundle children; if bundle commits,
+  attachment fires after COMMIT success)
+
+### Scenario C — Standalone POS receipt → born-paid bundle (v1 active via manual workflow)
+
+Per ADR-0015 Decision item 7 verbatim:
+
+> The receipt arrives for a vendor purchase with no
+> pre-existing bill in CHOUnting (a credit-card receipt for
+> office supplies; a restaurant receipt for a client meal).
+> The classifier identifies the receipt; the Relationship
+> Router does not find a matching open bill. **v1 routing:
+> exception queue with manual born-paid workflow available**
+> per the reframe spec §15 matrix and the "Manual born-paid
+> workflow" callout. The exception emits a typed exception
+> through the queue per ADR-0011 §13 with `resolution_action
+> = manual_born_paid_workflow` (a reserved value per ADR-0010;
+> full enum membership owned by ADR-0011 §13).
+
+**Manual born-paid workflow** (per ADR-0015 Decision item 7
+verbatim):
+
+> The manual born-paid workflow is the controller-authored
+> path: the controller opens the exception, reviews the
+> receipt, and authors a born-paid bundle proposal (the bill
+> side and the payment side together) using the same
+> `billService.postWithImmediatePayment(bundle)` domain
+> service that the automated path uses. Per ADR-0012 §11
+> manual + automated path uniformity, manual differs from
+> automated only in **how the bundle was proposed**
+> (controller-authored vs classifier-routed); the commit path
+> is identical.
+
+**Contract:**
+- **Input:** receipt arrives for vendor purchase with no
+  pre-existing bill in CHOUnting
+- **Relationship Router result:** no matching open bill found
+- **v1 routing:** exception queue with manual born-paid
+  workflow available
+- **Exception shape:** typed exception via ADR-0011 §13 with
+  `resolution_action = manual_born_paid_workflow` (reserved
+  per ADR-0010)
+- **Manual workflow commit path:** controller opens the
+  exception → reviews receipt → authors born-paid bundle
+  proposal (bill side + payment side together) → commits via
+  `billService.postWithImmediatePayment(bundle)` (same domain
+  service as automated path; per ADR-0012 §11 manual +
+  automated path uniformity)
+- **Bundle composition:** `ProposedMutationBundle` with
+  children `post_bill` + `record_bill_payment` per ADR-0012
+  §12 v1-active `born_paid_bill` bundle type
+- **v1 status:** v1-active via manual workflow; automated
+  born-paid path is post-v1
+
+**Flag 4 — `manual_born_paid_workflow` cross-enum question
+(carry-forward governance question parallel to Flag 3).**
+ADR-0015 Decision item 7 cites `resolution_action =
+manual_born_paid_workflow` as "a reserved value per ADR-0010;
+full enum membership owned by ADR-0011 §13." However,
+ADR-0011 §13's 16-value `resolution_action` enum (per §11
+above) does NOT list `manual_born_paid_workflow`. Sibling
+inconsistency to Flag 3 (`wrong_entity_exception`):
+
+Possible interpretations: (a) `manual_born_paid_workflow` is
+subsumed under `route_to_manual_entry` (the v1-active
+resolution action for Scenario C routing) and ADR-0015
+Decision item 7's reference is a sub-route nomenclature;
+(b) ADR-0011 §13's enum is incomplete and
+`manual_born_paid_workflow` should be added; (c) drafting
+drift between ADR-0011 §13 and ADR-0015 Decision item 7.
+
+**Status**: Phase 2 carry-forward governance question parallel
+to Flag 3. Warrants either ADR-0011 amendment OR ADR-0015
+Decision item 7 clarification. Founder-domain triage timing.
+
+### Lifecycle synthesis for Scenarios A / B / C (per ADR-0015 Decision item 7 verbatim)
+
+> All three scenarios use the canonical `mutation_lifecycle.md`
+> states (Pending, Needs Attention, Approved, Posted (auto),
+> Posted (manual), Finalized; Rejected, Rejected-with-reversal).
+> v1 has no auto-post for `born_paid_bill` (Scenario C) per
+> Q60 v1 closure; Scenarios A and B follow the same Pending →
+> Approved (Always Confirm v1) → Posted (manual) → Finalized
+> path under v1 ProposedAttachment and ProposedMutation rules
+> from ADR-0011 §7.
+
+**v1 commit-path summary:**
+- **Scenario A**: `documentLinkService.create()` (no ledger
+  mutation; document-layer audit only — `attachment_link_created`
+  per ADR-0011 §1 canonical writer)
+- **Scenario B**: `paymentService.record(...)` (produces
+  ledger mutation via `ledgerService.post(...)` per Reading B)
+- **Scenario C**: `billService.postWithImmediatePayment(bundle)`
+  (produces bundle ledger mutation per ADR-0012 §3 atomicity)
+
+Per ADR-0011 §7's ProposedAttachment v1 approval policy,
+Scenario A's approval gate is **Always Confirm except** the
+user-initiated direct-upload variant (a controller dragging a
+receipt directly onto a specific payment row, where the upload
+action itself is the implicit approval); Scenarios B and C are
+always Always Confirm in v1.
+
+### Classifier-side cross-reference (per ADR-0014 §7)
+
+Per ADR-0014 §7 (Document-type classification strategy; Q71
+closure), the tiered classification produces document-type
+discriminator values consumed by Scenarios A/B/C:
+
+- **Tier A — Rule-based classifier (active v1)**: matches on
+  payment-confirmation language ("payment received", "thank
+  you for your payment") + receipt-shape patterns (terminal-
+  style line layout, total at bottom, payment-method line) +
+  filename heuristics ("receipt"). High precision, low recall.
+- **Tier C — Claude Sonnet AI fallback (active v1)**: invoked
+  when Tier A no-match. OCR text + system prompt naming the
+  document-type enum. Output Zod-validated; non-validating →
+  exception with `unknown` type.
+- **Tier D — Unknown (active v1)**: terminal classification
+  when prior tiers fail; routes to exception queue per
+  ADR-0011 §13.
+
+**Per-document-type confidence threshold (Q65 v1 provisional
+values per ADR-0014 §7):**
+
+| Document type | Threshold | Below-threshold path |
+|---|---|---|
+| `vendor_invoice` | 0.85 | Exception queue (`needs_review`) |
+| `receipt` | 0.80 | Exception queue (`needs_review`) |
+| `payment_confirmation` | 0.85 | Exception queue (`needs_review`) |
+| `unknown` | N/A | Always exception queue |
+
+Provisional values per Q77 v1-ship-gate pattern; ADR-0019
+ratifies at v1 ship; ADR-0014 amends if ratification adjusts.
+
+**Dedup-by-hash idempotency cross-reference (per ADR-0014 §6,
+Q70 closure):** Before writing a new `source_documents` row,
+the ingestion path computes SHA-256 of bytes and checks for
+existing `source_documents.original_content_hash` match within
+the same `org_id` scope. Match-found → skip OCR sidecar;
+reuse artifact rows; audit event `ingestion_dedup_hit`. Per-
+org scope; cross-org dedup not in scope. v1 system-fixed; per-
+org configurability reserved post-v1 via
+`org_settings.dedup_policy`. Receipts arriving via multiple
+ingestion channels (drag_drop_pdf + forwarded_mailbox of the
+same receipt) short-circuit at this dedup stage before
+Scenario A/B/C routing fires.
+
+### Cross-references
+
+- **ADR-0015 Decision item 7** — canonical citation (NOT §15
+  — ADR-0015 uses Decision-item numbering)
+- **ADR-0011 §7** — three-proposal-type contract
+  (ProposedMutation / ProposedMutationBundle / ProposedAttachment)
+- **ADR-0011 §13** — exception-queue routing for Scenario C +
+  resolution-action enum
+- **ADR-0012 §2** — bundle children = ProposedMutations only
+  (NOT ProposedAttachments); workflows requiring both sequence
+- **ADR-0012 §3** — bundle atomicity (single Postgres
+  transaction)
+- **ADR-0012 §11** — manual + automated path uniformity
+- **ADR-0012 §12** — bundle types closed enum (v1-active
+  `born_paid_bill`)
+- **ADR-0014 §6** — dedup-by-hash idempotency (Q70 closure)
+- **ADR-0014 §7** — document-type classification strategy
+  (Q71 closure with Tier A/C/D + per-document-type thresholds)
+- **reframe-spec §15** — receipt v1 decision matrix canonical
+  origin (cited by ADR-0015 Decision item 7)
 
 ## 14. Phase A acceptance criteria
 [Stub — fill after AP/Spend Subdomain ADR ratifies]
