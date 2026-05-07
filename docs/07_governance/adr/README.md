@@ -82,6 +82,18 @@ Links to PLAN.md sections, other ADRs, specs, or external docs that
 the reader should follow for more detail.
 ```
 
+### Decision section structure (forward-only)
+
+**ADR section structure convention (forward-only):** New ADRs use
+Decision-item numbering under a single `## Decision` header (per
+ADR-0012 / 0015 / 0016 / 0018 / 0019 precedent). Earlier ADRs
+(0007 / 0011 / 0013 / 0014) use §-numbering as historical artifact
+and are preserved in current form per δ-i preservation discipline.
+Convention codified by Phase 2 brief-creation arc-closeout cycle
+2026-05-08 (Stage 3b firing decision); see arc-closeout
+retrospective entry at `docs/07_governance/friction-journal.md`
+line 6668 for context.
+
 ## Supersedes and supersession
 
 ADRs are never edited after they are accepted. If a decision changes,

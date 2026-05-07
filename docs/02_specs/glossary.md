@@ -337,6 +337,15 @@ CHECK + service idempotency lookup). Each layer catches a
 different failure mode; the database is always the
 authoritative enforcement.
 
+**Tier 2 (data-layer entity ownership).** Where the entity
+columns live in the Document Platform data layer per ADR-0011 §1
+entity ownership boundary. NOT to be confused with Tier 2
+(agent-tier execution).
+
+**Tier 2 (agent-tier execution).** Which agent tier executes a
+write per ADR-0007 §Tier 2 strict no-write rule. NOT to be
+confused with Tier 2 (data-layer entity ownership).
+
 **Throwaway-work test.** The inclusion criterion for
 `CLAUDE.md` non-negotiable rules: does a violation cause work
 the user has to throw away or redo? If a "rule" is just style

@@ -12,6 +12,12 @@ audit event through the canonical audit-log writer per §1." All
 three items accepted per the D2 ratification package's recommended
 path.
 
+Amended 2026-05-08 (Phase 2 brief-creation arc-closeout cycle) —
+§13 resolution-action enum extended to add
+`manual_born_paid_workflow` per cross-enum-consistency governance
+triage path (a) election. ADR-0011's first amendment; title-line
+stability preserved. See `## Amendment` block at end of this ADR.
+
 ## Date
 
 2026-05-03
@@ -742,13 +748,19 @@ discipline:
 `create_vendor_prepayment`, `apply_vendor_prepayment`,
 `create_vendor_credit`, `apply_vendor_credit`, `mark_duplicate`,
 `mark_non_accounting`, `request_missing_document`,
-`route_to_manual_entry`, `route_to_bank_reconciliation`,
-`route_to_AR_future`, `reprocess`, `archive`.
+`route_to_manual_entry`, `manual_born_paid_workflow`,
+`route_to_bank_reconciliation`, `route_to_AR_future`, `reprocess`,
+`archive`.
+
+(`manual_born_paid_workflow` added by 2026-05-08 amendment — see
+`## Amendment — manual_born_paid_workflow registration (2026-05-08)`
+at end of this ADR.)
 
 **v1 active subset (narrow):** `attach_to_existing_bill`,
 `attach_to_existing_payment`, `record_bill_payment`,
 `mark_duplicate`, `mark_non_accounting`, `route_to_manual_entry`,
-`reprocess`, `archive`. The remaining values are reserved per
+`manual_born_paid_workflow`, `reprocess`, `archive`. The remaining
+values are reserved per
 ADR-0010 — defined in the enum, not emitted by any v1 service
 write path. v1 manual workflows that conceptually correspond to
 reserved values (record vendor credit, create vendor prepayment,
@@ -1361,3 +1373,89 @@ types rather than quadratically.
   manual form; the path is not "just emit the resolution-action
   row," it's "emit + commit through the same domain service the
   manual form uses."
+
+## Amendment — manual_born_paid_workflow registration (2026-05-08)
+
+The 2026-05-08 Phase 2 brief-creation arc-closeout cycle (per
+arc-closeout retrospective entry at
+`docs/07_governance/friction-journal.md` line 6668) elected
+path (a) of the cross-enum-consistency governance triage:
+extend the §13 resolution-action enum membership listing to
+include `manual_born_paid_workflow`, lifting the editorial-gap
+reading between ADR-0011 §13's enum listing and ADR-0015 §7
+(Q74 Scenario C closure) which emits this `resolution_action`
+value at three locations.
+
+### Substance
+
+The §13 enum listing extends from sixteen values to seventeen
+values; `manual_born_paid_workflow` is added after
+`route_to_manual_entry` (semantically grouped with manual-routing
+actions). The v1 active subset extends correspondingly from
+eight to nine values: `manual_born_paid_workflow` is v1-active
+per ADR-0015 §7 emission (Q74 Scenario C closure: the manual
+born-paid bundle workflow path).
+
+### Why this amendment
+
+Per chunk B2-4 closeout entry (commit `35367a9` at
+`docs/07_governance/friction-journal.md` line 6243):
+`manual_born_paid_workflow` was emitted by ADR-0015 but absent
+from ADR-0011 §13's enum membership listing. Two interpretation
+paths surfaced — (a) implicit enum extension via cross-reference
+reading; (b) editorial gap. The arc-closeout cross-enum-
+consistency governance triage (Stage 4 per founder-provided
+7-stage framework) elected path (a) of four resolution paths —
+ADR-0011 amendment to extend the enum — over alternative paths:
+
+- Path (b): ADR-0015 amendment to drop the value
+- Path (c): new inter-ADR registration discipline
+- Path (d): ADR-0011 §13 amended with inline cross-reference
+  note without enum extension
+
+Path (a) substantive grounds:
+
+- **Operational accessibility for future readers**: full enum
+  membership readable from §13 alone (extended)
+- **Substrate-decision-integrity-density**: enum extension
+  formalizes the cross-reference reading
+- **First-arc-instance precedent-setting weight**: path (a)
+  doesn't just close THIS gap; it sets the response shape for
+  similar future cross-ADR enum gaps
+- **Within-arc evidence weight**: Flag 3
+  (`wrong_entity_exception`) + Flag 4
+  (`manual_born_paid_workflow`) joint cumulative N=6+ within-arc
+  surface count materially anchors this amendment
+
+### Bundling — Stage 3a path (c) ADR-0007 amendment
+
+Per cross-ADR governance review window opened by this amendment,
+Stage 3a path (c) ADR-0007 amendment for Tier 2 substrate
+sense-disambiguation is **bundled** with this amendment-arc per
+arc-closeout cycle's Stage 4 governance triage decision.
+ADR-0007 amendment (Candidate A inline at §Tier 2) ships in the
+same arc-closeout codification commit as this ADR-0011
+amendment. See
+`docs/07_governance/adr/0007-three-tier-agent-architecture.md`
+inline §Tier 2 sense-disambiguation lead-in for the cross-
+bundled work product.
+
+### Cross-references
+
+- **`docs/07_governance/friction-journal.md`** line 6668 —
+  arc-closeout retrospective entry; full Phase 2 brief-creation
+  arc documentary record + 8 firing decisions outcomes
+- **`docs/07_governance/adr/0015-ap-spend-subdomain.md`** §7
+  (Q74 Scenario C closure) — emission point for
+  `manual_born_paid_workflow`
+- **`docs/07_governance/adr/0007-three-tier-agent-architecture.md`**
+  §Tier 2 sense-disambiguation lead-in — cross-bundled work
+  product per arc-closeout Stage 4 governance triage decision
+
+This is **ADR-0011's first amendment**. Title-line stability
+preserved (no title-line revision per refined (R-iii) graduated
+form's first-arc-instance precedent-setting framing; ADR
+identifier consistency maintained). Scope is narrow (this
+specific cross-enum gap + Stage 3a path (c) bundling); broader
+Phase 0 review deferred per arc-class first-instance status
+framing.

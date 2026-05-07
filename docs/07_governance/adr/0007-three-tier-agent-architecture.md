@@ -10,6 +10,14 @@ Items 3 (prohibition-list duplication) and 5 (Status convention)
 accepted as-is per the D1 ratification package's recommended
 path.
 
+Amended 2026-05-08 (Phase 2 brief-creation arc-closeout cycle) —
+§Tier 2 sense-disambiguation lead-in added (Candidate A inline
+clarification distinguishing Tier 2 agent-tier-execution from
+ADR-0011 §1's Tier 2 data-layer-entity-ownership sense).
+Bundled with ADR-0011 §13 amendment per Stage 4 cross-enum-
+consistency governance triage path (a) election. See sense-
+disambiguation lead-in within §Tier 2 below.
+
 ## Date
 
 2026-05-03
@@ -144,6 +152,20 @@ atomicity (a stale-state check that fails inside `withInvariants()`
 rolls back the same way an invariant violation does).
 
 ### Tier 2 — Proposal Path
+
+**Sense disambiguation (added by 2026-05-08 amendment).** "Tier 2"
+in this ADR refers to **agent-tier execution** — which agent
+tier executes a write per the strict no-write rule below. This
+is distinct from **Tier 2 (data-layer entity ownership)** per
+ADR-0011 §1, which refers to where Document Platform entity
+columns live in the data layer. Both senses appear in chounting
+documentation; this disambiguation distinguishes them. NOT to be
+confused with Tier 2 (data-layer entity ownership) per ADR-0011
+§1. See arc-closeout retrospective entry at
+`docs/07_governance/friction-journal.md` line 6668 for context;
+amendment scope narrow per Phase 2 brief-creation arc-closeout
+cycle's Stage 3a path (c) codification bundled with ADR-0011 §13
+amendment per Stage 4 governance triage path (a) election.
 
 **What runs here.** Stateless typed pipeline stages. Each stage is
 a function `(typed_input) → typed_output` that may wrap an LLM
@@ -686,6 +708,12 @@ add it to a Tier 2 system as a special case.
 - **ADR-0010** (`0010-reserved-enum-states.md`) — applied to any
   new enums introduced by Tier 2.5 stages (per the Tier 2.5 safety
   contract idempotency clause).
+- **ADR-0011** (`0011-document-platform.md`) — Document Platform
+  spine. §1 entity ownership boundary uses Tier 2 in
+  data-layer-entity-ownership sense (NOT to be confused with this
+  ADR's agent-tier-execution sense per the sense-disambiguation
+  lead-in within §Tier 2 above). Cross-referenced by 2026-05-08
+  amendment (Phase 2 brief-creation arc-closeout cycle).
 - **ADR-0012** (forthcoming, `ProposedMutationBundle`) — referenced
   by the bundle re-verification surface (Q28 surface 4).
 - **ADR-0017** (forthcoming, vendor template autonomy) — the
