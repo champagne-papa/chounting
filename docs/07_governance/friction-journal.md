@@ -5975,3 +5975,265 @@ Substrate-decision-integrity preserved across chunks B2-1 +
 B2-2 substantive output (1666 lines aggregate / 50% arc-
 completion boundary at clean termination); next-chunk onset
 adjudication fires at next session.
+
+---
+
+### Phase 2 brief-creation arc — chunk B2-3 commit (2026-05-07) + 5 sub-shape codification candidates accumulated
+
+Chunk B2-3 ships substantive content for §10-§13 of
+`docs/09_briefs/phase-2/document_platform_initiative.md`
+(lifecycle immutability + exception queue first-class
+deliverable + multi-entity reservation + receipt v1 decision
+matrix). Single direct-commit on staging at `d06d227` per
+single-purpose-commit-discipline; **bundled commit + push** per
+(C-ii) bundled-explicit founder verdict at clean-termination
+gate per refined (R-iii) — `bdb0dce..d06d227` advanced on
+origin/staging 2026-05-07.
+
+#### Substantive output
+
+616 insertions / 4 deletions. Per-section delta:
+
+- **§10 Lifecycle immutability** (79 lines) — (κ-3) hybrid:
+  verbatim 4 immutability rules per ADR-0011 §9 (`ocr_runs`
+  immutable + `extraction_runs` immutable per
+  `(source_document_id, ocr_run_id, extraction_version)` tuple
+  + `document_relationship_candidates` versioned via
+  `supersedes_candidate_id` + post-commit
+  `source_document_links` require reversal-or-supersession);
+  schema-layer + service-layer two-layer enforcement; Q69
+  forward-pointer to ADR-0014 for replay-supersession cadence
+  (boundary-vs-cadence axis preserves substrate-decision-
+  integrity).
+- **§11 Exception queue first-class deliverable** (212 lines)
+  — (λ-3) hybrid: verbatim 16-value `resolution_action` enum
+  (Q68 closure) + v1-active 8 + reserved-but-not-emitted 8 +
+  first-class deliverable framing (queue is bulk of v1's user-
+  visible work) + 4 first-class requirements (document-type-
+  aware actions + reclassification + bulk operations +
+  screenshot-gate ratification) + reserved-value handling for
+  v1 manual workflows (route to AP/Spend manual entry; row
+  not closed via reserved action); substrate-vs-domain
+  placement boundary; **Tier-capability framing with semantic
+  clarification** (split per chunk B2-1 §4 δ-2-i lock + ADR-
+  0007 Tier semantics) + resolution-action capability mapping
+  (Tier 1 capability dependent state-changing / Tier 1
+  substrate-metadata writes / Tier 3 routing decisions / Cross-
+  domain handoff).
+- **§12 Multi-entity reservation** (87 lines) — (μ-3) hybrid:
+  verbatim 5 reserved nullable columns per ADR-0011 §10
+  (`source_documents.legal_entity_id`,
+  `bills.legal_entity_id`, `bill_lines.benefiting_entity_id`,
+  `payments.paying_entity_id`, `payments.benefiting_entity_id`)
+  + v1's 1-1 default to `org_id` + intercompany due-to / due-
+  from out-of-scope framing + substrate-now-enforcement-later
+  cross-pattern (D6 §6.8 + ADR-0010 amendment Variant A) +
+  three-layer ADR-0010 defense.
+- **§13 Receipt v1 decision matrix** (246 lines) — (ν-3)
+  hybrid: verbatim Scenarios A/B/C contracts per ADR-0015
+  Decision item 7 (A receipt-as-payment-evidence
+  ProposedAttachment / B receipt-as-payment-trigger
+  ProposedMutation / C standalone POS born-paid bundle
+  exception-queue manual workflow); lifecycle synthesis
+  (canonical states from `mutation_lifecycle.md`); classifier-
+  side cross-reference to ADR-0014 §7 (Tier A/C/D + per-
+  document-type confidence thresholds Q65 v1 provisional);
+  dedup-by-hash idempotency cross-reference to ADR-0014 §6
+  (Q70 closure).
+
+#### Citation-anchor corrections inlined silently
+
+- **ADR-0015 Decision item 7 (NOT §15)** — ADR-0015 uses
+  Decision-item numbering under `## Decision` header; "§15"
+  inside ADR-0015 refers to **reframe-spec §15**, not an
+  ADR-0015 §15. Same shape as ADR-0016 / ADR-0018 Decision-
+  item-numbering convention (chunk B2-2 dispatch findings).
+- **ADR-0011 §10 (NOT §17)** — same correction as chunk B2-1
+  §2 multi-entity inlined silently per pattern parity. §17
+  is reframe-spec anchor; ADR-0011 re-anchored at §10.
+- **ADR-0014 §6 + §7 §-numbering CONFIRMED** correct (NOT
+  off-by-one as previously suspected at chunk B2-2). §6
+  dedup-by-hash + §7 classification strategy per Q70 + Q71
+  closures.
+
+#### Substantive Flag surfacings
+
+- **Flag 3 wrong_entity_exception cross-enum question** —
+  carry-forward at §11 + §12 (per chunk B2-1 §2 precedent).
+  Within-arc cumulative N=3 (chunks B2-1 §2 + B2-3 §11 +
+  B2-3 §12).
+- **Flag 4 (NEW) manual_born_paid_workflow cross-enum
+  question** — surfaced at §11 + §13 (sibling to Flag 3).
+  ADR-0015 Decision item 7 cites "reserved per ADR-0010; full
+  enum membership owned by ADR-0011 §13" but ADR-0011 §13's
+  16-value `resolution_action` enum does NOT list
+  `manual_born_paid_workflow`. Three interpretation paths
+  surfaced for founder triage at cross-arc closeout. Within-
+  arc cumulative N=2 (chunks B2-3 §11 + B2-3 §13).
+
+Cumulative cross-enum-inconsistency surface count = N=5
+within-arc; projects to N=6+ at chunk B2-4 §16 (ADRs produced
+inventory). Joint framing under "cross-enum-consistency
+governance question" recommended at cross-arc closeout
+firing-point.
+
+#### Substantive interpretive clarification at §11
+
+**Tier 2 substrate framing semantic clarification.** Chunk
+B2-1 §4 δ-2-i lock used "Tier 2 substrate" to mean data-
+layer entity ownership; ADR-0007 §Tier 2 strict reading
+prohibits Tier 2 writes (lines 180-181: "MUST NOT INSERT /
+UPDATE / DELETE in any table directly"). §11 drafting
+clarifies inline:
+
+- **Tier 2 (data-layer entity ownership)**: where the entity
+  columns live in the Document Platform data layer (per
+  ADR-0011 §1 entity ownership boundary).
+- **Tier 2 (agent-tier execution)**: which agent tier
+  executes a write per ADR-0007 §Tier 2 strict no-write rule.
+
+Substrate-metadata writes (`mark_duplicate`,
+`mark_non_accounting`, `archive` updating queue-row state)
+route through Tier 1 commits via `withInvariants()` — non-
+financial-state but still Tier-1-executed. The "Tier 2
+substrate" framing in chunk B2-1 §4 means the first sense
+(entity ownership), NOT the second sense (execution).
+
+This clarification is itself a codification candidate at
+session-close (Sub-shape candidate 1 below).
+
+#### Substantive locks honored across §10-§13
+
+- Reading B preservation reaffirmed in §10, §11, §13
+- Single-writer rules: `documentLinkService` for
+  `source_document_links` (§10); `ledgerService` for
+  `journal_entries` via domain services (§11, §13)
+- Substrate-now-enforcement-later cross-pattern (D6 §6.8 +
+  ADR-0010 amendment Variant A) cited at §11 reserved-action
+  handling + §12 multi-entity column activation
+- Three-layer ADR-0010 defense applied at §12 multi-entity
+  reservation
+- Manual + automated path uniformity preserved at §13
+  Scenario C (per ADR-0012 §11)
+
+#### Length-as-calibration NEW datapoint
+
+Chunk B2-3 fired AT estimate (~624 lines / 470-850 Sub-Q
+estimate = 0.7-1.3x range). Contrast with chunks B2-1
+(1.6-2.3x) + B2-2 (1.6-2.7x). Substrate-honest finding: Z1
+#9 length-as-calibration overshoot is **enum-density / matrix-
+density dependent at brief-creation grain, NOT uniform**.
+Chunks B2-1 + B2-2 had high-density enum sections (B2-1 §2
+reserved-but-not-emitted enumeration; B2-2 §7 polymorphic
+links 756-cell matrix); chunk B2-3 has bounded-substrate
+sections (4 rules + 5 columns + Scenarios A/B/C contracts) —
+no enum/matrix-density driver fires here. Refinement
+candidate: Sub-shape candidate 4 below.
+
+#### 5 sub-shape codification candidates accumulated this arc
+
+Per Anchor C tiering: chunk-grain accumulation-status surface
+THIS session (this entry); arc-grain firing decisions at
+arc-level closeout NEXT session.
+
+1. **(NEW) Tier 2 substrate sense-disambiguation** — chunk
+   B2-3 §11 surfaced. Path forward: brief glossary entry
+   (path a) + friction-journal codification (path b) at
+   session-close. ADR-0007 amendment (path c) deferred as
+   conditional-future-action contingent on cross-arc closeout
+   amendment-arc election.
+2. **Cross-enum-consistency governance question** (Flag 3 +
+   Flag 4 joint framing). Within-arc cumulative N=5 (Flag 3
+   N=3 + Flag 4 N=2); projects to N=6+ at chunk B2-4 §16.
+   Cross-arc closeout firing-point. ADR-0011 amendment
+   candidate (potentially bundled with Tier 2 sense-
+   disambiguation if amendment-arc fires).
+3. **(NEW) ADR Decision-item-vs-§-numbering convention** —
+   chunk B2-3 surfaced via 4 ADR distillation comparison.
+   Temporal pattern: earlier ADRs (0007/0011/0013/0014) use
+   §-numbering; later ADRs (0012/0015/0016/0018) use
+   Decision-item numbering. Friction-journal codification
+   scope; convention-going-forward applies to NEW ADRs only;
+   NO retroactive retrofit per δ-i preservation.
+4. **Z1 #9 refined sub-shape (enum-density / matrix-density
+   dependent)** — refinement candidate. Within-arc N=3
+   datapoints (B2-1 + B2-2 fire it; B2-3 doesn't). If B2-4
+   fires within-estimate, graduates with within-arc N=4
+   datapoints (3 confirming + 1 predicting). Founder-elect on
+   shape-refinement-via-within-arc-evidence-basis pathway as
+   graduation criterion.
+5. **(NEW) Shape-refinement-via-within-arc-evidence-basis** as
+   meta-codification candidate — distinct from Z1 #9
+   refinement itself. Codifies graduation-pathway shape:
+   within-arc evidence basis valid for shape-refinement (vs
+   new-shape) graduation. Standard cross-arc N=2 graduation
+   criterion may not apply to refinement-graduation if within-
+   arc evidence is sufficient. Founder-domain election scope.
+
+Plus carry-forward **(R-iii) gate-class-dependent shape
+codifiable refinement candidate**: cross-arc N=2 graduation
+criterion = THIS session operating under same model. This
+session validated refined model across 7 gate fires; refined
+(R-iii) graduates at session-close from codifiable refinement
+candidate to codified discipline if no operational gaps in
+gate-class taxonomy fire.
+
+#### Foreign session-lock disposition
+
+α-equivalent precedent extended this session at `d06d227`
+commit + push. Foreign session-lock disposition reopens at
+next-session start as founder-domain election; lock held at
+`phase-1-document-platform-2026-05-06`. α-equivalent now at
+N=15+ cumulative across three sessions; brainstorm-side non-
+prejudicing observation: β-equivalent rotation increasingly
+viable as hygiene action; founder-domain election remains.
+
+#### Subagent dispatch shape
+
+Layer 2 fired 4 parallel general-purpose subagents per Z1
+#11.b preventive verbatim re-read discipline before drafting:
+
+1. ADR-0011 §9 + §10 + §13 (mandatory for §10 + §11 + §12)
+2. ADR-0015 Decision item 7 + ADR-0014 §6/§7 (mandatory for
+   §13 + cross-ref for classifier-side `payment_confirmation`
+   handling)
+3. ADR-0012 envelope shapes (Scenario A/B/C distinguishing
+   characteristics for §13)
+4. ADR-0007 Tier framing (Tier 3 explicit "exception
+   explanation" ownership for §11 UI surface; substrate-
+   metadata writes Tier 1 capability dependency clarification)
+
+Subagent dispatch shape preserved as forward-pattern for
+chunk B2-4: bounded-substrate sections likely warrant 2-3
+subagents (vs 4 here / 5 at B2-2 / 4 at B2-1) given §14 +
+§16 + §18-§20 scope.
+
+#### Carry-forward to next session
+
+- **Chunk B2-4** — primary next-session work product. Final
+  5 substantive content stubs at §14 (Phase A acceptance) +
+  §16 (ADRs produced) + §18 (friction-journal scope) + §19
+  (NOT-doing) + §20 (verification against canonical docs).
+- **Arc-level closeout cycle** — fires AFTER chunk B2-4
+  commits + pushes. Arc retrospective + 5 sub-shape codifi-
+  cation candidate firing decisions + (R-iii) graduation
+  decision + cross-enum-consistency governance question
+  triage timing.
+- **Hygiene-cycle 3 deferred fixes** — γ-hygiene (DEFERRED
+  per founder Anchor 2 election from earlier session). Folds
+  into chunk B2-4 cadence OR cross-arc closeout per founder
+  elect.
+- **Memory pickup file refresh** — `project_phase_2_brief_
+  creation_pending.md` content reflects post-chunk-B2-3
+  state (filename retained per filename-stability convention).
+- **Foreign session-lock disposition** — α-equivalent /
+  β-equivalent / other; founder-domain election at next-
+  session start (Anchor D from this session's restate-window
+  carries forward).
+
+Phase 2 brief-creation arc continues at next-session opening.
+Substrate-decision-integrity preserved across chunks B2-1 +
+B2-2 + B2-3 substantive output (2290 lines aggregate / 75%
+arc-completion boundary at clean termination); chunk B2-4 +
+arc-level closeout cycle fires next session per Anchor B
+deferral.
