@@ -2345,7 +2345,205 @@ Scenario A/B/C routing fires.
   origin (cited by ADR-0015 Decision item 7)
 
 ## 14. Phase A acceptance criteria
-[Stub — fill after AP/Spend Subdomain ADR ratifies]
+
+Document Platform Phase A ships the substrate slice that Phase 1
+(Storage / Evidence Core), Phase 2 (Document Core skeleton),
+Phase 3 (Document Relationship Graph), and Phase 4 (Relationship
+Router consumption) operationalize, enabling the Phase 5 first-
+domain consumer (AP/Spend Subdomain per ADR-0015) to consume
+Document Platform end-to-end. Phase A acceptance composes across
+three substrate axes: spine acceptance (ADR-0011), domain
+consumption acceptance (ADR-0015), and gate-firing pattern (D6
+§6.8 substrate-now-enforcement-later cross-pattern).
+
+### Spine acceptance — ADR-0011 distributed criteria
+
+ADR-0011 does not consolidate Phase A acceptance into a single
+section. Acceptance-equivalent content is distributed across five
+locations within ADR-0011, all of which Phase A implementation
+must satisfy:
+
+**1. Substrate-ratification Q-closures** (ADR-0011 `## Closes`).
+Phase 0 ratification declares seven Document-Platform-scope
+questions resolved: Q53 (document-type enum), Q54 (document case
+lifecycle states), Q67 (bank/card transaction ownership), Q68
+(exception queue UX), Q73 (per-org configuration knobs), Q75
+(document case source cardinality), Q76 (re-evaluation policy
+immutability boundary). Phase A implementation consumes these
+closures verbatim — no Phase A code may re-open a Q-closure
+without prior amendment.
+
+**2. Non-negotiable rules** (ADR-0011 `## Consequences → What this
+constrains`). Five rules apply to every Phase A code path:
+
+- **Spine extension discipline.** Adding a new
+  `linked_entity_type` value, a new `link_role` value, or a new
+  `(linked_entity_type, link_role)` valid pair requires an
+  ADR-0016 amendment; adding a new document type requires the Q28
+  matrix to extend per the ADR-0007 obligation; adding a new
+  exception resolution-action requires the ADR-0011 §13 enum to
+  extend.
+- **No Document Platform write to ledger tables.** No Document
+  Platform path may write to `journal_entries` or `journal_lines`.
+  A direct ledger write from any Document Platform module is a
+  Reading B violation.
+- **Exception queue cannot ship as a stub.** v1 ships the queue
+  with the eight active resolution actions, bulk operations,
+  reclassification, document-type-aware actions, and screenshot-
+  gate coverage per CLAUDE.md UI-session screenshot gate
+  convention.
+- **Replayability discipline.** No post-v1 phase may ship in-place
+  updates to `ocr_runs`, `extraction_runs`, or committed
+  `source_document_links`. Re-extraction produces new rows;
+  re-evaluation produces new candidates; reversals produce link-
+  status flips with audit-traceable supersession.
+- **Vendor-matcher read boundary mechanical.** A Tier 2 stage
+  importing the `bank_account_number` field from `vendors`
+  violates ADR-0007 Tier 2's MUST NOT clause. Enforcement lives
+  in the Tier 2 ESLint rule (Q29 deferred per substrate-now-
+  enforcement-later pattern; design fires at first
+  `src/agent/pipelines/**/*` code).
+
+**3. Q28 matrix v1 ship gate** (ADR-0011 §12 per Q77). Every
+document type the platform supports has a corresponding row in
+the Q28 matrix at v1 ship time per Q77. New document types added
+post-v1 carry an obligation to extend the matrix in the same
+brief that promotes the type from reserved to active.
+
+**4. Exception queue first-class deliverable** (ADR-0011 §13).
+v1 ship requirements per spec §10:
+
+- **Document-type-aware actions.** A credit memo lets the user
+  record the credit manually via the AP/Spend domain service; a
+  vendor statement opens a reconciliation view; a bank statement
+  routes to a manual-classification flow.
+- **Reclassification workflows.** Documents misclassified as
+  exception are easily moved to the right type; classification
+  is editable, not a permanent label.
+- **Bulk operations.** Filter by document type, vendor, date
+  range; bulk-approve, bulk-route, bulk-reclassify.
+- **First-class screenshot-gate coverage.** Exception queue UI
+  ships with screenshot-gate ratification per CLAUDE.md UI-
+  session screenshot gate convention.
+
+**5. Phase distribution** (ADR-0011 `## Consequences → What this
+costs`). The platform-owned table set ships across the first
+four implementation phases:
+
+- **Phase 1 (Storage / Evidence Core)** — first slice;
+  `source_documents`, `source_document_versions`,
+  `document_artifacts`, `ingest_batches`, `ingest_items`,
+  `document_jobs`, `ocr_runs`, `extraction_runs`.
+- **Phase 2 (Document Core skeleton)** — case + artifact tables;
+  `document_cases`, `document_case_sources`.
+- **Phase 3 (Document Relationship Graph)** — link table;
+  `source_document_links`.
+- **Phase 4 (Relationship Router consumption)** — candidate
+  table; `document_relationship_candidates`.
+
+Each table carries reserved enum columns and reservation
+discipline per ADR-0010. Final shape (whether `ocr_runs` and
+`extraction_runs` ship as separate tables or as artifact subtypes;
+whether enumerated tables collapse into others as schema design
+lands) is owned by per-Phase implementation plans, not by
+ADR-0011.
+
+### Domain consumption acceptance — ADR-0015 summary
+
+Phase A implementation must satisfy ADR-0015's Document Platform
+consumption shape end-to-end, enabling AP/Spend Subdomain to
+consume Document Platform per Phase 5 first-domain consumer
+ratification. ADR-0015 names seven consumption surfaces:
+
+- **ADR-0011 §1** — entity ownership boundary (AP/Spend owns
+  bills / payments / vendor entities; Document Platform owns
+  source-document entities; ledger service owns journal entries).
+  ADR-0015 inherits the split verbatim.
+- **ADR-0011 §7** — `ProposedMutation` / `ProposedMutationBundle` /
+  `ProposedAttachment` handoff vocabulary. ADR-0015 consumes all
+  three at the domain-service entry points; AP/Spend introduces
+  no fourth proposal primitive.
+- **ADR-0011 §11** — vendor-matcher Tier 2 read boundary (vendor
+  identity-and-matching fields ONLY; control / payment-risk
+  fields readable at Tier 2.5; Tier 1 re-verifies all vendor-
+  control fields at commit).
+- **ADR-0011 §15** — `DOC` invariant prefix introduction;
+  INV-DOC-001 (evidence-completeness) reserves controller-
+  override on bills without a `primary_invoice` link role.
+  ADR-0015 ships the schema-level seat
+  (`override_evidence_completeness` flag on `bills`) and consumes
+  the platform-side invariant for the service-layer enforcement
+  at `billService.post()`.
+- **ADR-0012** — bundle envelope, single-DB-transaction
+  atomicity, canonical lifecycle states, Q28 Surface 4 commit-
+  time re-verification, max(child ceilings) composition rule,
+  manual = automated path uniformity, and `bundle_type` enum
+  membership (v1-active `born_paid_bill`).
+- **ADR-0013 §1** — `storageProviderService` interface; AP/Spend
+  reads no bytes directly. Payment-evidence rendering and
+  ProposedAttachment commits route through the platform service
+  layer.
+- **ADR-0014 §11** — pipeline output → `ProposedMutation` /
+  `ProposedMutationBundle` / `ProposedAttachment` routing.
+  AP/Spend consumes the routing logic against its variant set
+  per ADR-0015 Decision item 7 (Q74 Scenarios A/B/C closure).
+
+ADR-0015 also names ADR-0016, ADR-0018, and ADR-0019 as consumed-
+but-not-owned surfaces:
+
+- **ADR-0016** owns the `link_role` / `linked_entity_type`
+  validity matrix; ADR-0015 consumes the v1 active subset
+  (`primary_invoice`, `payment_evidence`, `receipt`, `supporting`)
+  but does not own enum membership or matrix entries.
+- **ADR-0018** owns Router output (`DocumentRelationshipCandidate`
+  objects); ADR-0015 consumes Router output but owns no Router
+  algorithmic logic, ambiguity-resolution policy, or re-evaluation
+  trigger membership.
+- **ADR-0019** owns confidence-threshold values, calibration
+  cycle, and audit process for tuning thresholds; ADR-0015
+  consumes per-document-type thresholds for proposal-card routing
+  but owns no threshold values.
+
+### Gate-firing pattern — D6 §6.8 substrate-now-enforcement-later
+
+Per `docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+§6.8, Phase A acceptance criteria fire under the substrate-now-
+enforcement-later cross-pattern that reached six-instance
+robustness across Phase 0 (ADR-0011 reserved exception-resolution-
+actions; ADR-0014 Tier B classifier reserved; ADR-0014 reserved
+`org_settings.*` columns; ADR-0017 vendor-rules-enforcement;
+ADR-0019 calibration substrate; ADR-0018 T7 + T9 + ADR-0019 T11
+reserved triggers).
+
+The pattern decomposes Phase A acceptance across two timing
+surfaces:
+
+- **Substrate fires at Phase A** — schema reservations, enum
+  members, interface contracts, invariant placeholders.
+  Verifiable from spec + the closed-enum / reserved-value
+  discipline (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3
+  service no-emit per ADR-0010).
+- **Enforcement fires at the first consumer's implementation gate
+  or v1 ship gate** — lint rules, runtime checks, migrations
+  against reserved values, invariant-content writeups. Verifiable
+  from code + tests at the gate fired by the first consuming
+  code path.
+
+Three named Phase 1 deferred-obligation triggers (per CLAUDE.md
+"Substrate-now-enforcement-later cross-pattern" entry) carry the
+pattern into Phase 1 and v1 ship:
+
+- **Q29 ESLint rule design** fires at first
+  `src/agent/pipelines/**/*` code.
+- **Q79 INV-DOC-001 shape + DOC prefix** fires at first DOC-
+  citing code.
+- **Q77 Q28 matrix ratification** fires at v1 ship gate.
+
+Phase A acceptance is therefore not a single-fire event but a
+pattern where substrate-ratification gates (Phase 0 closure,
+complete) and consumer-implementation gates (Phase 1 onset and
+v1 ship) compose across Phase 0 → Phase 1 → Phase 5 to deliver
+v1 ship-readiness.
 
 ## 15. Phase 0 prerequisites
 
@@ -2393,7 +2591,97 @@ gate per substrate-now-enforcement-later pattern). See §17 below.
 citation drift fixed via comprehensive cleanup at commit `e5965c3`.
 
 ## 16. ADRs this initiative produces
-[Stub — Document Platform ADR (ADR-0011), ProposedMutationBundle ADR (ADR-0012), Storage Provider ADR (ADR-0013), Tier 2 Document Pipeline ADR (ADR-0014), Document Relationship Graph ADR (ADR-0016), Relationship Router ADR (ADR-0018), Confidence Calibration Policy ADR (ADR-0019) — seven Document-Platform-owned ADRs per Decision 7 of the Phase 0 plan]
+
+Seven Document-Platform-owned ADRs ratified at Phase 0 per
+Decision 7 of `docs/09_briefs/phase-2/document_platform_reframe_design.md`.
+Each ADR's forward-looking γ-1 description follows:
+
+- **ADR-0011: Document Platform** — Ratifies the spine: entity
+  ownership boundary across `bills` / `bill_lines` / `payments` /
+  `vendors` (AP/Spend) vs `source_documents` /
+  `source_document_links` / `document_cases` (Document Platform)
+  vs `journal_entries` / `journal_lines` (ledger service).
+  Introduces the `ProposedMutation` / `ProposedMutationBundle` /
+  `ProposedAttachment` three-proposal-type contract (§7), the
+  exception queue resolution-action enum (§13), the Tier 2
+  vendor-matcher read boundary (§11), and the `DOC` invariant
+  prefix reservation (§15). Reading B preserved at four anchors
+  (§8 + Consequences/What this constrains + What this enables +
+  Alternative 4 rejection). _Cross-enum-consistency amendment
+  pending arc-closeout governance triage (concrete substrate
+  gap: `manual_born_paid_workflow` resolution-action emitted by
+  ADR-0015 §7 / Q74 Scenario C closure but not enumerated in
+  ADR-0011 §13 resolution-action enum membership listing)._
+
+- **ADR-0012: ProposedMutationBundle** — Ratifies the typed
+  envelope around two-or-more child `ProposedMutation` objects
+  with declared single-DB-transaction atomicity, canonical
+  lifecycle states (Pending / Needs Attention / Approved /
+  Posted / Finalized + Rejected variants per
+  `docs/02_specs/mutation_lifecycle.md`), bundle-level Logic
+  Receipt, and Q28 Surface 4 commit-time re-verification. v1
+  active `bundle_type` is `born_paid_bill`; bundle-effective
+  ceiling = max(child ceilings) per §9. Manual born-paid path
+  runs through the same domain-service entry as the automated
+  path per §11.
+
+- **ADR-0013: Storage Provider** — Ratifies the
+  `storageProviderService` interface that maps `(storage_provider,
+  storage_key)` to put / get / delete operations across pluggable
+  backends, with hash-verify-on-put, three-way failure
+  classification (transient retryable / provider-unavailable /
+  permanent malformed), drift-detection routing, and the
+  `storage_status` closed enum. v1 ships `supabase_storage` only;
+  SharePoint / S3 / external_url backends are reserved per
+  ADR-0010 reserved-enum-states discipline.
+
+- **ADR-0014: Tier 2 Document Pipeline** — Ratifies the end-to-
+  end Tier 2 pipeline that runs PaddleOCR via a Modal Python
+  sidecar, classifies documents (Tier A rule-based + Tier C AI
+  fallback active in v1; Tier B small classifier reserved),
+  dedupes by content hash, integrates with the ADR-0011 §11
+  vendor-matcher read boundary, garbage-collects orphan blobs,
+  and routes pipeline output to `ProposedMutation` /
+  `ProposedMutationBundle` / `ProposedAttachment` proposals with
+  Logic Receipt emission. Per-document-type confidence thresholds
+  are defined here; ratification cycle owned by ADR-0019.
+
+- **ADR-0016: Document Relationship Graph** — Ratifies the full
+  closed `linked_entity_type` and `link_role` enum membership
+  (with v1 active vs reserved subsets), the two-dimensional
+  pair-validity matrix that gates which `(linked_entity_type,
+  link_role)` combinations `documentLinkService` accepts, the
+  per-`linked_entity_type` cascade behavior on linked-entity
+  reversal / void / cancel, and the schema-side enforcement of
+  ADR-0011 §9 lifecycle immutability via the pre-commit / post-
+  commit boundary. `documentLinkService` is the sole writer of
+  `source_document_links`.
+
+- **ADR-0018: Relationship Router** — Ratifies the Tier 2.5
+  read-only Router algorithm decomposed into three subsystems
+  (Ledger-State Candidate Completion, Ambiguity Resolution, Re-
+  Evaluation Logic), the Tier 2.5 read-boundary specifics
+  (vendor control / payment-risk fields readable at Tier 2.5
+  per ADR-0011 §11; ledger-state read-only across all three
+  subsystems), the deferral of stale-state TOCTOU obligations to
+  Tier 1 commit-time re-verification, and the closed list of v1
+  re-evaluation triggers (T1–T10; v1-active subset T1, T2, T3,
+  T4, T5, T6, T8, T10). Router produces
+  `DocumentRelationshipCandidate` objects only — never writes to
+  `source_document_links` or `journal_entries`.
+
+- **ADR-0019: Confidence Calibration Policy** — Ratifies the
+  governance for v1's confidence-threshold values: five named
+  calibration surfaces (`vendor_invoice` / `receipt` /
+  `payment_confirmation` classifier thresholds plus the Router
+  Subsystem 2 ambiguity-margin, plus the structural always-
+  exception `unknown` surface), the cross-domain calibration
+  coupling (four active surfaces calibrated as a coupled set
+  per cycle), the six-month first-cycle wall-clock anchor, three
+  canonical audit events for cycle execution and ratification,
+  two-anchor effective-time contract, audit-trail invariance for
+  prior pre-commit candidates and post-commit ledger state, and
+  six reserved post-v1 `org_settings.*` override seats.
 
 ## 17. Open questions
 
@@ -2464,13 +2752,191 @@ compatible config-column reservation) — substrate ratified at
 Phase 0; enforcement landing at Phase 1 implementation or v1 ship.
 
 ## 18. Friction-journal scope
-[Stub — Document Platform arc placeholder name]
+
+Document Platform Initiative implementation entries land under
+the **Document Platform Initiative arc** (placeholder slug
+`arc-document-platform-initiative`; final name confirmed at the
+first session-kickoff per the `<Subject> Initiative` arc-name
+template established in the Spend Initiative brief §16). Arc
+scope spans Phase 1 (Storage / Evidence Core), Phase 2 (Document
+Core skeleton), Phase 3 (Document Relationship Graph), Phase 4
+(Relationship Router consumption), and Phase 5 first-domain
+consumption (AP/Spend Subdomain per ADR-0015) implementation
+work that operationalizes the substrate ratified in this brief.
+Substrate-ratification work that produced this brief (Phase 2
+brief-creation arc B2-1 through B2-4 chunks) lands under the
+existing Phase 2 brief-creation arc scope in
+`docs/07_governance/friction-journal.md`.
 
 ## 19. What this initiative does NOT do
-[Stub — does not commit accounting state; does not own domain logic; does not change Authority Gradient / Agent Ladder / Two Laws / Service Communication Rules / existing invariants; does not edit AP/Spend brief content; does not generalize Document Core into a non-accounting document management system]
+
+The Document Platform brief is substrate scope. It does NOT:
+
+- **Commit accounting state.** Document Platform produces
+  proposals (`ProposedMutation` / `ProposedMutationBundle` /
+  `ProposedAttachment` per ADR-0011 §7); commits run through
+  domain services. No platform code path writes to ledger
+  tables.
+- **Own domain logic.** Document Platform is logical-substrate-
+  ownership boundary; AP/Spend / Banking / AR / future domains
+  own their respective accounting semantics.
+- **Execute ledger-side substrate writes.** Document Platform
+  proposes mutations; domain services produce ledger operations;
+  `ledgerService` is the sole writer of `journal_entries` and
+  `journal_lines` per Reading B preservation (ADR-0011 §8 +
+  What this constrains + What this enables + Alternative 4
+  rejection).
+- **Change Authority Gradient / Agent Ladder / Two Laws /
+  Service Communication Rules / existing invariants.** Document
+  Platform consumes these from `docs/02_specs/`; substrate
+  contribution is invariant-extension (DOC prefix per ADR-0011
+  §15) only.
+- **Edit Spend brief content.** The Spend Initiative brief
+  (`docs/09_briefs/phase-2/spend_initiative.md`) is the canonical
+  Phase 5 first-domain consumer artifact; this brief forward-
+  points without modifying.
+- **Generalize Document Core into a non-accounting document
+  management system.** Document Platform is bookkeeping-substrate
+  scope; non-accounting document management (HR contracts, legal
+  filings, etc.) is out of scope and not a v1 / post-v1
+  evolution pathway.
 
 ## 20. Verification against canonical docs
-[Stub — fill after ADRs ratify; list every canonical doc verified per the original AP brief §18 precedent]
+
+Verified by direct read against every file the prompt named, in
+the order named:
+
+- `/home/philc/projects/chounting/CLAUDE.md`,
+  `/home/philc/projects/chounting/AGENTS.md`,
+  `/home/philc/projects/chounting/docs/INDEX.md`,
+  `/home/philc/projects/chounting/docs/02_specs/README.md`
+  — orientation. The "ADR before code" discipline, the spec-
+  without-enforcement-rule canonical convention, and the UI-
+  session screenshot gate convention all apply to this brief
+  and to every consuming Phase 1+ implementation arc.
+- `/home/philc/projects/chounting/docs/02_specs/ledger_truth_model.md`
+  — Authority Gradient, Layer 4 Cognitive Truth (Agents
+  Propose), Service Communication Rules, and the cited
+  invariants. Reading B preservation cited in §1, §3, §6, §8,
+  §9, §14, §19. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/agent_autonomy_model.md`
+  — Agent Ladder (three rungs), System ceiling list, policy
+  decision tree. The reversal-as-System-ceiling rule referenced
+  in §13. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/intent_model.md`
+  — `ProposedMutation` shape, the Four Questions grammar,
+  Logic Receipts. The three-proposal-type contract in §9 rides
+  the existing shape. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/mutation_lifecycle.md`
+  — canonical lifecycle states. ADR-0012 inherits these
+  verbatim per §9 + §16. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/data_model.md`
+  — Phase 2+ reserved tables. §5 reconciles the platform-owned
+  table set against the reservations. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/invariants.md`
+  — canonical INV-IDs and bidirectional reachability rule.
+  INV-DOC-001 placeholder reserved per ADR-0011 §15 + Q79
+  Phase-1-implementation-gate deferral; spec-without-enforcement-
+  rule honored. Cited in §11, §15, §17. **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/glossary.md`
+  — Workflow Vocabulary (Arc / Phase / Session / Sub-session).
+  §18 friction-journal arc-name framing uses this vocabulary.
+  **Not modified.**
+- `/home/philc/projects/chounting/docs/02_specs/open_questions.md`
+  — Q53–Q79 verification + Q29 sibling deferral. §17 enumerates
+  closed and deferred subset. **Not modified.**
+- `/home/philc/projects/chounting/docs/03_architecture/phase_plan.md`
+  — Phase 2 scope. The brief operationalizes Phase 2 substrate
+  per §1 + §15. **Not modified.**
+- `/home/philc/projects/chounting/docs/03_architecture/phase_simplifications.md`
+  — Simplification 3. §1 cites this directly as the substrate
+  origin; §1 + §15 reference the 2026-05-03 footnote. **Not
+  modified.**
+- `/home/philc/projects/chounting/docs/03_architecture/folder-structure.md`
+  — four-layer architecture per ADR-0020. §4 Tier placement
+  cites this. **Not modified.**
+- `/home/philc/projects/chounting/docs/03_architecture/authority-gradient.md`
+  — four-layer authority framing. §4 Tier placement cites this.
+  **Not modified.**
+- `/home/philc/projects/chounting/docs/04_engineering/conventions.md`
+  — Documentation Routing convention, naming conventions,
+  ADR-0010 reserved-enum-states three-layer defense. The brief
+  follows the routing rule (canonical home in `phase-2/` for
+  the planning artifact). **Not modified.**
+- `/home/philc/projects/chounting/docs/04_engineering/repo-rules.md`
+  — repo shape, four-layer architecture, cross-reference table.
+  Cited in §3 architecture overview. **Not modified.**
+- `/home/philc/projects/chounting/docs/04_engineering/delivery-model.md`
+  — phase lifecycle, merge rules, branch sync, flag posture.
+  Cited in §15 Phase 0 prerequisites framing. **Not modified.**
+- `/home/philc/projects/chounting/docs/07_governance/adr/README.md`
+  — ADR format and when-to-write rules. §16 inventory follows
+  the ADR registration convention. **Not modified.**
+- `/home/philc/projects/chounting/docs/07_governance/adr/0007-three-tier-agent-architecture.md`
+  — Three-tier agent architecture + Tier 2.5 amendment. §4 Tier
+  placement + §11 vendor-matcher read boundary cite this.
+  **Not modified.**
+- `/home/philc/projects/chounting/docs/07_governance/adr/0010-reserved-enum-states.md`
+  — Reserved-enum-states three-layer discipline. §6 storage
+  abstraction + §13 Receipt v1 matrix + §16 ADR-0013 / ADR-0014
+  / ADR-0019 inventory rows cite this. **Not modified.**
+- `/home/philc/projects/chounting/docs/07_governance/adr/0011-document-platform.md`
+  — Document Platform spine. Heavy citation throughout §1, §3,
+  §4, §5, §7, §9, §10, §11, §12, §14, §16, §19. Substrate
+  source for §14 distributed acceptance criteria.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0012-proposed-mutation-bundle.md`
+  — ProposedMutationBundle envelope. Cited in §9, §13, §14, §16.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0013-storage-provider.md`
+  — Storage Provider. Cited in §4, §6, §10, §14, §16.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0014-tier-2-document-pipeline.md`
+  — Tier 2 Document Pipeline. Cited in §3, §4, §10, §13, §14,
+  §16.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0015-ap-spend-subdomain.md`
+  — AP/Spend Subdomain (Phase 5 first-domain consumer).
+  Substrate source for §14 domain consumption acceptance summary;
+  §16 ADR-0011 row cross-enum-consistency anchor. Cited in §13,
+  §14, §16, §17, §18, §19.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0016-document-relationship-graph.md`
+  — Document Relationship Graph. Cited in §7, §10, §14, §16, §17.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0017-vendor-template-substrate.md`
+  — Vendor Template substrate. Cited in §15 + cross-pattern §14
+  six-instance enumeration.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0018-relationship-router.md`
+  — Relationship Router. Cited in §8, §10, §14, §16, §17.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0019-confidence-calibration-policy.md`
+  — Confidence Calibration Policy. Cited in §8, §13, §14, §16,
+  §17 + cross-pattern §14 six-instance enumeration.
+- `/home/philc/projects/chounting/docs/07_governance/adr/0020-agent-first-authority-gradient-source-architecture.md`
+  — Authority Gradient source architecture (B.5 substrate).
+  Cited in §3, §4. **Not modified.**
+- `/home/philc/projects/chounting/docs/09_briefs/phase-2/document_platform_reframe_design.md`
+  — reframe-spec (canonical source for substrate framing). Cited
+  throughout §1, §2, §3, §15, §16. **Not modified.**
+- `/home/philc/projects/chounting/docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+  — D6 §6.8 substrate-now-enforcement-later codification.
+  Substrate source for §14 gate-firing pattern axis. **Not
+  modified.**
+- `/home/philc/projects/chounting/docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`
+  — Phase 0 12-surface disposition. Cited in §15 + §16. **Not
+  modified.**
+- `/home/philc/projects/chounting/docs/09_briefs/phase-2/spend_initiative.md`
+  — Spend Initiative brief (Phase 5 first-domain consumer
+  artifact). Precedent source for §18 arc-name template + §20
+  verification-list shape. Cited in §1, §13, §17, §18, §19.
+  **Not modified.**
+- `/home/philc/projects/chounting/docs/09_briefs/CURRENT_STATE.md`
+  — project state. Brief opens against post-Phase-0-closure
+  state (2026-05-04). **Not modified.**
+
+No architectural conflicts surfaced. The eight Phase 0 ADRs are
+folded in. The 25 closed Q53–Q79 questions are folded in. The
+two open questions (Q77 v1-ship-gate, Q79 Phase-1-implementation-
+gate) are surfaced per substrate-now-enforcement-later cross-
+pattern. The Reading B preservation rule is preserved verbatim
+at four ADR-0011 anchors (§8 + What this constrains + What this
+enables + Alternative 4 rejection) and reaffirmed in §1, §14, §19.
+The Spend Initiative brief is not modified. `open_questions.md`
+is not modified.
 
 ## 21. Review history
 
