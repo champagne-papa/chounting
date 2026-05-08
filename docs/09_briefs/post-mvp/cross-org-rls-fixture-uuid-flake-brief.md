@@ -97,3 +97,51 @@ NOTE alongside the commit is sufficient.
   (verify against current state).
 - `apps/web/scripts/audit/verifyAuditCoverage.ts` and similar —
   precedent for `crypto.randomUUID()` usage in test-adjacent code.
+
+## Adjacent scope: tooling polish (independent within this arc)
+
+Pre-Session-4 cleanup Phase 3 surfaced four tooling-polish
+findings in `scripts/adr/` and `scripts/install-hooks.sh` that
+share a code area with this fix arc and benefit from the same
+reviewer attention. They are **independent within this arc** —
+each can ship alone or paired; the test-hygiene fix above
+(candidate (a) for `crossOrgRlsIsolation`) does not depend on
+any of these, and vice versa. Bundling here for code-area and
+reviewer-attention coherence, not sequencing.
+
+- **#1 — Linter error messages don't path-cite the canonical
+  files.** `scripts/adr/lint.ts` errors say "not in
+  taxonomy.md" / "not in invariants.md" without the path. If
+  either file renames, error messages rot silently. Fix:
+  define one constant (e.g., `TAXONOMY_PATH`,
+  `INVARIANTS_PATH` already exist as path resolutions) and
+  use them in error messages too. ~5-line change.
+
+- **#2 — `pnpm adr:index --check` failure doesn't surface a
+  sample diff.** CI casualty knows to run `pnpm adr:index`
+  but not what the corruption was. Fix: compute the would-be
+  diff in `--check` path and print first ~10 lines on failure.
+  Small change in `scripts/adr/generate-index.ts` `main()`.
+
+- **#3 — `scripts/install-hooks.sh` backup mechanism not
+  idempotent.** Each run blindly backs up the existing hook to
+  `.git/hooks/pre-commit.pre-coordination`, overwriting any
+  prior backup. After 2+ runs, "what was here originally" is
+  lost. Fix: either timestamp backups
+  (`pre-commit.pre-coordination.YYYYMMDDHHMMSS`) or
+  short-circuit when content is content-equivalent. Couples
+  with #5 (operational silent-bypass fix in Session 4) if that
+  fix takes the `prepare`-script route — see Session 4
+  documentation-cluster brief if filed.
+
+- **#4 — `scripts/install-hooks.sh` has no "already installed"
+  no-op messaging.** Both runs print identical install output.
+  Confusion-only, not breakage. Fix: pair with #3 — when
+  content-equivalent, print "Hook already installed, no
+  action." Single condition check.
+
+Source: pre-Session-4 cleanup Phase 3 audit, 2026-05-08.
+Filed as adjacent scope per Phase 4 triage (#1, #2, #3, #4
+disposition: OUT, paired with this arc's code area). See
+`docs/07_governance/friction-journal.md` 2026-05-08 entry
+sub-block "Phase 3 audit results" for full probe details.
