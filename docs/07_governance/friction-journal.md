@@ -223,6 +223,112 @@ Categories:
     ratification structure; round-2 design context, conventions.md
     addition deferred to Session 7.
 
+  Phase 3 audit results (snapshot, audit-time — preserve
+  verbatim; this is the substrate state at 2026-05-08 before
+  Session 4 lands fixes). Four breadth-first probes against
+  the ADR substrate landed in Session 3:
+
+  - **Probe 1 — `pnpm adr:lint` against malformed ADR
+    (`9999-probe-malformed.md`, 6 distinct violations + 1 valid
+    INV control):** PASS. 7 errors caught (id mismatch, status
+    enum, malformed date, unknown module, INV regex, INV not in
+    invariants.md, related ADR not found). All messages cite
+    `path:field severity message` shape. Exit 1. Probe file
+    deleted; baseline lint returned to 0 errors / 21 ADRs.
+  - **Probe 2 — `pnpm adr:index --check` after Current ADRs
+    table corruption** (`Three-Tier Agent Architecture (with
+    Document Platform Reframe Amendment)` → `CORRUPTED-PROBE-2`
+    via sed): PASS. `--check` exited 1 with message "README.md
+    regeneration would change content. Run `pnpm adr:index` and
+    commit the result." Non-check `pnpm adr:index` restored
+    cleanly; final diff empty.
+  - **Probe 3 — `scripts/install-hooks.sh` idempotency +
+    silent-bypass surface:** PARTIAL PASS / FINDING. Hook
+    *content* idempotent across runs (same generated heredoc),
+    but backup mechanism overwrites prior `pre-commit.pre-
+    coordination`; "what was originally here" history lost
+    after first re-run. No "already installed" no-op message.
+    Silent-bypass surface confirmed: zero `postinstall` /
+    `prepare` script in package.json; zero `install-hooks`
+    mention in `developer_setup.md`; fresh-clone contributors
+    commit unguarded.
+  - **Probe 4 — comprehension test (read ADR-0021 +
+    `_template.md` fresh, attempt hypothetical ADR-0022 "Brief
+    frontmatter and tooling"):** 7 GAPS surfaced — (4a)
+    next-free-ADR-number procedure not documented, (4b)
+    filename pattern (`NNNN-kebab-slug.md`) not stated, (4c)
+    Status-line bracket placeholders (`[authority]`,
+    `[ratification artifact reference]`) unexplained, (4d)
+    supersession workflow not in reference docs, (4e) amendment
+    workflow tribal knowledge, (4f) forward-only Decision rule
+    referenced but not restated, (4g) YAML date quoting not
+    signaled. Honest caveat: I wrote both reference docs in
+    Session 3 (inheritance bias real); a fresh contributor may
+    surface additional semantic gaps (e.g., terms like
+    "round-2," "dogfood ADR," "δ-i preservation").
+
+  Calibration: Phase 2 zero candidates + Phase 3 twelve
+  candidates = breadth-first audit working as designed.
+  Definitional-exercise pass (Phase 2) and breakage attempt
+  (Phase 3) test different failure modes; the substrate is
+  mechanically sound (no probes hard-failed) but operationally
+  and documentationally underspecified at substrate-landing
+  time.
+
+  Phase 4 triage matrix (pre-Session-4 plan — NOT execution
+  record; Session 4 commits will be the actual outcome
+  evidence). 9 IN, 4 OUT, 0 DROP across the 12 Phase 3
+  candidates after #1's reconsideration (DROP → OUT on
+  asymmetry-favoring-prevention pushback).
+
+  - **IN, mandatory operational fix:** #5 silent bypass.
+    Doc-only minimum-viable shape — one line in
+    `developer_setup.md` ("Run `bash scripts/install-hooks.sh`
+    after `pnpm install`"). High operational risk + small fix
+    + decouples from #3's backup-overwrite issue.
+  - **IN, documentation cluster (single PR):** #6 next-free-
+    ADR-number procedure, #7 filename pattern, #8 Status-line
+    bracket placeholders, #11 forward-only Decision rule
+    restatement, #12 YAML date quoting — all land in
+    `_template.md` comment-block additions or ADR README prose.
+    #9 supersession workflow + #10 amendment workflow split
+    out into ADR-0022 substrate per locked decision below.
+  - **OUT, tooling polish (independent within test-hygiene
+    arc):** #1 linter error path-citing, #2 `--check` sample
+    diff, #3 install-hooks backup idempotency, #4 install-
+    hooks no-op messaging. Re-filed as adjacent-scope
+    amendment to `09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md`
+    (commit `a322fe9`). Trigger relationship: independent
+    within arc.
+  - **DROP:** none (after #1 reconsideration).
+
+  Locked Session 4 decisions (made at Phase 4 disposition,
+  preventing mid-session re-scoping):
+  - **Profile (b)** — structural-plus-semantic reference docs.
+    Documentation cluster ships profile (b): structural fixes
+    for #6–#12 plus inline glosses for the round-2-specific
+    terms ADR-0021 uses ("dogfood ADR," "round-2," "forward-
+    only convention," "δ-i preservation," "session-internal
+    narration"). Cheap addition; opens reference docs to
+    Phase 1 implementation contributors.
+  - **ADR-0022 ratification** for amendment-vs-supersession
+    workflow. Decision rules belong in ADRs per project
+    conventions; documenting-by-inspection is the exact
+    failure mode Probe 4e surfaced. Extends the dogfood
+    pattern (ADR-0021 ratified frontmatter+tooling system;
+    ADR-0022 ratifies lifecycle workflows). Splits #9, #10
+    out of documentation cluster prose into ADR-0022 substrate.
+
+  Forward-pointer to friction-journal readers: the Phase 3
+  probe results above are *snapshot evidence* — substrate state
+  at audit-time, before fixes — and should remain readable
+  verbatim even after Session 4 closes the gaps. The Phase 4
+  triage matrix is *planning artifact* — disposition, not
+  outcome — and is expected to become outdated as IN candidates
+  ship in Session 4. Distinguishing artifact types here so
+  future readers don't conflate "what was true at substrate-
+  landing" with "what got fixed in cleanup."
+
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
   at drafting time. Counter-evidence: Web Crypto's BufferSource type
