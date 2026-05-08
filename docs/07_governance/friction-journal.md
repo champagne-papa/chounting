@@ -88,35 +88,60 @@ Categories:
   `conventions.md` addition for codification.
 
   Push-readiness gate Condition 1 deviation (per CLAUDE.md
-  three-artifact framing — DEVIATION, NOT BLOCKER, since the
-  session did not push):
-  - (a) Mechanism: `tests/integration/crossOrgRlsIsolation.test.ts`
-    fails at line 102 with `duplicate key value violates unique
-    constraint "journal_entries_pkey"`. Accumulated dev-DB state
-    from prior sessions; the test's fixture inserts collide with
-    pre-existing journal_entries rows. `pnpm typecheck` clean,
-    `pnpm test:no-hardcoded-urls` clean, `pnpm agent:floor`
-    fails ONLY on this single test.
-  - (b) Fix shape: `pnpm db:reset:clean && pnpm db:seed:all`
-    restores clean baseline; re-running `pnpm agent:validate` and
-    `pnpm test` against the reseeded DB returns the suite to green
-    per CURRENT_STATE.md's "598/598 under pnpm db:reset:clean"
-    baseline (2026-05-01).
-  - (c) Carry-forward framing: NOT a Session 3 regression. This
-    session's HEAD diff against ac1ff11 touches 12 files: 0
-    migrations, 0 services, 0 integration tests, 0 schemas. All
-    changes are docs (taxonomy, ADR-0021, README, INDEX) or
-    docs-tooling (scripts/adr/, package.json, install-hooks.sh,
-    ci.yml, .gitignore). The DB state pollution is environmental
-    and pre-dates this session. Operator runs the fix outside
-    Session 3 scope; if a similar deviation re-fires in a docs-
-    only session, the pattern earns codification (N=2 candidate).
+  three-artifact framing — investigation completed post-Commit 8;
+  finding revised below):
 
-  Operator action required before push: `pnpm db:reset:clean &&
-  pnpm db:seed:all && pnpm agent:validate && pnpm test`. If those
-  pass clean, push proceeds. If they don't, halt and surface (the
-  failure would then be a real Session 3 regression, but no
-  evidence supports that hypothesis as of commit time).
+  Initial deviation hypothesis (pre-investigation): dev DB state
+  pollution from prior sessions. Filed at Commit 8 commit time as
+  the most likely mechanism given session diff scope (0 migrations
+  / services / integration tests touched).
+
+  Post-investigation finding (after `pnpm db:reset:clean &&
+  pnpm db:seed:all`): hypothesis WAS PARTIALLY WRONG. The clean
+  reset PASSES `pnpm agent:validate` 26/26 (5 floor test files
+  including `crossOrgRlsIsolation.test.ts` itself), but FAILS
+  `pnpm test` (full suite) with the same PK-collision error on
+  the same test file. The mechanism is inter-test state pollution
+  in the full suite, NOT dev DB state pollution from prior
+  sessions.
+
+  - (a) Mechanism (revised): test-suite ordering / inter-test
+    state pollution. `tests/integration/crossOrgRlsIsolation.test.ts`
+    inserts journal_entries with fixed UUIDs in its fixture. When
+    run in 5-file floor scope (`pnpm agent:floor`), no conflict.
+    When run in full 137-file suite (`pnpm test`), at least one
+    other test file inserts a journal_entry with a colliding UUID
+    before crossOrgRlsIsolation runs, producing the PK violation.
+    Test count grew 598 → 665 (28 new tests) since
+    CURRENT_STATE.md's "598/598 green" baseline (2026-05-01); a
+    recently-added test likely introduces the collision.
+  - (b) Fix shape (revised): four candidates for a future
+    test-hygiene arc, NOT in Session 3 scope:
+      i. crossOrgRlsIsolation uses random UUIDs (e.g., `crypto.randomUUID()`)
+         instead of fixed fixture UUIDs.
+      ii. Conflicting test cleans up its inserts.
+      iii. Per-file DB reset between integration tests (slow but
+           isolating).
+      iv. Vitest test-ordering forces crossOrgRlsIsolation first.
+    Each touches the test suite directly; outside docs-only Session 3
+    scope.
+  - (c) Carry-forward framing: NOT a Session 3 regression — diff
+    scope confirmed (0 migrations / services / integration tests).
+    The full-suite failure is a pre-existing test-suite-hygiene
+    issue introduced by the 28 tests added between 2026-05-01 and
+    2026-05-08. Filed as carry-forward to the next session that
+    touches integration tests OR to a dedicated test-hygiene arc;
+    Session 4 forward-pointer.
+
+  Push decision: deferred to operator. Investigation complete;
+  Session 3 substantive work is sound (typecheck clean, lint
+  clean, generator idempotent, ADR-0021 ratified, all 7 tracked
+  commits land cleanly). The full-suite test failure is real but
+  pre-existing and out of scope. Operator chooses between:
+   (push now, deviation documented per Condition 1's three-artifact
+   framing — Condition 1 met under "OR deviations documented"
+   branch) vs (defer push, file test-hygiene fix arc, push after
+   that arc lands and full suite returns to green).
 
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
