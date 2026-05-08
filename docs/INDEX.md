@@ -34,6 +34,7 @@ deletion criterion.
 - `data_model.md` — table-by-table schema reference: columns, named CHECK constraints, triggers, indexes, RLS policies.
 - `invariants.md` — contributor-facing rollup index: every INV-ID, its layer, its leaf anchor, its code enforcement site. Carries the bidirectional-reachability proof.
 - `glossary.md` — vocabulary reference for terms with project-specific meanings (`adminClient`, `MoneyAmount`, Two Laws, canvas directive, etc.). Does not redefine GAAP/IFRS or generic software terms. Includes the `## Workflow Vocabulary` section (Arc / Phase / Session / Sub-session hierarchy + supporting terms; codified 2026-04-26).
+- `taxonomy.md` — canonical values for frontmatter fields used across ADRs, briefs, and spec / architecture / engineering documents. The single source of truth for module / phase / concern / audience value vocabularies. The linter at `scripts/adr/lint.ts` reads this file. Added 2026-05-07 per ADR-0021 (round-2 docs reorganization Session 3).
 - `open_questions.md` — unresolved questions across founder data, architectural defaults, closeout surfacings, and formalization candidates. Current leading entry: Q32 (reversal-mirror step-order discrepancy).
 
 ## 03_architecture — how the pieces fit
