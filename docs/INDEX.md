@@ -90,7 +90,8 @@ for the deletion criterion.
 
 ### 07_governance/adr — Architecture Decision Records
 
-- `adr/README.md` — ADR format, when-to-write rules, supersession process, current ADR index.
+- `adr/README.md` — ADR format, when-to-write rules, supersession process, frontmatter schema (ADR-0021+), pre-ratification design spec lifecycle, generated current-ADR index plus by-module / by-invariant / by-phase generated sections.
+- `adr/_template.md` — frontmatter + body skeleton for new ADRs (ADR-0021+). Field semantics documented in the comment block above the frontmatter. Per ADR-0021. Added 2026-05-07.
 - `adr/0001-reversal-semantics.md` — reversal entries are normal `journal_entries` rows with self-FK + non-empty reason; three-layer enforcement. Tiebreaker for `reversal_reason` column placement.
 - `adr/0002-confidence-as-policy-input.md` — confidence scores drive routing internally; never displayed as a number in the UI.
 - `adr/0003-one-voice-agent-architecture.md` — the user sees one agent, always. No user-facing sub-agent delegation.

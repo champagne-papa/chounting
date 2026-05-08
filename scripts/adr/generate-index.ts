@@ -84,10 +84,12 @@ function extractFromBody(body: string, sectionHeader: string): string {
 }
 
 function extractTitle(body: string): string {
-  // First H1 heading, strip "ADR-NNNN: " prefix if present.
+  // First H1 heading, strip "ADR-NNN: " or "ADR-NNNN: " prefix if
+  // present. Legacy ADR-0001 uses 3-digit `ADR-001:`; 0007+ use
+  // 4-digit `ADR-0007:`. Both forms strip cleanly.
   const match = body.match(/^#\s+(.+)$/m);
   if (!match) return STATUS_DASH;
-  return match[1].replace(/^ADR-\d{4}:\s*/, '').trim();
+  return match[1].replace(/^ADR-\d{3,4}:\s*/, '').trim();
 }
 
 function extractStatus(body: string): string {

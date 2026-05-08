@@ -155,8 +155,18 @@ not delete it.
 | [ADR-0006](./0006-agent-persona-unnamed.md) | Agent Persona: Senior Bookkeeper, Unnamed | Accepted | 2026-04-16 |
 | [ADR-0007](./0007-three-tier-agent-architecture.md) | Three-Tier Agent Architecture (with Document Platform Reframe Amendment) | Ratified | 2026-05-03 |
 | [ADR-0008](./0008-layer-1-enforcement-modes.md) | Layer 1 Enforcement Modes — Commit-Time (1a) vs. Scheduled Audit (1b) | Accepted | 2026-04-21 |
-| [ADR-0009](./0009-before-state-capture-convention.md) | Audit `before_state` Capture Convention | Accepted | 2026-04-23 |
-| [ADR-0010](./0010-reserved-enum-states.md) | Reserved Enum States for Phase 2 Workflow Affordances | Accepted | 2026-04-29 |
+| [ADR-0009](./0009-before-state-capture-convention.md) | `before_state` Capture Convention for `audit_log` | Accepted | 2026-04-23 |
+| [ADR-0010](./0010-reserved-enum-states.md) | Reserved Enum States for Phase 2 Workflow Affordances | Accepted | 2026-04-24 |
+| [ADR-0011](./0011-document-platform.md) | Document Platform — Substrate Spine, DOC Invariant Prefix, Domain Boundary Map | Ratified | 2026-05-03 |
+| [ADR-0012](./0012-proposed-mutation-bundle.md) | ProposedMutationBundle — Atomicity, Lifecycle, Logic Receipt, Q28 Surface 4 | Ratified | 2026-05-03 |
+| [ADR-0013](./0013-storage-provider.md) | Storage Provider — Abstraction, Drift Detection, Queue-and-Retry, Integrity-Check, Controller-Override | Ratified | 2026-05-03 |
+| [ADR-0014](./0014-tier-2-document-pipeline.md) | Tier 2 Document Pipeline — OCR Engine, Sidecar Topology, Classification, AI Fallback, Replay Policy, Dedup, Vendor Matcher, Orphan-Blob GC | Ratified | 2026-05-03 |
+| [ADR-0015](./0015-ap-spend-subdomain.md) | AP/Spend Subdomain — Vendor Prepayments, Born-Paid Bundle Approval, Tax Timing, Vendor Balance, Backfill, Receipt v1, Payment Failure Lifecycle | Ratified | 2026-05-03 |
+| [ADR-0016](./0016-document-relationship-graph.md) | Document Relationship Graph | Ratified | 2026-05-04 |
+| [ADR-0017](./0017-vendor-template-substrate.md) | Vendor Template Substrate (substrate-only v1) | Ratified | 2026-05-04 |
+| [ADR-0018](./0018-relationship-router.md) | Relationship Router | Ratified | 2026-05-04 |
+| [ADR-0019](./0019-confidence-calibration-policy.md) | Confidence Calibration Policy | Ratified | 2026-05-04 |
+| [ADR-0020](./0020-agent-first-authority-gradient-source-architecture.md) | Agent-First Authority-Gradient Source Architecture (substrate-only v1) | Ratified | 2026-05-05 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -168,6 +178,7 @@ not delete it.
 > frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-module -->
+_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
 <!-- END:generated-by-module -->
 
 ## By invariant
@@ -176,6 +187,7 @@ not delete it.
 > without frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-invariant -->
+_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
 <!-- END:generated-by-invariant -->
 
 ## By phase
@@ -184,6 +196,7 @@ not delete it.
 > frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-phase -->
+_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
 <!-- END:generated-by-phase -->
 
 ## Related files
