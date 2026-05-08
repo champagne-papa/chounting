@@ -593,3 +593,110 @@ the integration unit between sessions and staging.
   fix-stack, Class 2 fix-stack). Bigger than an EC,
   smaller than a Phase. Has its own scoping doc and exit
   criteria.
+
+## Governance Vocabulary
+
+Terms used across the project's governance flow — push gates,
+verification sessions, deviation documentation, codification
+discipline. Some terms are stable production use (Tier 1) with
+definitions ratified during Phase 2 of pre-Session-4 cleanup
+(2026-05-08). Other terms are still in motion (Tier 2) with
+definitions deferred to Session 7 alongside the `conventions.md`
+entries that codify the underlying patterns.
+
+### Tier 1 — defined
+
+**push-readiness gate.** The three-condition checklist applied
+before a working-branch HEAD is pushed to a shared branch
+(`main` / `staging`). Each condition (Condition 1 test-suite
+health; Condition 2 doc-sync reconciled; Condition 3 governance
+closeout) must be met OR formally documented as a deviation.
+Codified in `CLAUDE.md` § "Push readiness three-condition gate."
+
+**Condition 1 (test-suite health).** First condition of the
+push-readiness gate. EITHER `pnpm test` full-suite green at HEAD
+OR deviations documented per the [three-artifact framing](#tier-1--defined)
+((a) mechanism, (b) fix shape, (c) explicit carry-forward
+framing — retrospective, friction-journal, or filed queue
+item). "Acceptable baseline" without all three artifacts is
+not a met condition.
+
+**Condition 2 (doc-sync reconciled).** Second condition of the
+push-readiness gate. `invariants.md` ↔ `control_matrix.md` ↔
+`ledger_truth_model.md` ↔ shipped code all consistent;
+bidirectional reachability diff clean (or flagged exceptions
+documented as Phase 2 stubs); `types.ts` regenerated against
+the post-arc schema; ADRs, obligations, and any other arc-
+affected governance docs reconciled. Deviation-documentation
+shape for Condition 2 is the "Phase 2 stub" pattern — distinct
+from Condition 1's three-artifact framing.
+
+**Condition 3 (governance closeout).** Third condition of the
+push-readiness gate. Retrospective written; friction-journal
+updated with arc-scope entries; any conventions earned by fire
+count codified in `CLAUDE.md` (or `conventions.md` per
+Documentation Routing) or filed for future codification with
+provenance.
+
+**three-artifact framing.** The deviation-documentation
+discipline specific to [Condition 1](#tier-1--defined) of the
+push-readiness gate: a deviation from "full-suite green at HEAD"
+is a met condition only if accompanied by all three of (a)
+mechanism, (b) fix shape, (c) explicit carry-forward framing
+(retrospective, friction-journal, or filed queue item).
+"Acceptable baseline" handwaving without all three is not a
+met condition. The phrase is specific to Condition 1; Conditions
+2 and 3 use distinct deviation-documentation shapes (Phase 2
+stub framing for Condition 2; codification-or-filing framing
+for Condition 3).
+
+**STRUCTURAL-OBJECTION.** A verification-session status taxonomy
+member (rev 3 verification prompt status taxonomy). Used when a
+verified claim's underlying facts check out, but the workstream's
+framing or cut is questionable. Verifier flags; operator decides
+resolution; verifier still does not propose a fix.
+Distinguished from sibling status members:
+- **AMBIGUOUS** — claim true under one reading, false under
+  another; verifier states both readings.
+- **DRIFTED** — claim was likely correct at plan-write time but
+  state has moved; evidence shows current divergence.
+- **WRONG** — claim factually incorrect against current state at
+  any time.
+- **CONFIRMED** / **UNVERIFIABLE** — descriptive of fact-check
+  outcomes.
+
+STRUCTURAL-OBJECTION is the only taxonomy member that addresses
+framing questions while accepting the underlying facts.
+
+**filesystem-not-prompt rule.** A round-2 verification discipline:
+every `CONFIRMED` status in a verification-session findings
+block must cite filesystem evidence (path:line reference, grep
+result, or directory listing), not quote the dispatch prompt
+back. The dispatch prompt is the hypothesis; the filesystem is
+the ground truth. The rule applies recursively to subagents —
+the rule does not weaken because it's a subagent. "Verify
+against the dispatch prompt's claim list" is the exact failure
+mode the rule is designed to prevent.
+
+### Tier 2 — deferred
+
+Round-2 design vocabulary; definitions land with `conventions.md`
+entries in Session 7 alongside the V1→V2 paired-ratification
+elevation. Defining these terms now risks locking in ambiguity
+before the underlying concepts ratify.
+
+- **Outcome A / B / C** — filesystem-not-prompt rule outcome
+  categories (dispatch-time prevented all violations / self-
+  checks fired and caught real violations / self-checks fired
+  on false positives). N=1 evidence captured at Session 2
+  verification; codification deferred.
+- **three-category codification taxonomy** — architectural
+  principle (N=1 sufficient; ratification IS codification) /
+  procedural pattern at workflow grain (N=1 if codification
+  artifact = workflow it describes) / process meta-pattern (N=2
+  with shape match; artifact decoupled from codification).
+  Round-2 design context; `conventions.md` addition deferred to
+  Session 7.
+- **round-N restructure plan workflow** — V1+V2 paired
+  ratification structure. Round-2 design context;
+  `conventions.md` addition deferred to Session 7.
