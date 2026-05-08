@@ -143,6 +143,52 @@ Categories:
    branch) vs (defer push, file test-hygiene fix arc, push after
    that arc lands and full suite returns to green).
 
+  ---
+
+  Post-investigation revision 2 (further empirical data): the
+  test is FLAKY, not deterministically broken on either side.
+
+  Test runs collected:
+  - ac1ff11 (pre-Session-3) full suite: 1 run, 665/665 GREEN.
+  - HEAD (post-Session-3) full suite, run 1: 1 failure on
+    crossOrgRlsIsolation.test.ts.
+  - HEAD run 2 (turbo cache hit; not informative).
+  - HEAD run 3 (forced via direct vitest invocation, fresh DB):
+    665/665 GREEN.
+  - HEAD run 4 (vitest direct, fresh DB): 665/665 GREEN.
+
+  Tally: 3 of 4 HEAD runs green, 1 red. Pre-Session-3 single
+  run green is consistent with the same flakiness rate (the bug
+  fires on the order of 25% of full-suite runs in this small
+  sample); a multi-run pre-Session-3 sample would likely surface
+  the same red.
+
+  Verdict: the failure is timing-dependent inter-test state
+  pollution that pre-dates Session 3. The lockfile diff
+  (gray-matter + 9 transitive deps; 0 packages bumped, 0 test
+  infrastructure changes) is not plausibly the cause; vitest's
+  parallel test-file scheduling produces non-deterministic
+  ordering, and crossOrgRlsIsolation's fixed-fixture UUIDs
+  collide with another full-suite test's inserts when the
+  scheduling lands the wrong way.
+
+  Fix candidate (a) — random UUIDs via `crypto.randomUUID()` in
+  the crossOrgRlsIsolation fixture — eliminates the class of bug
+  and is the right next arc. Filed as carry-forward.
+
+  Probe #7 forward-pointer (per round-2 design conversation
+  feedback): the regex-hole near-miss in adf2ced (3-digit-prefix
+  fix) and this flaky-test investigation both surface the gap
+  that Probes #5 and #6 don't cover — the GENERATOR's extraction
+  logic (regex on H1 / Status / Date) and the LINTER's logic
+  itself have no test fixtures with known-bad inputs asserting
+  that bad inputs produce expected error / extraction outputs.
+  A versioned fixture (small test ADRs with deliberately-broken
+  H1 / Status / Date / frontmatter, asserted to produce expected
+  extraction or rejection) closes this gap. File for the next
+  session that touches scripts/adr/ — likely Session 6 or the
+  test-hygiene arc that ships fix candidate (a).
+
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
   at drafting time. Counter-evidence: Web Crypto's BufferSource type
