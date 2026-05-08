@@ -10,6 +10,114 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Round-2 docs reorganization Session 3 (ADR
+  system upgrade) shipped. Six tracked commits + skipped Commit 7
+  (idempotency check, no diff): reports/ gitignore (`f0858a5`,
+  separate session); taxonomy.md substrate (`fce7172`); INDEX
+  attribution (`2955cea`); template + scripts + README + wiring
+  (`f6a2af9`); generator first run + 3-digit-prefix regex fix
+  (`adf2ced`); ADR-0021 dogfood + Date normalization fix
+  (`9007404`).
+
+  ADR-0021 ratifies four locked Decision items per round-2 plan:
+  frontmatter schema (forward-only from 0021); canonical taxonomy
+  at 02_specs/taxonomy.md (not adr/TAXONOMY.md per consultant
+  redirect); TypeScript-for-docs-tooling LOCATION convention at
+  top-level scripts/<area>/ (runtime tsx already established;
+  location is what's new, with explicit attribution per Blocker 4
+  resolution); pre-ratification design specs at
+  09_briefs/<phase>/specs/.
+
+  Bugs surfaced + fixed inline: (1) generator's 3-digit-prefix
+  regex didn't strip "ADR-001:" from ADR-0001's H1 (legacy file
+  predates 4-digit convention); (2) gray-matter auto-parsed
+  unquoted YAML date `2026-05-08` to a Date object, which the
+  linter rejected as "not a valid ISO date." Both fixed by
+  expanding regex (`\d{3,4}`) and Date-object normalization in
+  both scripts.
+
+  Filesystem-not-prompt rule outcome (Sub-shape #5 N=1 evidence
+  carry-forward from verification): Outcome A. The verification
+  pass in Session 2 captured N=1 evidence with all 6 subagents
+  firing Outcome A (dispatch-time rule prevented prompt-quoting;
+  zero re-dispatches). This Session 3 execution did not exercise
+  the verification rubric directly; the rule's load-bearing role
+  remains active for Session 5/6's structured verification (when
+  it next fires).
+
+  Round-N restructure plan codification: NOT shipped this session;
+  deferred to Session 7's conventions.md addition alongside V1
+  elevation + V2 creation. Three-category codification taxonomy
+  (architectural principles N=1, procedural patterns at workflow
+  grain N=1, process meta-patterns N=2-with-shape-match) also
+  deferred to Session 7.
+
+  Deviation from Session 3 prompt logged: (a) Commit 1 (planning
+  notes file) was skipped as a tracked commit because reports/ is
+  gitignored; the notes live at
+  `reports/session-3-adr-execution-notes.md` as working scratch.
+  (b) INDEX.md entries for `scripts/adr/generate-index.ts` and
+  `scripts/adr/lint.ts` not added — INDEX.md is explicitly the
+  Docs Index (line 1) and adding scripts/ entries violates its
+  stated scope. Scripts documented in adr/README.md and
+  package.json instead. (c) ADR-0021 frontmatter required moving
+  the field-semantics comment block out of the file (it broke
+  gray-matter's frontmatter detection) — the comment block lives
+  in `_template.md` only.
+
+  Pre-commit hook upgrade: `scripts/install-hooks.sh` now generates
+  a hook that runs `pnpm adr:lint` and `pnpm adr:index --check`
+  whenever staged files include ADR-related paths (adr/, taxonomy,
+  invariants, scripts/adr/). Existing session-lock check preserved
+  verbatim; runs in compose order before the ADR check.
+  Re-installation required after any future install-hooks.sh
+  edit; verified working in Commits 5 and 6 (both ran the new
+  hook successfully).
+
+  Forward note for Session 5 superpowers/ elimination: ADR-0021's
+  pre-ratification design specs section + the ADR README's
+  matching section both name superpowers/specs/ as the now-
+  deprecated prior location and forward-point at
+  DOCS_RESTRUCTURE_V2.md (Session 7) for the canonical migration
+  record. The breadcrumb is in place ahead of the actual file move.
+
+  Forward note for Session 7 codification: round-N restructure
+  plan convention + three-category codification taxonomy (and the
+  artifact-codification relationship insight) both committed as
+  round-2 design context but await Session 7's
+  `conventions.md` addition for codification.
+
+  Push-readiness gate Condition 1 deviation (per CLAUDE.md
+  three-artifact framing — DEVIATION, NOT BLOCKER, since the
+  session did not push):
+  - (a) Mechanism: `tests/integration/crossOrgRlsIsolation.test.ts`
+    fails at line 102 with `duplicate key value violates unique
+    constraint "journal_entries_pkey"`. Accumulated dev-DB state
+    from prior sessions; the test's fixture inserts collide with
+    pre-existing journal_entries rows. `pnpm typecheck` clean,
+    `pnpm test:no-hardcoded-urls` clean, `pnpm agent:floor`
+    fails ONLY on this single test.
+  - (b) Fix shape: `pnpm db:reset:clean && pnpm db:seed:all`
+    restores clean baseline; re-running `pnpm agent:validate` and
+    `pnpm test` against the reseeded DB returns the suite to green
+    per CURRENT_STATE.md's "598/598 under pnpm db:reset:clean"
+    baseline (2026-05-01).
+  - (c) Carry-forward framing: NOT a Session 3 regression. This
+    session's HEAD diff against ac1ff11 touches 12 files: 0
+    migrations, 0 services, 0 integration tests, 0 schemas. All
+    changes are docs (taxonomy, ADR-0021, README, INDEX) or
+    docs-tooling (scripts/adr/, package.json, install-hooks.sh,
+    ci.yml, .gitignore). The DB state pollution is environmental
+    and pre-dates this session. Operator runs the fix outside
+    Session 3 scope; if a similar deviation re-fires in a docs-
+    only session, the pattern earns codification (N=2 candidate).
+
+  Operator action required before push: `pnpm db:reset:clean &&
+  pnpm db:seed:all && pnpm agent:validate && pnpm test`. If those
+  pass clean, push proceeds. If they don't, halt and surface (the
+  failure would then be a real Session 3 regression, but no
+  evidence supports that hypothesis as of commit time).
+
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
   at drafting time. Counter-evidence: Web Crypto's BufferSource type
