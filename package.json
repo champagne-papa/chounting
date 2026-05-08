@@ -28,12 +28,16 @@
     "db:seed": "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f apps/web/src/db/seed/dev.sql",
     "db:seed:auth": "pnpm --filter @chounting/web exec dotenv -e .env.local -- tsx scripts/seed-auth-users.ts",
     "db:seed:all": "pnpm db:seed:auth && pnpm db:seed",
-    "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all"
+    "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all",
+    "adr:index": "tsx scripts/adr/generate-index.ts",
+    "adr:lint": "tsx scripts/adr/lint.ts",
+    "adr:check": "pnpm adr:lint && pnpm adr:index --check"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
+    "gray-matter": "^4.0.3",
     "prettier": "^3.3.0",
     "supabase": "^2.95.4",
     "tsx": "^4.21.0",
