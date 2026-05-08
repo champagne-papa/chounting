@@ -167,6 +167,7 @@ not delete it.
 | [ADR-0018](./0018-relationship-router.md) | Relationship Router | Ratified | 2026-05-04 |
 | [ADR-0019](./0019-confidence-calibration-policy.md) | Confidence Calibration Policy | Ratified | 2026-05-04 |
 | [ADR-0020](./0020-agent-first-authority-gradient-source-architecture.md) | Agent-First Authority-Gradient Source Architecture (substrate-only v1) | Ratified | 2026-05-05 |
+| [ADR-0021](./0021-adr-frontmatter-and-tooling.md) | ADR Frontmatter and Tooling | Ratified | 2026-05-08 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -178,7 +179,9 @@ not delete it.
 > frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-module -->
-_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
+### infra
+
+- [ADR-0021](./0021-adr-frontmatter-and-tooling.md) — ADR Frontmatter and Tooling (Ratified; 2026-05-08)
 <!-- END:generated-by-module -->
 
 ## By invariant

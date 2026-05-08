@@ -43,7 +43,8 @@ type Frontmatter = {
   id?: string;
   title?: string;
   status?: string;
-  date?: string;
+  // YAML may parse unquoted ISO dates as Date objects; readAdrs normalizes.
+  date?: string | Date;
   deciders?: string[];
   modules?: string[];
   features?: string[];
@@ -133,7 +134,12 @@ async function readAdrs(): Promise<Adr[]> {
     const status = frontmatter.status
       ? frontmatter.status.charAt(0).toUpperCase() + frontmatter.status.slice(1)
       : extractStatus(body);
-    const date = frontmatter.date ?? extractDate(body);
+    // YAML auto-parses unquoted ISO dates to Date objects; normalize.
+    const rawDate = frontmatter.date;
+    const date =
+      rawDate instanceof Date
+        ? rawDate.toISOString().slice(0, 10)
+        : (rawDate ?? extractDate(body));
 
     adrs.push({
       filename,

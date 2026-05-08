@@ -58,7 +58,8 @@ type Frontmatter = {
   id?: string;
   title?: string;
   status?: string;
-  date?: string;
+  // YAML may parse unquoted ISO dates as Date; check 4 normalizes.
+  date?: string | Date;
   modules?: string[];
   features?: string[];
   phase?: string;
@@ -212,14 +213,21 @@ function lintAdr(
   }
 
   // Check 4: date is valid ISO and not in future.
-  if (!fm.date) {
+  // YAML auto-parses unquoted ISO dates to Date objects; normalize.
+  let dateStr: string | undefined;
+  if (typeof fm.date === 'string') {
+    dateStr = fm.date;
+  } else if (fm.date instanceof Date) {
+    dateStr = (fm.date as Date).toISOString().slice(0, 10);
+  }
+  if (!dateStr) {
     error('date', 'frontmatter `date` is required');
-  } else if (!isValidIsoDate(fm.date)) {
-    error('date', `date "${fm.date}" is not a valid ISO date (YYYY-MM-DD)`);
+  } else if (!isValidIsoDate(dateStr)) {
+    error('date', `date "${dateStr}" is not a valid ISO date (YYYY-MM-DD)`);
   } else {
     const today = new Date().toISOString().slice(0, 10);
-    if (fm.date > today) {
-      error('date', `date "${fm.date}" is in the future (today: ${today})`);
+    if (dateStr > today) {
+      error('date', `date "${dateStr}" is in the future (today: ${today})`);
     }
   }
 
