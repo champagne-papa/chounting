@@ -1,3 +1,5 @@
+// Known flake under full-suite: fixed fixture UUID collides. See docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md.
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient, userClientFor, SEED } from '../setup/testDb';
