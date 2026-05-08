@@ -189,6 +189,40 @@ Categories:
   session that touches scripts/adr/ — likely Session 6 or the
   test-hygiene arc that ships fix candidate (a).
 
+  Glossary candidates flagged for Phase 2 of pre-Session-4
+  cleanup (governance vocabulary that recurred consistently
+  across round-2 design + Session 3 execution; ready to migrate
+  to `02_specs/glossary.md` Governance Vocabulary subsection
+  when Phase 2 creates that section). No taxonomy.md migrations
+  in this entry — no frontmatter values introduced:
+  - **push-readiness gate** + **Condition 1 / 2 / 3** +
+    **three-artifact framing** — CLAUDE.md push-readiness
+    three-condition gate vocabulary; in production use across
+    Sessions 2 and 3.
+  - **STRUCTURAL-OBJECTION** — verification-session status
+    taxonomy member (rev 3 verification prompt); used in
+    Session 2 verification report and reused in Session 3
+    deviation framing.
+  - **filesystem-not-prompt rule** — round-2 verification
+    discipline (subagents must cite filesystem evidence, not
+    quote dispatch back); load-bearing in Session 2 verification
+    and Session 3 closeout posture.
+  - **Outcome A / B / C** — filesystem-not-prompt rule outcome
+    categories (dispatch-time prevented all violations / self-
+    checks fired and caught real violations / self-checks fired
+    on false positives); design committed at round-2 design
+    conversation; N=1 evidence captured.
+  - **Three-category codification taxonomy**: architectural
+    principle (N=1 sufficient; ratification IS codification),
+    procedural pattern at workflow grain (N=1 if codification
+    artifact = workflow it describes), process meta-pattern
+    (N=2 with shape match; artifact decoupled from codification).
+    Round-2 design context; conventions.md addition deferred to
+    Session 7 alongside V1→V2 elevation.
+  - **Round-N restructure plan workflow** — V1+V2 paired
+    ratification structure; round-2 design context, conventions.md
+    addition deferred to Session 7.
+
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
   at drafting time. Counter-evidence: Web Crypto's BufferSource type
