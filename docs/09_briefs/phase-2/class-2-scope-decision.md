@@ -60,5 +60,5 @@ Class-2-as-separate-workstream scoping.
   the same commit landing this artifact):
   `docs/09_briefs/phase-2/obligations.md`.
 - EC-2 prompt set Entries 13 (multi-line split with discount) and
-  15 (bad-debt allowance bump): `docs/07_governance/ec-2-prompt-set.md`
+  15 (bad-debt allowance bump): `docs/09_briefs/phase-1.2/ec-2-prompt-set.md`
   lines 319-355.

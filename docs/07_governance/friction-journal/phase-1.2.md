@@ -1,3 +1,13 @@
+> **Path note 2026-05-08 (round-2 docs reorganization Session 4
+> ec-2 move):** entries below referencing
+> `07_governance/ec-2-prompt-set.md` should be read as referring
+> to `09_briefs/phase-1.2/ec-2-prompt-set.md` post-move. The file
+> content is unchanged; only its location moved. References
+> preserved verbatim per the friction-journal-is-history rule
+> (entries record what was true at write time). See the
+> 2026-05-08 NOTE entry in the active `friction-journal.md` for
+> migration commit-level provenance.
+
 ## Agent Autonomy Design Sprint
 
 - 2026-04-16 NOTE   Agent autonomy model and UI/UX architecture

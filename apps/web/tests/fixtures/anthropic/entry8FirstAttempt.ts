@@ -1,6 +1,6 @@
 // tests/fixtures/anthropic/entry8FirstAttempt.ts
 // OI-2 fix-stack handshake Soft 8 — canonical Entry 8 replay
-// fixtures. Source prompt: docs/07_governance/ec-2-prompt-set.md
+// fixtures. Source prompt: docs/09_briefs/phase-1.2/ec-2-prompt-set.md
 // lines 199-208 (the original failing form, before any
 // explicit-date recovery the operator added live during C6 EC-2).
 //

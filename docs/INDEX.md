@@ -86,7 +86,6 @@ for the deletion criterion.
 - `retrospectives/phase-1.2-retrospective.md` — closeout retrospective (2026-04-26): wins / frictions / conventions / scope. Inheritance-artifact map at §2; cross-session patterns at §3 (Pattern 1–8).
 - `retrospectives/arc-A-retrospective.md` — Arc A closeout retrospective (2026-04-24): 12-step execution arc, 9 patterns, three-role workflow meta-observations.
 - `CTO_HANDOFF_V2.md` — agent-first authority-gradient source-tree organization input; ratified into ADR-0020 (substrate-only at v1; ESLint rule activates at Phase 1 chunk 1). Cited verbatim by ADR-0020 Appendix A. Indexed at Phase 1.Storage closeout density per Class A INDEX hygiene amendment.
-- `ec-2-prompt-set.md` — pre-existing audit prompt set (stub: investigate scope at first edit).
 
 ### 07_governance/adr — Architecture Decision Records
 
@@ -183,6 +182,7 @@ for the deletion criterion.
 - `phase-1.2/session-8-c6-prereq-o2-v2-pre-zod-injection-plan.md` — Session 8 C6 prereq: OI-2 v2 pre-Zod injection plan (revision after prior plan superseded).
 - `phase-1.2/session-8-c6-prereq-o3-agent-date-context.md` — Session 8 C6 prereq: OI-3 agent date-context preparation.
 - `phase-1.2/session-8-c6-prereq-o3-execution-plan.md` — Session 8 C6 prereq: OI-3 execution plan.
+- `phase-1.2/ec-2-prompt-set.md` — Phase 1.2 EC-2 (Exit Criterion 2) Session 8 Commit 6 paid-API verification prompt set. Status: FROZEN 2026-04-20. Moved from `docs/07_governance/ec-2-prompt-set.md` during round-2 docs reorganization Session 4 (2026-05-08).
 - `phase-1.2/oi-3-class-2-fix-stack-scoping.md` — OI-3 / Class 2 fix-stack scoping doc (mechanism identified, fix surface bounded, methodology partitioned, hypothesis treatment authored; first concrete application of Meta A and Meta B at scoping time). Phase 2 carry-forward.
 - `phase-1.2/ec-matrix.md` — Phase 1.2 EC matrix (codified at C10, updated at C12). 27 ECs + 3 shipping line items across 6 sections; post-C12 totals: 21 MET / 7 DEFERRED / 2 PARTIAL / 0 MISSED.
 - `phase-1.2/session-15-brief.md` — Session 15 brief: Documentation Routing convention + Workflow Vocabulary ratification. Authority for the friction-journal split.

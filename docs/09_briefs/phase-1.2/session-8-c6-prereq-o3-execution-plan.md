@@ -1134,7 +1134,7 @@ If the user approves, continue to Task D2. If the user defers or declines, halt;
 
 ### Task D2: Run the Entry 1 retry with log capture
 
-The EC-2 runner is a **manual browser-driven workflow**, not an automated script. Per `docs/07_governance/ec-2-prompt-set.md:73-95`, Entry 1 retries run against the dev server with a paste-into-UI pattern. The invocation below is locked from the prompt-set doc and is the exact sequence the approval at Step D1.3 is granted for — do not deviate.
+The EC-2 runner is a **manual browser-driven workflow**, not an automated script. Per `docs/09_briefs/phase-1.2/ec-2-prompt-set.md:73-95`, Entry 1 retries run against the dev server with a paste-into-UI pattern. The invocation below is locked from the prompt-set doc and is the exact sequence the approval at Step D1.3 is granted for — do not deviate.
 
 - [ ] **Step D2.1: Set up log capture (per `ec-2-prompt-set.md:73-78`)**
 

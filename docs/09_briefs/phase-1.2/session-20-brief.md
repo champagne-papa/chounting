@@ -16,7 +16,7 @@
 - OI-3 scoping doc at `docs/09_briefs/phase-1.2/oi-3-class-2-fix-stack-scoping.md` (commit `161bff8`) — §6 Part 5 paid-validation harness scoping, 9-shape prompt set, four-state hypothesis-discrimination model.
 - S19 Commit 1 (`136b3ba`) — the prompt-surgery being validated (§4a STRUCTURED_RESPONSE_CONTRACT, §4b respondToUser tool description, §4c validTemplateIdsSection rubric).
 - S19 Commit 2 (`13e11f7`) — Soft 9 mocked-LLM integration test that validates the four directive-emission shapes against fixtures. S20 validates the same property against the real model.
-- EC-2 prompt set at `docs/07_governance/ec-2-prompt-set.md` — verbatim source for the 9 shapes (Entries 12-20). Prompts frozen at this source; deviation requires scoping-doc revision, not brief revision.
+- EC-2 prompt set at `docs/09_briefs/phase-1.2/ec-2-prompt-set.md` — verbatim source for the 9 shapes (Entries 12-20). Prompts frozen at this source; deviation requires scoping-doc revision, not brief revision.
 - Convention #8 Spec-to-Implementation Verification — Identity assertions discipline applies to harness-level fixture identity (account UUIDs, fiscal_period UUIDs runtime-resolved by natural key per Soft 9's P2 pattern).
 - Convention #11 Per-Entry Row-Card Pairing Post-Paste Verification — the orphan-prevention property the harness measures.
 
@@ -33,7 +33,7 @@
   - Per-call ceiling: $0.15. Single-invocation spend > $0.15 halts the run mid-shape.
   - Provenance: scoping doc §6 Part 5 estimates $0.40-$0.50 typical against a $0.50 ceiling. S20 lifts the ceiling to $0.75 (operator decision earlier in this session) for ~50% headroom on novel shapes 16-19. $0.75 is operator-authoritative; $0.50 is the scoping doc's typical-spend baseline, not the ceiling-of-record for S20.
 - **Frozen §4a/§4b/§4c prompt-surgery surfaces.** Surfaces (`_sharedSections.ts:40` body, `respondToUser.ts:11` description, `validTemplateIds.ts:232` rubric paragraph) must be at S19 Commit 1's exact text during the paid run. No mid-run prompt edits. Verification at Task 2 Step 1.
-- **Frozen 9-shape prompt set.** The 9 prompts (Entries 12-20 from the EC-2 prompt set) are frozen verbatim at `docs/07_governance/ec-2-prompt-set.md` lines 309-422. No paraphrasing, no shape additions/removals. Drift requires scoping-doc revision, not brief revision.
+- **Frozen 9-shape prompt set.** The 9 prompts (Entries 12-20 from the EC-2 prompt set) are frozen verbatim at `docs/09_briefs/phase-1.2/ec-2-prompt-set.md` lines 309-422. No paraphrasing, no shape additions/removals. Drift requires scoping-doc revision, not brief revision.
 - **Synthetic-prompt harness only.** No user-input mode, no ad-hoc prompts mid-run, no improvisation. The 9 shapes are the entire input space for the run.
 - **No cross-shape state pre-population.** The harness session_id starts with empty state, empty conversation, empty turns. Shape 17's "annual insurance prepaid we booked earlier this session" cross-reference is intentional — the agent must detect the missing reference and ask, not fabricate. Pre-populating Entry 7 (or any other prior context) would invalidate the negative-control treatment of shape 17. Mirrors scoping doc §6 Part 5's negative-control treatment of cross-reference dependencies. Shape 20's reference toward Entry 8 is the parallel hallucination-bait probe.
 - **Distinct fresh session_id per shape.** Each shape's 3 runs share one shape-specific session_id; no reuse across shapes; no reuse across sessions. Per-run trace_id remains the per-invocation evidence scope per Soft 8/9's pattern.
