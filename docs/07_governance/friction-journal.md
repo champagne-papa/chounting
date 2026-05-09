@@ -19,6 +19,42 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Floor-only push gate carve-out for doc-only
+  diffs (N=1 precedent). Plans-landing commit-pair (commits
+  `f3aa14d` round-2 namespace + 5A plan; `e4721a1` topic 4 plan)
+  pushed under floor-only gate (`pnpm agent:validate` 26/26 GREEN
+  on clean DB) rather than full-suite gate, on the grounds that
+  plan documents have zero test-affecting impact. Floor-only is
+  mechanically defensible for diffs containing zero migrations /
+  zero services / zero integration tests / zero source files /
+  zero test files.
+
+  Generalizable observation (not codified): full-suite gate
+  exists to catch test regressions; doc-only diffs cannot regress
+  tests by construction. Repeated invocation of full-suite for
+  doc-only work risks normalization-by-attrition of the deviation
+  framing — Sessions 3, 4, and halftime all carried the documented
+  Condition 1 deviation under full-suite gate; a fourth carry on
+  doc-only work would start looking like normalization rather
+  than exception. Floor-only carve-out for genuinely doc-only
+  diffs is the disciplined alternative.
+
+  N=1; not codified. ≥2 future invocations of this carve-out
+  elevate to `04_engineering/conventions.md` candidate. Companion
+  to the linter/generator deferral (V1-amendment-locked) and
+  convention-shape deferral (5A audit-driven trim from 5 sub-
+  buckets to 3) — three deferral patterns now visible across
+  round-2's governance substrate; codification threshold remains
+  pre-codification per the same N-and-cross-arc-evidence
+  discipline that's held throughout.
+
+  Forward pointers: test-hygiene fix arc executes next per
+  `docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-plan.md`
+  (closes the Condition 1 deviation that has carried across
+  Sessions 3, 4, and halftime); Session 5A executes after per
+  `docs/07_governance/round-2/2026-05-08-session-5a-plan.md`
+  (first push under green Condition 1).
+
 - 2026-05-08 NOTE — Round-2 docs reorganization halftime check +
   V1 amendment + Session 7 payload risk flag. Triggered post-
   Session-4 closeout (commit `3251d7b`), before the test-hygiene
