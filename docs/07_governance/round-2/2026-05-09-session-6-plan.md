@@ -37,7 +37,7 @@ The mechanism is preserved as plan-internal substrate so a fresh-context executi
 
 ---
 
-## Push-readiness gate (floor-only carve-out, fourth invocation)
+## Push-readiness gate (floor-only carve-out, fifth invocation)
 
 The floor-only carve-out's formal criteria, established at the halftime plans push (commit `ea22b76`):
 
@@ -55,7 +55,7 @@ Session 6's diff against these criteria:
 
 All five criteria met. Session 6's diff is mechanically docs-only (~150–250 lines net diff across four README rewrites); floor-only gate applies.
 
-**N=4 invocation context.** Session 6's push will be the fourth floor-only invocation (after halftime plans push N=1, 5B brainstorm closeout push N=2, 5B execution push N=3 LIVE). N=4 with the formal-criteria-primary justification (not "brainstorm pushes are special") confirms the formal criteria operate uniformly across brainstorm-grade plan-and-closeout work AND execution-grade README-rewrite work. Codification of the carve-out itself defers to Session 7's natural substrate moment per substrate-now-enforcement-later — Session 6 uses the carve-out, does not codify it.
+**N=5 invocation context.** Session 6's execution push will be the fifth floor-only invocation (after halftime plans push N=1, 5A brainstorm push N=2, 5B brainstorm closeout push N=3, 5B execution push N=4). 5B execution push (N=4) is the first execution-grade fire of the carve-out; Session 6 execution push (N=5) is the second. N=5 with the formal-criteria-primary justification (not "brainstorm pushes are special") confirms the formal criteria operate uniformly across brainstorm-grade plan-and-closeout work AND execution-grade README-rewrite work. Codification of the carve-out itself defers to Session 7's natural substrate moment per substrate-now-enforcement-later — Session 6 uses the carve-out, does not codify it.
 
 **Verification protocol per the floor-only carve-out:**
 - `pnpm db:reset:clean` (clear accumulated dev DB state)
@@ -263,7 +263,7 @@ EOF
 
 ## Task 3: Floor-only verification + closeout commit + push (C3)
 
-**Context:** Push-readiness gate per Topic 5 lock: floor-only carve-out, formal criteria as primary justification, N=4 fire. Verification protocol matches the carve-out's framing — floor-scope only, full-suite NOT invoked per the mechanical-non-impact argument.
+**Context:** Push-readiness gate per Topic 5 lock: floor-only carve-out, formal criteria as primary justification, N=5 fire. Verification protocol matches the carve-out's framing — floor-scope only, full-suite NOT invoked per the mechanical-non-impact argument.
 
 - [ ] **Step 1: Floor-only verification protocol.**
 
@@ -309,12 +309,14 @@ Entry structure (closeout for Session 6 EXECUTION):
 
   Pre-codification observation queue updates per Topic 4 lock
   (status-track at every closeout):
-  - Tier 1 LIVE: floor-only push gate carve-out advances N=3 LIVE
-    → N=4 LIVE this push. Codification position for Session 7
+  - Tier 1 LIVE: floor-only push gate carve-out advances N=4 LIVE
+    → N=5 LIVE this push. Codification position for Session 7
     strengthens further; formal-criteria-primary justification
-    confirmed at first execution-grade work. Other Tier 1
-    candidates (Turbo cache, count-level commit pattern) status
-    unchanged.
+    confirmed across both brainstorm-grade and execution-grade
+    work (5B execution push N=4 was the first execution-grade
+    fire; Session 6 execution push N=5 is the second). Other
+    Tier 1 candidates (Turbo cache, count-level commit pattern)
+    status unchanged.
   - Tier 2 (awaiting second fire): status reaffirmed; no
     elevations from Session 6 brainstorm or execution.
   - Tier 3 (N=1 awaiting recurrence): status reaffirmed.
@@ -380,7 +382,7 @@ Entry structure (closeout for Session 6 EXECUTION):
   - Session 7 owns Tier 1 codification (3 LIVE candidates + V2
     ratification + DOCS_RESTRUCTURE_V2.md) per Topic 4 lock.
     Tier 2-5 are queue-resident, not Session-7-scoped.
-  - Floor-only carve-out at N=4 LIVE goes to Session 7 for
+  - Floor-only carve-out at N=5 LIVE goes to Session 7 for
     codification per the recursive substrate-now-enforcement-
     later application.
 ```
@@ -400,10 +402,11 @@ rewrite) plus this closeout commit. Push-readiness gate evaluates
 green under floor-only carve-out (fourth invocation; formal-
 criteria-primary justification confirmed at execution-grade work).
 
-Floor-only push gate carve-out advances N=3 LIVE → N=4 LIVE.
+Floor-only push gate carve-out advances N=4 LIVE → N=5 LIVE.
 Codification position for Session 7 strengthens; carve-out fires
 uniformly across brainstorm-grade plan-and-closeout work AND
-execution-grade README-rewrite work. Codification deferred to
+execution-grade README-rewrite work (5B execution push N=4 is
+the first execution-grade fire; this push N=5 is the second). Codification deferred to
 Session 7's natural substrate moment per recursive substrate-
 now-enforcement-later.
 
@@ -415,7 +418,7 @@ session dependency mechanism for plans is new pattern observation
 N=1.
 
 Carry-forwards documented for Session 7: Tier 1 codification
-scope (Turbo cache, floor-only at N=4, count-level commit
+scope (Turbo cache, floor-only at N=5, count-level commit
 pattern); V2 ratification + DOCS_RESTRUCTURE_V2.md per Topic 4
 lock; Tier 2-5 are queue-resident, not Session-7-scoped.
 
@@ -443,7 +446,7 @@ Verify with `git log --oneline origin/staging..HEAD | wc -l` post-push: expect 0
 3. **Type/identifier consistency:** Doc-class names (`PRDs`, `specs`, `architecture`, `engineering`) consistent across plan + commit messages + closeout entry. File paths consistent. ✓
 4. **Failure-mode partition coverage:** C1 covers the failed-backward triple (02/03/04); C2 covers the failed-forward case (01); closeout covers the meta-observation. No README left ambiguous. ✓
 5. **Stop conditions keyed to scope-completion milestones:** Stops use scope-completion language ("after C1 lands," "after C2 lands," "after floor-only verification") not commit numbers. Stop Condition 1 verifies inter-session dependency state per the structurally novel mechanism class — self-explanatory at execution time per the inter-session-dependency design rationale section. ✓
-6. **Plan readability standalone:** A fresh-context execution session opening this plan can execute against it without conversation reload. The inter-session dependency mechanism, the failure-mode taxonomy framing, the floor-only carve-out N=4 framing, and the canonical-axis articulations for each README are all plan-internal substrate. ✓
+6. **Plan readability standalone:** A fresh-context execution session opening this plan can execute against it without conversation reload. The inter-session dependency mechanism, the failure-mode taxonomy framing, the floor-only carve-out N=5 framing, and the canonical-axis articulations for each README are all plan-internal substrate. ✓
 
 ---
 
@@ -453,7 +456,7 @@ Verify with `git log --oneline origin/staging..HEAD | wc -l` post-push: expect 0
 - **Failure-mode taxonomy** (forward vs backward) is the principled basis for the C1/C2 partition. C1 = failed-backward triple (content-completeness expansion); C2 = failed-forward case (structural-pattern adoption + 5B-touchup baseline). The failure-mode framing is a brainstorm-time observation; closeout entry surfaces it.
 - **Doc-class opener pattern** is the consumer-side instantiation of ADR-0021's "A folder encodes one canonical axis" principle. Each rewrite includes `**Document class: <name>.**` as the opening sentence pattern; the canonical axis articulation follows immediately. Don't include the literal "one canonical axis" phrase — the principle propagates, not the phrase.
 - **δ-i preservation discipline** applies to 02/03/04: existing "What goes / What does NOT go" structure is preserved; rewrites add the doc-class opener + canonical-axis articulation + canonical-source enumeration ON TOP of existing prose, rather than replacing wholesale. 01_prd's full rewrite adopts the structure that 02/03/04 already had — δ-i applies in reverse (the structure is the discipline being preserved).
-- **Floor-only carve-out N=4 invocation** is one of the closeout-entry-significant observations; capture explicitly in the friction-journal entry per Task 3 Step 2's structure. Codification of the carve-out itself defers to Session 7 — Session 6 uses, doesn't codify.
+- **Floor-only carve-out N=5 invocation** is one of the closeout-entry-significant observations; capture explicitly in the friction-journal entry per Task 3 Step 2's structure. Codification of the carve-out itself defers to Session 7 — Session 6 uses, doesn't codify.
 - **01_prd/README read timing.** Stop Condition 1 reads `01_prd/README.md` for verification (3 invalid claims absent). Task 2 Step 1 re-reads it for the rewrite work after C1 lands. Do not read `01_prd/README.md` during initial context loading or pre-Stop-1 exploration — reading before Stop 1 risks working from a pre-touchup baseline if 5B execution didn't land cleanly. The two reads in the plan are the only sanctioned reads of this file.
 - **Closeout entry information density.** Task 3 Step 2's entry covers four discrete obligation clusters (Tier reaffirmation, brainstorm-time observations, 5B carry-forward handling, push-readiness gate per three-condition framing). This is the largest closeout-entry surface area round-2 has produced. If the entry's running prose starts blurring obligations together at write-time, consider explicit sub-headings per cluster. Writing-craft decision at write-time based on actual length; no template change required.
 - **Working tree clean state expected post-execution** — no deferred work, no in-flight observations, no untracked files. Session 6 ships clean state to Session 7 brainstorm.
