@@ -13,13 +13,12 @@ set -euo pipefail
 
 HOOK_PATH=".git/hooks/pre-commit"
 
-if [[ -f "$HOOK_PATH" ]]; then
-  BACKUP="${HOOK_PATH}.pre-coordination"
-  echo "Existing pre-commit hook found; backing up to $BACKUP"
-  cp "$HOOK_PATH" "$BACKUP"
-fi
+# Write the new hook content to a temp file first so we can compare
+# with the existing hook before deciding whether to back up + install.
+TMP_HOOK=$(mktemp)
+trap 'rm -f "$TMP_HOOK"' EXIT
 
-cat > "$HOOK_PATH" <<'HOOK_EOF'
+cat > "$TMP_HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
 # Installed by scripts/install-hooks.sh. Enforces:
 #   1. Session Lock File Convention (see conventions.md).
@@ -76,7 +75,24 @@ fi
 exit 0
 HOOK_EOF
 
+# Content-equivalence short-circuit: if existing hook matches the
+# new content byte-for-byte, skip backup + install + messaging.
+if [[ -f "$HOOK_PATH" ]] && cmp -s "$TMP_HOOK" "$HOOK_PATH"; then
+  echo "Pre-commit hook already installed at $HOOK_PATH (no action)."
+  exit 0
+fi
+
+# Otherwise, back up existing hook (only when content differs) and
+# install the new hook.
+if [[ -f "$HOOK_PATH" ]]; then
+  BACKUP="${HOOK_PATH}.pre-coordination"
+  echo "Existing pre-commit hook differs from new content; backing up to $BACKUP"
+  cp "$HOOK_PATH" "$BACKUP"
+fi
+
+mv "$TMP_HOOK" "$HOOK_PATH"
 chmod +x "$HOOK_PATH"
+trap - EXIT  # Disarm the cleanup since TMP_HOOK no longer exists.
 
 echo "Pre-commit hook installed at $HOOK_PATH."
 echo ""
