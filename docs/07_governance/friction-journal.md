@@ -34,6 +34,235 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-09 NOTE — Round-2 docs reorganization Session 6.5
+  closeout (apps/web/src/ folder-placement guardrail interim);
+  files landed at `apps/web/src/README.md` (substantive guardrail,
+  ~150 lines) and `apps/web/src/AGENTS.md` (terse pre-flight
+  directive, 3-5 sentences) at commit `b98208c` (157 line additions
+  total). Closes the Phase 1 (Storage / Evidence Core) onset risk
+  at the source-tree surface: ADR-0020 authority-gradient discipline
+  is now load-bearing at the apps/web/src/ surface itself, not
+  only in canonical docs (folder-structure.md, authority-gradient.md).
+  Session 6.5 ratifies Principle 3 (folder placement guardrails at
+  high-decision-cost structural surfaces) at the source-tree
+  surface as N=1 implementation evidence; full Principle 3 wording,
+  three-surface map (apps/web/src/, docs/, repo root), Pattern 7
+  conditional-permission framing for meta-arc folders, and
+  AGENTS.md/README.md pairing convention carry forward to Session
+  7's V2 ratification.
+
+  **Locked decisions (5):**
+  - Principle 3 (tightened wording, ratifies in Session 7 V2):
+    folder placement guardrails land at high-decision-cost
+    structural surfaces; the canonical taxonomy is documented at
+    the surface itself, not only elsewhere. Three surfaces ratified
+    at V2: apps/web/src/ (this session), docs/ (Session 7), repo
+    root (Session 7).
+  - Three-surface enumeration (apps/web/src/ first, docs/ + repo
+    root in Session 7) — substrate-now-enforcement-later applied
+    at the guardrail-surface axis: Session 6.5 ships one surface
+    now to close the active risk window; remaining surfaces ship
+    in Session 7 atomically with V2 ratification + CLAUDE.md
+    sub-section + DOCS_RESTRUCTURE_V2.md.
+  - Pattern 7 conditional-permission framing for meta-arc folders
+    under `07_governance/` — first-instance meta-arc shape requires
+    full bypass (folder README answering doc-class questions,
+    friction-journal entry as N=1 evidence, operator acknowledgment
+    in commit body); follows-precedent meta-arc requires light
+    bypass (4/4 precedent-matching checklist, one-line friction-
+    journal entry, commit-body precedent citation). Codification
+    lands at Session 7 in `docs/README.md`.
+  - AGENTS.md + README.md pairing convention at apps/web/src/ per
+    repo-root precedent: AGENTS.md is AI-pre-flight cross-tool
+    convention (terse, 3-5 sentences, recognized by Cursor / Aider
+    / Codex); README.md is structural-onboarding (audience-neutral,
+    substantive). Repo root pairs both; apps/web/src/ now also
+    pairs both. `docs/` uses README.md alone (existing convention;
+    CLAUDE.md cross-reference makes it pre-flight without a
+    separate AGENTS.md).
+  - CLAUDE.md sub-section under "Project rules and vocabulary"
+    (not a fabricated "Rule 12") — Session 7 lands a new
+    sub-section pointing at the three surface guardrails, stating
+    the bypass discipline, citing worked examples. Atomic landing
+    with `docs/` guardrail and repo-root extension to avoid
+    orphan-link windows.
+
+  **Carry-forwards to Session 7:**
+  - `docs/README.md` Folder placement guardrail draft (caught-and-
+    fixed example: `docs/superpowers/` workflow-lineage migration
+    in round-2 Session 5A; worked-precedent example:
+    `docs/07_governance/round-2/` meta-arc folder).
+  - Repo-root `README.md` Folder placement section (structural-
+    folder-permitted patterns: `apps/`, `packages/`, `supabase/`,
+    `scripts/`, `docs/`, `eslint-rules/`, `.coordination/`;
+    tooling/system folders out-of-scope: `.git/`, `.turbo/`,
+    `node_modules/`, `logs/`, `reports/`, `test-results/`).
+  - CLAUDE.md sub-section under "Project rules and vocabulary"
+    (per locked decision above).
+  - Principle 3 ratification in `DOCS_RESTRUCTURE_V2.md` — the
+    canonical wording and three-surface map land at V2, with
+    apps/web/src/ as N=1 implementation precedent.
+  - Pattern 7 conditional-permission wording with the 4/4
+    precedent-matching checklist (precedent README answers
+    doc-class questions; new README answers same questions citing
+    precedent; cross-phase scope / durable identity / closure
+    criteria / governance-surface placement match; naming
+    structurally consistent).
+
+  **Brainstorm-time observations (5):**
+  - **Plan-substrate-vs-canonical-reality drift fired three times
+    in this session** (recurrent meta-pattern within a single
+    execution window; N=1 of the meta-pattern, not N=3 —
+    multiple-within-session is itself the unit). The three
+    instances:
+    1. Plan's brainstorm-context section listed `lib/` and
+       `hooks/` among forbidden patterns; canonical
+       `folder-structure.md` (ratified by ADR-0020) lists both as
+       permitted forward-looking patterns. Resolution: README
+       aligned with canonical doc; only `utils/` and
+       `modules/<feature>/` ship as forbidden. Operator-
+       acknowledged via AskUserQuestion resolution — option 1
+       (canonical wins).
+    2. Plan instructed friction-journal entry header use
+       `### 2026-05-09 —` style; canonical pattern across all
+       prior closeouts (5A, 5B, Session 6 brainstorm, etc.) is
+       bullet-list `- 2026-05-09 NOTE —` style. Plan's own "Notes
+       for executor" section said "structure matches Session
+       5A/5B/6 closeout shape" — internal plan inconsistency.
+       Resolution: bullet-list style used (this entry), matching
+       canonical pattern.
+    3. Plan claimed N=6 floor-only invocation; operator handoff
+       projected N=7. Reality at push time: N=5 (next push after
+       Session 6 brainstorm closeout at N=4 LIVE; 5B execution
+       and Session 6 execution have not yet run). Plan and
+       handoff both projected forward from a sequence (5B exec →
+       Session 6 exec → Session 6.5 exec) that did not
+       materialize. Resolution: closeout records N=5; observation
+       captures the drift.
+    Common shape across all three: plan-substrate (forbidden
+    list, header style, projected count) drifts from canonical-
+    reality (folder-structure.md, friction-journal pattern,
+    chronological fire history) at execution time. Future readers
+    should source fire-counts from the friction-journal's
+    fire-history record rather than from forward projections in
+    plans or handoffs; forbidden-pattern lists from canonical
+    `folder-structure.md` rather than plan brainstorm-context;
+    entry-shape from canonical existing entries rather than plan
+    literal instructions. Forward to Session 7's V2 ratification
+    of Principle 3: guardrail-canonical alignment is load-bearing,
+    and the bypass procedure shape should make canonical-source
+    verification step explicit. The principle Session 7 ratifies
+    operates on this very pattern — guardrails that don't match
+    canonical sources create the same disambiguation problem the
+    principle is solving.
+  - **Floor-only carve-out N=5 invocation, first fire outside
+    `docs/` territory.** Markdown placement under `apps/web/src/`
+    (rather than `docs/`) is a structurally novel surface; the
+    diff shape (zero migrations / zero services / zero integration
+    tests / zero source files / zero test files) is mechanically
+    equivalent to prior doc-only fires. Codification of the carve-
+    out itself still defers to Session 7's natural substrate
+    moment per substrate-now-enforcement-later — Session 6.5 uses
+    the carve-out, does not codify it. Session 7 closeout absorbs
+    N=5 as additional evidence that the formal criteria operate on
+    diff shape, not folder location. (Per the drift observation
+    above: Session 7 will need to source the canonical fire-count
+    from the friction-journal record at codification time, not
+    from earlier plan / handoff projections.)
+  - **Pattern 7 light-bypass implicitly fired for this plan's
+    placement under `docs/07_governance/round-2/`.** N=1 evidence
+    of the conditional-permission machinery operating in practice
+    (currently described only in the brainstorm-context section
+    of the plan and this closeout). 4/4 precedent-matching: round-2
+    README answers document-class questions; this plan's location
+    implicitly cites precedent (`round-2/` naming); cross-phase
+    scope and durable identity match the meta-arc shape; naming
+    structurally consistent with the round-N session-plan pattern
+    (`2026-05-09-session-6-5-plan.md`). Material for Session 7's
+    V2 ratification of Pattern 7.
+  - **`pnpm adr:index --check` meaningfulness for non-ADR diffs.**
+    Gate ran clean for the README + AGENTS markdown-only diff;
+    result vacuously clean (the diff doesn't touch ADRs, so the
+    gate had no possible signal to produce). Gate stays in the
+    floor sequence as cheap insurance but is not load-bearing for
+    this diff scope. If a future floor-only diff happens to touch
+    `docs/07_governance/adr/` inadvertently, the gate would catch
+    it — that's the insurance value. No Session 7 codification
+    consequence beyond the existing Topic 4 lock.
+  - **Friction-journal heading-structure verification result.**
+    `## Phase 2` was the active section heading at execution time
+    (matches plan's expected structure; no shift since Session 5
+    or Session 6 brainstorm closeout placement). Closeout entry
+    inserted at top of `## Phase 2`, above the Session 6
+    brainstorm closeout entry, per canonical chronological-reverse
+    ordering.
+
+  **Pre-codification observation queue post-Session-6.5-execution
+  (queue updates):**
+  - Tier 1 LIVE: Floor-only push gate carve-out advances to N=5
+    LIVE this dispatch push (halftime + 5A brainstorm closeout +
+    5B brainstorm closeout + Session 6 brainstorm closeout +
+    Session 6.5 execution = 5 fires through this push). First
+    fire outside `docs/` territory; structural-coverage data
+    point for Session 7 codification. Other Tier 1 candidates
+    (Turbo cache #3, count-level commit pattern #11) status
+    unchanged.
+  - Tier 3 (N=1 awaiting recurrence): +1 (plan-substrate-vs-
+    canonical-reality drift meta-pattern; three instances
+    captured in this session count as N=1 of the meta-pattern,
+    not N=3). Methodology cluster.
+  - Other tiers: status reaffirmed; no changes. Methodology
+    bucket count holding at 10+1 inhabitants (the new meta-
+    pattern observation joins methodology cluster) per Session 6
+    brainstorm closeout soft-threshold trip; Session 7 already
+    owns the sub-categorization decision.
+
+  **Push-readiness gate (per CLAUDE.md three-condition gate,
+  floor-only carve-out path, fifth invocation N=5):**
+  - Condition 1 (test-suite health): GREEN under floor-only path.
+    `pnpm db:reset:clean && pnpm agent:validate` reports 26/26.
+    Full-suite NOT invoked per the carve-out's mechanical-non-
+    impact argument; doc-only diff (README + AGENTS markdown,
+    zero migrations / zero services / zero integration tests /
+    zero source files / zero test files) cannot regress tests by
+    construction. First fire outside `docs/` territory;
+    mechanical equivalence preserved.
+  - Condition 2 (doc-sync): GREEN. Diff is README + AGENTS
+    additions at apps/web/src/; no canonical doc edits; no INDEX
+    update needed (`docs/INDEX.md` catalogs `docs/` contents,
+    not source-tree contents). Cross-references resolve to
+    `folder-structure.md`, `authority-gradient.md`,
+    `conventions.md` canonical paths from
+    `apps/web/src/README.md` (verified via `grep -rn` per plan
+    Stop Condition 2).
+  - Condition 3 (governance closeout): this entry; carry-forwards
+    captured above per plan §Task 2 closeout structure.
+
+  **Forward pointers:**
+  - Session 7 brainstorm scope per Session 6 brainstorm closeout
+    Topic 4 lock: Tier 1 codification (3 LIVE candidates: Turbo
+    cache #3, floor-only push gate carve-out at N=5 post-this-
+    push [adjusted from earlier projection of N=7 per the
+    chronological reality observation above], count-level commit
+    pattern #11) + V2 ratification + DOCS_RESTRUCTURE_V2.md +
+    methodology bucket sub-categorization decision (per soft-
+    threshold trip recorded at Session 6 brainstorm closeout).
+    Session 7 also inherits this closeout's plan brainstorm-
+    context section by way of
+    `docs/07_governance/round-2/2026-05-09-session-6-5-plan.md`
+    (Principle 3 wording, three-surface map, Pattern 7 conditional
+    permission, AGENTS.md/README.md pairing convention, CLAUDE.md
+    sub-section content) for V2 ratification scope.
+  - Session 6 execution and 5B execution remain pending; Session
+    6.5 closing without those running first does not block them —
+    the Phase 1 onset-risk Session 6.5 closes is independent of
+    5B execution (Layer 1 + Layer 2 migrations) and Session 6
+    execution (four-README rewrites). The session-ordering
+    assumption captured in plan and handoff (5B → 6 → 6.5 → 7)
+    was forward-projection substrate, not a blocking dependency;
+    Session 6.5 dispatching ahead of 5B/6 execution is the
+    contingency the chronological reality drift surfaced.
+
 - 2026-05-09 NOTE — Round-2 docs reorganization Session 6
   brainstorm closed; plan landed at
   `docs/07_governance/round-2/2026-05-09-session-6-plan.md`
