@@ -115,18 +115,29 @@ brainstorming. Pre-ratification specs live at
 during which the spec was authored. Filename pattern:
 `YYYY-MM-DD-adr-NNNN-<slug>-design.md`.
 
-The lifecycle is: brainstorm → design spec at
-`<phase>/specs/<file>` → ratification package authored → ADR
-ratified → design spec preserved as historical reference (the
-ADR itself is the canonical authority post-ratification).
+Pre-ratification execution plans (multi-step plans authored
+during the same brainstorming sessions) live at
+`docs/09_briefs/<phase>/plans/`, sibling home to
+`<phase>/specs/`. The two sub-buckets share the per-phase
+location pattern.
 
-Phase 0 (governance arc 2026-05-03 to 2026-05-04) was the first
-phase to use this pattern; ADRs 0011–0019 ratified from design
-specs originally authored at the now-deprecated location
-`docs/superpowers/specs/`. Migration to the per-phase location
-happens during round-2 docs reorganization Session 5; see
-`docs/07_governance/DOCS_RESTRUCTURE_V2.md` (Session 7) for the
-canonical migration record.
+The lifecycle is: brainstorm → design spec at
+`<phase>/specs/<file>` (and execution plan at
+`<phase>/plans/<file>` if applicable) → ratification package
+authored → ADR ratified → design spec preserved as historical
+reference (the ADR itself is the canonical authority post-
+ratification).
+
+ADR-0021 introduced the pre-ratification-design-spec discipline
+at round-2 Session 3. ADRs 0001-0018 predate this convention
+and were ratified without separate pre-ratification specs.
+ADR-0019 is the single pre-existing instance under the
+convention; its design spec was originally authored at the
+now-deprecated location `docs/superpowers/specs/`, migrated to
+`docs/09_briefs/phase-0/specs/` in round-2 Session 5A (see
+`docs/restructure-plan.md` Amendments section for migration
+provenance and `docs/07_governance/DOCS_RESTRUCTURE_V2.md`
+when ratified at Session 7).
 
 ## Writing a new ADR
 
