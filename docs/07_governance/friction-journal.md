@@ -34,6 +34,313 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-09 NOTE — Round-2 docs reorganization Session 6
+  brainstorm closed; plan landed at
+  `docs/07_governance/round-2/2026-05-09-session-6-plan.md`
+  (commit `c913b7a`, 459 lines), with two fix-up commits
+  (`14c840c` correcting floor-only fire count from N=4 to N=5;
+  `a562568` correcting Session 6 execution's projected floor-
+  only fire count from N=5 to N=6 after the first fix-up's
+  propagation gap surfaced). Seven locked decisions (Topics
+  1-7) plus an inter-session dependency mechanism. Session 6
+  execution waits for fresh-context session against the plan;
+  5B execution must run first per the plan's Stop Condition 1
+  verification. This entry documents brainstorm-grain output
+  (locked decisions + brainstorm-time observations + queue
+  updates + carry-forwards); Session 6 execution closeout will
+  be a separate entry after the README rewrites ship.
+
+  **Locked decisions (7 + 1):**
+  - Topic 1 (per-README failure-mode taxonomy): 01_prd is
+    failed-forward (described future state that round-2 retired
+    by populating the folder); 02_specs / 03_architecture /
+    04_engineering are failed-backward (under-specify present
+    state by omitting canonical-source files named in CLAUDE.md
+    as authoritative). Two work shapes follow: full rewrite
+    (01_prd, structural-pattern adoption) vs targeted rewrites
+    (02/03/04, content-completeness expansion preserving
+    existing structure per δ-i discipline). All four READMEs
+    propagate the doc-class opener pattern (`**Document class:
+    <name>.**`) instantiating ADR-0021's "A folder encodes one
+    canonical axis" principle. Principle propagates, not phrase
+    — caught at brainstorm-time via grep verification that the
+    literal "one canonical axis" phrase lives at ADR-0021:498
+    while the consumer-side instantiation in 09_briefs/README
+    is the doc-class opener.
+  - Topic 2 (commit shape, 1+3+1): C1 grouped 02/03/04 rewrite
+    (failed-backward triple, content-completeness expansion,
+    no 5B-execution dependency) → C2 isolated 01_prd full
+    rewrite (failed-forward case, structural-pattern adoption,
+    5B-touchup baseline dependency) → C3 closeout. Failure-
+    mode asymmetry maps cleanly to commit boundaries —
+    preserves blame-locality where work shape is similar,
+    isolates categorically distinct work. Count-level commit
+    pattern N=4 fire at structural level (implementation-then-
+    closeout); count varies (3 implementation, not 4) per
+    work-shape grouping. Pattern holds at structural level;
+    count-level variance is itself a brainstorm-time
+    observation (see below).
+  - Topic 3 (cross-reference synchronization): batch-edit
+    discipline within each commit (cross-refs touched by a
+    commit land in that commit; no later sync sweep) +
+    grep-sweep verification before each commit lands. No new
+    "cross-ref cadence" naming substrate — batch-edit
+    discipline catches at-write-time without adding new surface
+    that would itself need consumer evidence to justify.
+  - Topic 4 (payload-mitigation, hybrid grain-separation):
+    Session 7 inherits the 16-item queue but only owns Tier 1
+    codification work (3 LIVE candidates + V2 ratification +
+    DOCS_RESTRUCTURE_V2.md). Tier 2-5 reaffirmation is per-
+    closeout work, not per-session work. Operating criterion:
+    **status-track at every closeout; codification at Tier 1
+    LIVE elevation**. The criterion separates queue-size
+    growth (monotonic until codification removes items) from
+    session-scope (action-items-only). Scales beyond round-2:
+    any future session's codification scope is Tier 1
+    candidates at session-onset; any future session's
+    closeout reaffirms tier status across the queue.
+  - Topic 5 (push-readiness gate): floor-only carve-out,
+    formal criteria as primary justification (zero migrations
+    / zero services / zero integration tests / zero source
+    files / zero test files all met). N=4 fire at this
+    dispatch push; Session 6 execution push will be N=6 (after
+    5B execution push at N=5). 5B execution push at N=5 is
+    the first execution-grade fire of the carve-out; Session
+    6 execution push at N=6 is the second. Codification of
+    the carve-out itself defers to Session 7's natural
+    substrate moment per recursive substrate-now-enforcement-
+    later.
+  - Topic 6 (5B brainstorm carry-forwards): four named at 5B
+    brainstorm closeout. (a) Payload-mitigation placement —
+    resolved in Topic 4 above. (b) Queue-trajectory non-
+    linearity — propagate forward; closeout reports queue
+    delta this brainstorm. (c) Methodology bucket sub-
+    categorization watch (8 inhabitants approaching size
+    threshold) — propagate forward; closeout reports current
+    count. (d) Categorical-distinction-preservation N=1 meta-
+    pattern — propagate forward; closeout reports whether new
+    bucket created or sub-pattern adjudicated.
+  - Topic 7 (substrate-leverage phase): track explicitly.
+    Session 6 brainstorm session-grain output is brainstorm/
+    plan-heavy (this dispatch shipped plan + two fix-ups +
+    closeout, zero execution work) — N=2 data point on the
+    phase-transition observation first surfaced at 5B
+    brainstorm closeout. Inversion confirmed at N=2;
+    observation moves Tier 3 (N=1) → Tier 2 (awaiting third
+    fire).
+  - Plus item (inter-session dependency mechanism, structurally
+    novel for round-2 plans): Session 6 plan introduces a Stop
+    Condition 1 that verifies prior session's execution closed
+    cleanly before current session's commits land. Prior
+    round-2 plans had stop conditions but no inter-session
+    dependency verification of this shape. Mechanism rationale
+    preserved as plan-internal substrate (lines 13-24 of the
+    plan) so fresh-context executor doesn't need brainstorm
+    history.
+
+  **Inter-session dependency mechanism class (load-bearing
+  meta-observation).** The Stop Condition 1 mechanism is a new
+  category of plan substrate: plans that depend on a different
+  session's execution closing cleanly. The mechanism's shape —
+  verify-then-halt-or-proceed — generalizes beyond Session 6:
+  any plan whose work depends on prior session's acceptance
+  criteria can use the same shape. The mechanism earns its
+  keep on failure case: if 5B execution lands cleanly, Stop 1
+  verifies and proceeds; if 5B execution introduced unexpected
+  scope, Stop 1 halts before any Session 6 commits land. The
+  plan-internal-substrate framing is what makes the mechanism
+  standalone-readable; without it, fresh-context executors
+  would need the brainstorm conversation to understand why
+  Stop 1 verifies what it verifies. N=1 observation;
+  codification candidacy at second fire.
+
+  **Brainstorm-time observations (6):**
+  - **README failure-mode taxonomy (forward vs backward).**
+    Surfaced as principled basis for the failure-mode-asymmetry
+    commit-shape partition. 01_prd failed forward (described
+    future state never materialized); 02/03/04 failed backward
+    (under-specifies present state by omitting canonical
+    contents). Adjudication: lands as sub-pattern within the
+    structural-pattern bucket created at 5B brainstorm. The
+    bucket matures past single-instance status with this
+    addition — its three inhabitants (count-level commit
+    pattern; phase folder lifecycle-stage hypothesis; phase-0/
+    phase-5 canonical exemplars) gain a sub-pattern (failure-
+    mode taxonomy) that lives within an existing inhabitant's
+    structural axis (canonical-exemplar pattern × failure-mode-
+    axis = matrix). Sub-pattern-within-bucket is a phenomenon
+    distinct from new-bucket-creation; round-2's posture
+    handles both. Counts as N=2 of the categorical-distinction-
+    preservation meta-pattern (5B brainstorm's structural-
+    pattern bucket creation was N=1).
+  - **Count-level commit pattern N=4 fire with count-of-3 (not
+    4).** 5A=4+1, fix-arc=4+1, 5B=4+1, Session 6=3+1. Pattern
+    holds at structural level (implementation-then-closeout)
+    while count varies. Recording as count-level variance
+    within stable structural pattern rather than force-fitting
+    to 4+1 (artificial commit splitting) or treating as new
+    pattern (categorical inflation). Itself an instance of
+    categorical-distinction-preservation (preserving pattern-
+    at-structural-level from pattern-at-count-level) — could
+    be counted as N=3 of the meta-pattern if surfacing-the-
+    distinction is itself an instance; not adjudicating that
+    count here.
+  - **Inter-session dependency mechanism — new pattern
+    observation N=1.** See meta-observation above for the
+    mechanism class framing. Joins the queue at Tier 3 (N=1,
+    awaiting recurrence). Codification candidacy at second
+    fire — likely Session 7 if it ships a similar plan shape,
+    or post-round-2 otherwise. Methodology cluster.
+  - **Pre-condition block N=2 holding.** Second consecutive
+    session-start where the precondition block produced clean
+    pass with no surprises. The block earns its keep on the
+    failure case (catching environment drift cheaply); current
+    pattern is consistent-environment, not pattern-confirming-
+    or-failing. N=2 holding; not codifying. Methodology
+    cluster.
+  - **Mid-dispatch plan re-read caught miscount — pre-push
+    verification N=2.** Advancing N=1 → N=2 from a single
+    brainstorm session: first instance caught the original N=4
+    vs N=5 miscount (plan as initially shipped at `c913b7a`
+    omitted 5A brainstorm push from precedent chain); second
+    instance caught the propagation-completeness gap when
+    fix-up #1 didn't propagate to Session 6 execution's
+    projected count (N=5 → N=6 fix at `a562568`). Mechanism's
+    value is the catching, not the category-of-thing-caught;
+    second fire was a propagation-completeness check on a
+    prior fix, surfacing fix-up review's distinct failure
+    mode. Methodology cluster.
+  - **Parallel-session commit appearance.** Mid-Session-6-
+    brainstorm a parallel-session commit landed (`25ac74b`
+    authored 13:32:27 PDT, between fix-up #1 and fix-up #2)
+    without crossing the chat boundary that authored Session
+    6 brainstorm. Recognized after-the-fact via git-log
+    surveillance during pre-closeout investigation.
+    Recognition resolved: the commit is the operator's own
+    work from a parallel agent session producing Session
+    6.5's plan. The methodology note is precise: operating
+    multi-agent across parallel sessions on the same local
+    repo produces commits in shared history without crossing
+    the chat boundary that authored them; recognition
+    requires git-log surveillance at session boundaries, not
+    just within-chat awareness. Future multi-agent sessions
+    on shared repos benefit from "check git log at session
+    boundaries for parallel-session commits" being a
+    discoverable discipline. N=1; methodology cluster; not
+    codifying.
+
+  **Pre-codification observation queue post-Session-6-
+  brainstorm (queue updates):**
+  - Tier 1 LIVE: status reaffirmed for all 3 candidates.
+    Floor-only push gate carve-out advances to N=4 LIVE this
+    dispatch push (halftime + 5A brainstorm + 5B brainstorm
+    closeout + Session 6 brainstorm dispatch = 4 fires through
+    this push). Will advance to N=5 LIVE at 5B execution push,
+    N=6 LIVE at Session 6 execution push, N=7 LIVE at Session
+    6.5 execution push. Codification position for Session 7
+    strengthens. Other Tier 1 candidates (Turbo cache #3,
+    count-level commit pattern #11) status unchanged; #11
+    gains a count-level-variance footnote per the brainstorm-
+    time observation above.
+  - Tier 2 (awaiting second fire): substrate-leverage phase
+    advances N=1 → N=2 per Topic 7 lock — moves from Tier 3
+    to Tier 2. Other Tier 2 items unchanged.
+  - Tier 3 (N=1 awaiting recurrence): +1 (inter-session
+    dependency mechanism) +1 (mid-dispatch plan re-read pre-
+    push verification, advancing to N=2 within this same
+    brainstorm via the propagation-completeness instance) +1
+    (parallel-session commit visibility). Other Tier 3 items
+    unchanged.
+  - Tier 4 (deferral cluster): status reaffirmed; no changes.
+  - Tier 5 (reference exemplars): status reaffirmed; no
+    changes.
+  - Bucket counts: structural-pattern bucket gains a sub-
+    pattern (failure-mode taxonomy); methodology cluster +2
+    (mid-dispatch plan re-read at N=2; parallel-session commit
+    visibility N=1) → 10 inhabitants. **Soft sub-categorization
+    threshold (10) reached.** Surface as Session 7 brainstorm
+    scope addition: methodology bucket sub-categorization
+    decision joins Session 7 alongside Tier 1 codification +
+    V2 ratification + DOCS_RESTRUCTURE_V2.md. Topic 4's hybrid
+    grain-separation lock anticipated this possibility; the
+    locked criterion (status-track at closeouts; codification
+    at Tier 1 LIVE) does not preclude bucket-structural work
+    being added to Session 7 scope when triggered.
+  - Queue-trajectory delta this brainstorm: +3 new tier
+    inhabitants (inter-session dependency mechanism, mid-
+    dispatch plan re-read, parallel-session commit
+    visibility), +1 sub-pattern (failure-mode taxonomy within
+    structural-pattern), +1 elevation (substrate-leverage
+    phase Tier 3 → Tier 2). Trajectory non-trivial; consistent
+    with 5B brainstorm closeout's queue-trajectory-non-
+    linearity flag.
+
+  **Push-readiness gate (per CLAUDE.md three-condition gate,
+  floor-only carve-out path, fourth invocation N=4):**
+  - Condition 1 (test-suite health): GREEN under floor-only
+    path. `pnpm db:reset:clean && pnpm agent:validate` reports
+    26/26. Full-suite NOT invoked per the carve-out's
+    mechanical-non-impact argument; doc-only diff (zero
+    migrations / zero services / zero integration tests / zero
+    source files / zero test files) cannot regress tests by
+    construction. Same category as 5A and 5B brainstorm
+    closeout pushes; brainstorm-grade work continues to
+    qualify under the formal criteria.
+  - Condition 2 (doc-sync): GREEN. Session 6 brainstorm's
+    primary deliverable IS plan-grade output (Session 6 plan +
+    two fix-ups); doc-sync is the deliverable type. Same
+    category as prior brainstorm closeouts (5A, 5B) —
+    sustained pattern not establishing pattern.
+  - Condition 3 (governance closeout): this entry; carry-
+    forwards captured below per Topic 6 + the new brainstorm-
+    time observations.
+
+  **Forward pointers:**
+  - Session 6 execution inherits this plan + post-5B-execution
+    docs structure. Stop Condition 1 verifies 5B closed
+    cleanly before any Session 6 commits land. If 5B execution
+    introduces unexpected scope, Stop 1 halts and escalates
+    inline.
+  - Session 6.5 sits between Session 6 execution and Session 7
+    in the round-2 sequence (per `25ac74b`'s plan, Stop 1
+    verifying Session 6 closeout state — brainstorm closeout,
+    per the plan's wording — before any Session 6.5 work
+    begins). Session 6.5 is unblocked by this push event
+    landing on origin/staging; Session 6 execution is also
+    unblocked by the same push and remains a separate future
+    session.
+  - Session 7 brainstorm scope per Topic 4 lock plus the
+    soft-threshold-trip update: Tier 1 codification (3 LIVE
+    candidates: Turbo cache #3, floor-only push gate carve-
+    out at N=7 post-Session-6.5-execution-push, count-level
+    commit pattern #11) + V2 ratification + DOCS_RESTRUCTURE_
+    V2.md + methodology bucket sub-categorization decision
+    (newly added per soft-threshold trip at this brainstorm).
+    Session 7 also inherits Session 6.5 closeout's brainstorm-
+    context section (Principle 3 wording, three-surface map,
+    Pattern 7 conditional permission, AGENTS.md/README.md
+    pairing convention, CLAUDE.md sub-section content) for
+    V2 ratification scope.
+  - Carry-forwards from 5B brainstorm: (a) payload-mitigation
+    resolved in Topic 4 (this brainstorm); (b) queue-
+    trajectory non-linearity confirmed (this brainstorm added
+    3 tier inhabitants + 1 sub-pattern + 1 elevation); (c)
+    methodology bucket count 10, soft threshold tripped —
+    added to Session 7 scope; (d) categorical-distinction-
+    preservation meta-pattern at N=2 (failure-mode taxonomy
+    adjudication is N=2 instance after 5B's structural-pattern
+    bucket creation N=1).
+  - New carry-forwards from Session 6 brainstorm: inter-
+    session dependency mechanism (Tier 3 N=1, codification
+    candidacy at second fire); mid-dispatch plan re-read pre-
+    push verification (Tier 3 N=2 within this brainstorm via
+    propagation-completeness instance, methodology cluster);
+    parallel-session commit visibility (Tier 3 N=1,
+    methodology cluster); substrate-leverage phase advanced
+    to Tier 2 (N=2 awaiting third fire — Session 6 execution
+    provides counter-evidence if execution-heavy or
+    confirming-evidence if brainstorm/plan-heavy continues).
+
 - 2026-05-08 NOTE — Round-2 docs reorganization Session 5B
   brainstorm closed; plan landed at
   `docs/07_governance/round-2/2026-05-08-session-5b-plan.md`.
