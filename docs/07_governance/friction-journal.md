@@ -19,6 +19,141 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Test-hygiene fix arc shipped (sibling-of-
+  round-2; closes the Sessions-3/4/halftime Condition 1
+  deviation). Three commits, by script-bundle, per the plan at
+  `docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-plan.md`
+  paired with its brief. Plan-and-brief pattern (one-brief-plus-
+  one-plan, co-located in post-mvp/) distinct from round-2's
+  one-arc-brief-plus-N-session-plans pattern.
+
+  - Commit `5e223dc` (primary solo, deviation-closing):
+    `tests/integration/crossOrgRlsIsolation.test.ts` — `TEST_IDS`
+    const moved from module-scope `as const` to describe-scope
+    `let`, assigned in `beforeAll` with `crypto.randomUUID()`
+    per field, reused in `afterAll` cleanup. Cleanup-dependency
+    option (a) — module-scope storage — chosen over post-insert
+    DB query per topic 4 brainstorm lock. +28/-15 lines.
+  - Commit `50e0199` (ADR scripts bundle, items #1+#2):
+    `scripts/adr/lint.ts` adds `TAXONOMY_REL` and `INVARIANTS_REL`
+    constants computed via `relative()` from the existing
+    `TAXONOMY_PATH`/`INVARIANTS_PATH` constants; Check 5
+    (modules) and Check 11 (invariants) error messages now
+    cite the relative-path constants instead of hardcoded
+    `"taxonomy.md"`/`"invariants.md"`. `scripts/adr/generate-
+    index.ts` `--check` failure path now emits first 10
+    differing lines of diff (- on disk, + after regeneration)
+    before exit 1. +19/-3. Commit 2's pre-commit hook execution
+    incidentally exercised the modified ADR scripts against
+    their own staged changes; both `adr:lint` and `adr:index
+    --check` passed under the new behavior — substrate testing
+    itself, the kind of dogfood validation that's hard to
+    engineer deliberately.
+  - Commit `3889372` (install-hooks bundle, items #3+#4):
+    `scripts/install-hooks.sh` writes new hook content to a
+    temp file via `mktemp` first, compares with existing hook
+    via `cmp -s`, short-circuits with "already installed...
+    (no action)" message when content matches; otherwise
+    backs up + installs (backup now pins to genuinely-different
+    content rather than overwriting prior backups). `trap` on
+    EXIT cleans temp file on failure paths; disarmed after
+    final `mv`. +22/-6.
+
+  Acceptance evidence (all seven criteria from the brief
+  satisfied):
+  - (a) `grep -E '99990[0-9]{3}-' apps/web/tests/integration/crossOrgRlsIsolation.test.ts`
+    returns no matches post-Commit 1.
+  - (b) `pnpm db:reset:clean && pnpm test` 5× under
+    `TURBO_FORCE=true`: 5/5 GREEN. Per-run timings tightly
+    clustered at 96-103s test duration (1m30-1m36s wall-clock);
+    all reports `Cached: 0 of 1 cached` confirming actual
+    re-execution. Pre-fix flake rate observed at ~25% across
+    Sessions 3/4/halftime; post-fix rate 0/5 across this
+    verification.
+  - (c) Test count baseline preserved: 137 files / 665 tests
+    full suite; `crossOrgRlsIsolation.test.ts` retains 20
+    tests.
+  - (d) ADR linter cites canonical paths in error output;
+    green-path behavior unchanged (`pnpm adr:lint` clean,
+    0 errors / 0 warnings).
+  - (e) `pnpm adr:index --check` diff path implemented;
+    green-path exits 0 with "no changes (22 ADRs scanned)".
+  - (f) `bash scripts/install-hooks.sh` rerun against matching
+    hook content prints no-op message and exits 0; no backup
+    overwrite (`.pre-coordination` size unchanged across
+    consecutive invocations).
+  - (g) All 3 commits independently revertable; commit
+    boundaries align with script-bundle seams.
+
+  The fix arc was triggered specifically to close the deviation
+  before Session 5's push, breaking the carry pattern at
+  session 3 rather than letting it normalize. Generalizable
+  observation (not codified): two sessions of carry is
+  documented exception; three starts being a tolerated norm.
+  N=1; not codified.
+
+  Methodology observation (not codified): N× verification
+  criteria implicitly assume each run actually executes.
+  Turbo's content-hash cache subverts this — `pnpm
+  db:reset:clean` resets DB state but doesn't invalidate
+  Turbo's cache, so subsequent `pnpm test` invocations against
+  unchanged source inputs return cached pass results in
+  ~100ms (`>>> FULL TURBO`) rather than re-executing. First
+  attempt at 5× verification hit this: Run 1 executed at
+  119s, Runs 2-5 returned cache hits at 97-135ms. Symptom to
+  watch for: a "5× run" loop completing in under 30s total
+  rather than the expected 5-10 min — the diagnostic is
+  per-run wall-clock time, not pass/fail status (cached runs
+  faithfully report the prior pass result). Resolved by
+  re-running with `TURBO_FORCE=true` prefix on each
+  invocation; `Cached: 0 of 1` confirmed across all 5 runs.
+  Generalizable observation (not codified): future briefs
+  specifying "run N×" acceptance criteria should either name
+  the cache-busting requirement explicitly (`TURBO_FORCE=true`)
+  or specify the equivalent direct command. N=1; not codified.
+  ≥2 future occurrences elevate to brief template guidance.
+  Categorically distinct from the deferral-pattern carry-
+  forwards (linter/generator deferral, convention-shape
+  deferral, floor-only push gate carve-out) — those are
+  substrate-trim decisions; this is a methodology gap in
+  acceptance-criteria specification.
+
+  Discipline codification per the brief: friction-journal
+  NOTE sufficient (this entry); `04_engineering/conventions.md`
+  addition for "integration test fixtures must use
+  `crypto.randomUUID()` for any column with a unique
+  constraint, never fixed values" deferred to ≥3-fire
+  threshold per the brief's framing.
+
+  Push-readiness gate (per CLAUDE.md three-condition gate,
+  full-suite path):
+  - Condition 1 (test-suite health): GREEN. `pnpm
+    db:reset:clean && pnpm test` 5× under `TURBO_FORCE=true`
+    reports 5/5 137/137 + 665/665. **First push since Session
+    2 to evaluate Condition 1 GREEN without deviation
+    framing.** The Sessions-3/4/halftime carry is closed.
+  - Condition 2 (doc-sync): three commits internally
+    consistent; no schema or ADR changes; `types.ts` regen
+    not required; `INDEX.md` unaffected; `adr:index --check`
+    confirms README in sync.
+  - Condition 3 (governance closeout): this entry; no
+    retrospective needed (sibling fix arc, not phase
+    closeout); shared-deferral-logic and methodology-gap
+    observations surfaced as separate carry-forward
+    paragraphs above.
+
+  Forward pointers:
+  - Session 5A executes next per
+    `docs/07_governance/round-2/2026-05-08-session-5a-plan.md`.
+    First round-2 session push under clean Condition 1 baseline
+    (no deviation; the fix arc closed it).
+  - Round-2 governance posture now carries four observations
+    pre-codification: linter/generator deferral, convention-
+    shape deferral, floor-only push gate carve-out (three
+    deferral-shape patterns); plus methodology-gap on N×
+    verification (different shape; tracked separately). All
+    N=1 with explicit codification thresholds.
+
 - 2026-05-08 NOTE — Floor-only push gate carve-out for doc-only
   diffs (N=1 precedent). Plans-landing commit-pair (commits
   `f3aa14d` round-2 namespace + 5A plan; `e4721a1` topic 4 plan)
