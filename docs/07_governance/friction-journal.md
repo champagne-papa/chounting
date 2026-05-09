@@ -34,6 +34,260 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Round-2 docs reorganization Session 5A
+  (Layer 0 substrate) shipped. Four implementation commits per
+  the substrate-then-moves sequence locked at topic 1
+  brainstorm + plan at
+  `docs/07_governance/round-2/2026-05-08-session-5a-plan.md`.
+  Round-2 is now past its hardest structural phase per the
+  fix-arc-closeout meta-observation; 5A is the first
+  application-of-substrate session against the clean baseline
+  the fix arc established.
+
+  Four commits:
+  - `baad85f` (Commit 1): docs(briefs): convention + _template
+    — three sub-buckets (specs/, plans/, chunks/) with explicit
+    deferral-to-consumer-evidence sentence; "**Document class:
+    briefs.**" one-liner per V1-amendment-locked decision #2;
+    minimal _template.md with closeout-artifacts inline (with
+    conventions.md cross-reference parenthetical to prevent
+    drift between conventions.md and the template if either
+    gets revised independently). +70/-8.
+  - `49ed5a8` (Commit 2): docs(adr): README pre-ratification-
+    home — parallel `<phase>/plans/` clause + ADR-0019-only
+    stale-claim correction (three-sentence historical seam:
+    "ADR-0021 introduced the pre-ratification-design-spec
+    discipline at round-2 Session 3. ADRs 0001-0018 predate
+    this convention and were ratified without separate
+    pre-ratification specs. ADR-0019 is the single pre-
+    existing instance under the convention."). +22/-11.
+  - `4f54fe7` (Commit 3): docs(briefs): docs/superpowers/
+    elimination — high-blast-radius solo. Asymmetric file
+    handling preserved in commit message: 3 git mv (tracked
+    siblings) for ADR-0019 spec → phase-0/specs/ + D5 plan +
+    C11/D6 plan → phase-0/plans/; 1 git add at new path
+    (never-tracked file; scratch location was never the
+    intended home per commit `1aff855`'s deliberate-untracked
+    breadcrumb) for chunk B5-1 plan → phase-5/chunks/.
+    friction-journal file-top path-note blockquote added
+    (sibling to existing ec-2 path-note). docs/superpowers/
+    source directory deleted. Reference disposition matrix
+    enumerated all remaining `docs/superpowers/` references
+    as δ-i-preserved (legacy ADR-0021/0019, restructure-plan.md
+    Phase 1.1 historical migration descriptions, round-2
+    namespace docs + 5A plan describing this session's own
+    work) — zero active-doc broken references. +1044 (3
+    renames at 100% similarity + chunk B5-1 1074 lines tracked
+    for first time + path-note blockquote).
+  - `33b4707` (Commit 4): docs(briefs): phase-0/ + phase-5/
+    READMEs — instantiated from _template.md against
+    directories Commit 3 populated. Phase-0 README documents
+    its specs/ + plans/ sub-buckets (ADR-0019 spec; D5 + C11/D6
+    plans); phase-5 README documents its chunks/ sub-bucket
+    (chunk B5-1). Closeout artifact references for phase-0
+    deferred to Session 5B Layer 2 migration. +35/-0.
+
+  Acceptance criteria — all nine satisfied:
+  - (a) docs/09_briefs/README.md trimmed three-sub-bucket
+    convention shipped; explicit deferral-to-consumer-evidence
+    sentence present; "one canonical axis" one-liner included.
+  - (b) docs/09_briefs/_template.md minimal phase-folder
+    skeleton shipped.
+  - (c) ADR README corrected; "ADRs 0011-0019" reframed to
+    ADR-0019-only with three-sentence historical seam.
+  - (d) docs/superpowers/ eliminated; four files relocated
+    to phase-appropriate homes.
+  - (e) Asymmetric git handling preserved in Commit 3 message
+    (one git add for never-tracked file vs three git mv for
+    tracked siblings).
+  - (f) `pnpm typecheck` clean before each commit.
+  - (g) `pnpm adr:lint` clean throughout (0 errors / 0
+    warnings).
+  - (h) `pnpm adr:index --check` clean throughout (no INDEX
+    drift).
+  - (i) Pre-commit hook fired correctly each commit
+    (informational session-lock warning only on Commits 1/3/4
+    where no ADR-related files staged; ADR check fired
+    correctly on Commit 2 with ADR README staged, both
+    `adr:lint` and `adr:index --check` passed).
+
+  Full-suite acceptance verification (5× under
+  `TURBO_FORCE=true`): 5/5 GREEN. Per-run timings: Run 1
+  107.99s, Run 2 102.65s, Run 3 105.95s, Run 4 109.05s, Run 5
+  126.32s (test durations); wall-clock 1m33.6s-1m57.9s.
+  `Cached: 0 of 1` confirmed each run; cache-bust working.
+  All 137/137 files + 665/665 tests green per run.
+
+  **Cross-session durability finding (load-bearing):** this
+  verification is the first independent test of whether the
+  test-hygiene fix arc's cleanup of the cross-org-rls-flake
+  Condition 1 deviation persists past the session that shipped
+  it. The fix-arc closeout entry could only claim "5/5 green
+  confirms the fix"; this entry can claim "5/5 green on a
+  session that didn't ship the fix confirms the fix's
+  durability beyond its own session." Floor-state compounding
+  (clean-baseline-inheritance) just demonstrated for the first
+  time across session boundaries — agency framing extends
+  through to the consumer of the closure (5A), not just the
+  actor that closed it (fix arc).
+
+  Open-item resolutions at session start (all three already
+  addressed by the plan as written; verification-not-discovery
+  outcome — meta-signal that the brainstorm-to-plan handoff
+  captured open items faithfully):
+  - Phase assignment for the three tracked sibling files: all
+    three self-identifiable as Phase 0 governance arc work
+    from line ~5 of each file. Mapping locked: ADR-0019 spec
+    → phase-0/specs/; D5 + C11/D6 plans → phase-0/plans/.
+  - 01_prd/README.md status: rewrite needed (not touch-up).
+    Three current claims structurally invalidated by Layer 1
+    landing feature specs ("ships empty in Phase 1.1";
+    "Expected first occupant: Phase 1.2 agent integration
+    PRD"; "Deletion criterion: archive…by end of Phase 1.3").
+    Carry-forward to Session 6 as 5th README rewrite outside
+    the locked four (locked four = 09_briefs in 5A + 02_specs
+    + 03_architecture + 04_engineering in Session 6).
+  - Template parenthetical: include the conventions.md
+    cross-reference. Default-include applied; cheap addition;
+    prevents drift between conventions.md and the template.
+
+  Observations surfaced during execution:
+  - **Comprehension test result (Phase 3 Probe 4 style):**
+    convention substrate (09_briefs/README + _template +
+    phase-0/phase-5 READMEs as exemplars + ADR-0021 Profile
+    (b) glosses) passes the four-question test (sub-buckets
+    + purposes; _template.md purpose; new-phase-folder
+    creation; canonical axis). One minor gap: the mechanical
+    "how" of creating-from-template (copy file? rename?
+    edit?) is implicit in the README's Authoring section; the
+    phase-0/phase-5 exemplars compensate, but a future
+    convention-revision could make the mechanical step
+    explicit. Exemplar-compensated; not a blocking gap.
+  - **Variance-decomposition diagnostic (methodology
+    observation, not codified):** Run 5's outlier slowness
+    (~16% slower than next-slowest) decomposes by vitest
+    sub-phase: prepare ~30% slower, collect ~30% slower,
+    tests only ~10% slower. Slowdown concentrates in
+    I/O-heavy startup phases (vitest module loading), not
+    test execution itself. That's the signature of
+    environmental noise (machine load, DB warmup, disk
+    contention), not test-suite instability — substantive
+    regression would surface in the `tests` sub-phase.
+    Generalizable observation (not codified): for N×
+    verification runs that show timing variance,
+    decomposition into vitest sub-phases distinguishes
+    environmental-from-substantive. Same methodology-gap
+    bucket as Turbo cache observation; categorically distinct
+    from deferral patterns. N=1; not codified.
+  - **Handoff-prompt-commit-number-translation (methodology
+    observation, not codified):** the handoff prompt named
+    four commits; the plan refined to four implementation
+    commits + a closeout commit. Stop conditions in the
+    handoff were keyed to commit numbers; as the actual
+    sequence diverged (closeout commit lands later than the
+    handoff numbering implied), translation between handoff-
+    numbering and plan-numbering was needed at session-start
+    Stop 3. Generalizable observation (not codified): when a
+    handoff prompt names commit numbers in stop conditions
+    and the plan refines the count, the executor needs to
+    translate. The handoff prompt's stop conditions could
+    have been keyed to scope-completion milestones (e.g.,
+    "after Layer 0 substrate commits land," "after full-
+    suite verification") rather than commit numbers,
+    sidestepping the translation entirely. This is a
+    handoff-prompt-design observation, not just a session-
+    execution observation — the gap was at drafting time,
+    not execution time. N=1; not codified.
+
+  Pre-codification observation state (post-5A):
+  - Linter/generator deferral (V1-amendment-locked): N=1; did
+    not fire during 5A.
+  - Convention-shape deferral (5A audit-driven trim 5→3):
+    N=1; trim happened at brainstorm not execution; did not
+    fire again during 5A.
+  - Floor-only push gate carve-out: N=1; 5A uses full-suite
+    gate (not floor-only); did not fire again.
+  - **Pattern observation (cross-substrate, not yet
+    cross-arc):** all three deferral observations above share
+    the same shape — "trim now to actually-consumed surface;
+    expansion follows consumer evidence." This is the
+    organizing principle the fix-arc closeout entry first
+    surfaced. The pattern stays not-codified pending
+    cross-arc evidence (next consumer would be a Session
+    5B/6/7 decision invoking the same shape); 5A did not
+    produce that evidence. Per the fix-arc closeout's
+    framing, the pattern's load-bearing status increases each
+    session it holds without firing, but codification still
+    requires consumer-evidence not just observer-recognition.
+  - **Turbo cache methodology gap: N=1 → N=2.** TURBO_FORCE
+    used in 5A's verification (second occurrence beyond
+    fix-arc closeout). Threshold reached per the codification
+    framing at fix-arc closeout (`≥2 future invocations of
+    this carve-out elevate to brief template guidance`).
+    **Codification candidate is now live**; actual
+    codification deferred to Session 7's V1→V2 ratification
+    work where brief template substrate naturally lands.
+    Same N=2 cross-arc evidence basis the deferral-pattern
+    cluster is still missing.
+  - Methodology-gap cluster (new bucket; categorically
+    distinct from deferral patterns): Turbo cache (N=2,
+    threshold reached); variance-decomposition diagnostic
+    (N=1, just surfaced in this session); handoff-prompt-
+    commit-number-translation (N=1, just surfaced in this
+    session). Three observations in one bucket; codification
+    threshold per the same epistemic discipline (N≥2
+    cross-arc for methodology gaps; Turbo cache is the first
+    to cross it).
+  - Narrative-substrate observation (fix-arc closeout's
+    temporal-vs-purposive framing): N=1; did not fire
+    explicitly during 5A but the "non-fix-arc session"
+    framing in this entry's cross-session durability finding
+    leans purposive (consumer-of-closure rather than
+    temporal-after-fix), which is the framing the
+    observation flagged as load-bearing.
+
+  Push-readiness gate (per CLAUDE.md three-condition gate,
+  full-suite path):
+  - Condition 1 (test-suite health): GREEN. 5×
+    `pnpm db:reset:clean && pnpm test` under
+    `TURBO_FORCE=true` reports 5/5 137/137 + 665/665. No
+    deviation. **Second consecutive push under clean
+    Condition 1** (fix-arc closeout was the first); the
+    pattern is being maintained, not just established.
+  - Condition 2 (doc-sync): GREEN. 5A's primary deliverable
+    IS doc-sync work (convention substrate + ADR README
+    correction + superpowers/ elimination + new phase
+    READMEs); category-distinct from fix-arc closeout's "no
+    doc-sync needed" green. Both readings are correct;
+    keeping the categorical distinction visible per the
+    fix-arc-closeout meta-observation. types.ts regen not
+    required; INDEX.md unaffected; `adr:index --check`
+    confirms README in sync.
+  - Condition 3 (governance closeout): this entry; no
+    retrospective needed (mid-arc; round-2 retrospective at
+    Session 7 V1→V2 ratification); methodology and
+    deferral observations surfaced as separate carry-forward
+    paragraphs above with explicit codification thresholds.
+
+  Forward pointers:
+  - Session 5B brainstorms next; consumes 5A's substrate
+    (Layer 1 = feature specs migration to 01_prd/; Layer 2 =
+    phase-0 governance migration to phase-0/). 5B inherits
+    the cleanest baseline of any round-2 session: Condition 1
+    green, no deferred deviations, no in-flight test-hygiene
+    work, working tree clean, briefs convention substrate on
+    disk for 5B's consumers.
+  - 01_prd/README.md rewrite carry-forward: lands in Session
+    6 as 5th README rewrite outside the locked four;
+    documented above per open-item resolution.
+  - Turbo cache methodology codification candidate live for
+    Session 7 (when brief template substrate naturally lands
+    as part of V1→V2 ratification work).
+  - Deferral-pattern cluster (linter/generator, convention-
+    shape, floor-only push gate) tracks at N=1 awaiting
+    cross-arc fire evidence; no codification action this
+    session.
+
 - 2026-05-08 NOTE — Test-hygiene fix arc shipped (sibling-of-
   round-2; closes the Sessions-3/4/halftime Condition 1
   deviation). Three commits, by script-bundle, per the plan at
