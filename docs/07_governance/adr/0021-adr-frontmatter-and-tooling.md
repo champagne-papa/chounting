@@ -534,3 +534,47 @@ genre's flexibility.
   to inherit the discipline. A future ADR proposing to migrate
   `scripts/*.sh` to TypeScript wholesale is reopening the
   language-follows-shape-of-work principle codified here.
+
+## Glossary for outside readers
+
+Round-2-specific terms this ADR uses without redefining
+inline. A reader new to the project's recent governance
+vocabulary will find these load-bearing:
+
+- **round-2** — the second comprehensive docs reorganization
+  arc (V2). Round 1 was the initial nine-folder restructure
+  (`00_product/` through `99_archive/`) per
+  `docs/restructure-plan.md`; round 2 ratifies cross-cutting
+  conventions (taxonomy, ADR system, brief frontmatter, doc
+  flatness principle) on top of round 1's folder substrate.
+  The full round-2 record will land in
+  `docs/07_governance/DOCS_RESTRUCTURE_V2.md` at Session 7.
+- **dogfood ADR** — an ADR that ratifies a substrate (e.g.,
+  the frontmatter / linter / generator system) AND is itself
+  the first instance to use that substrate. ADR-0021 is the
+  dogfood ADR for the frontmatter+tooling system; its own
+  frontmatter is the linter's first input.
+- **forward-only convention** — a convention that applies to
+  artifacts authored from the convention's ratification date
+  forward; pre-existing artifacts are NOT retroactively
+  reformatted. ADR-0021 Decision item 7 codifies this for the
+  frontmatter schema; the same discipline applies to most
+  governance conventions in chounting.
+- **δ-i preservation discipline** — the rule that historical
+  artifacts (legacy ADRs, archived friction-journal entries,
+  closed phase briefs) are preserved in their original shape,
+  not rewritten when later conventions land. Companion to
+  forward-only application; together they keep the historical
+  record readable.
+- **session-internal narration** — prose authored for the
+  authoring session's context (e.g., "Verify 0021 is the next
+  free number first" inside an ADR's Triggered-by section)
+  rather than for long-term reader-facing instruction. A
+  reader detecting session-internal narration in an ADR can
+  treat it as historical artifact rather than as canonical
+  rule.
+
+For broader project vocabulary (push-readiness gate,
+filesystem-not-prompt rule, STRUCTURAL-OBJECTION, etc.), see
+the [Governance Vocabulary](../../02_specs/glossary.md#governance-vocabulary)
+section of `docs/02_specs/glossary.md`.

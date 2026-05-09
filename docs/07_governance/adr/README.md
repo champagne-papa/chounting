@@ -128,13 +128,80 @@ happens during round-2 docs reorganization Session 5; see
 `docs/07_governance/DOCS_RESTRUCTURE_V2.md` (Session 7) for the
 canonical migration record.
 
+## Writing a new ADR
+
+The procedure for authoring an ADR from scratch:
+
+1. **Find the next free ADR number.** List the folder
+   (`ls docs/07_governance/adr/ | grep -oE '^[0-9]{4}' | sort -u
+   | tail -1`) and increment by 1, OR inspect the generated
+   `## Current ADRs` table below for the highest-numbered ADR.
+   IDs are 4-digit zero-padded.
+
+2. **Author at `docs/07_governance/adr/NNNN-kebab-slug.md`.** Copy
+   `_template.md` as a starting point; the slug is lowercase
+   kebab-case (letters / digits / hyphens) and must match the
+   linter regex `^\d{4}-[a-z0-9-]+\.md$`.
+
+3. **Fill in the frontmatter.** Field semantics are documented in
+   the comment block above the template's frontmatter. The
+   chounting-specific `invariants` field cross-references
+   `docs/02_specs/invariants.md` — the linter verifies each
+   value matches `^INV-[A-Z]+-\d{3}$` AND exists in invariants.md.
+   Quote the `date` value as a string to prevent YAML
+   auto-parsing to a Date object.
+
+4. **Author the body.** Section order: `## Status` →
+   `## Date` → `## Triggered by` → `## Context` → `## Decision`
+   (Decision-item-numbered list per the forward-only convention)
+   → `## Consequences` (enables / constrains / costs split is
+   conventional) → `## Alternatives considered` →
+   `## Cross-references` → optional `## Notes for future ADR
+   writers`. Status-line format:
+   `Ratified YYYY-MM-DD by [authority] per [ratification artifact reference].`
+
+5. **Run the linter and the generator.**
+   `pnpm adr:lint` validates the frontmatter; expected output is
+   "0 error(s), 0 warning(s)" for a well-formed ADR.
+   `pnpm adr:index` regenerates the README's Current ADRs / By
+   module / By invariant / By phase sections (overwrites
+   generator-managed marker blocks). Re-running with `--check`
+   after the regen should exit 0 (idempotency).
+
+6. **Stage the ADR + the regenerated README + INDEX.md update.**
+   The pre-commit hook fires `pnpm adr:lint` and
+   `pnpm adr:index --check` when ADR-related files are staged
+   (per `scripts/install-hooks.sh`); both must pass.
+
+7. **For supersession or amendment**, see
+   [ADR-0022](./0022-adr-lifecycle-workflows.md) for the
+   amend-vs-supersede decision rule and the workflow specifics.
+
 ## Supersedes and supersession
 
-ADRs are never edited after they are accepted. If a decision changes,
-write a new ADR, set its `Triggered by` field to the ADR being
-superseded, and update the old ADR's status to
-`Superseded by ADR-MMMM`. The old ADR stays in place as history — do
-not delete it.
+ADRs are never silently edited after they are accepted. If a
+decision changes, the choice between **amending** the existing
+ADR in place (extending the framework without contradicting it)
+and **superseding** it with a new ADR (replacing the framework)
+follows the decision rule codified in
+[ADR-0022](./0022-adr-lifecycle-workflows.md): can a future
+reader read parent + amendment as a coherent decision? Yes →
+amend. No → supersede.
+
+For supersession specifically: write a new ADR, set its
+`Triggered by` field to the ADR being superseded, set
+`supersedes: ["NNNN"]` in the new ADR's frontmatter, set
+`superseded_by: ["MMMM"]` in the old ADR's frontmatter and flip
+its `status` to `superseded`. The linter's checks 12 and 13
+(per ADR-0021) enforce the frontmatter side at commit time;
+Status-section updates in both ADRs are human discipline. Both
+updates land in the same commit. The old ADR stays in place as
+history — do not delete it.
+
+For amendment, see
+[ADR-0022](./0022-adr-lifecycle-workflows.md) Decision items 2
+and 3 for the `## Amendment YYYY-MM-DD — <scope>` block format
+and the Status-line clause-accumulation pattern.
 
 ## Current ADRs
 

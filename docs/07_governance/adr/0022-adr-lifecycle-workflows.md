@@ -439,3 +439,15 @@ exchange for not destroying historical accuracy.
   writing ADR-A with `supersedes: ["NNNN"]` will see a lint
   error before the commit lands. Status-section updates are
   not lint-enforced and are human discipline.
+
+## Glossary for outside readers
+
+For round-2-specific governance vocabulary this ADR uses
+without redefining inline (round-2, dogfood ADR, forward-only
+convention, δ-i preservation discipline, session-internal
+narration), see
+[ADR-0021's Glossary for outside readers section](./0021-adr-frontmatter-and-tooling.md#glossary-for-outside-readers).
+For broader project vocabulary (push-readiness gate,
+filesystem-not-prompt rule, STRUCTURAL-OBJECTION, etc.), see
+the [Governance Vocabulary](../../02_specs/glossary.md#governance-vocabulary)
+section of `docs/02_specs/glossary.md`.
