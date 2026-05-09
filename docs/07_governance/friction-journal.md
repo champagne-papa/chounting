@@ -19,6 +19,121 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Round-2 docs reorganization Session 4
+  (`07_governance/` housekeeping + Phase 3/4 audit dispositions)
+  shipped. Seven tracked commits:
+
+  - `7492765` — ec-2-prompt-set.md move from `07_governance/` to
+    `09_briefs/phase-1.2/` (solo, 24-ref blast radius). Active
+    refs silently rewritten; friction-journal entries preserved
+    verbatim per the friction-journal-is-history rule + file-top
+    annotation; closed-phase session briefs silently rewritten.
+  - `4634a56` — `07_governance/README.md` rewrite addressing the
+    4 stale-claim findings from Session 2 verification (open_questions
+    miscategorization fixed, CTO_HANDOFF_V2 + friction-journal/
+    archive entries added; ec-2 not added per Commit 1 move).
+  - `caf8ba0` — INDEX.md disambiguation blockquotes for `06_audit/`
+    (financial-controls invariant evidence) vs
+    `07_governance/audits/` (technical code-audit framework).
+  - `cfa9149` — developer_setup.md Step 4: `bash scripts/install-hooks.sh`
+    documented as required setup step. Closes #5 silent-bypass
+    operational fix from Phase 3 Probe 3b. Doc-only minimum-viable
+    shape.
+  - `fda99b9` — ADR-0022 ratification (Amendment vs Supersession
+    Workflow). Six Decision items: amend-vs-supersede decision rule,
+    `## Amendment` block format, Status-line clause accumulation,
+    frontmatter unchanged across amendments, supersession workflow
+    symmetry, forward-only application. Sibling to ADR-0021
+    (substrate vs lifecycle).
+  - `a040e98` — documentation cluster batch (Phase 3 candidates
+    #6/#7/#8/#11/#12) in `_template.md` + ADR README, plus Profile
+    (b) inline glosses in ADR-0021 / ADR-0022 ("Glossary for
+    outside readers" sections). Single-disposition per Phase 4
+    reviewer note.
+  - `<this entry>` — friction-journal closeout + push-readiness
+    verification + Session 4 → Session 5 forward pointers.
+
+  Phase 4 triage outcomes ratified by execution: 9 IN candidates
+  all landed (1 operational fix #5 + ADR-0022 substrate replacing
+  #9/#10 + 5 documentation-cluster fixes #6/#7/#8/#11/#12 + 2
+  pre-Session-4 cleanup commits per locked decisions = 9). 4 OUT
+  candidates (#1/#2/#3/#4 tooling polish) stay deferred to the
+  test-hygiene-arc-or-sibling brief at
+  `09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md`
+  per the locked OUT disposition.
+
+  Sequencing decision (per Phase 4 reviewer note): ADR-0022
+  ratified (Commit 5) BEFORE the README prose changes that
+  reference it (Commit 6). Forward-reference foot-gun avoided.
+
+  Session 4 followed the Profile (b) decision: structural-plus-
+  semantic reference docs. Both ADR-0021 and ADR-0022 ship
+  "Glossary for outside readers" sections covering round-2-
+  specific terms (round-2, dogfood ADR, forward-only convention,
+  δ-i preservation, session-internal narration). Cross-references
+  the existing Governance Vocabulary section in
+  `02_specs/glossary.md` for broader project vocabulary.
+
+  Push-readiness gate Condition 1 deviation (third instance in
+  round-2 work; per CLAUDE.md three-artifact framing):
+
+  - (a) Mechanism: same pre-existing test-suite flake as
+    Session 3. `tests/integration/crossOrgRlsIsolation.test.ts`
+    fails ~25% of full-suite runs (`pnpm test`) due to fixed-
+    fixture UUID collision with another test inserted before it
+    under vitest's parallel scheduling. Floor scope (`pnpm
+    agent:validate`) on clean DB: 26/26 GREEN. Full suite this
+    session: 1 failure, same crossOrgRlsIsolation file.
+  - (b) Fix shape: candidate (a) — random UUIDs in fixture —
+    filed at `09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md`
+    (existing brief from round-2 cleanup, amended at `a322fe9`
+    with the tooling-polish OUT cluster).
+  - (c) Carry-forward framing: NOT a Session 4 regression.
+    Session 4 diff (7 commits) touched 0 migrations, 0 services,
+    0 integration tests. Pure docs/governance. The flake
+    pre-exists round-2 work entirely (~25% rate observed at
+    Session 3 sampling).
+
+  Condition 2 (doc-sync): INDEX.md ↔ ADR README ↔ frontmatter
+  schema ↔ taxonomy.md ↔ glossary.md all reconciled. ADR-0022
+  cross-references resolve. Generator idempotent post-Commit-6.
+
+  Condition 3 (governance closeout): this entry. Conventions
+  earned: ADR-0022 codifies amendment-vs-supersession workflow
+  (was tribal knowledge before Phase 3 Probe 4 surfaced).
+  Documentation cluster fixes close the 5 onboarding gaps from
+  Probe 4. Profile (b) glosses opened reference docs to outside
+  readers per the locked decision.
+
+  Forward-pointer for Session 5 Layer 0: the
+  `docs/superpowers/plans/2026-05-07-phase-5-chunk-b5-1-session-1.md`
+  scratch file is still untracked at its current path,
+  deliberately, per the Layer-0-instruction commit `1aff855`.
+  Layer 0's first action: `git add` at the new path
+  `docs/09_briefs/phase-5/chunks/2026-05-07-phase-5-chunk-b5-1-session-1.md`,
+  NOT `git mv`. The three sibling files in `docs/superpowers/`
+  use `git mv` to their `phase-0/` destinations.
+
+  Forward-pointer for the test-hygiene fix arc (whenever it
+  triggers): post-mvp brief carries (a) the random-UUID fixture
+  fix as the primary scope and (b) the four tooling-polish OUT
+  candidates (#1/#2/#3/#4) as adjacent-scope-independent-within-arc.
+  CI will continue to flake on crossOrgRlsIsolation at ~25% rate
+  until this arc lands. CI casualties hitting the failure should
+  find the diagnosis from the failure surface (one-line comment
+  added at `c8f4f5f` to the test file pointing at the brief).
+
+  Total round-2 work to date (Sessions 2–4 + cleanup block + this
+  Session 4): 25+ tracked commits. Session 4 alone: 7. Cumulative
+  tally: ADR-0021 + ADR-0022 ratified, taxonomy.md + glossary
+  Governance Vocabulary established, lint+generator+CI substrate
+  shipped, 5 documentation gaps closed, operational silent-bypass
+  fix shipped, ec-2 relocated, INDEX disambiguated, README
+  rewritten. Session 5 (briefs reorganization + superpowers/
+  elimination) and Session 6 (Workstream 5 spec/architecture/
+  engineering frontmatter) and Session 7 (round-2 V1→V2
+  ratification + conventions.md codifications) remain.
+
 - 2026-05-08 NOTE — Round-2 docs reorganization Session 3 (ADR
   system upgrade) shipped. Six tracked commits + skipped Commit 7
   (idempotency check, no diff): reports/ gitignore (`f0858a5`,
