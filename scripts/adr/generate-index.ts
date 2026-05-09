@@ -281,8 +281,22 @@ async function main(): Promise<void> {
   if (isCheck) {
     console.error(
       `adr:index --check — README.md regeneration would change content. ` +
-        `Run \`pnpm adr:index\` and commit the result.`
+        `Run \`pnpm adr:index\` and commit the result.\n`
     );
+    const oldLines = originalReadme.split('\n');
+    const newLines = readme.split('\n');
+    const maxLines = Math.max(oldLines.length, newLines.length);
+    const diffLines: string[] = [];
+    for (let i = 0; i < maxLines && diffLines.length < 10; i++) {
+      if (oldLines[i] !== newLines[i]) {
+        if (oldLines[i] !== undefined) diffLines.push(`- ${oldLines[i]}`);
+        if (newLines[i] !== undefined) diffLines.push(`+ ${newLines[i]}`);
+      }
+    }
+    if (diffLines.length > 0) {
+      console.error('First differing lines (- on disk, + after regeneration):');
+      console.error(diffLines.slice(0, 10).join('\n'));
+    }
     process.exit(1);
   }
 

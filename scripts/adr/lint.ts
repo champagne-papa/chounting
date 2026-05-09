@@ -44,6 +44,8 @@ const REPO_ROOT = process.cwd();
 const ADR_DIR = resolve(REPO_ROOT, 'docs/07_governance/adr');
 const TAXONOMY_PATH = resolve(REPO_ROOT, 'docs/02_specs/taxonomy.md');
 const INVARIANTS_PATH = resolve(REPO_ROOT, 'docs/02_specs/invariants.md');
+const TAXONOMY_REL = relative(REPO_ROOT, TAXONOMY_PATH);
+const INVARIANTS_REL = relative(REPO_ROOT, INVARIANTS_PATH);
 
 const NUMBERED_ADR_REGEX = /^(\d{4})-[a-z0-9-]+\.md$/;
 const INV_ID_REGEX = /^INV-[A-Z]+-\d{3}$/;
@@ -234,7 +236,7 @@ function lintAdr(
   // Check 5: modules values exist in taxonomy.
   for (const value of fm.modules ?? []) {
     if (!taxonomy.modules.has(value)) {
-      error('modules', `unknown module "${value}"; not in taxonomy.md Modules section`);
+      error('modules', `unknown module "${value}"; not in ${TAXONOMY_REL} Modules section`);
     }
   }
 
@@ -281,7 +283,7 @@ function lintAdr(
       continue;
     }
     if (!invariants.has(inv)) {
-      error('invariants', `unknown INV-ID "${inv}"; not in invariants.md`);
+      error('invariants', `unknown INV-ID "${inv}"; not in ${INVARIANTS_REL}`);
     }
   }
 
