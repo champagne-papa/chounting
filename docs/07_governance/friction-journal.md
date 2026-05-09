@@ -329,6 +329,29 @@ Categories:
   future readers don't conflate "what was true at substrate-
   landing" with "what got fixed in cleanup."
 
+  Forward-pointer for Session 5 Layer 0 (`docs/superpowers/`
+  elimination): the file
+  `docs/superpowers/plans/2026-05-07-phase-5-chunk-b5-1-session-1.md`
+  is currently untracked at its scratch path. This is *deliberate*,
+  not drift — discovered during pre-Session-4 cleanup pre-push
+  verification, after weighing path (1) "track at scratch path
+  + git mv in Layer 0" against path (2) "leave untracked + first
+  git add at the new path during Layer 0." Path (2) chosen for
+  cleaner git history: the file was always intended to live under
+  `docs/09_briefs/phase-5/chunks/`; the current location is just
+  where it was scratched while being drafted. **Layer 0
+  instruction: first action for this file is `git add` at the
+  new path `docs/09_briefs/phase-5/chunks/2026-05-07-phase-5-chunk-b5-1-session-1.md`,
+  NOT `git mv` from the scratch path.** Three sibling files in
+  `docs/superpowers/` (the two D5/D6 ratification execution plans
+  and the ADR-0019 design spec) ARE tracked and SHOULD use `git
+  mv` to their respective `phase-0/` destinations per the round-2
+  plan. The asymmetric handling (one `git add` + three `git mv`)
+  reflects the asymmetric history (one never-tracked scratch +
+  three tracked-since-Phase-0). Reconsider path (2) if Session 5
+  slips beyond ~2 weeks — the durability gap widens past the
+  point where scope hygiene wins.
+
 - 2026-05-05 NOTE — Phase 1.Storage chunk 3 hashing implementation:
   Node crypto.createHash chosen over Web Crypto crypto.subtle.digest
   at drafting time. Counter-evidence: Web Crypto's BufferSource type
