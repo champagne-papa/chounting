@@ -17,6 +17,21 @@ Categories:
 > See the 2026-05-08 NOTE entry below for the migration's
 > commit-level provenance.
 
+> **Path note 2026-05-08 (round-2 docs reorganization Session 5A
+> docs/superpowers/ elimination):** entries below referencing
+> `docs/superpowers/specs/` should be read as referring to
+> `docs/09_briefs/phase-0/specs/` post-move. Entries referencing
+> `docs/superpowers/plans/2026-05-04-*` should be read as referring
+> to `docs/09_briefs/phase-0/plans/`. The single entry referencing
+> `docs/superpowers/plans/2026-05-07-phase-5-chunk-b5-1-session-1.md`
+> should be read as referring to
+> `docs/09_briefs/phase-5/chunks/2026-05-07-phase-5-chunk-b5-1-session-1.md`.
+> File contents are unchanged; only locations moved. References
+> preserved verbatim per the friction-journal-is-history rule
+> (entries record what was true at write time). See the 2026-05-08
+> NOTE entry below (Session 5A closeout) for the migration's
+> commit-level provenance.
+
 ## Phase 2
 
 - 2026-05-08 NOTE — Test-hygiene fix arc shipped (sibling-of-
