@@ -19,6 +19,101 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Round-2 docs reorganization halftime check +
+  V1 amendment + Session 7 payload risk flag. Triggered post-
+  Session-4 closeout (commit `3251d7b`), before the test-hygiene
+  fix arc triggers. Round-2 is at the midpoint of its seven-
+  session sequence — Sessions 1-4 + cleanup block shipped;
+  Sessions 5/6/7 queued. Halftime ran a plan-vs-execution
+  reconciliation and surfaced three buckets plus one risk flag.
+
+  - **Locked-on-disk and holding.** restructure-plan.md (1158
+    lines, V1 substrate); ADR-0021 four locked items (frontmatter
+    schema, `02_specs/taxonomy.md` as canonical, `scripts/<area>/`
+    location, `09_briefs/<phase>/specs/` pre-ratification homes);
+    ADR-0022 ratification (amendment vs supersession); Profile
+    (b) — structural-plus-semantic reference docs; deferral of
+    three-category codification taxonomy + round-N restructure
+    plan workflow to Session 7. No drift in this bucket.
+
+  - **Scope-elevated during execution (deliberate, budget-
+    consuming).** Session 4 elevated documentation-cluster items
+    #9 and #10 to ADR-0022 substrate ratification (Profile (b)-
+    authorized scope elevation, not creep). Session 4 also added
+    Profile (b) glosses for round-2-specific vocabulary (dogfood
+    ADR, forward-only convention, δ-i preservation, session-
+    internal narration) as a "cheap addition" beyond pure
+    triage. Both consumed budget against later sessions; both
+    deliberate.
+
+  - **Drift signal — conversational-only substrate (headline
+    finding).** Three round-2 design-conversation decisions
+    exist only in transcripts and have no filesystem home: (1)
+    briefs convention ships now / linter+generator deferred to
+    N=3 OR friction trigger / Session 5 ships convention +
+    `_template.md` only, (2) "one canonical axis" principle
+    one-liner in four README rewrites (Sessions 5+6), (3) "top-
+    level folders are document classes" principle ratified in V2
+    Part 1 (Session 7). Verified zero matches across
+    `docs/restructure-plan.md` and this journal. This is exactly
+    the failure mode the filesystem-not-prompt rule and Z1 #15
+    (bidirectional iterative-catching termination — artifacts
+    are the anchor, not transcripts) protect against.
+
+  - **Fix shape — V1 amendment.** `docs/restructure-plan.md`
+    gets a new "Amendments — Post-V1 Decisions" section
+    appending the three decisions with a bounded scope-preamble:
+    V1 amendments capture post-V1-write decisions with
+    identified Session 5/6/7 consumers, not retroactive
+    revisions of executed decisions and not speculative
+    substrate. The preamble bounds the precedent so future
+    amendments either fit that shape or surface the question of
+    whether they belong elsewhere. Substrate-now-enforcement-
+    later applies cleanly: the three decisions ARE substrate,
+    their consumers (Sessions 5/6/7) ARE known, and consumer
+    shape (briefs convention, README rewrites, V2 Part 1) is
+    concrete. Lands before the test-hygiene fix arc executes so
+    Session 5's substrate is on disk when execution resumes.
+
+  - **Sibling status of test-hygiene fix arc.** Arc is post-mvp/
+    test-hygiene subject matter, not docs-reorganization. Brief
+    at `docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md`.
+    Calling it sibling-of-round-2 (not in-round) preserves
+    round-2's scope identity and keeps the V1→V2 ratification at
+    Session 7 from renumbering. Recorded in the V1 amendment as
+    the explicit boundary between round-2 and sibling work.
+
+  - **Session 7 payload risk flag — decision not made at
+    halftime.** Session 7 carries V1→V2 ratification + three-
+    category codification taxonomy + round-N restructure plan
+    workflow + conventions.md additions + glossary Tier 2 stub
+    closures. With the three conversational decisions' execution
+    residue potentially adding to that, Session 7 is at overload
+    risk. Mitigation options identified: (a) offload payload to
+    Session 6, (b) split into Session 7A / 7B, (c) accept
+    overload. Decision deferred to Session 6 planning or Session
+    7 trigger-time. This entry preserves the risk for visibility;
+    no decision attached.
+
+  - **Halftime-as-practice meta-note (not codified).** This
+    halftime check produced a real finding (the three
+    conversational decisions) and a real concern (Session 7
+    overload). That is the audit working as intended — same way
+    Phase 3 of the cleanup block worked. Halftime checks at
+    roughly equivalent points in future rounds appear to be a
+    tested practice worth repeating. N=1; not codified as a
+    rule. Future-rounds surface will reveal whether the pattern
+    holds or needs different shape. If halftime-as-practice ever
+    moves toward codification, the routing question (this entry
+    lives in friction-journal following the Session 4 / Phase 2
+    arc-grain pattern, but `04_engineering/conventions.md`
+    Documentation Routing currently directs phase-or-arc-scope
+    reflection to `07_governance/retrospectives/`) will need
+    explicit resolution.
+
+  Closes round-2 halftime-check. Test-hygiene fix arc triggers
+  next; Session 5 follows.
+
 - 2026-05-08 NOTE — Round-2 docs reorganization Session 4
   (`07_governance/` housekeeping + Phase 3/4 audit dispositions)
   shipped. Seven tracked commits:
