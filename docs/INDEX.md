@@ -121,6 +121,7 @@ for the deletion criterion.
 - `adr/0019-confidence-calibration-policy.md` — calibration governance for v1 confidence-threshold values; per-org reserved-seat substrate; bounded-substantive-in-v1 path; system-fixed-only-at-v1 with per-org reserved.
 - `adr/0020-agent-first-authority-gradient-source-architecture.md` — agent-first source-tree organization per CTO Handoff v2 (`docs/07_governance/CTO_HANDOFF_V2.md`); 9 decision items including folder layout, `core/` not `domain/`, import boundary rules in Appendix A, ESLint rule scaffold-not-firing, and the skills tracking gap correction. Substrate-only at v1; ESLint rule activates at Phase 1 chunk 1. Ratified 2026-05-05.
 - `adr/0021-adr-frontmatter-and-tooling.md` — ADR frontmatter schema (forward-only from ADR-0021), canonical taxonomy at `docs/02_specs/taxonomy.md`, TypeScript-for-docs-tooling location convention at top-level `scripts/<area>/`, pre-ratification design specs at `docs/09_briefs/<phase>/specs/`, generator + linter as enforcement (substrate-now-enforcement-later per ADR-0010 precedent). The dogfood ADR for the system. Ratified 2026-05-08.
+- `adr/0022-adr-lifecycle-workflows.md` — Amendment-vs-supersession decision rule, `## Amendment` block format, Status-line accumulation pattern, supersession workflow symmetry. Sibling to ADR-0021 (substrate vs lifecycle). Forward-only application; legacy amended ADRs (0007 / 0010 / 0011) preserved per δ-i discipline. Ratified 2026-05-08.
 
 ### 07_governance/audits — audit framework
 
