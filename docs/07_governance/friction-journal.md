@@ -34,6 +34,248 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-08 NOTE — Round-2 docs reorganization Session 5B
+  brainstorm closed; plan landed at
+  `docs/07_governance/round-2/2026-05-08-session-5b-plan.md`.
+  Seven locked decisions covering Layer 1 + Layer 2 migration
+  scope, commit shape, push-readiness gate, queue triage, and
+  observation-bucket structure. 5B execution waits for fresh-
+  context session against the plan. This entry documents
+  brainstorm-grain output (locked decisions + queue triage +
+  bucket creation + 16 observations across 4 buckets); 5B
+  execution closeout will be a separate entry after migrations
+  ship.
+
+  **Locked decisions (7):**
+  - Decision 1 (Layer 1 narrow scope): 9 Phase-2-pattern feature
+    specs migrate phase-2/ → 01_prd/ flat, no sub-folder. 8
+    retained files become explicit forward-pointers (2
+    architectural briefs to Session 6; 1 scope-decision + 5
+    specialized to Session 7 or post-round-2). Audit-revised
+    headline (handoff said "10 feature specs"; content audit
+    found 9 + 2 architectural-briefs + 1 scope-decision + 5
+    specialized — categorical re-framing under Explore-grain
+    file-content audit).
+  - Decision 2 (Layer 2 + convention expansion): 13 Phase-0
+    files migrate to phase-0/. Convention expands 3→4 sub-
+    buckets with new `ratification-packages/` for D1-D6 cluster
+    (option X selected over semantic-stretch options Y/Z).
+    Three READMEs touched (briefs convention; ADR README
+    separate paragraph distinguishing pre-ratification vs
+    ratification-time; phase-0/README instance update).
+    Amendment file in chunks/ per temporal-vs-formal
+    distinction. The 2026-05-06 file stays in phase-2/ (not
+    phase-0 work despite date-grouping).
+  - Decision 3 (01_prd/README disposition): touch-up in 5B
+    (3 invalid claims fixed) + rewrite in Session 6 (5th
+    outside locked four). Re-examined the 5A-closeout binary
+    (rewrite-vs-touch-up) under fresh evidence; produced a
+    third option (touch-up + rewrite split) better than either
+    original. State-mismatch-window argument is load-bearing
+    — discipline extends from "make Session N inherit answers"
+    to "make published artifacts accurate at all times."
+  - Decision 4 (commit shape, 5 commits): C1 Layer 1 bundle →
+    C2 Layer 2 substrate → C3 2026-05-03 group → C4 2026-05-04
+    group → C5 closeout. Matches the count-level commit pattern
+    from fix-arc (4 implementation + 1 closeout) and 5A (4
+    implementation + 1 closeout); 5B is N=3 instance via
+    natural-outcome evidence (count emerged from Decisions 1+2+3
+    independent of count-targets, not pattern-engineered-by-
+    reaching).
+  - Decision 5 (phase-0 sub-organization): no additional
+    sub-organization beyond the 4 sub-buckets. Phase-0 becomes
+    canonical multi-sub-bucket exemplar; phase-5 remains
+    canonical single-sub-bucket exemplar. First concrete test
+    of "phase folder contains sub-buckets the phase needs"
+    rule produces correct output.
+  - Decision 6 (push-readiness gate): floor-only carve-out
+    per formal criteria (zero migrations / zero services /
+    zero integration tests / zero source files / zero test
+    files all met). N=2 invocation (after halftime plans push);
+    codification candidate live for Session 7. Brainstorm-time-
+    instinct correction preserved as evidence trail: initial
+    instinct flagged 5B as full-suite-appropriate via
+    "structural changes" framing; closer examination revealed
+    this conflated substrate-change-affecting-downstream-
+    consumers with test-regression-risk — different concerns
+    with different gates. Substrate-correctness has its own
+    audit-shaped gate (review process, friction-journal, README
+    cross-references, ADR linter); full-suite gate's mechanical
+    purpose is catching test regressions, not validating
+    downstream-consumer impact.
+  - Decision 7 (bucket creation + queue triage): structural-
+    pattern bucket created with 3 inhabitants (count-level
+    commit pattern; phase folder lifecycle-stage hypothesis;
+    phase-0/phase-5 canonical exemplars). Categorically distinct
+    from deferral cluster (substrate-trim discipline) and
+    methodology cluster (reasoning tools). Queue triage executed
+    at 5B brainstorm (not deferred to Session 6) because 5B
+    execution will surface migration-mechanical observations,
+    not strategic-grain observations affecting codification
+    thresholds.
+
+  **Bucket-creation-vs-codification distinction (load-bearing
+  meta-observation).** Bucket creation is organizational
+  substrate (where do observations live in the queue;
+  triggered by consumer evidence — multiple inhabitants warrant
+  categorical distinction). Observation codification is
+  rule-shaping substrate (what does the observation become as
+  a rule in conventions.md or similar; triggered by N-threshold
+  + natural-outcome evidence). These are parallel-but-different
+  operations and can happen independently. 5B brainstorm's
+  bucket creation (structural-pattern bucket with 3 inhabitants,
+  only one at LIVE codification candidacy) exercises this
+  distinction. Without naming it explicitly, future readers
+  might conflate "moving an observation into a bucket" with
+  "codifying the observation," confusing the trajectory.
+
+  **Pre-codification observation queue post-5B-brainstorm (16
+  observations across 4 buckets):**
+
+  Deferral cluster (2; substrate-trim discipline): #1
+  linter/generator deferral (N=1, awaiting cross-arc); #2
+  convention-shape deferral (N=1, awaiting cross-arc).
+
+  Methodology cluster (8; reasoning tools): #3 Turbo cache
+  content-hash (N=2, **codification candidate LIVE** for
+  Session 7 brief template substrate); #4 floor-only push gate
+  carve-out (N=2, **codification candidate LIVE**, will move
+  to N=3 at this brainstorm closeout's push); #5 variance-
+  decomposition diagnostic (N=1, awaiting recurrence); #6
+  handoff-prompt-commit-number-translation (N=1, awaiting
+  recurrence); #7 count-level-vs-structural-level distinction
+  (N=2 across two decision domains; Decision 4 commit shape +
+  Decision 6 gate-path); #8 pre-execution-audit-revealing-
+  scope-refinement (N=2: Phase 3 substrate audit + 5B Decision
+  1 audit); #9 5A-closeout-framings-refined-by-5B-brainstorm
+  (N=2: Decision 1 audit revision + Decision 3 binary→split);
+  #10 discipline-extension pattern (N=2: 5A's agency-extends-
+  to-consumer + 5B's discipline-extends-to-published-artifact-
+  accuracy); #16 fresh-pass-on-decision-revealing-refinement
+  (N=1, surfaced at Decision 7's fresh-pass; categorically
+  distinct from #8 audit-shaped via decision-state-re-
+  examination vs filesystem/content evidence-gathering).
+
+  Structural-pattern cluster (3; work-shape regularities; **NEW
+  BUCKET established at 5B brainstorm Decision 7.B**): #11
+  count-level commit pattern (N=3 codification candidacy via
+  natural-outcome evidence; commit count emerged from substrate-
+  vs-consumer reasoning independent of count-targets); #12
+  phase folder lifecycle-stage hypothesis (N=2: phase-5 mid-
+  execution single sub-bucket vs phase-0 closed multi-sub-
+  bucket; awaiting third phase); #13 phase-0/phase-5 as
+  canonical exemplars (Tier 5 reference; exemplars exemplify
+  rather than codify).
+
+  Narrative-substrate cluster (1; meta-meta): #14 temporal-vs-
+  purposive framing (N=1, applied once in 5A's cross-session
+  durability finding; engagement-not-new-fire trajectory).
+
+  Convention-meta (1): #15 convention-expansion rule first
+  invocation (N=1, ratification-packages/ at Decision 2;
+  awaiting second expansion for codification candidacy).
+
+  **Queue-trajectory non-linearity (Session 6 planning input).**
+  Queue grew 4 (halftime) → 5 (fix-arc closeout) → 9 (5A
+  closeout) → 16 (5B brainstorm). Each session has produced
+  more observations than the previous, not the same number.
+  Trajectory is non-linear because each session exercises
+  governance surfaces in ways that produce new observations,
+  and those new observations themselves become surfaces future
+  decisions exercise. This is the discipline working as
+  designed AND a Session 7 planning input. If 5B execution +
+  Session 6 produce comparable growth, Session 7 inherits 25-30
+  observations across the four-or-five buckets — meaningfully
+  larger than halftime's 4-observation queue saw when it
+  flagged Session 7 payload risk. **Session 6 brainstorm should
+  make the payload-mitigation decision explicitly** (offload-
+  to-Session-6 vs split-7A/7B vs accept-overload) rather than
+  deferring to Session 7 trigger time. The calculus has shifted:
+  "accept overload" is decreasingly attractive as queue grows;
+  Session 6 has the relevant inputs for the decision (current
+  queue + 5B execution outputs); Session 7 trigger time has
+  less flexibility because the session is already starting.
+
+  **Methodology bucket sub-categorization watch.** 8 inhabitants
+  approaching the size where internal sub-categorization might
+  warrant consideration. Don't sub-categorize prophylactically;
+  let Session 7's codification work surface natural sub-
+  divisions if any emerge. Substrate-now-enforcement-later
+  applied at the bucket-internal-structure level.
+
+  **Observation queue tier sort (for Session 7's codification
+  work):**
+  - Tier 1 (codification candidates LIVE; eligible for
+    codification at Session 7 — actual disposition depends on
+    Session 7's evidence state and payload constraints;
+    codification work itself may reveal whether observation is
+    cleanly codifiable in current form): #3 Turbo cache (Session
+    7 brief template substrate context); #4 floor-only push
+    gate (conventions.md addition); #11 count-level commit
+    pattern (conventions.md addition or its own doc in
+    `docs/07_governance/round-2/`).
+  - Tier 2 (awaiting one more fire to elevate): #7 count-vs-
+    structural distinction; #8 pre-exec-audit pattern; #9 5A-
+    closeout-framings-refined; #10 discipline-extension; #12
+    lifecycle-stage hypothesis; #15 convention-expansion rule.
+  - Tier 3 (N=1 awaiting recurrence): #5 variance-decomposition;
+    #6 handoff-prompt-commit-number-translation; #16 fresh-
+    pass-on-decision-revealing-refinement.
+  - Tier 4 (deferral cluster awaiting cross-arc evidence): #1
+    linter/generator; #2 convention-shape.
+  - Tier 5 (reference exemplars; referenced as substrate by
+    future work; no codification because exemplars exemplify
+    rather than codify): #13 phase-0/phase-5 canonical exemplars.
+  - Narrative-substrate (separate trajectory): #14 temporal-vs-
+    purposive (N=1, applied; codify only when fires as new
+    instance, not as engagement).
+
+  Push-readiness gate (floor-only carve-out, second consecutive
+  invocation):
+  - Condition 1: GREEN under floor-only path. The 5B-brainstorm-
+    closeout commit-batch (this entry + plan) is plans-landing-
+    grain work; mechanical-non-impact argument applies cleanly
+    (zero migrations / zero services / zero integration tests /
+    zero source files / zero test files in 5B brainstorm output).
+    Per the floor-only carve-out's framing, full-suite NOT
+    invoked.
+  - Condition 2: GREEN. Plans-landing artifacts internally
+    consistent; plan cross-references locked decisions; closeout
+    entry captures all 7 decisions + queue triage + observation
+    inventory; no schema or ADR changes (ADR README touched in
+    5B execution C2, not in this brainstorm push).
+  - Condition 3: GREEN. This entry; methodology and structural-
+    pattern observations surfaced as separate carry-forward
+    paragraphs with explicit codification thresholds.
+
+  This push elevates floor-only push gate carve-out from N=2
+  to N=3 (after halftime plans push and 5A brainstorm push).
+  N=3 with natural-outcome evidence at three independent
+  consumers strengthens codification candidacy beyond N=2 LIVE
+  status — the codification at Session 7 doesn't need to argue
+  from scarce evidence; three natural-outcome consumers
+  demonstrate the carve-out's criteria reflect something
+  structural about the work. Floor-only is the first methodology-
+  cluster observation to reach N=3 LIVE status.
+
+  Forward pointers:
+  - 5B execution session (fresh-context) executes against the
+    plan; closeout entry follows execution. This brainstorm
+    closeout is brainstorm-grain output only.
+  - Session 6 brainstorm inherits this queue + whatever 5B
+    execution surfaces. Payload-mitigation decision flagged as
+    Session 6 brainstorm scope per queue-trajectory non-
+    linearity above.
+  - Session 7 codification queue tier-sorted as above; Tier 1
+    candidates eligible (not pre-committed) at Session 7
+    trigger time per current evidence state and payload
+    constraints.
+  - Pattern-tracking carry-forwards: categorical-distinction-
+    preservation under pressure (Decision 6 + Decision 7 #16-
+    vs-#8 — both N=1 instances; observe but don't codify; track
+    if recurs); methodology bucket sub-categorization watch
+    (8 inhabitants; defer to Session 7 codification work).
+
 - 2026-05-08 NOTE — Round-2 docs reorganization Session 5A
   (Layer 0 substrate) shipped. Four implementation commits per
   the substrate-then-moves sequence locked at topic 1
