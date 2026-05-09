@@ -73,6 +73,15 @@ for the deletion criterion.
 
 ## 06_audit — invariant evidence
 
+> **Disambiguation:** `06_audit/` holds **financial-controls /
+> SOX-style invariant enforcement evidence** (auditor-facing
+> control matrix mapping INV-IDs to spec leaves, tests, and
+> code enforcement). It is distinct from
+> [`07_governance/audits/`](#07_governanceaudits--audit-framework),
+> which holds the **technical code-audit framework** (DESIGN.md
+> + prompts/ + per-audit-run subfolders for architecture / code
+> quality / security / performance scans).
+
 - `control_matrix.md` — auditor-facing evidence table: each INV-ID → spec leaf + test coverage + specific enforcement mechanism + failure mode.
 
 ## 07_governance — institutional memory
@@ -114,6 +123,14 @@ for the deletion criterion.
 - `adr/0021-adr-frontmatter-and-tooling.md` — ADR frontmatter schema (forward-only from ADR-0021), canonical taxonomy at `docs/02_specs/taxonomy.md`, TypeScript-for-docs-tooling location convention at top-level `scripts/<area>/`, pre-ratification design specs at `docs/09_briefs/<phase>/specs/`, generator + linter as enforcement (substrate-now-enforcement-later per ADR-0010 precedent). The dogfood ADR for the system. Ratified 2026-05-08.
 
 ### 07_governance/audits — audit framework
+
+> **Disambiguation:** `07_governance/audits/` holds the
+> **technical code-audit framework** (DESIGN.md + prompts/ +
+> per-audit-run subfolders, e.g., `phase-1.1/` and `phase-1.2/`).
+> Audits scan the codebase for architecture / code quality /
+> security / performance findings. Distinct from
+> [`06_audit/`](#06_audit--invariant-evidence), which holds
+> financial-controls / SOX-style invariant enforcement evidence.
 
 - `audits/README.md` — how to read an audit, framework summary, completed-audits index.
 - `audits/DESIGN.md` — audit framework: four-phase execution (Orientation → Category Scans → Synthesis → Write), session boundaries, category collapse rules, findings format.
