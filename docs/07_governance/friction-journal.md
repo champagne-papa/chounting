@@ -53,6 +53,212 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-09 NOTE — Round-2 docs reorganization Session 5B
+  execution closeout (Layer 1 + Layer 2 briefs reorganization;
+  post-Session-7 cleanup work). Five implementation commits per
+  the substrate-then-moves sequence locked at the 5B brainstorm
+  + plan at
+  `docs/07_governance/round-2/2026-05-08-session-5b-plan.md`.
+  Plan was authored 2026-05-08 (pre-V2-ratification); execution
+  at 2026-05-09 (post-V2-ratification at Session 7). Multiple
+  cross-reference-time drift instances caught at execution time
+  per the drift discipline; recorded as evidence below.
+
+  Five commits this dispatch:
+  - C1 `429c144` (Layer 1): 9 feature specs `phase-2/` →
+    `01_prd/` flat + `phase-2/README` acknowledgment +
+    `01_prd/README` touch-up.
+  - C2 `173abea` (Layer 2 substrate): briefs convention 3→4
+    sub-buckets + 3 README updates + new
+    `ratification-packages/` + `chunks/` directories. ADR
+    README anchor adjusted at execution time (cross-reference-
+    time drift catch #1).
+  - C3 `60281a6` (Layer 2 2026-05-03 group): 5 file moves +
+    friction-journal path-note blockquote extension + active-doc
+    cross-reference updates (ADR/README:274 + open_questions.md:755
+    cross-reference-time drift catches #2-3).
+  - C4 `42fdf8d` (Layer 2 2026-05-04 group): 8 file moves +
+    active-doc cross-reference updates (delivery-model.md:156 +
+    document_platform_initiative.md 5 refs cross-reference-time
+    drift catches #4-9).
+  - C5 (this commit): closeout.
+
+  Acceptance criteria — all 12 satisfied (a-l per plan).
+
+  **Locked decisions (5B brainstorm-validated, retained at
+  execution time):**
+  - Convention expansion via Decision 2 option X: briefs
+    convention adds `ratification-packages/` as 4th sub-bucket
+    per 6-consumer evidence (D1-D6 ratification cluster).
+  - Decision 5 sub-bucket assignments: governance-plan → plans/;
+    D1-D6 → ratification-packages/; bank-detail amendment +
+    evidence-link + closure-verification + session prompts/
+    closeout → chunks/.
+  - Decision 4 substrate-then-moves: C1 Layer 1 bundle (9 moves
+    + 2 READMEs); C2 Layer 2 substrate (3 READMEs + new
+    directory); C3 + C4 Layer 2 migrations (5 + 8 moves).
+  - Disposition matrix per 5A's Commit 3 precedent: friction-
+    journal entries + legacy ADRs + closed-phase briefs (in
+    phase-0/) + 5B plan + 5A plan + round-2 README → δ-i
+    preserved; active spec/architecture/engineering docs →
+    rewritten at execution time.
+  - phase-2/README acknowledgment text: 9 retainees (plan
+    author's "8 retainees" was off-by-one; 2026-05-06-phase-2-
+    brief-pre-positioning-notes.md was missed at brainstorm
+    time; corrected at execution time).
+
+  **Cross-reference-time drift surface — N=1 firing (advances
+  drift meta-pattern toward Tier 1 codification candidacy).**
+  The plan-substrate-vs-canonical-reality drift meta-pattern
+  fired multiple instances at the cross-reference-time surface
+  during 5B execution. Per V2 Part 2's codification trajectory
+  framing: N=2 evidence pre-this-closeout (execution-time +
+  planning-decision-time surfaces); cross-reference-time surface
+  needed an N=1 instance to advance the meta-pattern from Tier 3
+  → Tier 2 to N=3 with shape match across distinct timing
+  surfaces (Tier 2 → Tier 1 candidacy). 5B execution provides
+  that N=1 evidence — multiple cross-reference-time instances
+  under one meta-pattern observation:
+
+  1. **ADR README anchor mismatch (C2).** Plan's old_string for
+     ADR README edit contained pre-Session-7 text
+     (`docs/restructure-plan.md`); current state post-Session-
+     7-C1 has `docs/07_governance/DOCS_RESTRUCTURE_V1.md`. Edit
+     anchor adjusted at execution time. Resolution applied by
+     verifying current canonical state before the Edit (the
+     "verify the artifact before agreeing with an alarm" rule
+     operating prophylactically: I read the current state of
+     the ADR README before drafting the Edit, rather than
+     trusting the plan's old_string).
+  2. **"when ratified at Session 7" phrasing stale.** V2 has
+     ratified at Session 7. Plan's both old_string and new_string
+     used future-tense "when ratified at Session 7". Updated to
+     past-tense "ratified at round-2 Session 7" in C2's Edit.
+  3. **ADR/README.md:274 active-doc cross-reference.** Phase 0
+     governance plan reservations paragraph cited the governance
+     plan at its old `docs/09_briefs/phase-2/2026-05-03-...`
+     path. Updated to new path under
+     `docs/09_briefs/phase-0/plans/` in C3.
+  4. **open_questions.md:755 active-doc cross-reference.**
+     Q53-Q78 file batches reference cited governance plan at old
+     path. Updated to new path under
+     `docs/09_briefs/phase-0/plans/` in C3.
+  5. **delivery-model.md:156 active-doc cross-reference.** d6
+     ratification package template reference cited at old path.
+     Updated to `docs/09_briefs/phase-0/ratification-packages/`
+     in C4.
+  6. **document_platform_initiative.md 5 active-doc cross-
+     references.** d6 package + closure-verification references.
+     Updated to new paths in C4.
+  7. **phase-2/README acknowledgment count drift.** Plan's
+     acknowledgment text said "8 retainees"; reality was 9
+     (`2026-05-06-phase-2-brief-pre-positioning-notes.md` was
+     authored 2026-05-06 but plan-author at 2026-05-08 missed
+     it). Corrected at execution time.
+
+  Total: 7 distinct cross-reference-time drift instances caught
+  at execution time. Counts as N=1 of the cross-reference-time
+  surface for the meta-pattern (multiple-within-session is the
+  unit, matching the Session 6.5 closeout precedent).
+
+  **Drift meta-pattern post-this-closeout: N=3 across 3 timing
+  surfaces.** Codification trajectory advances from Tier 3 →
+  Tier 2 to Tier 2 → Tier 1 candidacy:
+  - Execution-time surface: 4+ instances (Session 6.5 lib/hooks
+    + header style + fire count + Session 7 C1 cross-reference
+    enumeration).
+  - Planning-decision-time surface: 1 instance (Session 7
+    brainstorm Path A vs Path B).
+  - Cross-reference-time surface: 1 instance (this 5B execution,
+    7 sub-instances under one meta-pattern observation).
+
+  The third timing surface firing is the codification gate-pass
+  per V2 Part 2: "N=3 with shape match across three distinct
+  timing surfaces." Codification candidacy is now Tier 1; future
+  Session (8 brainstorm or beyond) adjudicates the principle-
+  level ratification text. The drift meta-pattern can now
+  cross-cut the V2 ratification (e.g., as an amendment to
+  Principle 3's bypass procedure operational rules, or as a
+  fourth Principle if the substrate-discipline framing warrants
+  separate ratification).
+
+  **5B execution validates Pattern 7's bypass procedure
+  operational rules in practice.** The plan was a substrate
+  artifact; the execution applied both operational rules
+  prophylactically:
+  - Canonical-source verification at execution time: applied
+    before each Edit anchor; caught the ADR README anchor drift
+    (would have failed silently otherwise).
+  - Chronological-reality verification at planning time: applied
+    when reading the closeout entry's forward pointers; the
+    plan's "Session 7 brainstorm inherits..." text was rewritten
+    to reflect post-Session-7 reality (Session 6 execution +
+    Session 8 brainstorm).
+
+  **Pre-codification observation queue post-Session-5B-execution
+  (queue updates):**
+  - Tier 1 LIVE: Floor-only push gate carve-out advances to N=8
+    LIVE this dispatch push (halftime + 5A brainstorm closeout +
+    5B brainstorm closeout + Session 6 brainstorm closeout +
+    Session 6.5 execution + Session 7 plan dispatch + Session 7
+    execution + Session 5B execution = 8 fires through this
+    push). Drift meta-pattern advances Tier 2 → Tier 1 candidacy.
+  - Tier 2: drift meta-pattern at N=3 across 3 timing surfaces;
+    Tier 1 codification candidate.
+  - Tier 3: status reaffirmed. Recurring meta-arc placement
+    question + prophylactic-vs-reactive sub-axis hold at N=1.
+  - Methodology cluster bucket: 11 inhabitants + cross-reference-
+    time drift firing as N=1 of the cross-reference-time surface
+    sub-instance category. Bucket count holds (the new evidence
+    is a sub-instance of an existing inhabitant, not a new
+    inhabitant). Sub-categorization decision still deferred to
+    Session 8.
+
+  **Push-readiness gate (per CLAUDE.md three-condition gate,
+  floor-only carve-out path, eighth invocation N=8):**
+  - Condition 1 (test-suite health): GREEN under floor-only path.
+    `pnpm db:reset:clean && pnpm agent:validate` reports 26/26.
+    Full-suite NOT invoked per the carve-out's mechanical-non-
+    impact argument; doc-only diff (22 file moves + 6 README
+    updates + 4 active-doc cross-reference updates +
+    friction-journal blockquote extension + this entry; zero
+    migrations / zero services / zero integration tests / zero
+    source files / zero test files) cannot regress tests by
+    construction.
+  - Condition 2 (doc-sync): GREEN. 5B's primary deliverable IS
+    doc-sync work (Layer 1 + Layer 2 migrations + convention
+    expansion + 3 README updates + 7 cross-reference-time drift
+    catches resolved at execution time); same category as 5A's
+    "doc-sync done as primary deliverable" green.
+  - Condition 3 (governance closeout): this entry; carry-forwards
+    captured below.
+
+  **Forward pointers (rewritten at execution time per drift
+  discipline; plan's pre-Session-7 forward pointers were stale):**
+  - Round-2 structural closure was complete at Session 7
+    (commit `863b52b`). 5B execution is post-V2 cleanup work,
+    NOT structural ratification. V2's three Principles + Pattern
+    7 + Migration Map are canonical and unchanged by this
+    execution.
+  - Session 6 execution remains pending after this closes;
+    Session 6 plan at `docs/07_governance/round-2/
+    2026-05-09-session-6-plan.md` (commit `c913b7a` + fix-ups)
+    is unchanged and unblocked.
+  - Session 8 brainstorm follows Session 6 execution; scope per
+    Session 7 closeout's framework (review 11 methodology-bucket
+    inhabitants + adjudicate sub-categorization; absorb
+    cross-reference-time drift firing as N=1 evidence; consider
+    drift meta-pattern Tier 1 codification at Session 8 or beyond).
+  - **Phase 1 onset readiness sustained.** The `apps/web/src/`
+    guardrail remains in place; source-tree authority discipline
+    remains ratified at V2 Part 1 Principle 3; 5B execution
+    operates entirely on docs/ and adds no source-tree changes;
+    Phase 1 storage / evidence work remains unblocked.
+  - **Drift meta-pattern N=3 codification trajectory.** Tier 2
+    → Tier 1 candidacy advanced this push. Future Session
+    adjudicates principle-level ratification (e.g., as Principle
+    4 in V2 amendment, or as Pattern 7 bypass-procedure expansion).
+
 - 2026-05-09 NOTE — Round-2 docs reorganization Session 7 closeout
   (V2 ratification + V1 elevation + remaining guardrail surfaces);
   closes round-2 structural work. Files landed across seven commits:
