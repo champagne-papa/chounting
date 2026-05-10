@@ -137,8 +137,28 @@ now-deprecated location `docs/superpowers/specs/`, migrated to
 `docs/09_briefs/phase-0/specs/` in round-2 Session 5A (see
 `docs/07_governance/DOCS_RESTRUCTURE_V1.md` Amendments section
 for migration provenance and
-`docs/07_governance/DOCS_RESTRUCTURE_V2.md` when ratified at
-Session 7).
+`docs/07_governance/DOCS_RESTRUCTURE_V2.md` ratified at
+round-2 Session 7).
+
+## Ratification packages
+
+Distinct from pre-ratification artifacts (specs/ + plans/),
+**ratification packages** are the formal substrate enacting ADR
+ratification at the original ratification moment. They live at
+`docs/09_briefs/<phase>/ratification-packages/` per the briefs
+convention's per-phase organization. Filename pattern:
+`YYYY-MM-DD-<package-id>-ratification-package.md`. Phase 0's
+D1-D6 ratification cluster (6 packages, ratifying ADRs 0011-0018
+respectively) is the canonical consumer; ratification-packages/
+sub-bucket established in round-2 Session 5B per consumer
+evidence. Migrated from the original Phase-2-brief-folder
+location during Session 5B Layer 2.
+
+The lifecycle distinction matters: pre-ratification specs/plans
+are INPUTS to ADR drafting (design specs become ADRs; execution
+plans guide ADR authorship); ratification packages are FORMAL
+SUBSTRATE at ratification time (the package is what enacts the
+ratification ceremony per the project's governance discipline).
 
 ## Writing a new ADR
 

@@ -8,13 +8,17 @@ within each phase organize by document type.
 
 Each phase folder contains the sub-buckets the phase needs:
 
-- `specs/`  — pre-ratification design specs (per ADR-0021).
-- `plans/`  — multi-step execution plans.
-- `chunks/` — mid-arc working briefs.
+- `specs/`              — pre-ratification design specs (per ADR-0021).
+- `plans/`              — multi-step execution plans.
+- `chunks/`             — mid-arc working briefs.
+- `ratification-packages/` — formal substrate enacting ADR ratification (added round-2 Session 5B; 6-consumer evidence from Phase 0's D1-D6 ratification cluster).
 
 Phases use the subset that applies. Sub-buckets are added as their
-consumers emerge; current convention ships with three because
-three have current consumers. Future sub-buckets land when consumer
+consumers emerge; current convention ships with four because four
+have current consumers. The `ratification-packages/` sub-bucket
+exercises the rule's first concrete invocation (Session 5B's Layer
+2 migration; consumer evidence: D1-D6 ratification packages from
+Phase 0's governance arc). Future sub-buckets land when consumer
 evidence forces the shape.
 
 The same deferral logic applies to brief tooling — a linter and
