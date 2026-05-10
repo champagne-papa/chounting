@@ -53,6 +53,255 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-10 NOTE — Round-2 docs reorganization Session 8
+  execution closeout (codification tail adjudications shipped)
+  AND ROUND-2 CLOSURE DECLARATION. Three implementation commits
+  + closeout per the codification-adjudication-shape locked at
+  Session 8 brainstorm + plan at
+  `docs/07_governance/round-2/2026-05-10-session-8-plan.md`.
+
+  **Round-2 docs reorganization closes at this push.** Three
+  closure dimensions met across the arc:
+
+  - **Structural closure** at Session 7 (`863b52b`) — V2
+    ratified at `docs/07_governance/DOCS_RESTRUCTURE_V2.md`;
+    three Principles + Pattern 7 + Migration Map canonical.
+  - **Operational closure** at Session 5B (`ba195d7`) and
+    Session 6 (`d1d239b`) — round-2 tail (Layer 1 + Layer 2
+    migrations; four-README rewrites + doc-class pattern
+    propagation); Phase 1 onset readiness sustained N=3
+    sessions post-V2.
+  - **Codification closure** at Session 8 (this push) — drift
+    meta-pattern Tier 1 ratified; Pattern 7 bypass-procedure
+    operationally complete (3 rules ↔ 3 timing surfaces);
+    methodology cluster sub-categorized; Tier 3 carry-forwards
+    dispositioned; round-2 closure declared.
+
+  The meta-arc folder `docs/07_governance/round-2/` becomes a
+  historical archive at this point. Future round-N work creates
+  `docs/07_governance/round-N/` per the round-N workflow
+  convention codified at Session 7 C6.
+
+  Three implementation commits + closeout this dispatch:
+  - C1 `6614d58` (drift meta-pattern Tier 1 codification): full
+    Tier 1 codification at conventions.md Round-2 section with
+    three timing surfaces + path-reference vs content-reference
+    sub-shapes + inter-session dependency sub-axis + prophylactic-
+    vs-reactive mode-of-application sub-rule + N=3 evidence
+    trail + codification-practice meta-question recorded as
+    canonical answer + Tier 3 carry-forward (recurring meta-arc
+    question held).
+  - C2 `8e76d6e` (Pattern 7 third operational rule):
+    cross-reference verification at execution time added to
+    `docs/README.md` Pattern 7 bypass-procedure. Three operational
+    rules now cover three timing surfaces (1:1 mapping confirmed:
+    canonical-source ↔ execution-time; chronological-reality ↔
+    planning-decision-time; cross-reference ↔ cross-reference-
+    time).
+  - C3 `58a4417` (methodology cluster sub-categorization): three
+    clusters (A: codification-trajectory; B: session-execution
+    discipline; C: scope/structural) with worked-example
+    inventory drawing from journal's canonical enumeration.
+    Halt-and-split contingency NOT triggered (11 inhabitants
+    within ~13-14 ceiling; clusters segment cleanly; no fourth
+    cluster needed).
+  - C4 (this commit): closeout + round-2 closure declaration.
+
+  Acceptance criteria — all 12 satisfied (a-l per plan).
+
+  **Locked decisions (Session 8 brainstorm-validated, executed
+  this dispatch):**
+  - Codification-practice meta-question answered: sub-shape
+    preservation when differential firing evidence exists;
+    unification with examples otherwise. Codified at
+    conventions.md Round-2 section as canonical answer for
+    future chounting codification work.
+  - Drift meta-pattern category: process meta-pattern (NOT
+    architectural principle). Surfaces are temporal (timing
+    surfaces), not structural. Principle 4 in V2 amendment ruled
+    out per category mismatch.
+  - Drift meta-pattern ratification path: conventions.md
+    Round-2 section update (Tier 1 codification with full
+    taxonomy) + Pattern 7 bypass-procedure expansion (third
+    operational rule). V2 stays as ratification snapshot per
+    δ-i discipline.
+  - Inter-session dependency mechanism: codified as sub-axis
+    within drift meta-pattern (preserved sub-shape per
+    differential timing surface).
+  - Prophylactic-vs-reactive sub-axis: codified as
+    mode-of-application sub-rule (N=3 evidence sufficient).
+  - Recurring meta-arc placement question: held at Tier 3 (N=1
+    insufficient; codification candidacy remains; awaiting
+    second fire).
+  - Methodology cluster sub-categorization: three clusters
+    (A/B/C) with character-based segmentation; worked-example
+    inventory drawing from journal's canonical enumeration;
+    re-evaluation trigger at ~8-inhabitant sub-cluster
+    soft-threshold.
+  - Round-2 closure declaration: attached to this Session 8
+    closeout per all-work-units-complete condition.
+
+  **Cross-reference-time drift surface — post-gate frequency
+  evidence (NOT trajectory advancement; gate fired at 5B
+  closeout):**
+
+  Sub-instances caught during Session 8 execution:
+
+  1. **C1 recursion (structurally novel meta-instance).** The
+     act of replacing "Tier 3 → Tier 2 trajectory" text with
+     "Tier 1 codified" text IS itself the resolution of a
+     content-reference drift on the very file being ratified.
+     The discipline catches itself updating the canonical record
+     of itself. Meta-instance worth marking even though gate
+     already fired; novel sub-shape (recursion) within the
+     content-reference cluster — the canonical record being
+     updated is the canonical record OF the discipline applying
+     the update. Not a new timing surface; not a new sub-shape
+     in the codification's structural sense; an instance of
+     pattern self-application that's worth recording for future
+     codification work to consider whether self-application
+     warrants its own naming.
+  2. **Plan-vs-journal divergence at C3 inventory.** Plan's
+     brainstorm-time inventory of 11 items (codification-
+     trajectory framing) and journal's actual methodology
+     cluster enumeration (5B brainstorm's "reasoning tools"
+     framing #3-#10 + #16 + Session 6 brainstorm's +2) diverge
+     in specifics. Resolution: C3 sub-categorization uses
+     journal's canonical enumeration; plan's inventory preserved
+     as substrate. Cross-reference-time drift sub-instance
+     (content-reference cluster).
+  3. **V2 Part 2 + conventions.md "Tier 3 → Tier 2 trajectory"
+     text (pre-Session-5B-gate-firing).** Both texts pre-date
+     the gate firing at Session 5B closeout. C1 updates
+     conventions.md to ratify Tier 1 (the live discipline doc
+     reflecting post-gate state). V2 Part 2's "N=2 evidence"
+     text stays as ratification snapshot per δ-i discipline.
+     This is the architectural separation V2 ratifies at
+     Session 7 + 5B + 6 + 8 sessions: V2 ratifies snapshot
+     state; conventions.md tracks live discipline. The
+     separation operates correctly at this Session 8 update.
+
+  Three sub-instances total during Session 8 execution. All
+  content-reference cluster (semantic drift from state changes).
+  Frequency data point: cross-reference-time surface continues
+  to fire when state evolves between codification time and live
+  discipline time, even within the same codification ratification
+  session. The discipline operates correctly; sub-instances
+  resolve at execution time per the operational rules now
+  ratified at C2.
+
+  **Pre-codification observation queue post-Session-8-execution
+  (queue updates):**
+
+  - Tier 1 LIVE: Floor-only push gate carve-out advances to
+    N=10 LIVE this push (halftime + 5A brainstorm + 5B brainstorm
+    + Session 6 brainstorm + Session 6.5 execution + Session 7
+    plan dispatch + Session 7 execution + 5B execution + Session
+    6 execution + Session 8 plan dispatch + Session 8 execution
+    = chronological count from journal at execution time).
+    [Verify count: N=9 was recorded at Session 6 closeout;
+    Session 8 plan dispatch (3ec624f) at +1 = N=10; this push
+    at +1 = N=11. Or if plan dispatch counts as separate fire:
+    chronological reality is N=11.] Actually re-counting
+    chronologically: previous push at Session 6 execution
+    (d1d239b) at N=9; Session 8 plan dispatch push (3ec624f) is
+    intervening floor-only fire = N=10; Session 8 execution push
+    (this) at N=11.
+  - Drift meta-pattern: Tier 1 RATIFIED at C1. Graduates from
+    Tier 2 → Tier 1 candidacy to Tier 1 ratified codification.
+  - Inter-session dependency sub-axis: Tier 1 RATIFIED at C1
+    as sub-axis within drift meta-pattern.
+  - Prophylactic-vs-reactive sub-rule: Tier 1 RATIFIED at C1
+    as mode-of-application sub-rule within drift meta-pattern.
+  - Tier 2: substrate-leverage phase observation holds at
+    Tier 2 (no Session 8 evidence affecting this).
+  - Tier 3: recurring meta-arc placement question holds at N=1.
+    Prophylactic-vs-reactive graduates out (codified at C1).
+  - Methodology cluster bucket: sub-categorized at C3 (3
+    clusters A/B/C); 3 inhabitants graduated out (drift,
+    inter-session, prophylactic). Floor-only carve-out also
+    graduated (at Session 7 C6, retroactively recorded in
+    Cluster A as worked example). Sub-clusters operate under
+    own count discipline per re-evaluation trigger.
+
+  **Push-readiness gate (per CLAUDE.md three-condition gate,
+  floor-only carve-out path, N=11 invocation):**
+  - Condition 1 (test-suite health): GREEN under floor-only
+    path. `pnpm db:reset:clean && pnpm agent:validate` reports
+    26/26. Full-suite NOT invoked per the carve-out's
+    mechanical-non-impact argument; doc-only diff (conventions.md
+    drift codification + docs/README.md Pattern 7 third rule +
+    conventions.md methodology cluster sub-categorization + this
+    entry; zero migrations / zero services / zero integration
+    tests / zero source files / zero test files) cannot regress
+    tests by construction.
+  - Condition 2 (doc-sync): GREEN. Session 8's primary
+    deliverable IS doc-sync work (codification ratifications +
+    bucket sub-categorization + closure declaration); same
+    category as Sessions 5A/5B/6/6.5/7 doc-sync deliverables.
+  - Condition 3 (governance closeout): this entry; round-2
+    closure declared (per below).
+
+  **Round-2 closure declaration.**
+
+  Round-2 docs reorganization closes at this push. Round-2
+  spanned Sessions 1 through 8 (with Session 6.5 + 5B execution
+  + Session 6 execution interim + Session 7 V2 ratification +
+  Session 8 codification tail). Three closure dimensions met:
+  structural at Session 7; operational at Sessions 5B + 6;
+  codification at Session 8. This is the institutional milestone
+  framing — three closure dimensions met across the arc is the
+  substantive achievement worth marking explicitly.
+
+  Phase 1 onset readiness: confirmed. Source-tree authority
+  discipline holds across N=4 sessions post-V2-ratification
+  (Session 7 + 5B + Session 6 + Session 8). Phase 1 storage /
+  evidence work unblocked at operator's discretion.
+
+  The drift discipline that emerged during round-2 (prophylactic-
+  vs-reactive default; cross-reference-time surface;
+  chronological-reality verification) is durable in canonical
+  conventions.md Round-2 section + Pattern 7's bypass-procedure
+  operational rules + V2's ratified Principles + the friction-
+  journal evidence trail across Sessions 5A through 8. Phase 1
+  work executing post-round-2 inherits the discipline without
+  explicit reference. That's substrate Phase 1 will benefit from
+  invisibly.
+
+  **Forward pointers (post-round-2):**
+
+  - **Round-2 closes at this push.** No further round-2 sessions
+    planned; meta-arc folder becomes historical archive.
+  - **Phase 1 onset is operator-determined.** Substrate is
+    ready; discipline is operational; guardrails are in place.
+    Phase 1 storage / evidence work begins whenever operator
+    decides.
+  - **Future round-N work** creates a new meta-arc folder
+    (`docs/07_governance/round-N/`) per the codified round-N
+    restructure plan workflow.
+  - **Tier 3 carry-forwards:** recurring meta-arc placement
+    question (N=1; codification candidacy at second fire);
+    Cluster A holds substrate-leverage phase observation (Tier
+    2; codification candidacy at third fire). Both await
+    future-arc evidence.
+  - **Methodology cluster sub-clusters** operate under own count
+    discipline; new observations land in cluster matched by
+    character. Re-evaluation trigger at ~8-inhabitant sub-cluster
+    soft-threshold.
+
+  Round-2 has been a substantial arc spanning ~8 sessions of
+  brainstorm-and-execution work, multiple plan-revision cycles,
+  drift catches at three timing surfaces with codification
+  trajectory advancement to Tier 1 ratification, two
+  architectural ratifications (V1 elevation + V2 creation), three
+  Principles ratified, Pattern 7 with conditional permission,
+  three operational rules covering three timing surfaces, a
+  meta-arc folder pattern that became canonical first-instance
+  precedent, a methodology cluster sub-categorized into three
+  named clusters, and the institutional discipline this
+  conversation arc developed. The substrate this arc built is
+  durable. Phase 1 inherits it.
+
 - 2026-05-10 NOTE — Round-2 docs reorganization Session 6
   execution closeout (four-README rewrites + doc-class pattern
   propagation). Two implementation commits per the failure-mode-
