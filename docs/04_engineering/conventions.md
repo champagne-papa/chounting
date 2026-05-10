@@ -1388,44 +1388,190 @@ alarm felt authoritative. The discipline is: verify directly,
 then respond. The alarm-raiser may be right; the artifact is the
 tiebreaker.
 
-### Plan-substrate-vs-canonical-reality drift meta-pattern (Tier 3 → Tier 2 codification trajectory)
+### Plan-substrate-vs-canonical-reality drift meta-pattern (Tier 1 codified)
 
 Forward projections embedded in plans, handoffs, or brainstorm-
 context sections drift from canonical reality at execution
-time. The meta-pattern fires across multiple timing surfaces:
+time. The meta-pattern fires across multiple timing surfaces;
+codified as Tier 1 process meta-pattern at round-2 Session 8 per
+N=3 evidence with shape match across distinct timing surfaces.
 
-- **Execution-time surface:** plan-internal substrate
-  (forbidden lists, header styles, fire counts) drifts from
+**Three timing surfaces:**
+
+- **Execution-time surface.** Plan-internal substrate (forbidden
+  lists, header styles, fire counts, anchor texts) drifts from
   canonical docs (folder-structure.md, friction-journal pattern,
-  chronological fire history).
-- **Planning-decision-time surface:** handoff sequence
+  chronological fire history, current file content). Caught at
+  execution time when Edits / greps / drafts surface
+  discrepancies.
+- **Planning-decision-time surface.** Handoff sequence
   projections drift from chronological reality (sequence didn't
-  materialize).
-- **Cross-reference-time surface:** forward references to
-  post-rewrite content drift from current-state content
-  (mitigated by path-level cross-references; see operational
-  rule below).
+  materialize). Caught at planning-decision time when adjudicating
+  scope-shape or dependency claims.
+- **Cross-reference-time surface.** Forward references in plans
+  / closeouts / canonical docs drift from current-state content
+  (paths moved; content evolved). Caught at execution time when
+  cross-reference grep-sweeps surface discrepancies. Mitigated
+  by path-level cross-references (cite paths, not post-rewrite
+  content).
 
-Current evidence count: N=2 (per `DOCS_RESTRUCTURE_V2.md`
-Part 2 record).
+**N=3 evidence trail:**
 
-- N=1 = Session 6.5 closeout (execution-time, three instances
-  under one meta-pattern observation).
-- N=2 = Session 7 brainstorm (planning-decision-time, the
-  Path A vs Path B sequence question).
+- N=1 = Session 6.5 closeout (execution-time surface; three
+  sub-instances: lib/hooks forbidden-list mismatch with
+  folder-structure.md; friction-journal entry-shape `### vs
+  bullet-list`; floor-only fire-count plan-claim N=6 vs
+  chronological N=5).
+- N=2 = Session 7 brainstorm (planning-decision-time surface;
+  Path A vs Path B sequencing question — sequence projection vs
+  chronological reality).
+- N=3 = Session 5B execution closeout (cross-reference-time
+  surface; 7 sub-instances under one meta-pattern observation:
+  ADR README anchor mismatch, "when ratified at Session 7"
+  phrasing stale, ADR/README:274 active-doc reference,
+  open_questions.md:755 reference, delivery-model.md:156 d6
+  reference, document_platform_initiative.md 5 references,
+  phase-2/README acknowledgment retainee count).
 
-**Codification status: Tier 3 → Tier 2 trajectory; not ratified
-to a principle at N=2.** Codification gates: N=3 with shape
-match across three distinct timing surfaces. The cross-
-reference-time surface needs an N=1 instance before the
-meta-pattern crosses to Tier 1 codification.
+Codification gates per process-meta-pattern threshold (N=3 with
+shape match across three distinct timing surfaces): satisfied at
+Session 5B closeout. Tier 1 codification ratifies at Session 8
+per this entry.
 
-**Operational rules within Pattern 7's bypass procedure** (these
-land at `docs/README.md` Folder placement guardrail's bypass
-procedure section, not at the principle level):
+**Path-reference vs content-reference sub-shapes (within
+cross-reference-time surface).**
 
-- Canonical-source verification at execution time.
-- Chronological-reality verification at planning time.
+The cross-reference-time surface fires under two distinct
+sub-shapes with differential firing conditions:
+
+- **Path-reference cluster (mechanical drift).** Fires when
+  paths move during round-N work and references didn't update.
+  Worked examples (Session 5B closeout): ADR README anchor
+  mismatch; ADR/README:274 active-doc reference;
+  open_questions.md:755 reference; delivery-model.md:156
+  reference; document_platform_initiative.md 5 references.
+  Resolution shape: update path target at execution time;
+  preserve δ-i-historical references per friction-journal-is-
+  history rule.
+- **Content-reference cluster (semantic drift).** Fires when
+  state-claims go stale because state changed (e.g., "when
+  ratified at Session 7" after V2 ratifies; "empty in Phase
+  1.1" after folder populates). Worked examples: Session 5B
+  closeout (2 instances), Session 6 closeout (3 instances; all
+  content-reference, 0 path-reference because Session 6 didn't
+  move paths).
+  Resolution shape: update prose claim at execution time;
+  preserve δ-i-historical claims in closed-phase briefs.
+
+Differential firing evidence (N=2 differential firings post-
+gate): path-reference cluster fires when paths move;
+content-reference cluster fires when state evolves without path
+moves. Sub-shapes preserved per the codification-practice
+meta-question's answer (sub-shape preservation when differential
+firing evidence exists).
+
+**Inter-session dependency sub-axis (read-time / pre-flight surface).**
+
+Plans that reference prior session's state require pre-flight
+verification that the prior state actually obtains. Mechanism:
+plans cite prior commits / acceptance criteria / closeout state;
+executors verify against current canonical state at session
+start (typically Stop Condition 1); deviations halt execution
+before commits land. Different timing surface from drift's
+write-time / execution-time surfaces (which catch drift in plan
+substrate); inter-session dependency catches drift in
+cross-session inheritance.
+
+N=3 evidence:
+
+- Session 6 plan referencing Session 5B closeout state.
+- Session 7 plan referencing Session 5B + Session 6.5 closeout
+  state.
+- Session 6 execution referencing Session 5B execution closeout
+  state.
+
+Threshold met (process meta-pattern; N=2 with shape match across
+distinct timing surfaces; N=3 confirms). Codified as sub-axis
+within the drift meta-pattern; the parent category absorbs the
+sub-axis per the codification-practice meta-question's answer
+(sub-shape preservation when differential firing evidence
+exists).
+
+**Prophylactic-vs-reactive mode-of-application sub-rule.**
+
+The drift discipline applies in two modes:
+
+- **Prophylactic mode (default).** Verify against canonical
+  sources at pre-flight before drafting forward-looking content.
+  Catches drift before it fires (lower cost; verification at
+  read time).
+- **Reactive mode (fallback).** Catch drift during execution
+  via Edit anchor mismatches, grep sweeps, or surface
+  discrepancies. Higher cost (drift surfaces in flight; requires
+  in-session correction).
+
+Default to prophylactic mode where the canonical state is
+verifiable at pre-flight. Reactive mode is the catch-net when
+prophylactic verification missed an instance.
+
+N=3 evidence: Session 6.5 + Session 7 + Session 5B all applied
+prophylactic verification at pre-flight; reactive catches still
+fired during execution as expected fallback.
+
+Worked examples:
+- Prophylactic: Session 7 brainstorm caught the floor-only
+  fire-count drift by NOT projecting in the plan (verification
+  at pre-flight: read journal at execution time).
+- Reactive: Session 6.5 caught the lib/hooks forbidden-list
+  drift after the plan was written and execution began (Edit
+  anchor mismatch surfaced during drafting).
+
+**Codification-practice meta-question (settled at Session 8).**
+
+Sub-shape preservation when differential firing evidence exists;
+unification with examples otherwise. The differential-firing-
+evidence threshold is the gating criterion: if proposed
+sub-shapes have demonstrably different firing conditions
+(different surface conditions trigger different sub-shapes),
+preserve them as named sub-rules. If the proposed sub-shapes
+are structural variants of the same firing condition, unify
+with examples.
+
+This answer applies consistently across drift meta-pattern
+sub-shapes (path-reference vs content-reference; inter-session
+dependency sub-axis; prophylactic-vs-reactive mode-of-
+application). Future codification work in chounting applies the
+same practice.
+
+**Operational rules (codified in `docs/README.md` Pattern 7
+bypass procedure).**
+
+The drift discipline's operational rules live within Pattern 7's
+bypass procedure section (per V2 Part 1's framing — discipline
+operational rules are downstream of guardrail principle):
+
+- Canonical-source verification at execution time (covers
+  execution-time surface).
+- Chronological-reality verification at planning time (covers
+  planning-decision-time surface).
+- Cross-reference verification at execution time (covers
+  cross-reference-time surface; added at Session 8 C2).
+
+The three operational rules apply to all bypasses regardless of
+surface; together they cover the three timing surfaces of the
+drift meta-pattern.
+
+**Tier 3 carry-forward: recurring meta-arc placement question
+(N=1 hold).**
+
+The "should we move docs/07_governance/round-2/" question
+recurred multiple times during round-2; closed by V2's Pattern
+7 ratification. Codification candidacy: "ratification gaps
+cause recurring questions" as a discipline rule. Per process-
+meta-pattern threshold (N=2 with shape match across distinct
+contexts), N=1 is insufficient evidence. **Hold at Tier 3.**
+Codification candidacy remains; awaiting second fire (a future
+round-N or arc-X recurring question would advance to N=2).
 
 ---
 
