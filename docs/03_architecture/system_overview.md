@@ -277,7 +277,7 @@ the-bridge/                    # single Next.js app, single repo, no pnpm worksp
     zh-Hant.json                        # placeholder structure (English fallback)
   docs/                                 # documentation — see docs/README.md for index
     00_product/                         # product vision, personas, glossary
-    01_prd/                             # feature-level PRDs (empty in Phase 1.1)
+    01_prd/                             # feature-level PRDs (Phase 2 feature specs from 2026-04-16 agent autonomy design sprint)
     02_specs/                           # system truth — invariants, data model, ledger rules
     03_architecture/                    # system design — this file, phase simplifications, lifecycle
     04_engineering/                     # developer setup, conventions, security, testing strategy
