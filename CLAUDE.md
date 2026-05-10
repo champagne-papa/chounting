@@ -44,6 +44,30 @@ Canonical sources for project-wide rules across concerns
 - `docs/04_engineering/conventions.md` — branch naming and
   contribution rules.
 
+### Folder placement guardrails
+
+Three surface guardrails ratify Principle 3 (folder placement
+guardrails at high-decision-cost structural surfaces) per
+`docs/07_governance/DOCS_RESTRUCTURE_V2.md` Part 1:
+
+- **`apps/web/src/README.md`** — source-tree authority-layer
+  guardrail per ADR-0020.
+- **`docs/README.md`** — docs-tree document-class guardrail.
+- **Repo-root `README.md`** — repo-root structural-folder
+  guardrail.
+
+Before creating any folder at one of these surfaces, read the
+relevant guardrail. The bypass procedure (Pattern 7 conditional
+permission for cross-phase meta-arcs under `07_governance/`)
+carries two operational rules: canonical-source verification at
+execution time AND chronological-reality verification at planning
+time. AI agents may not unilaterally bypass without operator
+acknowledgment in the commit body.
+
+Worked examples: `docs/superpowers/` migration (Session 5A,
+caught-and-fixed Principle 2 violation); `docs/07_governance/round-2/`
+(canonical first-instance Pattern 7 precedent).
+
 When starting work, identify which concern your task touches
 and read the canonical source. Do not re-derive these rules
 from conversation context.
