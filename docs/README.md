@@ -91,7 +91,11 @@ conditionally permitted under Pattern 7 (per V2 Part 1):
 [`07_governance/round-2/`](07_governance/round-2/) (round-2 docs
 reorganization meta-arc).
 
-**Pattern 7's bypass procedure carries two operational rules:**
+**Pattern 7's bypass procedure carries three operational rules
+(covering the three timing surfaces of the plan-substrate-vs-
+canonical-reality drift meta-pattern per
+[`04_engineering/conventions.md`](04_engineering/conventions.md)
+Round-2 section):**
 
 - **Canonical-source verification at execution time.** When
   implementing a bypass, verify against canonical sources (V2,
@@ -100,12 +104,26 @@ reorganization meta-arc).
   etc.) at the moment of writing rather than from memory or
   plan-internal substrate. Plan-internal brainstorm-context is
   design substrate; canonical docs are the ratified source.
+  Covers the execution-time surface.
 - **Chronological-reality verification at planning time.** When
   drafting forward-looking content (fire counts, sequence
   assumptions, "after X session executes" projections), don't
   project; reference the current ratified state and let
   execution-time verification establish the count when the
-  artifact lands.
+  artifact lands. Covers the planning-decision-time surface.
+- **Cross-reference verification at execution time.** When
+  drafting plans, closeouts, or canonical docs that cite paths
+  or content in other docs, verify cross-reference resolution
+  at execution time before committing. Path-level
+  cross-references (cite paths, not post-rewrite content)
+  mitigate cross-reference-time drift by construction; explicit
+  grep-sweeps at execution time catch residual drift instances.
+  Sub-shapes within this surface (path-reference vs
+  content-reference clusters per
+  [`04_engineering/conventions.md`](04_engineering/conventions.md)
+  Round-2 section) have differential firing conditions —
+  path-reference fires when paths move; content-reference fires
+  on state evolution. Covers the cross-reference-time surface.
 
 AI agents may not unilaterally bypass without operator
 acknowledgment in the commit body.
