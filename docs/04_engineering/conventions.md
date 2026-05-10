@@ -1573,6 +1573,123 @@ contexts), N=1 is insufficient evidence. **Hold at Tier 3.**
 Codification candidacy remains; awaiting second fire (a future
 round-N or arc-X recurring question would advance to N=2).
 
+### Methodology cluster sub-categorization
+
+The methodology cluster bucket accumulated 11 inhabitants
+during round-2 sessions (soft-threshold at 10 tripped at Session
+6.5 closeout; 11th added at Session 6 brainstorm closeout).
+Session 8 ratifies sub-categorization into three clusters with
+differential character. The actual inventory spans round-2
+friction-journal entries (5A brainstorm closeout's "Methodology
+cluster (8; reasoning tools)" enumeration #3-#10 + Session 5B
+brainstorm's #16 + Session 6 brainstorm's +2); future inventories
+consult the journal as canonical record.
+
+**Cluster A: Codification-trajectory observations.**
+
+Inhabitants currently at codification trajectory: Tier 1 LIVE
+candidates, Tier 2 candidates, Tier 3 holds, or items recently
+graduated to dedicated codification.
+
+Worked examples (with current status post-Session-8):
+- Drift meta-pattern (graduated to Tier 1 ratified at Session 8
+  C1; dedicated codification at the entry above).
+- Inter-session dependency sub-axis (graduated as part of drift
+  meta-pattern at Session 8 C1).
+- Prophylactic-vs-reactive sub-rule (graduated as part of drift
+  meta-pattern at Session 8 C1).
+- Recurring meta-arc placement question (Tier 3 hold; see
+  carry-forward sub-section above).
+- Substrate-leverage phase observation (Tier 3 → Tier 2 per
+  Session 5B brainstorm closeout).
+- Floor-only push gate carve-out (graduated to ratified at
+  Session 7 C6; dedicated codification at the round-N
+  restructure plan workflow + this Round-2 Conventions section).
+- Turbo cache content-hash (Tier 1 LIVE candidate; codification
+  path TBD).
+- Variance-decomposition diagnostic (#5; N=1).
+- Handoff-prompt-commit-number-translation (#6; N=1).
+
+Character: items have a codification trajectory (toward
+ratification or hold-with-recurrence-trigger). Sub-cluster's
+own count discipline: items track their N-count toward
+codification thresholds per the three-category codification
+taxonomy.
+
+**Cluster B: Session-execution discipline observations.**
+
+Inhabitants describing operational discipline that fires within
+session execution (typically at session-start verification,
+pre-push gates, or mid-execution pattern recognition).
+
+Worked examples:
+- Mid-dispatch plan re-read pre-push verification (N=2 per
+  Session 6 brainstorm closeout).
+- Parallel-session commit visibility (N=1 per Session 6
+  brainstorm closeout).
+- Pre-execution-audit-revealing-scope-refinement (#8; N=2 across
+  Phase 3 substrate audit + 5B Decision 1 audit).
+- Fresh-pass-on-decision-revealing-refinement (#16; N=1).
+
+Character: items describe session-execution mechanics — what
+gates fire, what verifications run, what patterns surface
+during execution. Distinct from codification-trajectory
+candidates (which are about what gets ratified) and from
+scope/structural observations (which are about scope decisions).
+
+**Cluster C: Scope/structural observations.**
+
+Inhabitants describing scope decisions, structural patterns,
+and category preservation (meta-meta level).
+
+Worked examples:
+- Count-level-vs-structural-level distinction (#7; N=2 across
+  decision domains: Decision 4 commit shape + Decision 6
+  gate-path).
+- Discipline-extension pattern (#10; N=2: 5A's agency-extends-
+  to-consumer + 5B's discipline-extends-to-published-artifact-
+  accuracy).
+- 5A-closeout-framings-refined-by-5B-brainstorm (#9; N=2:
+  Decision 1 audit revision + Decision 3 binary→split).
+- Categorical-distinction-preservation meta-pattern (round-2
+  brainstorm-time observation; N=2).
+- Failure-mode taxonomy (forward vs backward) — sub-pattern
+  within structural-pattern bucket per Session 6 brainstorm
+  closeout.
+- Count-level commit pattern variance (#11 in structural-pattern
+  bucket; N=3 codification candidacy).
+
+Character: items describe scope/structural reasoning — how
+scope decisions emerge, how structural patterns hold across
+work shapes, how category boundaries preserve.
+
+Note: the structural-pattern cluster (NEW BUCKET established at
+Session 5B brainstorm Decision 7.B with #11/#12/#13) is sibling
+to the methodology cluster. Cluster C absorbs structural-pattern-
+related observations conceptually; explicit reconciliation
+between methodology cluster Cluster C and the journal's
+structural-pattern bucket can land at a future bucket-structural
+session if the two reveal differential character (currently
+treated as related sub-shape evidence).
+
+**Adding new observations to the bucket.**
+
+Future round-N or arc-X observations land in the cluster they
+match by character. New sub-cluster creation requires evidence
+of differential character (per the codification-practice
+meta-question's answer; sub-shape preservation when differential
+firing evidence exists). The bucket count limits no longer apply
+once sub-categorization is in place; instead each sub-cluster
+operates under its own count discipline.
+
+**Re-evaluation trigger.** Methodology cluster sub-categorization
+re-evaluates if any sub-cluster grows past ~8 inhabitants
+(soft-threshold 50% smaller than the parent bucket's
+10-inhabitant threshold, reflecting sub-cluster's narrower
+scope) OR if a new observation doesn't fit cleanly into A / B /
+C. The re-evaluation may add a fourth sub-cluster, split an
+existing sub-cluster, or restructure the parent bucket.
+
 ---
 
 ## Documentation Routing
