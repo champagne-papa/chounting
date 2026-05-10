@@ -53,6 +53,232 @@ Categories:
 
 ## Phase 2
 
+- 2026-05-10 NOTE — Round-2 docs reorganization Session 6
+  execution closeout (four-README rewrites + doc-class pattern
+  propagation). Two implementation commits per the failure-mode-
+  asymmetry partition locked at Session 6 brainstorm + plan at
+  `docs/07_governance/round-2/2026-05-09-session-6-plan.md`.
+  Plan was authored 2026-05-09 (pre-Session-7-V2-ratification);
+  execution at 2026-05-10 (post-V2 + post-5B-execution).
+  Closeout forward pointers rewritten from pre-Session-7 plan-
+  substrate to post-Session-7-and-5B reality per the drift
+  discipline.
+
+  Two implementation commits + closeout:
+  - C1 `5d178f1` (02/03/04 grouped rewrite): three READMEs
+    propagate doc-class openers + canonical-axis articulation +
+    canonical-source enumeration matching CLAUDE.md's
+    authoritative-source list. Failed-backward triple
+    (content-completeness expansion preserving WGH/WDNGH
+    structure per δ-i discipline).
+  - C2 `5846178` (01_prd full rewrite): structural-pattern
+    adoption (WGH/WDNGH framework + doc-class opener) layered
+    on 5B's invalid-claim touchup. Failed-forward case. Plus
+    one cross-reference-time drift catch:
+    `system_overview.md:280` "empty in Phase 1.1" annotation
+    updated to reflect 9-feature-spec post-5B-Layer-1 state.
+  - C3 (this commit): closeout.
+
+  Acceptance criteria — all 11 implementation-side criteria
+  satisfied (a-k per plan); criterion (l) closed by this entry.
+
+  **Locked decisions (Session 6 brainstorm-validated, retained
+  at execution time):**
+  - Failure-mode taxonomy (forward vs backward) drove the C1/C2
+    partition: 02/03/04 failed-backward (under-specifies present
+    state) → C1 grouped rewrite (content-completeness expansion);
+    01_prd failed-forward (described future state) → C2 isolated
+    rewrite (structural-pattern adoption).
+  - Doc-class opener pattern (`**Document class: <name>.**`)
+    propagated from `docs/09_briefs/README.md` precedent to four
+    directory READMEs. Consumer-side instantiation of V2 Part 1
+    Principle 1 ("one canonical axis"); the principle propagates,
+    not the literal phrase.
+  - δ-i preservation discipline: 02/03/04 preserve existing WGH
+    structure, layering opener + canonical-source enumeration on
+    top; 01_prd's full rewrite adopts the structure 02/03/04
+    already had (δ-i applies in reverse — the structure is what's
+    being preserved).
+  - Inter-session dependency mechanism (Stop Condition 1 verifies
+    5B execution closed cleanly before any Session 6 commits
+    land): structurally novel mechanism class for round-2 plans;
+    operated correctly at session start (verified
+    HEAD=ba195d7 + 9 feature specs at 01_prd/ + 4 sub-buckets at
+    phase-0/ + 01_prd/README invalid-claims-removed + toolchain
+    green).
+
+  **Cross-reference-time drift surface — post-gate frequency
+  evidence (NOT trajectory advancement; gate already fired at
+  5B closeout):**
+
+  Per V2 Part 2's drift meta-pattern codification status (Tier 2
+  → Tier 1 candidacy advanced at 5B closeout via N=3 across
+  three timing surfaces), Session 6 execution sub-instances
+  accumulate as frequency evidence at the cross-reference-time
+  surface, not as new gate-firing events. Sub-instances caught
+  during Session 6 execution (per the prophylactic discipline):
+
+  1. **Plan's closeout template references Session 7 as
+     future.** Plan said "Session 7 owns Tier 1 codification (3
+     LIVE candidates + V2 ratification + DOCS_RESTRUCTURE_V2.md)"
+     and "Codification deferred to Session 7's natural substrate
+     moment." Both stale: V2 ratified at Session 7 commit
+     `863b52b`; carve-out codified at Session 7 C6 (conventions.md
+     round-2 section). Resolution: closeout forward pointers
+     rewritten to reflect post-Session-7 reality (Session 8
+     brainstorm follows; carve-out is canonically codified).
+  2. **Plan claimed N=6 invocation.** Actual chronological count:
+     N=9 LIVE post-this-push (read journal at execution time per
+     drift discipline; N=8 recorded at 5B closeout + this push +
+     1 = N=9). Resolution: closeout records N=9.
+  3. **`system_overview.md:280` content-reference drift.** Said
+     "01_prd/  # feature-level PRDs (empty in Phase 1.1)" but
+     folder has 9 feature specs post-5B Layer 1. Resolution:
+     updated annotation to reflect current state in C2.
+
+  Three sub-instances total during Session 6 execution. All
+  content-reference cluster (semantic drift from state changes)
+  per the path-reference vs content-reference sub-shape framing
+  Session 7 closeout flagged. The path-reference cluster fired
+  zero instances during Session 6 (no paths moved; Session 6
+  operates entirely on docs/ READMEs in-place). The content-
+  reference cluster fired three instances. Frequency data point:
+  cross-reference-time surface continues to fire when state has
+  evolved between plan-write-time and execution-time, even when
+  the gate has already fired.
+
+  **Brainstorm-time observations (Session 6 brainstorm output;
+  preserved verbatim per brainstorm-time-observations-as-
+  historical discipline; closeout-time framing notes added in
+  brackets):**
+
+  - **README failure-mode taxonomy: forward vs backward.**
+    Surfaced as principled basis for the failure-mode-asymmetry
+    commit-shape partition. 01_prd failed forward (described
+    future state never materialized); 02/03/04 failed backward
+    (under-specifies present state by omitting canonical
+    contents). Adjudication: lands as sub-pattern within the
+    structural-pattern bucket (the bucket matures past
+    single-instance status with this addition; sub-pattern-within-
+    bucket is a phenomenon distinct from new-bucket-creation;
+    round-2's posture handles both). [Closeout-time framing:
+    bucket sub-categorization decision still deferred to Session
+    8 with framework per Session 7 closeout's deferral.]
+  - **Count-level commit pattern N=4 fire with count-of-3
+    (not 4).** 5A=4+1, fix-arc=4+1, 5B=4+1, Session 6=2+1.
+    Pattern holds at structural level (implementation-then-
+    closeout) while count varies. Recording as count-level
+    variance within stable structural pattern rather than
+    force-fitting to 4+1 or treating as new pattern. [Closeout-
+    time framing: Session 7 was 6+1 (C1-C6 + closeout); count
+    variance is consistent across round-2 execution sessions.]
+  - **Inter-session dependency mechanism — new pattern
+    observation.** Session 6 plan introduced a Stop Condition 1
+    that verifies prior session's execution closed cleanly
+    before current session's commits land. [Closeout-time
+    framing: Session 7 plan ALSO carried this mechanism for 5B
+    + Session 6 dependencies; mechanism has now fired three
+    times (Session 6 plan referencing 5B; Session 7 plan
+    referencing 5B + Session 6.5; this Session 6 execution
+    referencing 5B closeout state). N=3 firings confirms the
+    mechanism class as a generalizable plan-substrate pattern;
+    Tier 3 → Tier 2 candidacy. Methodology cluster.]
+
+  **Pre-codification observation queue post-Session-6-execution
+  (queue updates, post-Session-7 reality framing):**
+
+  - Tier 1 LIVE: Floor-only push gate carve-out advances to N=9
+    LIVE this push (halftime + 5A brainstorm + 5B brainstorm +
+    Session 6 brainstorm + Session 6.5 execution + Session 7
+    plan dispatch + Session 7 execution + 5B execution +
+    Session 6 execution = 9 fires through this push). The
+    carve-out is now canonically codified at conventions.md
+    round-2 section (Session 7 C6); subsequent firings are
+    post-codification frequency data, not pre-codification
+    candidacy. **NEW status:** carve-out has graduated from
+    "candidate" to "ratified" via Session 7 C6.
+  - Tier 1 candidacy: drift meta-pattern at N=3 across 3 timing
+    surfaces holds; principle-level ratification path
+    adjudication remains Session 8 brainstorm work.
+  - Tier 2: drift meta-pattern Tier 1 candidacy unchanged from
+    5B closeout. Inter-session dependency mechanism at N=3
+    advances Tier 3 → Tier 2 (per closeout-time framing of the
+    brainstorm-time observation).
+  - Tier 3 (N=1 awaiting recurrence): recurring meta-arc
+    placement question + prophylactic-vs-reactive sub-axis hold
+    at N=1.
+  - Methodology cluster bucket: 11 inhabitants + cross-reference-
+    time drift firings as frequency evidence (post-gate;
+    accumulating evidence of frequency, not new inhabitants).
+    Sub-categorization decision remains deferred to Session 8.
+    [Closeout-time framing: Session 8's bucket-structural scope
+    grows by inter-session dependency mechanism Tier 3 → Tier 2
+    advancement; bucket reorganization potentially absorbs that
+    elevation depending on Session 8 brainstorm adjudication.]
+
+  **Push-readiness gate (per CLAUDE.md three-condition gate,
+  floor-only carve-out path, ninth invocation N=9):**
+  - Condition 1 (test-suite health): GREEN under floor-only
+    path. `pnpm db:reset:clean && pnpm agent:validate` reports
+    26/26. Full-suite NOT invoked per the carve-out's
+    mechanical-non-impact argument; doc-only diff (4 README
+    rewrites + 1 system_overview annotation update + this entry;
+    zero migrations / zero services / zero integration tests /
+    zero source files / zero test files) cannot regress tests by
+    construction.
+  - Condition 2 (doc-sync): GREEN. Session 6's primary
+    deliverable IS doc-sync work (four README rewrites consuming
+    V2's ratified Principle 1 + ADR-0021's architectural
+    contributions); same category as 5A and 5B execution
+    closeouts.
+  - Condition 3 (governance closeout): this entry; carry-
+    forwards captured below.
+
+  **Forward pointers (rewritten at execution time per drift
+  discipline; plan's pre-Session-7 forward pointers were
+  stale):**
+
+  - **Round-2 substantive work fully closes at this push.**
+    Round-2 structural closure was complete at Session 7 (commit
+    `863b52b`); round-2 tail (Layer 1 + Layer 2 migrations) at
+    Session 5B (commit `ba195d7`); round-2 cleanup completion
+    (four-README rewrites) at this Session 6 execution push.
+    The meta-arc folder `docs/07_governance/round-2/` becomes a
+    historical archive; future round-N work creates
+    `docs/07_governance/round-N/` per the round-N workflow
+    convention codified at Session 7 C6.
+  - **Session 8 brainstorm next.** Scope per Session 7 closeout
+    + 5B closeout + this closeout:
+    - Drift meta-pattern Tier 1 codification path adjudication
+      (architectural-principle vs process-meta-pattern category
+      boundary; principle-level / Pattern-7-bypass-procedure-
+      expansion / conventions.md-only ratification path). Per
+      Session 7 closeout's flag, the category boundary is the
+      load-bearing question; the ratification path follows.
+    - Methodology bucket sub-categorization (11+ inhabitants;
+      soft-threshold tripped at Session 6.5 closeout).
+    - Inter-session dependency mechanism Tier 3 → Tier 2
+      advancement (N=3 firings: Session 6 plan, Session 7 plan,
+      this Session 6 execution).
+    - Recurring meta-arc placement question Tier 3 carry-
+      forward; prophylactic-vs-reactive sub-axis Tier 3 carry-
+      forward.
+    - Path-reference vs content-reference sub-shape codification
+      consideration (per Session 7 closeout flag): Session 6
+      execution adds content-reference frequency data (3
+      sub-instances); path-reference cluster fired 0 sub-instances
+      this session. Session 8 considers whether codification
+      distinguishes the sub-shapes.
+  - **Phase 1 onset readiness — N=3 sustained-readiness test
+    passed.** Session 7 (V2 ratification) + Session 5B (Layer
+    1+2 migrations) + Session 6 (four-README rewrites) all
+    landed cleanly without challenging the apps/web/src/
+    guardrail. Source-tree authority discipline holds across
+    three sessions post-V2-ratification. **Round-2 closure is
+    now operator-determined**: declaration is a decision, not a
+    question. Phase 1 storage / evidence work is unblocked at
+    operator's discretion.
+
 - 2026-05-09 NOTE — Round-2 docs reorganization Session 5B
   execution closeout (Layer 1 + Layer 2 briefs reorganization;
   post-Session-7 cleanup work). Five implementation commits per
