@@ -121,12 +121,18 @@ export interface AuditEntry {
  * Writes one row to the `audit_log` table.
  *
  * Accepts a `SupabaseClient` rather than creating its own so the caller
- * can pass the same client (and therefore the same transaction) that is
- * performing the mutation. This guarantees the audit row is committed
- * atomically with the data change — if the transaction rolls back, the
- * audit row disappears too.
+ * controls connection + auth context. Atomicity with the audited
+ * mutation is achieved when the caller routes both writes through a
+ * single RPC: the canonical pattern is `write_journal_entry_atomic`,
+ * which wraps entity INSERT(s) + audit_log INSERT in one plpgsql
+ * function so a rollback discards both. Direct REST callers (separate
+ * `.from().insert()` calls) do NOT obtain transactional atomicity from
+ * supabase-js — each REST call is its own DB transaction. INV-AUDIT-001
+ * atomicity is preserved in practice for ledger writes via the RPC
+ * route; non-ledger services accept the gap pending Phase 2's events-
+ * table consolidation (see `docs/03_architecture/phase_simplifications.md`).
  *
- * @param db   - The Supabase client participating in the current transaction.
+ * @param db   - The Supabase client used to issue the audit_log INSERT.
  * @param ctx  - The ServiceContext for this request (provides org_id, user_id, trace_id).
  * @param entry - The audit payload describing what changed.
  */

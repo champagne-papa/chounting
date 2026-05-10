@@ -1171,6 +1171,53 @@ ADR-0011 §15 reserved INV-DOC-001 (Document Platform invariant prefix) without 
 
 ---
 
+## Phase 5 substantive surfacing-surfaced questions
+
+Questions surfaced during Phase 5 chunk B5-1 substantive sessions
+(vendor prepayment subdomain).
+
+### Q80 — Refund-with-applications interaction (D4-α)
+
+ADR-0015 §6 specifies the refund flow (`record_vendor_prepayment_refund`
+→ `vendor_prepayment_refunded` audit + status='refunded') but does not
+specify behavior when the parent `vendor_prepayments` row has rows in
+`vendor_prepayment_applications`. Three candidate dispositions surfaced
+at chunk B5-1 substantive session #2 substantive surfacing gate:
+
+- **(D4-α) currently shipped**: block refund if applications exist;
+  force user to reverse applications first via a separate mutation.
+  Conservative; aligns with single-purpose-per-mutation framing under
+  Reading B preservation.
+- **(D4-β)**: cascade-reverse applications then refund. Risks Reading
+  B collision — applications were posted by
+  `apply_vendor_prepayment_to_bill`'s JE; reversing them belongs to a
+  separate reversal-of-application mutation, not to refund.
+- **(D4-γ)**: defer refund mutation entirely until ADR-0015 §6 amends.
+  Over-shrinks v1 scope unnecessarily.
+
+**Currently enforced**: D4-α posture in
+`apps/web/src/services/spend/vendorPrepaymentService.ts` — the refund
+mutation throws ServiceError if `vendor_prepayment_applications.count
+> 0` for the parent prepayment. The integration test
+`apps/web/tests/integration/vendorPrepaymentRefund.test.ts` exercises
+both happy path (no applications → succeeds) and violation path
+(applications present → rejects).
+
+**Decision needed**: does ADR-0015 §6 ratify D4-α as canonical, or
+amend to specify D4-β cascade semantics? If D4-β, what
+reversal-of-application mutation handles the cascade?
+
+**Blocks**: post-v1 ADR-0015 §6 amendment; expansion of refund
+mutation to cover applied-prepayment cases if dispositioned to D4-β.
+
+**Source**: Phase 5 chunk B5-1 substantive session #2 substantive
+surfacing gate, 2026-05-10. Founder ratified D4-α as the conservative
+shipping posture under bundled-accept (D1-γ + D2-α + D3
+service-layer-only + D4-α + D5 Q-closure-ID); gap flagged for explicit
+ADR resolution.
+
+---
+
 ## Section 4 — Formalization candidates
 
 Distinct category from Sections 1-3. These are NOT architectural
