@@ -53,6 +53,119 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-1 substantive arc closeout retrospective entry (2026-05-10) — first Phase-5-arc-execution friction-journal entry + 12 first-instance pattern observations + 7 codification adjudications + 3 drift dispositions
+
+This is the FIRST Phase-5-arc-execution entry in the friction-journal. Phase 5 first-domain consumer arc opened at chunk B5-1 onset 2026-05-07 per arc-cadence forward-pointers from Phase 2 brief-creation arc-closeout. Substantive sessions #1+#2 SHIPPED; chunk B5-1 closes at session #3 per (cadence-β-i-a) 3-session deliverable-grain split. Phase 5 arc continues with subsequent chunks (B5-2+) per (decomp-γ) hybrid by domain-slice.
+
+#### Aggregate chunk metrics
+
+| Session | HEAD | Files | Lines | Tests | Validation |
+|---|---|---|---|---|---|
+| Chunk onset (2026-05-07) | `78da920` (round-2 closure) | — | — | — | memory-writes-only Stage 6 |
+| Substantive #1 (2026-05-10) | `ebeab51` | 7 | +568/-4 | 19 unit | 684/684 + 26/26 |
+| Substantive #2 (2026-05-10) | `7c9f715` | 10 | +2025/-5 | 15 integration | 699/699 + 26/26 |
+| Closeout #3 (2026-05-10) | this commit | — | — | — | conditions 1+2+3 MET |
+
+Cadence: (cadence-β-i-a) 3-session split confirmed operational. Total session #1+#2 deliverable: 17 files / +2593/-9 / 34 new tests passing.
+
+#### Arc-class first-instance status framing
+
+Chunk B5-1 is the first chunk-grain implementation arc of Phase 5. Phase 5 is the first first-domain consumer implementation arc of chounting (after Phase 0 governance arc, Phase 1.Storage substrate implementation arc, and Phase 2 brief-creation arc). All session #1 + session #2 observations qualify as first-instance under arc-class framing.
+
+#### 12 first-instance pattern observations
+
+**Session #1 observations (recovered from `ebeab51` commit body per drift §A disposition):**
+
+1. **First implementation-arc substantive code commit in Phase 5** — `ebeab51` lands first vendor prepayment infrastructure code; sets precedent for subsequent slices (B5-2, B5-3, etc.). Source: commit body opening.
+2. **First chunk-grain substantive session under (cadence-β-i-a)** — multi-session-per-chunk operational shape verified; substantive split across 3 sessions per locked scope. Source: commit body cadence reference.
+3. **First round-2-guardrail-respecting implementation** — `apps/web/src/services/spend/` + `apps/web/src/shared/schemas/spend/` paths verified compliant with `apps/web/src/README.md` folder-placement guardrail per Principle 3. Source: commit body "Round-2 absorption" section.
+4. **First substrate-gap surface during chunk-grain execution (Cluster B B1 substrate-citation grain)** — D5/(orgset-β): `org_settings.deposit_tax_timing_default` cited in ADR-0015 §10 but `org_settings` table itself was anti-scoped at Phase 1.Storage chunk 1 to a dedicated sub-arc that has not yet fired. Source: commit body "D5 substrate-gap deferral" section.
+5. **First INV-MONEY-001-compliant pure status function in spend domain** — `vendorPrepaymentStatus.ts` uses money.schema helpers (toMoneyAmount + addMoney + subtractMoney + eqMoney + zeroMoney); avoids Number coercion per discipline. Source: commit body "State-machine substrate" section.
+6. **First plan-vs-actual divergence handled mid-execution** — test paths shifted from co-located (plan default) to `tests/unit/` flat per chounting convention (vitest config restricts to `tests/**/*.test.ts`). Source: commit body final paragraph.
+
+**Session #2 observations (per pickup file enumeration):**
+
+7. **First chunk-grain mutation-shipping session in Phase 5** — `7c9f715` lands the first vendor prepayment mutation handlers; sets precedent for subsequent slices.
+8. **First (test-γ) hybrid test architecture firing** — 6 integration tests across 3-per-mutation + 3-per-criterion grain; per-criterion tests exercise EC-A-1/2/3 invariants via the apply mutation (Spend brief §11 covers bill posting; vendor prepayment apply contributes indirectly).
+9. **First D4-α policy decision logged to open_questions.md** — refund-with-applications gap per ADR-0015 §6 silence; conservative (block-and-force-reverse) shipping posture. Q80 RESOLVED at this closeout per Adjudication 7.
+10. **First mid-session test-pollution catch + fix (Cluster B B3 runtime grain — covered separately by Item 20 codification)** — initial tests used seeded chart_of_accounts codes ('2200' / '1300') that other test files (`reportTrialBalance.test.ts`) assert specific zero-balances on; refactored to dedicated test accounts (per-run codes derived from traceId). Resolution required schema-grain refactor across 4 test files.
+11. **First scope-compression-from-plan-authoring-grain at session-start framing (Cluster B B2 sub-shape)** — session-start prompt framed 4 mutations + 7 tests + 8 audit events + Q1-Q5 locks; verify-from-disk surfaced D1 (write_off reserved per ADR §1) + D2 (§11.1-§11.3 are bill criteria not vendor-prepayment) + D3 (approval-gate service-layer only, not joint) + D5 (Q1-Q5 notation drift; canonical is Q-closure-IDs); founder bundle compressed to 3 mutations + 6 tests + 6 events + Q-closure IDs. Second instance of Cluster B B1 substrate-citation shape (after session #1's D5/(orgset-β)) plus first instance of Cluster B B2 scope-projection shape.
+12. **(Reclassified per Adjudication 2 below)** Obs 6 was originally enumerated at session #2 close as first-instance "atomicity-model docstring rephrase" (`recordMutation.ts:122-127`); reclassified at this closeout entry as carry-forward-resolution for Item 1 FT3 (RESOLVED transition) rather than first-instance pattern observation.
+
+**Plus brainstorm-side meta-observation surfaced at session #3 closeout (becomes evidence basis for Cluster B graduation per Adjudication 1):**
+
+13. **Pickup-file-content-tracking gap (Cluster B B1 sub-shape at pickup-file-maintenance grain)** — session #1's six first-instance observations were enumerated in session #1's close pickup file body but did not carry into session #2's close pickup file body. The gap surfaces the Cluster B B1 shape recurring at pickup-file-maintenance grain: pickup-file Stage 6 firing operates at pickup-file-content-tracking grain not verified-from-disk grain re what needs preserving across closeouts. Recovery via `ebeab51` commit body sufficient for this entry's enumeration (drift §A disposition).
+
+#### 7 codification adjudications outcomes
+
+**Adjudication 1 — Cluster B graduation (multi-shape codification per cross-arc N=2 via candidate (e)).** Cluster B graduates as multi-shape codified discipline at this closeout per founder bundled-accept. Codified at `CLAUDE.md` "Plan-authoring substrate-verification at transitive-dependency grain" section (added at this commit). Sub-shapes:
+
+- **B1 Substrate-citation grain** — cited substrate may reference tables / types / files that don't exist or have been moved or deferred. Instances: session #1 D5/(orgset-β); session #2 D3 approval-gate misreading + D5 Q-lock notation drift; session #3 pickup-file-content-tracking gap (meta-evidence at pickup-file-maintenance grain).
+- **B2 Scope-projection grain** — plan projects scope larger than substrate supports. Instances: session #2 D1-γ (4→3 mutations); D2-α (7→6 tests).
+- **B3 Runtime grain** — covered separately by Item 20 codification (dedicated-test-accounts pattern). NOT a Cluster B sub-discipline.
+
+Adjacent to Z1 #11.b (verbatim re-read at drafting-onset for cited substrate). Cluster B fires earlier: at plan-authoring-onset, before scope-lock. Discrimination is timing — Z1 #11.b is for drafters; Cluster B is for plan-authors.
+
+**Adjudication 2 — Cluster A retain-as-observation; Obs 6 reclassification.** Cluster A retains as observation cluster (no graduation firing). Obs 6 (atomicity-docstring rephrase) reclassifies as carry-forward-resolution (Item 1 FT3 RESOLVED transition logged at session #2) rather than first-instance pattern observation. Refines first-instance count to 11 + 1 RESOLVED.
+
+**Adjudication 3 — Cluster C retain-as-observation.** Obs 9 (D4-α policy gap → Q80) is informational not codification candidate. Logged for arc-grain retrospective consumption at Phase 5 arc-closure (chunk B5-1 doesn't close the Phase 5 arc).
+
+**Adjudication 4 — Item 17 graduation pattern-stable per candidate (e) within-arc N≥3.** Memory-writes-only Stage 6 firing-shape graduates at this closeout. Codified at `CLAUDE.md` "Memory-writes-only Stage 6 firing-shape" section (added at this commit). Within-arc N=3: chunk-onset memory-writes-only + session #1 close (γ-a) bundle (1 commit + 2 memory-writes) + session #2 close (γ-a) bundle (1 commit + 2 memory-writes); shape consistent across all three instances.
+
+**Adjudication 5 — Cluster taxonomy applicability per §A.3 (option-iii non-exhaustive).** Three-cluster (A/B/C) framing arose mid-conversation as descriptive grouping; treating as prescriptive would over-weight a working-memory artifact. Future first-instances classified ad-hoc per substantive shape. No codification artifact ships (declining-to-codify is the disposition).
+
+**Adjudication 6 — Item 20 dedicated-test-accounts pattern codified at testing-discipline grain.** Pattern: integration tests posting JEs to ANY seeded account require dedicated test accounts to avoid cross-file balance-assertion collisions. Codified at `.claude/skills/integration-test-rules/SKILL.md` §3 (added at this commit). Implementation: per-run unique account_codes derived from traceId; lifecycle: beforeAll create, afterAll delete after journal_lines + journal_entries cleanup.
+
+**Adjudication 7 — Q80 disposition (combined option-i + option-iii).** ADR-0015 §1 amendment shipped at this closeout: ratifies D4-α v1 disposition (block refund if applications exist) + adds post-v1 deferral language for D4-β cascade (alongside `written_off` / `forfeited` reserved-state deferral pattern). Q80 entry REMOVED from `docs/02_specs/open_questions.md` per resolution discipline ("removing items from this file as they resolve is the discipline that keeps the file useful").
+
+#### 3 drift dispositions
+
+**§A — Session #1 observations gap recovered.** Session #1's six first-instance observations were absent from session #2 close pickup file body. Recovered via `ebeab51` commit body (option 2: canonical-evidence-anchor per Z1 #15). Option 4 fallback not needed — commit body grain sufficient for enumeration. The gap itself becomes Cluster B B1 evidence at pickup-file-maintenance grain (Obs 13 above; meta-evidence under Adjudication 1).
+
+**§B — Retrospective venue: inline-in-friction-journal (this entry).** Chunk B5-1 closeout is mid-arc (Phase 5 arc continues with B5-2+); arc-completion retrospective fires at arc closure, not chunk closure. Inline-in-friction-journal preserves the precedent pattern that closest matches chunk-grain (Phase 2 brief-creation arc-closeout was inline at line 9401). Separate retrospective document (arc-A / phase-1.1 / phase-1.2 precedent) deferred to Phase 5 arc-closure.
+
+**§C — Item 13 (`crossOrgRlsIsolation.test.ts` test-infra hygiene) transition CARRY-FORWARD → RESOLVED.** Three-run durability established at HEADs `ebeab51` + `7c9f715` + `7c9f715` (third pre-flight green at session #3 onset). (test-fix-α) defensive enhancement skipped per session #2 Anchor 4 verdict; durability not falsified. (a) state-dependent-on-pre-session-#1-substrate interpretation substantially better-supported per brainstorm-side observation: three runs across two HEADs all clean without (test-fix-α) is meaningful evidence that the original failure was state-dependent on pre-session-#1 substrate that round-2 / session #1 substrate updates cleared.
+
+#### Carry-forward to subsequent chunks (B5-2+) and Phase 5 arc-closure
+
+**Active for subsequent-chunk firing:**
+
+- **Item 1 FT1** (`clampTtl` NaN-guard at `apps/web/src/services/storage/providers/supabaseStorageProvider.ts:95-99`) — fires at next chunk that touches `storageProviderService` directly. Chunk B5-1 didn't fire it (verified at session #1 dispatch).
+- **Item 18 org_settings substrate-floor** (dedicated sub-arc per (orgset-β)) — activates per-org override branch of tax-timing 3-layer rule retroactively across all consuming domains; fires before v1 ship per Phase 1.Storage anti-scope framing.
+
+**Active for Phase 5 arc-closure retrospective:**
+
+- **Item 16 cross-arc-grain codified-discipline applicability meta-codification-candidate** — Sub-Q axis taxonomy (subq-β) lock; potential meta-codification candidate at arc closure if cross-arc evidence accumulates.
+- **Process-overhead-vs-deliverable-velocity observation** (founder + brainstorm-side joint flagging) — chunk B5-1 generated more codification candidates than substantive code per ratio comparison; not necessarily wrong for first-implementation-arc chunk where structural novelty is high; bears watching across chunks B5-2+ to see whether codification velocity normalizes or continues outpacing deliverable velocity.
+
+#### Subagent dispatch shape (this cycle)
+
+Z1 #11.b dispatch fired at session #3 substantive-drafting-onset (3 subagents):
+
+- Subagent A: friction-journal current shape + Phase 5 arc-class-first-instance entry framing precedents
+- Subagent B: cluster A/B/C codification meta-candidates synthesis (consolidate first-instance observations across sessions #1+#2)
+- Subagent C: ADR-0015 §6 + Q80 disposition options + post-v1 deferral framing precedents
+
+Plus pre-flight retrospective-venue probe via bash.
+
+**Cumulative chunk B5-1 dispatch count**: 4 (session #1 onset) + 4 (session #2: 3 ADR + 1 recon) + 3 (session #3: friction-journal + cluster + Q80) = **11 subagent dispatches across chunk preventively**. Z1 #11.b graduated codification operationally validated across chunk-grain implementation execution.
+
+#### Push-readiness gate disposition (chunk-completion grain)
+
+**Condition 1 (test-suite health)**: MET. `pnpm agent:validate` 26/26 + `pnpm test` 699/699 at HEAD `7c9f715` (session #2 push); session #3 closeout commit re-verifies condition 1.
+
+**Condition 2 (doc-sync reconciled)**: MET. `invariants.md` ↔ `control_matrix.md` ↔ `ledger_truth_model.md` consistent across chunk B5-1 (no new invariants registered; INV-AP-001/002 reserved per Spend brief §11.3 substrate-now-enforcement-later cross-pattern; activate at first INV-AP citation). `types.ts` matches post-session #1 schema substrate (regenerate via `pnpm db:generate-types` if any future schema deltas). ADR-0015 §1 amendment shipped at this commit per Q80 resolution.
+
+**Condition 3 (governance closeout)**: MET. Friction-journal entry shipped (this entry); 7 codification adjudications recorded; 3 drift dispositions resolved; carry-forward inventory reconciled to 4 active items (FT1, item 18, item 16, process-overhead observation). `CLAUDE.md` updated with 2 new graduated conventions (Cluster B B1+B2 + memory-writes-only Stage 6). `skills/integration-test-rules/SKILL.md` updated with §3 dedicated-test-accounts pattern.
+
+**All three push-readiness conditions MET at chunk B5-1 closeout. Push authorized.**
+
+---
+
+**Substrate-decision-integrity preserved across full chunk B5-1 (3 sessions; 2026-05-07 onset → 2026-05-10 closeout).** Phase 5 chunk B5-1 CLOSED at this retrospective entry. Phase 5 arc continues with chunk B5-2+ per (decomp-γ) hybrid by domain-slice. First Phase-5-arc-execution friction-journal entry shipped under (γ-a) bundled commit at clean-termination gate per refined (R-iii) graduated form.
+
+---
+
 - 2026-05-10 NOTE — Round-2 docs reorganization Session 8
   execution closeout (codification tail adjudications shipped)
   AND ROUND-2 CLOSURE DECLARATION. Three implementation commits

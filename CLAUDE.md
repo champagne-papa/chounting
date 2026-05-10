@@ -290,6 +290,92 @@ rule design fires at first `src/agent/pipelines/**/*` code), Q79
 Q77 (Q28 matrix fires at v1 ship). Full Phase 0 closeout at
 `docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`.
 
+### Plan-authoring substrate-verification at transitive-dependency grain
+
+Plan-authoring (briefs, plan files, session-start prompts) cites
+substrate at cited-substrate grain — what's listed in the planning
+artifact. Verify-from-disk operates at transitive-dependency grain —
+what the cited substrate actually depends on, exists at, or supports.
+Gaps surface at implementer dispatch when cited substrate's
+transitive dependencies don't exist or projected scope exceeds what
+substrate enables.
+
+The discipline: at plan-authoring grain, dispatch a verify-from-disk
+recon subagent BEFORE locking scope to confirm cited substrate +
+transitive dependencies + scope feasibility. Sub-shapes:
+
+- **B1 — Substrate-citation verification.** Cited substrate may
+  reference tables, types, files, or sections that don't exist (have
+  been deferred / not yet activated / renamed / moved). Recon at
+  plan-authoring grain catches these before scope-lock.
+- **B2 — Scope-projection verification.** Plan may project scope
+  larger than substrate supports (e.g., 4 mutations cited but only
+  3 active per ADR reservation; 7 tests cited but only 6 fit the
+  test-architecture rule). Recon at plan-authoring grain catches
+  scope-substrate mismatch before scope-lock.
+
+Mechanism: cited-substrate grain is what plan-authoring sees in the
+canonical substrate; verified-from-disk grain is what actually exists
++ what the cited substrate transitively depends on + what scope the
+substrate enables. The two diverge when (a) substrate has been
+deferred to a future arc but cited as active (B1), OR (b) plan-
+authoring projects scope beyond what substrate explicitly supports
+(B2). Both surface as gaps at implementer dispatch unless caught
+preventively.
+
+Adjacent to Z1 #11.b (verbatim re-read at drafting-onset for cited
+substrate). Cluster B fires earlier: at plan-authoring-onset, before
+scope-lock. The discrimination is timing — Z1 #11.b is for drafters;
+Cluster B is for plan-authors.
+
+Trigger: any plan-authoring activity that cites substrate by section
+reference, table name, type name, or scope count (mutations, tests,
+events, files). Single-line plan items don't fire; multi-line plan
+bodies or session-start prompts do.
+
+Precedent: Phase 5 chunk B5-1 sessions #1+#2. Codified at chunk B5-1
+session #3 closeout (2026-05-10) per cross-arc N=2 graduation pathway
+via candidate (e). B1 instances: session #1 D5/(orgset-β)
+substrate-citation gap; session #2 D3 approval-gate substrate-
+misreading + D5 Q-lock notation drift; session #3 pickup-file-content-
+tracking gap (meta-evidence at pickup-file-maintenance grain). B2
+instances: session #2 D1-γ scope reduction (4→3 mutations) + D2-α
+scope reduction (7→6 tests). Runtime grain (B3) covered separately
+by `.claude/skills/integration-test-rules/` §3 dedicated-test-accounts
+pattern; not a Cluster B sub-discipline. See
+`docs/07_governance/friction-journal.md` Phase 5 chunk B5-1 closeout
+retrospective entry (2026-05-10) Adjudication 1 for full evidence
+basis.
+
+### Memory-writes-only Stage 6 firing-shape
+
+When a session's substantive scope is fully captured by a single
+substantive commit, Stage 6 session-close fires as memory-writes-only:
+no additional commit, just pickup file refresh + MEMORY.md refresh.
+The (γ-a) bundle pattern carries: 1 substantive commit + 2 memory-
+writes (pickup + MEMORY).
+
+Trigger: any session whose substantive scope is captured in a single
+commit AND whose Stage 6 surface is limited to pickup-file refresh +
+MEMORY.md refresh. Multi-commit sessions fire Stage 6 differently
+(per substantive commit's own commit body + final memory-writes after
+the last commit).
+
+Mechanism: Stage 6 separates session-close infrastructure (pickup +
+MEMORY) from session-substance (commit). Memory-writes-only fires
+when the session's substance is single-commit-captured; the memory
+infrastructure layer rides outside the commit. Avoids creating a
+post-substance "infrastructure-only commit" that bloats history.
+
+Precedent: Phase 5 chunk B5-1 within-arc N=3 (chunk-onset
+memory-writes-only Stage 6 + session #1 close (γ-a) bundle 1+2 +
+session #2 close (γ-a) bundle 1+2). Graduated to pattern-stable at
+chunk B5-1 session #3 closeout (2026-05-10) per candidate (e)
+shape-refinement-via-within-arc-evidence-basis meta-pathway. See
+`docs/07_governance/friction-journal.md` Phase 5 chunk B5-1 closeout
+retrospective entry (2026-05-10) Adjudication 4 for the graduation
+adjudication.
+
 ## Phase 1 Simplifications
 
 Three Phase 1 simplifications (synchronous audit log,

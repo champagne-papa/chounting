@@ -309,6 +309,8 @@ emission is governed at Layer 3 by the corresponding service
 function; the immutability post-insert (Layer 1 CHECK) prevents
 silent reclassification across flows.
 
+**Refund preconditions (Q80 ratification, D4-α v1 disposition; 2026-05-10 amendment).** The v1 `vendorPrepaymentService.refund(...)` mutation rejects when the parent `vendor_prepayments` row has any rows in `vendor_prepayment_applications`. Conservative posture under Reading B (single-purpose-per-mutation: refund concerns the prepayment lifecycle; application reversal concerns the bill lifecycle and belongs to a separate reversal-of-application mutation that does not exist at v1). Cascade semantics (D4-β: refund auto-reverses applications) defer activation to a post-v1 workflow brief covering refund-with-applications mechanics alongside the write-off + forfeiture rules deferral above. v1 cases that conceptually require cascade route through manual application reversal first, then refund. See `docs/07_governance/friction-journal.md` Phase 5 chunk B5-1 closeout retrospective entry (2026-05-10) Adjudication 7 for the disposition history.
+
 **Application logic.** `apply_vendor_prepayment_to_bill` is a
 `ProposedMutation` variant that creates a
 `vendor_prepayment_applications` row inside the ledger transaction
