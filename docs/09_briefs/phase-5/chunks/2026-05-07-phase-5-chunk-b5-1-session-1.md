@@ -1011,7 +1011,7 @@ git rev-list --left-right --count origin/staging...HEAD
 
 Expected:
 - `git status --short`: clean (no output).
-- `git log --oneline -2`: top commit shows `feat(spend): chunk B5-1 substantive session #1 ...` followed by `ac1ff11`.
+- `git log --oneline -2`: top commit shows `feat(spend): chunk B5-1 substantive session #1 ...` followed by `78da920` (round-2 Session 8 closeout — current HEAD post-round-2 substrate updates).
 - `git rev-list --left-right --count`: `0	0`.
 
 If any of these don't match, the push did not complete cleanly — investigate before reporting Task 11 complete.

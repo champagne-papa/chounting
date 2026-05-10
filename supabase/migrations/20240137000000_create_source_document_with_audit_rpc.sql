@@ -11,9 +11,12 @@
 -- envelope.
 --
 -- Atomicity is the load-bearing property of this migration. Per
--- ADR-0013 §16 verbatim:
---   "source_document_created audit event fires in the same transaction
---    as the source_documents INSERT."
+-- docs/02_specs/ledger_truth_model.md INV-AUDIT-001 leaf:
+--   "Every service function that writes to a tenant-scoped table also
+--    writes a row to `audit_log` inside the same database transaction."
+-- The source_document_created audit event lives in this RPC so it
+-- commits atomically with the source_documents INSERT (parallel
+-- pattern to 20240134000000_write_journal_entry_atomic_rpc.sql:45-52).
 --
 -- In Supabase JS, sequential `.insert()` calls are NOT atomic at the
 -- PostgREST request layer (each call is its own request-level
