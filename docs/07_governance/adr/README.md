@@ -135,9 +135,10 @@ ADR-0019 is the single pre-existing instance under the
 convention; its design spec was originally authored at the
 now-deprecated location `docs/superpowers/specs/`, migrated to
 `docs/09_briefs/phase-0/specs/` in round-2 Session 5A (see
-`docs/restructure-plan.md` Amendments section for migration
-provenance and `docs/07_governance/DOCS_RESTRUCTURE_V2.md`
-when ratified at Session 7).
+`docs/07_governance/DOCS_RESTRUCTURE_V1.md` Amendments section
+for migration provenance and
+`docs/07_governance/DOCS_RESTRUCTURE_V2.md` when ratified at
+Session 7).
 
 ## Writing a new ADR
 

@@ -10,7 +10,6 @@ rules and points here for everything else.
 ## Top-level
 
 - `README.md` — orientation for new contributors: reading order plus a compact reference list.
-- `restructure-plan.md` — Phase 1.1 closeout working plan for the docs reorganization itself; historical context for why the tree is numbered this way. Moves to `99_archive/` when fully retired.
 
 ## 00_product — vision and people
 
@@ -95,6 +94,7 @@ for the deletion criterion.
 - `retrospectives/phase-1.2-retrospective.md` — closeout retrospective (2026-04-26): wins / frictions / conventions / scope. Inheritance-artifact map at §2; cross-session patterns at §3 (Pattern 1–8).
 - `retrospectives/arc-A-retrospective.md` — Arc A closeout retrospective (2026-04-24): 12-step execution arc, 9 patterns, three-role workflow meta-observations.
 - `CTO_HANDOFF_V2.md` — agent-first authority-gradient source-tree organization input; ratified into ADR-0020 (substrate-only at v1; ESLint rule activates at Phase 1 chunk 1). Cited verbatim by ADR-0020 Appendix A. Indexed at Phase 1.Storage closeout density per Class A INDEX hygiene amendment.
+- `DOCS_RESTRUCTURE_V1.md` — Round-1 docs reorganization plan, elevated to canonical-tier governance at round-2 Session 7 closure (2026-05-09). Establishes the nine-folder substrate (`00_product/` through `09_briefs/` + `99_archive/`) that round-2 V2 extends.
 
 ### 07_governance/adr — Architecture Decision Records
 

@@ -489,7 +489,7 @@ genre's flexibility.
   verification report (gitignored working artifact); the four
   blockers identified there inform Decision items 2, 3, 4, and
   the framing of Decision item 7.
-- [`docs/restructure-plan.md`](../../restructure-plan.md) — the
+- [`docs/07_governance/DOCS_RESTRUCTURE_V1.md`](../DOCS_RESTRUCTURE_V1.md) — the
   round-1 docs reorganization plan; elevated to
   `docs/07_governance/DOCS_RESTRUCTURE_V1.md` at Session 7
   alongside `DOCS_RESTRUCTURE_V2.md` (the canonical record of
@@ -544,7 +544,10 @@ vocabulary will find these load-bearing:
 - **round-2** — the second comprehensive docs reorganization
   arc (V2). Round 1 was the initial nine-folder restructure
   (`00_product/` through `99_archive/`) per
-  `docs/restructure-plan.md`; round 2 ratifies cross-cutting
+  `docs/07_governance/DOCS_RESTRUCTURE_V1.md` (originally
+  `docs/restructure-plan.md` at round-1 ratification time;
+  elevated to canonical-tier governance at round-2 Session 7);
+  round 2 ratifies cross-cutting
   conventions (taxonomy, ADR system, brief frontmatter, doc
   flatness principle) on top of round 1's folder substrate.
   The full round-2 record will land in

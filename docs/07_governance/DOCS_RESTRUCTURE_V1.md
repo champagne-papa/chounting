@@ -1,7 +1,21 @@
-# Documentation Restructure Plan
+# DOCS_RESTRUCTURE_V1.md — Round-1 Documentation Reorganization
 
-Phase 1.1 closeout deliverable. Working artifact, not polished doc.
-After execution, this file moves to /99_archive/restructure-plan.md.
+**Status:** Ratified V1 (round-1, 2026-04 to 2026-05-08). Elevated
+to canonical-tier governance at round-2 closure (Session 7,
+2026-05-09). Companion document: `DOCS_RESTRUCTURE_V2.md` (round-2
+ratification, this folder).
+
+**Scope:** V1 ratifies the nine-folder substrate (`00_product/`
+through `09_briefs/`, plus `99_archive/`) that round-2 then
+extended with three Principles, frontmatter conventions, the
+canonical taxonomy, the source-tree authority-layer organization
+per ADR-0020, and the three Principle 3 surface guardrails.
+
+**Reading order:** V1 establishes the substrate; V2 ratifies the
+round-2 deltas. Read V1 for the round-1 architectural reasoning;
+read V2 for the current canonical state.
+
+---
 
 ## Migration Notes
 
