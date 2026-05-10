@@ -271,7 +271,7 @@ and the Status-line clause-accumulation pattern.
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
-`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md` Decision 7: ADR-0011 Document Platform, ADR-0012 ProposedMutationBundle, ADR-0013 Storage Provider, ADR-0014 Tier 2 Document Pipeline, ADR-0015 AP/Spend Subdomain, ADR-0016 Document Relationship Graph, ADR-0017 Vendor Template Substrate, ADR-0018 Relationship Router, ADR-0019 Confidence Calibration Policy. These ADRs ratified across D1–D6 gates 2026-05-03 / 2026-05-04 per Phase 0 closure verification (Session 2F).
+`docs/09_briefs/phase-0/plans/2026-05-03-phase-0-governance-plan.md` Decision 7: ADR-0011 Document Platform, ADR-0012 ProposedMutationBundle, ADR-0013 Storage Provider, ADR-0014 Tier 2 Document Pipeline, ADR-0015 AP/Spend Subdomain, ADR-0016 Document Relationship Graph, ADR-0017 Vendor Template Substrate, ADR-0018 Relationship Router, ADR-0019 Confidence Calibration Policy. These ADRs ratified across D1–D6 gates 2026-05-03 / 2026-05-04 per Phase 0 closure verification (Session 2F).
 
 ## By module
 

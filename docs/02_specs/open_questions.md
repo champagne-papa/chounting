@@ -752,7 +752,7 @@ Topic-level mapping from reserved-but-never-filed Q35–Q52 to current architect
 Questions Q53–Q78 file against the Document Platform reframe spec
 (`docs/09_briefs/phase-2/document_platform_reframe_design.md`).
 Filed in three batches per the Phase 0 governance plan
-(`docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md`)
+(`docs/09_briefs/phase-0/plans/2026-05-03-phase-0-governance-plan.md`)
 Tasks A2 (Q53–Q60), A3 (Q61–Q70), A4 (Q71–Q78).
 
 ### Q53 — Document-type enum: which types are active in v1, which are reserved?

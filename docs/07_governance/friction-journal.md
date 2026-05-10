@@ -32,6 +32,25 @@ Categories:
 > NOTE entry below (Session 5A closeout) for the migration's
 > commit-level provenance.
 
+> **Path note 2026-05-09 (round-2 docs reorganization Session 5B
+> Layer 2 phase-0 governance migration):** entries below
+> referencing `docs/09_briefs/phase-2/2026-05-03-*` and
+> `docs/09_briefs/phase-2/2026-05-04-*` files (D1-D6 ratification
+> packages, phase-0-governance-plan, bank-detail amendment,
+> evidence-link coordination, phase-0-closure-verification, session
+> 2d/2f opening prompts and closeout) should be read as referring
+> to their new locations under `docs/09_briefs/phase-0/<sub-bucket>/`
+> per the briefs convention's per-phase organization. Sub-bucket
+> assignments per Session 5B Decision 2 + 5: governance-plan →
+> plans/; D1-D6 packages → ratification-packages/ (NEW sub-bucket
+> per convention expansion at Session 5B Decision 2); bank-detail
+> amendment + evidence-link + closure-verification + session
+> prompts/closeout → chunks/. File contents unchanged; only
+> locations moved. References preserved verbatim per the
+> friction-journal-is-history rule. See the 2026-05-09 NOTE entry
+> below (Session 5B closeout) for the migration's commit-level
+> provenance.
+
 ## Phase 2
 
 - 2026-05-09 NOTE — Round-2 docs reorganization Session 7 closeout
