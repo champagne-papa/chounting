@@ -6,7 +6,7 @@ initiatives consume. Status header + §15 Phase 0 prerequisites + §17
 open questions + §21 review history finalized at Phase 0 closure;
 substantive content sections (§1–§14, §16, §18–§20) deferred to
 Phase 1 implementation onset per the substrate-now-enforcement-later
-cross-pattern (per `docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+cross-pattern (per `docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`
 §6.8 codified Phase 0 governance lesson + ADR-0010 amendment Variant
 A precedent at commit `797db40`). Substantive section content fills
 in alongside Phase 1 (Storage / Evidence Core) implementation work
@@ -114,7 +114,7 @@ visible.
 Per ADR-0010 amendment Variant A precedent (NULL-default forward-
 compatible config-column reservation) + the substrate-now-
 enforcement-later cross-pattern codified at the D6 ratification
-package §6.8 (`docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`),
+package §6.8 (`docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`),
 v1 scope splits three ways: in-scope (substrate ratified + active
 in v1), out-of-scope (Phase 5 or post-v1 explicitly named), and
 reserved-but-not-emitted (substrate ratified, defined in schema,
@@ -276,7 +276,7 @@ Phase 1 implementation or v1 ship.
   reserved as the first DOC-prefix invariant candidate
   (evidence-completeness; per-bill or per-case primary-link
   requirement). Q79 path β deferral per
-  `docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+  `docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`
   §6.8: enforcement-rule shape lands at first DOC-citing code
   in Phase 1 implementation. Phase 1.Storage code does not yet
   cite DOC; Q79 trigger remains pending Phase 2 implementation
@@ -2506,7 +2506,7 @@ but-not-owned surfaces:
 
 ### Gate-firing pattern — D6 §6.8 substrate-now-enforcement-later
 
-Per `docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+Per `docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`
 §6.8, Phase A acceptance criteria fire under the substrate-now-
 enforcement-later cross-pattern that reached six-instance
 robustness across Phase 0 (ADR-0011 reserved exception-resolution-
@@ -2549,7 +2549,7 @@ v1 ship-readiness.
 
 Phase 0 closure verification (Session 2F, 2026-05-04) confirms all
 prerequisites met. The verification artifact at
-`docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`
+`docs/09_briefs/phase-0/chunks/2026-05-04-phase-0-closure-verification.md`
 documents the full 12-surface disposition.
 
 **Eight Phase 0 ADRs ratified across six gates D1–D6:**
@@ -2912,11 +2912,11 @@ the order named:
 - `/home/philc/projects/chounting/docs/09_briefs/phase-2/document_platform_reframe_design.md`
   — reframe-spec (canonical source for substrate framing). Cited
   throughout §1, §2, §3, §15, §16. **Not modified.**
-- `/home/philc/projects/chounting/docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+- `/home/philc/projects/chounting/docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`
   — D6 §6.8 substrate-now-enforcement-later codification.
   Substrate source for §14 gate-firing pattern axis. **Not
   modified.**
-- `/home/philc/projects/chounting/docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`
+- `/home/philc/projects/chounting/docs/09_briefs/phase-0/chunks/2026-05-04-phase-0-closure-verification.md`
   — Phase 0 12-surface disposition. Cited in §15 + §16. **Not
   modified.**
 - `/home/philc/projects/chounting/docs/09_briefs/phase-2/spend_initiative.md`

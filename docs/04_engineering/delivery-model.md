@@ -153,7 +153,7 @@ the fact is harder.
 
 A ratification package doc summarizes work being reviewed and
 the founder's verdict. Template per
-`docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`.
+`docs/09_briefs/phase-0/ratification-packages/2026-05-04-d6-ratification-package.md`.
 
 Founder verdict shapes:
 
