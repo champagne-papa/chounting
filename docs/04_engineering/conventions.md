@@ -1313,6 +1313,122 @@ rename informing the final form landed here.
 
 ---
 
+## Round-2 Conventions (established 2026-05-09)
+
+Codified during round-2 docs reorganization (2026-04 to
+2026-05-09) per `docs/07_governance/DOCS_RESTRUCTURE_V2.md`.
+Round-2 ratified three Principles plus four operational
+conventions captured here.
+
+### Round-N restructure plan workflow
+
+Round-N docs reorganization arcs follow a stable artifact
+pattern:
+
+- Arc-level brief lives at the docs root during the arc (e.g.,
+  `docs/restructure-plan.md` for round-1's V1, until elevated).
+- Session-level plans live at the meta-arc folder
+  (`docs/07_governance/round-N/`).
+- At arc closure, the arc-level brief elevates to
+  `docs/07_governance/DOCS_RESTRUCTURE_V<N>.md` alongside the
+  new `DOCS_RESTRUCTURE_V<N+1>.md` (which becomes the V1 source
+  for the NEXT round).
+
+The meta-arc folder under `07_governance/round-N/` is a
+Pattern 7 conditional-permission case (cross-phase meta-arc
+exception to Principle 2 of V<N>.md). First-instance precedent:
+`docs/07_governance/round-2/`.
+
+### Three-category codification taxonomy
+
+Codification thresholds vary by category. The artifact-
+codification relationship is the load-bearing distinction:
+
+- **Architectural principle.** Ratification IS codification.
+  The principle's text in V<N>.md (or in an ADR) is the
+  canonical record at the moment of ratification. Threshold:
+  N=1 per surface the principle applies to. Aggregation across
+  surfaces is NOT required — each surface independently meets
+  N=1. Worked examples: Principles 1, 2, 3 in
+  `DOCS_RESTRUCTURE_V2.md`; ADR-0020's authority-gradient
+  source organization.
+- **Procedural pattern.** Artifact's existence documents the
+  convention. The convention is in the artifact itself; reading
+  the artifact teaches the pattern. Threshold: N=1 establishes;
+  N=2 confirms; codification often coincides with artifact
+  creation. Worked examples: ADR `## Amendment` block format
+  (per ADR-0022); friction-journal entry shape; round-N
+  session-plan filename convention.
+- **Process meta-pattern.** Artifact is decoupled from
+  codification. The pattern operates on processes (how decisions
+  get made, how drift gets caught, how sequences get verified)
+  rather than on artifacts. Threshold: N=2 with shape match
+  across distinct timing surfaces or distinct contexts; N=3
+  confirms. Codification gates must catch shape-match across
+  instances, not just count. Worked examples: plan-substrate-
+  vs-canonical-reality drift meta-pattern (N=2; not yet
+  codified to a principle).
+
+### "Verify the artifact before agreeing with an alarm" rule
+
+When someone (operator, agent, doc) raises an alarm about an
+artifact's state, verify against the artifact directly before
+responding. Don't agree with the alarm based on memory of the
+prior state; read the artifact at alarm-time.
+
+Worked example: Session 6.5 plan claimed `lib/` was forbidden
+in the authority-layer enumeration; canonical
+`docs/03_architecture/folder-structure.md` actually lists `lib/`
+as a permitted forward-looking layer. Executor verified against
+folder-structure.md (canonical) before drafting; canonical won.
+
+Failure mode this prevents: "agent agrees with the alarm because
+the operator raised it" — propagating a misreading because the
+alarm felt authoritative. The discipline is: verify directly,
+then respond. The alarm-raiser may be right; the artifact is the
+tiebreaker.
+
+### Plan-substrate-vs-canonical-reality drift meta-pattern (Tier 3 → Tier 2 codification trajectory)
+
+Forward projections embedded in plans, handoffs, or brainstorm-
+context sections drift from canonical reality at execution
+time. The meta-pattern fires across multiple timing surfaces:
+
+- **Execution-time surface:** plan-internal substrate
+  (forbidden lists, header styles, fire counts) drifts from
+  canonical docs (folder-structure.md, friction-journal pattern,
+  chronological fire history).
+- **Planning-decision-time surface:** handoff sequence
+  projections drift from chronological reality (sequence didn't
+  materialize).
+- **Cross-reference-time surface:** forward references to
+  post-rewrite content drift from current-state content
+  (mitigated by path-level cross-references; see operational
+  rule below).
+
+Current evidence count: N=2 (per `DOCS_RESTRUCTURE_V2.md`
+Part 2 record).
+
+- N=1 = Session 6.5 closeout (execution-time, three instances
+  under one meta-pattern observation).
+- N=2 = Session 7 brainstorm (planning-decision-time, the
+  Path A vs Path B sequence question).
+
+**Codification status: Tier 3 → Tier 2 trajectory; not ratified
+to a principle at N=2.** Codification gates: N=3 with shape
+match across three distinct timing surfaces. The cross-
+reference-time surface needs an N=1 instance before the
+meta-pattern crosses to Tier 1 codification.
+
+**Operational rules within Pattern 7's bypass procedure** (these
+land at `docs/README.md` Folder placement guardrail's bypass
+procedure section, not at the principle level):
+
+- Canonical-source verification at execution time.
+- Chronological-reality verification at planning time.
+
+---
+
 ## Documentation Routing
 
 ### Routing rule
