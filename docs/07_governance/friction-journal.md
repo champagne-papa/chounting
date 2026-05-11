@@ -53,6 +53,116 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-3-D1 substantive arc closeout retrospective entry (2026-05-11) — third Phase-5-arc-execution friction-journal entry + (cadence-β-i-a) second-instance (cross-arc N=2 graduation evaluation FIRED; arc-closure synthesis) + 6 chunk-grain catches + 3 drift dispositions + chunk-closeout/arc-closure grain discrimination methodology
+
+This is the THIRD Phase-5-arc-execution entry. Chunk B5-3-D1 (Slice D AP read-side reporting; data-side) opened 2026-05-10 at HEAD `fdb019d`; substantive sessions #1 + #2 SHIPPED 2026-05-10/11 at HEADs `770fef4` + `93cecdd`; closeout session #3 closes the chunk at this commit per (cadence-β-i-a) 3-session split (second instance of this cadence-shape after chunk B5-1; cross-arc N=2 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per founder narrow-scope disposition §Drift-B). Phase 5 arc continues with chunk B5-3-D2 (UI screenshot-gated surfaces) OR alternative next-slice election per (decomp-γ) hybrid by domain-slice.
+
+**Chunk-closeout grain narrowed per founder ratification at session #3 onset (§Drift-B below):** this entry preserves chunk-grain pattern observations + drift dispositions + carry-forward inventory. Cross-arc synthesis (codification adjudications + graduation evaluations + cross-arc N≥2/N≥3 codification candidate decisions) defers to Phase 5 arc-closure retrospective rather than firing at this chunk-closeout grain. Methodology shift from chunk B5-1 + B5-2 closeout precedents (which included codification adjudications at chunk-closeout grain).
+
+#### Aggregate chunk metrics
+
+| Session | HEAD | Files | Lines | Tests | Validation |
+|---|---|---|---|---|---|
+| Chunk onset (2026-05-10) | `fdb019d` (chunk B5-2 closeout) | — | — | — | memory-writes-only Stage 6 per Item 17 |
+| Substantive #1 (2026-05-10) | `770fef4` | 13 | +2340/-1 | 24 new | 801/801 + 26/26 |
+| Substantive #2 (2026-05-11) | `93cecdd` | 8 | +1368/-3 | 11 new | 812/812 + 26/26 |
+| Closeout #3 (2026-05-11) | this commit | — | — | — | conditions 1+2+3 MET |
+
+Cumulative across substantive sessions: 21 files / +3708/-4 / 35 new tests at clean DB baseline 812/812. 5 of 5 v1-deliverable views shipped (EC-A-3 + EC-A-4 + EC-A-5 + EC-A-6 + EC-A-7); EC-A-8 scope-removed under (δ) per §Drift-A.
+
+#### Arc-class second-instance status framing
+
+Chunk B5-3-D1 is the THIRD chunk-grain implementation arc of Phase 5 (after chunks B5-1 + B5-2). (cadence-β-i-a) 3-session split fires SECOND time after chunk B5-1 — **cross-arc N=2 graduation trigger for candidate (e) FIRES at session #1 ship.** Per §Drift-B narrow-scope ratification, graduation evaluation defers to Phase 5 arc-closure retrospective; this entry logs the trigger-firing as a raw data point.
+
+Sessions #1 + #2 substantive observations enumerated below as raw data points; codification synthesis carries forward to arc-closure.
+
+#### 6 chunk-grain catches (observations; codification deferred to arc-closure)
+
+**Cluster B B1 cumulative N=25 = 19 entering D1 + 6 across chunk B5-3-D1.**
+
+Session #1 catches (4):
+
+1. **Catch #21 — orchestrator-dispatch-grain loggerWith API drift.** Subagent-caught during Task 2-3 implementation at session #1; subagent revised file-scoped logger to per-call construction per substrate-grounded API. Architecture-validating observation: defense-in-depth working as designed (subagent's substrate-read at implementation grain corrected orchestrator's semantic-memory projection in dispatch prompt).
+2. **Catch #22 — orchestrator-dispatch-grain `ctx.caller.org_ids[0]` semantic-memory propagation.** Brainstorm-side caught at session #1 checkpoint #1; resolved via openBills.schema.ts + org_id input shape addition (pattern parity with aging + balance schemas).
+3. **Catch #23 — orchestrator-ratification-grain D1.3 ratification without .gitignore verify-from-disk.** Surfaced at post-Task-3 file-staging verify when D1.3 `reports/` subfolder silently captured by .gitignore `reports/` broad pattern; resolved via disposition (b) .gitignore scope refinement (`reports/` → `/reports/` root-only).
+4. **Catch #24 — substrate-side .gitignore broader-than-documented-intent observation.** Surfaced concurrently with catch #23; resolved via disposition (b) scope refinement. New grain variant in grounding-rigor spectrum: substrate-side observation grain.
+
+Session #2 catches (2):
+
+5. **Catch #25 — orchestrator-ratification-grain D1.1 ratification without verify-from-disk on exception routing substrate.** Surfaced at session #2 onset D2.4 dispatch when verify-from-disk Outcome C revealed exception_queue substrate doesn't exist in code or migrations. Sibling to catch #23 (D1.3 ratification-grain). Resolved via §Drift-A (δ) EC-A-8 scope-removal.
+6. **Catch #26 — orchestrator-dispatch-grain `toMoneyAmount` String() coercion projection drift.** Subagent-caught preventively at Tasks 1-4 by verify-from-disk against session #1 `loadBillsWithAmountDue` helper pattern. Sibling to catch #21 (loggerWith API drift); same class — orchestrator-grain projection without disk grounding. Defense-in-depth validation second instance.
+
+**Within-arc pattern observations (logged as raw data; codification deferred to arc-closure per §Drift-B):**
+
+- **Orchestrator-dispatch-grain count = 3 instances** (catches #21 + #22 + #26) — **within-arc N≥3 candidate (e) shape-refinement-via-within-arc-evidence-basis trigger FIRES.** Codification candidate evaluation deferred to arc-closure.
+- **Orchestrator-ratification-grain count = 2 instances** (catches #23 + #25) — within-arc N≥2; codification candidate "ratification-grain verify-from-disk dispatch fires PREVENTIVELY at chunk-onset planning lock against any ratification that cites substrate as a dependency"; deferred to arc-closure alongside (α) codification-grain primary candidate from B5-2.
+- **Subagent-caught catches = 2 instances** (catches #21 + #26) — both orchestrator-dispatch-grain; architecture-validating data points; defense-in-depth from subagent substrate-read at implementation grain corrected orchestrator-grain semantic-memory drift at both instances.
+
+**Process-overhead hypothesis refinement (carry-forward to arc-closure):** D1 evidence refines the hypothesis to a **two-surface model**:
+- **Implementation-grain catches** correlate with substrate novelty (D1 session #2 = 0 catches at Tasks 1-4; pattern-inherited from session #1; novelty zero produces yield zero)
+- **Ratification-grain catches** correlate with substrate-existence-assumption surface (D1 session #2 catch #25 surfaced at fresh substrate-existence-assumption for EC-A-8 despite pattern-inherited session; independent of substrate novelty)
+
+#### 3 drift dispositions
+
+**§Drift-A — EC-A-8 (δ) scope-removal from chunk B5-3-D1.** D1.1 ratification of "3 EC-A-8 behavioral tests" surfaced at session #2 onset D2.4 verify-from-disk dispatch as Outcome C: exception routing substrate does NOT exist in code or migrations (zero references to `exception_queue` or `exceptionRoutingService` in `apps/web/src/`; zero migrations create the table); Phase 5 §10 phase-sequencing explicitly excludes ingestion/extraction substrate (verbatim: "No drag-drop, no email, no extraction"); EC-A-8 row at Spend brief §11.4 explicitly anchors substrate ownership to Document Platform ("consumed from Document Platform substrate"). Disposition (δ) ratified: EC-A-8 scope-removed from chunk B5-3-D1; stays as Phase A exit criterion; delivery deferred to Phase 6+ chunk that ships Document Platform exception_queue substrate. Catch #25 logged at session #2 onset; resolved via this disposition. Phase 5 ↔ Phase 6+ cross-phase dependency carry-forward to arc-closure.
+
+**§Drift-B — Chunk-closeout / arc-closure grain discrimination methodology.** Brainstorm-side surfaced at session #3 onset: chunk B5-3-D1 carry-forward inventory entering closeout would have included 4 candidate (e) trigger evaluations + multiple cross-arc codification candidate decisions if chunk-closeout precedent at B5-1 + B5-2 were applied uniformly. Founder narrow-scope ratification: chunk-closeout limits disposition to artifacts that NEED to land at chunk-closeout grain (friction-journal entry + push-readiness gate + chunk-grain push); arc-closure-grain candidates (cross-arc graduation evaluations + cross-arc codification candidates) carry-forward to Phase 5 arc-closure retrospective. Methodology shift from chunk B5-1 + B5-2 closeout precedents (which included codification adjudications at chunk-closeout grain). New chunk-closeout/arc-closure grain discrimination methodology established at B5-3-D1; preserves grain separation between chunk-closeout substrate-grain reconciliation and arc-closure cross-arc synthesis.
+
+**§Drift-C — Retrospective venue (inline-in-friction-journal).** Per chunk B5-1 §B + chunk B5-2 §Drift-B precedents: inline-in-friction-journal at chunk closeout; arc-completion retrospective separate document deferred to Phase 5 arc-closure. Chunk B5-3-D1 is mid-arc (Phase 5 arc continues with chunk B5-3-D2 or B5-4 per (decomp-γ) hybrid).
+
+#### Carry-forward to subsequent chunks (B5-3-D2 / B5-4+) and Phase 5 arc-closure
+
+**Active for subsequent-chunk firing (2 items; preserved from chunk B5-2 closeout):**
+
+- **Item 1 FT1** (`clampTtl` NaN-guard at `apps/web/src/services/storage/providers/supabaseStorageProvider.ts`) — deferred at D1 onset; still pending; fires at storage-substrate-touching chunk
+- **Item 18 org_settings substrate-floor** (dedicated sub-arc per (orgset-β)) — deferred at D1 onset; still pending; fires at first `org_settings.*` consumption
+
+**Active for Phase 5 arc-closure retrospective (18 items; chunk-closeout-grain consolidation per §Drift-B):**
+
+Preserved from prior chunks:
+
+1. **Item 16** cross-arc-grain meta-codification-candidate
+2. **Process-overhead-vs-deliverable-velocity observation** — refined to two-surface model at B5-3-D1 (implementation-grain vs ratification-grain catches with different drivers)
+3. **Discipline-of-the-discipline observation** (Z1 #11.b + Cluster B adjacent-register pattern)
+4. **Catch #17 brainstorm-side semantic-memory observation pattern**
+5. **(α) Codification-grain verify-from-disk gate** (primary candidate from B5-2)
+6. **(β) Test-pass-evidence-grain limitation** (sub-observation under α)
+7. **6-grain-variant grounding-rigor spectrum** (4-grain at B5-2 + catch #21 orchestrator-dispatch-grain + catch #24 substrate-side observation grain; B5-3-D1 catches #25 + #26 fit existing grains)
+8. **(cadence-β-i-b) cross-arc N=2 watch** (stays at N=1; B5-3-D1 fires (cadence-β-i-a))
+9. **Catch #20 forward-pointer** — post-v1 accrual workflow chunk for ADR-0015 §5 two-axis spec drift disambiguation
+10. **§3.1+§3.2 trigger-condition sub-pattern SKILL refinement candidate** — read-side direct-DB seeding doesn't fire trigger; SKILL refinement at arc-closure
+11. **accountLedgerService.test.ts pollution-driven flake observation** — cross-arc N=2 candidate (B5-2 session #1 + D1 sessions #1+#2)
+12. **(cadence-β-i-a) cross-arc N=2 graduation evaluation FIRED** — B5-1 + D1 = N=2; founder triangulation at arc-closure per candidate (e) pathway
+
+New at chunk B5-3-D1 closeout:
+
+13. **Within-arc N≥3 orchestrator-dispatch-grain codification candidate** — catches #21 + #22 + #26 within D1; candidate (e) shape-refinement-via-within-arc-evidence-basis trigger FIRED; arc-closure evaluation
+14. **Within-arc N≥2 orchestrator-ratification-grain codification candidate** — catches #23 + #25 within D1; "ratification-grain verify-from-disk dispatch fires PREVENTIVELY at chunk-onset planning lock against any ratification that cites substrate as a dependency"; arc-closure evaluation alongside (α) codification-grain primary candidate from B5-2
+15. **(test-γ) grain definition clarification** — three plausible counting surfaces (file-grain / logical-test-class-grain / case-grain); B5-1 + B5-2 + D1 cross-arc comparison gated on this disposition; arc-closure evaluation
+16. **EC-A-8 (δ) scope-removal + Phase 5 ↔ Phase 6+ cross-phase dependency** — EC-A-8 satisfies at Phase 6+ chunk that delivers Document Platform exception_queue substrate; arc-closure consolidation
+17. **File-top staleness convention pattern-stable observation** — convention fired across B5-1 + B5-2 + B5-3-D1 (3 Phase 5 chunks); pattern-stable per codified discipline in CLAUDE.md
+18. **Chunk-closeout/arc-closure grain discrimination methodology** (§Drift-B) — narrow-scope precedent established at B5-3-D1; arc-closure consolidation of methodology evidence across chunks
+
+#### Subagent dispatch and brainstorm-side parallel-surface shape (chunk-grain)
+
+Two-sided + founder triple architecture operated across chunk B5-3-D1. Substantive subagent dispatches at sessions #1 (Tasks 1-3) + #2 (Tasks 1-4); brainstorm-side parallel-surface review at checkpoints (#1 + #2 session #1; checkpoint Task 5 session #2). Cluster B B1 verify-from-disk dispatches at chunk-onset + session #2 onset (D2.4 exception routing substrate) + scope-lock gates per graduated discipline. **Subagent-caught catches (#21 + #26) validate defense-in-depth architecture** — subagent substrate-read at implementation grain corrected orchestrator-grain semantic-memory projection at both instances. Architecture-validating data point: two-sided + founder triple defends against orchestrator-grain drift via subagent-grain substrate-read.
+
+#### Push-readiness gate disposition (chunk-completion grain)
+
+**Condition 1 (test-suite health):** MET. `pnpm agent:validate` 26/26 + `pnpm test` 812/812 at HEAD `93cecdd` (session #2 push); session #3 closeout commit re-verifies condition 1 (doc-only commit; no test impact).
+
+**Condition 2 (doc-sync reconciled):** MET. `invariants.md` ↔ `control_matrix.md` ↔ `ledger_truth_model.md` consistent across chunk B5-3-D1 (no new invariants registered; INV-AP-001/002 activated at B5-2 Layer 2 service per Spend brief §11.3 substrate-now-enforcement-later cross-pattern; D1 read-side adds NO new invariants). `types.ts` matches post-B5-2 schema substrate (D1 no schema changes). Spend brief unchanged at D1 (D1 amendment shipped at B5-2 closeout). ADR-0015 unchanged at D1.
+
+**Condition 3 (governance closeout):** MET. Friction-journal entry shipped (this entry); 6 catches enumerated as observations (codification deferred per §Drift-B); 3 drift dispositions resolved (§Drift-A EC-A-8 (δ) scope-removal + §Drift-B grain discrimination methodology + §Drift-C retrospective venue); carry-forward inventory reconciled to 2 subsequent-chunk + 18 arc-closure candidates. CLAUDE.md NOT updated this chunk (no new graduated conventions; codification candidates carry-forward to arc-closure per §Drift-B narrow-scope disposition). `.claude/skills/integration-test-rules/SKILL.md` NOT amended (§3.1+§3.2 trigger-condition sub-pattern refinement candidate carries to arc-closure).
+
+**All three push-readiness conditions MET at chunk B5-3-D1 closeout. Push authorized.**
+
+---
+
+**Substrate-decision-integrity preserved across full chunk B5-3-D1 (3 sessions; 2026-05-10 onset → 2026-05-11 closeout).** Phase 5 chunk B5-3-D1 CLOSED at this retrospective entry. Phase 5 arc continues with chunk B5-3-D2 (UI screenshot-gated surfaces) OR alternative next-slice election per (decomp-γ) hybrid by domain-slice. Chunk-closeout/arc-closure grain discrimination methodology established per §Drift-B narrow-scope disposition: chunk-closeout limits to substrate-grain reconciliation; arc-closure handles cross-arc synthesis. Multiple candidate (e) triggers FIRED but evaluation deferred to arc-closure retrospective: (cadence-β-i-a) cross-arc N=2 + (test-γ) within-arc N≥3 + within-arc N≥3 orchestrator-dispatch-grain + within-arc N≥2 orchestrator-ratification-grain.
+
+---
+
 ### Phase 5 chunk B5-2 substantive arc closeout retrospective entry (2026-05-10) — second Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) first-instance + 12 first-instance observations + 6 codification adjudications + 2 drift dispositions + 4-data-point grounding-rigor spectrum
 
 This is the SECOND Phase-5-arc-execution entry. Chunk B5-2 (Slice A bill lifecycle per Spend Initiative §11.1) opened at 2026-05-10 substantive session #1 onset; substantive session #1 SHIPPED at HEAD `3cffe74`; closeout session #2 closes the chunk at this commit per (cadence-β-i-b) 2-session bundled cadence (N=1 first-instance precedent; first chunk-grain implementation-arc closeout under (cadence-β-i-b)). Phase 5 arc continues with chunk B5-3+ per (decomp-γ) hybrid by domain-slice.
