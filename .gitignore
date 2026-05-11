@@ -86,4 +86,13 @@ test-results/
 # deferred to a separate cleanup arc. Round-2 docs reorganization
 # (2026-05-07) is the precondition for this rule; see
 # DOCS_RESTRUCTURE_V2.md Part 3 (Session 7) for the canonical record.
-reports/
+#
+# Scope refined 2026-05-10 at chunk B5-3-D1 session #1 checkpoint #1 per
+# founder verdict: pattern updated from `reports/` (matches at any depth)
+# to `/reports/` (root-only) to align rule scope with documented intent.
+# The bare-pattern form was silently capturing application source paths
+# named `reports/` at deeper paths (e.g., `apps/web/src/services/spend/
+# reports/` D1.3 substrate + the already-tracked `apps/web/src/app/api/
+# orgs/[orgId]/reports/` API routes tree). Catch #23 + #24 logged for
+# D1 closeout friction-journal forward-pointer.
+/reports/
