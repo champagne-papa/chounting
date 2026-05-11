@@ -1,7 +1,11 @@
 // src/services/spend/reports/apReportService.ts
 //
-// Phase 5 chunk B5-3-D1 substantive session #1: EC-A-3 AP aging + EC-A-4 open
-// bills reports. Read-only AP/Spend report service per Spend brief §11.4.
+// Phase 5 chunk B5-3-D1 substantive sessions #1 + #2: consolidated 4-method
+// AP/Spend read-only report service per Spend brief §11.4.
+//   - aging()                — EC-A-3 (session #1)
+//   - openBills()            — EC-A-4 (session #1)
+//   - paymentApprovalQueue() — EC-A-6 (session #2)
+//   - paidBillsHistory()     — EC-A-7 (session #2)
 //
 // Mirror pattern: billService.ts (B5-2) for structural discipline (imports,
 // ServiceContext, adminClient, ServiceError, loggerWith, plain unwrapped
@@ -61,6 +65,16 @@ import {
   type OpenBillsInputRaw,
 } from '@/shared/schemas/spend/reports/openBills.schema';
 import {
+  PaymentApprovalQueueInputSchema,
+  type PaymentApprovalQueueInput,
+  type PaymentApprovalQueueInputRaw,
+} from '@/shared/schemas/spend/reports/paymentApprovalQueue.schema';
+import {
+  PaidBillsHistoryInputSchema,
+  type PaidBillsHistoryInput,
+  type PaidBillsHistoryInputRaw,
+} from '@/shared/schemas/spend/reports/paidBillsHistory.schema';
+import {
   addMoney,
   subtractMoney,
   toMoneyAmount,
@@ -100,6 +114,43 @@ export interface OpenBillRow {
 export interface OpenBillsOutput {
   bills: OpenBillRow[];
   total_amount_due: MoneyAmount;
+}
+
+/**
+ * Payment approval queue output per EC-A-6 (Spend brief §11.4).
+ * Bills in `approved_for_payment` lifecycle_state awaiting payment-execution.
+ */
+export interface PaymentApprovalQueueRow {
+  bill_id: string;
+  vendor_id: string;
+  bill_number: string | null;
+  due_date: string | null;
+  amount_cad: MoneyAmount;
+  amount_due: MoneyAmount; // computed = bills.amount_cad − SUM(allocations) per catch #20
+}
+
+export interface PaymentApprovalQueueOutput {
+  bills: PaymentApprovalQueueRow[];
+  total_amount_due: MoneyAmount;
+}
+
+/**
+ * Paid bills history output per EC-A-7 (Spend brief §11.4).
+ * Bills in `fully_paid` lifecycle_state — historical view of completed payments.
+ */
+export interface PaidBillRow {
+  bill_id: string;
+  vendor_id: string;
+  bill_number: string | null;
+  due_date: string | null;
+  amount_cad: MoneyAmount;
+  // No amount_due column needed (fully_paid means amount_due = 0)
+  // Future: extend with payment metadata if Tier-3 UI needs it
+}
+
+export interface PaidBillsHistoryOutput {
+  bills: PaidBillRow[];
+  total_amount_paid: MoneyAmount; // sum of bills.amount_cad
 }
 
 // ---------------------------------------------------------------------
@@ -373,6 +424,148 @@ async function openBills(
   };
 }
 
+/**
+ * paymentApprovalQueue — EC-A-6 per Spend brief §11.4.
+ *
+ * Fetches bills in `approved_for_payment` lifecycle_state via the shared
+ * `loadBillsWithAmountDue` helper (which filters
+ * lifecycle_state IN {approved_for_payment, partially_paid}), then post-
+ * filters to `approved_for_payment` only. Returns the per-bill list +
+ * total_amount_due. Pagination DEFERRED post-v1 per conditional disposition
+ * (a) at chunk B5-3-D1 onset.
+ *
+ * Helper-vs-inline rationale: EC-A-6's filter set
+ * ({approved_for_payment}) is a strict subset of the helper's open-bill
+ * filter set ({approved_for_payment, partially_paid}). Post-filtering the
+ * helper output preserves helper-signature stability over parameterizing
+ * the helper (small post-fetch operation; canonical sibling pattern to
+ * `openBills()` which uses the helper + post-filters amount_due > 0).
+ *
+ * Cross-org access discipline: route handler wraps via
+ * withInvariants(action: 'payment_approval_queue.read') which validates
+ * the caller has access to the supplied org_id against ctx.caller.org_ids.
+ */
+// withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
+// withInvariants(action: 'payment_approval_queue.read'))
+async function paymentApprovalQueue(
+  input: PaymentApprovalQueueInputRaw,
+  ctx: ServiceContext,
+): Promise<PaymentApprovalQueueOutput> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  const parsed: PaymentApprovalQueueInput = PaymentApprovalQueueInputSchema.parse(input);
+
+  // Reuse session #1 helper; loadBillsWithAmountDue filters lifecycle_state
+  // IN {approved_for_payment, partially_paid}. EC-A-6 needs only
+  // 'approved_for_payment'; filter the helper's output post-fetch.
+  const allOpenBills = await loadBillsWithAmountDue(db, parsed.org_id);
+  const approvedOnly = allOpenBills.filter(
+    (b) => b.lifecycle_state === 'approved_for_payment',
+  );
+
+  const rows: PaymentApprovalQueueRow[] = approvedOnly.map((b) => ({
+    bill_id: b.bill_id,
+    vendor_id: b.vendor_id,
+    bill_number: b.bill_number,
+    due_date: b.due_date,
+    amount_cad: b.amount_cad,
+    amount_due: b.amount_due,
+  }));
+
+  let totalAmountDue: MoneyAmount = zeroMoney();
+  for (const r of rows) {
+    totalAmountDue = addMoney(totalAmountDue, r.amount_due);
+  }
+
+  log.info(
+    {
+      org_id: parsed.org_id,
+      bill_count: rows.length,
+      total_amount_due: totalAmountDue,
+    },
+    'Payment approval queue computed',
+  );
+
+  return { bills: rows, total_amount_due: totalAmountDue };
+}
+
+/**
+ * paidBillsHistory — EC-A-7 per Spend brief §11.4.
+ *
+ * Fetches bills in `fully_paid` lifecycle_state — historical view of
+ * completed payments. Returns the list + total amount paid (= sum of
+ * bills.amount_cad for the filtered set; fully_paid means amount_due = 0
+ * by construction, so no per-bill subquery against
+ * bill_payment_allocations is required). Pagination DEFERRED post-v1 per
+ * conditional disposition (a) at chunk B5-3-D1 onset.
+ *
+ * Helper-vs-inline rationale: the shared `loadBillsWithAmountDue` helper
+ * filters lifecycle_state to the OPEN-bill set
+ * ({approved_for_payment, partially_paid}). EC-A-7 wants `fully_paid`
+ * (outside that set), AND we don't need the amount_due computation. Inline
+ * fetch is the right shape; extending the helper would muddy its
+ * open-bill semantics.
+ *
+ * Cross-org access discipline: route handler wraps via
+ * withInvariants(action: 'paid_bills_history.read') which validates
+ * the caller has access to the supplied org_id against ctx.caller.org_ids.
+ */
+// withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
+// withInvariants(action: 'paid_bills_history.read'))
+async function paidBillsHistory(
+  input: PaidBillsHistoryInputRaw,
+  ctx: ServiceContext,
+): Promise<PaidBillsHistoryOutput> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  const parsed: PaidBillsHistoryInput = PaidBillsHistoryInputSchema.parse(input);
+
+  const { data: bills, error: billsErr } = await db
+    .from('bills')
+    .select('bill_id, vendor_id, bill_number, due_date, amount_cad')
+    .eq('org_id', parsed.org_id)
+    .eq('lifecycle_state', 'fully_paid');
+  if (billsErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `paid_bills_history: bills lookup failed: ${billsErr.message}`,
+    );
+  }
+  const billRows = (bills ?? []) as Array<{
+    bill_id: string;
+    vendor_id: string;
+    bill_number: string | null;
+    due_date: string | null;
+    amount_cad: string | number;
+  }>;
+
+  const rows: PaidBillRow[] = billRows.map((b) => ({
+    bill_id: b.bill_id,
+    vendor_id: b.vendor_id,
+    bill_number: b.bill_number,
+    due_date: b.due_date,
+    amount_cad: toMoneyAmount(b.amount_cad),
+  }));
+
+  let totalAmountPaid: MoneyAmount = zeroMoney();
+  for (const r of rows) {
+    totalAmountPaid = addMoney(totalAmountPaid, r.amount_cad);
+  }
+
+  log.info(
+    {
+      org_id: parsed.org_id,
+      paid_bill_count: rows.length,
+      total_amount_paid: totalAmountPaid,
+    },
+    'Paid bills history computed',
+  );
+
+  return { bills: rows, total_amount_paid: totalAmountPaid };
+}
+
 // ---------------------------------------------------------------------
 // Service object export (Pattern B: route handlers wrap each method
 // via withInvariants(action: '<verb>.read') at call site)
@@ -380,7 +573,10 @@ async function openBills(
 
 export const apReportService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'ap_aging.read' | 'open_bills.read'))
+  // withInvariants(action: 'ap_aging.read' | 'open_bills.read' |
+  // 'payment_approval_queue.read' | 'paid_bills_history.read'))
   aging,
   openBills,
+  paymentApprovalQueue,
+  paidBillsHistory,
 };
