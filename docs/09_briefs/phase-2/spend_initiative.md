@@ -100,11 +100,23 @@ Two distinct lifecycles operate on every AP bill flow. The
 `docs/02_specs/mutation_lifecycle.md` — Pending, Needs Attention,
 Approved, Posted (auto), Posted (manual), Finalized) governs *the
 action* — what state is the proposed mutation in, what can happen
-to it next. The **AP bill lifecycle** (a domain enum on
-`bills.status` — `draft`, `posted`, `approved_for_payment`,
-`scheduled`, `partially_paid`, `paid`, `voided`, `reversed`,
-`disputed`, `duplicate`) governs *the entity* — what state is this
-specific bill in.
+to it next. The **AP bill lifecycle** governs *the entity* — what
+state is this specific bill in. The canonical enum is
+`bills.lifecycle_state` (column type `bill_lifecycle_state`), with
+7 v1-active states: `draft`, `pending_approval`,
+`approved_for_payment`, `partially_paid`, `fully_paid`, `voided`,
+`cancelled`. Ratified at ADR-0015 §10; shipped via migration
+`20240138000000` (chunk B5-1 substrate, CREATE TYPE) and migration
+`20240139000000` (chunk B5-2 substrate, `bills.lifecycle_state`
+column + downstream tables). The legacy `bills.status` text column
+is retained untouched per chunk B5-2 Sub-F (no current readers per
+audit grep); all new code reads `bills.lifecycle_state`. The
+original brief draft's 10-state list (with `posted`, `scheduled`,
+`paid`, `reversed`, `disputed`, `duplicate`) was superseded by the
+7-state canonical at ADR-0015 ratification — reversal is modeled
+via `journal_entries.reverses_journal_entry_id` per chunk B5-2
+Sub-N (b) with reversed-bill terminal state `voided`; `scheduled`,
+`disputed`, `duplicate` deferred to post-v1.
 
 The two lifecycles are orthogonal but coupled. A single AP bill
 state transition is produced by a single completed mutation

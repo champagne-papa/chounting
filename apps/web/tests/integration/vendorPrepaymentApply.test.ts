@@ -121,10 +121,13 @@ describe('vendorPrepaymentService.apply', () => {
   });
 
   afterAll(async () => {
-    if (createdJeIds.length > 0) {
-      await db.from('journal_lines').delete().in('journal_entry_id', createdJeIds);
-      await db.from('journal_entries').delete().in('journal_entry_id', createdJeIds);
-    }
+    // journal_entries / journal_lines are append-only per INV-LEDGER-001
+    // (migration 20240133000000 — trg_journal_entries_no_delete rejects
+    // DELETE; service_role does NOT bypass triggers). Rows accumulate
+    // canonically across runs. The createdJeIds array is preserved for
+    // diagnostic purposes only; no cleanup attempted. See
+    // .claude/skills/integration-test-rules/SKILL.md §3.2.
+    void createdJeIds;
     if (createdAppIds.length > 0) {
       await db.from('vendor_prepayment_applications').delete().in('id', createdAppIds);
     }

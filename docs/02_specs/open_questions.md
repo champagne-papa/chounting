@@ -1169,6 +1169,16 @@ ADR-0011 §15 reserved INV-DOC-001 (Document Platform invariant prefix) without 
 
 **Source:** Session 2A D3 ratification, 2026-05-03 (D3 ratification package §3 clarifying note on DOC prefix awaiting Task E1 registration).
 
+### Q80 — Plain post_bill spec ratification
+
+The `post_bill` mutation (`billService.post`, chunk B5-2 substantive session #1, commit `3cffe74`) is operational at v1 with state-transition + JE-shape semantics projected from EC-A-1 acceptance criterion (`apps/web/tests/integration/billEcA1.test.ts`) and Spend brief framing (`docs/09_briefs/phase-2/spend_initiative.md` §3 + §11.1). No explicit ADR or spec section ratifies the plain post_bill semantics independently — the v1 disposition derives from inference across multiple substrate surfaces.
+
+**Decision space:** whether to ratify plain post_bill spec independently (separate ADR or new spec section) or accept the EC-A-1 inference + brief framing as sufficient v1 disposition. Implementation currently behaves consistently with the inference (verified at session #1 push; 777/777 tests pass). Explicit ratification would surface any latent ambiguity in the multi-substrate inference (e.g., interaction between plain `post_bill` and `post_bill_with_payment` bundle semantics; behavior under bills with multiple `bill_lines` rows; the transition-on-post target state — whether the bill stays at `draft`, advances to `pending_approval`, or lands at some other v1-active state).
+
+**Blocks:** post-v1 explicit-disposition adjudication if multi-substrate inference proves brittle under post-v1 workflow extensions (born-paid bundle expansion, batch posting, post_bill with attachments). Does not block v1 ship — v1 disposition is EC-A-1 inference accepted.
+
+**Source:** Phase 5 chunk B5-2 substantive session #1 closeout (2026-05-10, commit `3cffe74`); D2 ratification at chunk B5-2 closeout session #2 (2026-05-10, this commit).
+
 ---
 
 ## Section 4 — Formalization candidates

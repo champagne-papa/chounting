@@ -112,10 +112,13 @@ describe('vendor_prepayment apply EC-A-2: bill reversal invariants', () => {
   });
 
   afterAll(async () => {
-    if (cleanup.jeIds.length) {
-      await db.from('journal_lines').delete().in('journal_entry_id', cleanup.jeIds);
-      await db.from('journal_entries').delete().in('journal_entry_id', cleanup.jeIds);
-    }
+    // journal_entries / journal_lines are append-only per INV-LEDGER-001
+    // (migration 20240133000000 — trg_journal_entries_no_delete rejects
+    // DELETE; service_role does NOT bypass triggers). Rows accumulate
+    // canonically across runs. The cleanup.jeIds array is preserved for
+    // diagnostic purposes only; no cleanup attempted. See
+    // .claude/skills/integration-test-rules/SKILL.md §3.2.
+    void cleanup.jeIds;
     if (cleanup.appIds.length) {
       await db.from('vendor_prepayment_applications').delete().in('id', cleanup.appIds);
     }

@@ -53,6 +53,131 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-2 substantive arc closeout retrospective entry (2026-05-10) — second Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) first-instance + 12 first-instance observations + 6 codification adjudications + 2 drift dispositions + 4-data-point grounding-rigor spectrum
+
+This is the SECOND Phase-5-arc-execution entry. Chunk B5-2 (Slice A bill lifecycle per Spend Initiative §11.1) opened at 2026-05-10 substantive session #1 onset; substantive session #1 SHIPPED at HEAD `3cffe74`; closeout session #2 closes the chunk at this commit per (cadence-β-i-b) 2-session bundled cadence (N=1 first-instance precedent; first chunk-grain implementation-arc closeout under (cadence-β-i-b)). Phase 5 arc continues with chunk B5-3+ per (decomp-γ) hybrid by domain-slice.
+
+#### Aggregate chunk metrics
+
+| Session | HEAD | Files | Lines | Tests | Validation |
+|---|---|---|---|---|---|
+| Chunk onset (2026-05-10) | `a4da915` (chunk B5-1 closeout) | — | — | — | memory-writes-only Stage 6 |
+| Substantive #1 (2026-05-10) | `3cffe74` | 12 | +4410/-3 | 78 new | 777/777 + 26/26 |
+| Closeout #2 (2026-05-10) | this commit | 5 (SKILL.md §3 + 4 vendor prepayment test refactors) + closeout artifacts | — | pre-check 4 files / 8 tests + typecheck | conditions 1+2+3 MET |
+
+Cadence: (cadence-β-i-b) 2-session bundled operationally validated as N=1 first-instance; awaiting cross-arc N=2 per candidate (e) for graduation evaluation. Chunk B5-1 fired (cadence-β-i-a) 3-session split; both shapes inhabit candidate (e) within-arc shape-refinement pathway.
+
+#### Arc-class first-instance status framing
+
+Chunk B5-2 is the SECOND chunk-grain implementation arc of Phase 5 (after chunk B5-1). (cadence-β-i-b) bundled cadence is FIRST-INSTANCE under the 2-session-per-chunk shape. Session #1 + session #2 observations qualify as first-instance under (cadence-β-i-b) cadence framing AND under chunk B5-2-specific cluster framing.
+
+#### 12 first-instance pattern observations
+
+**Session #1 observations (per `3cffe74` commit body + pickup file enumeration):**
+
+1. **First chunk-grain bill lifecycle substantive session in Phase 5** — `3cffe74` lands first bill substrate (migration 20240139000000) + 4 mutations (`post_bill`, `approve_bill_for_payment`, `record_bill_payment`, `reverse_bill`) + `bill_payment_allocations` net-new table per Sub-I.
+
+2. **First (cadence-β-i-b) 2-session bundled cadence firing** — chunk B5-2 splits into substantive #1 + closeout #2; cadence-shape locked at chunk-onset planning per founder bundled-accept. First-instance precedent; awaiting cross-arc N=2 per candidate (e) for graduation evaluation.
+
+3. **First (test-γ) 4+2+1 asymmetric split firing** — 4 per-mutation tests + 2 per-criterion tests (EC-A-1 + EC-A-2) + 1 unit test (54 cases). Asymmetric: `approve_bill_for_payment` is state-only (no JE) so no per-criterion grain test required there.
+
+4. **First substrate-decision audit-grounded re-ratification under Cluster B B1 discipline (N=12 ratifications at chunk onset)** — D1-D7 + Sub-D/E/F/G/I/J/K/L/M/N + Path β; Sub-H dissolved as false catch (numeric(20,4) uniform across spend domain). Cluster B B1 productive catches accumulate to N=19 across the chunk spanning 19 grain variants (N=18 at chunk-onset + step-1 closeout grain; catch #19 added at step-4 closeout grain — see §Drift-A sibling exhibit); Cluster B B2 first-fire operationally validated at scope-projection sub-shape (4→3 mutations + 7→6 tests projected vs substrate-supported).
+
+5. **First Reading B preservation under `bill_payment_allocations` mutation surface** — `record_bill_payment` posts JE via `journalEntryService` AND inserts `bill_payment_allocations` rows via `billService` (Reading B-compliant: domain service produces ledger ops, ledger service writes journal_entries). Sub-I net-new table preserves Reading B by routing through `billService` not `ledgerService`.
+
+6. **First `reverse_bill` thin-wrapper mutation pattern** — calls `journalEntryService.post(reverses_journal_entry_id=…)` per Sub-E corrected mechanism; target state `voided` per Sub-D; `posted_journal_entry_id` uuid FK back-reference on `bills` per Sub-N (b).
+
+7. **First `payment_method` enum activation** — 5 active values (`check`/`eft`/`wire`/`cash`/`other`) + 4 reserved (`credit_card`/`ach`/`bank_transfer`/`money_order`) per Sub-K. Reserved-enum-states discipline per ADR-0010.
+
+8. **First INV-AP-001 + INV-AP-002 Layer 2 activation** — invariants activated at first AP-domain service consumer per Spend brief §11.3 substrate-now-enforcement-later cross-pattern.
+
+**Session #2 closeout observations:**
+
+9. **First chunk-grain closeout step-1 verify-from-disk dispatch under semantic-memory-citation discipline** — handoff prompt cited 4 anchors (Spend brief §9 line 225, ADR-0015 §1 Q80, open_questions.md Q80 pattern, CURRENT_STATE.md §Drift-1 option-i); verify-from-disk surfaced 5 Cluster B B1 fires across the 4 citation anchors. §Drift-1 anchor returned no on-disk basis after (β) sub-investigation (no §Drift-* section in CURRENT_STATE.md or friction-journal.md; no "option i" enumeration framing).
+
+10. **Catch #17 — session-grain semantic-memory proposal grain** — brainstorm-side proposed traceId cleanup at chunk B5-2 session #1 without substrate read; WSL-side substrate-read corrected the mechanism. First codified instance of brainstorm-side semantic-memory observation surfacing as if grounded.
+
+11. **Catch #18 — codified-discipline grain substrate-finding** — chunk B5-1 Adjudication 6 codification of dedicated-test-accounts pattern at SKILL.md §3 prescribed DELETE cleanup of `journal_lines` + `journal_entries` that is silently rejected by `trg_journal_entries_no_delete` (migration 20240133000000; service_role does NOT bypass triggers). 4 vendor prepayment afterAll blocks have been silently failing since chunk B5-1 codification. The chunk B5-1 closeout claim of "699/699 tests PASS" was substantively accurate against assertion grain but cleanup grain was failing silently across the full chunk B5-1 + chunk B5-2 session #1 timeline. Path β refinement at session #1 pre-ship aligned bill tests; SKILL.md §3 revision at session #2 codifies the substrate-aligned shape (split into §3.1 per-run COA isolation + §3.2 JE/JL accumulation-acceptance); 4 vendor prepayment test files refactored at session #2 step 2 to align. Pre-check validated 4 files / 8 tests PASS + `pnpm typecheck` clean (~5s combined).
+
+12. **§Drift-1 dissolution — handoff-document grain semantic-memory propagation** — brainstorm-side authored "CURRENT_STATE.md §Drift-1 option-i update" citation at chunk B5-2 session #1 onset handoff drafting from semantic memory without verify-from-disk grounding; citation propagated forward to session #2 onset handoff; dissolved at closeout step 1 by verify-from-disk dispatch. No on-disk anchor across CURRENT_STATE.md, friction-journal.md, or conventions.md. Concrete exhibit of handoff-document semantic-memory propagation across two sequential handoff documents without source verification. (α) founder restate explicitly NOT requested per honest-epistemic-discipline (founder not the author; (α) would invert cost structure). Closeout scope reduced from 5 to 4 items.
+
+#### 4-data-point grounding-rigor spectrum
+
+Catches #17, #18, §Drift-1 dissolution, and (cadence-β-i-b) form four data points along a handoff-citation grounding-rigor spectrum, ordered from correctly-grounded to never-grounded. Positive-control inclusion is load-bearing: an implicit-axis enumeration would lose the asymmetry between catches the discipline corrects and citations the discipline validates.
+
+1. **Correctly-grounded, verify-from-disk validates** — (cadence-β-i-b) at chunk B5-2 D7. Handoff-document carried a real substrate-decision; verify-from-disk at consumption confirmed the framing. Positive-control evidence that the discipline validates correct citations as well as catches incorrect ones.
+
+2. **Session-grain proposal, semantic-memory uninformed** — Catch #17 (brainstorm-side traceId cleanup). Proposal originated from semantic memory without substrate read; correction landed when substrate-read surfaced the actual mechanism.
+
+3. **Codified-discipline grain, substrate-finding corrects** — Catch #18 (Item 20 dedicated-test-accounts pattern was solving the wrong problem). Test-pollution drove substrate discovery; codified discipline was substrate-misframed and required revision via SKILL.md §3 split into §3.1 + §3.2.
+
+4. **Handoff-document grain, never grounded** — §Drift-1 dissolution. Citation entered handoff chain at session #1 onset from brainstorm-side semantic memory; propagated forward to session #2 onset; dissolved at closeout step 1 by verify-from-disk dispatch. No on-disk basis at any grain.
+
+#### 6 codification adjudications outcomes
+
+**Adjudication 1 — Item 20 SKILL revision (§3 split into §3.1 + §3.2 per catch #18 substrate-level finding).** SKILL.md §3 was "Dedicated test-accounts pattern" — single section conflating COA-isolation discipline (beforeAll grain) with JE/JL cleanup discipline (afterAll grain). Catch #18 surfaced that the conflated pattern prescribed JE/JL DELETE silently rejected at trigger layer. Revision splits §3 into:
+
+- **§3.1 Per-run COA isolation** (beforeAll grain; `T${traceId.slice(0,8)}_*` codes; `vendorPrepaymentApply.test.ts` as codification anchor preserved from chunk B5-1; afterAll COA cleanup framed as optional hygiene-positive defense-in-depth rather than load-bearing discipline).
+- **§3.2 JE/JL accumulation-acceptance** (afterAll grain; `void createdJeIds` + comment; `journalSourceExternalId.test.ts:32-40` as canonical pattern; `reportTrialBalance.test.ts:147` as read-side T-prefix filter anchor; INV-LEDGER-001 Layer 1a + migration 20240133000000 → `trg_journal_entries_no_delete` as substrate authority chain; explicit "service-role does NOT bypass triggers" framing).
+
+4 vendor prepayment test files (`vendorPrepaymentApply.test.ts` + 3 `vendorPrepaymentApplyEcA*` siblings) refactored at session #2 step 2 to substrate-aligned shape. Three-way consistency achieved across (a) SKILL.md codification + (b) chunk-B5-1 vendor prepayment tests (refactored at this step 2) + (c) chunk-B5-2 bill tests (already aligned via session #1 Path β refinement).
+
+**Adjudication 2 — (cadence-β-i-b) ratified as N=1 first-instance observation; NOT graduated.** Awaiting cross-arc N=2 per candidate (e) shape-refinement-via-cross-arc-evidence-basis meta-pathway. (cadence-β-i-b) is currently listed as chunk B5-2 substrate-decision (D7), not as graduated standing rule. Friction-journal entry records the N=1 data point; graduation evaluation defers until subsequent chunk-grain implementation arc reproduces the bundled-cadence shape.
+
+**Adjudication 3 — Sub-H dissolution (false catch at chunk-onset audit grain).** Sub-H was a Cluster B B1 candidate at chunk-onset for numeric column type divergence between `bills.amount_total` (existing) and `bill_payment_allocations.amount` (new). Audit-grounded re-ratification confirmed `numeric(20,4)` uniform across spend domain; Sub-H dissolved. First codified instance of Cluster B B1 false-positive disposition at chunk-onset audit grain — confirms the discipline's discrimination between productive catches and false candidates.
+
+**Adjudication 4 — Cluster B B1 N=19 productive catches operationally validated at chunk-grain scale.** Across 19 grain variants spanning substrate-citation, scope-projection, audit-grounded substrate-decision-restate, plan-authoring transitive-dependency, semantic-memory observation, handoff-document propagation (section-non-existence sub-grain AND path-prefix sub-grain), pickup-file-content-tracking. Cluster B graduated at chunk B5-1 closeout per chunk B5-1 Adjudication 1; chunk B5-2 firing-density confirms the discipline operates at expected scale across implementation-arc-execution. Cluster B B2 (scope-projection grain) first-fire operationally validated at independent grain from chunk B5-1.
+
+**Adjudication 5 — Item 20 SKILL revision codification under (a) in-scope refactor disposition (Sub-Adjudication 3 at session #2 step 2 surfacing).** Session #2 step 2 surfaced that the §3.1 canonical anchor (`vendorPrepaymentApply.test.ts`) itself contained the substrate-violating afterAll pattern that §3.2 corrects. Three dispositions adjudicated: (a) in-scope refactor of canonical anchor + 3 EC-A siblings; (b) out-of-scope defer; (c) hybrid refactor canonical anchor only. Disposition (a) selected on codification-integrity grounds — §3.2 cites `vendorPrepaymentApply.test.ts` as §3.1's canonical anchor; the file should embody the discipline it anchors. Cost: 4 mechanical file edits. Three-way consistency outcome per Adjudication 1.
+
+**Adjudication 6 — Path β substrate-aligned cleanup refinement (catch #18 in-session disposition).** Catch #18 discovered during session #1 integration test runs: chunk-B5-1-codified dedicated-test-accounts pattern prescribed DELETE on `journal_lines` + `journal_entries` that's silently rejected by `trg_journal_entries_no_delete`. Path β refinement applied at session #1 pre-ship: bill tests refactored to accept JE/JL accumulation + T-prefix filter at read side. Canonical anchors: RUN_SUFFIX precedent at `journalSourceExternalId.test.ts:32-40` (accumulation-acceptance pattern); T-prefix filter at `reportTrialBalance.test.ts:147` (read-side discipline). SKILL.md §3 revision at session #2 codifies the substrate-aligned shape; vendor prepayment test refactors at session #2 step 2 bring chunk-B5-1 tests into alignment.
+
+#### 2 drift dispositions
+
+**§Drift-A — §Drift-1 citation dissolution (handoff-document semantic-memory propagation).** Handoff prompt cited "CURRENT_STATE.md §Drift-1 option-i update" as one of 5 chunk B5-2 closeout active items. Verify-from-disk dispatch at closeout step 1 (β) sub-investigation returned no on-disk anchor across CURRENT_STATE.md (30+ sections; none labeled §Drift-*), friction-journal.md (no §Drift-* framing), or conventions.md (no on-disk basis). (β) negative; (γ) floor disposition fired: dissolution + documentation. Source-grain identified as brainstorm-side handoff-drafting at chunk B5-2 session #1 onset, propagated forward to session #2 onset via inherited handoff. (α) founder restate explicitly NOT requested per honest-epistemic-discipline. Closeout scope reduced from 5 items to 4.
+
+**Sibling exhibit at handoff-document grain (lower severity, same pathway).** Step 4 verify-from-disk surfaced a second handoff-document semantic-memory propagation: handoff cited the Spend brief at `docs/09_briefs/phase-5/spend_initiative.md`; on-disk path is `docs/09_briefs/phase-2/spend_initiative.md` (the brief was authored during the Phase 2 Document Platform Initiative arc ahead of Phase 5 implementation, so the directory binds to the authoring phase not the consuming phase). Lower severity than §Drift-1 (file exists at neighbor path rather than not at all), same handoff-document grain propagation pathway: brainstorm-side semantic memory bound the Spend Initiative implementation arc (Phase 5) to the brief's directory location without verify-from-disk grounding; citation propagated through session #1 + session #2 onset handoffs unmodified. Catch #19 logged at step 4 disposition (during D1 path-citation verification before bundled commit); brings running Cluster B B1 catch count from N=18 to N=19. Path-prefix sub-grain joins section-non-existence sub-grain (§Drift-1) under the handoff-document grain umbrella — both inhabit the 4-data-point spectrum's entry 4 ("Handoff-document grain, never grounded") at different severities.
+
+**§Drift-B — Retrospective venue (inline-in-friction-journal).** Per chunk B5-1 §B precedent: inline-in-friction-journal at chunk closeout; arc-completion retrospective separate document deferred to Phase 5 arc-closure. Chunk B5-2 is mid-arc (Phase 5 arc continues with B5-3+).
+
+#### Carry-forward to subsequent chunks (B5-3+) and Phase 5 arc-closure
+
+**Active for subsequent-chunk firing (preserved from chunk B5-1 carry-forward):**
+
+- **Item 1 FT1** (`clampTtl` NaN-guard at `apps/web/src/services/storage/providers/supabaseStorageProvider.ts`) — fires at next chunk that touches `storageProviderService` directly. Chunk B5-2 didn't fire it.
+- **Item 18 org_settings substrate-floor** — dedicated sub-arc per (orgset-β); fires before v1 ship per Phase 1.Storage anti-scope framing.
+
+**Active for Phase 5 arc-closure retrospective:**
+
+- **Item 16 cross-arc-grain codified-discipline applicability meta-codification-candidate** — preserved from chunk B5-1.
+- **Process-overhead-vs-deliverable-velocity observation** — chunk B5-1 closeout flagged this as concerning ("codification velocity outpacing deliverable velocity"). **Chunk B5-2 update inverts the framing:** more rigorous verification grain than chunk B5-1 (Cluster B B1 N=18 + B2 first-fire + 4 catches at codification grain spanning catch #17/#18/§Drift-1/Sub-H) produced real catches that would have shipped silently otherwise. Process overhead at chunk B5-2 produced substantive value at multiple grains. The "outpacing" framing from chunk B5-1 reads at chunk B5-2 as overhead-was-load-bearing rather than overhead-was-excess. Cross-arc trajectory worth tracking across chunks B5-3+.
+- **Discipline-of-the-discipline observation** (Z1 #11.b + Cluster B adjacent-register pattern) — preserved from chunk B5-1.
+- **Catch #17 brainstorm-side self-incurred semantic-memory observation** — preserved from chunk B5-1 carry-forward; new concrete data point logged this chunk (Obs 10 above).
+- **NEW: (α) Codification-grain verify-from-disk gate** — **primary cross-arc retrospective candidate.** Generalization of handoff-document verify-from-disk pattern to a new grain: codification of disciplines that touch substrate should fire verify-from-disk on the substrate before ratification. Evidence basis: chunk B5-1 Adjudication 6 codified the dedicated-test-accounts pattern WITH a substrate-violating DELETE prescription AT THE SAME TIME the test suite was reporting 699/699 PASS. Two failure modes co-occurred at codification grain: (α-i) substrate read of migration 20240133000000 was not fired before codification ratification; (α-ii) test-pass evidence was implicitly trusted as cleanup-discipline evidence. Both gaps need verify-from-disk to close. Sub-options for the codification candidate shape held for arc-closure synthesis: author-time gate / author-time marking / consume-time gate / hybrid. Resolution awaits cross-arc N≥2 evidence per candidate (e) pathway if the pattern fires again.
+- **NEW: (β) Test-pass-evidence-grain limitation** — **sub-observation under (α).** Test-pass evidence ratifies assertions, not surrounding cleanup-discipline. Complementary observation about evidence-type limits; not a discipline-codification candidate in its own right.
+- **NEW: 4-data-point grounding-rigor spectrum meta-pattern** — handoff-citation grounding-rigor varies along a spectrum from correctly-grounded (positive control: cadence-β-i-b) through session-grain (catch #17), codified-discipline grain (catch #18), to never-grounded (§Drift-1). Meta-pattern data point exhibits at chunk B5-2; possible cross-arc retrospective synthesis with (α) if firing recurs.
+- **(cadence-β-i-b) cross-arc N=2 watch** — N=1 logged at chunk B5-2; graduation evaluation fires if cross-arc N=2 accumulates per candidate (e).
+
+#### Subagent dispatch and brainstorm-side parallel-surface shape (this cycle)
+
+Two-sided + founder triple architecture operated across chunk B5-2: WSL-side (filesystem/bash/git execution + verify-from-disk authority) and brainstorm-side (parallel observation surface with filesystem MCP for grounding-when-needed); founder adjudicates substrate-decision authority surfaces. Closeout step 1 verify-from-disk dispatched against the 4 handoff-cited anchors surfaced 5 Cluster B B1 fires; closeout step 2 (Item 20 SKILL revision + 4 vendor prepayment test refactors) executed under (γ-a) bundle pattern (working-tree accumulation; no per-task commits); closeout step 2 pre-check validated 4 vendor prepayment test files pass + typecheck clean before step 3 friction-journal narrative-locking (~5s combined cost). Procedural-symmetry argument confirmed operational: step 1 validated handoff citations before scope-lock; analogous discipline at step-2-completion validated substrate-aligned-refactor before narrative-lock.
+
+#### Push-readiness gate disposition (chunk-completion grain)
+
+**Condition 1 (test-suite health)**: MET. `pnpm agent:validate` 26/26 + `pnpm test` 777/777 at HEAD `3cffe74` (session #1 push); session #2 closeout pre-check validated 4 vendor prepayment test files pass (8 tests / 4.03s) + `pnpm typecheck` clean. Doc-only changes from session #2 step 3+ don't affect condition 1 grain.
+
+**Condition 2 (doc-sync reconciled)**: MET. `invariants.md` ↔ `control_matrix.md` ↔ `ledger_truth_model.md` consistent across chunk B5-2 (INV-AP-001/002 activated at Layer 2 service per Spend brief §11.3 substrate-now-enforcement-later cross-pattern). `types.ts` regenerated against post-session #1 schema substrate at session #1 push. Spend brief §3 D1 amendment ships at this commit per substrate-aligned `bill_lifecycle_state` canonical 7-state framing (per ADR-0015 §10 + B5-1 migration 20240138000000 + B5-2 migration 20240139000000). open_questions.md Q80 (plain post_bill spec D2 Q-entry) ships per Q70-Q79 concise-pattern shape. `.claude/skills/integration-test-rules/SKILL.md` §3 revision ships per Adjudication 1.
+
+**Condition 3 (governance closeout)**: MET. Friction-journal entry shipped (this entry); 6 codification adjudications recorded; 2 drift dispositions resolved; carry-forward inventory reconciled across subsequent-chunk-firing surfaces (2 items: FT1, Item 18) + Phase 5 arc-closure retrospective candidates (8 items: Item 16, process-overhead observation w/ chunk B5-2 update, discipline-of-the-discipline, catch #17 meta-pattern, (α) primary, (β) sub-observation, grounding-rigor spectrum meta-pattern, (cadence-β-i-b) N=2 watch). Item 20 SKILL revision shipped at `.claude/skills/integration-test-rules/SKILL.md` §3 split (§3.1 + §3.2). 4 vendor prepayment test files refactored to substrate-aligned shape per Adjudication 5.
+
+**All three push-readiness conditions MET at chunk B5-2 closeout. Push authorized.**
+
+---
+
+**Substrate-decision-integrity preserved across full chunk B5-2 (2 sessions; 2026-05-10 onset → 2026-05-10 closeout).** Phase 5 chunk B5-2 CLOSED at this retrospective entry. Phase 5 arc continues with chunk B5-3+ per (decomp-γ) hybrid by domain-slice. (cadence-β-i-b) 2-session bundled cadence documented as N=1 first-instance; awaiting cross-arc N=2 per candidate (e) for graduation evaluation. First chunk-grain implementation-arc closeout under (cadence-β-i-b) precedent shipped under (γ-a) bundled commit at clean-termination gate per refined (R-iii) graduated form.
+
+---
+
 ### Phase 5 chunk B5-1 substantive arc closeout retrospective entry (2026-05-10) — first Phase-5-arc-execution friction-journal entry + 12 first-instance pattern observations + 7 codification adjudications + 3 drift dispositions
 
 This is the FIRST Phase-5-arc-execution entry in the friction-journal. Phase 5 first-domain consumer arc opened at chunk B5-1 onset 2026-05-07 per arc-cadence forward-pointers from Phase 2 brief-creation arc-closeout. Substantive sessions #1+#2 SHIPPED; chunk B5-1 closes at session #3 per (cadence-β-i-a) 3-session deliverable-grain split. Phase 5 arc continues with subsequent chunks (B5-2+) per (decomp-γ) hybrid by domain-slice.
