@@ -135,11 +135,22 @@ describe('Trial Balance report aggregation', () => {
       freshCtx(),
     );
 
-    // Holding company has 16 accounts in the seed CoA
-    expect(result.rows).toHaveLength(16);
+    // Filter chunk B5-1+ dedicated test accounts (Item 20 T${8hex}_* pattern).
+    // journal_entries/journal_lines are append-only (trg_journal_entries_no_delete
+    // from migration 20240133000000_journal_immutability_triggers.sql; service_role
+    // does NOT bypass triggers); per-run unique account_codes accumulate across
+    // runs because their journal_lines references can't be deleted, blocking
+    // chart_of_accounts cleanup. Per the RUN_SUFFIX precedent at
+    // journalSourceExternalId.test.ts:32-40, accumulation is canonical; tests
+    // filter rather than depend on cleanup. Item 20 SKILL revision pending at
+    // arc-closure retrospective.
+    const seedRows = result.rows.filter((r) => !/^T[a-f0-9]{8}_/.test(r.account_code));
 
-    // Ordered by account_code
-    const codes = result.rows.map((r) => r.account_code);
+    // Holding company has 16 accounts in the seed CoA
+    expect(seedRows).toHaveLength(16);
+
+    // Ordered by account_code (filtered set)
+    const codes = seedRows.map((r) => r.account_code);
     const sorted = [...codes].sort();
     expect(codes).toEqual(sorted);
   });
