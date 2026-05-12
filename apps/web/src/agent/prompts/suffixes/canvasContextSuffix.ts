@@ -80,6 +80,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the new bill form';
     case 'payment_approval_card':
       return 'the payment approval card';
+    case 'payment_record_card':
+      return 'the record payment card';
     case 'recurring_template_list':
       return 'the recurring journal templates list';
     case 'recurring_template_form':

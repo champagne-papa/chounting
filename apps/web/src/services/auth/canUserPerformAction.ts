@@ -47,6 +47,8 @@ export const ACTION_NAMES = [
   // AP/Spend (Phase 5 B5-3-D3)
   'bill.post',
   'bill.approve',
+  // AP/Spend (Phase 5 B5-3-D4)
+  'bill.record_payment',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];

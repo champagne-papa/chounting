@@ -1,6 +1,6 @@
 // tests/integration/permissionCatalogSeed.test.ts
 // CA-28: 3 roles × correct permission counts
-// (27 total; controller 27; ap_specialist 5; executive 4).
+// (28 total; controller 28; ap_specialist 6; executive 4).
 
 import { describe, it, expect } from 'vitest';
 import { adminClient } from '../setup/testDb';
@@ -15,23 +15,23 @@ describe('CA-28: permission catalog seed integrity', () => {
     expect(keys).toEqual(['ap_specialist', 'controller', 'executive']);
   });
 
-  it('27 permissions exist', async () => {
+  it('28 permissions exist', async () => {
     const { data } = await db.from('permissions').select('permission_key');
-    expect(data).toHaveLength(27);
+    expect(data).toHaveLength(28);
   });
 
-  it('controller has all 27 permissions', async () => {
+  it('controller has all 28 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'controller').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(27);
+    expect(perms).toHaveLength(28);
   });
 
-  it('ap_specialist has exactly 5 permissions', async () => {
+  it('ap_specialist has exactly 6 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'ap_specialist').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(5);
+    expect(perms).toHaveLength(6);
     const keys = (perms ?? []).map((p: { permission_key: string }) => p.permission_key).sort();
-    expect(keys).toEqual(['ai_actions.read', 'bill.post', 'chart_of_accounts.read', 'journal_entry.post', 'user.profile.update']);
+    expect(keys).toEqual(['ai_actions.read', 'bill.post', 'bill.record_payment', 'chart_of_accounts.read', 'journal_entry.post', 'user.profile.update']);
   });
 
   it('executive has exactly 4 permissions', async () => {
