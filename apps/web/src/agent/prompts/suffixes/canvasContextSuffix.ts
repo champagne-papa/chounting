@@ -76,6 +76,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the reversal form';
     case 'adjustment_form':
       return 'the adjusting journal entry form';
+    case 'bill_form':
+      return 'the new bill form';
     case 'recurring_template_list':
       return 'the recurring journal templates list';
     case 'recurring_template_form':

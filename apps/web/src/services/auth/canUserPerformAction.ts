@@ -44,6 +44,9 @@ export const ACTION_NAMES = [
   'recurring_run.generate',
   'recurring_run.approve',
   'recurring_run.reject',
+  // AP/Spend (Phase 5 B5-3-D3)
+  'bill.post',
+  'bill.approve',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];
