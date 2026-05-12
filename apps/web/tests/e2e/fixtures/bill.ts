@@ -1,19 +1,31 @@
 // tests/e2e/fixtures/bill.ts
 // Phase 5 chunk B5-3-D3 substantive session #1 — first write-side E2E fixture.
-// Sibling-pattern to journalEntry.ts (navigation-only) but ships the first
-// form-fill + submit + assert helpers; sets precedent for subsequent write-side E2E.
+// Extended at chunk B5-3-D4 session #2 Task 2 with RecordPaymentCard helpers
+// (gotoPaymentApprovalQueue, selectBillFromQueue, fillRecordPaymentForm,
+// submitRecordPaymentForm, assertPaymentRecorded) + seedApprovedBill admin
+// helper for pre-seeding bills directly into `approved_for_payment` lifecycle
+// state (bypasses post+approve UI flows; the recordPayment spec tests only
+// the recordPayment UX, not the upstream flows).
 //
-// Four exported helpers:
-//   gotoBillForm(page, orgId)  — navigate to org root + click "New Bill" rail entry
+// Original four exported helpers (B5-3-D3):
+//   gotoBillForm(page, orgId)   — navigate to org root + click "New Bill" rail entry
 //   fillBillForm(page, fixture) — fill all required form fields via label/option queries
 //   submitBillForm(page)        — click "Post Bill" + wait for navigation or error
 //   assertBillCreated(page)     — verify navigation to report_open_bills + table visible
 //
-// Additional export:
-//   seedTestVendor(orgId)       — creates a vendor in the local Supabase instance via
-//                                  admin client; returns cleanup fn. Required because
-//                                  dev.sql seeds no vendors; VendorPicker renders empty
-//                                  without at least one row.
+// New helpers (B5-3-D4 session #2):
+//   gotoPaymentApprovalQueue(page, orgId) — click "Payment Approval Queue" rail entry
+//   selectBillFromQueue(page, billId)     — click the bill row to navigate to RecordPaymentCard
+//   fillRecordPaymentForm(page, opts)     — fill the RecordPaymentCard form (8 fields)
+//   submitRecordPaymentForm(page)         — click "Record Payment" + wait for navigation back
+//   assertPaymentRecorded(page, opts)     — verify return to queue + bill state visibility
+//
+// Seed exports:
+//   seedTestVendor(orgId)               — creates a vendor row via admin client.
+//   seedApprovedBill(orgId, vendorId, opts) — creates a bill row in lifecycle_state
+//                                            'approved_for_payment' via admin client.
+//                                            Skips the post + approve UI flows entirely
+//                                            (E2E tests only the recordPayment UX).
 //
 // Env vars consumed (from .env.local, available to Playwright process):
 //   NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY → Supabase admin client.
@@ -235,4 +247,313 @@ export async function assertBillCreated(page: Page): Promise<void> {
   await expect(
     page.locator('table').or(page.getByText(/no data\./i)),
   ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// seedApprovedBill — create a bill row directly via admin client in
+// `lifecycle_state = 'approved_for_payment'`. Bypasses post + approve UI
+// flows since the RecordPaymentCard E2E exercises only the recordPayment UX.
+// ---------------------------------------------------------------------------
+
+export interface SeedApprovedBillOpts {
+  /** Bill amount (CAD); defaults to '500.00'. */
+  amount_cad?: string;
+  /** Optional bill_number; defaults to a unique 'E2E-PAY-<short-uuid>' string. */
+  bill_number?: string;
+  /** Issue date (YYYY-MM-DD); defaults to today. */
+  issue_date?: string;
+  /** Optional due date (YYYY-MM-DD); defaults to today. */
+  due_date?: string;
+}
+
+/**
+ * Seed a single bill row in `approved_for_payment` state for E2E use.
+ *
+ * Important: this skips post_bill (no journal_entries row is created and
+ * `posted_journal_entry_id` is left null). That's intentional — the spec
+ * tests only recordPayment behavior; INV-AP-001 / INV-AP-002 are exercised
+ * at the recordPayment grain (allocation sum, state transition), which
+ * doesn't require an upstream posted JE to fire correctly.
+ *
+ * Returns the seeded bill_id + a cleanup function that deletes the bill
+ * (which cascades to bill_lines + bill_payment_allocations via FK).
+ */
+export async function seedApprovedBill(
+  orgId: string,
+  vendorId: string,
+  opts: SeedApprovedBillOpts = {},
+): Promise<{ billId: string; billNumber: string; amountCad: string; cleanup: () => Promise<void> }> {
+  const db = makeAdminClient();
+  const billId = crypto.randomUUID();
+  const today = new Date().toISOString().slice(0, 10);
+  const amount_cad = opts.amount_cad ?? '500.00';
+  const bill_number = opts.bill_number ?? `E2E-PAY-${billId.slice(0, 8)}`;
+  const issue_date = opts.issue_date ?? today;
+  const due_date = opts.due_date ?? today;
+
+  const { error } = await db.from('bills').insert({
+    bill_id: billId,
+    org_id: orgId,
+    vendor_id: vendorId,
+    bill_number,
+    issue_date,
+    due_date,
+    currency: 'CAD',
+    amount_original: amount_cad,
+    amount_cad,
+    fx_rate: '1.0',
+    lifecycle_state: 'approved_for_payment',
+  });
+  if (error) {
+    throw new Error(`seedApprovedBill failed: ${error.message}`);
+  }
+
+  const cleanup = async () => {
+    await db.from('bills').delete().eq('bill_id', billId);
+  };
+
+  return { billId, billNumber: bill_number, amountCad: amount_cad, cleanup };
+}
+
+// ---------------------------------------------------------------------------
+// gotoPaymentApprovalQueue — navigate to the queue canvas view
+// ---------------------------------------------------------------------------
+
+/**
+ * Navigate to the org root and click the "Payment Approval Queue" MainframeRail
+ * entry. Waits for the heading + table-or-empty-state to ensure the queue's
+ * client-side fetch has resolved.
+ */
+export async function gotoPaymentApprovalQueue(page: Page, orgId: string): Promise<void> {
+  await page.goto(`/${LOCALE}/${orgId}`);
+  await page.getByTitle('Payment Approval Queue').click();
+  await expect(
+    page.getByRole('heading', { name: /payment approval queue/i }),
+  ).toBeVisible();
+  // Wait for fetch to resolve — table or empty-state must be visible.
+  await expect(
+    page.locator('table').or(page.getByText(/no data\./i)),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// selectBillFromQueue — click the bill row to navigate to RecordPaymentCard
+// ---------------------------------------------------------------------------
+
+/**
+ * Click the queue row for the given billId to trigger the
+ * `payment_record_card` canvas directive. Waits for the RecordPaymentCard
+ * heading to appear before returning.
+ *
+ * Row identification: PaymentApprovalQueueView renders the bill_number cell
+ * but not the bill_id (vendor_id is shown as a mono uuid). We match on the
+ * bill_number cell text which is unique within the E2E run.
+ */
+export async function selectBillFromQueue(page: Page, billNumber: string): Promise<void> {
+  // Locate the <tr> whose first cell text matches billNumber, then click it.
+  // The row has cursor-pointer + hover styling per the Task 1 amendment.
+  const row = page.locator('tr').filter({
+    has: page.locator('td', { hasText: new RegExp(`^${billNumber}$`) }),
+  }).first();
+  await row.click();
+
+  // Wait for RecordPaymentCard heading to confirm navigation.
+  await expect(
+    page.getByRole('heading', { name: /record payment/i }),
+  ).toBeVisible({ timeout: 10_000 });
+
+  // Wait for the form to mount (Record Payment button visible).
+  await expect(
+    page.getByRole('button', { name: /^record payment$/i }),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// fillRecordPaymentForm — fill the 8-field record-payment form
+// ---------------------------------------------------------------------------
+
+export interface RecordPaymentFormOverrides {
+  /** Payment method enum value; defaults to 'eft' (form default). */
+  payment_method?: 'check' | 'eft' | 'wire' | 'cash' | 'other';
+  /** Payment date (YYYY-MM-DD); defaults left as form default (today). */
+  payment_date?: string;
+  /** Amount (CAD) as numeric string; required to override the pre-filled bill amount_due. */
+  amount_cad?: string;
+  /** Reference number; defaults to empty. */
+  reference_number?: string;
+  /** Entry date (YYYY-MM-DD); defaults left as form default (today). */
+  entry_date?: string;
+  /**
+   * Cash account option text substring (case-insensitive); the form default-
+   * selects "Cash and Cash Equivalents". Override only when the test needs
+   * a non-default account.
+   */
+  cash_account_option_text?: string;
+  /**
+   * AP control account option text substring (case-insensitive); the form
+   * default-selects "Accounts Payable". Override only when the test needs
+   * a non-default account.
+   */
+  ap_control_account_option_text?: string;
+}
+
+/**
+ * Fill the RecordPaymentCard form. Most defaults are pre-populated by the
+ * component on mount (payment_method='eft', payment_date=today, entry_date=
+ * today, fiscal_period_id=first period, ap_control_account_id=Accounts Payable,
+ * cash_account_id=Cash and Cash Equivalents, amount_cad=bill.amount_due).
+ *
+ * Tests override only what they need (typically amount_cad for the
+ * partial-payment case).
+ *
+ * Precondition: selectBillFromQueue has been called and the form is mounted.
+ */
+export async function fillRecordPaymentForm(
+  page: Page,
+  opts: RecordPaymentFormOverrides = {},
+): Promise<void> {
+  // ---- Payment Method (optional override) ----
+  if (opts.payment_method) {
+    const pmDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^payment method/i }),
+    }).first();
+    await pmDiv.locator('select').selectOption(opts.payment_method);
+  }
+
+  // ---- Payment Date (optional override) ----
+  if (opts.payment_date) {
+    const pdDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^payment date/i }),
+    }).first();
+    await pdDiv.locator('input[type="date"]').fill(opts.payment_date);
+  }
+
+  // ---- Amount (CAD) override ----
+  // The form pre-fills with bill.amount_due; tests that want a non-full
+  // payment must override.
+  if (opts.amount_cad !== undefined) {
+    const amountDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^amount \(cad\)/i }),
+    }).first();
+    const amountInput = amountDiv.locator('input[type="text"]').first();
+    await amountInput.fill(opts.amount_cad);
+  }
+
+  // ---- Reference Number (optional override) ----
+  if (opts.reference_number !== undefined) {
+    const refDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^reference number/i }),
+    }).first();
+    await refDiv.locator('input[type="text"]').fill(opts.reference_number);
+  }
+
+  // ---- Entry Date (optional override) ----
+  if (opts.entry_date) {
+    const edDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^entry date/i }),
+    }).first();
+    await edDiv.locator('input[type="date"]').fill(opts.entry_date);
+  }
+
+  // ---- Cash Account (optional override) ----
+  if (opts.cash_account_option_text) {
+    const cashDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^cash account/i }),
+    }).first();
+    await cashDiv.locator('select').selectOption({
+      label: new RegExp(opts.cash_account_option_text, 'i') as unknown as string,
+    });
+  }
+
+  // ---- AP Control Account (optional override) ----
+  if (opts.ap_control_account_option_text) {
+    const apDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^ap control account/i }),
+    }).first();
+    await apDiv.locator('select').selectOption({
+      label: new RegExp(opts.ap_control_account_option_text, 'i') as unknown as string,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// submitRecordPaymentForm — click "Record Payment" + wait for navigation back
+// ---------------------------------------------------------------------------
+
+/**
+ * Click the "Record Payment" submit button. On success the component
+ * navigates back to `report_payment_approval_queue` via onNavigate (heading
+ * "Payment Approval Queue" visible). On failure an error banner appears
+ * inside the card.
+ */
+export async function submitRecordPaymentForm(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^record payment$/i }).click();
+
+  // Wait for the queue heading (success) or an inline error banner (failure).
+  await expect(
+    page
+      .getByRole('heading', { name: /payment approval queue/i })
+      .or(page.locator('[class*="red"]').filter({ hasText: /error|unable|unexpected/i })),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+// ---------------------------------------------------------------------------
+// assertPaymentRecorded — verify return to queue + bill visibility transition
+// ---------------------------------------------------------------------------
+
+export interface AssertPaymentRecordedOpts {
+  /**
+   * Expected lifecycle state after the recordPayment call.
+   * 'fully_paid' → the bill is removed from the approved_for_payment queue
+   *                (queue filter is `approved_for_payment` only); expect the
+   *                bill_number row to be absent.
+   * 'partially_paid' → the bill remains in the queue (queue filter is
+   *                    `approved_for_payment` only, but billService transitions
+   *                    state to partially_paid which is NOT in the queue filter
+   *                    set per apReportService).
+   * The pragmatic v1 boundary: assert queue heading visible + table-or-empty
+   * shape. State-specific row presence is verified for fully_paid only.
+   */
+  expectedLifecycleState: 'fully_paid' | 'partially_paid';
+  /** Bill number used to identify the bill row. */
+  billNumber: string;
+}
+
+/**
+ * Assert that the recordPayment submission landed back on the queue view
+ * and the bill's queue presence matches the expected post-state.
+ *
+ * Queue filter: apReportService.getPaymentApprovalQueue filters by
+ * `lifecycle_state = 'approved_for_payment'`. After recordPayment:
+ *   - fully_paid    → row absent from queue (state transition removes it).
+ *   - partially_paid → also absent from queue (state is not in filter set).
+ * Both transitions remove the row from the approved_for_payment-filtered
+ * queue. The spec asserts queue navigation + row absence as the v1 boundary.
+ */
+export async function assertPaymentRecorded(
+  page: Page,
+  opts: AssertPaymentRecordedOpts,
+): Promise<void> {
+  // Queue heading visible (navigation back from RecordPaymentCard succeeded).
+  await expect(
+    page.getByRole('heading', { name: /payment approval queue/i }),
+  ).toBeVisible();
+
+  // Wait for queue fetch to resolve.
+  await expect(
+    page.locator('table').or(page.getByText(/no data\./i)),
+  ).toBeVisible({ timeout: 10_000 });
+
+  // Bill row should be ABSENT post-recordPayment (queue filters by
+  // approved_for_payment; both fully_paid and partially_paid drop out).
+  // Use a permissive check: the bill_number cell text is no longer visible.
+  await expect(
+    page.locator('td', { hasText: new RegExp(`^${opts.billNumber}$`) }),
+  ).toHaveCount(0, { timeout: 10_000 });
+
+  // Note: opts.expectedLifecycleState is currently used only to document the
+  // expected transition; queue-absence holds for both. A future helper could
+  // navigate to ApAgingView or PaidBillsHistoryView to verify the precise
+  // post-state, but that's beyond the v1 smoke boundary.
+  void opts.expectedLifecycleState;
 }

@@ -53,6 +53,142 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-3-D4 substantive arc closeout retrospective entry (2026-05-12) — sixth Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) fourth-instance (cross-arc N=4 graduation evaluation FIRED; arc-closure synthesis) + 3 chunk-grain catches + 5 sub-catch-ledger analytical observations + recordPayment write-side UX completion (1 user-accessible RecordPaymentCard via PaymentApprovalQueueView row-click amendment) + D2.7 screenshot gate (γ) FIRED at (a-ii) incremental Shot #8 verdict PASS + Phase A scope canonical expansion 7→8 surfaces
+
+This is the SIXTH Phase-5-arc-execution entry. Chunk B5-3-D4 (Slice D Spend continuation — recordPayment write-side UX completion; reverse defers to B5-3-D5 OR arc-closure per (decomp-γ) hybrid scope-lock) opened 2026-05-12 at HEAD `6a99c2c` (post-B5-3-D3 ship); substantive session #1 SHIPPED 2026-05-12 at HEAD `de358fb` (LOCAL ONLY; push DEFERRED to chunk-completion per (cadence-β-i-b); 1 commit ahead of `origin/staging` through session #2 implementation) — substrate: bill.record_payment ActionName + permission migration atomic + POST /api/orgs/[orgId]/bills/[billId]/record-payment mutation route + RecordPaymentCard canvas view (per-bill form-grain with form-schema separation per catch #46) + payment_record_card canvas integration 4-file canonical touch-set + recordBillPaymentRoute integration test (9 tests = 5 Category A floor + 4 substantive); substantive session #2 + closeout SHIPPED at this commit per (cadence-β-i-b) 2-session bundled cadence (**fourth instance after chunk B5-2 + chunk B5-3-D2 + chunk B5-3-D3; cross-arc N=4 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per §Drift-B**). Chunk B5-3-D4 ships 1 v1-deliverable write-side UI surface promoted to user-accessible at chunk close: **RecordPaymentCard** (substrate-ship-only at session #1; promoted to user-accessible at session #2 via PaymentApprovalQueueView 5th-file row-click amendment revived with NEW navigation target per Item 4 (β) discriminator naming + catch #57 sub-surface re-framing semantically valid grounding). Phase 5 arc continues with next-chunk election per (decomp-γ) hybrid — candidates: B5-3-D5 (recordPayment partial-payment-followup UX + reverse mutation) OR B5-3-E (AR domain slice) OR arc-closure synthesis venue.
+
+**Chunk-closeout grain preserves §Drift-B narrow-scope methodology** (precedent established at chunk B5-3-D1 closeout; continued at chunks B5-3-D2 + B5-3-D3 closeouts): this entry preserves chunk-grain pattern observations + drift dispositions + carry-forward inventory + analytical-observation enumeration. Cross-arc synthesis defers to Phase 5 arc-closure retrospective.
+
+**Chunk B5-3-D4 SHIPPED summary:**
+
+- Session #1 (HEAD `de358fb` LOCAL): 11 files / +2067/-10 / migration + 1 mutation route + RecordPaymentCard canvas view + 4-file canvas integration + integration test (9 tests) + plan doc (729 lines) / 835/835 vitest + 26/26 agent:validate + typecheck clean at session #1 close gate
+- Session #2 + closeout (this commit): 3 files at substrate-touch + closeout artifacts / PaymentApprovalQueueView 5th-file row-click amendment (revived per Item 4 (β); 2 surgical edits — line 20 destructure + line 77 onClick) + bill.ts E2E fixture extension (+320 lines; 5 new helpers including seedApprovedBill direct admin-client seed bypassing post+approve UI for E2E recordPayment-only scope) + recordPaymentCard.spec.ts Playwright E2E spec (138 lines; 2 tests = full-payment + partial-payment) + friction-journal entry + push-readiness gate evaluation / typecheck clean at post-Task-2 verification
+- Cumulative chunk B5-3-D4: ~14 files / 1 user-accessible UI surface promoted to user-accessible at chunk close (RecordPaymentCard) / 9 new vitest tests (recordBillPaymentRoute) / 2 new Playwright E2E tests (recordPaymentCard.spec.ts) / 835/835 at clean DB baseline (was 826 entering)
+
+**D2.7 screenshot gate (γ) firing — (a-ii) incremental gate-firing verdict per founder Item 3 (a-ii) ratification:**
+
+D2.7 screenshot gate fired at session #2 close per (a-ii) incremental framing (capture NEW surface ONLY; prior 6 user-accessible shots verified at B5-3-D3 gate — no regression-test rationale absent material change). Founder captured 1 new shot (Shot #8 — RecordPaymentCard mounted at approved_for_payment bill state via Path β DB-direct pre-seed). **Gate verdict: PASS** (all 8 prescribed verifications hold):
+
+1. Card heading "Record Payment — Bill #D4-SHOT-8" ✓
+2. Bill detail summary (vendor + due_date + amount_cad + amount_due) ✓
+3. payment_method 'EFT' default selected ✓
+4. amount_cad pre-filled with computed amount_due ($500.00; hint text "Partial payment allowed. Amount due: 500.0000" — implementer-grain UX prophylactic-application instance addressing catch #57 sub-surface expansion at in-form grain) ✓
+5. cash_account_id "1000 — Cash and Cash Equivalents" default ✓
+6. ap_control_account_id "2000 — Accounts Payable" default ✓
+7. fiscal_period_id "FY Current" default ✓
+8. "Record Payment" + "Cancel" buttons visible ✓
+
+Phase A scope canonical expansion grounded at chunk-grain ratification: 7 → 8 surfaces (7 user-accessible + 1 substrate-ship-only PaymentApprovalCard remaining per founder Item 5; carried to arc-closure substrate-correction venue). RecordPaymentCard joins user-accessible cohort.
+
+**Chunk-grain catches enumeration (3 catches at chunk B5-3-D4; cumulative N=59 entering → N=62 exiting):**
+
+Chunk-onset catches (#61; 1 at chunk-onset triangulation grain):
+- #61 WSL-side scope-projection under-specification at MEMORY.md edit-anchor grain (founder Item 1 ratification at chunk-onset; sibling cluster #33+#35+#36+#43+#53+#56+#58 → within-arc under-specification N=8 — codification-candidate evidence basis substantively load-bearing further)
+
+Session #1 implementation catches: NONE at chunk-execution-grain. Verify-from-disk discipline + catch-lesson #34-#61 prophylactic-application at code-template grain held breadth-correctly through all 5 session #1 tasks. Within-arc prophylactic-application-grain N=14 sustained at session #1 implementation; cross-subagent grain-axis N=12 sustained.
+
+Session #2 implementation + gate-execution catches (#62-#63; 2 at chunk-close grain):
+- #62 WSL-side substrate-citation drift at column-name grain (plan template cited `bill_payment_allocations.allocation_id` PK; actual disk-verified is `bill_payment_allocation_id` per disk schema verification; implementer-subagent prophylactically self-corrected at Task 5 integration test authoring; sibling-class to catch #51 column-name grain — within-arc substrate-citation-at-column-name-sub-grain N=2; cross-subagent grain-axis prophylactic-application instance N=13 logged separately)
+- #63 WSL-side orchestrator-grain task-description editorial drift at subagent-mandate-framing grain (NEW sub-shape; sibling-class to catch #57 substrate-grain semantic drift but distinct mandate-framing vs downstream-consumer-code grain; brainstorm-side verified-from-disk at apReportService.ts:489-491 post-filter as `approved_for_payment` ONLY → WSL-side Task 14 subagent-dispatch mandate framing editorialized "partially_paid stays" — INCORRECT per disk; logged per bidirectional symmetry discipline as sibling to #48-#52 implementer-grain editorial drift sub-mechanism)
+
+**Sub-catch-ledger analytical observations enumeration (5 observations at chunk B5-3-D4; NOT catch-ledger-grade per "would this cause a bug?" threshold; carried as analytical for arc-closure synthesis classification framework codification candidate):**
+
+1. **Estimation-grain analytical**: RecordPaymentCard 554 lines vs 300-350 plan estimate (within 2x; ManualBillForm 630-line precedent was available at plan-doc-draft time but cited 300-350 anyway). Sub-mechanism: estimation-grain drift at line-count-projection grain.
+2. **Orchestrator-grain meta-execution-mechanic**: shell-state-persistence between Bash invocations at validation gate execution (cwd persisted from `cd apps/web` at step 6b → root-level `pnpm db:reset:clean` failed to resolve at step 6c; resolved in-band via explicit `cd /home/philc/projects/chounting && ...` prefix). Operational-discipline questions surfaced: should orchestrator emit cwd-restore preamble after `cd <subdir>` operations? Should Bash invocations be wrapped with project-root prefix by default? Sub-mechanism: shell-discipline at meta-execution-mechanic grain.
+3. **Brainstorm-side file-size-cite drift**: brainstorm-side cited bill.ts at 361 lines in prior turn framing; subagent verify-from-disk at 239 actual baseline (subagent verified ground truth before extending to 559 post-Task-2). Sub-mechanism: file-size-cite drift at brainstorm-side count-arithmetic grain (sibling to #59 chain-of-drift through count-propagation).
+4. **Implementer-subagent JSDoc helper-name editorial drift**: assertPaymentRecorded JSDoc at bill.ts:577-609 cites `apReportService.getPaymentApprovalQueue` but actual method name is `apReportService.paymentApprovalQueue` (no `get` prefix). Verified-on-disk by brainstorm-side at post-Task-2 verification. Non-substantive at JSDoc comment grain (not consumed in code logic). Sub-mechanism: implementer-subagent-grain editorial drift at JSDoc-naming grain.
+5. **401 DevTools console surface at Shot #8 capture**: PostgREST query against canonical test user UUID returned 401 Unauthorized; bill detail fetch DID succeed (hint text rendered amount_due correctly); functional impact undetectable at gate-execution grain. Likely source: agent session-lifecycle background fetch OR Supabase SSR auth-state refresh OR canvas view stale fetch cancellation window. Sub-mechanism: dev-server background-fetch surface (NEW sub-shape).
+
+Within-arc analytical observation sub-pattern N=5 — codification-candidate evidence basis substantively load-bearing for arc-closure synthesis 33rd retrospective candidate (sub-catch-ledger analytical-observation classification framework codification — addresses the "what crosses the catch-ledger threshold vs carries as analytical observation" methodology question).
+
+**Sub-mechanism distribution post-chunk-B5-3-D4 (cumulative within-arc; WSL-side canonical count per N=62):**
+
+- WSL-side substrate-citation drift N=12 (#34 + #39 + #40 + #41 + #44 + #46 + #47 + #48 + #49 + #51 + #52 + #55 + #62) — note: enumeration shows 13 catches; #39 is hybrid-classified across substrate-citation + prophylactic-application; counts primary classification at chunk-close adjudication. +#62 column-name sub-grain at session #2 = +1
+- WSL-side scope-projection N=10 (#28 + #30 + #31 + #33 + #35 + #36 + #37 + #50 + #53 + #56 + #58 + #61); under-specification sub-cluster N=8 (#33 + #35 + #36 + #43 + #53 + #56 + #58 + #61; codification-candidate evidence basis substantively load-bearing further; +#61 at chunk-onset) ; over-specification sub-cluster N=2 (#37 + #50); other sub-mechanisms N=3 (#28 + #30 + #31)
+- WSL-side orchestrator-grain task-description editorial drift (NEW sub-mechanism at session #2) N=1 (#63)
+- Brainstorm-side substrate-citation drift N=3 (#27 + #29 + #45 hybrid)
+- Brainstorm-side grain-discrimination scope-projection N=1 (#32)
+- Chain-of-drift bilateral meta-grain N=2 (#38 + #59)
+- Chain-of-drift through founder-ratification surface (#45 hybrid) N=1
+- Prophylactic-application-grain partial-success meta-grain N=1 (#39 hybrid)
+- Dispatch-mandate-violation 4th grain-axis N=1 (#42)
+- Pre-existing-rule-firing surface N=1 (#54)
+- Substrate-grain semantic drift at downstream-consumer N=1 (#57; sub-surface expansion at partial-payment-followup UX flagged at this chunk; bundles to arc-closure candidate 4 inventory)
+- Substrate-grain capability gap N=1 (#60)
+
+Total cumulative N=62. **1 NEW sub-mechanism class surfaced at chunk B5-3-D4**: orchestrator-grain task-description editorial drift (#63) — sibling-class to substrate-grain semantic drift (#57) at distinct mandate-framing-vs-code-logic grain axis. Pre-existing-substrate-drift sub-pattern within-arc N=3 (#54 + #57 + #60) sustained (no new instances at B5-3-D4).
+
+**Cross-grain prophylactic-application bilateral convergence observation (bundle-as-single instance per chunk-close adjudication):**
+
+Implementer subagent at Task 2 dispatch encoded catch #57 sub-surface expansion (partial-payment-followup UX gap) at TWO grains within single dispatch:
+- (a) `assertPaymentRecorded` JSDoc at `bill.ts:577-609` (test-fixture grain — explicit documentation that both `partially_paid` AND `fully_paid` transitions remove the row from the `approved_for_payment`-filtered queue; spec asserts queue-absence as v1 boundary)
+- (b) RecordPaymentCard "Partial payment allowed. Amount due: 500.0000" hint text (UX-grain — observed at Shot #8 capture; surfaces partial-payment capability + remaining amount_due to operator)
+
+Cross-grain prophylactic application within single subagent dispatch substantively load-bearing for arc-closure prophylactic-application-grain codification-candidate. **Bundle-as-single within-arc prophylactic-application instance per chunk-close adjudication** (single root semantic understanding driving both encodings; logging as separate instances would over-count evidence basis at codification-candidate grain). **Within-arc prophylactic-application-grain N=14 sustained baseline + 1 bundled instance at session #2 = N=15.**
+
+**Drift dispositions resolved at chunk-B5-3-D4 closeout:**
+
+§Drift-A + §Drift-B + §Drift-C persist from prior chunks; this entry follows §Drift-B narrow-scope methodology + §Drift-C inline-in-friction-journal venue. Founder Item 4 (B5-3-D1 substrate-amendment timing) preserved at arc-closure venue. **Item 2 (a) (B5-3-D3 chunk-onset 5-file canvas integration ratification; ROLLED BACK at B5-3-D3 session #2 (iii-b) per catch #57 grounding): REVIVED at B5-3-D4 with NEW navigation target `payment_record_card` per Item 4 (β) ratification — semantically valid per record-payment's `approved_for_payment` entry-state precondition matches existing queue filter canonically (catch #57 sub-surface re-framing at action-grain different from original approve-action framing).** Forward-progress amendment ratified at chunk-grain; not retroactive substrate amendment. Founder Item 5 (D2.7-gate-with-substrate-ship-only-exception codification candidate) sustained at arc-closure synthesis carry-forward; Shot #7 PaymentApprovalCard remains substrate-ship-only-exception (no v1 user-accessible entry path; arc-closure substrate-correction chunk fires UX-wiring).
+
+**Catch #57 sub-surface expansion at chunk-B5-3-D4 (NEW arc-closure substrate-correction sub-surface bundled to Candidate 4 inventory):**
+
+Brainstorm-side verified-from-disk at chunk B5-3-D4 session #2 verification grain: `loadBillsWithAmountDue` helper filters `lifecycle_state IN {approved_for_payment, partially_paid}` (open-bill set); `paymentApprovalQueue` post-filters to `approved_for_payment` ONLY (apReportService.ts:489-491). Bills at `partially_paid` are EXCLUDED from queue per post-filter. **Sub-substantive UX gap at v1 partial-payment-followup**: when operator records a partial payment via RecordPaymentCard, bill transitions to `partially_paid` → bill DISAPPEARS from PaymentApprovalQueueView visibility → operator has NO v1 UX path to record additional partial payments against the same bill. Original catch #57 framing was queue filter semantic drift at approve-action grain; this is sibling-class manifestation at record-payment partial-payment-followup action grain. **Sharpened arc-closure substrate-correction scope** (per WSL-side verification #4 grounding at Shot #8 capture surface enhancement): in-form math is correct (RecordPaymentCard pulls computed `amount_due` per catch #20 helper logic; partial-payment-followup pre-fill would be correct AT form-grain IF an entry path existed); the actual UX gap is queue-filter / "Active Payments view exposing `partially_paid` bills". Bundle to **Candidate 4 sub-surface (i) NEW** (sibling to (c) queue-filter correction + (d) Pending Approvals view) OR extends (c) scope. Arc-closure synthesis venue per founder substrate-decision authority.
+
+**Cross-arc graduation triggers FIRED at chunk-B5-3-D4 (evaluation DEFERRED to Phase 5 arc-closure per §Drift-B):**
+
+- **(cadence-β-i-b) cross-arc N=4 FIRES** (B5-2 + B5-3-D2 + B5-3-D3 + B5-3-D4); combined with prior firings, cadence shape (cadence-β-i-b) has substantively favorable cross-arc N=4 evidence basis entering arc-closure synthesis
+- Under-specification sub-cluster within-arc N=8 (#33 + #35 + #36 + #43 + #53 + #56 + #58 + #61) — codification-candidate evidence basis substantively load-bearing further (was N=7 at B5-3-D3 close; +1 at chunk B5-3-D4)
+- Pre-existing-substrate-drift sub-pattern within-arc N=3 (#54 + #57 + #60) sustained
+- Chain-of-drift bilateral meta-grain within-arc N=2 (#38 + #59) sustained
+- Within-arc prophylactic-application-grain N=15 successful preventive catches (14 baseline + 1 bundled at chunk B5-3-D4 implementer cross-grain encoding of catch #57 sub-surface) — codification-candidate evidence basis substantively load-bearing further for arc-closure synthesis
+- Sub-catch-ledger analytical observation sub-pattern within-arc N=5 (NEW evidence-basis at chunk B5-3-D4) — codification-candidate emerging for arc-closure 33rd retrospective candidate
+- Cross-subagent grain-axis within-arc N=13 (12 baseline + #62 implementer prophylactic self-correction at column-name sub-grain) — codification-candidate evidence basis sustained
+- Orchestrator-grain task-description editorial drift NEW sub-mechanism class (#63) — within-arc N=1 baseline; sibling-class to substrate-grain semantic drift (#57) at distinct grain axis
+
+**Carry-forward inventory (B5-3-D4 SHIPPED → subsequent chunks + arc-closure):**
+
+Active for subsequent-chunk firing (2 items; preserved-deferred from prior chunks):
+1. FT1 (`clampTtl` NaN-guard at `supabaseStorageProvider.ts:95-99`) — preserved-deferred to storage-substrate-touching chunk
+2. Item 18 org_settings substrate-floor — preserved-deferred per (orgset-β)
+
+Active for Phase 5 arc-closure retrospective (32 candidates inherited + potential 33rd at chunk-B5-3-D4 close):
+- Items 1-32 per prior chunk closeout entries below
+- **Potential 33rd**: Sub-catch-ledger analytical-observation classification framework codification (within-arc N=5 evidence basis at chunk B5-3-D4; methodology question — what crosses catch-ledger threshold vs carries as analytical observation; "would this cause a bug?" heuristic + sub-mechanism class enumeration emerging at chunk-grain) [META-GRAIN]
+
+**Candidate 4 EXPANSION at chunk-B5-3-D4 closeout (originally B5-3-D1 header drift; expanded over 4 chunks):**
+
+Candidate 4 EXPANDED scope (now 9 sub-surfaces over 4 chunks; +1 from chunk B5-3-D4):
+- (a) B5-3-D1 read-side service file header text aspirational drift
+- (b) Per-property ESLint annotation across 5 Phase 5 service files (catch #54)
+- (c) `apReportService.paymentApprovalQueue` filter semantic-drift correction (catch #57; COUPLED with (d) + new (i))
+- (d) Pending Approvals canvas view exposing `pending_approval` bills (NEW at B5-3-D3; COUPLED with (c))
+- (e) Agent canvas-directive emission capability wiring for `payment_approval_card` (catch #60; COUPLED with (f))
+- (f) PaymentApprovalQueueView row-click amendment add-back for approve-action grain (COUPLED with (e)) — NOTE: PaymentApprovalQueueView row-click amendment for record-payment-action grain SHIPPED at chunk B5-3-D4 session #2 per Item 4 (β) ratification; (f) scope now specifically approve-action target
+- (g) D2.7 Shot #7 fire at substrate-correction-chunk grain [OPERATIONAL CONSEQUENCE]
+- (h) D2.7-gate-with-substrate-ship-only-exception discipline codification [META-GRAIN]
+- **(i) NEW at B5-3-D4: "Active Payments" canvas view exposing `partially_paid` bills for partial-payment-followup UX OR queue-filter rename + scope-extension** — catch #57 sub-surface expansion at partial-payment-followup action grain; COUPLED with (c) substrate-correction scope
+
+Arc-closure scope-grain expansion observation: 9 sub-surfaces vs original 1-surface framing at chunk B5-3-D1 closeout. Arc-closure substrate-amendment scope continues to grow substantively. **Non-blocking observation; preserved at arc-closure venue per §Drift-B**.
+
+**Defense-in-depth grain-axis enumeration (post-chunk-B5-3-D4):**
+
+- Cross-side axis: within-arc N≥19 (catches #21-#33 + #37 + #39 + #45 + #55 + #56 + #57 + #58 + #59 + #60 + #63 cross-side surfaced)
+- Self-reflective axis: within-arc N=2 (#32 + #37 + #44)
+- Cross-subagent axis: within-arc N=13 (B5-3-D2 N=5 + B5-3-D3 N=7 + B5-3-D4 N=1 = #62 implementer prophylactic self-correction at column-name sub-grain)
+- Meta-grain buckets: chain-of-drift bilateral N=2 (#38 + #59); chain-of-drift through founder-ratification N=1 (#45 hybrid); prophylactic-application-grain partial-success N=1 (#39 hybrid); dispatch-mandate-violation N=1 (#42); pre-existing-rule-firing N=1 (#54); substrate-grain semantic drift at downstream-consumer N=1 (#57); substrate-grain capability gap N=1 (#60); orchestrator-grain task-description editorial drift N=1 (#63 NEW at B5-3-D4)
+
+Architecture-validating observation: bidirectional cross-side parallel-surface verification + cross-subagent verify-from-disk discipline + bilateral grain-axis convergence at substrate-grain semantic understanding (catch #57 prophylactic encoding bundle-as-single instance at chunk B5-3-D4) operate symmetrically AND across multiple grain-axes; H3 surface-area-grain asymmetry hypothesis substantively favored further entering Phase 5 arc-closure synthesis (within-arc N=15 prophylactic-success preventive catches; N=13 cross-subagent; N=19+ cross-side; N=5 sub-catch-ledger analytical observations codification-candidate).
+
+**Push-readiness three-condition gate (CHUNK-COMPLETION grain) — MET per CLAUDE.md convention:**
+
+1. Test-suite health: **MET** (835/835 vitest + 26/26 agent:validate + typecheck clean at session #1 close gate; post-Task-2 typecheck verified clean at session #2 implementation; no test regressions at session #2 surgical edits)
+2. Doc-sync reconciled: **MET trivially** (no INV / control_matrix / ADR amendments at this chunk; canvas integration is type-level + UI only; `ledger_truth_model` unchanged; `types.ts` not regenerated — no schema changes beyond permission migration; permission migration consumed via integration test verification)
+3. Governance closeout: **MET** via this friction-journal chunk-B5-3-D4 entry + retrospective inline per §Drift-C + carry-forward inventory + Candidate 4 (i) NEW sub-surface codification + 33rd arc-closure retrospective candidate evidence-basis emergence
+
+**Chunk B5-3-D4 CLOSED at this commit.** 1 v1-deliverable write-side UI surface promoted to user-accessible at chunk close (RecordPaymentCard via PaymentApprovalQueueView row-click amendment per Item 4 (β)). D2.7 screenshot gate FIRED with Shot #8 PASS verdict per (a-ii) incremental framing (Phase A scope canonical expansion 7→8 surfaces grounded). (cadence-β-i-b) cross-arc N=4 graduation evaluation FIRES; defers to Phase 5 arc-closure per §Drift-B. Push CLEAN to `origin/staging` per (cadence-β-i-b) precedent (push fires at chunk-completion, NOT session #1 close). Phase 5 arc continues with next-chunk election per (decomp-γ) hybrid.
+
+---
+
 ### Phase 5 chunk B5-3-D3 substantive arc closeout retrospective entry (2026-05-12) — fifth Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) third-instance (cross-arc N=3 graduation evaluation FIRED; arc-closure synthesis) + 21 chunk-grain catches + 2 of 2 v1-deliverable write-side UI surfaces shipped (1 user-accessible + 1 substrate-ship-only per catch #57+#60 disposition) + 2 new sub-mechanism buckets + D2.7 screenshot gate (γ) FIRED with substrate-ship-only-exception verdict (6/7 PASS + 1 deferred to arc-closure substrate-correction chunk)
 
 This is the FIFTH Phase-5-arc-execution entry. Chunk B5-3-D3 (Slice D write-side UI surfaces: manual bill form + payment approval card + D2.7 screenshot gate firing) opened 2026-05-11 at HEAD `4abd387` (post-B5-3-D2 ship); substantive session #1 SHIPPED 2026-05-11 at HEAD `1844f9e` (AP write-side UI substrate: 2 ActionName permissions atomic migration + POST /bills mutation route + VendorPicker thin abstraction Path X + ManualBillForm canvas view + bill_form canvas integration 4-file canonical touch-set + postBillRoute integration test + NEW bill.ts E2E fixture + billForm.spec.ts); substantive session #2 + closeout SHIPPED at this commit per (cadence-β-i-b) 2-session bundled cadence (third instance after chunk B5-2 + chunk B5-3-D2; **cross-arc N=3 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per §Drift-B**). Chunk B5-3-D3 ships 2 v1-deliverable write-side UI surfaces: ManualBillForm (user-accessible via MainframeRail "New Bill"; functional end-to-end verified at gate-execution grain — vendor + bill creation + JE side-effect + recordMutation audit all green) + PaymentApprovalCard (**substrate-ship-only at v1** per catch #57 + #60 disposition; component + integration tests + canvas-directive type + 4-file canvas integration plumbing ship; no v1 user-accessible entry path due to substrate-grain semantic + capability gaps; arc-closure substrate-correction chunk fires user-grade UX wiring). Phase 5 arc continues with next-chunk election per (decomp-γ) hybrid — candidates: B5-3-E (AR domain slice) OR B5-3-D4+ (Spend continuation with recordPayment + reverse mutations) OR alternative.

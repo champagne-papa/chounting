@@ -17,7 +17,7 @@ export interface PaymentApprovalQueueViewProps {
   onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
-export function PaymentApprovalQueueView({ orgId }: PaymentApprovalQueueViewProps) {
+export function PaymentApprovalQueueView({ orgId, onNavigate }: PaymentApprovalQueueViewProps) {
   const [data, setData] = useState<PaymentApprovalQueueOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +74,11 @@ export function PaymentApprovalQueueView({ orgId }: PaymentApprovalQueueViewProp
           </thead>
           <tbody>
             {data.bills.map((b) => (
-              <tr key={b.bill_id} className="border-b border-neutral-100">
+              <tr
+                key={b.bill_id}
+                onClick={() => onNavigate({ type: 'payment_record_card', orgId, billId: b.bill_id })}
+                className="border-b border-neutral-100 cursor-pointer hover:bg-neutral-50"
+              >
                 <td className="py-2 pr-4">{b.bill_number ?? '—'}</td>
                 <td className="py-2 pr-4 font-mono text-xs">{b.vendor_id}</td>
                 <td className="py-2 pr-4">{b.due_date ?? '—'}</td>
