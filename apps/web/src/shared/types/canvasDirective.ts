@@ -16,6 +16,9 @@ export type CanvasDirective =
   | { type: 'report_balance_sheet'; orgId: string; asOfDate?: string }
   | { type: 'report_account_ledger'; orgId: string; accountId: string; periodId?: string }
   | { type: 'report_accounts_by_type'; orgId: string; accountType: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'; periodId?: string }
+  | { type: 'report_ap_aging'; orgId: string }
+  | { type: 'report_open_bills'; orgId: string }
+  | { type: 'report_vendor_balance'; orgId: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'adjustment_form'; orgId: string }
   | { type: 'recurring_template_list'; orgId: string }

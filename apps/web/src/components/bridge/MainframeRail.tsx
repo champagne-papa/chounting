@@ -26,6 +26,9 @@ const ICONS = [
   { id: 'recurring',     label: 'Recurring Journals', icon: '\u{1F504}' },
   { id: 'pl',            label: 'P&L Report',         icon: '\u{1F4CA}' },
   { id: 'trial_balance', label: 'Trial Balance',      icon: '\u2696' },
+  { id: 'ap_aging',      label: 'AP Aging',           icon: '\u{1F4B0}' },
+  { id: 'open_bills',    label: 'Open Bills',         icon: '\u{1F4DD}' },
+  { id: 'vendor_balance', label: 'Vendor Balance',    icon: '\u{1F4B5}' },
   { id: 'actions',       label: 'AI Action Review',   icon: '\u2705' },
 ] as const;
 
@@ -47,6 +50,12 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
         return onNavigate({ type: 'report_pl', orgId });
       case 'trial_balance':
         return onNavigate({ type: 'report_trial_balance', orgId });
+      case 'ap_aging':
+        return onNavigate({ type: 'report_ap_aging', orgId });
+      case 'open_bills':
+        return onNavigate({ type: 'report_open_bills', orgId });
+      case 'vendor_balance':
+        return onNavigate({ type: 'report_vendor_balance', orgId });
       case 'actions':
         return router.push(`/${locale}/${orgId}/agent/actions`);
     }

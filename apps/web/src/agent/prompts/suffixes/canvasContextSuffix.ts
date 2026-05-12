@@ -62,6 +62,12 @@ function describeDirective(directive: CanvasDirective): string {
       return 'an account ledger';
     case 'report_accounts_by_type':
       return 'a per-account breakdown for one account type';
+    case 'report_ap_aging':
+      return 'the AP aging report';
+    case 'report_open_bills':
+      return 'the open bills report';
+    case 'report_vendor_balance':
+      return 'the vendor balance report';
     case 'reversal_form':
       return 'the reversal form';
     case 'adjustment_form':
