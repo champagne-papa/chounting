@@ -53,6 +53,132 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-3-D3 substantive arc closeout retrospective entry (2026-05-12) — fifth Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) third-instance (cross-arc N=3 graduation evaluation FIRED; arc-closure synthesis) + 21 chunk-grain catches + 2 of 2 v1-deliverable write-side UI surfaces shipped (1 user-accessible + 1 substrate-ship-only per catch #57+#60 disposition) + 2 new sub-mechanism buckets + D2.7 screenshot gate (γ) FIRED with substrate-ship-only-exception verdict (6/7 PASS + 1 deferred to arc-closure substrate-correction chunk)
+
+This is the FIFTH Phase-5-arc-execution entry. Chunk B5-3-D3 (Slice D write-side UI surfaces: manual bill form + payment approval card + D2.7 screenshot gate firing) opened 2026-05-11 at HEAD `4abd387` (post-B5-3-D2 ship); substantive session #1 SHIPPED 2026-05-11 at HEAD `1844f9e` (AP write-side UI substrate: 2 ActionName permissions atomic migration + POST /bills mutation route + VendorPicker thin abstraction Path X + ManualBillForm canvas view + bill_form canvas integration 4-file canonical touch-set + postBillRoute integration test + NEW bill.ts E2E fixture + billForm.spec.ts); substantive session #2 + closeout SHIPPED at this commit per (cadence-β-i-b) 2-session bundled cadence (third instance after chunk B5-2 + chunk B5-3-D2; **cross-arc N=3 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per §Drift-B**). Chunk B5-3-D3 ships 2 v1-deliverable write-side UI surfaces: ManualBillForm (user-accessible via MainframeRail "New Bill"; functional end-to-end verified at gate-execution grain — vendor + bill creation + JE side-effect + recordMutation audit all green) + PaymentApprovalCard (**substrate-ship-only at v1** per catch #57 + #60 disposition; component + integration tests + canvas-directive type + 4-file canvas integration plumbing ship; no v1 user-accessible entry path due to substrate-grain semantic + capability gaps; arc-closure substrate-correction chunk fires user-grade UX wiring). Phase 5 arc continues with next-chunk election per (decomp-γ) hybrid — candidates: B5-3-E (AR domain slice) OR B5-3-D4+ (Spend continuation with recordPayment + reverse mutations) OR alternative.
+
+**Chunk-closeout grain preserves §Drift-B narrow-scope methodology** (precedent established at chunk B5-3-D1 closeout; continued at chunk B5-3-D2 closeout): this entry preserves chunk-grain pattern observations + drift dispositions + carry-forward inventory. Cross-arc synthesis defers to Phase 5 arc-closure retrospective.
+
+**Chunk B5-3-D3 SHIPPED summary:**
+
+- Session #1 (HEAD `1844f9e`): 15 files / +2496/-10 / migration + 1 mutation route + VendorPicker + ManualBillForm + 4-file canvas integration + integration test + NEW E2E fixture + E2E spec + plan doc / 821/821 vitest + 26/26 agent:validate + typecheck clean
+- Session #2 + closeout (this commit): 6+ files / approve route + PaymentApprovalCard + 4-file canvas integration (post-(iii-b) revert; was 5-file at chunk-onset Item 2 (a) ratification) + integration test + plan doc + friction-journal entry / 826/826 vitest + 26/26 agent:validate + typecheck clean
+- Cumulative: ~21-23 files / 2 v1-deliverable write-side UI surfaces (1 user-accessible + 1 substrate-ship-only) / 1 new vitest cluster (5 tests at session #1 postBillRoute) + 1 new vitest cluster (5 tests at session #2 billApproveForPaymentRoute) / 826/826 at clean DB baseline
+
+**D2.7 screenshot gate (γ) firing — substrate-ship-only-exception verdict (NEW codification candidate, founder Item 5 ratified):**
+
+D2.7 screenshot gate fired at session #2 closeout per chunk-onset Surface 8 ratification + CLAUDE.md §UI-session screenshot gate convention. Founder captured 7 prescribed shots against fresh-seed state (Shots #1-#6 user-accessible UX surfaces; Shot #7 per (iii-b) revert disposition requires agent canvas directive entry path). Gate verdict: **6/7 PASS + 1 substrate-ship-only deferral**:
+
+- Shots #1-#5 (B5-3-D2 read-side UX surfaces): PASS clean against fresh seed
+- Shot #6 (ManualBillForm B5-3-D3 session #1): PASS (form chrome + Zod validation surface + (δ) one-off vendor pre-seed + end-to-end submission verified at gate-execution grain — bill `84b4e6b2-5e7e-479c-9dd5-7c1e60930570` created in `pending_approval` with JE back-reference `bb241f71-802d-4e9b-bc02-277bf1495a2d`)
+- Shot #7 (PaymentApprovalCard B5-3-D3 session #2): **DEFERRED** per catch #57 + #60 substrate-ship-only grounding; canonical agent canvas directive entry path returns HTTP 400 (catch #60 capability gap); fallback paths (debug page / DevTools manipulation) rejected per Item 5 (g) ratification + §Drift-B narrow-scope methodology alignment
+
+**NEW codification candidate at Item 5:** "D2.7-gate-with-substrate-ship-only-exception" discipline — substrate-ship-only surfaces (components that ship as substrate awaiting future-chunk UX-wiring) DO NOT block D2.7-style gates at chunk closeout grain. Sibling-class to §Drift-B narrow-scope methodology codification. Arc-closure synthesis venue.
+
+**Chunk-grain catches enumeration (21 catches at chunk B5-3-D3; cumulative N=38 entering → N=59 exiting):**
+
+Chunk-onset catches (#40-#46; 7 at scope-lock + plan doc draft grain):
+- #40 WSL-side substrate-citation drift at action-name grain (Surface 3 lean `'bill.approve_for_payment'`; canonical `'bill.approve'` per billService.ts:11 + :406)
+- #41 WSL-side substrate-citation drift at count-quantification grain (recon Target A2 N=1; actual N=11 in apReportService.ts whole-file scan)
+- #42 NEW sub-mechanism: cross-subagent dispatch-mandate-violation grain (recon made analytical "structural not drift" judgment exceeding dispatch mandate "NOT to make recommendations"); 4th cross-grain axis distinct from prior cross-subagent (subagent catches orchestrator)
+- #43 WSL-side scope-projection under-specification at canvas integration grain (Surface 7 cited 4-file touch-set; PaymentApprovalCard navigation required 5th-file PaymentApprovalQueueView amendment — founder Item 2 (a) ratified, later reverted under (iii-b) at session #2 post-Task-5 checkpoint per catch #57 disposition)
+- #44 WSL-side substrate-citation drift at chunk-attribution grain (B5-2-era attribution corrected to B5-3-D1; self-reflective catch-grain axis)
+- #45 chain-of-drift through founder-ratification surface (NEW sub-shape; hybrid classification: brainstorm-side substrate-citation drift sibling #27+#29 + NEW chain-of-drift sub-shape; "accountant" role_key cited unverified → founder ratified verbatim → WSL-side plan-doc-grain disk verification catch)
+- #46 WSL-side substrate-citation drift at code-template grain (Task 4b form/service schema separation per JournalEntryForm precedent; sibling cluster)
+
+Session #1 implementation catches (#47-#54; 8 at implementer-subagent + validation-gate-execution + cross-side parallel-surface verification grain):
+- #47 WSL-side substrate-citation drift at timestamp grain (plan cited `20240133`; actual `20240140` per disk scan; 7 non-permission migrations shipped between recon and Task 1 execution)
+- #48 WSL-side substrate-citation drift at field-name grain (plan cited `display_name`; actual `name` per vendorService.ts + listVendors.schema.ts)
+- #49 WSL-side substrate-citation drift at endpoint-path grain (plan cited `/api/orgs/[orgId]/tax-codes`; actual `/api/tax-codes` flat global route)
+- #50 WSL-side scope-projection over-specification at validation-gate-citation grain (plan cited `pnpm build` as validation gate; CLAUDE.md §1 doesn't include build; pre-existing ESLint failures persist on 5 Phase 5 service files)
+- #51 WSL-side substrate-citation drift at column-name grain (plan cited `journal_entries.posted`; actual `adjustment_status` + `entry_type` per disk-verified schema)
+- #52 WSL-side substrate-citation drift at seed-data-assumption grain (plan assumed vendor seed; dev.sql has none; required NEW `seedTestVendor` helper)
+- #53 WSL-side scope-projection under-specification at hardcoded-count-asserting-file enumeration grain (Task 1 missed CA-37 in `crossOrgRlsIsolation.test.ts`; CA-28 covered but CA-37 not; sibling under-specification cluster)
+- #54 NEW sub-mechanism bucket: pre-existing-rule-firing surface (ESLint `services/withInvariants-wrap-or-annotate` fires on 5 Phase 5 service-layer files / 13 errors pre-existing across B5-1 + B5-2 + B5-3-D1 + B5-3-D2 substrate; non-blocking per CLAUDE.md §1 chunk-close gate)
+
+Session #2 implementation + gate-execution catches (#55-#60; 6 at implementer-subagent + gate-execution + cross-side parallel-surface grain):
+- #55 WSL-side substrate-citation drift at type-shape grain (template local `BillRow` with `string` amount fields; actual `PaymentApprovalQueueRow` with `MoneyAmount` branded type; sibling cluster)
+- #56 WSL-side scope-projection under-specification at amendment-site enumeration grain (plan Task 3 cited line 77 `<tr>` amendment; missed line 20 prop destructuring requirement for compilation)
+- #57 NEW sub-mechanism bucket: substrate-grain semantic drift at downstream-consumer implementation grain (B5-3-D1 `apReportService.paymentApprovalQueue` filter semantic drift: filter `approved_for_payment` post-fetch vs spec §11.4 EC-A-6 intent `pending_approval`; sibling-class to catch #54 pre-existing-substrate-drift)
+- #58 WSL-side scope-projection under-specification at pre-seed-dependency grain (Task 6 setup item 3 assumed ManualBillForm bill creation provides Shot #7 substrate; ManualBillForm vendor-required + fresh-seed 0 vendors → blocker; sibling under-specification cluster)
+- #59 chain-of-drift through count-propagation between sides (sibling to #38 chain-of-drift bilateral; WSL-side N=53 vs brainstorm-side N=54 propagation drift; meta-recursive sub-grain observation: catch #59 own surface carries the count drift it documents — sub-grain bundled under #59 per founder ratification rather than separate catch #61)
+- #60 NEW sub-mechanism bucket: substrate-grain capability gap at gate-execution grain (agent canvas-directive emission for `payment_approval_card` not wired at v1; HTTP 400 at `/api/agent/message`; ADR-0015 + agent-first architecture canonical-path BLOCKED; sibling-class to catch #57 substrate-ship-only framing)
+
+**Sub-mechanism distribution post-chunk-B5-3-D3 (cumulative within-arc; WSL-side canonical count per N=59):**
+
+- WSL-side projection-drift N=9 (#28 + #30 + #31 + #33 + #35 + #36 + #37 + #53 + #56 + #58); under-specification sub-cluster N=7 (#33 + #35 + #36 + #43 + #53 + #56 + #58; within-arc codification-candidate evidence basis substantively strengthened); over-specification sub-cluster N=2 (#37 + #50); other sub-mechanisms N=3 (#28 + #30 + #31)
+- WSL-side substrate-citation drift N=11 (#34 + #39 + #40 + #41 + #44 + #46 + #47 + #48 + #49 + #51 + #52 + #55) — note: this enumeration shows 12 catches; #39 is hybrid-classified across substrate-citation + prophylactic-application; counts in substrate-citation bucket per primary classification at session #1 close adjudication
+- Brainstorm-side substrate-citation drift N=3 (#27 + #29 + #45 hybrid)
+- Brainstorm-side grain-discrimination scope-projection N=1 (#32)
+- Chain-of-drift bilateral meta-grain N=2 (#38 + #59)
+- Chain-of-drift through founder-ratification surface (NEW sub-shape at #45 hybrid) N=1
+- Prophylactic-application-grain partial-success meta-grain N=1 (#39 hybrid)
+- Dispatch-mandate-violation 4th grain-axis (NEW at chunk-onset) N=1 (#42)
+- Pre-existing-rule-firing surface (NEW bucket at session #1) N=1 (#54)
+- Substrate-grain semantic drift at downstream-consumer (NEW bucket at session #2) N=1 (#57)
+- Substrate-grain capability gap (NEW bucket at session #2) N=1 (#60)
+
+Total cumulative N=59. **3 NEW sub-mechanism buckets surfaced at chunk B5-3-D3**: dispatch-mandate-violation (#42), pre-existing-rule-firing (#54), substrate-grain semantic drift at downstream-consumer (#57). Plus #60 (substrate-grain capability gap) sibling-class to #57 framing → could bundle as 2 buckets vs 3 at arc-closure synthesis adjudication. Symmetric sub-mechanism class coverage between sides; pre-existing-substrate-drift sub-pattern within-arc N=3 (#54 + #57 + #60) codification-candidate evidence basis emerging substantively.
+
+**Drift dispositions resolved at chunk-B5-3-D3 closeout:**
+
+§Drift-A + §Drift-B + §Drift-C persist from B5-3-D1 + B5-3-D2; this entry follows §Drift-B narrow-scope methodology + §Drift-C inline-in-friction-journal venue. Founder Item 4 (B5-3-D1 substrate-amendment timing) preserved at arc-closure venue. Item 2 (a) (5-file canvas integration with PaymentApprovalQueueView row-click amendment) **rolled back** at session #2 post-Task-5 checkpoint per (iii-b) ratification — catch #57 substantive grounding made the row-click amendment non-functional (queue filter excludes pending_approval; clicked bills already in target state). Session-grain rollback preserves §Drift-B + δ-i discipline (forward-progress amendment reverted before commit; closed B5-3-D2 substrate not retroactively amended). Founder Item 5 (D2.7-gate-with-substrate-ship-only-exception codification candidate) ratified for arc-closure synthesis carry-forward.
+
+**Cross-arc graduation triggers FIRED at chunk-B5-3-D3 (evaluation DEFERRED to Phase 5 arc-closure per §Drift-B):**
+
+- **(cadence-β-i-b) cross-arc N=3 FIRES** (B5-2 + B5-3-D2 + B5-3-D3); combined with (cadence-β-i-a) cross-arc N=2 FIRED at B5-3-D1, cadence shape (cadence-β-i-b) has substantively favorable cross-arc N=3 evidence basis entering arc-closure
+- (test-γ) within-arc N≥3 ratchet continues active
+- 3 NEW sub-mechanism buckets surfaced at chunk B5-3-D3 (dispatch-mandate-violation #42 + pre-existing-rule-firing #54 + substrate-grain semantic drift at downstream-consumer #57 / substrate-grain capability gap #60) — bucket-class enumeration vs lumping methodology arc-closure adjudication candidate
+- Pre-existing-substrate-drift sub-pattern within-arc N=3 (#54 + #57 + #60) — NEW codification-candidate evidence basis emerging
+- Under-specification sub-cluster within-arc N=7 (#33 + #35 + #36 + #43 + #53 + #56 + #58) — codification-candidate evidence basis substantively strengthened (was N=3 at B5-3-D2 close; +4 at chunk B5-3-D3)
+- Chain-of-drift bilateral meta-grain within-arc N=2 (#38 + #59) — sibling pattern propagation across chunks
+- Within-arc prophylactic-application-grain N=14 successful preventive catches (7 at B5-3-D3 session #1 + 6 at B5-3-D3 session #2 + prior chunks) — codification-candidate evidence basis substantively load-bearing for arc-closure synthesis
+
+**Carry-forward inventory (B5-3-D3 SHIPPED → subsequent chunks + arc-closure):**
+
+Active for subsequent-chunk firing (2 items; preserved-deferred from prior chunks):
+1. FT1 (clampTtl NaN-guard at `supabaseStorageProvider.ts:95-99`) — preserved-deferred to storage-substrate-touching chunk
+2. Item 18 org_settings substrate-floor — preserved-deferred per (orgset-β)
+
+Active for Phase 5 arc-closure retrospective (32+ items; 29 inherited from prior chunks + 3+ new at chunk-B5-3-D3 close):
+- Items 1-29 per chunk B5-3-D1 + B5-3-D2 closeout entries below
+- 30: Cross-arc N=3 graduation evaluation for (cadence-β-i-b) — substantively favorable evidence basis
+- 31: Pre-existing-substrate-drift sub-pattern codification candidate (#54 + #57 + #60; within-arc N=3 evidence basis)
+- 32: D2.7-gate-with-substrate-ship-only-exception discipline codification (founder Item 5 ratified; sibling §Drift-B narrow-scope methodology codification)
+
+**Candidate 4 EXPANSION at chunk-B5-3-D3 closeout (originally B5-3-D1 header drift; expanded over 3 chunks):**
+
+What was "B5-3-D1 read-side service file header drift carry-forward" at chunk B5-3-D1 closeout has expanded over 3 chunks to **Phase 5 Spend subdomain substrate-amendment-and-UX-architecture-reconciliation scope** with 8 sub-surfaces:
+- (a) B5-3-D1 read-side service file header text aspirational drift (`apReportService.ts` + `vendorReportService.ts`; N=11 loci verified)
+- (b) Per-property ESLint annotation across 5 Phase 5 service files (catch #54; 13 errors pre-existing)
+- (c) `apReportService.paymentApprovalQueue` filter semantic-drift correction (catch #57; filter should match spec §11.4 EC-A-6 `pending_approval` intent OR rename queue per UX-architecture reconciliation) [COUPLED with (d)]
+- (d) Pending Approvals canvas view (NEW) to expose `pending_approval` bills with row-click entry to PaymentApprovalCard [COUPLED with (c)]
+- (e) Agent canvas-directive emission capability wiring for `payment_approval_card` (catch #60; ADR-0015 + agent-first architecture canonical path) [COUPLED with (f)]
+- (f) PaymentApprovalQueueView row-click amendment add-back after substrate semantic-fix lands (revives catch #43 chunk-onset Item 2 (a) ratification scope) [COUPLED with (e)]
+- (g) D2.7 Shot #7 fire at substrate-correction-chunk grain (founder Item 5 deferral per catch #57 + #60) [OPERATIONAL CONSEQUENCE of (c)+(d)+(e)+(f)]
+- (h) D2.7-gate-with-substrate-ship-only-exception discipline codification (NEW; founder Item 5; sibling §Drift-B narrow-scope methodology codification) [META-GRAIN]
+
+Arc-closure scope-grain expansion observation: 8 sub-surfaces vs original 1-surface framing at chunk B5-3-D1 closeout. Arc-closure substrate-amendment scope substantively larger than originally projected. **Non-blocking observation; preserved at arc-closure venue per §Drift-B**.
+
+**Defense-in-depth grain-axis enumeration (post-chunk-B5-3-D3):**
+
+- Cross-side axis: within-arc N≥18 (catches #21-#33 + #37 + #39 + #45 + #55 + #56 + #57 + #58 + #59 + #60 cross-side surfaced)
+- Self-reflective axis: within-arc N=2 (#32 + #37 + #44)
+- Cross-subagent axis: within-arc N=12 (B5-3-D2 N=5 + B5-3-D3 N=7 — implementer subagent catches at task-grain via verify-from-disk discipline)
+- Meta-grain buckets: chain-of-drift bilateral N=2 (#38 + #59); chain-of-drift through founder-ratification N=1 (#45 hybrid); prophylactic-application-grain partial-success N=1 (#39 hybrid); dispatch-mandate-violation N=1 (#42); pre-existing-rule-firing N=1 (#54); substrate-grain semantic drift at downstream-consumer N=1 (#57); substrate-grain capability gap N=1 (#60)
+
+Architecture-validating observation: bidirectional cross-side parallel-surface verification + cross-subagent verify-from-disk discipline operate symmetrically AND across multiple grain-axes; H3 surface-area-grain asymmetry hypothesis substantively favored entering Phase 5 arc-closure synthesis (within-arc N=14+ prophylactic-success preventive catches; N=12 cross-subagent; N=18+ cross-side).
+
+**Push-readiness three-condition gate (CHUNK-COMPLETION grain) — MET per CLAUDE.md convention:**
+
+1. Test-suite health: **MET** (826/826 vitest + 26/26 agent:validate + typecheck clean at clean DB baseline; +5 from session #1 close baseline 821 = matches Task 4 5-test increment)
+2. Doc-sync reconciled: **MET trivially** (no INV / control_matrix / ADR amendments at this chunk; canvas integration is type-level + UI only; `ledger_truth_model` unchanged; `types.ts` regenerated implicitly via typecheck pass)
+3. Governance closeout: **MET** via this friction-journal chunk-B5-3-D3 entry + retrospective inline per §Drift-C + carry-forward inventory + Item 5 codification candidate ratification
+
+**Chunk B5-3-D3 CLOSED at this commit.** 2 v1-deliverable write-side UI surfaces shipped (1 user-accessible: ManualBillForm functional end-to-end + 1 substrate-ship-only: PaymentApprovalCard component + integration tests + canvas-directive plumbing). D2.7 screenshot gate FIRED with 6/7 PASS + 1 substrate-ship-only-exception verdict (founder Item 5 ratified). (cadence-β-i-b) cross-arc N=3 graduation evaluation FIRES; defers to Phase 5 arc-closure per §Drift-B. Push CLEAN to `origin/staging` per (cadence-β-i-b) precedent (push fires at chunk-completion, NOT session #1 close). Phase 5 arc continues with next-chunk election per (decomp-γ) hybrid.
+
+---
+
 ### Phase 5 chunk B5-3-D2 substantive arc closeout retrospective entry (2026-05-11) — fourth Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) second-instance (cross-arc N=2 graduation evaluation FIRED; arc-closure synthesis) + 13 chunk-grain catches + 5 of 5 v1-deliverable view UI surfaces shipped + 2 new meta-grain sub-mechanism buckets
 
 This is the FOURTH Phase-5-arc-execution entry. Chunk B5-3-D2 (Slice D UI-side AP read-side reporting; 5 view UI surfaces) opened 2026-05-11 at HEAD `9aafabe` (post-B5-3-D1 ship); substantive session #1 SHIPPED 2026-05-11 at HEAD `e143792` (3 of 5 views: EC-A-3 + EC-A-4 + EC-A-5 + new vendorService.ts substrate); substantive session #2 + closeout SHIPPED at this commit per (cadence-β-i-b) 2-session bundled cadence (second instance after chunk B5-2; cross-arc N=2 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per §Drift-B). Chunk B5-3-D2 closes 5 of 5 v1-deliverable read-side view UI surfaces (3 from session #1 + 2 from session #2); EC-A-8 scope-removed under (δ) symmetry with B5-3-D1 per §11.5 Document-Platform ownership. Phase 5 arc continues with B5-3-D3 (write-side UI surfaces: manual bill form + payment approval card + screenshot gate (γ) firing for all 7 Phase A UI surfaces) OR alternative next-slice election per (decomp-γ) hybrid.

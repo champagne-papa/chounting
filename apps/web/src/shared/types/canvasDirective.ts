@@ -27,6 +27,7 @@ export type CanvasDirective =
   | { type: 'recurring_template_form'; orgId: string }
   | { type: 'recurring_run_list'; orgId: string; recurringTemplateId?: string }
   | { type: 'bill_form'; orgId: string }
+  | { type: 'payment_approval_card'; orgId: string; billId: string }
   | { type: 'none' }
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation:

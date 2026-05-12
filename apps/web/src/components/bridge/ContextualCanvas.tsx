@@ -31,6 +31,7 @@ import { VendorBalanceView } from '@/components/canvas/VendorBalanceView';
 import { PaymentApprovalQueueView } from '@/components/canvas/PaymentApprovalQueueView';
 import { PaidBillsHistoryView } from '@/components/canvas/PaidBillsHistoryView';
 import { ManualBillForm } from '@/components/canvas/ManualBillForm';
+import { PaymentApprovalCard } from '@/components/canvas/PaymentApprovalCard';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
@@ -144,6 +145,8 @@ function renderDirective(
       return <AdjustmentForm orgId={d.orgId} onNavigate={onNavigate} />;
     case 'bill_form':
       return <ManualBillForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'payment_approval_card':
+      return <PaymentApprovalCard orgId={d.orgId} billId={d.billId} onNavigate={onNavigate} />;
     case 'recurring_template_list':
       return <RecurringTemplateListView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'recurring_template_form':
