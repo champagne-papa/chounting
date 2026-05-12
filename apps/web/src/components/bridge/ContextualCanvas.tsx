@@ -28,6 +28,8 @@ import { AccountsByTypeView } from '@/components/canvas/AccountsByTypeView';
 import { ApAgingView } from '@/components/canvas/ApAgingView';
 import { OpenBillsView } from '@/components/canvas/OpenBillsView';
 import { VendorBalanceView } from '@/components/canvas/VendorBalanceView';
+import { PaymentApprovalQueueView } from '@/components/canvas/PaymentApprovalQueueView';
+import { PaidBillsHistoryView } from '@/components/canvas/PaidBillsHistoryView';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
@@ -175,6 +177,10 @@ function renderDirective(
       return <OpenBillsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'report_vendor_balance':
       return <VendorBalanceView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_payment_approval_queue':
+      return <PaymentApprovalQueueView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_paid_bills_history':
+      return <PaidBillsHistoryView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

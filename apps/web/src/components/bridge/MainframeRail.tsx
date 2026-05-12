@@ -29,6 +29,8 @@ const ICONS = [
   { id: 'ap_aging',      label: 'AP Aging',           icon: '\u{1F4B0}' },
   { id: 'open_bills',    label: 'Open Bills',         icon: '\u{1F4DD}' },
   { id: 'vendor_balance', label: 'Vendor Balance',    icon: '\u{1F4B5}' },
+  { id: 'payment_approval_queue', label: 'Payment Approval Queue', icon: '\u{1F4B3}' },
+  { id: 'paid_bills_history', label: 'Paid Bills History', icon: '\u{1F4DC}' },
   { id: 'actions',       label: 'AI Action Review',   icon: '\u2705' },
 ] as const;
 
@@ -56,6 +58,10 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
         return onNavigate({ type: 'report_open_bills', orgId });
       case 'vendor_balance':
         return onNavigate({ type: 'report_vendor_balance', orgId });
+      case 'payment_approval_queue':
+        return onNavigate({ type: 'report_payment_approval_queue', orgId });
+      case 'paid_bills_history':
+        return onNavigate({ type: 'report_paid_bills_history', orgId });
       case 'actions':
         return router.push(`/${locale}/${orgId}/agent/actions`);
     }

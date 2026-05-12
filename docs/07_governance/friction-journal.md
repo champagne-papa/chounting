@@ -53,6 +53,88 @@ Categories:
 
 ## Phase 2
 
+### Phase 5 chunk B5-3-D2 substantive arc closeout retrospective entry (2026-05-11) — fourth Phase-5-arc-execution friction-journal entry + (cadence-β-i-b) second-instance (cross-arc N=2 graduation evaluation FIRED; arc-closure synthesis) + 13 chunk-grain catches + 5 of 5 v1-deliverable view UI surfaces shipped + 2 new meta-grain sub-mechanism buckets
+
+This is the FOURTH Phase-5-arc-execution entry. Chunk B5-3-D2 (Slice D UI-side AP read-side reporting; 5 view UI surfaces) opened 2026-05-11 at HEAD `9aafabe` (post-B5-3-D1 ship); substantive session #1 SHIPPED 2026-05-11 at HEAD `e143792` (3 of 5 views: EC-A-3 + EC-A-4 + EC-A-5 + new vendorService.ts substrate); substantive session #2 + closeout SHIPPED at this commit per (cadence-β-i-b) 2-session bundled cadence (second instance after chunk B5-2; cross-arc N=2 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per §Drift-B). Chunk B5-3-D2 closes 5 of 5 v1-deliverable read-side view UI surfaces (3 from session #1 + 2 from session #2); EC-A-8 scope-removed under (δ) symmetry with B5-3-D1 per §11.5 Document-Platform ownership. Phase 5 arc continues with B5-3-D3 (write-side UI surfaces: manual bill form + payment approval card + screenshot gate (γ) firing for all 7 Phase A UI surfaces) OR alternative next-slice election per (decomp-γ) hybrid.
+
+**Chunk-closeout grain preserves §Drift-B narrow-scope methodology** (precedent established at chunk B5-3-D1 closeout): this entry preserves chunk-grain pattern observations + drift dispositions + carry-forward inventory. Cross-arc synthesis defers to Phase 5 arc-closure retrospective.
+
+**Chunk B5-3-D2 SHIPPED summary:**
+
+- Session #1 (HEAD `e143792`): 18 files / +1838 / 3 views + new vendorService.ts substrate + 4-file canvas integration + 4 unit tests + 7 E2E / 816/816 vitest + 26/26 agent:validate + typecheck clean
+- Session #2 + closeout (this commit): 12 files / 2 views + 4-file canvas integration extension + 4 E2E + friction-journal entry + plan doc / 816/816 vitest + 26/26 agent:validate + typecheck clean
+- Cumulative: 30 files / 5 of 5 v1-deliverable view UI surfaces + 1 new service substrate / 4 new vitest + 11 new E2E
+
+**Chunk-grain catches enumeration (13 catches at chunk B5-3-D2; cumulative N=25 entering → N=38 exiting):**
+
+Chunk-onset catches (#27-#33; 7 at scope-lock + plan doc draft grain):
+- #27 brainstorm-side substrate-citation drift at slice election (ADR-0015 §10 6-mutation enumeration)
+- #28 WSL-side scope-projection at D2.7 (manual form-entry fixtures transitive-dependency-temporal)
+- #29 brainstorm-side substrate-citation drift at D2.6 (test-count session-vs-grain conflation)
+- #30 WSL-side layer-categorization error on EC-A-5 (D2.4 symmetry at wrong layer; Two Laws Law 1 dispositive)
+- #31 WSL-side grain-discrimination scope-projection at Q1 (hybrid page route as implementation-grain vs ratification-grain)
+- #32 brainstorm-side self-surfaced grain-discrimination (within-B5-3-D1-retrospective venue projection; SELF-REFLECTIVE)
+- #33 WSL-side plan-doc scope-projection under-specification (canvas integration 0-2 contingent vs 3-file concrete)
+
+Session #1 implementation catches (#34-#37; 4 at implementer-subagent + validation-gate-execution grain):
+- #34 WSL-side substrate-citation drift (`@/components/canvas/types` nonexistent; FIRST WSL-side substrate-citation; cross-subagent-grain)
+- #35 WSL-side scope-projection under-specification (canvasContextSuffix.ts 4th file; cross-subagent-grain)
+- #36 WSL-side scope-projection under-specification (TS-typing vendor_id; cross-subagent-grain)
+- #37 WSL-side scope-projection over-specification (plan doc Task 5 E2E gate over-projection; SELF-REFLECTIVE)
+
+Session #2 onset + plan doc draft catches (#38-#39; 2 at NEW meta-grain buckets):
+- #38 chain-of-drift bilateral meta-grain (WSL-side commit/memory N=5 → brainstorm-side handoff partial-correction N=6 → actual N=7; chain crosses sides with partial-correction at verification surface; NEW meta-grain bucket)
+- #39 WSL-side substrate-citation drift at session #2 plan doc Task 1b code template (combined imports from wrong path; sibling to #34; finer-grain variant; NEW meta-grain bucket: prophylactic-application-grain partial-success — catch #34 lesson succeeded at lesson-statement grain but failed at code-template grain)
+
+**Sub-mechanism distribution post-chunk-B5-3-D2 (cumulative within-arc):**
+
+- WSL-side projection-drift N=7 (#28 + #30 + #31 + #33 + #35 + #36 + #37); under-specification sub-cluster N=3 (#33 + #35 + #36; codification candidate); over-specification N=1 (#37); other N=3 (#28 + #30 + #31)
+- WSL-side substrate-citation drift N=1 (#34)
+- Brainstorm-side substrate-citation drift N=2 (#27 + #29)
+- Brainstorm-side grain-discrimination scope-projection N=1 (#32)
+- Chain-of-drift bilateral meta-grain N=1 (#38; NEW bucket)
+- Prophylactic-application-grain partial-success meta-grain N=1 (#39; NEW bucket)
+
+Total cumulative N=38. Symmetric sub-mechanism class coverage between sides; absolute counts diverge per H3 surface-area-grain asymmetry hypothesis (arc-closure synthesis).
+
+**Drift dispositions resolved at chunk-B5-3-D2 closeout:**
+
+§Drift-A + §Drift-B + §Drift-C persist from B5-3-D1; this entry follows §Drift-B narrow-scope methodology + §Drift-C inline-in-friction-journal venue. B5-3-D1 header-comment aspirational withInvariants/ActionName drift (N=10+ mentions across apReportService.ts + vendorReportService.ts) NOT replicated at B5-3-D2 new files (drift disposition applied prophylactically); arc-closure carry-forward per §Drift-B + δ-i.
+
+**Cross-arc graduation triggers FIRED at chunk-B5-3-D2 (evaluation DEFERRED to Phase 5 arc-closure per §Drift-B):**
+
+- (cadence-β-i-b) cross-arc N=2 FIRES (B5-2 + B5-3-D2); combined with (cadence-β-i-a) cross-arc N=2 FIRED at B5-3-D1, both cadence shapes have cross-arc N=2 evidence basis entering arc-closure
+- (test-γ) within-arc N≥3 ratchet continues active; counting-grain ambiguity surfaced at session #1 + session #2 validation gates via accountLedgerService pollution-driven flake
+- NEW: Chain-of-drift propagation pattern (#38) — meta-grain mechanism distinct from substrate-citation + projection-drift sub-mechanism classes
+- NEW: Prophylactic-application-grain partial-success (#39) — meta-grain mechanism for grain-asymmetric discipline application
+
+**Carry-forward inventory (B5-3-D2 SHIPPED → subsequent chunks + arc-closure):**
+
+Active for subsequent-chunk firing (3 items):
+1. FT1 (clampTtl NaN-guard) — preserved-deferred to storage-substrate chunk
+2. Item 18 org_settings substrate-floor — preserved-deferred per (orgset-β)
+3. NEW: D2.7 screenshot gate (γ) — fires at B5-3-D3 closeout (captures all 7 Phase A UI surfaces at single fixture state via founder-grain capture per CLAUDE.md §UI-session screenshot gate)
+
+Active for Phase 5 arc-closure retrospective (29 items; 25 inherited from prior chunks + 4 new at chunk-B5-3-D2):
+- Items 1-25 per chunk B5-3-D1 closeout entry below
+- 26: ec-19.spec.ts pre-existing E2E failure (2/3 against CONTROLLER_ORG seed; verified pre-existing via stash-regression-check)
+- 27: accountLedgerService.test.ts pollution-driven flake counting-grain ambiguity ((test-γ) instance)
+- 28: cross-subagent-grain catch-grain axis recognition + chain-of-drift bilateral meta-grain (#38) + prophylactic-application-grain partial-success meta-grain (#39)
+- 29: Defense-in-depth grain-axis enumeration confirmed at 3-axis (cross-side + self-reflective + cross-subagent) + 2 meta-grain buckets
+
+**Defense-in-depth grain-axis enumeration (post-chunk-B5-3-D2):**
+
+- Cross-side axis: within-arc N≥12 (catches #21-#33 + #37 + #39)
+- Self-reflective axis: within-arc N=2 (#32 + #37)
+- Cross-subagent axis: within-arc N=5 (B5-3-D1 #21+#26 + B5-3-D2 #34+#35+#36)
+- Meta-grain buckets: chain-of-drift bilateral N=1 (#38); prophylactic-application-grain partial-success N=1 (#39)
+
+Architecture-validating observation: bidirectional cross-side parallel-surface verification operates symmetrically AND across multiple grain-axes; H3 surface-area-grain asymmetry hypothesis substantively favored entering Phase 5 arc-closure synthesis.
+
+**Chunk B5-3-D2 CLOSED at this commit. Push CLEAN to `origin/staging`. 5 of 5 v1-deliverable read-side view UI surfaces shipped per Phase A scope; B5-3-D3 ships write-side UI + screenshot gate (γ) firing. Phase 5 arc continues.**
+
+---
+
 ### Phase 5 chunk B5-3-D1 substantive arc closeout retrospective entry (2026-05-11) — third Phase-5-arc-execution friction-journal entry + (cadence-β-i-a) second-instance (cross-arc N=2 graduation evaluation FIRED; arc-closure synthesis) + 6 chunk-grain catches + 3 drift dispositions + chunk-closeout/arc-closure grain discrimination methodology
 
 This is the THIRD Phase-5-arc-execution entry. Chunk B5-3-D1 (Slice D AP read-side reporting; data-side) opened 2026-05-10 at HEAD `fdb019d`; substantive sessions #1 + #2 SHIPPED 2026-05-10/11 at HEADs `770fef4` + `93cecdd`; closeout session #3 closes the chunk at this commit per (cadence-β-i-a) 3-session split (second instance of this cadence-shape after chunk B5-1; cross-arc N=2 trigger for candidate (e) graduation evaluation FIRES — evaluation deferred to Phase 5 arc-closure retrospective per founder narrow-scope disposition §Drift-B). Phase 5 arc continues with chunk B5-3-D2 (UI screenshot-gated surfaces) OR alternative next-slice election per (decomp-γ) hybrid by domain-slice.
