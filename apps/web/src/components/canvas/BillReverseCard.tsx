@@ -84,7 +84,8 @@ export function formStateToServiceInput(
 
 export type BillReverseCardReturnTo =
   | 'report_active_payments'
-  | 'report_paid_bills_history';
+  | 'report_paid_bills_history'
+  | 'report_pending_approvals';
 
 export type BillReverseCardProps = {
   orgId: string;
@@ -101,6 +102,9 @@ function returnDirective(
 ): CanvasDirective {
   if (returnTo === 'report_paid_bills_history') {
     return { type: 'report_paid_bills_history', orgId };
+  }
+  if (returnTo === 'report_pending_approvals') {
+    return { type: 'report_pending_approvals', orgId };
   }
   return { type: 'report_active_payments', orgId };
 }

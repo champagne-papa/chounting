@@ -364,6 +364,90 @@ export async function seedPartiallyPaidBill(
 }
 
 // ---------------------------------------------------------------------------
+// seedPendingApprovalBill — admin-direct seed of a bill in pending_approval
+// state. Used by the PendingApprovalsView E2E smoke; admin client only
+// (no billService import — assertEnv cascade per B5-3-D6 lesson).
+// ---------------------------------------------------------------------------
+
+export async function seedPendingApprovalBill(
+  orgId: string,
+  vendorId: string,
+  opts: { amount_cad?: string; bill_number?: string } = {},
+): Promise<{ billId: string; billNumber: string; cleanup: () => Promise<void> }> {
+  const db = makeAdminClient();
+  const billId = crypto.randomUUID();
+  const amount_cad = opts.amount_cad ?? '250.00';
+  const bill_number = opts.bill_number ?? `E2E-PEND-${billId.slice(0, 8)}`;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await db.from('bills').insert({
+    bill_id: billId,
+    org_id: orgId,
+    vendor_id: vendorId,
+    bill_number,
+    issue_date: today,
+    due_date: today,
+    currency: 'CAD',
+    amount_original: amount_cad,
+    amount_cad,
+    fx_rate: '1.0',
+    lifecycle_state: 'pending_approval',
+  });
+  if (error) throw new Error(`seedPendingApprovalBill failed: ${error.message}`);
+
+  const cleanup = async () => {
+    await db.from('bills').delete().eq('bill_id', billId);
+  };
+  return { billId, billNumber: bill_number, cleanup };
+}
+
+// ---------------------------------------------------------------------------
+// gotoPendingApprovals — navigate to the Pending Approvals canvas view
+// ---------------------------------------------------------------------------
+
+export async function gotoPendingApprovals(page: Page, orgId: string): Promise<void> {
+  await page.goto(`/${LOCALE}/${orgId}`);
+  await page.getByTitle('Pending Approvals').click();
+  await expect(
+    page.getByRole('heading', { name: /pending approvals/i }),
+  ).toBeVisible();
+  await expect(
+    page.locator('table').or(page.getByText(/no bills currently awaiting approval/i)),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// selectBillFromPendingApprovals — click row to navigate to PaymentApprovalCard
+// ---------------------------------------------------------------------------
+
+export async function selectBillFromPendingApprovals(
+  page: Page,
+  billNumber: string,
+): Promise<void> {
+  const row = page.locator('tr').filter({
+    has: page.locator('td', { hasText: new RegExp(`^${billNumber}$`) }),
+  }).first();
+  // Click a non-button cell to ensure row body triggers (not the per-row
+  // Reverse button which stopPropagation).
+  await row.locator('td').first().click();
+
+  await expect(
+    page.getByRole('heading', { name: /approve bill.*for payment/i }),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// cancelPaymentApproval — click Cancel on PaymentApprovalCard, expect return
+// ---------------------------------------------------------------------------
+
+export async function cancelPaymentApproval(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^cancel$/i }).click();
+  await expect(
+    page.getByRole('heading', { name: /pending approvals/i }),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
 // gotoActivePayments — navigate to the Active Payments canvas view
 // ---------------------------------------------------------------------------
 

@@ -86,6 +86,11 @@ import {
   type BillDetailOutput,
 } from '@/shared/schemas/spend/reports/billDetail.schema';
 import {
+  PendingApprovalsInputSchema,
+  type PendingApprovalsInput,
+  type PendingApprovalsInputRaw,
+} from '@/shared/schemas/spend/reports/pendingApprovals.schema';
+import {
   addMoney,
   subtractMoney,
   toMoneyAmount,
@@ -183,6 +188,32 @@ export interface ActivePaymentsRow {
 export interface ActivePaymentsOutput {
   bills: ActivePaymentsRow[];
   total_amount_due: MoneyAmount;
+}
+
+/**
+ * Pending approvals row — Phase 5 arc-closure.
+ *
+ * Bills in `pending_approval` lifecycle_state awaiting controller approval.
+ * Mirrors sibling row shapes (vendor_id, bill_number, due_date, amount_cad)
+ * and adds `issue_date` + `days_pending`. `days_pending` is `today −
+ * created_at` (rounded down to whole days); measures how long the bill has
+ * been sitting in the queue since entered into the system. issue_date can
+ * be backdated or future-dated by the vendor, so created_at is the source
+ * of truth for operational queue duration.
+ */
+export interface PendingApprovalsRow {
+  bill_id: string;
+  vendor_id: string;
+  bill_number: string | null;
+  issue_date: string | null;     // YYYY-MM-DD; vendor-stated date
+  due_date: string | null;       // YYYY-MM-DD
+  amount_cad: MoneyAmount;
+  days_pending: number;          // today − created_at, floored to whole days
+}
+
+export interface PendingApprovalsOutput {
+  bills: PendingApprovalsRow[];
+  total_amount: MoneyAmount;
 }
 
 // ---------------------------------------------------------------------
@@ -772,6 +803,91 @@ async function paidBillsHistory(
   return { bills: rows, total_amount_paid: totalAmountPaid };
 }
 
+/**
+ * pendingApprovals — Phase 5 arc-closure.
+ *
+ * Fetches bills in `pending_approval` lifecycle_state — bills awaiting
+ * controller approval before payment can be recorded. Operator entry path
+ * for PaymentApprovalCard (approve action) and BillReverseCard (reverse
+ * action via the bill-reverse-card directive against the per-bill route).
+ *
+ * Helper-vs-inline rationale: the shared `loadBillsWithAmountDue` helper
+ * filters lifecycle_state to {approved_for_payment, partially_paid}. This
+ * report wants `pending_approval` (outside that set), AND amount_due
+ * computation is irrelevant (pending_approval bills have no payments by
+ * construction — no allocations to subtract). Inline fetch is the right
+ * shape; extending the helper would muddy its open-bill semantics
+ * (mirror pattern: paidBillsHistory).
+ *
+ * Cross-org access discipline: route handler is unwrapped per sibling
+ * read-side routes (active-payments, paid-bills-history); cross-org access
+ * manifests as an empty filter result at the adminClient layer subject to
+ * RLS.
+ */
+// withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
+// withInvariants(action: 'pending_approvals.read'))
+async function pendingApprovals(
+  input: PendingApprovalsInputRaw,
+  ctx: ServiceContext,
+): Promise<PendingApprovalsOutput> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  const parsed: PendingApprovalsInput = PendingApprovalsInputSchema.parse(input);
+
+  const { data: bills, error: billsErr } = await db
+    .from('bills')
+    .select('bill_id, vendor_id, bill_number, issue_date, due_date, amount_cad, created_at')
+    .eq('org_id', parsed.org_id)
+    .eq('lifecycle_state', 'pending_approval');
+  if (billsErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `pending_approvals: bills lookup failed: ${billsErr.message}`,
+    );
+  }
+  const billRows = (bills ?? []) as Array<{
+    bill_id: string;
+    vendor_id: string;
+    bill_number: string | null;
+    issue_date: string | null;
+    due_date: string | null;
+    amount_cad: string | number;
+    created_at: string;
+  }>;
+
+  const nowMs = Date.now();
+  const rows: PendingApprovalsRow[] = billRows.map((b) => {
+    const createdMs = Date.parse(b.created_at);
+    const daysPending = Math.max(0, Math.floor((nowMs - createdMs) / 86_400_000));
+    return {
+      bill_id: b.bill_id,
+      vendor_id: b.vendor_id,
+      bill_number: b.bill_number,
+      issue_date: b.issue_date,
+      due_date: b.due_date,
+      amount_cad: toMoneyAmount(b.amount_cad),
+      days_pending: daysPending,
+    };
+  });
+
+  let totalAmount: MoneyAmount = zeroMoney();
+  for (const r of rows) {
+    totalAmount = addMoney(totalAmount, r.amount_cad);
+  }
+
+  log.info(
+    {
+      org_id: parsed.org_id,
+      bill_count: rows.length,
+      total_amount: totalAmount,
+    },
+    'Pending approvals computed',
+  );
+
+  return { bills: rows, total_amount: totalAmount };
+}
+
 // ---------------------------------------------------------------------
 // Service object export (Pattern B: route handlers wrap each method
 // via withInvariants(action: '<verb>.read') at call site)
@@ -781,11 +897,13 @@ export const apReportService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
   // withInvariants(action: 'ap_aging.read' | 'open_bills.read' |
   // 'payment_approval_queue.read' | 'paid_bills_history.read' |
-  // 'active_payments.read' | 'bill_detail.read'))
+  // 'active_payments.read' | 'bill_detail.read' |
+  // 'pending_approvals.read'))
   aging,
   openBills,
   paymentApprovalQueue,
   paidBillsHistory,
   activePayments,
+  pendingApprovals,
   billDetail,
 };

@@ -1,22 +1,29 @@
 'use client';
 //
 // Phase 5 chunk B5-3-D3 substantive session #2: PaymentApprovalCard —
-// per-bill canvas view for payment-approval action.
-// Consumes POST /api/orgs/[orgId]/bills/[billId]/approve-for-payment (Task 1
-// route) which wraps billService.approveForPayment via withInvariants(action:
-// 'bill.approve'). Data fetch: reuses queue endpoint + client-side billId
-// filter (Disposition (α) per plan-doc-grain ratification; no new per-bill
-// endpoint).
+// per-bill canvas view for the payment-approval action. Calls POST
+// /api/orgs/[orgId]/bills/[billId]/approve-for-payment (B5-3-D3 route)
+// which wraps billService.approveForPayment via withInvariants(action:
+// 'bill.approve').
 //
-// Mirror pattern: JournalEntryDetailView.tsx canonical (HEAD 4abd387);
-// per-entity canvas view with { orgId, billId } discriminator.
+// Phase 5 arc-closure substrate-correction: data source swapped from
+// /reports/payment-approval-queue (which post-filters to
+// approved_for_payment only — the OUTPUT state of the approve action,
+// not the INPUT state pending_approval) to the per-bill endpoint
+// /api/orgs/[orgId]/bills/[billId] (B5-3-D5; lifecycle-state-agnostic).
+// Mirror pattern: RecordPaymentCard at B5-3-D5 received the identical
+// correction. Without this swap, mounting from PendingApprovalsView
+// (the new arc-closure wiring) would always error with "Bill not found
+// in approval queue".
+//
+// Third instance of the queue-find-by-id substrate-correction pattern
+// (#57 RecordPaymentCard's first surface, #69 RecordPaymentCard's
+// second surface, this one PaymentApprovalCard). Grep audit confirmed
+// no fourth consumer.
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
-import type {
-  PaymentApprovalQueueOutput,
-  PaymentApprovalQueueRow,
-} from '@/services/spend/reports/apReportService';
+import type { BillDetailRow } from '@/shared/schemas/spend/reports/billDetail.schema';
 
 export interface PaymentApprovalCardProps {
   orgId: string;
@@ -25,7 +32,7 @@ export interface PaymentApprovalCardProps {
 }
 
 export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprovalCardProps) {
-  const [bill, setBill] = useState<PaymentApprovalQueueRow | null>(null);
+  const [bill, setBill] = useState<BillDetailRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -34,19 +41,17 @@ export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprov
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/orgs/${orgId}/reports/payment-approval-queue`)
+    fetch(`/api/orgs/${orgId}/bills/${billId}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-        return res.json() as Promise<PaymentApprovalQueueOutput>;
+        if (!res.ok) {
+          if (res.status === 404) throw new Error(`Bill ${billId} not found`);
+          throw new Error(`Fetch failed: ${res.status}`);
+        }
+        return res.json() as Promise<BillDetailRow>;
       })
       .then((body) => {
         if (cancelled) return;
-        const found = body.bills.find((b) => b.bill_id === billId);
-        if (!found) {
-          setError(`Bill ${billId} not found in approval queue`);
-        } else {
-          setBill(found);
-        }
+        setBill(body);
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -82,8 +87,9 @@ export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprov
         return;
       }
       await response.json();
-      // On success: navigate back to queue (bill no longer in approved_for_payment state)
-      onNavigate({ type: 'report_payment_approval_queue', orgId });
+      // On success: navigate back to the pending-approvals view (bill
+      // has transitioned to approved_for_payment and is no longer here).
+      onNavigate({ type: 'report_pending_approvals', orgId });
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -107,9 +113,9 @@ export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprov
         <button
           type="button"
           className="text-sm text-blue-600 hover:underline"
-          onClick={() => onNavigate({ type: 'report_payment_approval_queue', orgId })}
+          onClick={() => onNavigate({ type: 'report_pending_approvals', orgId })}
         >
-          &larr; Back to queue
+          &larr; Back
         </button>
         <h2 className="text-lg font-semibold">
           Approve Bill{bill.bill_number ? ` #${bill.bill_number}` : ''} for Payment
@@ -136,8 +142,8 @@ export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprov
         <dt className="font-medium text-neutral-500">Amount (CAD)</dt>
         <dd className="font-mono">{String(bill.amount_cad)}</dd>
 
-        <dt className="font-medium text-neutral-500">Amount Due</dt>
-        <dd className="font-mono">{String(bill.amount_due)}</dd>
+        <dt className="font-medium text-neutral-500">Lifecycle State</dt>
+        <dd className="font-mono">{bill.lifecycle_state}</dd>
       </dl>
 
       <div className="flex gap-2">
@@ -151,7 +157,7 @@ export function PaymentApprovalCard({ orgId, billId, onNavigate }: PaymentApprov
         </button>
         <button
           type="button"
-          onClick={() => onNavigate({ type: 'report_payment_approval_queue', orgId })}
+          onClick={() => onNavigate({ type: 'report_pending_approvals', orgId })}
           disabled={submitting}
           className="px-4 py-2 bg-neutral-200 text-neutral-700 rounded text-sm hover:bg-neutral-300 disabled:opacity-50"
         >

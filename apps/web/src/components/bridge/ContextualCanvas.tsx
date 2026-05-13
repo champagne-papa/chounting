@@ -31,6 +31,7 @@ import { VendorBalanceView } from '@/components/canvas/VendorBalanceView';
 import { PaymentApprovalQueueView } from '@/components/canvas/PaymentApprovalQueueView';
 import { ActivePaymentsView } from '@/components/canvas/ActivePaymentsView';
 import { PaidBillsHistoryView } from '@/components/canvas/PaidBillsHistoryView';
+import { PendingApprovalsView } from '@/components/canvas/PendingApprovalsView';
 import { ManualBillForm } from '@/components/canvas/ManualBillForm';
 import { PaymentApprovalCard } from '@/components/canvas/PaymentApprovalCard';
 import { RecordPaymentCard } from '@/components/canvas/RecordPaymentCard';
@@ -203,6 +204,8 @@ function renderDirective(
       return <ActivePaymentsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'report_paid_bills_history':
       return <PaidBillsHistoryView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_pending_approvals':
+      return <PendingApprovalsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

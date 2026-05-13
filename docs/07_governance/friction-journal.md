@@ -10866,3 +10866,71 @@ arc-closeout adds that view.
 
 The Spend domain is now functionally complete at v1. Next:
 Phase 5 arc-closure synthesis when the founder elects.
+
+### 2026-05-12 — Phase 5 arc-closure prep: PendingApprovalsView
+
+Closed the last functional gap before Phase 5 arc-closure. Before
+this chunk, operators could reach reverse for bills in
+approved_for_payment / partially_paid / fully_paid (via Active
+Payments + Paid Bills History row-clicks) but not pending_approval
+— even though billService.reverse accepts that state. The route
+substrate has been ready since B5-3-D6; this chunk added the UI
+entry point.
+
+Five pieces shipped:
+
+1. `apReportService.pendingApprovals` — inline fetch (the shared
+   loadBillsWithAmountDue helper filters to
+   `{approved_for_payment, partially_paid}` only, so it's not
+   reusable here; same call as paidBillsHistory's reasoning).
+   Returns vendor_id + bill_number + issue_date + due_date +
+   amount_cad + days_pending. days_pending = `today - created_at`
+   (issue_date can be backdated, created_at measures actual queue
+   duration).
+2. GET `/api/orgs/[orgId]/reports/pending-approvals` route —
+   read-side, no withInvariants, mirror sibling pattern.
+3. `PendingApprovalsView` — per-org table, row-click navigates to
+   PaymentApprovalCard, per-row Reverse button (mirror of the
+   ActivePaymentsView amendment from D6) navigates to
+   BillReverseCard with `returnTo: 'report_pending_approvals'`
+   (extended the BillReverseCard return union to include the new
+   view).
+4. Canvas integration (5-file set: directive + ContextualCanvas
+   + canvasContextSuffix + MainframeRail entry + view import).
+5. Substrate-correction to PaymentApprovalCard: swapped its
+   fetch from `/reports/payment-approval-queue` (which post-
+   filters to approved_for_payment only — the OUTPUT state of
+   the action, not the INPUT state pending_approval) to the
+   per-bill endpoint `/api/orgs/[orgId]/bills/[billId]` (B5-3-D5
+   substrate). Without this, mounting the card from the new view
+   would always error "Bill not found in approval queue". Same
+   shape of fix as B5-3-D5 (RecordPaymentCard's correction);
+   PaymentApprovalCard was substrate-ship-only since B5-3-D3 and
+   had no working entry point until now.
+
+**Audit pass at chunk-onset.** Before building, grepped the
+codebase for other consumers using the
+"fetch a queue endpoint, then `.find(b => b.bill_id === billId)`"
+pattern that's been the root cause of catches #57, #69, and
+PaymentApprovalCard. Found 7 client-side report-endpoint
+consumers; 6 are list views (correct use), 1 was PaymentApprovalCard
+(the one already in scope). No fourth instance. PaidBillsHistoryView's
+row-click goes directly to BillReverseCard (per-bill endpoint);
+VendorBalanceView uses a parameterized `?vendor_id=X` query. The
+trajectory is real but bounded.
+
+**Validation gate.** typecheck clean; agent:validate 26/26;
+pnpm test 871/871 (was 862 → +9 route tests on the new
+pendingApprovalsRoute test, +4 unit-schema, with the new file
+appearing in the 173 → wait, file count went 173 (was 171) →
+correctly +2 files = unit + route integration). E2E pendingApprovalsView
+spec passes 2/2 in 26s (rail-click smoke + row-click smoke). Test
+pollution surfaced once mid-run on accountLedgerService.test.ts
+(running-balance baseline drift from accumulated JE rows across
+the suite); a `pnpm db:reset:clean` cleared it. Pre-existing
+suite-wide test-pollution issue, not chunk-related.
+
+Phase 5 functionally complete at v1 across all four bill
+lifecycle entry points (pending_approval, approved_for_payment,
+partially_paid, fully_paid) for both approve and reverse actions.
+Arc-closure synthesis is the next surface.

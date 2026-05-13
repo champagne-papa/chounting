@@ -74,6 +74,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the active payments view';
     case 'report_paid_bills_history':
       return 'the paid bills history';
+    case 'report_pending_approvals':
+      return 'the pending approvals view';
     case 'reversal_form':
       return 'the reversal form';
     case 'adjustment_form':

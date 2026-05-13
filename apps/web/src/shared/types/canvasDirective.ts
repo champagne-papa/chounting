@@ -22,6 +22,7 @@ export type CanvasDirective =
   | { type: 'report_payment_approval_queue'; orgId: string }
   | { type: 'report_active_payments'; orgId: string }
   | { type: 'report_paid_bills_history'; orgId: string }
+  | { type: 'report_pending_approvals'; orgId: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'adjustment_form'; orgId: string }
   | { type: 'recurring_template_list'; orgId: string }
@@ -34,7 +35,10 @@ export type CanvasDirective =
       type: 'bill_reverse_card';
       orgId: string;
       billId: string;
-      returnTo?: 'report_active_payments' | 'report_paid_bills_history';
+      returnTo?:
+        | 'report_active_payments'
+        | 'report_paid_bills_history'
+        | 'report_pending_approvals';
     }
   | { type: 'none' }
 
