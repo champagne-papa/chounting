@@ -10943,3 +10943,51 @@ issue in the suite (other tests posting JE entries against the
 shared seed accounts Investments-in-Subsidiaries and Intercompany-
 Receivables before this test reads its baseline). If this bites
 again, start there.
+
+### 2026-05-12 — Phase 5 arc-closure
+
+Phase 5 (Spend Initiative) closes. Manual AP foundation shipped
+across 9 chunks (B5-1 substrate → B5-2 substrate → B5-3-D1
+through B5-3-D6 → arc-closure prep). The two real users can
+post bills, approve them, record payments against them, reverse
+them from any of the four reversable lifecycle states, and
+report on the resulting bill population through five canonical
+read views plus two operational entry-path views. 871/871
+vitest at HEAD `07ae4e9`; 26/26 agent:validate floor; E2E specs
+for the write-side surfaces passing against a fresh
+`db:reset:clean`.
+
+The retrospective lives at
+`docs/07_governance/retrospectives/phase-5-retrospective.md` —
+nine sections, structured against Phase 1.1's frame, written in
+plain English deliberately because the meta-lesson of the arc
+was that the apparatus (catch ledgers, sub-mechanism class
+labels, cumulative-N tallies, ratification cycles) had
+overstayed. Section 9 is the honest-limitations section and is
+the part that earns the rest of the document's claims.
+
+Things to know at Phase 5 closeout that aren't in the
+retrospective:
+
+- The Spend brief's §2 ("Locked v1 scope") and §10 ("Phase
+  sequencing") disagree about whether prepayments / credits /
+  vendor onboarding are v1 deliverables. Phase 5 shipped
+  against §2; the §10 additions are deferred to post-v1 under
+  the "reserved schema seats" framing. The Phase 2 brief
+  author should resolve which is authoritative.
+- `vendorPrepaymentService` has 3 of 4 methods on disk
+  (`record` / `apply` / `refund`) with Zod schemas; no routes,
+  no UI. Substrate is ready when the operational signal
+  arrives.
+- Vendor credits are zero — no service, no schema, no
+  migration. Clean greenfield when needed.
+- Vendor onboarding is read-only (`listVendors`). No
+  createVendor / updateVendor / vendor_rules.
+
+Sequencing for what's next, settled in the arc-closure
+conversation: **Phase 2 (Document Core) → Phase 3 (Document
+Relationship Graph) → Phase 4 (Relationship Router) → Phase 6
+(Ingestion channels) → Phase 7 (Extraction) → Phase 8
+(Proposal handoff)**. Canonical per the reframe spec §2;
+Phase 1 (Storage / Evidence Core) verified shipped across all
+six chunks per the migration header.
