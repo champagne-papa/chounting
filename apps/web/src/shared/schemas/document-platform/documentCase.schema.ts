@@ -12,12 +12,17 @@ export const DocumentTypeSchema = z.enum([
 ]);
 export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 
-// Chunk-2 v1-active subset (was 'received' only at chunk 1).
-// Reserved states defined in DB enum but rejected here at the service
-// boundary. needs_review / matched / extracting / classified / committed
-// / archived are CHECK-rejected at Layer 1 too — chunk 6+ broadens.
+// Chunk-6 v1-active subset (was 4 values at chunk 2; chunk 6 adds
+// 'classified' + 'needs_review' per the document_cases_state_chunk_6_active
+// CHECK broadening in the chunk-6 substrate migration). The Zod
+// boundary mirrors the Layer 1 CHECK admission set verbatim.
+//
+// Still reserved at Layer 1 + Layer 2 (CHECK-rejected; Zod-rejected):
+// extracting / matched / committed / archived. Future chunks broaden.
 export const DocumentCaseStateSchema = z.enum([
   'received',
+  'classified',
+  'needs_review',
   'proposed',
   'approved',
   'rejected',

@@ -33,7 +33,7 @@ const LEGAL_TRANSITIONS: Record<AllCaseStates, AllCaseStates[]> = {
   classified:   ['matched', 'needs_review'],
   matched:      ['proposed', 'needs_review'],
   proposed:     ['approved', 'rejected'],
-  needs_review: ['rejected', 'matched', 'proposed'],
+  needs_review: ['rejected', 'matched', 'proposed', 'classified'],
   approved:     ['committed'],
   committed:    ['archived'],
   rejected:     ['archived'],

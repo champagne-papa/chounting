@@ -87,6 +87,11 @@ export type ServiceErrorCode =
   // Document core (Phase 2 chunk 5) — polymorphic integrity validator
   // in documentLinkService per ADR-0011 §4 + ADR-0016 §4.
   | 'LINKED_ENTITY_NOT_FOUND'
+  // Document core (Phase 2 chunk 6) — exception queue partial UNIQUE
+  // rejection in documentExceptionService per ADR-0011 §13.
+  // Maps from Postgres unique_violation (23505) on
+  // exception_queue_entries_open_per_case_idx.
+  | 'EXCEPTION_ALREADY_OPEN'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future

@@ -329,7 +329,7 @@ describe('documentCaseService.transition (chunk 2)', () => {
     });
 
     expect(error).not.toBeNull();
-    expect(error!.message).toMatch(/document_cases_state_chunk_2_active/);
+    expect(error!.message).toMatch(/document_cases_state_chunk_\d+_active/);
 
     // Case state unchanged; CHECK violation aborted the transaction.
     const { data: caseRow } = await db

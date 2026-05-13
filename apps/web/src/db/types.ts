@@ -316,6 +316,8 @@ export type Database = {
           bill_id: string
           bill_line_id: string
           description: string
+          line_number: number | null
+          tax_code_id: string | null
         }
         Insert: {
           account_id?: string | null
@@ -325,6 +327,8 @@ export type Database = {
           bill_id: string
           bill_line_id?: string
           description: string
+          line_number?: number | null
+          tax_code_id?: string | null
         }
         Update: {
           account_id?: string | null
@@ -334,6 +338,8 @@ export type Database = {
           bill_id?: string
           bill_line_id?: string
           description?: string
+          line_number?: number | null
+          tax_code_id?: string | null
         }
         Relationships: [
           {
@@ -350,6 +356,68 @@ export type Database = {
             referencedRelation: "bills"
             referencedColumns: ["bill_id"]
           },
+          {
+            foreignKeyName: "bill_lines_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
+            referencedColumns: ["tax_code_id"]
+          },
+        ]
+      }
+      bill_payment_allocations: {
+        Row: {
+          amount_cad: number
+          bill_id: string
+          bill_payment_allocation_id: string
+          created_at: string
+          created_by: string
+          org_id: string
+          payment_id: string
+          trace_id: string
+        }
+        Insert: {
+          amount_cad: number
+          bill_id: string
+          bill_payment_allocation_id?: string
+          created_at?: string
+          created_by: string
+          org_id: string
+          payment_id: string
+          trace_id: string
+        }
+        Update: {
+          amount_cad?: number
+          bill_id?: string
+          bill_payment_allocation_id?: string
+          created_at?: string
+          created_by?: string
+          org_id?: string
+          payment_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_payment_allocations_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "bill_payment_allocations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "bill_payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["payment_id"]
+          },
         ]
       }
       bills: {
@@ -363,8 +431,14 @@ export type Database = {
           due_date: string | null
           fx_rate: number
           issue_date: string
+          lifecycle_state: Database["public"]["Enums"]["bill_lifecycle_state"]
           org_id: string
+          override_evidence_completeness: boolean
+          payment_terms_days: number | null
+          posted_journal_entry_id: string | null
+          purchase_order_id: string | null
           status: string
+          tax_amount_total: number
           vendor_id: string
         }
         Insert: {
@@ -377,8 +451,14 @@ export type Database = {
           due_date?: string | null
           fx_rate?: number
           issue_date: string
+          lifecycle_state?: Database["public"]["Enums"]["bill_lifecycle_state"]
           org_id: string
+          override_evidence_completeness?: boolean
+          payment_terms_days?: number | null
+          posted_journal_entry_id?: string | null
+          purchase_order_id?: string | null
           status?: string
+          tax_amount_total?: number
           vendor_id: string
         }
         Update: {
@@ -391,8 +471,14 @@ export type Database = {
           due_date?: string | null
           fx_rate?: number
           issue_date?: string
+          lifecycle_state?: Database["public"]["Enums"]["bill_lifecycle_state"]
           org_id?: string
+          override_evidence_completeness?: boolean
+          payment_terms_days?: number | null
+          posted_journal_entry_id?: string | null
+          purchase_order_id?: string | null
           status?: string
+          tax_amount_total?: number
           vendor_id?: string
         }
         Relationships: [
@@ -402,6 +488,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "bills_posted_journal_entry_id_fkey"
+            columns: ["posted_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["journal_entry_id"]
           },
           {
             foreignKeyName: "bills_vendor_id_fkey"
@@ -534,6 +627,165 @@ export type Database = {
           },
         ]
       }
+      document_artifacts: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          engine: Database["public"]["Enums"]["document_artifact_engine"]
+          engine_version: string
+          extraction_run_id: string
+          id: string
+          lines: Json
+          ocr_run_id: string
+          pages: Json
+          pipeline_trace: Json
+          quality_flags: string[]
+          source_document_id: string
+          words: Json
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          engine: Database["public"]["Enums"]["document_artifact_engine"]
+          engine_version: string
+          extraction_run_id: string
+          id?: string
+          lines: Json
+          ocr_run_id: string
+          pages: Json
+          pipeline_trace: Json
+          quality_flags: string[]
+          source_document_id: string
+          words: Json
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          engine?: Database["public"]["Enums"]["document_artifact_engine"]
+          engine_version?: string
+          extraction_run_id?: string
+          id?: string
+          lines?: Json
+          ocr_run_id?: string
+          pages?: Json
+          pipeline_trace?: Json
+          quality_flags?: string[]
+          source_document_id?: string
+          words?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_artifacts_extraction_run_id_fkey"
+            columns: ["extraction_run_id"]
+            isOneToOne: false
+            referencedRelation: "extraction_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_artifacts_ocr_run_id_fkey"
+            columns: ["ocr_run_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_artifacts_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_case_sources: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_case_id: string
+          id: string
+          role: Database["public"]["Enums"]["document_case_source_role"]
+          source_document_id: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_case_id: string
+          id?: string
+          role: Database["public"]["Enums"]["document_case_source_role"]
+          source_document_id: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_case_id?: string
+          id?: string
+          role?: Database["public"]["Enums"]["document_case_source_role"]
+          source_document_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_case_sources_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_case_sources_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_cases: {
+        Row: {
+          classification_confidence: number | null
+          created_at: string
+          created_by: string
+          current_relationship_candidate_id: string | null
+          document_type: Database["public"]["Enums"]["document_type"]
+          id: string
+          org_id: string
+          state: Database["public"]["Enums"]["document_case_state"]
+          trace_id: string
+        }
+        Insert: {
+          classification_confidence?: number | null
+          created_at?: string
+          created_by: string
+          current_relationship_candidate_id?: string | null
+          document_type: Database["public"]["Enums"]["document_type"]
+          id?: string
+          org_id: string
+          state?: Database["public"]["Enums"]["document_case_state"]
+          trace_id: string
+        }
+        Update: {
+          classification_confidence?: number | null
+          created_at?: string
+          created_by?: string
+          current_relationship_candidate_id?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"]
+          id?: string
+          org_id?: string
+          state?: Database["public"]["Enums"]["document_case_state"]
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_cases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       events: {
         Row: {
           _event_version: string
@@ -581,6 +833,124 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      exception_queue_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_case_id: string
+          exception_queue_entry_id: string
+          exception_reason: Database["public"]["Enums"]["exception_reason"]
+          exception_status: Database["public"]["Enums"]["exception_status"]
+          org_id: string
+          resolution_action:
+            | Database["public"]["Enums"]["resolution_action"]
+            | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_document_id: string | null
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_case_id: string
+          exception_queue_entry_id?: string
+          exception_reason: Database["public"]["Enums"]["exception_reason"]
+          exception_status?: Database["public"]["Enums"]["exception_status"]
+          org_id: string
+          resolution_action?:
+            | Database["public"]["Enums"]["resolution_action"]
+            | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_document_id?: string | null
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_case_id?: string
+          exception_queue_entry_id?: string
+          exception_reason?: Database["public"]["Enums"]["exception_reason"]
+          exception_status?: Database["public"]["Enums"]["exception_status"]
+          org_id?: string
+          resolution_action?:
+            | Database["public"]["Enums"]["resolution_action"]
+            | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_document_id?: string | null
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exception_queue_entries_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exception_queue_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "exception_queue_entries_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extraction_runs: {
+        Row: {
+          created_at: string
+          created_by: string
+          extraction_version: string
+          id: string
+          ocr_run_id: string
+          source_document_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          extraction_version: string
+          id?: string
+          ocr_run_id: string
+          source_document_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          extraction_version?: string
+          id?: string
+          ocr_run_id?: string
+          source_document_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extraction_runs_ocr_run_id_fkey"
+            columns: ["ocr_run_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extraction_runs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1086,6 +1456,45 @@ export type Database = {
           },
         ]
       }
+      ocr_runs: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          source_document_id: string
+          supersedes_ocr_run_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          source_document_id: string
+          supersedes_ocr_run_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          source_document_id?: string
+          supersedes_ocr_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_runs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_runs_supersedes_fk"
+            columns: ["supersedes_ocr_run_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_invitations: {
         Row: {
           accepted_at: string | null
@@ -1309,27 +1718,57 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          applied_to: string | null
+          authorization_reference: string | null
+          bank_or_card_last4: string | null
           created_at: string
           currency: string
+          merchant_identifier: string | null
           org_id: string
           payment_date: string
           payment_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_purpose: Database["public"]["Enums"]["payment_purpose"]
+          payment_state: Database["public"]["Enums"]["payment_state"]
+          reference_number: string | null
+          statement_appearance_date: string | null
+          vendor_id: string | null
         }
         Insert: {
           amount: number
+          applied_to?: string | null
+          authorization_reference?: string | null
+          bank_or_card_last4?: string | null
           created_at?: string
           currency?: string
+          merchant_identifier?: string | null
           org_id: string
           payment_date: string
           payment_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          payment_purpose?: Database["public"]["Enums"]["payment_purpose"]
+          payment_state?: Database["public"]["Enums"]["payment_state"]
+          reference_number?: string | null
+          statement_appearance_date?: string | null
+          vendor_id?: string | null
         }
         Update: {
           amount?: number
+          applied_to?: string | null
+          authorization_reference?: string | null
+          bank_or_card_last4?: string | null
           created_at?: string
           currency?: string
+          merchant_identifier?: string | null
           org_id?: string
           payment_date?: string
           payment_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          payment_purpose?: Database["public"]["Enums"]["payment_purpose"]
+          payment_state?: Database["public"]["Enums"]["payment_state"]
+          reference_number?: string | null
+          statement_appearance_date?: string | null
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -1338,6 +1777,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "payments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -1583,6 +2029,50 @@ export type Database = {
           },
         ]
       }
+      source_document_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          link_role: Database["public"]["Enums"]["link_role"]
+          link_status: Database["public"]["Enums"]["link_status"]
+          linked_entity_id: string
+          linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
+          source_document_id: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          link_role: Database["public"]["Enums"]["link_role"]
+          link_status?: Database["public"]["Enums"]["link_status"]
+          linked_entity_id: string
+          linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
+          source_document_id: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          link_role?: Database["public"]["Enums"]["link_role"]
+          link_status?: Database["public"]["Enums"]["link_status"]
+          linked_entity_id?: string
+          linked_entity_type?: Database["public"]["Enums"]["linked_entity_type"]
+          source_document_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_document_links_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_document_versions: {
         Row: {
           byte_size: number
@@ -1796,6 +2286,162 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_prepayment_applications: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          trace_id: string
+          vendor_prepayment_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          trace_id: string
+          vendor_prepayment_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          applied_at?: string
+          bill_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          trace_id?: string
+          vendor_prepayment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_prepayment_applications_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "vendor_prepayment_applications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_prepayment_applications_vendor_prepayment_id_fkey"
+            columns: ["vendor_prepayment_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_prepayments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_prepayments: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          expected_application_date: string | null
+          fx_rate: number | null
+          id: string
+          legal_entity_id: string | null
+          org_id: string
+          payment_id: string
+          prepayment_type: Database["public"]["Enums"]["vendor_prepayment_type"]
+          recognized_at: string
+          status: Database["public"]["Enums"]["vendor_prepayment_status"]
+          tax_amount_at_payment: number | null
+          tax_timing_choice: Database["public"]["Enums"]["tax_timing_choice"]
+          trace_id: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          expected_application_date?: string | null
+          fx_rate?: number | null
+          id?: string
+          legal_entity_id?: string | null
+          org_id: string
+          payment_id: string
+          prepayment_type: Database["public"]["Enums"]["vendor_prepayment_type"]
+          recognized_at: string
+          status: Database["public"]["Enums"]["vendor_prepayment_status"]
+          tax_amount_at_payment?: number | null
+          tax_timing_choice: Database["public"]["Enums"]["tax_timing_choice"]
+          trace_id: string
+          vendor_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          expected_application_date?: string | null
+          fx_rate?: number | null
+          id?: string
+          legal_entity_id?: string | null
+          org_id?: string
+          payment_id?: string
+          prepayment_type?: Database["public"]["Enums"]["vendor_prepayment_type"]
+          recognized_at?: string
+          status?: Database["public"]["Enums"]["vendor_prepayment_status"]
+          tax_amount_at_payment?: number | null
+          tax_timing_choice?: Database["public"]["Enums"]["tax_timing_choice"]
+          trace_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_prepayments_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_prepayments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_prepayments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["payment_id"]
+          },
+          {
+            foreignKeyName: "vendor_prepayments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["vendor_id"]
+          },
+        ]
+      }
       vendor_rules: {
         Row: {
           approved_at: string | null
@@ -1910,8 +2556,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      attach_document_case_source_with_audit: {
+        Args: { p_audit: Json; p_link: Json }
+        Returns: string
+      }
+      create_document_case_with_audit: {
+        Args: { p_audit: Json; p_case: Json }
+        Returns: string
+      }
+      create_source_document_link_with_audit: {
+        Args: { p_audit: Json; p_link: Json }
+        Returns: string
+      }
       create_source_document_with_audit: {
         Args: { p_audit: Json; p_source_document: Json }
+        Returns: string
+      }
+      enqueue_exception_with_audit: {
+        Args: { p_audit: Json; p_entry: Json }
         Returns: string
       }
       get_account_balance: {
@@ -1969,6 +2631,45 @@ export type Database = {
           debit_total_cad: number
         }[]
       }
+      resolve_exception_with_audit: {
+        Args: { p_audit: Json; p_entry_id: string; p_resolution: Json }
+        Returns: string
+      }
+      reverse_source_document_link_with_audit: {
+        Args: { p_audit: Json; p_input: Json }
+        Returns: string[]
+      }
+      test_post_balanced_entry: {
+        Args: {
+          p_amount: number
+          p_credit_account: string
+          p_debit_account: string
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_credit_account: string
+          p_credit_amount: number
+          p_debit_account: string
+          p_debit_amount: number
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
+      update_document_case_state_with_audit: {
+        Args: {
+          p_audit: Json
+          p_case_id: string
+          p_target_state: Database["public"]["Enums"]["document_case_state"]
+        }
+        Returns: string
+      }
       user_has_org_access: { Args: { target_org_id: string }; Returns: boolean }
       user_has_permission: {
         Args: { target_org_id: string; target_permission_key: string }
@@ -1996,6 +2697,14 @@ export type Database = {
         | "stale"
         | "edited"
       autonomy_tier: "always_confirm" | "notify_auto" | "silent"
+      bill_lifecycle_state:
+        | "draft"
+        | "pending_approval"
+        | "approved_for_payment"
+        | "partially_paid"
+        | "fully_paid"
+        | "voided"
+        | "cancelled"
       business_structure:
         | "sole_prop"
         | "partnership"
@@ -2012,7 +2721,55 @@ export type Database = {
         | "drift_rejected_kept_original"
         | "unknown_drift"
       confidence_level: "high" | "medium" | "low" | "novel"
+      document_artifact_engine: "paddleocr" | "tesseract" | "claude_vision_3_5"
+      document_case_source_role:
+        | "primary"
+        | "supporting"
+        | "email_body"
+        | "payment_evidence"
+        | "superseded_source"
+        | "related_prior_document"
+      document_case_state:
+        | "received"
+        | "extracting"
+        | "classified"
+        | "matched"
+        | "proposed"
+        | "needs_review"
+        | "approved"
+        | "committed"
+        | "rejected"
+        | "archived"
+      document_type:
+        | "vendor_invoice"
+        | "receipt"
+        | "payment_confirmation"
+        | "unknown"
+        | "credit_memo"
+        | "vendor_statement"
+        | "purchase_order"
+        | "receiving_document"
+        | "retainer_request"
+        | "deposit_request"
+        | "bank_statement"
+        | "card_statement"
+        | "customer_invoice"
+        | "customer_remittance"
+        | "tax_form"
+        | "contract"
+        | "payroll_document"
+        | "asset_purchase_support"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
+      exception_reason:
+        | "manual_route"
+        | "low_confidence_classification"
+        | "unknown_document_type"
+        | "unmatched_router_candidate"
+        | "multi_candidate_ambiguity"
+        | "invariant_violation"
+        | "wrong_entity_exception"
+        | "drift_detected"
+      exception_status: "open" | "resolved" | "cancelled"
       ingest_channel:
         | "drag_drop_pdf"
         | "forwarded_mailbox"
@@ -2020,6 +2777,64 @@ export type Database = {
         | "api_ingest"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       journal_entry_source: "manual" | "agent" | "import"
+      link_role:
+        | "primary_invoice"
+        | "payment_evidence"
+        | "receipt"
+        | "supporting"
+        | "duplicate_arrival"
+        | "superseded_version"
+        | "vendor_credit_memo"
+        | "vendor_statement_excerpt"
+        | "purchase_order"
+        | "receiving_document"
+        | "retainer_agreement"
+        | "deposit_request"
+        | "bank_statement_excerpt"
+        | "card_statement_excerpt"
+        | "reconciliation_evidence"
+        | "failure_notice"
+        | "customer_invoice_attachment"
+        | "customer_remittance"
+        | "tax_form"
+        | "contract"
+        | "payroll_document"
+        | "asset_purchase_support"
+        | "prior_period_evidence"
+        | "correction_memo"
+        | "controller_override_memo"
+        | "audit_evidence"
+        | "email_thread"
+      link_status: "created" | "reversed"
+      linked_entity_type:
+        | "bill"
+        | "bill_line"
+        | "payment"
+        | "bill_payment_allocation"
+        | "vendor_prepayment"
+        | "vendor_prepayment_application"
+        | "vendor_credit"
+        | "vendor_credit_application"
+        | "bank_transaction"
+        | "card_transaction"
+        | "bank_account"
+        | "card_account"
+        | "customer_invoice"
+        | "customer_invoice_line"
+        | "customer_payment"
+        | "customer_credit"
+        | "vendor_statement_line"
+        | "bank_reconciliation"
+        | "card_reconciliation"
+        | "fixed_asset"
+        | "tax_filing"
+        | "payroll_run"
+        | "payroll_employee"
+        | "journal_entry"
+        | "journal_line"
+        | "vendor_master"
+        | "customer_master"
+        | "period_close"
       membership_status: "active" | "invited" | "suspended" | "removed"
       org_industry:
         | "healthcare"
@@ -2029,12 +2844,56 @@ export type Database = {
         | "restaurant"
         | "holding_company"
       org_status: "active" | "trial" | "suspended" | "archived" | "closed"
+      payment_method:
+        | "check"
+        | "eft"
+        | "wire"
+        | "cash"
+        | "other"
+        | "credit_card"
+        | "ach"
+        | "bank_transfer"
+        | "money_order"
+      payment_purpose:
+        | "bill_payment"
+        | "vendor_prepayment"
+        | "vendor_refund"
+        | "other"
+        | "customer_payment"
+        | "employee_reimbursement"
+        | "owner_reimbursement"
+        | "tax_payment"
+      payment_state:
+        | "pending"
+        | "paid"
+        | "failed"
+        | "partially_returned"
+        | "refunded"
       recurring_run_status:
         | "pending_approval"
         | "approved"
         | "posted"
         | "rejected"
       report_basis: "accrual" | "cash"
+      resolution_action:
+        | "attach_to_existing_bill"
+        | "attach_to_existing_payment"
+        | "record_bill_payment"
+        | "mark_duplicate"
+        | "mark_non_accounting"
+        | "route_to_manual_entry"
+        | "manual_born_paid_workflow"
+        | "reprocess"
+        | "archive"
+        | "create_bill"
+        | "create_vendor_prepayment"
+        | "apply_vendor_prepayment"
+        | "create_vendor_credit"
+        | "apply_vendor_credit"
+        | "request_missing_document"
+        | "route_to_bank_reconciliation"
+        | "route_to_AR_future"
+        | "backfill_vendor_prepayment_suggested"
       storage_provider:
         | "supabase_storage"
         | "sharepoint_drive"
@@ -2048,7 +2907,28 @@ export type Database = {
         | "hash_mismatch"
         | "provider_unavailable"
         | "verification_pending_retry"
+      tax_timing_choice:
+        | "at_payment"
+        | "at_final_invoice"
+        | "review_required"
+        | "controller_chooses_per_invoice"
       user_role: "executive" | "controller" | "ap_specialist"
+      vendor_prepayment_status:
+        | "open"
+        | "partially_applied"
+        | "fully_applied"
+        | "refunded"
+        | "written_off"
+        | "forfeited"
+      vendor_prepayment_type:
+        | "retainer"
+        | "deposit"
+        | "advance"
+        | "other"
+        | "security_deposit"
+        | "prepaid_service"
+        | "inventory_deposit"
+        | "fixed_asset_deposit"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2192,6 +3072,15 @@ export const Constants = {
         "edited",
       ],
       autonomy_tier: ["always_confirm", "notify_auto", "silent"],
+      bill_lifecycle_state: [
+        "draft",
+        "pending_approval",
+        "approved_for_payment",
+        "partially_paid",
+        "fully_paid",
+        "voided",
+        "cancelled",
+      ],
       business_structure: [
         "sole_prop",
         "partnership",
@@ -2210,7 +3099,59 @@ export const Constants = {
         "unknown_drift",
       ],
       confidence_level: ["high", "medium", "low", "novel"],
+      document_artifact_engine: ["paddleocr", "tesseract", "claude_vision_3_5"],
+      document_case_source_role: [
+        "primary",
+        "supporting",
+        "email_body",
+        "payment_evidence",
+        "superseded_source",
+        "related_prior_document",
+      ],
+      document_case_state: [
+        "received",
+        "extracting",
+        "classified",
+        "matched",
+        "proposed",
+        "needs_review",
+        "approved",
+        "committed",
+        "rejected",
+        "archived",
+      ],
+      document_type: [
+        "vendor_invoice",
+        "receipt",
+        "payment_confirmation",
+        "unknown",
+        "credit_memo",
+        "vendor_statement",
+        "purchase_order",
+        "receiving_document",
+        "retainer_request",
+        "deposit_request",
+        "bank_statement",
+        "card_statement",
+        "customer_invoice",
+        "customer_remittance",
+        "tax_form",
+        "contract",
+        "payroll_document",
+        "asset_purchase_support",
+      ],
       entry_type: ["regular", "adjusting", "closing", "reversing"],
+      exception_reason: [
+        "manual_route",
+        "low_confidence_classification",
+        "unknown_document_type",
+        "unmatched_router_candidate",
+        "multi_candidate_ambiguity",
+        "invariant_violation",
+        "wrong_entity_exception",
+        "drift_detected",
+      ],
+      exception_status: ["open", "resolved", "cancelled"],
       ingest_channel: [
         "drag_drop_pdf",
         "forwarded_mailbox",
@@ -2219,6 +3160,66 @@ export const Constants = {
       ],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       journal_entry_source: ["manual", "agent", "import"],
+      link_role: [
+        "primary_invoice",
+        "payment_evidence",
+        "receipt",
+        "supporting",
+        "duplicate_arrival",
+        "superseded_version",
+        "vendor_credit_memo",
+        "vendor_statement_excerpt",
+        "purchase_order",
+        "receiving_document",
+        "retainer_agreement",
+        "deposit_request",
+        "bank_statement_excerpt",
+        "card_statement_excerpt",
+        "reconciliation_evidence",
+        "failure_notice",
+        "customer_invoice_attachment",
+        "customer_remittance",
+        "tax_form",
+        "contract",
+        "payroll_document",
+        "asset_purchase_support",
+        "prior_period_evidence",
+        "correction_memo",
+        "controller_override_memo",
+        "audit_evidence",
+        "email_thread",
+      ],
+      link_status: ["created", "reversed"],
+      linked_entity_type: [
+        "bill",
+        "bill_line",
+        "payment",
+        "bill_payment_allocation",
+        "vendor_prepayment",
+        "vendor_prepayment_application",
+        "vendor_credit",
+        "vendor_credit_application",
+        "bank_transaction",
+        "card_transaction",
+        "bank_account",
+        "card_account",
+        "customer_invoice",
+        "customer_invoice_line",
+        "customer_payment",
+        "customer_credit",
+        "vendor_statement_line",
+        "bank_reconciliation",
+        "card_reconciliation",
+        "fixed_asset",
+        "tax_filing",
+        "payroll_run",
+        "payroll_employee",
+        "journal_entry",
+        "journal_line",
+        "vendor_master",
+        "customer_master",
+        "period_close",
+      ],
       membership_status: ["active", "invited", "suspended", "removed"],
       org_industry: [
         "healthcare",
@@ -2229,6 +3230,34 @@ export const Constants = {
         "holding_company",
       ],
       org_status: ["active", "trial", "suspended", "archived", "closed"],
+      payment_method: [
+        "check",
+        "eft",
+        "wire",
+        "cash",
+        "other",
+        "credit_card",
+        "ach",
+        "bank_transfer",
+        "money_order",
+      ],
+      payment_purpose: [
+        "bill_payment",
+        "vendor_prepayment",
+        "vendor_refund",
+        "other",
+        "customer_payment",
+        "employee_reimbursement",
+        "owner_reimbursement",
+        "tax_payment",
+      ],
+      payment_state: [
+        "pending",
+        "paid",
+        "failed",
+        "partially_returned",
+        "refunded",
+      ],
       recurring_run_status: [
         "pending_approval",
         "approved",
@@ -2236,6 +3265,26 @@ export const Constants = {
         "rejected",
       ],
       report_basis: ["accrual", "cash"],
+      resolution_action: [
+        "attach_to_existing_bill",
+        "attach_to_existing_payment",
+        "record_bill_payment",
+        "mark_duplicate",
+        "mark_non_accounting",
+        "route_to_manual_entry",
+        "manual_born_paid_workflow",
+        "reprocess",
+        "archive",
+        "create_bill",
+        "create_vendor_prepayment",
+        "apply_vendor_prepayment",
+        "create_vendor_credit",
+        "apply_vendor_credit",
+        "request_missing_document",
+        "route_to_bank_reconciliation",
+        "route_to_AR_future",
+        "backfill_vendor_prepayment_suggested",
+      ],
       storage_provider: [
         "supabase_storage",
         "sharepoint_drive",
@@ -2251,7 +3300,31 @@ export const Constants = {
         "provider_unavailable",
         "verification_pending_retry",
       ],
+      tax_timing_choice: [
+        "at_payment",
+        "at_final_invoice",
+        "review_required",
+        "controller_chooses_per_invoice",
+      ],
       user_role: ["executive", "controller", "ap_specialist"],
+      vendor_prepayment_status: [
+        "open",
+        "partially_applied",
+        "fully_applied",
+        "refunded",
+        "written_off",
+        "forfeited",
+      ],
+      vendor_prepayment_type: [
+        "retainer",
+        "deposit",
+        "advance",
+        "other",
+        "security_deposit",
+        "prepaid_service",
+        "inventory_deposit",
+        "fixed_asset_deposit",
+      ],
     },
   },
 } as const
