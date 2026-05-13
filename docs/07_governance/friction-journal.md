@@ -10798,3 +10798,71 @@ across 4 chunks; full §1-§21 substantive content shipped at brief;
 8 firing decisions locked at arc-closeout; 5 codification
 artifacts ship across this retrospective + subsequent codification
 commit.
+
+### 2026-05-12 — Phase 5 chunk B5-3-D6 SHIPPED — bill reversal flow
+
+Built and shipped the bill reversal flow per the founder's
+plain-English brief. Single Claude, no ratification rituals, no
+catch ledgers, no cadence labels. Five pieces:
+
+1. POST `/api/orgs/[orgId]/bills/[billId]/reverse` route wrapping
+   `billService.reverse` with `withInvariants({ action: 'bill.reverse' })`.
+   Mirrors the approve-for-payment + record-payment route shape.
+2. `bill.reverse` permission migration (controller only; +1 perm,
+   +1 role_perm) and CA-28/CA-37 count assertions bumped 28→29 /
+   38→39.
+3. `BillReverseCard` per-bill canvas view — 3-field form
+   (reversal_reason textarea, fiscal_period_id picker, entry_date),
+   red "Reverse" confirm button, amber warning banner about
+   irreversibility through the UI. Bill detail fetched from the
+   B5-3-D5 per-bill endpoint (so the card works for all four
+   reversable states uniformly).
+4. Canvas integration (4-file set) + row-click amendments:
+   ActivePaymentsView gets a per-row "Reverse" button at the end
+   of each row (stopPropagation so the row body still navigates
+   to record-payment), PaidBillsHistoryView gets a full-row click
+   to bill_reverse_card. The directive carries an optional
+   `returnTo` so the card returns the user to wherever they came
+   from.
+5. Integration test (9 cases — 5 Category A floor + ap_specialist
+   PERMISSION_DENIED + 3 state-coverage: approved_for_payment /
+   partially_paid / fully_paid). Category A-1 captures the mirror
+   semantics check. E2E smoke verifies row-click → card mount →
+   form fields render → cancel returns; passes in 28s.
+
+Gate: agent:validate 26/26, typecheck clean, full vitest
+862/862 (up from 853 = +9 route tests).
+
+**Surprise.** Tried to seed a posted bill from the Playwright
+fixture by importing `billService` directly so the E2E could
+exercise the full success path. The import chain hits
+`assertEnv()` at module load (via `adminClient.ts → env.ts`)
+which demands `ANTHROPIC_API_KEY`, `UPSTASH_REDIS_*`, etc. —
+vars the Playwright test runner doesn't have, even though the
+`pnpm dev` webServer does (Next loads .env.local for it). Pivoted
+to a simpler E2E that seeds a `partially_paid` bill via direct
+admin insert (no posted JE) and verifies UI wire-up only.
+Full reverse-success-path coverage moved entirely to the route
+integration test, which walks bills through real state
+transitions via `billService.post / approveForPayment /
+recordPayment` and exercises all four reversable lifecycle
+states. The split feels fine for v1: integration test owns the
+semantics, E2E owns the canvas-wire-up smoke.
+
+**Form-schema unit test attempted then dropped.** Wrote a
+`BillReverseCard.test.ts` next to the component for the 4-case
+boundary check. Vitest's `include` is `tests/**/*.test.ts`
+only, so the test was invisible. Looked at sibling form schemas
+(`RecordPaymentFormSchema` inside `RecordPaymentCard.tsx`) — no
+unit test exists for any of them. Boundary already covered by
+the route test's 400-Zod case (empty `reversal_reason`). Deleted
+the file and moved on.
+
+**One micro-thing in the brief.** "Reverse from pending_approval
+via canvas UI" is out of scope per the brief (no Pending
+Approvals view yet). The route still accepts pending_approval —
+verified by Category A-1 — so the substrate is ready when the
+arc-closeout adds that view.
+
+The Spend domain is now functionally complete at v1. Next:
+Phase 5 arc-closure synthesis when the founder elects.

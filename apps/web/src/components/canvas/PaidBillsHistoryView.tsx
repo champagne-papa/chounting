@@ -5,6 +5,11 @@
 // Consumes /api/orgs/[orgId]/reports/paid-bills-history via client-side
 // fetch per Pattern (b) ratification. Bills in fully_paid lifecycle
 // state — historical view of completed payments.
+//
+// B5-3-D6 amendment: row-click navigates to BillReverseCard
+// (bill_reverse_card discriminator) with returnTo='report_paid_bills_history'.
+// Reversing a fully_paid bill voids it and produces a mirrored reversal JE
+// per INV-REVERSAL-001.
 
 import { useEffect, useState } from 'react';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
@@ -17,7 +22,7 @@ export interface PaidBillsHistoryViewProps {
   onSelectEntity?: (entity: SelectedEntity) => void;
 }
 
-export function PaidBillsHistoryView({ orgId }: PaidBillsHistoryViewProps) {
+export function PaidBillsHistoryView({ orgId, onNavigate }: PaidBillsHistoryViewProps) {
   const [data, setData] = useState<PaidBillsHistoryOutput | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +79,18 @@ export function PaidBillsHistoryView({ orgId }: PaidBillsHistoryViewProps) {
           </thead>
           <tbody>
             {data.bills.map((b) => (
-              <tr key={b.bill_id} className="border-b border-neutral-100">
+              <tr
+                key={b.bill_id}
+                onClick={() =>
+                  onNavigate({
+                    type: 'bill_reverse_card',
+                    orgId,
+                    billId: b.bill_id,
+                    returnTo: 'report_paid_bills_history',
+                  })
+                }
+                className="border-b border-neutral-100 cursor-pointer hover:bg-neutral-50"
+              >
                 <td className="py-2 pr-4">{b.bill_number ?? '—'}</td>
                 <td className="py-2 pr-4 font-mono text-xs">{b.vendor_id}</td>
                 <td className="py-2 pr-4">{b.due_date ?? '—'}</td>

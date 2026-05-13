@@ -30,6 +30,12 @@ export type CanvasDirective =
   | { type: 'bill_form'; orgId: string }
   | { type: 'payment_approval_card'; orgId: string; billId: string }
   | { type: 'payment_record_card'; orgId: string; billId: string }
+  | {
+      type: 'bill_reverse_card';
+      orgId: string;
+      billId: string;
+      returnTo?: 'report_active_payments' | 'report_paid_bills_history';
+    }
   | { type: 'none' }
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation:

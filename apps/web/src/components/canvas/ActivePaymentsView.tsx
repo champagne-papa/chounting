@@ -17,6 +17,12 @@
 // Row-click navigates to RecordPaymentCard (payment_record_card
 // discriminator) with computed amount_due pre-fill for subsequent
 // partial-payment.
+//
+// B5-3-D6 amendment: per-row "Reverse" affordance navigates to
+// BillReverseCard (bill_reverse_card discriminator). Both
+// approved_for_payment and partially_paid bills can be reversed
+// from this entry. Button stops propagation so the row-body
+// navigates to record-payment as before.
 
 import { useEffect, useState } from 'react';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
@@ -84,6 +90,7 @@ export function ActivePaymentsView({ orgId, onNavigate }: ActivePaymentsViewProp
               <th className="py-2 pr-4 text-left">Vendor</th>
               <th className="py-2 pr-4 text-left">Due date</th>
               <th className="py-2 pr-4 text-right">Amount due</th>
+              <th className="py-2 pr-2 text-right w-1" />
             </tr>
           </thead>
           <tbody>
@@ -97,6 +104,23 @@ export function ActivePaymentsView({ orgId, onNavigate }: ActivePaymentsViewProp
                 <td className="py-2 pr-4 font-mono text-xs">{b.vendor_id}</td>
                 <td className="py-2 pr-4">{b.due_date ?? '—'}</td>
                 <td className="py-2 pr-4 text-right font-mono">{b.amount_due}</td>
+                <td className="py-2 pr-2 text-right">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate({
+                        type: 'bill_reverse_card',
+                        orgId,
+                        billId: b.bill_id,
+                        returnTo: 'report_active_payments',
+                      });
+                    }}
+                    className="px-2 py-0.5 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50"
+                  >
+                    Reverse
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -104,6 +128,7 @@ export function ActivePaymentsView({ orgId, onNavigate }: ActivePaymentsViewProp
             <tr className="font-semibold border-t-2 border-neutral-300">
               <td className="py-2 pr-4" colSpan={3}>Total amount due</td>
               <td className="py-2 pr-4 text-right font-mono">{data.total_amount_due}</td>
+              <td className="py-2 pr-2" />
             </tr>
           </tfoot>
         </table>

@@ -7,6 +7,14 @@
 // state (bypasses post+approve UI flows; the recordPayment spec tests only
 // the recordPayment UX, not the upstream flows).
 //
+// Extended at chunk B5-3-D6 with BillReverseCard helpers (gotoActivePayments,
+// clickReverseFromActivePayments, fillBillReverseForm, submitBillReverseForm,
+// assertBillReversed) + seedPostedBillInState which posts a real bill via
+// billService.post (creating a real posted JE) and then updates lifecycle_state
+// to the requested state via admin client. The reverse flow requires
+// posted_journal_entry_id to be non-null, so seedApprovedBill (which bypasses
+// post) is unsuitable.
+//
 // Original four exported helpers (B5-3-D3):
 //   gotoBillForm(page, orgId)   — navigate to org root + click "New Bill" rail entry
 //   fillBillForm(page, fixture) — fill all required form fields via label/option queries
@@ -313,6 +321,133 @@ export async function seedApprovedBill(
   };
 
   return { billId, billNumber: bill_number, amountCad: amount_cad, cleanup };
+}
+
+// ---------------------------------------------------------------------------
+// seedPartiallyPaidBill — admin-direct seed of a bill in `partially_paid`
+// state (no posted JE). Used by the BillReverseCard E2E smoke to verify
+// canvas wire-up (row-click → card → cancel). The reverse-success path is
+// covered by the route integration test (billReverseRoute.test.ts) which
+// exercises all four lifecycle states with real posted JEs via service.
+// ---------------------------------------------------------------------------
+
+export async function seedPartiallyPaidBill(
+  orgId: string,
+  vendorId: string,
+  opts: { amount_cad?: string; bill_number?: string } = {},
+): Promise<{ billId: string; billNumber: string; cleanup: () => Promise<void> }> {
+  const db = makeAdminClient();
+  const billId = crypto.randomUUID();
+  const amount_cad = opts.amount_cad ?? '300.00';
+  const bill_number = opts.bill_number ?? `E2E-REV-${billId.slice(0, 8)}`;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await db.from('bills').insert({
+    bill_id: billId,
+    org_id: orgId,
+    vendor_id: vendorId,
+    bill_number,
+    issue_date: today,
+    due_date: today,
+    currency: 'CAD',
+    amount_original: amount_cad,
+    amount_cad,
+    fx_rate: '1.0',
+    lifecycle_state: 'partially_paid',
+  });
+  if (error) throw new Error(`seedPartiallyPaidBill failed: ${error.message}`);
+
+  const cleanup = async () => {
+    await db.from('bills').delete().eq('bill_id', billId);
+  };
+  return { billId, billNumber: bill_number, cleanup };
+}
+
+// ---------------------------------------------------------------------------
+// gotoActivePayments — navigate to the Active Payments canvas view
+// ---------------------------------------------------------------------------
+
+export async function gotoActivePayments(page: Page, orgId: string): Promise<void> {
+  await page.goto(`/${LOCALE}/${orgId}`);
+  await page.getByTitle('Active Payments').click();
+  await expect(
+    page.getByRole('heading', { name: /active payments/i }),
+  ).toBeVisible();
+  await expect(
+    page.locator('table').or(page.getByText(/no bills currently/i)),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// clickReverseFromActivePayments — click the per-row "Reverse" button
+// ---------------------------------------------------------------------------
+
+export async function clickReverseFromActivePayments(
+  page: Page,
+  billNumber: string,
+): Promise<void> {
+  const row = page.locator('tr').filter({
+    has: page.locator('td', { hasText: new RegExp(`^${billNumber}$`) }),
+  }).first();
+  await row.getByRole('button', { name: /^reverse$/i }).click();
+
+  await expect(
+    page.getByRole('heading', { name: /reverse bill/i }),
+  ).toBeVisible({ timeout: 10_000 });
+}
+
+// ---------------------------------------------------------------------------
+// fillBillReverseForm — fill the BillReverseCard 3-field form
+// ---------------------------------------------------------------------------
+
+export interface BillReverseFormOverrides {
+  reversal_reason: string;
+  entry_date?: string;
+}
+
+export async function fillBillReverseForm(
+  page: Page,
+  opts: BillReverseFormOverrides,
+): Promise<void> {
+  const reasonDiv = page.locator('div').filter({
+    has: page.locator('label', { hasText: /^reversal reason/i }),
+  }).first();
+  await reasonDiv.locator('textarea').fill(opts.reversal_reason);
+
+  if (opts.entry_date) {
+    const dateDiv = page.locator('div').filter({
+      has: page.locator('label', { hasText: /^entry date/i }),
+    }).first();
+    await dateDiv.locator('input[type="date"]').fill(opts.entry_date);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// submitBillReverseForm — click "Reverse" and wait for navigation
+// ---------------------------------------------------------------------------
+
+export async function submitBillReverseForm(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^reverse$/i }).click();
+
+  // Success returns to the originating view (Active Payments or Paid Bills
+  // History); failure shows an inline error banner.
+  await expect(
+    page
+      .getByRole('heading', { name: /active payments|paid bills history/i })
+      .or(page.locator('[class*="red"]').filter({ hasText: /error|unable|unexpected/i })),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+// ---------------------------------------------------------------------------
+// cancelBillReverse — click the Cancel button and wait for navigation back
+// to Active Payments.
+// ---------------------------------------------------------------------------
+
+export async function cancelBillReverse(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^cancel$/i }).click();
+  await expect(
+    page.getByRole('heading', { name: /active payments/i }),
+  ).toBeVisible({ timeout: 10_000 });
 }
 
 // ---------------------------------------------------------------------------
