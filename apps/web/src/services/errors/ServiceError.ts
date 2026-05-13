@@ -82,6 +82,8 @@ export type ServiceErrorCode =
   | 'INTEGRITY_VERIFY_FAILED'              // ADR-0013 §7 + §9 — hash mismatch on integrity check
   | 'STORAGE_PROVIDER_TRANSIENT_EXHAUSTED' // ADR-0013 §8 — retry budget exhausted on transient failure
   | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
+  // Document core (Phase 2 chunk 2)
+  | 'INVALID_TRANSITION'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future

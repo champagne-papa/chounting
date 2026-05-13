@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TimestamptzString } from '@/shared/schemas/common.schema';
 
 // Layer 2 boundary: v1-active subsets only.
 // Reserved values defined in DB enum but rejected here.
@@ -11,8 +12,33 @@ export const DocumentTypeSchema = z.enum([
 ]);
 export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 
-export const DocumentCaseStateSchema = z.enum(['received']);
+// Chunk-2 v1-active subset (was 'received' only at chunk 1).
+// Reserved states defined in DB enum but rejected here at the service
+// boundary. needs_review / matched / extracting / classified / committed
+// / archived are CHECK-rejected at Layer 1 too — chunk 6+ broadens.
+export const DocumentCaseStateSchema = z.enum([
+  'received',
+  'proposed',
+  'approved',
+  'rejected',
+]);
 export type DocumentCaseState = z.infer<typeof DocumentCaseStateSchema>;
+
+// transition() input. Discriminated union: target_state determines
+// whether reason is required. Mirrors Phase 5 billService.reverse's
+// reversal_reason pattern for the rejection path.
+export const TransitionInputSchema = z.discriminatedUnion('target_state', [
+  z.object({
+    target_state: z.literal('approved'),
+    reason: z.string().optional(),
+  }),
+  z.object({
+    target_state: z.literal('rejected'),
+    reason: z.string().min(1, 'reason is required when target_state is rejected'),
+  }),
+]);
+export type TransitionInputRaw = z.input<typeof TransitionInputSchema>;
+export type TransitionInput = z.infer<typeof TransitionInputSchema>;
 
 // Input to createDocumentCase. org_id lives on the input (Pattern B
 // canonical — see Phase 1 documentPlatformService.createSourceDocument).
@@ -34,11 +60,7 @@ export const DocumentCaseSchema = z.object({
   current_relationship_candidate_id: z.string().uuid().nullable(),
   classification_confidence: z.number().nullable(),
   trace_id: z.string().uuid(),
-  // created_at returned by Supabase as ISO 8601 with offset (e.g. '+00:00'),
-  // not the Z-suffix form that z.string().datetime() accepts by default.
-  // No existing Zod schema in the repo validates timestamptz; trust Supabase
-  // and use plain z.string().
-  created_at: z.string(),
+  created_at: TimestamptzString,
   // created_by carries 'agent' literal OR <user_id> per ADR-0011 §2 + Phase 1
   // source_documents.created_by precedent (column type is text, not uuid).
   created_by: z.string(),

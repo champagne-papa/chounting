@@ -4,6 +4,7 @@ import { makeTestContext } from '../setup/makeTestContext';
 import {
   createDocumentCase,
   readDocumentCase,
+  transition,
 } from '@/services/document-platform/documentCaseService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
@@ -98,7 +99,10 @@ describe('document_cases substrate + documentCaseService (chunk 1)', () => {
     });
 
     expect(error).not.toBeNull();
-    expect(error!.message).toMatch(/document_cases_state_chunk_1_active/);
+    // Constraint name encodes the broadening chunk (chunk_1 → chunk_2 → …);
+    // match \d+ to stay stable across future CHECK broadenings without
+    // re-rewriting this assertion every chunk.
+    expect(error!.message).toMatch(/document_cases_state_chunk_\d+_active/);
   });
 
   it('immutability trigger rejects UPDATE on audit-anchor columns', async () => {
@@ -173,5 +177,199 @@ describe('RPC atomicity contract — create_document_case_with_audit', () => {
       .eq('id', caseId)
       .maybeSingle();
     expect(caseRow).toBeNull();
+  });
+});
+
+describe('documentCaseService.transition (chunk 2)', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(() => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+    // document_cases rows NOT deleted (delete-forbidden per
+    // trg_document_cases_no_delete; accumulate within run).
+  });
+
+  // Helper: seed a case directly in the target source state via
+  // admin bypass. Bypasses the service's create path because that
+  // path always writes state='received' (chunk 1 Layer 3 discipline).
+  async function seedCaseInState(state: 'proposed' | 'approved'): Promise<string> {
+    const db = adminClient();
+    const id = crypto.randomUUID();
+    await db.from('document_cases').insert({
+      id,
+      org_id: SEED.ORG_HOLDING,
+      document_type: 'vendor_invoice',
+      state,
+      trace_id: ctx.trace_id,
+      created_by: ctx.caller.user_id,
+    });
+    return id;
+  }
+
+  it('happy path: proposed -> approved (no reason, optional)', async () => {
+    const caseId = await seedCaseInState('proposed');
+
+    const result = await transition(caseId, { target_state: 'approved' }, ctx);
+
+    expect(result.state).toBe('approved');
+    expect(result.id).toBe(caseId);
+
+    const db = adminClient();
+    const { data: auditRows } = await db
+      .from('audit_log')
+      .select('*')
+      .eq('trace_id', ctx.trace_id)
+      .eq('entity_id', caseId)
+      .eq('action', 'document_case_transitioned');
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows![0].before_state).toEqual({ state: 'proposed' });
+    expect(auditRows![0].reason).toBeNull();
+  });
+
+  it('happy path: proposed -> rejected (reason required, carries through to audit_log.reason)', async () => {
+    const caseId = await seedCaseInState('proposed');
+
+    const result = await transition(
+      caseId,
+      { target_state: 'rejected', reason: 'classifier disagreed with operator review' },
+      ctx,
+    );
+
+    expect(result.state).toBe('rejected');
+
+    const db = adminClient();
+    const { data: auditRows } = await db
+      .from('audit_log')
+      .select('*')
+      .eq('trace_id', ctx.trace_id)
+      .eq('entity_id', caseId)
+      .eq('action', 'document_case_transitioned');
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows![0].before_state).toEqual({ state: 'proposed' });
+    expect(auditRows![0].reason).toBe('classifier disagreed with operator review');
+  });
+
+  it('Zod rejection: target_state=rejected without reason throws READ_FAILED', async () => {
+    const caseId = await seedCaseInState('proposed');
+
+    await expect(
+      transition(
+        caseId,
+        // @ts-expect-error -- testing Zod discriminated-union rejection when reason missing for rejected
+        { target_state: 'rejected' },
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      code: 'READ_FAILED',
+      // Match a substring rather than full message — discriminated-union
+      // error shapes include the discriminator path and can be brittle.
+      message: expect.stringContaining('reason'),
+    });
+  });
+
+  it('Zod rejection: target_state outside v1-active subset throws READ_FAILED', async () => {
+    const caseId = await seedCaseInState('proposed');
+
+    await expect(
+      transition(
+        caseId,
+        // @ts-expect-error -- testing Zod rejection of reserved target_state
+        { target_state: 'extracting' },
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      code: 'READ_FAILED',
+      message: expect.stringContaining('target_state'),
+    });
+  });
+
+  it('matrix rejection: approved -> rejected (no such transition) throws INVALID_TRANSITION', async () => {
+    // Note: matrix-rejection coverage is naturally limited to within-CHECK
+    // transitions (source and target both in the chunk-2 v1-active subset).
+    // Cross-CHECK rejections (e.g., committed -> received) are covered
+    // implicitly by Layer 1 CHECK + Layer 2 Zod's reserved-target rejection.
+    const caseId = await seedCaseInState('approved');
+
+    await expect(
+      transition(
+        caseId,
+        { target_state: 'rejected', reason: 'trying to undo approval' },
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      code: 'INVALID_TRANSITION',
+      message: expect.stringContaining('approved -> rejected'),
+    });
+  });
+
+  it('Layer 1 CHECK rejects reserved target when RPC is bypassed', async () => {
+    // Parallel to chunk-1 test #4 (direct admin INSERT with reserved state).
+    // The Zod layer rejects reserved targets before the RPC is called in
+    // normal operation; this test calls the RPC directly to confirm Layer 1
+    // is the last line of defense for future automation workers that may
+    // bypass the human service boundary.
+    const caseId = await seedCaseInState('proposed');
+    const db = adminClient();
+
+    const { error } = await db.rpc('update_document_case_state_with_audit', {
+      p_case_id: caseId,
+      p_target_state: 'extracting', // reserved at chunk 2; CHECK rejects
+      p_audit: {
+        org_id: SEED.ORG_HOLDING,
+        user_id: ctx.caller.user_id,
+        trace_id: ctx.trace_id,
+        action: 'document_case_transitioned',
+        entity_type: 'document_case',
+      },
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toMatch(/document_cases_state_chunk_2_active/);
+
+    // Case state unchanged; CHECK violation aborted the transaction.
+    const { data: caseRow } = await db
+      .from('document_cases')
+      .select('state')
+      .eq('id', caseId)
+      .single();
+    expect(caseRow!.state).toBe('proposed');
+  });
+
+  it('RPC atomicity: rolls back state UPDATE when audit_log INSERT fails (FK violation on audit_log.org_id)', async () => {
+    // This test calls the RPC directly to prove transaction-level atomicity
+    // on the UPDATE path; the service always uses matched org_ids. Parallel
+    // to chunk 1's test #6 for the INSERT path.
+    const db = adminClient();
+    const caseId = await seedCaseInState('proposed');
+    const nonExistentOrgId = '00000000-0000-0000-0000-deadbeefcafe';
+
+    const { error } = await db.rpc('update_document_case_state_with_audit', {
+      p_case_id: caseId,
+      p_target_state: 'approved',
+      p_audit: {
+        org_id: nonExistentOrgId, // not in organizations(org_id) -> FK violation
+        user_id: ctx.caller.user_id,
+        trace_id: ctx.trace_id,
+        action: 'document_case_transitioned',
+        entity_type: 'document_case',
+      },
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toMatch(/foreign key|violates/i);
+
+    // The case state must NOT have changed -- transaction rolled back
+    // both the UPDATE and the audit INSERT.
+    const { data: caseRow } = await db
+      .from('document_cases')
+      .select('state')
+      .eq('id', caseId)
+      .single();
+    expect(caseRow!.state).toBe('proposed');
   });
 });

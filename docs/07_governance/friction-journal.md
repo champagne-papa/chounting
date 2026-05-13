@@ -11020,3 +11020,41 @@ Postgres timestamptz emits — Supabase returns the offset form
 for timestamptz read-back unless you opt into `{ offset: true }`.
 Caught by integration tests against a real DB; not surfaced by
 typecheck or by the brief-loop review pass.
+
+### 2026-05-12 — Phase 2 chunk 2 SHIPPED — transition() + state machine enforcement
+
+Two findings worth carrying forward.
+
+**AccountLedgerService delta-assertion category error.** The
+chunk-2 validation gate surfaced the third recurrence of the
+`accountLedgerService.test.ts` running_balance failures
+previously written off as "intermittent pollution" in `07ae4e9`.
+Investigation: it's not mid-suite pollution. It's a category
+error in the assertion shape. Tests 3 and 6 used a "delta from
+end-of-file baseline" assertion that conflated two properties —
+(a) the entry got posted, and (b) the file-end running_balance
+shifted by the entry's amount. (b) is only meaningful if the
+test owns the entire ledger state. running_balance is positional
+(window function at query time, ordered by entry_date), so
+past-dated entries from prior test-file runs interleave at the
+same entry_date and shift the `find()`-by-content result's
+running_balance non-deterministically. Fix at `fc5dfd8`:
+find-by-journal_entry_id + per-row contribution (this row's rb
+minus the previous row's rb in the ordered result). Residue-
+immune by construction. The deeper fix — disposable accounts
+per test so shared state doesn't accumulate at all — is tracked
+as a Phase 2 retrospective candidate; the assertion shape and
+the test-design strategy are distinct concerns. The "third
+recurrence = investigate, not remediate" rule from the chunk-2
+brief was the right discipline here.
+
+**Constraint-name renames as a downstream test-fragility
+surface.** The chunk-2 migration renamed the state CHECK
+constraint from `document_cases_state_chunk_1_active` to
+`document_cases_state_chunk_2_active` "for chunk traceability."
+That broke chunk-1's test #4 regex match. Fixed inline (regex
+now matches `document_cases_state_chunk_\d+_active`). Worth
+knowing: rename-with-broadening migrations have test-stability
+costs that are easy to miss at brief drafting. If chunks 3+
+continue the rename pattern, the regex stays stable; if they
+switch to in-place ALTER without rename, the costs disappear.
