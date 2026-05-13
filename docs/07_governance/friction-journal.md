@@ -11058,3 +11058,23 @@ knowing: rename-with-broadening migrations have test-stability
 costs that are easy to miss at brief drafting. If chunks 3+
 continue the rename pattern, the regex stays stable; if they
 switch to in-place ALTER without rename, the costs disappear.
+
+### 2026-05-13 — Phase 2 chunk 4 SHIPPED — document_artifacts substrate + ocr_runs + extraction_runs
+
+One finding worth carrying forward (no fresh surprises — four
+anticipated surprises in the brief did not manifest as new
+issues).
+
+**Substrate-walkable phase-done refinement.** Chunk 4 ships
+substrate-only; the phase-done bar refined to substrate-walkable
+(admin-INSERT + constraint/trigger/RLS verification from tests).
+Three proofs that chunks 1-3 landed are deferred to Phase 7's
+writer: Pattern B unwrapped-export + ServiceError shape for this
+surface, audit-log RPC integration with parent-derived org_id
+(chunk-3 canonical pattern), and Zod boundary against real-caller
+payloads (vs admin-test fixtures). Item 4 of the working
+discipline (phase-done means end-to-end-walkable) is preserved by
+naming the deferral, not by silently relaxing it. The Phase 7
+writer is the natural home for those three proofs because the
+pipeline orchestrator per ADR-0014 owns the artifact-write
+surface end-to-end.
