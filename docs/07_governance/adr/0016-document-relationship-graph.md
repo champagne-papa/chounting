@@ -66,7 +66,7 @@ rejects categorically, and the cascade contract that determines
 what happens to link rows when the linked entity changes state.
 
 The document relationship graph is the schema substrate that
-ADR-0011 §6 reserved and that ADR-0018 (Relationship Router,
+ADR-0011 §4 reserved and that ADR-0018 (Relationship Router,
 forthcoming) will traverse at runtime. ADR-0016 owns the schema
 and the validity rules; ADR-0018 owns the matching algorithm
 that produces candidate link rows from classifier output and
@@ -142,7 +142,7 @@ which is the only function that inserts rows into
   service-layer integrity validation in `documentLinkService` —
   ADR-0016 inherits all three verbatim and fills in the full
   membership for both enums.
-- **ADR-0011 §6** — `source_document_links` table existence and
+- **ADR-0011 §4** — `source_document_links` table existence and
   base columns. ADR-0011 reserved the table at the spine; ADR-0016
   does NOT introduce the table — it specifies the enum membership
   and validity rules for columns the table already has. Adding new
@@ -270,19 +270,30 @@ ADR-0010 reserved-enum-states discipline:
 **v1 active subset:**
 
 `bill`, `bill_line`, `payment`, `bill_payment_allocation`,
-`vendor_prepayment`, `vendor_prepayment_application`,
-`vendor_credit`, `vendor_credit_application`.
+`vendor_prepayment`, `vendor_prepayment_application`.
 
 **Reserved post-v1 (defined in the enum, not emitted by any v1
 service write path):**
 
-`bank_transaction`, `card_transaction`, `bank_account`,
-`card_account`, `customer_invoice`, `customer_invoice_line`,
-`customer_payment`, `customer_credit`, `vendor_statement_line`,
+`vendor_credit`, `vendor_credit_application`, `bank_transaction`,
+`card_transaction`, `bank_account`, `card_account`,
+`customer_invoice`, `customer_invoice_line`, `customer_payment`,
+`customer_credit`, `vendor_statement_line`,
 `bank_reconciliation`, `card_reconciliation`, `fixed_asset`,
 `tax_filing`, `payroll_run`, `payroll_employee`,
 `journal_entry`, `journal_line`, `vendor_master`,
 `customer_master`, `period_close`.
+
+`vendor_credit` and `vendor_credit_application` were listed in
+the original §1 v1-active subset, but Phase 5 substrate did not
+ship `vendor_credits` / `vendor_credit_applications` tables (no
+v1 consumer service). Moved to reserved post-v1 at Phase 2.5
+close per ADR-0010 substrate-now-enforcement-later discipline;
+chunk-5 substrate ships the tighter 6-value CHECK at Layer 1;
+activation lands alongside the future substrate per the "land
+schema with consumer code" governance precedent at
+`supabase/migrations/20240135000000_storage_substrate.sql`
+lines 46-49.
 
 The v1 active subset is constrained by ADR-0011 §1's entity
 ownership boundary: only entity types whose owning domain ships
@@ -476,7 +487,7 @@ each table's section header and in the **Cell count totals**
 paragraph after Table B, and update mechanically when either
 enum's membership extends.
 
-**Table A: v1 active `linked_entity_type` rows (8 rows × 27 columns = 216 cells)**
+**Table A: v1 active `linked_entity_type` rows (6 rows × 27 columns = 162 cells)**
 
 | linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | failure_notice | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -486,10 +497,8 @@ enum's membership extends.
 | `bill_payment_allocation` | I | A | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
 | `vendor_prepayment` | I | A | A | A | I | R | I | I | I | I | R | R | I | I | I | I | I | I | R | R | I | I | I | R | R | R | R |
 | `vendor_prepayment_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
-| `vendor_credit` | I | I | I | A | I | R | R | R | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
-| `vendor_credit_application` | I | I | I | A | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
 
-**Table B: reserved post-v1 `linked_entity_type` rows (20 rows × 27 columns = 540 cells)**
+**Table B: reserved post-v1 `linked_entity_type` rows (22 rows × 27 columns = 594 cells)**
 
 Every cell in these rows is either `R` (reserved post-v1; the
 entity type itself is not active in v1, so any link to it is
@@ -501,6 +510,8 @@ regardless of when the entity type activates.
 
 | linked_entity_type ↓ \ link_role → | primary_invoice | payment_evidence | receipt | supporting | duplicate_arrival | superseded_version | vendor_credit_memo | vendor_statement_excerpt | purchase_order | receiving_document | retainer_agreement | deposit_request | bank_statement_excerpt | card_statement_excerpt | reconciliation_evidence | failure_notice | customer_invoice_attachment | customer_remittance | tax_form | contract | payroll_document | asset_purchase_support | prior_period_evidence | correction_memo | controller_override_memo | audit_evidence | email_thread |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `vendor_credit` | I | I | I | R | I | R | R | R | I | I | I | I | I | I | I | I | I | I | I | R | I | I | I | R | R | R | R |
+| `vendor_credit_application` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | I | R | I |
 | `bank_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | R | I | R | R | I | I | I | I | I | I | R | R | I | R | R |
 | `card_transaction` | I | R | R | R | I | R | I | R | I | I | I | I | I | R | R | R | I | I | I | I | I | I | R | R | I | R | R |
 | `bank_account` | I | I | I | R | I | I | I | I | I | I | I | I | R | I | R | I | I | I | I | R | I | I | I | I | R | R | I |
@@ -522,18 +533,22 @@ regardless of when the entity type activates.
 | `customer_master` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | R | R | I | I | I | I | R | R | R |
 | `period_close` | I | I | I | R | I | R | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | I | R | R | R | R | R |
 
-**Cell count totals.** Table A: 216 cells (8 rows × 27 columns).
-Table B: 540 cells (20 rows × 27 columns). Combined: 756 cells.
-Active v1 (`A`): 15 cells (all in Table A, all in the four
+**Cell count totals.** Table A: 162 cells (6 rows × 27 columns).
+Table B: 594 cells (22 rows × 27 columns). Combined: 756 cells.
+Active v1 (`A`): 13 cells (all in Table A, all in the four
 v1-active link-role columns of Table A — `bill` 3, `bill_line` 1,
 `payment` 3, `bill_payment_allocation` 2, `vendor_prepayment` 3,
-`vendor_prepayment_application` 1, `vendor_credit` 1,
-`vendor_credit_application` 1; the `failure_notice` column is
+`vendor_prepayment_application` 1; the `failure_notice` column is
 reserved post-v1 per the post-D4 mini-decision dispatch and
 contributes no `A` cells). Reserved post-v1 (`R`): varies;
 ships at v1 schema time per ADR-0010 discipline as the seat for
 post-v1 activation. Invalid (`I`): the remainder; the pair is
 rejected categorically by `documentLinkService` at any phase.
+`vendor_credit` and `vendor_credit_application` were originally
+in Table A (8 active rows) at ADR-0016 ratification; Phase 2.5
+Commit A moved them to Table B per §1 reservation reconciliation
+(no Phase 5 consumer service), dropping the active-v1 cell count
+from 15 to 13.
 
 **Validity-matrix activation discipline.** Activating a reserved
 cell in any future amendment requires (a) ensuring the cell's
@@ -751,6 +766,11 @@ reversed / voided / cancelled:
 | `bill_payment_allocation` | Allocation reversal as part of payment reversal or bill amendment | Link row is discarded with the allocation reversal | Link row's `link_status` flips to `reversed`; the allocation-level evidence (rare; typically supporting documents) remains audit-queryable |
 | `vendor_prepayment` | `vendor_prepayments.status` flips to `refunded` per ADR-0015 §1; OR prepayment-level reversal | Link row is discarded; prepayment-level documents (retainer agreement excerpts, deposit confirmations) re-route to the exception queue or to the new prepayment row | Link row's `link_status` flips to `reversed`; the prepayment-evidence document remains attached for audit purposes |
 | `vendor_prepayment_application` | Application reversal (the prepayment-to-bill application is reversed; the prepayment returns to its prior `remaining_balance`) | Link row is discarded with the application reversal | Link row's `link_status` flips to `reversed`; the application-level evidence remains audit-queryable |
+
+**Reserved post-v1 entity types** (cascade behavior specified at v1 schema time per ADR-0010; substrate ships when a v1 consumer service emerges per the "land schema with consumer code" discipline at `supabase/migrations/20240135000000_storage_substrate.sql` lines 46-49):
+
+| linked_entity_type | Reversal trigger | Pre-commit behavior | Post-commit behavior (per ADR-0011 §16) |
+|---|---|---|---|
 | `vendor_credit` | `vendor_credits.status` flips to a reversed-equivalent state per ADR-0015 §10 (status enum extension); OR credit-level reversal | Link row is discarded; credit-level documents (vendor credit memos in a future post-v1 active set) re-route | Link row's `link_status` flips to `reversed`; the credit-evidence document remains attached |
 | `vendor_credit_application` | Application reversal (the credit-to-bill application is reversed) | Link row is discarded with the application reversal | Link row's `link_status` flips to `reversed`; the application-level evidence remains audit-queryable |
 
@@ -763,10 +783,14 @@ function is the sole post-commit mutator of
 `source_document_links`. Its contract:
 
 1. **Input.** The function accepts `(linked_entity_type,
-   linked_entity_id, reversal_trace_id, controller_user_id)`.
-   The `reversal_trace_id` propagates from the upstream
-   reversal's trace per Service Communication Rule 5 from
-   `ledger_truth_model.md`.
+   linked_entity_id, reversal_reason, reversal_trace_id,
+   controller_user_id)`. The `reversal_trace_id` propagates
+   from the upstream reversal's trace per Service Communication
+   Rule 5 from `ledger_truth_model.md`. The `reversal_reason` is
+   a required controller-stamped string per
+   §Reserved-enums-and-audit-events — the
+   `source_document_link_reversed` audit event lists
+   `reversal_reason` as a required field.
 2. **Behavior.** The function looks up all
    `source_document_links` rows where `(linked_entity_type,
    linked_entity_id)` matches the input AND `link_status =
@@ -907,7 +931,7 @@ ADR-0013's `original_storage_key` and ADR-0015's
 
 **ADR-0016's primary schema deltas are enum membership
 extensions on existing platform-owned columns.** The
-`source_document_links` table itself is owned by ADR-0011 §6 and
+`source_document_links` table itself is owned by ADR-0011 §4 and
 is NOT introduced by ADR-0016; ADR-0016 specifies the membership
 of the `linked_entity_type` and `link_role` enum columns that
 already exist on the table per ADR-0011's reservation. The
@@ -918,14 +942,15 @@ explicit + Layer 1 / Layer 2 / Layer 3 defenses).
 **Enum membership additions (full reserved sets per ADR-0010):**
 
 - **`linked_entity_type`** (closed enum on `source_document_links`
-  per ADR-0011 §6) — full reserved set per item 1 above (28
-  values); v1 active subset is 8 values (`bill`, `bill_line`,
+  per ADR-0011 §4) — full reserved set per item 1 above (28
+  values); v1 active subset is 6 values (`bill`, `bill_line`,
   `payment`, `bill_payment_allocation`, `vendor_prepayment`,
-  `vendor_prepayment_application`, `vendor_credit`,
-  `vendor_credit_application`). Reserved post-v1: 20 values
-  enumerated in item 1.
+  `vendor_prepayment_application`). Reserved post-v1: 22 values
+  enumerated in item 1 (`vendor_credit` and
+  `vendor_credit_application` moved to reserved post-v1 at
+  Phase 2.5 Commit A; see §1 for the rationale).
 - **`link_role`** (closed enum on `source_document_links` per
-  ADR-0011 §6) — full reserved set per item 2 above; v1 active
+  ADR-0011 §4) — full reserved set per item 2 above; v1 active
   subset is 4 values (`primary_invoice`, `payment_evidence`,
   `receipt`, `supporting` — the four values ADR-0015 §10
   declared its consumption of). Reserved post-v1: full
@@ -937,12 +962,12 @@ explicit + Layer 1 / Layer 2 / Layer 3 defenses).
   full set (both values active).
 
 **No new columns on `source_document_links` introduced by
-ADR-0016.** The table's column set is owned by ADR-0011 §6.
+ADR-0016.** The table's column set is owned by ADR-0011 §4.
 The CHECK constraints introduced by ADR-0016 (item 4 above)
 are constraint additions on existing columns, NOT new columns.
 
 **No new tables introduced by ADR-0016.** The
-`source_document_links` table is owned by ADR-0011 §6;
+`source_document_links` table is owned by ADR-0011 §4;
 ADR-0016 specifies the column membership and the validity
 contract for that table only.
 
@@ -1180,7 +1205,7 @@ from `docs/02_specs/open_questions.md`:
 
 | Q | Closure scope | Disposition |
 |---|---|---|
-| **Q55** | `source_document_links` active enums and pair validity | **Closed.** (a) `linked_entity_type` enum membership — full reserved set per item 1 + v1 active subset (8 values: `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`, `vendor_credit`, `vendor_credit_application`). (b) `link_role` enum membership — full reserved set per item 2 + v1 active subset (4 values: `primary_invoice`, `payment_evidence`, `receipt`, `supporting` — the four values ADR-0015 §10 declared its consumption of). (c) `(linked_entity_type, link_role)` per-pair validity matrix — labeled grid with each cell flagged active v1 (`A`) / reserved post-v1 (`R`) / invalid (`I`); 15 active v1 cells, remainder reserved or invalid; per-table cell counts and combined total stated in the **Cell count totals** paragraph after Tables A and B in item 3. (d) `documentLinkService` rejection rules — invalid pairs raise `ServiceError` `PAIR_INVALID`; reserved pairs raise `ServiceError` `PAIR_RESERVED_POST_V1`; integrity-check failures raise `ServiceError` `LINKED_ENTITY_NOT_FOUND`; three-layer defense (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3 service emission) per ADR-0010 reserved-enum-states discipline. (e) Cascade behavior per `linked_entity_type` — post-commit immutability per ADR-0011 §16 (status flip to `reversed` via `documentLinkService.reverseLinkedEntityLink()`); pre-commit re-routing allowed per ADR-0011 §13 (discard prior candidate, create new candidate, emit `pre_commit_link_rerouted` audit event). (f) Pre-commit vs post-commit boundary — schema-side enforcement of ADR-0011 §16 lifecycle immutability via (i) `documentLinkService.create()` is the only INSERT path and refuses to insert post-commit, (ii) `source_document_links` carries no UPDATE permission for service-role clients on most columns; only `link_status` may transition, and only in the `created → reversed` direction. Per items 1–6 above. |
+| **Q55** | `source_document_links` active enums and pair validity | **Closed.** (a) `linked_entity_type` enum membership — full reserved set per item 1 + v1 active subset (6 values: `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`); `vendor_credit` and `vendor_credit_application` reserved post-v1 per item 1 (substrate not shipped in Phase 5). (b) `link_role` enum membership — full reserved set per item 2 + v1 active subset (4 values: `primary_invoice`, `payment_evidence`, `receipt`, `supporting` — the four values ADR-0015 §10 declared its consumption of). (c) `(linked_entity_type, link_role)` per-pair validity matrix — labeled grid with each cell flagged active v1 (`A`) / reserved post-v1 (`R`) / invalid (`I`); 13 active v1 cells, remainder reserved or invalid; per-table cell counts and combined total stated in the **Cell count totals** paragraph after Tables A and B in item 3. (d) `documentLinkService` rejection rules — invalid pairs raise `ServiceError` `PAIR_INVALID`; reserved pairs raise `ServiceError` `PAIR_RESERVED_POST_V1`; integrity-check failures raise `ServiceError` `LINKED_ENTITY_NOT_FOUND`; three-layer defense (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3 service emission) per ADR-0010 reserved-enum-states discipline. (e) Cascade behavior per `linked_entity_type` — post-commit immutability per ADR-0011 §16 (status flip to `reversed` via `documentLinkService.reverseLinkedEntityLink()`); pre-commit re-routing allowed per ADR-0011 §13 (discard prior candidate, create new candidate, emit `pre_commit_link_rerouted` audit event). (f) Pre-commit vs post-commit boundary — schema-side enforcement of ADR-0011 §16 lifecycle immutability via (i) `documentLinkService.create()` is the only INSERT path and refuses to insert post-commit, (ii) `source_document_links` carries no UPDATE permission for service-role clients on most columns; only `link_status` may transition, and only in the `created → reversed` direction. Per items 1–6 above. |
 
 **Explicitly NOT closed by ADR-0016:**
 
@@ -1465,7 +1490,7 @@ alternative would have computed link relationships at query
 time from the underlying domain tables (joining `bills`,
 `payments`, `source_documents` through inferred FK paths)
 without materializing a separate `source_document_links`
-table. The alternative was rejected per ADR-0011 §6's
+table. The alternative was rejected per ADR-0011 §4's
 table reservation: the polymorphic many-to-many between
 documents and accounting entities cannot be inferred from
 domain tables alone (a document attached to a bill via
@@ -1691,6 +1716,107 @@ permitted path.
   covers all cells in the row plus the relevant link-role
   cells. The matrix's exhaustiveness at v1 schema time is the
   precondition for the low-friction amendment shape.
+
+## Amendment — Phase 2.5 Commit A reconciliation (2026-05-13)
+
+ADR-0016 is amended at Phase 2.5 close (the Phase 2 close + ADR
+audit cycle following six chunks of substrate ship). Path (a) of
+the audit-cycle (β) reconciliation pattern: ADR text catches up to
+chunk-5 substrate ship state plus corrects cross-reference drift
+to ADR-0011 §4.
+
+### Substance
+
+Three reconciliations:
+
+1. **§6→§4 cross-reference correction (8 locations).** ADR-0016
+   referenced `ADR-0011 §6` in 8 contexts that should have cited
+   `ADR-0011 §4` (the section that owns `source_document_links`
+   table reservation; §6 owns the `document_type` discriminator).
+   References at lines 69, 145, 910, 921, 928, 940, 945, 1468
+   (pre-amendment line numbers) updated. References at lines 398
+   and 961/965 correctly cite §6 (the `document_type`
+   discriminator context) and are preserved.
+
+2. **§5 `reverseLinkedEntityLink` signature reconciliation
+   (4-field → 5-field).** Chunk-5 substrate shipped
+   `reverseLinkedEntityLink` with 5 input fields because the
+   audit event spec at §Reserved-enums-and-audit-events requires
+   `reversal_reason` on every `source_document_link_reversed`
+   audit event. §5's 4-field signature predated the chunk-5 ship;
+   the amendment inserts `reversal_reason` as the 3rd field
+   matching schema order at
+   `apps/web/src/shared/schemas/document-platform/sourceDocumentLink.schema.ts`
+   lines 85-91.
+
+3. **§1 v1-active subset 8→6 + cascading edits.** §1 originally
+   listed `vendor_credit` and `vendor_credit_application` as
+   v1-active `linked_entity_type` values; chunk-5 substrate
+   shipped the tighter 6-value v1-active CHECK because Phase 5
+   substrate did not ship `vendor_credits` /
+   `vendor_credit_applications` tables (no v1 consumer service).
+   Per ADR-0010 substrate-now-enforcement-later discipline plus
+   the "land schema with consumer code" governance precedent
+   at Phase 1 storage_substrate migration lines 46-49,
+   `vendor_credit` and `vendor_credit_application` moved to
+   reserved post-v1. Cascading edits: §3 Table A 8→6 rows
+   (216→162 cells), Table B 20→22 rows (540→594 cells), Cell
+   count totals 15→13 active v1 cells; §5 cascade matrix split
+   into 6-row v1-active sub-table + 2-row reserved-post-v1
+   sub-table with mini-header; §Schema-deltas v1-active 8→6
+   values + reserved-post-v1 20→22 values; §Closes Q55 v1
+   active subset 8→6 + active v1 cell count 15→13.
+
+### Why this amendment
+
+Per chunk-5 implementation close (chunk-5 friction-journal entry
+"ADR-0016 §1 vendor_credit / vendor_credit_application substrate
+gap" in `docs/07_governance/friction-journal.md`): chunk-5
+substrate shipped the tighter 6-value CHECK with explicit
+deviation from ADR-0016 §1; the (β) reconciliation pattern says
+ADR text catches up at the next retrospective cycle. Phase 2.5
+is that cycle. The §6→§4 cross-reference drift was a separate
+audit finding at chunk-5 close consolidated into the same
+retrospective inventory item; the §5 signature gap was a third
+chunk-5-close finding under the same item.
+
+### Bundling
+
+Phase 2.5 Commit A bundles three sub-findings (6.1, 6.2, 6.3) of
+retrospective inventory item #6 — the consolidated ADR-0011 +
+ADR-0016 cross-ADR editorial audit cycle. Commit B (ADR-0011
+amendment) bundles four more sub-findings (6.4-6.7). Commit C
+(Phase 2 retrospective writeup) closes the consolidated audit
+item with reference to commits A and B SHAs.
+
+### Cross-references
+
+- `docs/07_governance/friction-journal.md` — chunk-5 close entry
+  documenting the substrate-now-amendment-later trajectory for
+  §1.
+- `apps/web/src/shared/schemas/document-platform/sourceDocumentLink.schema.ts`
+  lines 18-25 — chunk-5 `LinkedEntityTypeSchema` 6 v1-active
+  values (source of truth for §1 reconciliation).
+- `apps/web/src/shared/schemas/document-platform/sourceDocumentLink.schema.ts`
+  lines 85-95 — chunk-5 `ReverseLinkedEntityLinkInputSchema`
+  5-field shape (source of truth for §5 signature
+  reconciliation).
+- `supabase/migrations/20240147000000_source_document_links_substrate.sql`
+  — chunk-5 `linked_entity_type_chunk_5_active` CHECK + ENUM
+  membership (28 values total; 6 v1-active CHECK).
+- `supabase/migrations/20240135000000_storage_substrate.sql`
+  lines 46-49 — Phase 1 "land schema with consumer code"
+  governance precedent (anti-scope text codifying the discipline
+  that defers substrate activation until a v1 consumer service
+  exists).
+- `docs/09_briefs/phase-2.5/2026-05-13-phase-2-5-commit-a.md` —
+  brief for this commit (Phase 2.5 Commit A).
+
+This is **ADR-0016's first amendment**. Title-line stability
+preserved (no title-line revision). Scope is narrow (three
+sub-findings 6.1, 6.2, 6.3 of retrospective inventory item #6);
+broader Phase 0 review deferred per arc-class first-instance
+status framing.
 
 - **The Tier 4 trio (ADR-0015, ADR-0016, ADR-0017) ratifies
   as a package; do not propose isolated ADR-0016
