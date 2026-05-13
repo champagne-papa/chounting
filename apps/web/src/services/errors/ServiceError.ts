@@ -84,6 +84,9 @@ export type ServiceErrorCode =
   | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
   // Document core (Phase 2 chunk 2)
   | 'INVALID_TRANSITION'
+  // Document core (Phase 2 chunk 5) — polymorphic integrity validator
+  // in documentLinkService per ADR-0011 §4 + ADR-0016 §4.
+  | 'LINKED_ENTITY_NOT_FOUND'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future
