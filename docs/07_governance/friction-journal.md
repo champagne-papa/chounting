@@ -10934,3 +10934,12 @@ Phase 5 functionally complete at v1 across all four bill
 lifecycle entry points (pending_approval, approved_for_payment,
 partially_paid, fully_paid) for both approve and reverse actions.
 Arc-closure synthesis is the next surface.
+
+**Flaky-test note for future-me.** `accountLedgerService.test.ts`
+has running-balance baseline pollution that surfaces intermittently
+when run mid-suite; `pnpm db:reset:clean` clears it. Root cause not
+investigated this session — suspect test-ordering or shared-state
+issue in the suite (other tests posting JE entries against the
+shared seed accounts Investments-in-Subsidiaries and Intercompany-
+Receivables before this test reads its baseline). If this bites
+again, start there.
