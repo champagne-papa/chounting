@@ -20,6 +20,7 @@ export type CanvasDirective =
   | { type: 'report_open_bills'; orgId: string }
   | { type: 'report_vendor_balance'; orgId: string }
   | { type: 'report_payment_approval_queue'; orgId: string }
+  | { type: 'report_active_payments'; orgId: string }
   | { type: 'report_paid_bills_history'; orgId: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'adjustment_form'; orgId: string }

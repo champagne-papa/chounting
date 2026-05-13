@@ -70,6 +70,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the vendor balance report';
     case 'report_payment_approval_queue':
       return 'the payment approval queue';
+    case 'report_active_payments':
+      return 'the active payments view';
     case 'report_paid_bills_history':
       return 'the paid bills history';
     case 'reversal_form':

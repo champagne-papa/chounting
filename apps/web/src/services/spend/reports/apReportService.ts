@@ -75,6 +75,17 @@ import {
   type PaidBillsHistoryInputRaw,
 } from '@/shared/schemas/spend/reports/paidBillsHistory.schema';
 import {
+  ActivePaymentsInputSchema,
+  type ActivePaymentsInput,
+  type ActivePaymentsInputRaw,
+} from '@/shared/schemas/spend/reports/activePayments.schema';
+import {
+  BillDetailInputSchema,
+  type BillDetailInput,
+  type BillDetailInputRaw,
+  type BillDetailOutput,
+} from '@/shared/schemas/spend/reports/billDetail.schema';
+import {
   addMoney,
   subtractMoney,
   toMoneyAmount,
@@ -151,6 +162,27 @@ export interface PaidBillRow {
 export interface PaidBillsHistoryOutput {
   bills: PaidBillRow[];
   total_amount_paid: MoneyAmount; // sum of bills.amount_cad
+}
+
+/**
+ * Active payments output per Phase 5 chunk B5-3-D5.
+ * Bills in `partially_paid` lifecycle_state — bills with at least one payment
+ * recorded but not yet fully paid. Operator entry path for subsequent
+ * partial-payment-followup actions (RecordPaymentCard with computed amount_due
+ * pre-fill). Mirrors PaymentApprovalQueueRow shape per pattern parity.
+ */
+export interface ActivePaymentsRow {
+  bill_id: string;
+  vendor_id: string;
+  bill_number: string | null;
+  due_date: string | null;
+  amount_cad: MoneyAmount;
+  amount_due: MoneyAmount; // computed = bills.amount_cad − SUM(allocations) per catch #20
+}
+
+export interface ActivePaymentsOutput {
+  bills: ActivePaymentsRow[];
+  total_amount_due: MoneyAmount;
 }
 
 // ---------------------------------------------------------------------
@@ -491,6 +523,180 @@ async function paymentApprovalQueue(
 }
 
 /**
+ * activePayments — Phase 5 chunk B5-3-D5.
+ *
+ * Fetches bills in `partially_paid` lifecycle_state via the shared
+ * `loadBillsWithAmountDue` helper (which filters
+ * lifecycle_state IN {approved_for_payment, partially_paid}), then post-
+ * filters to `partially_paid` only. Returns the per-bill list +
+ * total_amount_due. Operator entry path for subsequent partial-payment-
+ * followup actions (RecordPaymentCard with computed amount_due pre-fill).
+ *
+ * Closes catch #57 sub-surface expansion UX gap at partial-payment-followup
+ * grain (`partially_paid` bills disappear from PaymentApprovalQueueView per
+ * its post-filter `approved_for_payment` only). ActivePaymentsView is the
+ * additive-substrate solution preserving B5-3-D2 PaymentApprovalQueueView
+ * semantic canonical-for-approve-action grain.
+ *
+ * Helper-vs-inline rationale: filter set ({partially_paid}) is a strict
+ * subset of the helper's open-bill filter set
+ * ({approved_for_payment, partially_paid}); post-filter the helper output
+ * (canonical sibling pattern to `paymentApprovalQueue()` which uses the
+ * helper + post-filters to `approved_for_payment`).
+ *
+ * Cross-org access discipline: route handler wraps via
+ * withInvariants(action: 'active_payments.read') which validates
+ * the caller has access to the supplied org_id against ctx.caller.org_ids.
+ */
+// withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
+// withInvariants(action: 'active_payments.read'))
+async function activePayments(
+  input: ActivePaymentsInputRaw,
+  ctx: ServiceContext,
+): Promise<ActivePaymentsOutput> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  const parsed: ActivePaymentsInput = ActivePaymentsInputSchema.parse(input);
+
+  // Reuse session #1 helper; loadBillsWithAmountDue filters lifecycle_state
+  // IN {approved_for_payment, partially_paid}. Active payments needs only
+  // 'partially_paid'; filter the helper's output post-fetch.
+  const allOpenBills = await loadBillsWithAmountDue(db, parsed.org_id);
+  const partiallyPaidOnly = allOpenBills.filter(
+    (b) => b.lifecycle_state === 'partially_paid',
+  );
+
+  const rows: ActivePaymentsRow[] = partiallyPaidOnly.map((b) => ({
+    bill_id: b.bill_id,
+    vendor_id: b.vendor_id,
+    bill_number: b.bill_number,
+    due_date: b.due_date,
+    amount_cad: b.amount_cad,
+    amount_due: b.amount_due,
+  }));
+
+  let totalAmountDue: MoneyAmount = zeroMoney();
+  for (const r of rows) {
+    totalAmountDue = addMoney(totalAmountDue, r.amount_due);
+  }
+
+  log.info(
+    {
+      org_id: parsed.org_id,
+      bill_count: rows.length,
+      total_amount_due: totalAmountDue,
+    },
+    'Active payments computed',
+  );
+
+  return { bills: rows, total_amount_due: totalAmountDue };
+}
+
+/**
+ * billDetail — Phase 5 chunk B5-3-D5 substrate-correction.
+ *
+ * Per-bill detail read for a single bill_id within an org. Closes catch #69
+ * (sibling-class to catch #57 substrate-grain semantic drift at downstream-
+ * consumer grain): RecordPaymentCard previously consumed the
+ * payment-approval-queue endpoint which post-filters to
+ * `approved_for_payment` only, breaking the partially_paid bill row-click
+ * flow surfaced from ActivePaymentsView. This per-bill endpoint is the
+ * additive-substrate solution, returning the bill regardless of
+ * lifecycle_state subject to RLS / org scoping.
+ *
+ * Computes amount_due per catch #20: bills.amount_cad − SUM(allocations)
+ * for the single bill_id. Returns BillDetailRow directly (single-bill
+ * shape; not an envelope).
+ *
+ * Cross-org access discipline: route handler wraps via
+ * withInvariants(action: 'bill_detail.read') OR caller-org check via
+ * buildServiceContext + RLS — the read-side route pattern is unwrapped
+ * per sibling endpoints (activePayments, paymentApprovalQueue), so cross-
+ * org access manifests as RLS-empty result → NOT_FOUND ServiceError.
+ */
+// withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
+// withInvariants(action: 'bill_detail.read'))
+async function billDetail(
+  input: BillDetailInputRaw,
+  ctx: ServiceContext,
+): Promise<BillDetailOutput> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  const parsed: BillDetailInput = BillDetailInputSchema.parse(input);
+
+  const { data: bill, error: billErr } = await db
+    .from('bills')
+    .select('bill_id, vendor_id, bill_number, due_date, amount_cad, lifecycle_state')
+    .eq('org_id', parsed.org_id)
+    .eq('bill_id', parsed.bill_id)
+    .maybeSingle();
+  if (billErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `bill_detail: bill lookup failed: ${billErr.message}`,
+    );
+  }
+  if (!bill) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `bill_detail: bill ${parsed.bill_id} not found in org ${parsed.org_id}`,
+    );
+  }
+
+  const billRow = bill as {
+    bill_id: string;
+    vendor_id: string;
+    bill_number: string | null;
+    due_date: string | null;
+    amount_cad: string | number;
+    lifecycle_state: string;
+  };
+
+  const { data: allocs, error: allocsErr } = await db
+    .from('bill_payment_allocations')
+    .select('amount_cad')
+    .eq('org_id', parsed.org_id)
+    .eq('bill_id', parsed.bill_id);
+  if (allocsErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `bill_detail: bill_payment_allocations lookup failed: ${allocsErr.message}`,
+    );
+  }
+  const allocRows = (allocs ?? []) as Array<{ amount_cad: string | number }>;
+
+  let allocated: MoneyAmount = zeroMoney();
+  for (const a of allocRows) {
+    allocated = addMoney(allocated, toMoneyAmount(a.amount_cad));
+  }
+  const billAmount = toMoneyAmount(billRow.amount_cad);
+  const amountDue = subtractMoney(billAmount, allocated);
+
+  log.info(
+    {
+      org_id: parsed.org_id,
+      bill_id: parsed.bill_id,
+      amount_cad: billAmount,
+      amount_due: amountDue,
+      lifecycle_state: billRow.lifecycle_state,
+    },
+    'Bill detail computed',
+  );
+
+  return {
+    bill_id: billRow.bill_id,
+    vendor_id: billRow.vendor_id,
+    bill_number: billRow.bill_number,
+    due_date: billRow.due_date,
+    amount_cad: billAmount,
+    amount_due: amountDue,
+    lifecycle_state: billRow.lifecycle_state,
+  };
+}
+
+/**
  * paidBillsHistory — EC-A-7 per Spend brief §11.4.
  *
  * Fetches bills in `fully_paid` lifecycle_state — historical view of
@@ -574,9 +780,12 @@ async function paidBillsHistory(
 export const apReportService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
   // withInvariants(action: 'ap_aging.read' | 'open_bills.read' |
-  // 'payment_approval_queue.read' | 'paid_bills_history.read'))
+  // 'payment_approval_queue.read' | 'paid_bills_history.read' |
+  // 'active_payments.read' | 'bill_detail.read'))
   aging,
   openBills,
   paymentApprovalQueue,
   paidBillsHistory,
+  activePayments,
+  billDetail,
 };

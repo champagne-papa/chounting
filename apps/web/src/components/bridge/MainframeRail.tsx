@@ -30,6 +30,7 @@ const ICONS = [
   { id: 'open_bills',    label: 'Open Bills',         icon: '\u{1F4DD}' },
   { id: 'vendor_balance', label: 'Vendor Balance',    icon: '\u{1F4B5}' },
   { id: 'payment_approval_queue', label: 'Payment Approval Queue', icon: '\u{1F4B3}' },
+  { id: 'active_payments', label: 'Active Payments', icon: '\u{1F4B8}' },
   { id: 'paid_bills_history', label: 'Paid Bills History', icon: '\u{1F4DC}' },
   { id: 'bill_form',     label: 'New Bill',           icon: '\u{1F4C4}' },
   { id: 'actions',       label: 'AI Action Review',   icon: '\u2705' },
@@ -61,6 +62,8 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
         return onNavigate({ type: 'report_vendor_balance', orgId });
       case 'payment_approval_queue':
         return onNavigate({ type: 'report_payment_approval_queue', orgId });
+      case 'active_payments':
+        return onNavigate({ type: 'report_active_payments', orgId });
       case 'paid_bills_history':
         return onNavigate({ type: 'report_paid_bills_history', orgId });
       case 'bill_form':

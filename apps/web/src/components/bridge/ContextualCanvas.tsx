@@ -29,6 +29,7 @@ import { ApAgingView } from '@/components/canvas/ApAgingView';
 import { OpenBillsView } from '@/components/canvas/OpenBillsView';
 import { VendorBalanceView } from '@/components/canvas/VendorBalanceView';
 import { PaymentApprovalQueueView } from '@/components/canvas/PaymentApprovalQueueView';
+import { ActivePaymentsView } from '@/components/canvas/ActivePaymentsView';
 import { PaidBillsHistoryView } from '@/components/canvas/PaidBillsHistoryView';
 import { ManualBillForm } from '@/components/canvas/ManualBillForm';
 import { PaymentApprovalCard } from '@/components/canvas/PaymentApprovalCard';
@@ -188,6 +189,8 @@ function renderDirective(
       return <VendorBalanceView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'report_payment_approval_queue':
       return <PaymentApprovalQueueView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_active_payments':
+      return <ActivePaymentsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'report_paid_bills_history':
       return <PaidBillsHistoryView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':

@@ -17,9 +17,12 @@
 // Dropdown endpoints:
 //   /api/orgs/${orgId}/fiscal-periods  → { periods: FiscalPeriod[] }
 //   /api/orgs/${orgId}/chart-of-accounts → { accounts: Account[] } (client-filtered)
-//   /api/orgs/${orgId}/reports/payment-approval-queue → { bills: PaymentApprovalQueueRow[] }
-//     (Disposition (α) precedent: reuse queue endpoint + client-side billId filter;
-//     no new per-bill endpoint per PaymentApprovalCard.tsx pattern)
+//   /api/orgs/${orgId}/bills/${billId} → BillDetailRow
+//     (B5-3-D5 substrate-correction: NEW per-bill bill-detail endpoint;
+//     supersedes the B5-3-D4 Disposition (α) reuse of payment-approval-queue
+//     which post-filtered to approved_for_payment only — broke the
+//     partially_paid flow surfaced from ActivePaymentsView row-click.
+//     Closes catch #69 substrate-grain semantic drift at downstream-consumer.)
 //
 // ap_control_account_id default-select: first liability account whose name
 // contains "accounts payable" (case-insensitive). Mirror ManualBillForm precedent.
@@ -33,10 +36,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { RecordBillPaymentInputRaw } from '@/shared/schemas/spend/bill.schema';
 import type { CanvasNavigateFn } from '@/shared/types/canvasDirective';
-import type {
-  PaymentApprovalQueueOutput,
-  PaymentApprovalQueueRow,
-} from '@/services/spend/reports/apReportService';
+import type { BillDetailRow } from '@/shared/schemas/spend/reports/billDetail.schema';
 
 // ---------------------------------------------------------------------
 // Form schema (UI-state shape; distinct from RecordBillPaymentInputSchema
@@ -114,7 +114,7 @@ export type RecordPaymentCardProps = {
 const TODAY = new Date().toISOString().slice(0, 10);
 
 export function RecordPaymentCard({ orgId, billId, onNavigate }: RecordPaymentCardProps) {
-  const [bill, setBill] = useState<PaymentApprovalQueueRow | null>(null);
+  const [bill, setBill] = useState<BillDetailRow | null>(null);
   const [billLoading, setBillLoading] = useState(true);
   const [billError, setBillError] = useState<string | null>(null);
 
@@ -143,28 +143,26 @@ export function RecordPaymentCard({ orgId, billId, onNavigate }: RecordPaymentCa
     },
   });
 
-  // --- Bill detail fetch (Disposition (α): reuse queue endpoint + client-side billId filter) ---
+  // --- Bill detail fetch (B5-3-D5 substrate-correction: per-bill endpoint) ---
 
   useEffect(() => {
     let cancelled = false;
     setBillLoading(true);
     setBillError(null);
-    fetch(`/api/orgs/${orgId}/reports/payment-approval-queue`)
+    fetch(`/api/orgs/${orgId}/bills/${billId}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-        return res.json() as Promise<PaymentApprovalQueueOutput>;
+        if (!res.ok) {
+          if (res.status === 404) throw new Error(`Bill ${billId} not found`);
+          throw new Error(`Fetch failed: ${res.status}`);
+        }
+        return res.json() as Promise<BillDetailRow>;
       })
       .then((body) => {
         if (cancelled) return;
-        const found = body.bills.find((b) => b.bill_id === billId);
-        if (!found) {
-          setBillError(`Bill ${billId} not found in payment approval queue`);
-        } else {
-          setBill(found);
-          // Pre-fill amount_cad with bill's amount_due (full payment default)
-          if (!form.getValues('amount_cad')) {
-            form.setValue('amount_cad', String(found.amount_due), { shouldValidate: false });
-          }
+        setBill(body);
+        // Pre-fill amount_cad with bill's amount_due (full payment default)
+        if (!form.getValues('amount_cad')) {
+          form.setValue('amount_cad', String(body.amount_due), { shouldValidate: false });
         }
         setBillLoading(false);
       })
