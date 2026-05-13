@@ -10991,3 +10991,32 @@ Relationship Graph) → Phase 4 (Relationship Router) → Phase 6
 (Proposal handoff)**. Canonical per the reframe spec §2;
 Phase 1 (Storage / Evidence Core) verified shipped across all
 six chunks per the migration header.
+
+### 2026-05-12 — Phase 2 chunk 1 SHIPPED — document_cases substrate + base service
+
+Three substrate findings worth carrying forward.
+
+**Logger level for case-lifecycle events.** Service uses
+`log.info` over the Phase 1 sibling `documentPlatformService.ts`'s
+`log.debug` because document_case creation is a human-cadence
+business event, not a high-volume storage trace step. Closest-
+sibling consistency inverts when volume + semantic level inverts.
+
+**DELETE-protection asymmetry vs Phase 1.** document_cases ships
+BEFORE DELETE protection (Option C adjudication at chunk-zero
+close) but not the full Phase 1 triple-layer (RLS + BEFORE DELETE
++ BEFORE TRUNCATE + REVOKE TRUNCATE). ADR-0011 §9 doesn't list
+document_cases as immutable in the row-level sense (§3 explicitly
+describes it as a workflow-mutable state machine); the BEFORE
+DELETE trigger is the load-bearing piece for audit_log referent
+integrity, the TRUNCATE protections in Phase 1 are about bulk-
+data hygiene that doesn't apply to workflow rows. Skipped as
+cargo-cult.
+
+**Zod `.datetime()` is too strict for timestamptz round-trips.**
+Zod's `.datetime()` defaults to a stricter ISO-8601 subset than
+Postgres timestamptz emits — Supabase returns the offset form
+(`...+00:00`), not `Z` suffix. `z.string()` is the right shape
+for timestamptz read-back unless you opt into `{ offset: true }`.
+Caught by integration tests against a real DB; not surfaced by
+typecheck or by the brief-loop review pass.
