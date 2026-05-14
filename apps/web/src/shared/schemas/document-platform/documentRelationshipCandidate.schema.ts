@@ -362,3 +362,94 @@ export const DecisionRecordBeforeStateSchema = z
     },
   );
 export type DecisionRecordBeforeState = z.infer<typeof DecisionRecordBeforeStateSchema>;
+
+// -----------------------------------------------------------
+// RouterDecisionOutcomeSchema — decision_outcome vocabulary
+// introduced fresh at Phase 4 chunk 3 per ADR-0018 §Schema-deltas
+// + Round 5.b'-α-modified extension.
+//
+// Five values: four ADR-0018-spec'd (no_change /
+// re_routed_from_exception / re_routed_to_exception /
+// candidate_superseded) plus one chunk-3-new (dispatch_failed)
+// for per-case service-layer failures caught at the dispatcher's
+// fan-out loop (emitted in a SEPARATE small transaction; PG-
+// rollback failures within the per-case transaction stay silent
+// by mechanism since rollback voids any in-transaction audit row).
+//
+// Per ADR-0018 §Schema-deltas, decision_outcome is documented as
+// event-payload constraint, NOT a DB CHECK closed enum. So this
+// schema is Layer 2 (Zod) + Layer 3 (TS const + service emission)
+// only; no Layer 1 DB CHECK addition. Substrate-now-amendment-
+// later: ADR-0018 §Schema-deltas amendment to formally add
+// 'dispatch_failed' is retrospective inventory candidate (Phase 4
+// retrospective batch). Pre-amendment substrate ships here per
+// chunk-6 backfill_vendor_prepayment_suggested precedent.
+// -----------------------------------------------------------
+export const RouterDecisionOutcomeSchema = z.enum([
+  'no_change',                 // ADR-0018 §Schema-deltas
+  're_routed_from_exception',  // ADR-0018 §Schema-deltas — case re-routed out of exception queue (paired with cancel_exception_with_audit)
+  're_routed_to_exception',    // ADR-0018 §Schema-deltas — case freshly enqueued to exception queue
+  'candidate_superseded',      // ADR-0018 §Schema-deltas — new candidate row inserted with supersedes_candidate_id chain
+  'dispatch_failed',           // chunk-3-new — service-layer failure caught at dispatcher per-case loop; emitted in separate small transaction
+]);
+export type RouterDecisionOutcome = z.infer<typeof RouterDecisionOutcomeSchema>;
+
+// -----------------------------------------------------------
+// DispatchTriggerInputSchema — Subsystem 3 dispatcher input
+// envelope per ADR-0018 §item 4. Zod discriminated union on
+// trigger_type with per-branch payload typing per Round 5.d-i.
+//
+// Framing F lock: 5 v1-active-emission-wired branches
+// (T1_new_bill, T3_new_vendor_prepayment, T5_bill_state_transition,
+// T8_period_reopen, T10_manual_override). T2/T4/T6 NOT in this
+// union — paymentService.ts and vendorCreditService.ts don't exist
+// at v1 (vendor_credits substrate reserved post-v1 per Phase 2.5
+// Commit A); their dispatcher branches add to this union when
+// paymentService/vendorCreditService ship in a future Phase 5
+// amendment chunk. T7_vendor_master_merge and T9_document_supersession
+// are reserved post-v1 per ADR-0018 (separate from chunk-3 framing).
+//
+// The ReRoutingTriggerSchema (chunk-1 ship; 8 v1-active values
+// plus 2 reserved) is a vocabulary-level Zod schema for audit event
+// payload validation; this DispatchTriggerInputSchema is the
+// envelope-level dispatcher-input schema — admits only what callers
+// can construct. The two schemas serve different layers.
+// -----------------------------------------------------------
+export const DispatchTriggerInputSchema = z.discriminatedUnion('trigger_type', [
+  z.object({
+    trigger_type: z.literal('T1_new_bill'),
+    org_id: z.string().uuid(),
+    bill_id: z.string().uuid(),
+    vendor_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+  }),
+  z.object({
+    trigger_type: z.literal('T3_new_vendor_prepayment'),
+    org_id: z.string().uuid(),
+    vendor_prepayment_id: z.string().uuid(),
+    vendor_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+  }),
+  z.object({
+    trigger_type: z.literal('T5_bill_state_transition'),
+    org_id: z.string().uuid(),
+    bill_id: z.string().uuid(),
+    old_lifecycle_state: z.enum(['approved_for_payment', 'partially_paid']),
+    new_lifecycle_state: z.enum(['fully_paid', 'voided']),
+    trace_id: z.string().uuid(),
+  }),
+  z.object({
+    trigger_type: z.literal('T8_period_reopen'),
+    org_id: z.string().uuid(),
+    period_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+  }),
+  z.object({
+    trigger_type: z.literal('T10_manual_override'),
+    org_id: z.string().uuid(),
+    case_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+  }),
+]);
+export type DispatchTriggerInputRaw = z.input<typeof DispatchTriggerInputSchema>;
+export type DispatchTriggerInput = z.infer<typeof DispatchTriggerInputSchema>;

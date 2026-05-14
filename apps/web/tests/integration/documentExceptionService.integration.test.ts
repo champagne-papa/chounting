@@ -271,19 +271,24 @@ describe('exception_queue_entries Layer 1 DB CHECK + §6(b) trigger (chunk 6)', 
     expect(error!.message).toMatch(/resolution_action_chunk_\d+_active/);
   });
 
-  it('DB CHECK rejects reserved exception_status when service is bypassed (Layer 1)', async () => {
+  it('DB CHECK admits cancelled exception_status after chunk-3 broadening (Layer 1)', async () => {
+    // Chunk-3 broadened exception_status_chunk_6_active →
+    // exception_status_chunk_8_active admitting 'cancelled' per
+    // Round 4.a (α-iii) arc-extended-lifecycle-sequence codification.
+    // chunk-6's original "reserved 'cancelled' rejected" assertion no
+    // longer holds; all 3 exception_status enum values are now v1-active.
+    // Converted to positive assertion verifying the broadening shipped.
     const db = adminClient();
     const freshCase = await buildClassifiedCaseFixture(SEED.ORG_HOLDING, ctx);
     const { error } = await db.from('exception_queue_entries').insert({
       org_id: SEED.ORG_HOLDING,
       document_case_id: freshCase,
       exception_reason: 'manual_route',
-      exception_status: 'cancelled', // reserved per ADR-0010
+      exception_status: 'cancelled',
       trace_id: ctx.trace_id,
       created_by: ctx.caller.user_id,
     });
-    expect(error).not.toBeNull();
-    expect(error!.message).toMatch(/exception_status_chunk_\d+_active/);
+    expect(error).toBeNull();
   });
 
   it('DB CHECK rejects reserved exception_reason when service is bypassed (Layer 1)', async () => {

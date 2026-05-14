@@ -14,6 +14,8 @@ import {
   ResolveCandidatesInputSchema,
   RouterDecisionSchema,
   DecisionRecordBeforeStateSchema,
+  DispatchTriggerInputSchema,
+  RouterDecisionOutcomeSchema,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 import { ExceptionReasonSchema } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 
@@ -151,5 +153,150 @@ describe('ExceptionReasonSchema — cross-schema-import sanity (chunk-6 home)', 
   it('accepts multi_candidate_ambiguity + unmatched_router_candidate literals (chunk-2 v1-active subset)', () => {
     expect(ExceptionReasonSchema.safeParse('multi_candidate_ambiguity').success).toBe(true);
     expect(ExceptionReasonSchema.safeParse('unmatched_router_candidate').success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Phase 4 chunk 3 — Subsystem 3 schemas (DispatchTriggerInputSchema +
+// RouterDecisionOutcomeSchema).
+//
+// Same schema-defense-on-internally-constructed-values rationale fires:
+// DispatchTriggerInputSchema's discriminated union edges + RouterDecision
+// OutcomeSchema's 5-value vocabulary are not naturally exercisable
+// through integration tests (the service constructs the envelope from
+// typed callers; the schema rejects malformed envelopes at the Layer 2
+// boundary). Unit schema tests are the canonical surface.
+// ---------------------------------------------------------------------
+
+describe('DispatchTriggerInputSchema — discriminated union edges', () => {
+  const ORG = '00000000-0000-0000-0000-0000000000aa';
+  const TRACE = '00000000-0000-0000-0000-0000000000bb';
+  const BILL = '00000000-0000-0000-0000-0000000000c1';
+  const VENDOR = '00000000-0000-0000-0000-0000000000c2';
+  const PREPAYMENT = '00000000-0000-0000-0000-0000000000c3';
+  const PERIOD = '00000000-0000-0000-0000-0000000000c4';
+  const CASE = '00000000-0000-0000-0000-0000000000c5';
+
+  it('T1_new_bill branch accepts valid payload (org_id + bill_id + vendor_id + trace_id)', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T1_new_bill',
+      org_id: ORG,
+      bill_id: BILL,
+      vendor_id: VENDOR,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('T1_new_bill branch rejects missing vendor_id', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T1_new_bill',
+      org_id: ORG,
+      bill_id: BILL,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('T3_new_vendor_prepayment branch accepts valid payload', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T3_new_vendor_prepayment',
+      org_id: ORG,
+      vendor_prepayment_id: PREPAYMENT,
+      vendor_id: VENDOR,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('T5_bill_state_transition branch accepts old/new lifecycle_state pair', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T5_bill_state_transition',
+      org_id: ORG,
+      bill_id: BILL,
+      old_lifecycle_state: 'approved_for_payment',
+      new_lifecycle_state: 'fully_paid',
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('T5_bill_state_transition branch rejects out-of-watched-set old_lifecycle_state (e.g. pending_approval)', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T5_bill_state_transition',
+      org_id: ORG,
+      bill_id: BILL,
+      old_lifecycle_state: 'pending_approval',
+      new_lifecycle_state: 'fully_paid',
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('T8_period_reopen branch accepts valid payload (org_id + period_id + trace_id)', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T8_period_reopen',
+      org_id: ORG,
+      period_id: PERIOD,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('T10_manual_override branch accepts valid payload (org_id + case_id + trace_id)', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T10_manual_override',
+      org_id: ORG,
+      case_id: CASE,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('cross-branch payload rejected (T1 trigger_type with period_id field is not a valid T1 branch)', () => {
+    const parsed = DispatchTriggerInputSchema.safeParse({
+      trigger_type: 'T1_new_bill',
+      org_id: ORG,
+      period_id: PERIOD,
+      trace_id: TRACE,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('reserved trigger types (T2/T4/T6/T7/T9) rejected — not in v1-active-emission-wired union', () => {
+    for (const reserved of [
+      'T2_new_payment',
+      'T4_new_vendor_credit',
+      'T6_payment_state_transition',
+      'T7_vendor_master_merge',
+      'T9_document_supersession',
+    ] as const) {
+      const parsed = DispatchTriggerInputSchema.safeParse({
+        trigger_type: reserved,
+        org_id: ORG,
+        trace_id: TRACE,
+      });
+      expect(parsed.success).toBe(false);
+    }
+  });
+});
+
+describe('RouterDecisionOutcomeSchema — 5-value vocabulary', () => {
+  it('accepts all 5 v1 values (no_change / re_routed_from_exception / re_routed_to_exception / candidate_superseded / dispatch_failed)', () => {
+    for (const v of [
+      'no_change',
+      're_routed_from_exception',
+      're_routed_to_exception',
+      'candidate_superseded',
+      'dispatch_failed',
+    ] as const) {
+      expect(RouterDecisionOutcomeSchema.safeParse(v).success).toBe(true);
+    }
+  });
+
+  it('rejects unknown values (e.g. unknown_outcome)', () => {
+    expect(RouterDecisionOutcomeSchema.safeParse('unknown_outcome').success).toBe(false);
+    expect(RouterDecisionOutcomeSchema.safeParse('matched').success).toBe(false);
+    expect(RouterDecisionOutcomeSchema.safeParse('').success).toBe(false);
   });
 });

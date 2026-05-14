@@ -1,6 +1,6 @@
 // src/services/document-platform/documentRouterService.ts
 //
-// Phase 4 Relationship Router service. Two public functions per
+// Phase 4 Relationship Router service. Three public functions per
 // ADR-0018 §item 1 three-subsystem decomposition:
 //   - completeCandidate(input, ctx) — Subsystem 1 (Ledger-State
 //     Candidate Completion) per ADR-0018 §item 2. Shipped at
@@ -28,6 +28,42 @@
 //           case classified → needs_review and creates queue entry.
 //       (c) unmatched (N=0) — same as (b) but
 //           exception_reason='unmatched_router_candidate'.
+//   - dispatchTrigger(input, ctx) — Subsystem 3 (Re-Evaluation Logic)
+//     per ADR-0018 §item 4. Shipped at chunk 3. Deterministic TS
+//     dispatcher consuming typed trigger events from AP/Spend domain
+//     services (T1/T3/T5/T8/T10 v1-active-emission-wired branches;
+//     T2/T4/T6 reserved pending paymentService.ts +
+//     vendorCreditService.ts future Phase 5 amendment; T7/T9 reserved
+//     post-v1 per ADR-0018). Fan-out across pre-commit cases per
+//     trigger semantic; per-case withInvariants transaction
+//     (5.a-i lock); per-trigger-type failure policy (5.b-i —
+//     T1/T3/T5/T8 log+skip+continue; T10 fail-and-propagate);
+//     post-commit dispatch from Phase 5/2/1 callers (5.c-P3-i —
+//     caller's primary mutation commits first; dispatcher fires
+//     after); Zod discriminated union envelope (5.d-i); direct
+//     cross-service call (5.e-i — no event-bus indirection at v1).
+//     Emits router_re_evaluation_fired audit event per case (7
+//     fields per ADR-0018 §Schema-deltas); on service-layer
+//     failure caught at the per-case loop, emits dispatch_failed
+//     audit row in SEPARATE small transaction (PG-rollback
+//     failures within per-case transaction stay silent by
+//     mechanism per Round 5.b'-α-modified). Integrates
+//     cancel_exception_with_audit RPC on re_routed_from_exception
+//     outcomes to flip the open exception_queue_entry to
+//     'cancelled' (chunk-6's reserved value activated at chunk 3
+//     per Round 4.a (α-iii) arc-extended-lifecycle-sequence
+//     codification — CHECK rename _chunk_6_active→_chunk_8_active
+//     admitting cancelled; closes chunk-2-Phase-4 retro item 7).
+//
+// pre_commit_link_rerouted audit event (ADR-0016 §6 line 1037) —
+// 10-field cascade-payload event capturing prior + new linked-
+// entity 3-tuples; reserved for a future chunk per "land schema
+// with consumer code" reverse-discipline (consumer ships at
+// chunk 3 via router_re_evaluation_fired.decision_outcome;
+// cascade-payload substrate deferred). The decision_outcome field
+// captures the coarse "re-route happened" fact; future chunk
+// wires the fine-grained prior→new entity coordinates per
+// ADR-0016 §6 when the cascade-payload construction logic ships.
 //
 // v1 envelope-less substrate-collapse: ADR-0018 §item 3's branch (b)
 // "propose-with-ambiguity-flag" presupposes Tier-1 ProposedEntryCard
@@ -107,15 +143,19 @@ import { z } from 'zod';
 import {
   CompleteCandidateInputSchema,
   DecisionRecordBeforeStateSchema,
+  DispatchTriggerInputSchema,
   DocumentRelationshipCandidateSchema,
   ResolveCandidatesInputSchema,
   type CompleteCandidateInputRaw,
   type CompleteCandidateInput,
   type DecisionRecordBeforeState,
+  type DispatchTriggerInputRaw,
+  type DispatchTriggerInput,
   type DocumentRelationshipCandidate,
   type ResolveCandidatesInputRaw,
   type ResolveCandidatesInput,
   type RouterDecision,
+  type RouterDecisionOutcome,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 import { LINKED_ENTITY_TABLE_MAP } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
@@ -123,6 +163,7 @@ import type { DocumentType } from '@/shared/schemas/document-platform/documentCa
 import { adminClient } from '@/db/adminClient';
 import { enqueueException } from '@/services/document-platform/documentExceptionService';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 
@@ -403,6 +444,166 @@ function deriveDecisionIdempotencyKey(case_id: string, trace_id: string): string
     .update(`${case_id}:${trace_id}:router_decision_recorded`)
     .digest('hex');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+// ---------------------------------------------------------------------
+// Subsystem 3 audit_log idempotency_key recipe (R1 per Round 2.a).
+//
+// Mirrors chunk-2 F-J-β shape with trigger_type substituting for
+// action_name in position 3: md5(case_id || ':' || trace_id || ':' ||
+// trigger_type)::uuid. Field order is case_id, trace_id, trigger_type
+// (verified at brief-draft against deriveDecisionIdempotencyKey above).
+//
+// Single trace_id may produce multiple router_re_evaluation_fired
+// audit rows of different trigger_types (e.g., T5 invalidation
+// produces a re-eval that fires T1-style fan-out via supersession
+// chains). trigger_type IS the discriminator that action_name was
+// for chunk 2's single-action-per-trace recipe. Same shape; new
+// dimension per F-J-10.
+//
+// Forensic-correlation-not-uniqueness: no UNIQUE constraint on
+// audit_log.idempotency_key; retries under same trace_id +
+// trigger_type produce multiple rows under the same key,
+// GROUP BY-deduplicable at higher orchestration layers.
+// ---------------------------------------------------------------------
+function deriveDispatchIdempotencyKey(
+  case_id: string,
+  trigger_type: string,
+  trace_id: string,
+): string {
+  const hex = createHash('md5')
+    .update(`${case_id}:${trace_id}:${trigger_type}`)
+    .digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+// ---------------------------------------------------------------------
+// Subsystem 3 re-eval primitive: rematchCandidate (γ'-partial).
+//
+// Thin wrapper over completeCandidate that reconstructs partial
+// CompleteCandidateInput from chunk-1's candidate_features substrate
+// + linked_entity_id fallback for vendor_id derivation. Honors
+// ADR-0018 §item 4 "re-evaluates pre-commit cases" contract at
+// matching-semantic level for cases-with-prior-candidates.
+//
+// γ'-partial per-trigger coverage at v1:
+//   - T5/T8 fan-out scope (cases with pre-commit candidates pointing
+//     at transitioned bill / candidates in reopened period):
+//     re-routing-functional via this helper.
+//   - T10 single-case: re-routing-functional if case has prior
+//     candidates; audit-only (returns []) if stranded.
+//   - T1/T3 fan-out scope (stranded cases in exception queue):
+//     returns [] (no prior candidate to reconstruct from); caller
+//     maps to decision_outcome='no_change' at v1. Re-routing for
+//     stranded cases activates when Phase 7 ships substrate for
+//     classification + extraction + vendor-matching reconstruction.
+//
+// Empty-array return for "no prior candidate" is semantically
+// correct (γ'-partial path), NOT a bug.
+//
+// Reconstruction fidelity (per F-J-13 verification at chunk-3 impl):
+//   - document_type ← candidate_features.document_type
+//   - classification_confidence ← candidate_features.classification_confidence
+//   - vendor_match.confidence ← candidate_features.vendor_match_confidence
+//   - vendor_match.match_type ← candidate_features.vendor_match_type
+//   - extracted_fields.invoice_amount / receipt_amount ← candidate_features.extracted_amount
+//   - extracted_fields.invoice_date ← candidate_features.extracted_invoice_date
+//   - vendor_match.vendor_id ← priorCandidate.linked_entity_id +
+//     Phase 5 entity row lookup (bills/vendor_prepayments carry
+//     vendor_id at Phase 5 ship)
+// ---------------------------------------------------------------------
+async function rematchCandidate(
+  case_id: string,
+  trace_id: string,
+  ctx: ServiceContext,
+): Promise<DocumentRelationshipCandidate[]> {
+  const log = loggerWith({ trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  // Load case's candidates; pick first head-of-chain (supersedes_candidate_id IS NULL).
+  const candidates = await loadCandidatesForCase(db, case_id);
+  const priorCandidate = candidates.find((c) => c.supersedes_candidate_id === null);
+
+  if (!priorCandidate) {
+    // γ'-partial path: stranded case with no prior candidate.
+    // Caller maps to no_change.
+    log.info(
+      { case_id, trigger_trace_id: trace_id },
+      'rematchCandidate: no prior candidate (γ\'-partial stranded-case path); returning []',
+    );
+    return [];
+  }
+
+  // Derive vendor_match.vendor_id via linked_entity_id fallback.
+  const features = priorCandidate.candidate_features as Record<string, unknown>;
+  let vendor_id: string | null = null;
+
+  if (priorCandidate.linked_entity_type === 'bill') {
+    const { data, error } = await db
+      .from('bills')
+      .select('vendor_id')
+      .eq('bill_id', priorCandidate.linked_entity_id)
+      .single();
+    if (error || !data) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `rematchCandidate: bills.vendor_id lookup failed for bill ${priorCandidate.linked_entity_id}: ${error?.message ?? 'no rows'}`,
+      );
+    }
+    vendor_id = (data as { vendor_id: string }).vendor_id;
+  } else if (priorCandidate.linked_entity_type === 'vendor_prepayment') {
+    const { data, error } = await db
+      .from('vendor_prepayments')
+      .select('vendor_id')
+      .eq('id', priorCandidate.linked_entity_id)
+      .single();
+    if (error || !data) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `rematchCandidate: vendor_prepayments.vendor_id lookup failed for vendor_prepayment ${priorCandidate.linked_entity_id}: ${error?.message ?? 'no rows'}`,
+      );
+    }
+    vendor_id = (data as { vendor_id: string }).vendor_id;
+  } else {
+    // Other linked_entity_types (bill_line, payment, bank_transaction, etc.)
+    // shouldn't appear at v1 fan-out (paymentService/vendorCreditService
+    // deferred per Round 1 finding). Defensive: log and return [] for
+    // unrecognized types; this is a verify-at-impl finding worth flagging.
+    log.warn(
+      { case_id, linked_entity_type: priorCandidate.linked_entity_type },
+      'rematchCandidate: unrecognized linked_entity_type for vendor_id derivation at v1; returning []',
+    );
+    return [];
+  }
+
+  // Reconstruct CompleteCandidateInput from candidate_features.
+  const reconstructedInput: CompleteCandidateInputRaw = {
+    document_case_id: case_id,
+    source_document_id: priorCandidate.source_document_id,
+    document_type: features.document_type as DocumentType,
+    classification_confidence: features.classification_confidence as number,
+    extracted_fields: {
+      invoice_amount: features.extracted_amount ?? null,
+      invoice_date: features.extracted_invoice_date ?? null,
+      receipt_amount: features.extracted_amount ?? null,
+    },
+    vendor_match: {
+      vendor_id,
+      confidence: features.vendor_match_confidence as number,
+      match_type: features.vendor_match_type as
+        | 'exact_name'
+        | 'alias'
+        | 'tax_id'
+        | 'email'
+        | 'domain'
+        | 'fuzzy_name'
+        | 'no_match',
+      candidate_alternatives: [],
+    },
+    trace_id,
+  };
+
+  return await completeCandidate(reconstructedInput, ctx);
 }
 
 // ---------------------------------------------------------------------
@@ -950,6 +1151,464 @@ export async function resolveCandidates(
     'Subsystem 2 routed to branches (b)/(c): decision recorded + chunk-6 enqueueException invoked',
   );
   return decision;
+}
+
+// ---------------------------------------------------------------------
+// Subsystem 3 per-case re-evaluation helper (private).
+//
+// One per-case "unit of work" applied by the dispatcher's fan-out loop.
+// Logic per amended brief §Architecture + Amendment §3 6-rule
+// discriminator:
+//
+//   1. count_before = K2 head-of-chain SELECT pre-mutation.
+//   2. open_exception_id = open exception_queue_entries row for case
+//      (or null).
+//   3. newCandidates = rematchCandidate(case_id, trace_id, ctx).
+//      Empty for stranded cases (γ'-partial path); non-empty for cases
+//      with prior candidates whose linked_entity_type ∈ ('bill',
+//      'vendor_prepayment').
+//   4. count_after = newCandidates.length (β-4 reconciliation: brief
+//      Task 4 step 7 said "SELECT COUNT(*) post-mutation" but K2 head-
+//      of-chain literal yields count_after = count_before for empty
+//      re-runs since chunk-1 completeCandidate doesn't supersede priors.
+//      newCandidates.length captures the operationally-coherent "fresh
+//      valid candidate set size" the 6-rule discriminator needs; this
+//      is the minimum-deviation interpretation that makes rules 2/4/6
+//      reachable at v1).
+//   5. If newCandidates non-empty AND case is not stranded: invoke
+//      Subsystem 2 resolveCandidates for ambiguity resolution. Branch
+//      (a) writes head pointer; branches (b)/(c) enqueue fresh
+//      exception. At v1 with single-feature scoring, every N≥2 case
+//      routes to branch (b) → exception; N=1 routes to branch (a) →
+//      matched.
+//   6. 6-rule discriminator:
+//      | # | count_before | count_after | open exception | outcome | Action |
+//      |---|---|---|---|---|---|
+//      | 1 | any | > 0 | yes | re_routed_from_exception | cancel_exception_with_audit + audit |
+//      | 2 | > 0 | > 0 | no  | candidate_superseded     | audit only |
+//      | 3 | 0   | > 0 | no  | (unreachable γ'-partial) | throw POST_FAILED |
+//      | 4 | > 0 | 0   | no  | re_routed_to_exception   | enqueueException + audit |
+//      | 5 | > 0 | 0   | yes | (data-inconsistent)      | throw POST_FAILED |
+//      | 6 | any | 0   | (else) | no_change             | audit only |
+//   7. Emit router_re_evaluation_fired audit via recordMutation. R1
+//      idempotency_key recipe.
+//
+// Rule 1 is structurally unreachable at v1 (γ'-partial returns [] for
+// stranded cases by definition; cases with prior candidates have no
+// concurrent open exception per chunk-6 partial UNIQUE). Defensive
+// code present for Phase 7 γ-full activation.
+//
+// Rules 3+5 throw POST_FAILED with descriptive log per β-1 catchall
+// precedent (no INTEGRITY_VIOLATION in ServiceErrorCode union).
+// ---------------------------------------------------------------------
+async function runPerCaseReEvaluation(
+  case_id: string,
+  trigger_type: DispatchTriggerInput['trigger_type'],
+  org_id: string,
+  trace_id: string,
+  ctx: ServiceContext,
+): Promise<RouterDecisionOutcome> {
+  const log = loggerWith({ trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  // K2 count_before: head-of-chain candidates pre-mutation.
+  const { count: countBeforeRaw, error: countBeforeErr } = await db
+    .from('document_relationship_candidates')
+    .select('id', { count: 'exact', head: true })
+    .eq('document_case_id', case_id)
+    .is('supersedes_candidate_id', null);
+  if (countBeforeErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `runPerCaseReEvaluation count_before failed for case ${case_id}: ${countBeforeErr.message}`,
+    );
+  }
+  const count_before = countBeforeRaw ?? 0;
+
+  // Open-exception probe: did the case enter this dispatcher run with
+  // an open exception_queue_entries row?
+  const { data: openExc, error: excErr } = await db
+    .from('exception_queue_entries')
+    .select('exception_queue_entry_id')
+    .eq('document_case_id', case_id)
+    .eq('exception_status', 'open')
+    .maybeSingle();
+  if (excErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `runPerCaseReEvaluation open-exception probe failed for case ${case_id}: ${excErr.message}`,
+    );
+  }
+  const open_exception_id: string | null = openExc?.exception_queue_entry_id ?? null;
+
+  // γ'-partial rematch primitive. Returns empty for stranded cases;
+  // non-empty for cases with prior candidates whose linked_entity_type
+  // ∈ ('bill', 'vendor_prepayment').
+  const newCandidates = await rematchCandidate(case_id, trace_id, ctx);
+  const count_after = newCandidates.length;
+
+  // If rematchCandidate produced candidates and case has no open
+  // exception, invoke Subsystem 2 ambiguity resolution. resolveCandidates'
+  // branch (a) RPC has state-transition guard WHERE state='classified';
+  // skipping when open_exception_id is set avoids the guard violation
+  // (case is in needs_review for stranded paths). This path is rule 2
+  // at v1 (candidate_superseded under D-partial-no-idempotency).
+  if (count_after > 0 && !open_exception_id) {
+    await resolveCandidates({ document_case_id: case_id, trace_id }, ctx);
+  }
+
+  // 6-rule discriminator.
+  let decision_outcome: RouterDecisionOutcome;
+
+  if (count_after > 0 && open_exception_id) {
+    // Rule 1: re_routed_from_exception (structurally unreachable at v1
+    // under γ'-partial; defensive code for Phase 7 γ-full activation).
+    decision_outcome = 're_routed_from_exception';
+
+    const { error: cancelErr } = await db.rpc('cancel_exception_with_audit', {
+      p_entry_id: open_exception_id,
+      p_audit: {
+        user_id: ctx.caller.user_id ?? '',
+        trace_id,
+        action: 'exception_cancelled',
+        entity_type: 'exception_queue_entry',
+        tool_name: null,
+        idempotency_key: null,
+        reason: 'router_re_evaluation_fired: case re-routed out of exception queue',
+      },
+    });
+    if (cancelErr) {
+      // 23514 → EXCEPTION_ALREADY_CANCELLED (chunk-3 new). Caller-side
+      // symmetric with chunk-6's EXCEPTION_ALREADY_OPEN. All other PG
+      // errors (23503 FK violation, P0002 no_data_found, etc.) →
+      // POST_FAILED catchall per β-1 precedent.
+      if (cancelErr.code === '23514') {
+        throw new ServiceError(
+          'EXCEPTION_ALREADY_CANCELLED',
+          `cancel_exception_with_audit: ${cancelErr.message}`,
+        );
+      }
+      throw new ServiceError(
+        'POST_FAILED',
+        `cancel_exception_with_audit RPC failed: ${cancelErr.message}`,
+      );
+    }
+  } else if (count_after > 0 && count_before > 0) {
+    // Rule 2: candidate_superseded (D-partial-no-idempotency means this
+    // fires on every non-empty re-run; chunk-1 completeCandidate does
+    // not dedup against existing document_relationship_candidates).
+    decision_outcome = 'candidate_superseded';
+  } else if (count_after > 0 && count_before === 0) {
+    // Rule 3: unreachable under γ'-partial. rematchCandidate returns []
+    // for stranded cases (count_before=0 implies no prior candidate to
+    // reconstruct from).
+    log.error(
+      { case_id, count_before, count_after, trigger_type },
+      'dispatcher framing violation: count_before=0 + count_after>0 unreachable',
+    );
+    throw new ServiceError(
+      'POST_FAILED',
+      `dispatcher framing violation: count_before=0 + count_after>0 unreachable; rematchCandidate produced non-empty for stranded case ${case_id}`,
+    );
+  } else if (count_after === 0 && count_before > 0 && !open_exception_id) {
+    // Rule 4: re_routed_to_exception. Invoke chunk-6 enqueueException
+    // with unmatched_router_candidate. ServiceError propagation is
+    // verbatim per chunks 3-6 no-wrap convention (EXCEPTION_ALREADY_OPEN
+    // passes through unchanged should a concurrent dispatch race).
+    decision_outcome = 're_routed_to_exception';
+
+    await enqueueException(
+      {
+        document_case_id: case_id,
+        exception_reason: 'unmatched_router_candidate',
+        trace_id,
+      },
+      ctx,
+    );
+  } else if (count_after === 0 && count_before > 0 && open_exception_id) {
+    // Rule 5: case has prior candidates AND is currently in exception
+    // queue. β-5 reconciliation: amended brief §3 Rule 5 framed this
+    // as "data-inconsistent" with throw POST_FAILED, but this state is
+    // operationally reachable at v1 — T5/T8 invalidation produces
+    // re_routed_to_exception (rule 4) which enqueues an exception
+    // without removing prior candidates; a subsequent T1/T3 fan-out
+    // legitimately picks up the case with priors + open exception.
+    // Operationally correct outcome: no_change (rematchCandidate found
+    // no fresh matches; case stays in exception queue).
+    decision_outcome = 'no_change';
+  } else {
+    // Rule 6: no_change. T1/T3/T10-stranded path under γ'-partial
+    // (count_before=0 + count_after=0) and any other "no work" path.
+    decision_outcome = 'no_change';
+  }
+
+  // Emit router_re_evaluation_fired audit row (7 fields per ADR-0018
+  // §Schema-deltas) via recordMutation. R1 idempotency_key recipe.
+  // org_id surfaces via dispatcher input (parsed.org_id) — passed in.
+  await recordMutation(db, ctx, {
+    org_id,
+    action: 'router_re_evaluation_fired',
+    entity_type: 'document_case',
+    entity_id: case_id,
+    before_state: {
+      trigger_type,
+      candidate_count_before: count_before,
+      candidate_count_after: count_after,
+      decision_outcome,
+    },
+    idempotency_key: deriveDispatchIdempotencyKey(case_id, trigger_type, trace_id),
+  });
+
+  log.info(
+    { case_id, trigger_type, count_before, count_after, decision_outcome },
+    'router_re_evaluation_fired',
+  );
+  return decision_outcome;
+}
+
+// ---------------------------------------------------------------------
+// Per-trigger fan-out query helpers (private).
+//
+// Each helper returns the list of document_case_ids that
+// runPerCaseReEvaluation should apply to for a given trigger event.
+// Per the amended brief §Per-trigger semantic-coverage table:
+//   - T1 / T3: fan-out across stranded cases in exception queue
+//     (audit-only at v1; rematchCandidate returns [] for stranded).
+//   - T5: cases with pre-commit candidates pointing at the transitioned
+//     bill (re-routing-functional via rematchCandidate).
+//   - T8: cases with pre-commit candidates whose extracted_invoice_date
+//     falls in the reopened period (re-routing-functional).
+//   - T10: single caller-specified case (re-routing-functional if case
+//     has priors; audit-only if stranded).
+// ---------------------------------------------------------------------
+
+// T1 / T3 fan-out (v1 audit-only): open exception_queue_entries with
+// exception_reason='unmatched_router_candidate' for the org. Vendor-
+// targeted fan-out activates when Phase 7 ships substrate to link
+// stranded cases to vendor identifiers.
+async function computeT1T3FanOut(db: Db, org_id: string): Promise<string[]> {
+  const { data, error } = await db
+    .from('exception_queue_entries')
+    .select('document_case_id')
+    .eq('org_id', org_id)
+    .eq('exception_status', 'open')
+    .eq('exception_reason', 'unmatched_router_candidate');
+  if (error) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `computeT1T3FanOut failed for org ${org_id}: ${error.message}`,
+    );
+  }
+  const ids = (data ?? []).map((r) => r.document_case_id as string);
+  // De-duplicate (partial UNIQUE on open status guarantees uniqueness
+  // per case, but be defensive).
+  return Array.from(new Set(ids));
+}
+
+// T5 fan-out: head-of-chain candidates pointing at the transitioned bill.
+async function computeT5FanOut(
+  db: Db,
+  org_id: string,
+  bill_id: string,
+): Promise<string[]> {
+  const { data, error } = await db
+    .from('document_relationship_candidates')
+    .select('document_case_id')
+    .eq('org_id', org_id)
+    .eq('linked_entity_type', 'bill')
+    .eq('linked_entity_id', bill_id)
+    .is('supersedes_candidate_id', null);
+  if (error) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `computeT5FanOut failed for bill ${bill_id}: ${error.message}`,
+    );
+  }
+  const ids = (data ?? []).map((r) => r.document_case_id as string);
+  return Array.from(new Set(ids));
+}
+
+// T8 fan-out: head-of-chain candidates whose candidate_features
+// .extracted_invoice_date falls in the reopened period's date range.
+// accounting_date derivation at v1 uses extracted_invoice_date as the
+// proxy (verify-at-impl ledger item 3; brief assumed shape, verified
+// here). Phase 7 may introduce a dedicated accounting_date column on
+// the case substrate; if so, the filter migrates.
+async function computeT8FanOut(
+  db: Db,
+  org_id: string,
+  period_id: string,
+): Promise<string[]> {
+  // Resolve period date range first.
+  const { data: period, error: periodErr } = await db
+    .from('fiscal_periods')
+    .select('start_date, end_date, org_id')
+    .eq('period_id', period_id)
+    .single();
+  if (periodErr || !period) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `computeT8FanOut: fiscal_period ${period_id} not found: ${periodErr?.message ?? 'no rows'}`,
+    );
+  }
+  if ((period as { org_id: string }).org_id !== org_id) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `computeT8FanOut: fiscal_period ${period_id} org_id mismatch`,
+    );
+  }
+
+  // Filter head-of-chain candidates by extracted_invoice_date in range.
+  const { data, error } = await db
+    .from('document_relationship_candidates')
+    .select('document_case_id, candidate_features')
+    .eq('org_id', org_id)
+    .is('supersedes_candidate_id', null);
+  if (error) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `computeT8FanOut head-of-chain query failed: ${error.message}`,
+    );
+  }
+
+  const start = (period as { start_date: string }).start_date;
+  const end = (period as { end_date: string }).end_date;
+  const ids = new Set<string>();
+  for (const row of data ?? []) {
+    const features = (row as { candidate_features: Record<string, unknown> })
+      .candidate_features;
+    const extractedDate = features?.extracted_invoice_date as string | null | undefined;
+    if (!extractedDate) continue;
+    if (extractedDate >= start && extractedDate <= end) {
+      ids.add((row as { document_case_id: string }).document_case_id);
+    }
+  }
+  return Array.from(ids);
+}
+
+// ---------------------------------------------------------------------
+// Public: dispatchTrigger (Subsystem 3 entry point).
+//
+// Layer 2 boundary: Zod parse via DispatchTriggerInputSchema (5-branch
+// discriminated union). Per-trigger fan-out via the helpers above;
+// per-case loop wrapping runPerCaseReEvaluation in try/catch.
+//
+// Per-trigger-type failure policy (Round 5.b-i lock):
+//   - T1 / T3 / T5 / T8: log + skip + continue (best-effort fan-out).
+//     Failed case emits dispatch_failed audit in SEPARATE small
+//     transaction so the audit survives the per-case rollback.
+//   - T10: re-throw the original error after dispatch_failed audit.
+//     Caller-driven trigger; failure must propagate so the caller
+//     (documentExceptionService.resolveException) can surface it.
+//
+// PG-rollback failures within the per-case transaction stay silent
+// by mechanism (rollback voids any in-transaction audit row); they
+// surface only via pino logs. dispatch_failed captures the operational
+// subset where the dispatcher catches a thrown ServiceError outside
+// the per-case rollback boundary.
+// ---------------------------------------------------------------------
+export async function dispatchTrigger(
+  input: DispatchTriggerInputRaw,
+  ctx: ServiceContext,
+): Promise<void> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+
+  // Layer 2 boundary: Zod parse at service entry. Discriminated union
+  // rejects unknown trigger_type values (T2/T4/T6 reserved per Framing
+  // F; T7/T9 reserved post-v1).
+  let parsed: DispatchTriggerInput;
+  try {
+    parsed = DispatchTriggerInputSchema.parse(input);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `dispatchTrigger validation failed: ${err.message}`,
+      );
+    }
+    throw err;
+  }
+
+  const db = adminClient();
+
+  // Compute fan-out case IDs per trigger_type. Each helper opens its
+  // own read-only queries against adminClient. T10 short-circuits to
+  // the single caller-specified case.
+  let fanOutCaseIds: string[];
+  switch (parsed.trigger_type) {
+    case 'T1_new_bill':
+    case 'T3_new_vendor_prepayment':
+      fanOutCaseIds = await computeT1T3FanOut(db, parsed.org_id);
+      break;
+    case 'T5_bill_state_transition':
+      fanOutCaseIds = await computeT5FanOut(db, parsed.org_id, parsed.bill_id);
+      break;
+    case 'T8_period_reopen':
+      fanOutCaseIds = await computeT8FanOut(db, parsed.org_id, parsed.period_id);
+      break;
+    case 'T10_manual_override':
+      fanOutCaseIds = [parsed.case_id];
+      break;
+  }
+
+  log.info(
+    {
+      trigger_type: parsed.trigger_type,
+      fan_out_count: fanOutCaseIds.length,
+      org_id: parsed.org_id,
+    },
+    'dispatchTrigger fan-out computed',
+  );
+
+  // Per-case fan-out loop with try/catch.
+  for (const caseId of fanOutCaseIds) {
+    try {
+      await runPerCaseReEvaluation(
+        caseId,
+        parsed.trigger_type,
+        parsed.org_id,
+        parsed.trace_id,
+        ctx,
+      );
+    } catch (err) {
+      log.error(
+        { err, case_id: caseId, trigger_type: parsed.trigger_type },
+        'Per-case re-evaluation failed',
+      );
+
+      // Emit dispatch_failed audit in SEPARATE small transaction.
+      // Innermost catch is fully silent per Round 5.b'-α-modified.
+      try {
+        await recordMutation(adminClient(), ctx, {
+          org_id: parsed.org_id,
+          action: 'router_re_evaluation_fired',
+          entity_type: 'document_case',
+          entity_id: caseId,
+          before_state: {
+            trigger_type: parsed.trigger_type,
+            decision_outcome: 'dispatch_failed',
+            error_class: err instanceof ServiceError ? err.code : 'unknown',
+          },
+          idempotency_key: deriveDispatchIdempotencyKey(
+            caseId,
+            parsed.trigger_type,
+            parsed.trace_id,
+          ),
+        });
+      } catch (auditErr) {
+        log.error(
+          { auditErr, case_id: caseId },
+          'dispatch_failed audit emission failed; fully silent',
+        );
+      }
+
+      // T10 (single-case caller-driven): fail-and-propagate.
+      // Fan-out triggers: continue to next case.
+      if (parsed.trigger_type === 'T10_manual_override') {
+        throw err;
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------

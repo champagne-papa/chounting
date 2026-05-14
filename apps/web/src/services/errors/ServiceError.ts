@@ -92,6 +92,14 @@ export type ServiceErrorCode =
   // Maps from Postgres unique_violation (23505) on
   // exception_queue_entries_open_per_case_idx.
   | 'EXCEPTION_ALREADY_OPEN'
+  // Document core (Phase 4 chunk 3) — exception queue state-machine
+  // rejection on dispatcher-initiated cancellation per ADR-0018
+  // Subsystem 3 contract. Maps from Postgres check_violation (23514)
+  // on cancel_exception_with_audit's WHERE exception_status='open'
+  // guard when the entry has drifted to 'resolved' or 'cancelled'.
+  // Caller-side symmetric with EXCEPTION_ALREADY_OPEN (both signal
+  // "queue entry is in unexpected state for this operation").
+  | 'EXCEPTION_ALREADY_CANCELLED'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future
