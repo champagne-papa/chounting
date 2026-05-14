@@ -12,17 +12,22 @@ export const DocumentTypeSchema = z.enum([
 ]);
 export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 
-// Chunk-6 v1-active subset (was 4 values at chunk 2; chunk 6 adds
-// 'classified' + 'needs_review' per the document_cases_state_chunk_6_active
-// CHECK broadening in the chunk-6 substrate migration). The Zod
-// boundary mirrors the Layer 1 CHECK admission set verbatim.
+// v1-active subset, broadened incrementally per ADR-0011 §3 matrix:
+// chunk-2-Phase-2 admitted 4 values; chunk-6-Phase-2 added 'classified'
+// + 'needs_review' (document_cases_state_chunk_6_active CHECK);
+// chunk-2-Phase-4 adds 'matched' for the classified → matched
+// transition emitted by Subsystem 2 branch (a) per ADR-0018 §item 3
+// (document_cases_state_chunk_7_active CHECK; first cross-phase
+// substrate modification at chunks-1-6 per F-J-θ). The Zod boundary
+// mirrors the Layer 1 CHECK admission set verbatim.
 //
 // Still reserved at Layer 1 + Layer 2 (CHECK-rejected; Zod-rejected):
-// extracting / matched / committed / archived. Future chunks broaden.
+// extracting / committed / archived. Future chunks broaden.
 export const DocumentCaseStateSchema = z.enum([
   'received',
   'classified',
   'needs_review',
+  'matched',
   'proposed',
   'approved',
   'rejected',

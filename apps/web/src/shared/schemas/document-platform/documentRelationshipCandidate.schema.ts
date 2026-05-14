@@ -6,6 +6,7 @@ import {
   VALID_PAIRS,
 } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
 import { DocumentTypeSchema } from '@/shared/schemas/document-platform/documentCase.schema';
+import { ExceptionReasonSchema } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 
 // Layer 2 boundary: v1-active subsets only.
 // Reserved values defined in shared enum types but rejected here.
@@ -213,3 +214,151 @@ export const DocumentRelationshipCandidateSchema = z
     },
   );
 export type DocumentRelationshipCandidate = z.infer<typeof DocumentRelationshipCandidateSchema>;
+
+// -----------------------------------------------------------
+// ResolveCandidatesInputSchema — Subsystem 2 entry payload.
+//
+// The case-id-driven shape per R3.2 lock: Subsystem 2 reads the
+// candidate set fresh from document_relationship_candidates (Tier
+// 2.5 substrate-as-source-of-truth) filtered by document_case_id.
+// No current_state field — state-transition legality is enforced
+// at the substrate layer via the branch (a) atomic RPC's
+// IF NOT FOUND RAISE check_violation guard. Symmetric forensic-
+// replay with chunk-1's CompleteCandidateInputSchema; forward-
+// compat with Subsystem 3 supersession filters at chunks 3+.
+//
+// Naming follows chunks-5-6 + chunk-1 <Verb><Entity>InputSchema
+// convention: documentRouterService.resolveCandidates() →
+// ResolveCandidatesInputSchema.
+// -----------------------------------------------------------
+export const ResolveCandidatesInputSchema = z.object({
+  document_case_id: z.string().uuid(),
+  trace_id: z.string().uuid(),
+});
+export type ResolveCandidatesInputRaw = z.input<typeof ResolveCandidatesInputSchema>;
+export type ResolveCandidatesInput = z.infer<typeof ResolveCandidatesInputSchema>;
+
+// -----------------------------------------------------------
+// RouterDecisionSchema — Subsystem 2 service return shape.
+//
+// Eight fields capturing the routing decision per R3.1 lock.
+// Iff-constraints on (branch, winner_candidate_id,
+// exception_queue_entry_id, exception_reason) enforced via
+// .refine() at Layer 2 — schema-defense-on-internally-constructed-
+// values (chunk-1 pair-validity-family discriminator): the shape
+// is service-emitted, no external-input path, so .refine() at the
+// schema layer is the canonical defense. No duplicate DB CHECK
+// (the schema is on a return type, not a persisted row).
+//
+// Branch (a): winner_candidate_id is non-null; exception_queue_entry_id
+// and exception_reason are null (head pointer set; case → matched).
+// Branches (b)/(c): winner_candidate_id is null; exception_queue_entry_id
+// and exception_reason are non-null (chunk-6 enqueueException
+// invoked; case → needs_review). v1 envelope-less collapse per
+// F-J-η preserves the branch identifier here for forward-compat
+// with envelope-shipping chunks.
+// -----------------------------------------------------------
+export const RouterDecisionSchema = z
+  .object({
+    branch: z.enum(['a', 'b', 'c']),
+    document_case_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+    candidate_set_ids: z.array(z.string().uuid()),
+    ambiguity_margin_computed: z.number().nullable(),
+    winner_candidate_id: z.string().uuid().nullable(),
+    exception_queue_entry_id: z.string().uuid().nullable(),
+    exception_reason: ExceptionReasonSchema.nullable(),
+  })
+  .refine(
+    (d) => {
+      if (d.branch === 'a') {
+        return (
+          d.winner_candidate_id !== null &&
+          d.exception_queue_entry_id === null &&
+          d.exception_reason === null
+        );
+      }
+      return (
+        d.winner_candidate_id === null &&
+        d.exception_queue_entry_id !== null &&
+        d.exception_reason !== null
+      );
+    },
+    {
+      message:
+        'RouterDecision iff: branch=a ⇔ winner non-null + exception fields null; branch=b/c ⇔ winner null + exception fields non-null',
+      path: ['branch'],
+    },
+  );
+export type RouterDecision = z.infer<typeof RouterDecisionSchema>;
+
+// -----------------------------------------------------------
+// DecisionRecordBeforeStateSchema — audit_log.before_state JSONB
+// shape for the chunk-2 decision-record row.
+//
+// Ten fields per R3.3.x.α lock + F-J-ζ forensic-payload self-
+// containment for ADR-0019 calibration-cycle queryability:
+//   - Explicit top_confidence + runner_up_confidence (redundant
+//     with confidence_scores map + candidate_set_ids ordered
+//     derivation) for ADR-0019 §7 query-path simplification.
+//   - ambiguity_margin_threshold captures at-decision-time
+//     AMBIGUITY_MARGIN_V1_PROVISIONAL value per ADR-0019 §13
+//     audit-trail invariance.
+//   - document_type as calibration-cycle stratification key
+//     per ADR-0019 §9 row 1.
+//
+// Iff-constraints enforced via .refine():
+//   - Branch ⇔ winner_candidate_id / exception_reason (same
+//     iff as RouterDecisionSchema).
+//   - N=0 ⇔ top_confidence null.
+//   - N<2 ⇔ runner_up_confidence null AND
+//     ambiguity_margin_computed null.
+//
+// Schema-defense-on-internally-constructed-values: service
+// constructs the JSONB payload from internal computation
+// (margin derivation + threshold capture); .refine() catches
+// service bugs at Layer 2 before INSERT into audit_log.
+// -----------------------------------------------------------
+export const DecisionRecordBeforeStateSchema = z
+  .object({
+    branch: z.enum(['a', 'b', 'c']),
+    candidate_set_ids: z.array(z.string().uuid()),
+    confidence_scores: z.record(z.number()),
+    top_confidence: z.number().nullable(),
+    runner_up_confidence: z.number().nullable(),
+    ambiguity_margin_computed: z.number().nullable(),
+    ambiguity_margin_threshold: z.number(),
+    winner_candidate_id: z.string().uuid().nullable(),
+    exception_reason: ExceptionReasonSchema.nullable(),
+    document_type: DocumentTypeSchema,
+  })
+  .refine(
+    (s) => {
+      if (s.branch === 'a') {
+        if (s.winner_candidate_id === null || s.exception_reason !== null) {
+          return false;
+        }
+      } else {
+        if (s.winner_candidate_id !== null || s.exception_reason === null) {
+          return false;
+        }
+      }
+      const N = s.candidate_set_ids.length;
+      if (N === 0 && s.top_confidence !== null) return false;
+      if (N >= 1 && s.top_confidence === null) return false;
+      if (N < 2) {
+        if (s.runner_up_confidence !== null) return false;
+        if (s.ambiguity_margin_computed !== null) return false;
+      } else {
+        if (s.runner_up_confidence === null) return false;
+        if (s.ambiguity_margin_computed === null) return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'DecisionRecordBeforeState iff: branch ⇔ winner/exception + N=0 ⇔ top_confidence null + N<2 ⇔ runner_up_confidence/margin null',
+      path: ['branch'],
+    },
+  );
+export type DecisionRecordBeforeState = z.infer<typeof DecisionRecordBeforeStateSchema>;

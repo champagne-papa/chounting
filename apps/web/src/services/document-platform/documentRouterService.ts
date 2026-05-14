@@ -1,21 +1,55 @@
 // src/services/document-platform/documentRouterService.ts
 //
-// Phase 4 chunk 1 — Subsystem 1 (Ledger-State Candidate Completion)
-// per ADR-0018 §item 2. Pattern B unwrapped service (chunks 1-3 + 5 +
-// 6 precedent; route handlers wrap via withInvariants() at the call
-// site with action grain 'document_router.complete_candidate').
-//
-// One public function:
-//   - completeCandidate(input, ctx) — given an "incomplete candidate"
-//     per ADR-0014 §11 (document_type + extracted fields + vendor
+// Phase 4 Relationship Router service. Two public functions per
+// ADR-0018 §item 1 three-subsystem decomposition:
+//   - completeCandidate(input, ctx) — Subsystem 1 (Ledger-State
+//     Candidate Completion) per ADR-0018 §item 2. Shipped at
+//     chunk 1 (6f3c2ad). Given an "incomplete candidate" per
+//     ADR-0014 §11 (document_type + extracted fields + vendor
 //     match), reads committed AP/Spend state via Tier 2.5 cross-
 //     domain reads, produces zero or more DocumentRelationshipCandidate
-//     rows via atomic batch RPC.
+//     rows via atomic batch RPC. Does NOT transition state on any
+//     exit path (M3-α discipline).
+//   - resolveCandidates(input, ctx) — Subsystem 2 (Ambiguity
+//     Resolution) per ADR-0018 §item 3. Shipped at chunk 2. Reads
+//     the candidate set for a document_case (Tier 2.5 substrate-
+//     as-source-of-truth; no cross-domain reads at Subsystem 2 —
+//     narrower than Subsystem 1's profile), computes the
+//     ambiguity margin against AMBIGUITY_MARGIN_V1_PROVISIONAL,
+//     and routes the case via three branches:
+//       (a) single winner (N=1, or N≥2 with margin ≥ threshold) —
+//           atomic set_case_head_pointer_with_audit RPC writes head
+//           pointer + transitions case classified → matched +
+//           emits decision-record + state-transition audit rows.
+//       (b) ambiguous (N≥2 with margin < threshold) — pure-audit
+//           record_router_decision RPC emits decision-record row;
+//           cross-service enqueueException with
+//           exception_reason='multi_candidate_ambiguity' transitions
+//           case classified → needs_review and creates queue entry.
+//       (c) unmatched (N=0) — same as (b) but
+//           exception_reason='unmatched_router_candidate'.
 //
-// Four private read helpers (Tier 2.5 cross-domain reads via
-// adminClient; chunks-5-6 don't cross-import services for reads;
-// apReportService.loadBillsWithAmountDue + vendorReportService.balance()
-// are the closest precedents):
+// v1 envelope-less substrate-collapse: ADR-0018 §item 3's branch (b)
+// "propose-with-ambiguity-flag" presupposes Tier-1 ProposedEntryCard
+// disambiguation UI that v1 does not ship. Chunk 2 collapses branch
+// (b) → branch (c) at the substrate mutation level (head pointer
+// unset; case → needs_review; differ only in exception_reason).
+// Branch identifier preserved in audit before_state for forward-
+// compat with envelope-shipping chunks.
+//
+// v1 pipeline orchestrator contract (Phase 7): always call
+// resolveCandidates after completeCandidate, regardless of candidate
+// count. N=0 handled inside Subsystem 2 (branch c), not at orchestrator-
+// side. Grounded in completeCandidate's M3-α discipline preserved
+// across all five empty-return paths.
+//
+// Pattern B unwrapped service (chunks 1-3 + 5 + 6 + chunk-1-Phase-4
+// precedent; route handlers wrap via withInvariants() at the call site
+// with action grain 'document_router.complete_candidate' or
+// 'document_router.resolve_candidates').
+//
+// Subsystem 1 Tier 2.5 reads (4 private cross-domain read helpers via
+// adminClient):
 //   - loadOpenBillsForVendor — bills filtered by lifecycle_state IN
 //     ('approved_for_payment', 'partially_paid') per ADR-0018 §item 5(a).
 //   - loadOpenPaymentsForVendor — payments filtered by payment_state
@@ -26,40 +60,68 @@
 //     by source_document_id IN (...) AND link_status = 'created' per
 //     ADR-0018 §item 5(f) for double-routing detection.
 //
+// Subsystem 2 Tier 2.5 reads (1 private read helper):
+//   - loadCandidatesForCase — document_relationship_candidates
+//     filtered by document_case_id; ORDER BY confidence_score DESC,
+//     id ASC. Document Platform substrate only — no cross-domain
+//     reads at chunk 2.
+//
 // loadOpenVendorCreditsForVendor deliberately skipped at chunk 1:
 // vendor_credit + vendor_credit_application are reserved post-v1 per
 // Phase 2.5 Commit A; the Phase 5 vendor_credits table doesn't exist.
 // Subsystem 1 cannot produce (vendor_credit, *) candidates at v1
 // because the pair isn't in chunk-5's 13-cell VALID_PAIRS matrix.
 //
-// CONFIDENCE_THRESHOLDS_V1_PROVISIONAL per ADR-0014 §7 Q65. ADR-0019
-// (Confidence Calibration Policy, not yet ratified) is the future
-// governance owner. When ADR-0019 ratifies, chunks-N amends the
-// constant with calibrated values. The constant's location at the
-// consuming-service top makes the amendment surface mechanical.
+// V1-PROVISIONAL constants at top of file for mechanical ADR-0019
+// ratification at v1_ship_at + 6 months:
+//   - CONFIDENCE_THRESHOLDS_V1_PROVISIONAL per ADR-0014 §7 Q65
+//     (Subsystem 1).
+//   - AMBIGUITY_MARGIN_V1_PROVISIONAL per ADR-0018 §item 3 +
+//     ADR-0019 §3 (Subsystem 2).
 //
-// 'unknown' document_type early-returns [] per ADR-0018 §item 2 +
-// ADR-0014 §7 Q65 (unknown short-circuits to exception queue at the
-// pipeline orchestrator level, before completeCandidate is invoked;
-// if invoked anyway, service returns empty + info log — caller routes
-// to exception per Subsystem 2 branch (c)).
+// 'unknown' document_type early-returns [] from completeCandidate per
+// ADR-0018 §item 2 + ADR-0014 §7 Q65 (unknown short-circuits to
+// exception queue at the pipeline orchestrator level, before
+// completeCandidate is invoked; if invoked anyway, service returns
+// empty + info log — caller routes to exception per Subsystem 2
+// branch (c)).
 //
 // Subsystem-write-scope discipline (M3-α): completeCandidate produces
-// candidates ONLY; does NOT write document_cases.current_relationship_candidate_id.
-// Subsystem 2 (chunks 2+) picks the winner per ADR-0018 §item 3
-// branches (a/b/c) and sets the head pointer at that time.
+// candidates ONLY; does NOT write document_cases.current_relationship_candidate_id
+// or transition state. resolveCandidates writes the head pointer (branch
+// a) AND transitions state (branch a directly; branches b/c via
+// chunk-6's enqueueException). Subsystem 3 (chunks 3+) writes new
+// candidate rows with supersedes_candidate_id and may invoke
+// supersede_case_head_pointer_with_audit to replace the head pointer.
+//
+// audit_log idempotency_key (chunk-2 first-instance per F-J-β):
+// deriveDecisionIdempotencyKey constructs a deterministic
+// md5(case_id || ':' || trace_id || ':router_decision_recorded')::uuid
+// recipe. Recipe is forensic-correlation-not-uniqueness — no UNIQUE
+// constraint on audit_log.idempotency_key; retries produce multiple
+// decision-record rows under the same idempotency_key, queryable via
+// GROUP BY for higher-orchestrator dedup logic.
 
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
   CompleteCandidateInputSchema,
+  DecisionRecordBeforeStateSchema,
   DocumentRelationshipCandidateSchema,
+  ResolveCandidatesInputSchema,
   type CompleteCandidateInputRaw,
   type CompleteCandidateInput,
+  type DecisionRecordBeforeState,
   type DocumentRelationshipCandidate,
+  type ResolveCandidatesInputRaw,
+  type ResolveCandidatesInput,
+  type RouterDecision,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
+import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 import { LINKED_ENTITY_TABLE_MAP } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
 import type { DocumentType } from '@/shared/schemas/document-platform/documentCase.schema';
 import { adminClient } from '@/db/adminClient';
+import { enqueueException } from '@/services/document-platform/documentExceptionService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
@@ -84,6 +146,22 @@ const CONFIDENCE_THRESHOLDS_V1_PROVISIONAL: Record<DocumentType, number | null> 
   payment_confirmation: 0.85,
   unknown: null,
 } as const;
+
+// ---------------------------------------------------------------------
+// Subsystem 2 ambiguity-margin threshold per ADR-0018 §item 3.
+// Provisional value at chunk 2 ship; ADR-0019 first calibration cycle
+// (v1_ship_at + 6 months per ADR-0019 §3 + §9 row 13) ratifies. Same
+// V1-PROVISIONAL pattern as CONFIDENCE_THRESHOLDS_V1_PROVISIONAL.
+//
+// v1-operational observation per F-J-α: chunk-1's completeCandidate
+// emits every candidate with confidence_score = vendor_match.confidence
+// (single-feature scoring). For N≥2 cases, margin = top − runner_up = 0
+// structurally. Under any positive threshold, every N≥2 case routes to
+// branch (b) → exception queue. Branch (a) via margin filter is
+// structurally unreachable at v1; activates when chunks-3+ ship multi-
+// feature scoring per ADR-0018 §item 2.
+// ---------------------------------------------------------------------
+const AMBIGUITY_MARGIN_V1_PROVISIONAL = 0.05;
 
 // ---------------------------------------------------------------------
 // Internal TS interfaces for private read helpers.
@@ -249,6 +327,82 @@ async function listLinksForCaseSourceDocuments(
     );
   }
   return (data ?? []) as ExistingLinkForRouter[];
+}
+
+// ---------------------------------------------------------------------
+// Subsystem 2 Tier 2.5 read helper: candidate set for a document_case.
+//
+// Reads document_relationship_candidates filtered by document_case_id;
+// ORDER BY confidence_score DESC, id ASC. Document Platform substrate
+// only — Subsystem 2's read profile is narrower than Subsystem 1's
+// (no cross-domain AP/Spend reads). Substrate-as-source-of-truth
+// gives forensic-replay symmetry: Subsystem 2's decision is reproducible
+// from document_relationship_candidates at any later time.
+//
+// Tiebreak rule ORDER BY confidence_score DESC, id ASC is forward-
+// compat ready for chunks-3+ multi-feature scoring per F-J-α; at v1
+// the rule applies trivially to N=1 (sole candidate elect).
+//
+// Lift trigger: second consumer materializes (likely Phase 5 reviewer
+// UI reading the candidate set for operator review). Same lift pattern
+// as Subsystem 1's read helpers.
+// ---------------------------------------------------------------------
+async function loadCandidatesForCase(
+  db: Db,
+  document_case_id: string,
+): Promise<DocumentRelationshipCandidate[]> {
+  const { data, error } = await db
+    .from('document_relationship_candidates')
+    .select('*')
+    .eq('document_case_id', document_case_id)
+    .order('confidence_score', { ascending: false })
+    .order('id', { ascending: true });
+
+  if (error) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `loadCandidatesForCase ${document_case_id} failed: ${error.message}`,
+    );
+  }
+
+  const rows = (data ?? []) as unknown[];
+  const results: DocumentRelationshipCandidate[] = [];
+  for (const row of rows) {
+    const parsed = DocumentRelationshipCandidateSchema.safeParse(row);
+    if (!parsed.success) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `loadCandidatesForCase ${document_case_id} returned unexpected shape: ${parsed.error.message}`,
+      );
+    }
+    results.push(parsed.data);
+  }
+  return results;
+}
+
+// ---------------------------------------------------------------------
+// Subsystem 2 idempotency_key derivation (TS-side md5 recipe).
+//
+// Deterministic recipe: md5(case_id || ':' || trace_id || ':router_decision_recorded')::uuid.
+// UUID-formatted via 8-4-4-4-12 hex slicing (md5 returns 32 hex chars;
+// audit_log.idempotency_key column is uuid). action verb included as
+// discriminator so a single trace_id with multiple Router decisions
+// (e.g., Subsystem 3 re-evaluation reusing the trace_id) doesn't
+// collide on idempotency_key.
+//
+// F-J-β: chunk-2-Phase-4 is the first chunk at chunks-1-6 to populate
+// audit_log.idempotency_key deliberately. Recipe is forensic-
+// correlation-not-uniqueness: audit_log.idempotency_key has no UNIQUE
+// constraint; retries produce duplicate rows under the same key,
+// queryable via GROUP BY idempotency_key for higher-orchestrator
+// dedup logic. Tier 2.5 pipeline orchestrator's per-case serialization
+// makes practical concurrency low at v1.
+// ---------------------------------------------------------------------
+function deriveDecisionIdempotencyKey(case_id: string, trace_id: string): string {
+  const hex = createHash('md5')
+    .update(`${case_id}:${trace_id}:router_decision_recorded`)
+    .digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 // ---------------------------------------------------------------------
@@ -536,6 +690,266 @@ export async function completeCandidate(
     'Subsystem 1 produced candidate set',
   );
   return results;
+}
+
+// ---------------------------------------------------------------------
+// Public: resolveCandidates (Subsystem 2 entry point).
+//
+// Layer 2 boundary: Zod parse via ResolveCandidatesInputSchema.
+// Reads the candidate set fresh from document_relationship_candidates
+// (substrate-as-source-of-truth) + computes branch decision per
+// R3.3 lock #1 + writes outcome.
+//
+// Branch (a) N=1 or N≥2-with-margin: atomic set_case_head_pointer_with_audit
+// RPC (split p_audit per F-J-δ). State-transition guard
+// (UPDATE … WHERE state='classified') is the substrate-layer enforcer;
+// 23514 → INVALID_TRANSITION.
+//
+// Branch (b) N≥2-without-margin / Branch (c) N=0: pure-audit
+// record_router_decision RPC + cross-service enqueueException to
+// chunk-6 (which owns the classified → needs_review transition +
+// exception_queue_entries row + own audit emission).
+// ServiceError propagation from chunk-6 is verbatim per chunks 3-6
+// no-wrap convention (EXCEPTION_ALREADY_OPEN passes unchanged).
+// ---------------------------------------------------------------------
+export async function resolveCandidates(
+  input: ResolveCandidatesInputRaw,
+  ctx: ServiceContext,
+): Promise<RouterDecision> {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+
+  // Layer 2 boundary: Zod parse at service entry.
+  let parsed: ResolveCandidatesInput;
+  try {
+    parsed = ResolveCandidatesInputSchema.parse(input);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `resolveCandidates validation failed: ${err.message}`,
+      );
+    }
+    throw err;
+  }
+
+  const db = adminClient();
+
+  // Read document_case for org_id + document_type (calibration key
+  // for DecisionRecordBeforeState.document_type per ADR-0019 §9 row 1).
+  // Also verifies the case exists at service entry.
+  const { data: caseData, error: caseError } = await db
+    .from('document_cases')
+    .select('org_id, document_type')
+    .eq('id', parsed.document_case_id)
+    .single();
+
+  if (caseError || !caseData) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `resolveCandidates: document_case ${parsed.document_case_id} not found: ${caseError?.message ?? 'no rows'}`,
+    );
+  }
+
+  const org_id = caseData.org_id as string;
+  const document_type = caseData.document_type as DocumentType;
+
+  // Tier 2.5 read: load candidate set ordered by score DESC, id ASC
+  // (tiebreak rule forward-compat ready per F-J-α).
+  const candidates = await loadCandidatesForCase(db, parsed.document_case_id);
+  const candidate_set_ids = candidates.map((c) => c.id);
+  const confidence_scores: Record<string, number> = {};
+  for (const c of candidates) {
+    confidence_scores[c.id] = c.confidence_score;
+  }
+
+  const N = candidates.length;
+  const top_confidence: number | null = N >= 1 ? candidates[0].confidence_score : null;
+  const runner_up_confidence: number | null = N >= 2 ? candidates[1].confidence_score : null;
+  const ambiguity_margin_computed: number | null =
+    N >= 2 ? (top_confidence as number) - (runner_up_confidence as number) : null;
+
+  // Branch decision logic per R3.3 lock #1.
+  let branch: 'a' | 'b' | 'c';
+  let winner_candidate_id: string | null = null;
+  let exception_reason: ExceptionReason | null = null;
+
+  if (N === 0) {
+    branch = 'c';
+    exception_reason = 'unmatched_router_candidate';
+  } else if (N === 1) {
+    branch = 'a';
+    winner_candidate_id = candidates[0].id;
+  } else {
+    if ((ambiguity_margin_computed as number) >= AMBIGUITY_MARGIN_V1_PROVISIONAL) {
+      branch = 'a';
+      winner_candidate_id = candidates[0].id;
+    } else {
+      branch = 'b';
+      exception_reason = 'multi_candidate_ambiguity';
+    }
+  }
+
+  // Construct DecisionRecordBeforeState and parse against schema
+  // before passing to RPC (Layer 2 schema-defense-on-internally-
+  // constructed-values per chunk-1 pair-validity-family discriminator).
+  const decisionBeforeState: DecisionRecordBeforeState = DecisionRecordBeforeStateSchema.parse({
+    branch,
+    candidate_set_ids,
+    confidence_scores,
+    top_confidence,
+    runner_up_confidence,
+    ambiguity_margin_computed,
+    ambiguity_margin_threshold: AMBIGUITY_MARGIN_V1_PROVISIONAL,
+    winner_candidate_id,
+    exception_reason,
+    document_type,
+  });
+
+  const idempotency_key = deriveDecisionIdempotencyKey(
+    parsed.document_case_id,
+    parsed.trace_id,
+  );
+
+  if (branch === 'a') {
+    // Branch (a): atomic RPC writes head pointer + state transition
+    // + emits 2 audit rows. Split p_audit per F-J-δ.
+    const { error: rpcError } = await db.rpc('set_case_head_pointer_with_audit', {
+      p_decision: {
+        case_id: parsed.document_case_id,
+        winner_candidate_id: winner_candidate_id as string,
+        trace_id: parsed.trace_id,
+      },
+      p_audit_decision: {
+        org_id,
+        user_id: ctx.caller.user_id,
+        trace_id: parsed.trace_id,
+        action: 'router_decision_recorded',
+        entity_type: 'document_case',
+        before_state: decisionBeforeState,
+        tool_name: null,
+        idempotency_key,
+        reason: null,
+      },
+      p_audit_mutation: {
+        org_id,
+        user_id: ctx.caller.user_id,
+        trace_id: parsed.trace_id,
+        action: 'document_case_transitioned',
+        entity_type: 'document_case',
+        tool_name: null,
+        reason: null,
+      },
+    });
+
+    if (rpcError) {
+      // PG error code mapping per chunk-6 documentExceptionService
+      // precedent (SQLSTATE strings on error.code). 23514 maps to
+      // INVALID_TRANSITION (state-transition guard). All other PG
+      // errors (FK violation 23503, no_data_found P0002, etc.) map
+      // to POST_FAILED catchall — chunks-5-6 don't define
+      // INTEGRITY_VIOLATION (β reconciliation: brief R3.4 cited
+      // INTEGRITY_VIOLATION as inherited from chunks-5-6, but it
+      // does not exist in the ServiceErrorCode union; chunks-5-6
+      // actual precedent is POST_FAILED catchall for non-23514/23505
+      // PG errors).
+      if (rpcError.code === '23514') {
+        throw new ServiceError(
+          'INVALID_TRANSITION',
+          `set_case_head_pointer_with_audit: ${rpcError.message}`,
+        );
+      }
+      throw new ServiceError(
+        'POST_FAILED',
+        `set_case_head_pointer_with_audit RPC failed: ${rpcError.message}`,
+      );
+    }
+
+    const decision: RouterDecision = {
+      branch: 'a',
+      document_case_id: parsed.document_case_id,
+      trace_id: parsed.trace_id,
+      candidate_set_ids,
+      ambiguity_margin_computed,
+      winner_candidate_id,
+      exception_queue_entry_id: null,
+      exception_reason: null,
+    };
+
+    log.info(
+      {
+        document_case_id: parsed.document_case_id,
+        branch,
+        winner_candidate_id,
+        ambiguity_margin_computed,
+        candidate_count: N,
+      },
+      'Subsystem 2 routed to branch (a): head pointer set, case classified → matched',
+    );
+    return decision;
+  }
+
+  // Branches (b)/(c): pure-audit RPC + cross-service enqueueException.
+  const { data: decisionAuditId, error: rpcError } = await db.rpc('record_router_decision', {
+    p_decision: {
+      case_id: parsed.document_case_id,
+      trace_id: parsed.trace_id,
+    },
+    p_audit: {
+      org_id,
+      user_id: ctx.caller.user_id,
+      trace_id: parsed.trace_id,
+      action: 'router_decision_recorded',
+      entity_type: 'document_case',
+      before_state: decisionBeforeState,
+      tool_name: null,
+      idempotency_key,
+      reason: null,
+    },
+  });
+
+  if (rpcError) {
+    throw new ServiceError(
+      'POST_FAILED',
+      `record_router_decision RPC failed: ${rpcError.message}`,
+    );
+  }
+
+  // Cross-service call to chunk-6 enqueueException. ServiceError
+  // propagation is verbatim per chunks 3-6 no-wrap convention
+  // (EXCEPTION_ALREADY_OPEN passes through unchanged).
+  const exceptionEntry = await enqueueException(
+    {
+      document_case_id: parsed.document_case_id,
+      exception_reason: exception_reason as ExceptionReason,
+      trace_id: parsed.trace_id,
+    },
+    ctx,
+  );
+
+  const decision: RouterDecision = {
+    branch,
+    document_case_id: parsed.document_case_id,
+    trace_id: parsed.trace_id,
+    candidate_set_ids,
+    ambiguity_margin_computed,
+    winner_candidate_id: null,
+    exception_queue_entry_id: exceptionEntry.exception_queue_entry_id,
+    exception_reason,
+  };
+
+  log.info(
+    {
+      document_case_id: parsed.document_case_id,
+      branch,
+      exception_reason,
+      exception_queue_entry_id: exceptionEntry.exception_queue_entry_id,
+      decision_record_audit_log_id: decisionAuditId,
+      ambiguity_margin_computed,
+      candidate_count: N,
+    },
+    'Subsystem 2 routed to branches (b)/(c): decision recorded + chunk-6 enqueueException invoked',
+  );
+  return decision;
 }
 
 // ---------------------------------------------------------------------

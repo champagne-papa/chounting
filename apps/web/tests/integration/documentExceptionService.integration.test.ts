@@ -543,8 +543,10 @@ describe('exception_queue_entries direct-org_id RLS + RPC atomicity + chunk-6 CH
   it('chunk-6 CHECK broadening: document_cases.state admits needs_review and classified post-chunk-6', async () => {
     // The chunk-6 migration broadens document_cases_state_chunk_2_active
     // (4 values) to document_cases_state_chunk_6_active (6 values
-    // adding needs_review + classified). Direct admin INSERT or
-    // UPDATE to these states should now succeed.
+    // adding needs_review + classified). Chunk-2-Phase-4 further broadens
+    // to document_cases_state_chunk_7_active (7 values adding 'matched').
+    // Direct admin INSERT or UPDATE to these admitted states should
+    // succeed.
     const created = await createDocumentCase(
       { org_id: SEED.ORG_HOLDING, document_type: 'vendor_invoice' },
       ctx,
@@ -563,14 +565,17 @@ describe('exception_queue_entries direct-org_id RLS + RPC atomicity + chunk-6 CH
       .eq('id', created.id);
     expect(needsReviewErr).toBeNull();
 
-    // Still-reserved states (matched, extracting, committed, archived)
-    // remain CHECK-rejected post-chunk-6.
-    const { error: matchedErr } = await db
+    // Still-reserved-at-Layer-1 states (extracting, committed, archived)
+    // remain CHECK-rejected post-chunk-2-Phase-4. 'matched' was admitted
+    // by chunk-2-Phase-4 (Subsystem 2 branch (a) state-transition target);
+    // pick a still-reserved state for the rejection assertion to keep the
+    // test forward-compat across future broadening events.
+    const { error: reservedErr } = await db
       .from('document_cases')
-      .update({ state: 'matched' })
+      .update({ state: 'extracting' })
       .eq('id', created.id);
-    expect(matchedErr).not.toBeNull();
-    expect(matchedErr!.message).toMatch(/document_cases_state_chunk_\d+_active/);
+    expect(reservedErr).not.toBeNull();
+    expect(reservedErr!.message).toMatch(/document_cases_state_chunk_\d+_active/);
   });
 
   it('LEGAL_TRANSITIONS broadening: chunk-6 resolve(reprocess) flips case state from needs_review to classified', async () => {
