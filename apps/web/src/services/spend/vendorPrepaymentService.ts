@@ -48,6 +48,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
+import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
 import {
   RecordVendorPrepaymentInputSchema,
   ApplyVendorPrepaymentToBillInputSchema,
@@ -274,6 +275,33 @@ export const vendorPrepaymentService = {
       },
       'Vendor prepayment recorded',
     );
+
+    // T3_new_vendor_prepayment dispatch per ADR-0018 §item 4 +
+    // Framing F. Pattern B external-wrap variant (F-J-11): dispatch
+    // hook lands at end of function body after primary writes commit,
+    // before return. Best-effort isolation (P3-i F-J-4): try/catch +
+    // log on failure; never propagate. Unconditional emission.
+    try {
+      await dispatchTrigger(
+        {
+          trigger_type: 'T3_new_vendor_prepayment',
+          org_id: parsed.org_id,
+          vendor_prepayment_id: (inserted as { id: string }).id,
+          vendor_id: parsed.vendor_id,
+          trace_id: ctx.trace_id,
+        },
+        ctx,
+      );
+    } catch (dispatchErr) {
+      log.error(
+        {
+          err: dispatchErr,
+          vendor_prepayment_id: (inserted as { id: string }).id,
+          trigger_type: 'T3_new_vendor_prepayment',
+        },
+        'T3 dispatch failed post-vendorPrepayment-record (best-effort; not propagating)',
+      );
+    }
 
     return {
       vendor_prepayment_id: (inserted as { id: string }).id,

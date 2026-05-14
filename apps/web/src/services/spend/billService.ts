@@ -72,6 +72,7 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
+import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
 import {
   PostBillInputSchema,
   ApproveBillForPaymentInputSchema,
@@ -390,6 +391,30 @@ async function post(
     'Bill posted',
   );
 
+  // T1_new_bill dispatch per ADR-0018 §item 4 + Framing F.
+  // Pattern B external-wrap variant (F-J-11): dispatch hook lands at
+  // end of function body after primary writes commit, before return.
+  // Best-effort isolation (P3-i F-J-4): try/catch + log on failure;
+  // never propagate to caller — bill post succeeds regardless of
+  // dispatcher outcome. Unconditional emission.
+  try {
+    await dispatchTrigger(
+      {
+        trigger_type: 'T1_new_bill',
+        org_id: parsed.org_id,
+        bill_id: insertedBill.bill_id,
+        vendor_id: parsed.vendor_id,
+        trace_id: ctx.trace_id,
+      },
+      ctx,
+    );
+  } catch (dispatchErr) {
+    log.error(
+      { err: dispatchErr, bill_id: insertedBill.bill_id, trigger_type: 'T1_new_bill' },
+      'T1 dispatch failed post-bill-post (best-effort; not propagating)',
+    );
+  }
+
   return { bill_id: insertedBill.bill_id, journal_entry_id };
 }
 
@@ -683,6 +708,33 @@ async function recordPayment(
     'Bill payment recorded',
   );
 
+  // T5_bill_state_transition dispatch per ADR-0018 §item 4 + Round 6
+  // Finding B per-method conditional gating (F-J-12): fires ONLY when
+  // transition produces 'fully_paid' (leaves watched set
+  // ('approved_for_payment', 'partially_paid')). Transitions to
+  // 'partially_paid' stay in watched set and do not fire T5.
+  // Pattern B external-wrap variant + P3-i best-effort isolation.
+  if (newState === 'fully_paid') {
+    try {
+      await dispatchTrigger(
+        {
+          trigger_type: 'T5_bill_state_transition',
+          org_id: parsed.org_id,
+          bill_id: parsed.bill_id,
+          old_lifecycle_state: before.lifecycle_state as 'approved_for_payment' | 'partially_paid',
+          new_lifecycle_state: 'fully_paid',
+          trace_id: ctx.trace_id,
+        },
+        ctx,
+      );
+    } catch (dispatchErr) {
+      log.error(
+        { err: dispatchErr, bill_id: parsed.bill_id, trigger_type: 'T5_bill_state_transition' },
+        'T5 dispatch failed post-recordPayment (best-effort; not propagating)',
+      );
+    }
+  }
+
   return {
     payment_id: payment.payment_id,
     bill_id: parsed.bill_id,
@@ -839,6 +891,38 @@ async function reverse(
     },
     'Bill reversed',
   );
+
+  // T5_bill_state_transition dispatch per ADR-0018 §item 4 + Round 6
+  // Finding B per-method conditional gating (F-J-12): fires ONLY when
+  // pre-reverse bill.lifecycle_state IS in watched set
+  // ('approved_for_payment', 'partially_paid'). Reversals from
+  // 'pending_approval' or 'fully_paid' don't fire (those bills weren't
+  // in the watched set; their reversal doesn't invalidate router
+  // candidates pointing at them). Pattern B external-wrap variant +
+  // P3-i best-effort isolation.
+  if (
+    before.lifecycle_state === 'approved_for_payment' ||
+    before.lifecycle_state === 'partially_paid'
+  ) {
+    try {
+      await dispatchTrigger(
+        {
+          trigger_type: 'T5_bill_state_transition',
+          org_id: parsed.org_id,
+          bill_id: parsed.bill_id,
+          old_lifecycle_state: before.lifecycle_state,
+          new_lifecycle_state: 'voided',
+          trace_id: ctx.trace_id,
+        },
+        ctx,
+      );
+    } catch (dispatchErr) {
+      log.error(
+        { err: dispatchErr, bill_id: parsed.bill_id, trigger_type: 'T5_bill_state_transition' },
+        'T5 dispatch failed post-reverse (best-effort; not propagating)',
+      );
+    }
+  }
 
   return {
     bill_id: parsed.bill_id,

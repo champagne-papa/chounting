@@ -10,6 +10,7 @@ import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
+import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
 
 // Pattern B unwrapped service per chunks 1-3 + 5 precedent.
 // Three exported functions: enqueueException, resolveException,
@@ -180,6 +181,28 @@ export async function resolveException(
     },
     'Exception resolved',
   );
+
+  // T10_manual_override dispatch per ADR-0018 §item 4 + Framing F.
+  // Pattern B external-wrap variant (F-J-11): dispatch hook lands at
+  // end of function body after primary writes commit, before return.
+  // NO try/catch — fail-and-propagate per Round 5.b-i (F-J-5
+  // per-trigger-type failure policy): T10 is caller-driven; the
+  // caller (route handler invoking resolveException) wants to know
+  // if the reprocess succeeded. Conditional emission on
+  // result.resolution_action === 'reprocess' (other actions do not
+  // re-route).
+  if (result.resolution_action === 'reprocess') {
+    await dispatchTrigger(
+      {
+        trigger_type: 'T10_manual_override',
+        org_id: result.org_id,
+        case_id: result.document_case_id,
+        trace_id: ctx.trace_id,
+      },
+      ctx,
+    );
+  }
+
   return result;
 }
 
