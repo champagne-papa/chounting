@@ -44,7 +44,17 @@ export type LinkStatus = z.infer<typeof LinkStatusSchema>;
 // (vendor_credit_application, supporting) per the chunk-5 deviation
 // documented above). Both the DB CHECK constraint and this Zod
 // .refine() reference this list; they must stay in sync.
-const VALID_PAIRS: ReadonlySet<string> = new Set([
+//
+// Exported per Phase 4 chunk 1 c-2 lock at scope-lock 2026-05-13.
+// documentRelationshipCandidate.schema.ts imports VALID_PAIRS as
+// the Zod-import-shared canonical Layer-1 defense (the candidate
+// row has no DB pair-validity CHECK; the matrix lives once here).
+// Pattern rule for future schema authors: when exporting a helper
+// with cross-chunk reuse anticipation, audit the entire matrix-
+// defense family (pair-validity matrix, table map, enum subsets,
+// validity sets) — export-or-keep-private should be deliberate
+// per-helper, not default-private with selective exports.
+export const VALID_PAIRS: ReadonlySet<string> = new Set([
   'bill|primary_invoice',
   'bill|receipt',
   'bill|supporting',

@@ -786,6 +786,83 @@ export type Database = {
           },
         ]
       }
+      document_relationship_candidates: {
+        Row: {
+          candidate_features: Json
+          confidence_score: number
+          created_at: string
+          created_by: string
+          document_case_id: string
+          id: string
+          link_role: Database["public"]["Enums"]["link_role"]
+          linked_entity_id: string
+          linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
+          org_id: string
+          source_document_id: string
+          supersedes_candidate_id: string | null
+          trace_id: string
+        }
+        Insert: {
+          candidate_features: Json
+          confidence_score: number
+          created_at?: string
+          created_by: string
+          document_case_id: string
+          id?: string
+          link_role: Database["public"]["Enums"]["link_role"]
+          linked_entity_id: string
+          linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
+          org_id: string
+          source_document_id: string
+          supersedes_candidate_id?: string | null
+          trace_id: string
+        }
+        Update: {
+          candidate_features?: Json
+          confidence_score?: number
+          created_at?: string
+          created_by?: string
+          document_case_id?: string
+          id?: string
+          link_role?: Database["public"]["Enums"]["link_role"]
+          linked_entity_id?: string
+          linked_entity_type?: Database["public"]["Enums"]["linked_entity_type"]
+          org_id?: string
+          source_document_id?: string
+          supersedes_candidate_id?: string | null
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_relationship_candidates_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_relationship_candidates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "document_relationship_candidates_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_relationship_candidates_supersedes_candidate_id_fkey"
+            columns: ["supersedes_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "document_relationship_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           _event_version: string
@@ -2559,6 +2636,10 @@ export type Database = {
       attach_document_case_source_with_audit: {
         Args: { p_audit: Json; p_link: Json }
         Returns: string
+      }
+      create_candidates_with_audit: {
+        Args: { p_audit: Json; p_candidates: Json }
+        Returns: string[]
       }
       create_document_case_with_audit: {
         Args: { p_audit: Json; p_case: Json }
