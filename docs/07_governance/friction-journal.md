@@ -11293,3 +11293,46 @@ Phase 4 retrospective Commit C (`294f9e7`, 2026-05-14) shipped three governance 
 
 **Sibling-to-(3) observation.** Named subsection (3) of the 2026-05-14 F-J entry codifies verify-from-disk at retrospective-scoping-grain (Round 3 emergence). This 2026-05-15 entry codifies verify-from-disk at post-retrospective-close-discovery-grain. Both are verify-from-disk applied at non-standard grains within the retrospective scope-lock + drafting + post-close arc. Together they suggest a higher-order pattern: verify-from-disk applies at every grain of the retrospective lifecycle (inventory consolidation + drafting + post-close); the discipline is grain-agnostic; future codification at the grain-agnostic framing graduates if a third grain surfaces evidence. Currently N=2 across two grains (retrospective-scoping at Round 3 + post-retrospective-close at this drift); third grain instance (e.g., verify-from-disk at retrospective-publication / cross-phase-consumer-application grain) would trigger grain-agnostic codification at next retrospective.
 
+
+### 2026-05-15 — Phase 3 closeout-verify: phase-scope-absorbed-by-preceding-phase-chunks pattern (N=1 observation)
+
+Phase 3 closeout-verify session (2026-05-15, immediately following the Phase 4 retrospective post-close correction commit `18dd608`) ratifies Phase 3 substantive completion via absorption into chunk-5-Phase-2 substrate (commit `0786cc2`, 2026-05-13) + Phase 2.5 + Phase 4 retrospective Commit B amendment cycles. No separate Phase 3 chunk arc materialized; Phase 3's canonical scope (per ADR-0011 §1:959 "ships the link table") was naturally consumed at chunk-5-Phase-2 grain because Phase 2's substrate-graph needed the `source_document_links` polymorphic spine to be coherent. The phase-name + governance-trail-position remain in the canonical 8-phase scheme (reframe spec §2:116-117); the chunk-arc-grain didn't materialize.
+
+This entry codifies the **phase-scope-absorbed-by-preceding-phase-chunks pattern** at N=1 evidence. The pattern is observation-only at chunks-1-6 + Phase 4 grain; codification graduates if a future phase exhibits the same absorption shape.
+
+**Pattern statement.** When a phase's canonical scope is exactly N substrate items AND those items are naturally consumed by a preceding phase's chunks (because the preceding phase's substrate-graph needs them to be coherent), the phase is substantively absorbed rather than shipped as its own chunk arc. The phase-name + governance-trail-position remain in the canonical sequencing; the chunk-arc-grain doesn't materialize. The closeout-verify session is small-precursor-work (1-2 hour scope) that ratifies-or-surfaces-residual-scope; it's not a substantive phase scope-lock cycle.
+
+**Trigger conditions for absorption** (based on N=1 evidence):
+
+(a) Phase's canonical scope is small and substrate-bounded (e.g., "ships the link table" — single substrate item).
+
+(b) Preceding phase's chunks naturally consume the substrate as part of their own substrate-graph completion (e.g., chunk-5-Phase-2's document-platform substrate-graph needed source_document_links to be coherent; chunk-5 shipped it).
+
+(c) The two-phase boundary is governance-trail-positional rather than scope-disjoint (canonical sequencing names them separately for governance-trail clarity; their substrate boundaries overlap operationally).
+
+When all three conditions hold, the closeout-verify session at the absorbed-phase grain produces ratification artifacts (memory pointer + memory file + this F-J entry) rather than a substantive phase scope-lock + chunk arc.
+
+**Trigger conditions for non-absorption** (also based on N=1 evidence; counterfactual):
+
+If Phase 3's canonical scope had included items beyond "ships the link table" (e.g., the original drafts that "implicitly collapsed Relationship Router into Phase 3" per reframe spec §2:121), the substantive scope would have exceeded what chunk-5-Phase-2 naturally consumed, and a separate Phase 3 chunk arc would have been needed. The reframe spec §2 amendment note (line 121) explicitly separated Relationship Router into Phase 4 — narrowing Phase 3's scope to "just the link table" — which is what enabled the absorption.
+
+The pattern fires precisely when canonical scope narrowing + preceding-phase substrate-graph completion intersect.
+
+**Codification grain.** N=1 at chunks-1-6 + Phase 4 grain. Below codification threshold for CLAUDE.md or ADR amendment. Observation-only entry; future phases that exhibit the same absorption shape produce N=2 evidence for graduation candidate. Future absorption candidates at the current project state: unclear — Phase 6/7/8 are larger-scope phases unlikely to absorb. The pattern's main future utility is at closeout-verify session shape: when a future phase's substantive completion is in question, the closeout-verify session shape codified here (1-2 hour scope; verify chunks against canonical scope baseline; produce ratification artifacts) is the right tool.
+
+**Sibling-to-related pattern: phase-scope-vs-shipped-substrate divergence.** Phase 5 retrospective §6 line 394-414 "§2-vs-§10 inconsistency" + reserved-schema-seats framing codified a related pattern: Phase 5's brief had §2 "Locked v1 scope" inconsistent with §10 "Phase sequencing list"; Phase 5 shipped against §2 (prepayments/credits/vendor onboarding stayed as reserved substrate, not shipped). Both Phase 5's pattern and this Phase 3 absorption pattern are about phase-scope-vs-shipped-substrate divergence; resolved by tracking what actually shipped rather than what the phase-sequencing-list named. Different mechanisms (Phase 5 = intentional partial shipping per locked scope; Phase 3 = scope-absorbed-by-preceding-phase-chunks); same higher-order observation (phase-name + chunk-ship-history are independent variables; ratification at retrospective close + closeout-verify reconciles them).
+
+**Closeout-verify session shape (codification for future absorption-candidate sessions).**
+
+1. **Op 1: Establish phase scope baseline** — read canonical ADRs + reframe spec + preceding-phase retrospective for the phase's original scope framing. Establish what the phase was canonically scoped to ship.
+
+2. **Op 2: Verify shipped substrate covers baseline** — compare shipped substrate (preceding-phase commits + ADR amendment cycles) against the baseline. Adjudicate: substantive completion (absorption) vs residual scope (separate phase chunk arc needed).
+
+3. **Op 3: Produce closeout artifact(s)** — if substantive completion: memory pointer + memory file + (optionally) friction-journal entry codifying any methodology observation. If residual scope: small brief drafting the residual work; scope-lock cycle if substantive; carry-forward documentation if minor.
+
+4. **Op 4: Ship** — per-commit validation (typecheck + agent:validate + test as docs-only check); single commit; push.
+
+Session-shape estimate: 1-2 hours when absorption ratifies cleanly. Smaller than chunk substantive work; smaller than full phase retrospective scope-lock + drafting. The shape respects codify-while-deciding-not-while-implementing at session-shape grain: closeout-verify ≠ substantive-phase scope-lock; separating them in their own session avoids conflating verify-shape work with scope-lock-shape work.
+
+**Phase 3 closeout-verify outcome.** Substantive completion ratifies. Phase 3 SHIPPED memory pointer + `project_phase_3_shipped.md` memory file produced. Next operational session: Phase 6 (Ingestion) substantive scope-lock per canonical sequencing (Phase 5 retrospective §6:380-381; Phase 4 retrospective post-close correction).
+
