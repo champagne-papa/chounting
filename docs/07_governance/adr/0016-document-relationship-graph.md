@@ -920,6 +920,37 @@ the re-routing) are owned by ADR-0018 per Q56 forward-pointer.
 ADR-0016 owns only the schema-side audit event that records
 the re-routing once it has fired.
 
+**v1 emission deferral** *(Phase 4 retrospective Amendment,
+2026-05-14; see Amendment block at end of ADR).* Phase 4
+chunk 3 (commits `c3782e9` + `5d4e954`) ships the
+`router_re_evaluation_fired` audit event (a coarse-grained
+dispatcher liveness event per ADR-0018 §Schema-deltas) but
+defers `pre_commit_link_rerouted` emission to a future chunk.
+The schema substrate for `pre_commit_link_rerouted` defined in
+this section (and the §Reserved-enums-and-audit-events table
+row above with its 10-field payload) is the canonical contract;
+chunk-3's `router_re_evaluation_fired` event carries a
+coarse-grained `decision_outcome` field (one of `no_change`,
+`re_routed_from_exception`, `re_routed_to_exception`,
+`candidate_superseded`, `dispatch_failed` per the Phase 4
+retrospective Amendment to ADR-0018) that names *whether*
+re-routing happened but not the prior-vs-new candidate target
+detail captured by `pre_commit_link_rerouted`'s 10-field
+payload. The future activation chunk introduces dispatcher-side
+emission of `pre_commit_link_rerouted` inside the same
+transaction as the new candidate row's INSERT per the
+discipline above; until that activation, the 10-field
+substrate carries the contract but no v1 service write path
+emits it. Phase 4 retrospective inventory item RI-4 names the
+deferral; the activation trigger is the first chunk that ships
+prior-candidate-aware dispatcher re-routing (likely Phase 5.1
+reviewer or Phase 7 envelope substrate, depending on which
+chunk first materializes the prior-candidate-target reads the
+event payload requires). The reserved-not-omitted shape per
+ADR-0010 substrate-now-enforcement-later discipline holds: the
+substrate is defined at v1 schema time; emission lands at the
+first consumer chunk that needs the forensic detail.
+
 ## Schema deltas
 
 Per the schema-decision discipline (C4/C5 lesson per ADR-0013 +
@@ -1003,7 +1034,7 @@ referenced from items 1, 2, and 5):
 
 | Enum | Full membership | v1 active subset |
 |---|---|---|
-| `linked_entity_type` | 28 values per item 1 | `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application`, `vendor_credit`, `vendor_credit_application` (8 values) |
+| `linked_entity_type` | 28 values per item 1 | `bill`, `bill_line`, `payment`, `bill_payment_allocation`, `vendor_prepayment`, `vendor_prepayment_application` (6 values; `vendor_credit` and `vendor_credit_application` reserved post-v1 per the Phase 2.5 Commit A amendment to §1 and the Phase 4 retrospective Amendment at end of ADR) |
 | `link_role` | full reserved set per item 2 | `primary_invoice`, `payment_evidence`, `receipt`, `supporting` (4 values) |
 | `link_status` | `created`, `reversed` | `created`, `reversed` (2 values; both active) |
 
@@ -1834,3 +1865,119 @@ status framing.
   from the v1 active subset) would also need to amend
   ADR-0015 in the same amendment package; the discipline is
   inherited from the Phase 0 sequencing.
+
+## Amendment — Phase 4 retrospective reconciliation (2026-05-14)
+
+ADR-0016 is amended at Phase 4 retrospective close (the Phase 4
+close + chunk-3-substrate-complete cycle following three chunks
+of Phase 4 substrate ship: chunk 1 candidate-completion / chunk
+2 ambiguity resolution / chunk 3 dispatcher + cross-phase
+emission wiring). Path (a) of the audit-cycle (β) reconciliation
+pattern: ADR text catches up to chunk-3 substrate ship state at
+the schema-side audit-event surface that ADR-0016 owns, plus
+closes a §Reserved-enums-and-audit-events table reconciliation
+that the Phase 2.5 Commit A amendment to §1 missed.
+
+### Substance
+
+Two reconciliations:
+
+1. **§Reserved-enums-and-audit-events table v1-active subset
+   8→6.** The reserved-enums table at §Reserved-enums-and-audit-
+   events listed the v1-active subset of `linked_entity_type`
+   as 8 values (`bill`, `bill_line`, `payment`,
+   `bill_payment_allocation`, `vendor_prepayment`,
+   `vendor_prepayment_application`, `vendor_credit`,
+   `vendor_credit_application`). The Phase 2.5 Commit A
+   amendment (commit `9d788e2`) corrected §1 and §3 + §5 +
+   §Schema-deltas + §Closes Q55 to the 6-value v1-active subset
+   reflecting the chunk-5-Phase-2 substrate ship (no v1
+   consumer service for `vendor_credits` /
+   `vendor_credit_applications` tables) — but the
+   §Reserved-enums-and-audit-events table row was not updated in
+   that pass. This amendment closes the missed-cell drift by
+   updating the table's v1-active subset cell to the 6-value
+   subset, citing the Phase 2.5 Commit A precedent for the
+   substantive justification (no re-litigation needed). Closes
+   chunk-2-Phase-4 carry-forward item 2.
+
+2. **§6 `pre_commit_link_rerouted` v1 emission deferral
+   forward-pointer.** §6 ("Pre-commit vs post-commit boundary")
+   specifies the `pre_commit_link_rerouted` audit event contract
+   (10-field payload at §Reserved-enums-and-audit-events;
+   trigger-ownership delegated to ADR-0018). Phase 4 chunk 3
+   ships the dispatcher (`documentRouterService.dispatchTrigger`)
+   plus the `router_re_evaluation_fired` audit event (per
+   ADR-0018 §Schema-deltas; coarse-grained dispatcher liveness)
+   but does **not** ship `pre_commit_link_rerouted` emission.
+   The substrate is defined; no v1 service write path emits it.
+   §6 amendment appends a "v1 emission deferral" paragraph after
+   the existing "Pre-commit re-routing audit event" sub-block
+   codifying: (a) the deferral itself; (b) the relationship to
+   chunk-3's `router_re_evaluation_fired` event (coarse
+   `decision_outcome` vs 10-field prior-vs-new target detail);
+   (c) the activation trigger (first chunk shipping
+   prior-candidate-aware dispatcher re-routing; likely
+   Phase 5.1 reviewer or Phase 7 envelope substrate); (d) the
+   reserved-not-omitted shape per ADR-0010
+   substrate-now-enforcement-later discipline. Closes
+   chunk-3-Phase-4 retrospective inventory item RI-4.
+
+### Why this amendment
+
+Per the Phase 4 retrospective scope-lock (7 rounds; 2026-05-14):
+Phase 4 closes at chunk-3 substrate-complete. The reconciliations
+above are both clarification-grade (no contract change). The
+§Reserved-enums-and-audit-events table reconciliation closes a
+missed-cell drift from the Phase 2.5 Commit A amendment cycle;
+no new substantive justification is needed (Phase 2.5 Commit A
+established the 6-value v1-active subset; this amendment carries
+the same correction through the one cell missed in that pass).
+The §6 deferral forward-pointer codifies what chunk-3 shipped
+(`router_re_evaluation_fired` alone, no `pre_commit_link_rerouted`
+emission) at the schema-side audit-event surface ADR-0016 owns;
+future readers see the deferral at the schema layer rather than
+having to reconstruct it from chunk-3 friction-journal entries.
+
+### Bundling
+
+Phase 4 retrospective Commit B bundles two reconciliations
+(§Reserved-enums-and-audit-events table + §6 emission deferral)
+covering retrospective inventory items chunk-2-Phase-4
+carry-forward 2 + chunk-3-Phase-4 RI-4. Commit A (ADR-0018
+amendment, commit `e9a3cd5`) bundles four reconciliations of
+the chunk-2/3-Phase-4 inventory items 1+6+2+9 that landed in
+ADR-0018. Commit C (Phase 4 retrospective writeup + CLAUDE.md
+verify-forward-at-scope-lock addition + retrospective-process
+meta-observations F-J entry) closes the retrospective work.
+
+### Cross-references
+
+- `docs/09_briefs/phase-4/chunks/2026-05-14-phase-4-chunk-3.md` —
+  chunk-3 brief (Subsystem 3 dispatcher + Round 2.b-C2 lock
+  deferring `pre_commit_link_rerouted` to a future chunk).
+- Chunk-3 commits `c3782e9` (3a — dispatcher service) +
+  `5d4e954` (3b — cross-phase emission wiring + chunk-3
+  substrate complete).
+- Phase 4 retrospective Commit A (ADR-0018 amendment) at
+  `e9a3cd5` — sibling amendment with §item 4 contract
+  refinements and §Schema-deltas `dispatch_failed` addition
+  that references this §6 deferral forward-pointer.
+- Phase 2.5 Commit A (ADR-0016 §1 + §3 + §5 + §Schema-deltas +
+  §Closes Q55 reconciliation at `9d788e2`) — the precedent
+  cycle that this amendment's §Reserved-enums-and-audit-events
+  table cell update mirrors at the missed cell.
+- `docs/07_governance/friction-journal.md` — F-J-14 tier-1
+  entry (Path C dispatcher-isolated split; documents the
+  chunk-3 Round 2.b-C2 deferral of the 10-field cascade event).
+- `docs/07_governance/retrospectives/phase-4-retrospective.md`
+  (forthcoming in Phase 4 retrospective Commit C) — full
+  retrospective writeup with carry-forwards-to-future-
+  retrospectives section naming RI-4 activation trigger.
+
+This is **ADR-0016's second amendment** (after Phase 2.5
+Commit A). Title-line stability preserved (no title-line
+revision). Scope is narrow (two clarification-grade
+reconciliations); broader Phase 0 review deferred per
+arc-class first-instance status framing per the Phase 2.5
+Commit A precedent.
