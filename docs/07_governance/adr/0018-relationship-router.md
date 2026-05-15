@@ -334,11 +334,15 @@ is restated here to make the Subsystem 1 ownership unambiguous.
 **Outputs.** Zero or more `DocumentRelationshipCandidate` rows.
 Each row carries:
 
-- `linked_entity_type` (one of the 8 v1-active values per
+- `linked_entity_type` (one of the 6 v1-active values per
   ADR-0016 §1: `bill`, `bill_line`, `payment`,
   `bill_payment_allocation`, `vendor_prepayment`,
-  `vendor_prepayment_application`, `vendor_credit`,
-  `vendor_credit_application`).
+  `vendor_prepayment_application`). `vendor_credit` and
+  `vendor_credit_application` are reserved post-v1 per
+  ADR-0016's Phase 2.5 Commit A amendment (commit `9d788e2`)
+  reflecting the chunk-5-Phase-2 substrate ship; the
+  Phase 4 retrospective Amendment below carries the
+  same reconciliation through ADR-0018.
 - `linked_entity_id` (the matched row's primary key).
 - `link_role` (one of the 4 v1-active values per ADR-0016 §2:
   `primary_invoice`, `payment_evidence`, `receipt`,
@@ -606,6 +610,76 @@ timestamp = <now>). Cases routed to the exception queue
 additionally emit the queue-routing audit event per ADR-0011
 §13.
 
+**v1 substrate-collapse and operational reality** *(Phase 4
+retrospective Amendment, 2026-05-14; see Amendment block at end
+of ADR).* Chunk-2-Phase-4 (commit `8c036be`) ships an
+envelope-less v1 substrate that reconciles the contract above
+with what v1 ships. ProposedEntryCard disambiguation UI
+presupposed by branch (b) does not ship at v1; envelope-less
+v1 substrate encodes disambiguation as exception-queue
+routing.
+
+(1) **v1 substrate-collapse interpretation of branches (b)/(c).**
+Branch (b) and branch (c) collapse at the substrate-mutation
+level: both unset the head pointer, transition the case
+`classified → needs_review` via chunk-6's `enqueueException`
+RPC, and differ only in `exception_reason`
+(`'multi_candidate_ambiguity'` for branch (b);
+`'unmatched_router_candidate'` for branch (c)). The branch
+identifier is preserved in the decision-record audit row's
+`before_state.branch` JSONB for §item 3 contract-intent
+conformance and forward-compat with envelope-shipping chunks.
+
+(2) **Branch (a) v1 operational reality.** Branch (a) writes
+the head pointer and transitions the case `classified →
+matched` via the atomic RPC `set_case_head_pointer_with_audit`.
+The state machine drives the proposal lifecycle at v1, rather
+than envelope dispatch to the AP/Spend commit path. Under
+chunk-1's single-feature scoring (every candidate from the
+same vendor_match carries `confidence_score =
+vendor_match.confidence` per
+`documentRouterService.ts:398/421/443/465`), the ambiguity
+margin (`top − runner_up`) is structurally `0` for any N≥2
+case. Under any positive `AMBIGUITY_MARGIN_V1_PROVISIONAL`,
+every N≥2 case routes to branch (b); branch (a) via the
+margin filter is structurally unreachable at v1 (only N=1
+cases reach branch (a)). The margin-filter path activates
+when chunks-3+ ship multi-feature scoring per §item 2 future
+amendment.
+
+(3) **Forward-compat preservation across the
+substrate-collapse.** Three forward-compat surfaces ship at
+v1: (i) `AMBIGUITY_MARGIN_V1_PROVISIONAL = 0.05` constant at
+the top of `documentRouterService.ts`, the mechanical
+amendment site for ADR-0019 calibration ratification;
+(ii) tiebreak rule `ORDER BY confidence_score DESC, id ASC`
+encoded in `loadCandidatesForCase` plus the decision-record
+`before_state.candidate_set_ids` ordering (forward-compat
+ready for N≥2 + differential scores at multi-feature-scoring
+activation); (iii) branch identifier in `before_state.branch`
+so envelope-shipping chunks can either promote branch (b) to
+multi-candidate envelope emission per §item 3's original
+framing or ratify chunk-2's collapse as canonical v1+ shape
+at the first envelope-substrate chunk.
+
+(4) **Amendment trigger and ProposedEntryCard deferral.**
+ProposedEntryCard disambiguation UI activation is the
+amendment trigger for §item 3's branch (b) prose. When
+envelope substrate ships (Phase 5.1 reviewer chunk or Phase 7
+envelope chunk), an ADR-0018 §item 3 amendment fires to
+reconcile §item 3's original framing with v1's
+substrate-collapse — either by promoting branch (b) to
+envelope emission with multiple candidate targets
+(envelope-shipping reverts §item 3's original semantics with
+envelope-supporting infrastructure now present) or by
+ratifying chunk-2's substrate-collapse as canonical v1+
+shape (state-machine drives the proposal lifecycle; envelope
+emission deferred indefinitely). Phase 4 retrospective
+inventory item 6 (chunk-2-Phase-4 carry-forward) stages this
+amendment trigger; the v1 substrate ships with the
+forward-compat hooks listed in (3) to enable either
+resolution.
+
 ### 4. Subsystem 3 — Re-Evaluation Logic (Q56 closure)
 
 **Trigger event consumer.** Subsystem 3 runs in response to
@@ -818,6 +892,96 @@ the operational visibility for Subsystem 3 — re-evaluation
 liveness (every trigger fires) and re-routing outcomes (only
 re-routings fire). The event flows through the canonical
 audit-log writer per ADR-0011 §1.
+
+**v1 dispatcher contract refinements at chunk-3 ship** *(Phase 4
+retrospective Amendment, 2026-05-14; see Amendment block at end
+of ADR).* Subsystem 3's chunk-3 substrate (commits `c3782e9` +
+`5d4e954`) refines the contract above at three points. The
+original §item 4 contract remains the canonical long-term
+intent; the refinements below codify v1 implementation reality
+at the ADR level, replacing the pre-implementation "re-run
+Subsystem 1" framing with γ'-partial per-trigger coverage +
+D-partial 6-rule discriminator + D-partial-no-idempotency
+contract as the canonical v1 Subsystem 3 contract that future
+Phase 7 + Phase 5.1 consumers read.
+
+**v1 dispatcher semantic coverage — γ'-partial.** Subsystem 3's
+re-evaluation primitive at v1 is `rematchCandidate`, a thin
+wrapper over `completeCandidate` that reconstructs
+`CompleteCandidateInput` from chunk-1's `candidate_features`
+substrate. This honors §item 4's matching-semantic level — but
+`completeCandidate` writes substrate only on successful
+candidate generation (no persistence on stranded-case paths).
+The v1 coverage table:
+
+| Trigger | Fan-out scope | γ' coverage at v1 |
+|---|---|---|
+| T1 (new bill posts) | Stranded-case fan-out (no priors) | Audit-only (`no_change` from empty re-run) |
+| T3 (new vendor_prepayment posts) | Stranded-case fan-out (no priors) | Audit-only |
+| T5 (bill state transition) | Watch-set leaves (with priors) | Re-routing-functional |
+| T8 (period reopen) | Pre-commit cases with reopened-period accounting_date (with priors) | Re-routing-functional |
+| T10 (manual operator override) | Specific case (with-priors or stranded) | With-priors: re-routing-functional; stranded: audit-only |
+
+T1/T3/T10-stranded cases hit the γ'-partial branch (empty
+`rematchCandidate` result) by definition; the dispatcher emits
+`no_change` per the 6-rule discriminator below.
+T5/T6/T8/T10-with-priors operate on cases that have prior
+`document_relationship_candidates` rows and exercise the full
+rematch + new-candidate-emit path. T2 / T4 / T6 are reserved
+per Framing F pending `paymentService.ts` +
+`vendorCreditService.ts` shipping; activation follows the same
+reserved-trigger discipline pattern as T7 / T9 above. Future
+chunks that ship multi-feature scoring + extraction-time
+substrate persistence may convert T1/T3/T10-stranded coverage
+to re-routing-functional; the γ'-partial framing is the
+chunk-3-shipped reality, not a long-term contract.
+
+**Decision-outcome discriminator — D-partial 6-rule.** The
+dispatcher's per-case decision mapping is a 6-rule discriminator
+over `(count_before, count_after, open_exception_present)`:
+
+| Rule | count_before | count_after | open_exception | decision_outcome | Action |
+|---|---|---|---|---|---|
+| 1 | 0 | > 0 | yes | `re_routed_from_exception` | Cancel open exception via `cancel_exception_with_audit`; emit candidate row. |
+| 2 | > 0 | > 0 | no | `candidate_superseded` | Emit new candidate with `supersedes_candidate_id` chain. (D-partial-no-idempotency means this fires on every non-empty re-run even when output matches; see idempotency-contract subsection below.) |
+| 3 | 0 | > 0 | no | (unreachable under γ'-partial) | Defensive log + throw `ServiceError(POST_FAILED, "dispatcher framing violation: count_before=0 + count_after>0 unreachable; rematchCandidate produced non-empty for stranded case")`. |
+| 4 | > 0 | 0 | no | `re_routed_to_exception` | Enqueue exception with `unmatched_router_candidate` reason; case → `needs_review`. |
+| 5 | > 0 | 0 | yes | `no_change` | Audit-only. (T5/T8 invalidation followed by T1/T3 fan-out picking up the same case is operationally reachable; rule 5 mapping recognizes the no-supersedes-on-empty-rerun semantic that surfaced at chunk-3 implementation per β-6.) |
+| 6 | 0 | 0 | (any) | `no_change` | Audit-only (T1/T3 stranded path; γ'-partial conformance). |
+
+Rules 3 and 5 use the `POST_FAILED` catchall per the
+chunk-2-Phase-4 β-1 precedent (`INTEGRITY_VIOLATION` is not a
+`ServiceErrorCode` in the union; descriptive log message
+carries operational signal). The defensive throw at rule 3
+plus the per-case try/catch in `dispatchTrigger` catches and
+emits the `dispatch_failed` audit row per the
+per-trigger-failure-policy: fan-out triggers T1/T3/T5/T8 = log
++ skip + continue per-case; single-case T10 =
+fail-and-propagate. The discriminator replaces the original
+3-rule under-specification implicit in §item 4's prose with
+6 explicit rules covering the v1 substrate's operationally
+reachable (and structurally unreachable) state combinations.
+
+**Idempotency contract — D-partial-no-idempotency at v1.** The
+"Subsystem 3 idempotency" paragraph above specifies dispatcher
+idempotency by `(case_id, classifier_output_fingerprint,
+domain_state_fingerprint)` — running the same trigger twice
+within a small time window with the same fingerprints is a
+no-op. **At chunk-3 ship, this idempotency contract is not
+implemented.** Chunk-1's `completeCandidate` dedups against
+`source_document_links` only, not against existing
+`document_relationship_candidates` rows. Every non-empty
+re-run emits a `candidate_superseded` row regardless of
+whether the new Subsystem 1 output matches the current
+candidate; noisy audit events and growing supersession chains
+are acceptable at v1 given low trigger volume. The deferral is
+named in Phase 4 retrospective inventory as **RI-9** (idempotency
+contract activation): a future chunk implements fingerprint-based
+dedup against existing candidates, activating the dispatcher
+idempotency contract specified above. Until that activation,
+deduplication is by external means (caller code wrapping
+`dispatchTrigger` invocations with their own idempotency keys;
+the dispatcher itself emits per-call).
 
 ### 5. Tier 2.5 read-boundary specifics
 
@@ -1075,7 +1239,7 @@ re-routings re-route" are separate operational concerns.
 
 | Event | Fields |
 |---|---|
-| `router_re_evaluation_fired` | `org_id`, `trigger_type` (one of `T1_new_bill`, `T2_new_payment`, `T3_new_vendor_prepayment`, `T4_new_vendor_credit`, `T5_bill_state_transition`, `T6_payment_state_transition`, `T8_period_reopen`, `T10_manual_override`; reserved post-v1: `T7_vendor_master_merge`, `T9_document_supersession`), `case_id` (the `document_case` that was re-evaluated), `candidate_count_before` (number of candidates the case had before the re-run), `candidate_count_after` (number of candidates after the re-run), `decision_outcome` (one of `no_change`, `re_routed_from_exception`, `re_routed_to_exception`, `candidate_superseded`), `trace_id` |
+| `router_re_evaluation_fired` | `org_id`, `trigger_type` (one of `T1_new_bill`, `T2_new_payment`, `T3_new_vendor_prepayment`, `T4_new_vendor_credit`, `T5_bill_state_transition`, `T6_payment_state_transition`, `T8_period_reopen`, `T10_manual_override`; reserved post-v1: `T7_vendor_master_merge`, `T9_document_supersession`), `case_id` (the `document_case` that was re-evaluated), `candidate_count_before` (number of candidates the case had before the re-run), `candidate_count_after` (number of candidates after the re-run), `decision_outcome` (one of `no_change`, `re_routed_from_exception`, `re_routed_to_exception`, `candidate_superseded`, `dispatch_failed`), `trace_id` |
 
 The event flows through the canonical audit-log writer per
 ADR-0011 §1; no service inserts into `audit_log` directly. The
@@ -1093,12 +1257,16 @@ trigger identifier to a closed enum (e.g., to enable typed
 indexing by trigger type), that amendment introduces the enum
 under ADR-0010 reserved-enum-states discipline. The
 `decision_outcome` payload value follows the same convention —
-a four-string vocabulary (`no_change`, `re_routed_from_exception`,
-`re_routed_to_exception`, `candidate_superseded`) documented as
-the event's payload constraint, not promoted to a schema-level
-closed enum because no service-behavior path branches on the
-value; promotion follows ADR-0010 discipline if a future feature
-gates behavior on the value.
+a five-string vocabulary (`no_change`, `re_routed_from_exception`,
+`re_routed_to_exception`, `candidate_superseded`,
+`dispatch_failed`) documented as the event's payload constraint,
+not promoted to a schema-level closed enum because no
+service-behavior path branches on the value; promotion follows
+ADR-0010 discipline if a future feature gates behavior on the
+value. (The `dispatch_failed` value was added by the Phase 4
+retrospective Amendment below per the substrate-now-amendment-
+later pattern — chunk-3 substrate at `RouterDecisionOutcomeSchema`
+ships the 5th value; this section catches up.)
 
 ## Reserved enums and audit events
 
@@ -1679,3 +1847,180 @@ orchestration in one place.
   would make the Tier 2.5 read boundary effectively
   open-ended — which would defeat the purpose of the Tier
   2.5 split per ADR-0007 §Amendment.
+
+## Amendment — Phase 4 retrospective reconciliation (2026-05-14)
+
+ADR-0018 is amended at Phase 4 retrospective close (the Phase 4
+close + chunk-3-substrate-complete cycle following three chunks
+of substrate ship: chunk 1 candidate-completion / chunk 2
+ambiguity resolution / chunk 3 dispatcher + cross-phase emission
+wiring). Path (a) of the audit-cycle (β) reconciliation pattern:
+ADR text catches up to chunks-1/2/3 substrate ship state, plus
+codifies v1 Subsystem 3 contract refinements at the ADR level
+for cross-phase consumer inheritance (Phase 5.1 reviewer,
+Phase 7).
+
+### Substance
+
+Four reconciliations:
+
+1. **§item 2 v1-active `linked_entity_type` 8→6.** §item 2
+   originally listed `vendor_credit` and `vendor_credit_application`
+   among the 8 v1-active values Subsystem 1 emits. Phase 2.5
+   Commit A (ADR-0016 amendment, commit `9d788e2`) moved those
+   two values to reserved post-v1 per chunk-5-Phase-2 substrate
+   ship (no v1 consumer service; Phase 5 substrate did not ship
+   `vendor_credits` / `vendor_credit_applications` tables). §item
+   2's inline list updates to the 6-value subset; the reserved-
+   post-v1 framing of the two values inherits from ADR-0016.
+   Closes chunk-2-Phase-4 carry-forward item 1.
+
+2. **§item 3 v1 substrate-collapse interpretation.** §item 3's
+   original framing presupposes envelope substrate
+   (`ProposedMutation` / `ProposedAttachment`) and the
+   ProposedEntryCard disambiguation UI on branch (b). v1 ships
+   neither (the envelope TS types have zero codebase references
+   at chunk-3 ship; the ProposedEntryCard UI is deferred to
+   Phase 5.1 reviewer / Phase 7). Chunk-2-Phase-4 (commit
+   `8c036be`) ships an envelope-less v1 substrate that collapses
+   branch (b) → branch (c) at the substrate-mutation level (both
+   unset head pointer + transition to `needs_review` via chunk-6's
+   `enqueueException` RPC), differing only in `exception_reason`,
+   with branch identifier preserved in `before_state.branch`
+   JSONB. Branch (a) writes the head pointer via the atomic RPC
+   `set_case_head_pointer_with_audit`. The §item 3 amendment
+   appends a 4-paragraph sub-block at the end of §item 3
+   codifying: (1) the (b)/(c) substrate-collapse mechanism;
+   (2) branch (a) v1 operational reality and structural
+   unreachability of the margin filter at v1 (chunk-1
+   single-feature scoring zeros every N≥2 margin); (3) forward-
+   compat preservation across the substrate-collapse (constant
+   + tiebreak rule + branch identifier in `before_state.branch`);
+   (4) the amendment trigger (envelope-substrate ship at Phase
+   5.1 reviewer or Phase 7 chunk) and ProposedEntryCard deferral.
+   Closes chunk-2-Phase-4 carry-forward item 6.
+
+3. **§item 4 v1 dispatcher contract refinements (γ'-partial +
+   D-partial 6-rule + D-partial-no-idempotency).** §item 4's
+   original contract — re-run Subsystem 1 against pre-commit
+   cases, idempotent by classifier + state fingerprint — is the
+   canonical long-term intent. Chunk-3 substrate-complete (3a
+   commit `c3782e9` + 3b commit `5d4e954`) ships three refinements
+   at v1 implementation level: (a) **γ'-partial per-trigger
+   semantic coverage** — the `rematchCandidate` primitive covers
+   cases-with-prior-candidates; stranded T1/T3/T10-stranded
+   cases produce audit-only `no_change` because
+   `completeCandidate` doesn't persist substrate on failure
+   paths; (b) **D-partial 6-rule decision-outcome discriminator** —
+   replaces the original 3-rule under-specification implicit in
+   §item 4 prose with 6 explicit `(count_before, count_after,
+   open_exception_present)` rules covering the v1 substrate's
+   operationally reachable (and structurally unreachable) state
+   combinations; rule 5 → `no_change` ratified at β-6 per
+   no-supersedes-on-empty-rerun semantic; (c) **D-partial-no-
+   idempotency at v1** — the dispatcher idempotency contract
+   in §item 4 ("Subsystem 3 idempotency" paragraph) is not
+   implemented at chunk-3; chunk-1's `completeCandidate` dedups
+   against `source_document_links` only, not against existing
+   candidate rows; noisy audit events at low v1 trigger volume
+   are acceptable. The §item 4 amendment appends a sub-block at
+   the end of §item 4 codifying these three refinements with
+   full coverage table + rule table + idempotency-deferral
+   contract; **RI-9** named-future-activation forward-pointer
+   for the idempotency-contract activation at a future
+   fingerprint-dedup chunk. Closes chunk-3-Phase-4 retrospective
+   inventory item RI-9 (forward-pointer placement; activation
+   itself remains open at a future chunk).
+
+4. **§Schema-deltas `dispatch_failed` 5th `decision_outcome`
+   value.** The `decision_outcome` payload vocabulary expands
+   from 4 values to 5 with `dispatch_failed` added to capture
+   service-layer failures caught at the dispatcher's per-case
+   try/catch. The audit row emits in a separate small
+   transaction; PG-rollback failures are silent by mechanism.
+   Inline edits land at the §Schema-deltas table row and prose
+   vocabulary; no Layer 1 DB CHECK introduced per §Schema-deltas
+   convention (event-payload constraint, not schema-level enum);
+   Layer 2 (Zod) + Layer 3 (TS const + service emission) ship
+   at chunk-3 per `documentRelationshipCandidate.schema.ts`
+   `RouterDecisionOutcomeSchema`. The substrate-now-amendment-
+   later pattern (chunk-6 `backfill_vendor_prepayment_suggested`
+   precedent at Phase 2.5 Commit B) carries: pre-amendment
+   substrate ships at chunk-3; this amendment cycle ratifies the
+   follow-on. Closes chunk-3-Phase-4 retrospective inventory
+   item RI-2.
+
+### Why this amendment
+
+Per the Phase 4 retrospective scope-lock (7 rounds; 2026-05-14):
+Phase 4 closes at chunk-3 substrate-complete. **§item 4
+amendment is substantive v1 contract refinement, not
+clarification — codifies v1 implementation reality at the ADR
+level, replacing the pre-implementation "re-run Subsystem 1"
+framing with γ'-partial per-trigger coverage + D-partial 6-rule
+discriminator + D-partial-no-idempotency contract as canonical
+v1 Subsystem 3 contract; future Phase 7 + Phase 5.1 work
+consuming Subsystem 3 reads these refinements at the ADR.**
+The §item 2 and §item 3 amendments reconcile cross-phase
+substrate-ship reality (Phase 2.5 Commit A + chunk-2-Phase-4
+substrate-collapse) at the ADR level so the ADR matches the
+shipped substrate. The §Schema-deltas amendment ratifies the
+substrate-now-amendment-later substrate (`dispatch_failed`)
+that shipped at chunk-3.
+
+### Bundling
+
+Phase 4 retrospective Commit A bundles four reconciliations
+(§item 2 + §item 3 + §item 4 + §Schema-deltas) covering
+retrospective inventory items 1+6 (chunk-2-Phase-4
+carry-forwards) + 2+9 (chunk-3-Phase-4 candidates). Commit B
+(ADR-0016 amendment) bundles separate reconciliations
+(chunk-2-Phase-4 §Reserved-enums-and-audit-events table
+reconciliation item + chunk-3-Phase-4 RI-4
+`pre_commit_link_rerouted` substrate forward-pointer).
+Commit C (Phase 4 retrospective writeup + CLAUDE.md
+verify-forward-at-scope-lock addition + retrospective-process
+meta-observations F-J entry) closes the retrospective work.
+
+### Cross-references
+
+- `docs/09_briefs/phase-4/chunks/2026-05-13-phase-4-chunk-1.md` —
+  chunk-1 brief (Subsystem 1 candidate completion).
+- `docs/09_briefs/phase-4/chunks/2026-05-14-phase-4-chunk-2.md` —
+  chunk-2 brief (Subsystem 2 ambiguity resolution +
+  envelope-less v1 substrate-collapse interpretation).
+- `docs/09_briefs/phase-4/chunks/2026-05-14-phase-4-chunk-3.md` —
+  chunk-3 brief (Subsystem 3 dispatcher + cross-phase emission
+  wiring; amended 2026-05-14 with five framing-discovery
+  findings).
+- Chunk-1 commit `6f3c2ad`; chunk-2 commit `8c036be`; chunk-3
+  commits `c3782e9` (3a — dispatcher service) + `5d4e954`
+  (3b — cross-phase emission wiring + chunk-3 substrate
+  complete).
+- `apps/web/src/services/document-platform/documentRouterService.ts` —
+  chunk-3 `dispatchTrigger` + `rematchCandidate` +
+  `runPerCaseReEvaluation` + per-trigger fan-out helpers
+  (source of truth for §item 4 refinements).
+- `apps/web/src/shared/schemas/document-platform/documentRelationshipCandidate.schema.ts` —
+  `RouterDecisionOutcomeSchema` 5-value Zod literal union
+  including `dispatch_failed` (source of truth for §Schema-deltas
+  amendment).
+- `supabase/migrations/20240151000000_document_relationship_router_dispatcher.sql` —
+  chunk-3 `cancel_exception_with_audit` RPC + CHECK rename +
+  trigger rewrite (cross-phase substrate referenced by §item 4
+  rule 1 cancel-integration).
+- `docs/07_governance/friction-journal.md` — F-J-13 tier-1 entry
+  (γ' + γ'-partial + D-partial-no-idempotency codification);
+  F-J-14 tier-1 entry (Path C dispatcher-isolated split);
+  F-J-15 tier-1 entry (brief amendment cycle discipline at
+  multi-finding scale).
+- `docs/07_governance/retrospectives/phase-4-retrospective.md`
+  (forthcoming in Phase 4 retrospective Commit C) — full
+  retrospective writeup with framing-discovery centerpiece +
+  codified patterns by graduation surface.
+
+This is **ADR-0018's first amendment**. Title-line stability
+preserved (no title-line revision). Scope spans four §-items
+covering chunks-1-3 shipped substrate reality + chunk-3
+framing-discovery refinements; broader §Decision review
+deferred per arc-class first-instance status framing.
