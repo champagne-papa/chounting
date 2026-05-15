@@ -816,3 +816,176 @@ retrospective-process meta-observations F-J entry); chunk-1 commit
 shape with the framing-discovery arc centerpiece and the cross-phase
 consumer two-inventory documentation; both extensions reflect Phase
 4's chunk-3 computational-shape novelty.
+
+## Post-close correction — Phase 5.1 framing + Phase 6 sequencing (2026-05-15)
+
+The §6.b cross-phase consumer inventory above + §3 framing-discovery
+arc cross-references + §4 codified patterns cluster references + §5
+inventory documentation references + §1 arc-summary references in
+this writeup contain naming and sequencing drift discovered the day
+after Commit C shipped, at the next-session-recommendation grain
+(2026-05-15 verify-from-disk against canonical sequencing documents).
+The corrections below restate the canonical reading; original
+sections above preserved for provenance per the same additive-
+provenance-preserving discipline Phase 2.5 codified for ADR
+amendments. The discovery grain is itself codified at the
+friction-journal entry dated 2026-05-15.
+
+### Canonical Phase 5.1 framing (per Phase 2 retrospective §6:588)
+
+> "Phase 5 amendment work (INV-DOC-001 enforcement wiring; vendor_credits substrate) is the other parallel candidate; could ship as Phase 5.1 amendments before or alongside Phase 3/4/7."
+
+**Phase 5.1 = Phase 5 amendments** (INV-DOC-001 enforcement +
+vendor_credits substrate + paymentService introduction territory
+per chunk-3-Phase-4 scope-lock framing of T2/T6 as "Phase 5
+amendment territory"). The §6.b heading + cross-references in this
+writeup framed Phase 5.1 as "Phase 5.1 reviewer chunk" — that
+naming was fabricated at Commit C drafting time without grounding
+against canonical sources. "Reviewer chunk" appears in no canonical
+doc other than the Commit C artifacts themselves; replace with
+"Phase 5.1 amendments" wherever read.
+
+Vendor onboarding + vendor_credits operational rollout remain
+post-v1 per **Phase 5 retrospective §6 lines 396-414**
+("reserved schema seats" framing). Phase 5.1 amendments could
+include INV-DOC-001 enforcement + paymentService introduction +
+vendor_credits substrate ratification but operational realization
+is contingent on founder + two real users hitting operational
+need; absent that signal, vendor_credits stays reserved-seat
+substrate.
+
+### Canonical sequencing (per Phase 5 retrospective §6:380-381)
+
+> "**Phase 5 closes → Phase 2 → Phase 3 → Phase 4 → Phase 6 → Phase 7 → Phase 8**. Canonical per the reframe spec §2."
+
+After Phase 4 closes, **Phase 6 (Ingestion) is the canonical next
+phase**, not Phase 5.1. The Round 7 scope-lock's cross-phase
+consumer two-inventory shape framing (§6.b above) missed Phase 6
+entirely — Round 7 framed only Phase 5.1 + Phase 7 as cross-phase
+consumers. The omission is corrected below.
+
+**Phase 3** (Document Relationship Graph consolidation per Phase 2
+retrospective §6:570-574) likely substantively shipped at
+chunk-5-Phase-2 (`source_document_links`); a Phase 3 closeout-
+verify precursor session ratifies or surfaces residual scope
+before Phase 6 scope-lock.
+
+### Corrected cross-phase consumer inventory (replaces §6.b)
+
+Three consumer shapes are instantiated in Phase 4's downstream
+consumer set, **ratifying the Round 7 Q3 three-shape theoretical
+framing as operationally complete** (Round 7 Q3 framed the third
+shape — pure discipline-reference consumer — as theoretical-possible
+for "hypothetical Phase 8"; Phase 6 is the actual instance):
+
+**Phase 6 (Ingestion) — pure discipline-reference consumer.**
+Canonical next phase per Phase 5 retrospective §6 sequencing.
+
+- *Activation-trigger inventory:* empty. Phase 6 does not activate
+  chunk-3 reserved T2/T4/T6 dispatcher slots (those are Phase 5.1
+  amendment territory); does not activate γ'-partial coverage gap
+  (Phase 7 substrate); does not directly consume Phase 4 substrate
+  beyond standing read-boundary access at ADR-0011 §1 documentation.
+- *Discipline-reference inventory:* RI-1 (consumer-presence
+  verification before substrate addition) applies at Phase 6's own
+  substrate additions; RI-6 four-grain applies at Phase 6
+  scope-lock if Phase 6's pipeline-orchestrator surface introduces
+  computational-shape decisions; RI-7 (session-budget-feasibility
+  + Path C invocation conditions) applies at Phase 6 scope-lock;
+  RI-10 (brief amendment cycle + framing-interaction matrix at
+  N≥3) applies if Phase 6 implementation surfaces
+  multi-finding-shape-changing framings.
+
+**Phase 5.1 amendments — both-shapes consumer.** Per Phase 2
+retrospective §6:588 framing; could ship before, alongside, or
+after Phase 6 per operational priority.
+
+- *Activation-trigger inventory:* chunk-3 reserved T2 dispatcher
+  slot activates at `paymentService.record()` post-commit dispatch
+  hook (per chunk-3-Phase-4 scope-lock framing of T2/T6 as "Phase
+  5 amendment territory"). T4 (vendor_credit activation) gated on
+  vendor_credits operational signal per Phase 5 retrospective §6
+  reserved-schema-seats framing. INV-DOC-001 enforcement wiring is
+  the third activation-trigger surface. `services/evidence/`
+  substrate-allocation realization is a downstream consumer
+  surface — could be Phase 5.1 amendments scope or later post-v1
+  chunk depending on operational priority.
+- *Discipline-reference inventory:* RI-1 + RI-6 four-grain + RI-7
+  + RI-10 apply at Phase 5.1 amendment scope-lock and
+  implementation.
+
+**Phase 7 Tier 2 pipeline — both-shapes consumer.** Downstream of
+Phase 6 (consumes Phase 6 ingestion substrate); larger scope per
+Phase 2 retrospective §6:580-585.
+
+- *Activation-trigger inventory:* γ'-partial coverage gap
+  (T1/T3/T10-stranded re-routing-functional via pipeline substrate)
+  activates when Phase 7 ships classification + extraction +
+  vendor-matching substrate for stranded cases; RI-9 (ADR-0018:792-805
+  idempotency contract activation) likely activates at Phase 7 if
+  fingerprint-dedup introduced; ADR-0018 §item 3 amendment trigger
+  fires at envelope-substrate ship; ADR-0016 §6
+  `pre_commit_link_rerouted` v1 emission deferral activation at the
+  chunk shipping prior-candidate-aware re-routing.
+- *Discipline-reference inventory:* same as Phase 6 + Phase 5.1
+  (RI-1 + RI-6 four-grain + RI-7 + RI-10).
+
+### Corrected next-session sequencing
+
+(1) **Phase 3 closeout-verify session** (small precursor; 1-2 hour
+scope). Verify chunks-5-6-Phase-2 + Phase 2.5 amendment cycles
+cover Phase 3's original "ships the link table" scope per ADR-0011
+§1 + ADR-0016. Produce closeout memory pointer + (if residual
+scope surfaces) a small brief.
+
+(2) **Phase 6 (Ingestion) substantive scope-lock** as the canonical
+next phase per Phase 5 retrospective §6. Pure discipline-reference
+consumer of Phase 4 codifications.
+
+(3) **Phase 5.1 amendments + Phase 7 + post-v1 prepayments/credits/
+vendor onboarding** downstream per operational priority. Phase 5.1
+amendments interleave with Phase 6/7 per Phase 2 retrospective
+§6:588 framing if operational priority demands.
+
+### Why this correction ships at post-close grain
+
+Verify-from-disk-applied-at-next-session-recommendation-grain
+surfaced the drift; codify-while-deciding-not-while-implementing
+applies reflexively. Fix-now-while-context-is-high amortizes the
+cost across one fix-commit rather than across N future-session
+reconciliations of mis-framed forward-pointers. The post-close
+correction shape is **provenance-preserving** — original sections
+preserved; correction appends at end; both visible to future
+readers. Below ADR-amendment-cycle threshold (no ADR amendment
+needed; canonical readings already exist in Phase 2 + Phase 5
+retrospectives). Above leave-implicit threshold (forward-pointer
+drift compounds in cost across future sessions reading the
+inheritance trail).
+
+### Surface-precedence note (revisited)
+
+The §7 surface-precedence T3 > T4 > T1 statement above also gets
+ratified at this correction: T3 (ADR amendments) carry contract
+correctness; T4 (CLAUDE.md) carries process/discipline
+correctness; T1 (this retrospective) carries war-diary
+correctness. The Phase 5.1 reviewer fabrication operated entirely
+at T1 grain (no T3 contract claim; no T4 discipline claim; the
+phase-naming-attribution was a T1 war-diary forward-pointer).
+Surface-precedence held — T1 drift didn't propagate to T3 or T4
+canonical contracts/disciplines. The post-close correction at T1
+grain preserves T3 + T4 unchanged.
+
+### Discriminator added for future retrospective drafting cycles
+
+When a retrospective writeup contains forward-pointers to
+downstream phases, the verify-at-impl item set MUST include
+**phase-naming-attribution verification against canonical
+sequencing documents** (Phase 2 retrospective + Phase 5
+retrospective + reframe spec + any phase-specific retrospectives
+that name future phases) before drafting close. This extends RI-6
+four-grain at retrospective-drafting grain with a fifth grain
+(phase-naming-attribution-against-canonical-sequencing); see
+friction-journal 2026-05-15 entry for the codification rationale
++ codification threshold framing (N=1; observation-only at
+chunks-1-6 + Phase 4 grain; future retrospectives surface N=2+
+for formal graduation).

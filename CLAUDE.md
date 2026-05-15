@@ -656,6 +656,47 @@ claims at chunks 4+ name the grain.
   Phase 4 retrospective F-J entry (codify-while-deciding meta-
   discipline + three applied-discipline instances).
 
+### Post-close correction (2026-05-15)
+
+The cluster above shipped at Phase 4 retrospective Commit C
+(`294f9e7`, 2026-05-14) with cross-references that name "Phase 5.1
+reviewer chunk" and "Phase 7 envelope substrate" as Phase 4's
+downstream consumers. Post-close verify-from-disk at the
+next-session-recommendation grain (2026-05-15) surfaced drift:
+"Phase 5.1 reviewer chunk" is a Commit-C-drafting fabrication;
+canonical Phase 5.1 = **Phase 5 amendments** per Phase 2
+retrospective §6 line 588 (INV-DOC-001 enforcement + vendor_credits
+substrate + paymentService introduction territory). The Round 7
+scope-lock missed Phase 6 (Ingestion) as the canonical next phase
+per Phase 5 retrospective §6 sequencing (`Phase 5 → Phase 2 →
+Phase 3 → Phase 4 → Phase 6 → Phase 7 → Phase 8`). Phase 6 is
+the operationally-instantiated **pure discipline-reference
+consumer** of this cluster (Round 7 Q3 third-shape ratified
+operationally).
+
+Canonical readings authoritative at the cross-references above:
+
+- **Phase 5.1** = Phase 5 amendments (not "Phase 5.1 reviewer
+  chunk"). Both-shapes consumer of Phase 4 (activation-trigger:
+  T2 dispatcher slot via paymentService.record() post-commit
+  dispatch hook; discipline-reference: RI-1 + RI-6 + RI-7 +
+  RI-10).
+- **Phase 6** (Ingestion) — canonical next phase post-Phase-4 per
+  Phase 5 retrospective §6:380-381. Pure discipline-reference
+  consumer of Phase 4 (RI-1 + RI-6 + RI-7 + RI-10 at Phase 6
+  scope-lock; no activation-trigger work on Phase 4 substrate).
+- **Phase 7** Tier 2 pipeline — both-shapes consumer (activation-
+  trigger: γ'-partial coverage gap + RI-9 fingerprint-dedup;
+  discipline-reference: RI-1 + RI-6 + RI-7 + RI-10).
+
+Full corrected cross-phase consumer inventory + corrected
+next-session sequencing at the Phase 4 retrospective writeup's
+"## Post-close correction" section (`docs/07_governance/retrospectives/phase-4-retrospective.md`).
+Drift codification + discovery-grain framing at friction-journal
+2026-05-15 entry. Below ADR-amendment-cycle threshold;
+provenance-preserving correction shape (original cross-references
+above stay; this note appends at end of cluster).
+
 ## Phase 1 Simplifications
 
 Three Phase 1 simplifications (synchronous audit log,
