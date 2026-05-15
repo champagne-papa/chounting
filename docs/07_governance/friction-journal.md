@@ -11374,3 +11374,51 @@ Conflating them forces every v1 customer to pay Mode-3-grade costs for Mode-1-2 
 - This entry.
 - Memory pointer + memory file at `project_sharepoint_durability_amendment.md` for activation-brief-author discoverability (the natural search path is MEMORY.md → ADR-0013, not grep-friction-journal-for-SharePoint).
 
+---
+
+## 2026-05-15 — RI-6 fifth grain: existing-consumer-contract-conformance when adding column constraints (Phase 6 chunk 1 amendment-cycle trigger)
+
+**Tier-1 codification candidate** — surfaces a missing grain in the RI-6 verify-forward-at-scope-lock four-grain discipline codified at Phase 4 retrospective. Phase 6 retrospective candidate per Amendment §4 of chunk 6.1 brief.
+
+**Trigger event.** Phase 6 chunk 1 execution at Task 12 (validation gates). After applying migration 152 with Sub-Q4 Step C (`ALTER TABLE source_documents ALTER COLUMN ingest_batch_id SET NOT NULL`), `pnpm test` revealed 57 cross-phase test failures, all rooted in one cause: the existing `documentPlatformService.createSourceDocument` calls migration 137's RPC `create_source_document_with_audit`, which does not pass `ingest_batch_id`. With the column NOT NULL, every existing call broke. 1064 vitest tests collected; 57 failed; 49 skipped.
+
+**Why the four-grain discipline missed this.** RI-6 (per Phase 4 retrospective + CLAUDE.md `Verify-forward-at-scope-lock for computational-shape chunks`) names four grains:
+
+- Grain 1: substrate-shape (what tables/columns/RPCs/types exist?)
+- Grain 2: per-decision-coverage (for each trigger/branch, what's the per-cell semantic?)
+- Grain 3: per-branch × per-failure-outcome (per-cell behavior exhaustive? Reachable cells correct?)
+- Grain 4: idempotency-and-side-effect-contract (per-cited-contract, is it implemented at chunk close?)
+
+The Sub-Q4 verify-at-implementation gate (Task 9) caught the **production-row gap** (count=75 in dev DB → sentinel-batch fallback activated). That's Grain-1-shaped verification: "what rows exist that the new column needs to accommodate?" The gate did not catch the **consumer-impact gap**: "which existing service-layer callers does the new constraint break?"
+
+The miss is a different shape than the four grains cover. None of Grains 1-4 prescribes "enumerate existing callers of related substrate and check their behavior against the new constraint."
+
+**Fifth-grain proposal — existing-consumer-contract-conformance.** For any chunk that adds a constraint (NOT NULL, CHECK, FK, UNIQUE) to an existing column OR adds substrate that an existing service writes to, enumerate existing callers and verify each survives the new constraint. Mechanics:
+
+- For NOT NULL on column X: grep service-layer + migration RPCs for INSERT statements on the parent table; verify each provides X or is updated to provide X in the same chunk.
+- For CHECK on column X: grep for emission paths; verify each emits compliant values.
+- For new FK on column X: grep for value sources; verify each provides a reachable parent row.
+- For UNIQUE on (X, Y): grep for INSERT/UPDATE paths; verify no path produces duplicate (X, Y).
+
+The grain operates at scope-lock-onset alongside the existing four grains; the volume cost is bounded by the chunk's substrate change set (one grep per constraint added).
+
+**Application to chunks 6.2/6.3.** When Sub-Q4 Step C reactivates at chunks 6.2/6.3 (with `documentPlatformService.createSourceDocument` updated to pass `ingest_batch_id`), the fifth grain fires explicitly: at scope-lock, grep all callers of `create_source_document_with_audit` and `createSourceDocument` and verify each provides `ingest_batch_id`. This pre-empts the chunk 6.1 firing class.
+
+**Pattern instance count.** N=1 observation at chunk-grain. Below CLAUDE.md codification threshold (observation-grain N=3 per the CLAUDE.md convention). Friction-journal entry preserves the pattern + Phase 6 chunk 6.1 brief amendment §4 marks the codification candidate. Future constraint-addition chunks (chunks 6.2/6.3 Step C activation; Phase 7 substrate constraints; Phase 8 onwards) produce additional observation-grain instances; graduation to CLAUDE.md fires at N=3 if the pattern recurs.
+
+**Sibling-to-related pattern: column-grain vs table-grain "land schema with consumer code" (Flag 4).** The constraint-grain refinement (Flag 10) sits as the third grain alongside Flag 4's two existing grains:
+
+- Table grain (Flag 4 + chunk 6.1 Sub-Q5 `ingest_items` deferral): table ships when first writer or reader exists.
+- Column grain (Flag 4 + chunk-1-Phase-2 reserved columns NULL-able with named future activation): columns ship NULL-able ahead of consumer code.
+- **Constraint grain (Flag 10 + chunk 6.1 Sub-Q4 Step C deferral)**: NOT NULL / CHECK / FK / UNIQUE defer until consumers exist that satisfy the contract.
+
+The three-grain framing is the consolidated discipline. Phase 6 retrospective codification candidate consolidating Flag 4 + Flag 10 + this entry into the three-grain "land schema with consumer code" statement.
+
+**Cross-references.**
+
+- `docs/07_governance/retrospectives/phase-4-retrospective.md` §RI-6 — original four-grain framing.
+- `CLAUDE.md` `## Verify-forward-at-scope-lock for computational-shape chunks` §RI-6 — four-grain codification.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-1.md` — Phase 6 chunk 1 brief with Amendment §4 codifying this finding.
+- `supabase/migrations/20240152000000_ingestion_substrate.sql` — chunk 6.1 substrate; Step C + Step D deferred-with-comments block documents the deferral target for chunks 6.2/6.3 activation.
+- `010fe97` — ADR-0011 §1 amendment commit (chunk 6.1 Commit 1).
+
