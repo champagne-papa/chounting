@@ -11559,3 +11559,330 @@ The chunk 6.2a brief's Grain 5 enumeration scope-locked at "30 callers across 10
 - `010b5e6` — chunk 6.2a brief commit.
 - Phase 6 retrospective at chunk 6.3 close — consolidates the four findings into RI-6 amendment + CLAUDE.md update.
 
+## 2026-05-15 — Brainstorming-round vocabulary not disk-anchored (Flag 13; chunk 6.2b first-instance tier-1)
+
+**Pattern.** Briefs and handoffs sometimes cite a round-numbered anchor
+("Round 4 X", "Round 7 Y") from a brainstorming-session round-tracking
+artifact. Round labels are brainstorming-session vocabulary that does
+NOT propagate to disk — the plan-doc / brief / canonical-artifact
+sections have section headings, line ranges, and section names, but
+not round labels. When a brief or handoff cites a round-numbered
+anchor, verify-from-disk MUST confirm the anchor's vocabulary actually
+exists in the cited canonical artifact. If the canonical artifact
+uses different vocabulary (e.g., a section heading + line range), the
+brief MUST cite the disk anchor, not the round label.
+
+**Trigger.** Chunk 6.2b handoff (composed at chunk 6.2a close)
+referenced "Round 4 submission-envelope semantic" as a plan-doc
+anchor for the multi-file POST shape (Sub-Q3) + the all-or-nothing
+failure shape (Sub-Q9). Verify-from-disk at chunk 6.2b brainstorming
+session surfaced that the semantic exists at
+`docs/09_briefs/phase-6/plans/2026-05-15-phase-6-ingestion-execution-plan.md`
+lines 139-156 (per-channel write composition section) but NO
+"Round 4" label appears anywhere in the plan doc. The "Round 4"
+anchor was a brainstorming-session artifact from the Phase 6
+brainstorming session that produced the plan doc.
+
+**Discipline.** Before citing a round-numbered anchor in any brief
+or handoff: (1) verify-from-disk the anchor's vocabulary appears in
+the cited canonical artifact via grep / Read; (2) if the canonical
+artifact uses different vocabulary (line range, section heading),
+cite the disk vocabulary instead; (3) round labels from brainstorming
+sessions are NOT canonical — they're working-memory state that
+shouldn't propagate beyond the session.
+
+**Sibling discipline.** RI-6 verify-from-disk five-grain (Grain 1
+substrate-shape). This pattern is Grain 1 applied to brainstorming-
+vocabulary citation specifically; the brief/handoff cites a "round"
+anchor that doesn't exist on disk. Codification level: tier-1
+first-instance precedent at chunk 6.2b close. Future briefs +
+handoffs MUST cite disk anchors (line ranges, section names).
+
+**Cross-references.**
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2b.md` §Sub-Q resolutions > Sub-Q3 — the brief cites `plan-doc lines 139-156` as the disk anchor (corrected from the handoff's "Round 4" vocabulary).
+- Phase 6 retrospective at chunk 6.3 close — consider promoting this to a CLAUDE.md convention (`Round vocabulary in brainstorming sessions is session-local; briefs cite disk anchors only`).
+
+## 2026-05-15 — First-instance precedent: Next.js native multipart parser + drag-drop UI native HTML5 events (Phase 6 chunk 6.2b)
+
+**Pattern.** Chunk 6.2b introduces TWO first-instance precedents in
+the codebase: (1) `Request.formData()` multipart parsing at a route
+handler — first multipart parser anywhere in `apps/web/src/app/api/`;
+(2) native HTML5 `onDragOver` / `onDrop` event handlers — first
+drag-drop UI anywhere in `apps/web/src/components/`. Grain 5
+prospective scan at chunk 6.2b brief-drafting returned zero existing
+consumers for both patterns; zero-count IS the evidence basis (NOT
+the skip basis).
+
+**Convention locked.**
+- Multipart parsing in route handlers: Next.js native
+  `Request.formData()`. No external library (no `formidable`, no
+  `busboy`, no `@vercel/blob` form parsing). Platform body size
+  limits (Next.js / Vercel default ~4-5MB depending on config) apply
+  as implicit fallback for file-count cap (Sub-Q3 lock).
+- Drag-drop UI: native HTML5 `onDragOver` / `onDrop` events. No
+  external library (no `react-dropzone`, no `useDropzone`). Tailwind-
+  only styling per existing canvas-component convention.
+
+**Greppable signals.**
+- Multipart: `await req.formData()` in route handlers (currently
+  `apps/web/src/app/api/orgs/[orgId]/documents/ingest/drag-drop/route.ts`
+  only).
+- Drag-drop UI: `onDrop=` + `onDragOver=` in canvas components
+  (currently `apps/web/src/components/canvas/DocumentIntakeRail.tsx`
+  only).
+
+**Trigger.** Future chunks adding additional multipart routes or
+drag-drop UI surfaces inherit these conventions. If a future need
+surfaces (e.g., very large file uploads requiring streaming) that
+the Next.js native parser can't handle, the deviation needs friction-
+journal codification + brief-level adjudication (NOT silent adoption
+of an external library).
+
+**Codification level.** Two distinct first-instance precedents
+codified at the same chunk close. Both qualify as tier-1
+graduations per Grain 5 zero-count-IS-evidence-basis discipline
+(per chunk 6.1 RI-6 fifth-grain codification).
+
+**Cross-references.**
+- `apps/web/src/app/api/orgs/[orgId]/documents/ingest/drag-drop/route.ts` — Multipart parser instance.
+- `apps/web/src/components/canvas/DocumentIntakeRail.tsx` — Drag-drop UI instance.
+- Phase 6 retrospective at chunk 6.3 close — consider codifying both as CLAUDE.md conventions.
+
+## 2026-05-15 — Volume-forecast drift at chunk 6.2b: 97% above upper-bound forecast (Phase 6 chunk 6.2b)
+
+**Pattern.** Chunk 6.2b shipped at **2335 LOC vs ~785-1185 forecast**
+(97% above upper bound). Per the brief's Task 12 verify-at-close LOC
+discipline (>30% drift triggers friction-journal entry), the drift
+threshold fired.
+
+**Drift drivers** (with attribution):
+1. **Migration 154 (new substrate, +119 LOC; NOT in original
+   forecast)** — Flag 6 / MF-3 resolution at T6 (cards endpoint
+   sentinel-filter implementation shape) selected option (ii)
+   Postgres view. The brief explicitly framed migration as
+   acceptable scope ("If (ii) or (iii) shape selected, the migration
+   ships in chunk 6.2b commit") but the original LOC forecast did
+   NOT account for it.
+2. **Test files heavier than forecast (+~600 LOC vs estimate)** —
+   3 test files shipped at 905 LOC total (17 tests × ~53 LOC/test);
+   brief estimate was ~10-15 tests × ~30-40 LOC/test ≈ 300-600 LOC.
+   Test files in this codebase carry heavy comment blocks +
+   structured fixture helpers; 53 LOC/test is closer to the
+   codebase median than the brief's lower estimate.
+3. **Heavy file-top comment blocks** — `ingestionService.ts` at
+   374 LOC; ~30-40% of that is file-top comment block citing all 9
+   Sub-Q locks + governance disciplines + flow narratives. Matches
+   chunk 6.2a precedent (documentPlatformService.ts post-amendment
+   has a similar density) but the chunk 6.2b brief LOC forecast
+   didn't fully account for it.
+
+**Calibration adjustment for chunk 6.3 forecast.**
+- chunk 6.3 brief should anchor LOC forecast against chunk 6.2a's
+  715 LOC AND chunk 6.2b's 2335 LOC. Average: 1525 LOC per Path C
+  half. But chunk 6.3 = `forwarded_mailbox` end-to-end + Phase 6
+  retrospective; retrospective alone may add ~500-1000 LOC. Chunk
+  6.3 forecast band: **~2000-3500 LOC** (substantially higher than
+  the plan doc's ~1000-1500 estimate per chunk).
+- Codification candidate at Phase 6 retrospective: revise per-chunk
+  LOC forecast methodology to account for (a) test-LOC at ~50-60
+  LOC/test, (b) file-top comment blocks proportional to Sub-Q count,
+  (c) impl-time-discovered substrate additions (e.g., view migrations).
+
+**Sibling pattern.** Path C codification (RI-7) at Phase 4 chunk 3
+calibrated against an empirical anchor (~1400 LOC). chunk 6.2b's
+2335 LOC suggests RI-7 calibration may be biased low; Phase 6
+retrospective should adjudicate whether to revise the RI-7 anchor
+downward (chunk 6.2a single-session band) or upward (chunk 6.2b
+substrate-adding band).
+
+**Cross-references.**
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2b.md` §Task plan T12 — the verify-at-close LOC discipline that fired.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2a.md` §"Path C invocation callout" — the original 785-1185 LOC forecast for chunk 6.2b.
+- Phase 6 retrospective at chunk 6.3 close — LOC calibration adjustment.
+
+## 2026-05-15 — Impl-time discoveries during chunk 6.2b execution (Phase 6 chunk 6.2b)
+
+**Five impl-time discoveries** during chunk 6.2b T1-T13 execution
+that warrant codification but do NOT individually trigger brief
+amendment cycles (single-finding-scale per RI-10):
+
+### Discovery 1 — `withInvariants(..., { action })` not used; CA-27 parity test would require permission seeding
+
+**Finding.** The brief example code at Sub-Q9 cited
+`withInvariants(..., { action: 'ingest.drag_drop' })`. Verify-from-
+disk at T5 (drag-drop POST route) surfaced that `ActionName` is a
+closed-enum type derived from `ACTION_NAMES` in
+`apps/web/src/services/auth/canUserPerformAction.ts`, with a CA-27
+parity test asserting set-equality between `ACTION_NAMES` and the
+`permissions` table. Adding `ingest.drag_drop` would require:
+ACTION_NAMES update + permissions row seeding migration +
+role_permissions rows. For v1 chunk 6.2b with no viewer role, the
+effective permission would be "all roles can drag-drop" — equivalent
+to dropping the `action` option entirely (Invariant 3 org-access
+check covers the load-bearing security gate).
+
+**Resolution.** Dropped the `action` option. Phase 7+ may add
+`ingest.drag_drop` action when finer-grained permissions surface
+(e.g., a viewer role that can't drag-drop).
+
+### Discovery 2 — `document_cases` has no `source_document_id` FK; link goes through `document_jobs`
+
+**Finding.** Brief example code at T6 (cards-list GET route)
+assumed `document_cases.source_document_id` as a JOIN key. Reading
+the chunk-1-Phase-2 schema surfaced that `document_cases` carries
+no direct FK to `source_documents`. The Phase 6 link is via
+`document_jobs.source_document_id` + `document_jobs.document_case_id`
+(both FKs). This is the canonical per-card link at Phase 6 (pre-
+Phase-7 classification).
+
+**Resolution.** Migration 154 `document_cards_view` JOINs through
+`document_jobs` (INNER JOIN) to flatten the per-card row. Pre-Phase-
+6 historical document_cases (no document_jobs row) are correctly
+excluded — they belong to the legacy Phase-2 surface, not the
+Phase 6 ingestion arc.
+
+### Discovery 3 — `p_cases` payload requires `document_type` and `trace_id`
+
+**Finding.** Brief example code at T4 (ingestionService) omitted
+`document_type` and `trace_id` from the `p_cases` payload. Reading
+the chunk 6.1 RPC body (migration 152 lines 533-545) surfaced that
+both columns are required in the `document_cases` INSERT inside the
+RPC. `document_type` is NOT NULL per the chunk-1-Phase-2 schema
+(values: `vendor_invoice`, `receipt`, `payment_confirmation`,
+`unknown`); `trace_id` is required per ADR-0010 service emission
+discipline.
+
+**Resolution.** ingestionService passes `document_type: 'unknown'`
+(pre-classification; Phase 7 transitions to specific types) and
+`trace_id: ctx.trace_id` in each `p_cases` element.
+
+### Discovery 4 — `audit_log` PK is `audit_log_id`, not `id`
+
+**Finding.** Initial test code at T10 (ingestionService integration)
+queried `audit_log.id` which returned a Postgrest error `42703
+column audit_log.id does not exist`. Reading
+`supabase/migrations/20240101000000_initial_schema.sql` surfaced
+that the PK is `audit_log_id`.
+
+**Resolution.** Test queries updated to use `audit_log_id` or
+`trace_id` columns. Generalizable lesson: schema-table-name vs
+column-name conventions vary; verify against migration files when
+querying for ID/PK columns.
+
+### Discovery 5 — Vitest config has no React DOM environment; .test.tsx component tests skipped
+
+**Finding.** Brief Task 11 listed `DocumentIntakeRail.test.tsx` +
+`DocumentCard.test.tsx` as new UI component unit tests. Reading
+`apps/web/vitest.config.ts` surfaced `environment: 'node'` +
+`include: ['tests/**/*.test.ts']` (no `.test.tsx` glob). No jsdom /
+happy-dom / @testing-library/react in dependencies. The codebase
+has ZERO `.test.tsx` files; adding the infrastructure is substrate
+scope expansion beyond chunk 6.2b boundary.
+
+**Resolution.** T11 skipped. Coverage gap: drag-drop event handler
+state transitions inside `DocumentIntakeRail` are NOT unit-tested.
+Integration tests (T10) cover the wire behavior (POST + response
+shapes). Phase 6 retrospective candidate: add React component test
+infrastructure if Phase 7+ surfaces additional component-level
+work.
+
+### Codification level
+
+All five discoveries shipped as friction-journal entries at chunk
+6.2b close. Discoveries 1, 2, and 5 are scope-shaping (affect brief
+text); 3 and 4 are implementation-trivia worth surfacing for
+greppable lookups. Phase 6 retrospective at chunk 6.3 close
+consolidates which (if any) graduate to CLAUDE.md.
+
+**Cross-references.**
+- `apps/web/src/services/auth/canUserPerformAction.ts` — Discovery 1 ACTION_NAMES enum.
+- `supabase/migrations/20240152000000_ingestion_substrate.sql` lines 533-584 — Discovery 2 + 3 chunk 6.1 RPC body shape.
+- `supabase/migrations/20240101000000_initial_schema.sql` — Discovery 4 audit_log schema.
+- `apps/web/vitest.config.ts` — Discovery 5 test environment.
+
+## 2026-05-15 — Flag 3 resolution: DocumentIntakeRail integrates at SplitScreenLayout (not nested in ContextualCanvas) (Phase 6 chunk 6.2b)
+
+**Resolution of Flagged ambiguity 3 from chunk 6.2b brief.**
+
+**Finding.** Brief said T8 should "wire DocumentIntakeRail
+integration" into ContextualCanvas. Reading
+`apps/web/src/components/bridge/ContextualCanvas.tsx` surfaced that
+ContextualCanvas is a flex-1 main pane that switches between 32
+directive-typed views via a switch statement. There's no natural
+host slot inside ContextualCanvas for a workflow primitive like
+the intake rail. Reading
+`apps/web/src/components/bridge/SplitScreenLayout.tsx` surfaced
+the actual parent layout with three zones (MainframeRail +
+AgentChatPanel + ContextualCanvas); the intake rail fits naturally
+as a fourth zone at the layout level.
+
+**Resolution.** Integration site = `SplitScreenLayout.tsx` (added
+fourth zone after ContextualCanvas). ContextualCanvas.tsx is NOT
+modified. The PRD vision ("vertical intake rail on the far right
+of the canvas") is satisfied by placing the rail as the rightmost
+layout zone, which renders to the right of the canvas pane.
+
+**Why this is the cleaner integration.** ContextualCanvas hosts
+directive-typed views (chart_of_accounts, journal_entry_list, etc.).
+The intake rail is a workflow primitive (always-on file intake
+affordance), not a canvas directive. Mixing the two would couple
+the canvas navigation history to the intake rail's drop-zone state;
+keeping them as sibling zones preserves separation of concerns.
+
+**Cross-references.**
+- `apps/web/src/components/bridge/SplitScreenLayout.tsx` — The four-zone layout post-chunk-6.2b.
+- `apps/web/src/components/bridge/ContextualCanvas.tsx` — Unchanged at chunk 6.2b.
+- `docs/01_prd/triage_bucket_intake.md` — PRD Phase 2 vision (canvas-right-edge intake rail).
+
+## 2026-05-15 — Flag 6 resolution: cards endpoint via Postgres view + INNER JOIN through document_jobs (Phase 6 chunk 6.2b; MF-3 resolution)
+
+**Resolution of Flagged ambiguity 6 from chunk 6.2b brief +
+execution-session MF-3 awareness item.**
+
+**Finding.** Brief example code at T6 (cards-list route) chained
+supabase-js `.not('source_documents.ingest_batches.channel_metadata',
+'cs', '...')` against a nested-JOIN reference. The brief flagged
+this as potentially fragile (Flag 6 + MF-3 listed four viable
+shapes: (i) chained .not(); (ii) Postgres view; (iii) stored
+procedure; (iv) fetch + app-layer filter).
+
+**Resolution.** Selected (ii) Postgres view. Migration
+`20240154000000_document_cards_view.sql` creates
+`document_cards_view` that flattens
+`document_cases` × `document_jobs` × `source_documents` ×
+`ingest_batches` via INNER JOIN, with the sentinel filter baked
+into the WHERE clause. Both cards endpoints (list + detail) query
+the view; sentinel exclusion is inherited from the view definition.
+
+**Why view over the other shapes.**
+- (i) chained `.not()` — uncertain syntax support for nested-JOIN
+  filter paths; brittle.
+- (iii) stored procedure — overkill for a SELECT-only path.
+- (iv) fetch + app-layer filter — security-adjacent (sentinel
+  filter should be DB-enforced, not app-layer); also N+1 query
+  problem if used naively.
+
+**Symmetric-filter discipline preserved.** The same JSONB
+containment expression `channel_metadata @> '{"sentinel": true}'`
+appears at BOTH (a) Layer 2 Zod ingress (write-side rejection in
+`DragDropChannelMetadataSchema.strict() + .refine()`) and (b) the
+view's WHERE clause (read-side filter). Single sentinel-shape
+definition, two enforcement sites. Test plan tests 13 + 14 verify
+BOTH m152-shape AND m153-shape sentinel fixtures are excluded
+(Drift 3 + MF-4 coverage requirement).
+
+**Implementation note.** Views inherit RLS from underlying tables.
+The cards route uses `adminClient` (bypasses RLS) but adds an
+explicit `ctx.caller.org_ids.includes(orgId)` check before the SQL
+query (the org-access gate for read endpoints without
+withInvariants). GRANT SELECT on the view to both `service_role`
+and `authenticated` for future user-direct access patterns.
+
+**Cross-references.**
+- `supabase/migrations/20240154000000_document_cards_view.sql` — The view definition.
+- `apps/web/src/app/api/orgs/[orgId]/documents/cases/route.ts` — list endpoint querying the view.
+- `apps/web/src/app/api/orgs/[orgId]/documents/cases/[caseId]/route.ts` — detail endpoint querying the view.
+- `apps/web/src/shared/schemas/document-platform/ingestBatch.schema.ts` `DragDropChannelMetadataSchema` — the write-side sentinel rejection.
+- Phase 6 retrospective at chunk 6.3 close — codify the symmetric-filter discipline as a CLAUDE.md convention if it recurs.
+
+
