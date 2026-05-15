@@ -18,6 +18,8 @@ Amended 2026-05-08 (Phase 2 brief-creation arc-closeout cycle) —
 triage path (a) election. ADR-0011's first amendment; title-line
 stability preserved. See `## Amendment` block at end of this ADR.
 
+Amended 2026-05-15 per Phase 6 chunk 1 ingest_items deferral clause.
+
 ## Date
 
 2026-05-03
@@ -1612,3 +1614,99 @@ Title-line stability preserved (no title-line revision). Scope
 is narrow (the four sub-findings 6.4, 6.5, 6.6, 6.7 of
 retrospective inventory item #6); broader Phase 0 review
 deferred per arc-class first-instance status framing.
+
+## Amendment 2026-05-15 — ingest_items deferral per "land schema with consumer code"
+
+### Triggered by
+
+Phase 6 chunk 1 (Ingestion Substrate) brainstorming session
+2026-05-15, committed at 8eee953. Round 5 scope-lock adjudication
+on `ingest_items` substrate consumer-presence per RI-1 + the
+"land schema with consumer code" reverse-discipline established
+at migration 135 (Sub-Q2(a) deferral of
+`source_documents.ingest_batch_id`).
+
+### Scope
+
+ADR-0011 §1 lists `ingest_batches and ingest_items — the
+ingestion-channel abstraction` as Document Platform substrate.
+Phase 6 chunk 1 ships `ingest_batches` (writer = `ingestionService`
+at chunks 6.2 / 6.3) but defers `ingest_items` to Phase 7
+(Extraction) when its consumer crisps. The §1 entity bullet text
+remains unchanged for provenance preservation; this amendment
+captures the deferral.
+
+This amendment does NOT remove `ingest_items` from substrate; it
+reserves the name at ADR text level (per the "ADR-named-not-
+yet-shipped" substrate pattern surfaced as Phase 6 retrospective
+inventory Flag 1) and defers the migration to Phase 7.
+Activation trigger: first Phase 7 brief-drafting where consumer
+code crisps (most likely shape: channel-attested per-attachment
+metadata for forwarded_mailbox provenance reconstruction, or
+per-item processing state orthogonal to `source_documents` +
+`document_jobs`).
+
+### Decision items (numbered, forward-only; numbering restarts at 1)
+
+1. **`ingest_items` substrate deferred to Phase 7.** §1's entity
+   bullet `ingest_batches and ingest_items — the ingestion-channel
+   abstraction (drag-drop PDF, forwarded mailbox, future channels)`
+   stays as-written. Semantically, the bullet reads forward as:
+   `ingest_batches` ships at Phase 6 chunk 1 as the ingestion-
+   channel envelope (drag-drop PDF, forwarded mailbox; service
+   emission narrows to these two v1 channels per spend brief §2
+   Layer-3 no-emit). `ingest_items` is named at substrate level
+   but deferred to Phase 7 (Extraction) per "land schema with
+   consumer code" discipline; activation trigger = first consumer
+   at Phase 7 brief-drafting. Future readers of §1 see the
+   original bullet; this amendment block clarifies the chunk 6.1
+   substrate-ship state.
+
+2. **Phase 6 chunk 1 ships `ingest_batches` + `document_jobs` +
+   `source_documents.ingest_batch_id` ALTER**, all at substrate
+   grain with writer-side consumer presence at Phase 6
+   (`ingestionService` at chunks 6.2 / 6.3) or named-future
+   activation at Phase 7 orchestrator (`document_jobs` Phase 7-
+   reserved columns + reserved enum values
+   `in_flight`/`failed_retry`/`failed_permanent`/`completed`).
+
+3. **`ingest_items` activation trigger named.** When Phase 7
+   brief-drafting surfaces a consumer for per-item state
+   orthogonal to `source_documents` + `document_jobs` (e.g.,
+   per-attachment channel-attested metadata, item-grain retry
+   budget, attachment-position-in-email provenance), the
+   `ingest_items` migration ships at that chunk. Until then,
+   substrate carries the name reserved at ADR text level only.
+   See Phase 6 retrospective inventory Flag 2 (`document_jobs` ↔
+   `ingest_items` overlap at Phase 7) — Phase 7 brief-drafting
+   may determine `ingest_items` is fully subsumed by
+   `document_jobs` + per-source_documents metadata, in which case
+   this amendment's deferral persists as substrate-name reservation
+   without ever activating.
+
+### Cross-references
+
+- `docs/09_briefs/phase-6/plans/2026-05-15-phase-6-ingestion-execution-plan.md` —
+  Phase 6 execution plan (canonical authority for Phase 6
+  scope-lock; committed at 8eee953).
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-1.md` —
+  Phase 6 chunk 1 brief (committed at e16eb8c).
+- `supabase/migrations/20240135000000_storage_substrate.sql` —
+  Phase 1 Sub-Q2(a) precedent (`source_documents.ingest_batch_id`
+  deferral per "land schema with consumer code"; chunk 6.1
+  Sub-Q4 closes this deferral with 3-step ALTER).
+- `supabase/migrations/20240152000000_ingestion_substrate.sql` —
+  chunk 6.1 migration that ships `ingest_batches` +
+  `document_jobs` + `source_documents.ingest_batch_id` ALTER +
+  atomic RPC. Lands as Commit 2 of chunk 6.1 (this amendment is
+  Commit 1).
+- `docs/07_governance/adr/0022-adr-lifecycle-workflows.md` §2
+  (amendment-block format) + §3 (Status-line update) + §6
+  (forward-only application) — this amendment is ADR-0011's
+  third and the first under post-ADR-0022 codified format. The
+  two prior amendments (2026-05-08 + 2026-05-13) retain legacy
+  informal shape; placement at end-of-file (after Cross-references
+  + Notes for future ADR writers) is preserved chronologically
+  rather than relocated per §2's "before Cross-references"
+  prescription. Placement gap surfaced as Phase 6 retrospective
+  inventory Flag 9.
