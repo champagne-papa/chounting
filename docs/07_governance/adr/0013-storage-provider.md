@@ -664,6 +664,10 @@ underlying bytes are out-of-band-deleted; the
 routes the controller to the resolution path; the
 accounting record persists.
 
+See the 2026-05-15 Amendment at the end of this ADR for the
+product-vs-vendor availability framing refinement and the
+`org_settings.sharepoint_durability_mode` substrate reservation.
+
 ### 14. Per-provider implementation skeletons (high-level only)
 
 ADR-0013 names the implementation contract requirements. It does
@@ -1075,7 +1079,9 @@ ownership.
   `org_settings.default_storage_provider` /
   `org_settings.drift_detection_cadence` /
   `org_settings.storage_retry_*` /
-  `org_settings.preview_url_*` columns.
+  `org_settings.preview_url_*` /
+  `org_settings.sharepoint_durability_mode` columns (the last
+  per the 2026-05-15 Amendment at end of ADR).
 - **ADR-0011** (`0011-document-platform.md`) — the spine.
   ADR-0013 inherits §1 (entity ownership boundary), §2
   (`source_documents` schema with the original-anchor +
@@ -1285,3 +1291,106 @@ ownership.
   are the only deferrable surface. Confusing the two surfaces
   produces the schema-migration cliff that ADR-0010 is
   designed to avoid.
+
+## 2026-05-15 Amendment — product-vs-vendor availability split + `sharepoint_durability_mode` reservation
+
+**Trigger.** Brainstorming session 2026-05-15 surfaced a load-bearing
+distinction in §13's "SharePoint holds bytes; CHOUnting holds
+meaning" framing. §13 is exact at the chounting-the-product
+availability grain — the grain it actually covers. The
+chounting-the-vendor availability grain (end-of-life; multi-year
+forensic audit; customer churn) is named here as a distinct
+concern that §13's framing does not on its own address, because
+when chounting-the-vendor is unavailable, the meaning is gone too
+(it lives only in chounting's database).
+
+**Three failure modes embedded in "chounting offline":**
+
+- **Mode 1 — transient outage (hours/days).** chounting unreachable
+  briefly. Best mechanism: chounting reliability investment
+  (cached views, mobile, email digests, offline read-only). Not a
+  storage-layer concern.
+- **Mode 2 — partial outage (weeks/months).** chounting frontend
+  bug / database fine. Best mechanism: product bugfix. Not a
+  storage-layer concern.
+- **Mode 3 — vendor end-of-life / forensic audit (multi-year).**
+  chounting-the-vendor gone; customer has SharePoint with N years
+  of accounting documents and needs to reconstruct approval /
+  rejection state. Only tractable via storage-layer commitment:
+  the meaning must be durable in SharePoint itself.
+
+The three modes have radically different best-mechanism profiles.
+Conflating them under "design for the strictest" produces over-
+engineering for cheap-to-solve modes AND under-serves the
+durability-grade mode. Stratified commitment is the right shape:
+Modes 1-2 via chounting reliability investment (no ADR amendment,
+no substrate writer obligations); Mode 3 via opt-in storage-layer
+commitment gated on per-org SharePoint configuration.
+
+**Substrate reservation.** A new column
+`org_settings.sharepoint_durability_mode` joins ADR-0013's
+reserved `org_settings.*` column list (per ADR-0010 reserved-
+enum-states discipline). The column rides with the deferred
+`org_settings` cross-cutting substrate sub-arc per the deferral
+codified in `supabase/migrations/20240135000000_storage_substrate.sql`
+anti-scope notes lines 27-33 (org_settings table + storage-related
+reserved columns deferred to dedicated sub-arc before v1 ship).
+Until that sub-arc lands, the reservation lives at ADR text grain
+only. Closed enum:
+
+- `none` — v1-fixed default. Bytes go to SharePoint; no folder
+  reorganization, no metadata projection. §13's original framing
+  holds verbatim for every v1 org.
+- `metadata_only` (reserved post-v1) — chounting writes
+  `chounting_status` and `chounting_display_label` metadata
+  columns to SharePoint files on lifecycle transitions. Bytes
+  don't move; `storage_key` unchanged. Intended for partial
+  Mode-3 coverage; SharePoint client-by-client visibility
+  behavior (web vs OneDrive sync vs Teams-attached libraries)
+  verified at activation, not at v1 ship.
+- `folder_organization` (reserved post-v1) — chounting moves
+  files between status-organized folders on lifecycle transitions
+  (`/<vendor>/<year>/<status>/<filename>`). Full Mode-3 coverage
+  (universal across SharePoint clients + audit / forensic
+  contexts). Requires treating the Microsoft Graph API drive-
+  item-ID as the stable `storage_key` abstraction so that moves
+  within a drive do not mutate `storage_key`; stability of drive-
+  item-IDs across the specific move pattern chounting needs
+  verified at activation, not at v1 ship.
+
+v1-active CHECK constraint: `sharepoint_durability_mode = 'none'`.
+The `metadata_only` and `folder_organization` values are
+reserved-not-omitted per ADR-0010; the v1-active CHECK relaxes
+when the SharePoint activation brief lands with a customer
+exercising one of the reserved modes.
+
+**Activation-brief consumer.** Per ADR-0013 §14's "reserved
+providers ship under their own activation briefs post-v1"
+discipline, the SharePoint activation brief is the named
+consumer for the reserved values. Activation-trigger: first
+customer request for vendor-end-of-life durability. At
+activation, the writer-obligation contract (synchronous vs
+eventual-consistency on lifecycle transitions; drift-detection
+`platform_initiated` flag distinguishing platform-driven moves
+from out-of-band moves; new audit event
+`source_document_relocated_on_lifecycle` per ADR-0011 §1
+canonical writer) lands alongside the v1-active CHECK relaxation.
+
+**§13 framing preserved for v1.** Until activation, the v1-active
+subset (`none` only) honors §13's original "SharePoint holds
+bytes; CHOUnting holds meaning. The split is exact and
+non-negotiable" verbatim — every v1 org runs `none`-mode and no
+customer pays the writer-obligation cost. The product-vs-vendor
+distinction is named now so future activation-brief authors and
+customer-positioning surfaces can address the two failure modes
+with the right mechanisms.
+
+**Cross-references.** Friction-journal entry 2026-05-15
+"Stratified continuity-of-business commitment: failure-mode-
+mechanism stratification (N=1 observation)" codifies the
+stratification framing as a sibling-to substrate-now-enforcement-
+later cross-pattern. Phase 4 retrospective post-close additions
+2026-05-15 names three forward-pointers (Phase 9+ chounting
+reliability investment for Modes 1-2; SharePoint activation brief
+activation-trigger for Mode 3; per-provider settings table
+refactor surface).

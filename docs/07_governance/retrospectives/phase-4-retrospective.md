@@ -665,6 +665,11 @@ is named with codification statement + named-future-trigger:
    (likely Phase 7 envelope substrate or Phase 5.1 reviewer chunk,
    depending on which surfaces the fingerprinting first).
 
+See `## Post-close additions — 2026-05-15 SharePoint continuity-of-
+business amendment` at end of document for items 6, 7, 8 added
+2026-05-15 per the additive-provenance-preserving shape (mirrors
+the existing 2026-05-15 post-close-correction precedent above).
+
 ### 6.b Cross-phase consumer inventory (Phase 5.1 + Phase 7)
 
 Two known downstream consumers inherit Phase 4 substrate and
@@ -989,3 +994,69 @@ friction-journal 2026-05-15 entry for the codification rationale
 + codification threshold framing (N=1; observation-only at
 chunks-1-6 + Phase 4 grain; future retrospectives surface N=2+
 for formal graduation).
+
+## Post-close additions — 2026-05-15 SharePoint continuity-of-business amendment
+
+Brainstorming session 2026-05-15 produced a four-artifact ADR-0013
+§13 framing-clarification amendment + governance trail (product-vs-
+vendor availability split + `org_settings.sharepoint_durability_mode`
+column reservation). The session output added three forward-pointer
+inventory items that extend §6.a's carry-forward list. Per the
+additive-provenance-preserving discipline codified at the existing
+Post-close correction section above (and originally established at
+Phase 2.5's ADR amendment cycle per memory pointer
+`project_phase_2_5_scope_locked.md`), the new items land in this
+appended section rather than in-place edits to §6.a. §6.a carries
+a one-line back-pointer to this section.
+
+Original §6.a numbered list (items 1-5) preserved unchanged; items
+6, 7, 8 below extend the list per this additions section.
+
+6. **2026-05-15 brainstorming — Phase 9+ chounting reliability
+   investment (Modes 1-2 continuity).** Codification statement:
+   mobile-friendly cached views of pending / approved / rejected
+   queues; email digests of pending status; offline read-only mode
+   in chounting web UI. Treats Modes 1-2 (transient outage,
+   partial outage) of the continuity-of-business concern as
+   product / reliability work, not architectural. No ADR amendment
+   surface. Named-future-trigger: Phase 9+ product investment cycle.
+
+7. **2026-05-15 brainstorming — SharePoint activation brief
+   activation-trigger for Mode 3 continuity.** Codification
+   statement: SharePoint activation brief introduces `metadata_only`
+   and / or `folder_organization` values of
+   `org_settings.sharepoint_durability_mode` (v1-active CHECK
+   relaxes from `= 'none'` to admit the activated value); writer-
+   obligation contract on lifecycle transitions lands alongside
+   (synchronous vs eventual-consistency choice; drift-detection
+   `platform_initiated` flag; new audit event
+   `source_document_relocated_on_lifecycle` per ADR-0011 §1
+   canonical writer); Microsoft Graph API drive-item-ID stability
+   across SharePoint moves verified at activation, not at v1 ship.
+   Named-future-trigger: first customer request for vendor-end-of-
+   life durability in SharePoint-mode org.
+
+8. **2026-05-15 brainstorming — per-provider settings table
+   refactor surface.** Codification statement: if multiple storage
+   providers (e.g., s3_bucket, sharepoint_drive each needing
+   distinct config) accumulate provider-specific `org_settings.*`
+   columns, a per-provider settings table
+   (`org_storage_provider_settings(org_id, storage_provider,
+   config_jsonb)`) becomes the cleaner shape than continuing to
+   add provider-specific columns to the catch-all `org_settings`
+   table. v1 ships with the single catch-all per ADR-0014 Q73
+   pattern; the refactor surface activates when the second
+   provider-specific column ships. Named-future-trigger: second
+   post-v1 provider activation (whichever ships first between
+   s3_bucket and sharepoint_drive activations).
+
+### Cross-references
+
+- ADR-0013 §13 2026-05-15 Amendment at end of ADR — substrate
+  reservation + product-vs-vendor framing.
+- `docs/07_governance/friction-journal.md` 2026-05-15 entry
+  "Stratified continuity-of-business commitment: failure-mode-
+  mechanism stratification (N=1 observation)" — pattern
+  codification.
+- Memory pointer `project_sharepoint_durability_amendment.md` —
+  session-output index entry for discoverability.

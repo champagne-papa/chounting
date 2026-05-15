@@ -11336,3 +11336,41 @@ Session-shape estimate: 1-2 hours when absorption ratifies cleanly. Smaller than
 
 **Phase 3 closeout-verify outcome.** Substantive completion ratifies. Phase 3 SHIPPED memory pointer + `project_phase_3_shipped.md` memory file produced. Next operational session: Phase 6 (Ingestion) substantive scope-lock per canonical sequencing (Phase 5 retrospective §6:380-381; Phase 4 retrospective post-close correction).
 
+### 2026-05-15 — Stratified continuity-of-business commitment: failure-mode-mechanism stratification (N=1 observation)
+
+Brainstorming session 2026-05-15 (post-Phase-3-closeout-verify, pre-Phase-6-scope-lock) surfaced a load-bearing distinction at architectural-commitment grain: when a "continuity-of-business" concern decomposes into multiple failure modes with materially different best-mechanism profiles, "design for the strictest" is a heuristic that decomposes into per-mode mechanism choices rather than a single substrate commitment spanning all modes.
+
+**Pattern statement.** "Design for the strictest" is a useful first-instinct when a continuity concern seems binary (commit to durability or don't). It is the **wrong** commitment when the failure modes have radically different best-mechanism profiles. Conflating multiple failure modes under one architectural commitment produces two failure shapes:
+
+- **Over-engineering for cheap-to-solve modes.** Heavyweight storage-layer commitments for failure modes that are better solved by product / reliability investment force every customer to pay writer-obligation costs that only durability-grade customers actually need.
+- **Under-serving the durability-grade mode.** Lighter mechanisms (metadata projection, manifest files, cached views) that satisfy the easier failure modes do not on their own provide the universal-cold-browse signal that the durability-grade mode requires.
+
+The discipline: at architectural-commitment scope-lock for any "continuity" concern, **decompose the concern into its embedded failure modes BEFORE picking a substrate mechanism.** Each mode gets its own mechanism choice (product investment vs storage-layer commitment vs opt-in customer activation). Substrate amendments activate alongside the mode-specific mechanism that requires them, not at the conflated-commitment scope-lock.
+
+**Triggering instance.** The session's framing was "AI agent offline — accountants need to check SharePoint to see document status." The first instinct ("design for the strictest") committed to universal SharePoint folder organization on every lifecycle transition. Decomposition surfaced three failure modes:
+
+- Mode 1 (transient outage, hours/days) — solvable via chounting reliability investment (cached views, mobile, email digests, offline read-only). Not a storage-layer concern.
+- Mode 2 (partial outage, weeks/months) — solvable via product bugfix. Not a storage-layer concern.
+- Mode 3 (vendor end-of-life, multi-year) — only solvable via storage-layer commitment (folder reorganization OR metadata projection).
+
+Stratified commitment shape: Modes 1-2 are Phase 9+ chounting reliability investment items (no ADR amendment, no substrate writer obligations). Mode 3 is opt-in per-org SharePoint commitment via `org_settings.sharepoint_durability_mode` ENUM reservation (`none` v1-active; `metadata_only` and `folder_organization` reserved-not-omitted per ADR-0010, activated by the SharePoint activation brief at first customer request).
+
+**Why the stratification is load-bearing.** The cost-benefit calibration of "design for the strictest" is asymmetric across the modes:
+
+- Modes 1-2 affect every customer briefly (every customer experiences product outages occasionally). Storage-layer commitment for these modes forces every v1 customer (including managed-bucket / supabase_storage customers who have already accepted chounting-as-access-path) to pay writer-obligation costs for failure modes they could solve more cheaply with product investment.
+- Mode 3 affects a subset of customers (SharePoint-mode orgs who explicitly want vendor-end-of-life durability) over a long horizon. Storage-layer commitment for this mode is appropriate because no product investment substitutes for "the meaning is durable in SharePoint."
+
+Conflating them forces every v1 customer to pay Mode-3-grade costs for Mode-1-2 failures. Stratification scopes the writer-obligation cost to the customers who actually need it.
+
+**Codification grain.** N=1 observation. Below codification threshold for CLAUDE.md (typically observation-grain N=3 per the CLAUDE.md "observation-grain vs application-grain N count" convention codified at Phase 4 retrospective). Friction-journal entry preserves the pattern + framing-clarification ADR amendment ships the substrate reservation. Future continuity-of-business concerns at chunk-N+ grain produce additional observation-grain instances; graduation to CLAUDE.md fires at N=3 if the pattern recurs.
+
+**Sibling-to-related pattern: substrate-now-enforcement-later.** This stratified-commitment pattern is a specialization of CLAUDE.md's substrate-now-enforcement-later cross-pattern (ADR-0010 reserved-not-omitted) applied at architectural-commitment grain. Substrate (the ENUM reservation) lands now (at ADR text grain pending org_settings sub-arc); enforcement (the writer-obligation contract on lifecycle transitions) lands at activation when the first customer-driven activation brief lands. The two-grain separation honors the same timing surfaces the substrate-now-enforcement-later pattern names.
+
+**On-disk artifacts (single bundled commit).**
+
+- ADR-0013 §13 one-line forward-pointer + Amendment block at end of ADR (§13 verbatim text preserved per its own opening framing).
+- ADR-0013 §Cross-references reserved-column-list extended by `org_settings.sharepoint_durability_mode`.
+- Phase 4 retrospective post-close additions 2026-05-15 names three forward-pointers (Phase 9+ chounting reliability investment; SharePoint activation brief activation-trigger; per-provider settings table refactor surface).
+- This entry.
+- Memory pointer + memory file at `project_sharepoint_durability_amendment.md` for activation-brief-author discoverability (the natural search path is MEMORY.md → ADR-0013, not grep-friction-journal-for-SharePoint).
+
