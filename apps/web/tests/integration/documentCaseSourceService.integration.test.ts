@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient, userClientFor, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import {
   attachDocumentCaseSource,
   readDocumentCaseSource,
@@ -27,12 +28,16 @@ describe('document_case_sources substrate + documentCaseSourceService (chunk 3)'
     );
     caseId = caseResult.id;
 
+    // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+    const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
     const sourceResult = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([1, 2, 3, 4]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-3-test.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -228,12 +233,16 @@ describe('RPC atomicity contract — attach_document_case_source_with_audit', ()
     );
     caseId = caseResult.id;
 
+    // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+    const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
     const sourceResult = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([5, 6, 7, 8]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-3-atomicity-test.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -323,12 +332,16 @@ describe('RLS through-case-org-access (chunk-3 first usage of EXISTS-subquery pa
     );
     caseId = caseResult.id;
 
+    // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+    const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
     const sourceResult = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([9, 10, 11, 12]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-3-rls-test.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,

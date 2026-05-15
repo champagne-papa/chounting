@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient, userClientFor, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import {
   create,
   reverseLinkedEntityLink,
@@ -56,12 +57,16 @@ describe('source_document_links happy chain + service round-trip (chunk 5)', () 
   beforeAll(async () => {
     ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
 
+    // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+    const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
     const sourceResult = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([1, 2, 3, 4]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-happy.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -113,12 +118,14 @@ describe('source_document_links happy chain + service round-trip (chunk 5)', () 
   });
 
   it('create + reverse round-trip: link_status flips created → reversed; reverse audit event lands', async () => {
+    const { ingest_batch_id: reverseBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const freshSourceResult = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([5, 6, 7, 8]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-reverse.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: reverseBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -171,12 +178,14 @@ describe('source_document_links happy chain + service round-trip (chunk 5)', () 
 
     const linkIds: string[] = [];
     for (const role of ['primary_invoice', 'receipt', 'supporting'] as const) {
+      const { ingest_batch_id: bulkBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
       const src = await documentPlatformService.createSourceDocument(
         {
           bytes: new Uint8Array([10 + linkIds.length]),
           mime_type: 'application/pdf',
           original_filename: `chunk-5-bulk-${role}.pdf`,
           ingest_channel: 'direct_upload',
+          ingest_batch_id: bulkBatchId,
           received_at: new Date().toISOString(),
           org_id: SEED.ORG_HOLDING,
           created_by: ctx.caller.user_id,
@@ -240,12 +249,14 @@ describe('source_document_links happy chain + service round-trip (chunk 5)', () 
 
   it('reverse twice on same entity: second call returns empty (rows already reversed)', async () => {
     const freshFixture = await buildBillFixture(SEED.ORG_HOLDING);
+    const { ingest_batch_id: doubleReverseBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const src = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([20]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-double-reverse.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: doubleReverseBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -301,12 +312,14 @@ describe('source_document_links Layer 1 DB CHECK + UNIQUE + §6 enforcement (chu
 
   beforeAll(async () => {
     ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const { ingest_batch_id: checksBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const src = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([30]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-checks.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: checksBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -399,12 +412,14 @@ describe('source_document_links Layer 1 DB CHECK + UNIQUE + §6 enforcement (chu
   });
 
   it('§6(a) column-level GRANT: service_role UPDATE on non-link_status column rejected; §6(b) trigger: reversed → created regression rejected', async () => {
+    const { ingest_batch_id: grantBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const freshSrc = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([40]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-grant-test.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: grantBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -465,12 +480,14 @@ describe('source_document_links Layer 2 Zod + Layer 3 integrity validator (chunk
 
   beforeAll(async () => {
     ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const { ingest_batch_id: zodBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const src = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([50]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-zod.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: zodBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -569,12 +586,14 @@ describe('source_document_links RLS through-parent + RPC atomicity + cascade-des
   beforeAll(async () => {
     ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
 
+    const { ingest_batch_id: rlsBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const src = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([60]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-rls.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: rlsBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,
@@ -670,12 +689,14 @@ describe('source_document_links RLS through-parent + RPC atomicity + cascade-des
   it('ON DELETE CASCADE from source_documents fires despite REVOKE DELETE FROM service_role', async () => {
     const db = adminClient();
 
+    const { ingest_batch_id: cascadeBatchId } = await createIngestBatchForTest(SEED.ORG_HOLDING);
     const freshSource = await documentPlatformService.createSourceDocument(
       {
         bytes: new Uint8Array([70]),
         mime_type: 'application/pdf',
         original_filename: 'chunk-5-cascade.pdf',
         ingest_channel: 'direct_upload',
+        ingest_batch_id: cascadeBatchId,
         received_at: new Date().toISOString(),
         org_id: SEED.ORG_HOLDING,
         created_by: ctx.caller.user_id,

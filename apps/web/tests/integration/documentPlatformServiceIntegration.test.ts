@@ -63,6 +63,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import { documentPlatformService } from '@/services/document-platform/documentPlatformService';
 import { ServiceError } from '@/services/errors/ServiceError';
 
@@ -89,6 +90,9 @@ describe('Phase 1.Storage chunk N+M: documentPlatformService end-to-end', () => 
     });
 
     it('createSourceDocument writes bytes to storage + inserts source_documents + emits audit_log', async () => {
+      // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+      const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
       const result = await documentPlatformService.createSourceDocument(
         {
           bytes: TEST_BYTES,
@@ -96,6 +100,7 @@ describe('Phase 1.Storage chunk N+M: documentPlatformService end-to-end', () => 
           org_id: SEED.ORG_HOLDING,
           original_filename: TEST_FILENAME,
           ingest_channel: 'direct_upload',
+          ingest_batch_id,
           received_at: new Date().toISOString(),
           created_by: SEED.USER_CONTROLLER,
         },
@@ -180,6 +185,17 @@ describe('Phase 1.Storage chunk N+M: documentPlatformService end-to-end', () => 
       const db = adminClient();
       let thrownError: unknown = null;
 
+      // Use a real org's batch to obtain a valid ingest_batch_id (chunk
+      // 6.2a Sub-Q4 Step C requires NOT NULL); the source_document.org_id
+      // is absentOrgId which fires the FK violation the test targets.
+      // Cross-org batch_id for an absent-org source_document is
+      // structurally allowed at the FK layer (no inter-row org_id
+      // matching constraint between ingest_batches and source_documents);
+      // the org_id FK at source_documents fires first as the test
+      // intended. Per chunk 6.2a friction-journal pre-draft (D)-filter:
+      // small implementation finding for Grain 5 codification.
+      const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
       try {
         await documentPlatformService.createSourceDocument(
           {
@@ -188,6 +204,7 @@ describe('Phase 1.Storage chunk N+M: documentPlatformService end-to-end', () => 
             org_id: absentOrgId,
             original_filename: TEST_FILENAME,
             ingest_channel: 'direct_upload',
+            ingest_batch_id,
             received_at: new Date().toISOString(),
             created_by: SEED.USER_CONTROLLER,
           },

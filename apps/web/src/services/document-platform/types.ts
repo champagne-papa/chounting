@@ -46,6 +46,18 @@ export interface CreateSourceDocumentInput {
   // pre-flight validates this against ctx.caller.org_ids.
   org_id: string;
 
+  // Parent ingest_batches.id (UUID). Required at chunk 6.2a per
+  // Sub-Q4 Step C activation (migration 153). Caller (drag-drop
+  // ingestionService at chunk 6.2b; forwarded_mailbox ingestionService
+  // at chunk 6.3) creates the parent ingest_batches row first via
+  // chunk 6.1's create_ingest_batch_with_documents_with_audit RPC,
+  // then passes the returned batch_id here. Test fixtures use
+  // tests/helpers/createIngestBatchForTest.ts to obtain a batch_id.
+  // Production code MUST NOT call create_ingest_batch_for_test
+  // (Layer 3 service-no-emit per migration 153 _for_test suffix
+  // convention).
+  ingest_batch_id: string;
+
   // Ingestion channel discriminator per ADR-0011 §2 closed enum
   // (drag_drop_pdf, forwarded_mailbox, direct_upload, api_ingest).
   ingest_channel: IngestChannelEnum;

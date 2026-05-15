@@ -29,6 +29,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import {
   completeCandidate,
   resolveCandidates,
@@ -71,6 +72,9 @@ async function seedRouterReadyCase(
   });
   if (vendorErr) throw new Error(`vendor fixture failed: ${vendorErr.message}`);
 
+  // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+  const { ingest_batch_id } = await createIngestBatchForTest(orgId);
+
   // Create source_document via documentPlatformService (chunk-5 precedent).
   const sourceResult = await documentPlatformService.createSourceDocument(
     {
@@ -78,6 +82,7 @@ async function seedRouterReadyCase(
       mime_type: 'application/pdf',
       original_filename: `chunk-2-router-${crypto.randomUUID().slice(0, 8)}.pdf`,
       ingest_channel: 'direct_upload',
+      ingest_batch_id,
       received_at: new Date().toISOString(),
       org_id: orgId,
       created_by: ctx.caller.user_id,

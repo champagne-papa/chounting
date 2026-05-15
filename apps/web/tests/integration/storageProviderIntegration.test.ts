@@ -35,6 +35,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import { createSupabaseStorageProvider } from '@/services/storage/providers/supabaseStorageProvider';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { documentPlatformService } from '@/services/document-platform/documentPlatformService';
@@ -54,6 +55,9 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
     let storageKey: string;
 
     beforeAll(async () => {
+      // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+      const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
       const result = await documentPlatformService.createSourceDocument(
         {
           bytes: TEST_BYTES,
@@ -61,6 +65,7 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
           org_id: SEED.ORG_HOLDING,
           original_filename: TEST_FILENAME,
           ingest_channel: 'direct_upload',
+          ingest_batch_id,
           received_at: new Date().toISOString(),
           created_by: SEED.USER_CONTROLLER,
         },
@@ -127,6 +132,9 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
     let storageKey: string;
 
     beforeAll(async () => {
+      // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+      const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+
       const result = await documentPlatformService.createSourceDocument(
         {
           bytes: TEST_BYTES,
@@ -134,6 +142,7 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
           org_id: SEED.ORG_HOLDING,
           original_filename: TEST_FILENAME,
           ingest_channel: 'direct_upload',
+          ingest_batch_id,
           received_at: new Date().toISOString(),
           created_by: SEED.USER_CONTROLLER,
         },

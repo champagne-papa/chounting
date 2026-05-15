@@ -234,14 +234,15 @@ describe('Phase 6 chunk 1: document_jobs substrate constraints', () => {
   });
 });
 
-describe('Phase 6 chunk 1: source_documents.ingest_batch_id column shape (Sub-Q4 Step A + Step B backfill; Step C deferred per amendment 2026-05-15)', () => {
-  it('Test 8: source_documents.ingest_batch_id ships as nullable column with FK to ingest_batches (Step C deferred to chunks 6.2/6.3)', async () => {
-    // Sub-Q4 amendment 2026-05-15 (RI-10 brief amendment cycle): Step C
-    // (SET NOT NULL) deferred to chunks 6.2/6.3 when consumer
-    // documentPlatformService.createSourceDocument is updated to
-    // always pass ingest_batch_id. At chunk 6.1 close, column is
-    // nullable; INSERT without ingest_batch_id succeeds (preserves
-    // migration 137's RPC path until service catches up).
+describe('Phase 6 chunk 2a: source_documents.ingest_batch_id column shape (Sub-Q4 Step C activated per migration 153)', () => {
+  it('Test 8: source_documents.ingest_batch_id is NOT NULL with FK to ingest_batches (Step C activated at chunk 6.2a per migration 153)', async () => {
+    // Sub-Q4 Step C activation 2026-05-15 (chunk 6.2a, migration 153):
+    // ALTER COLUMN ingest_batch_id SET NOT NULL ships in same commit
+    // as documentPlatformService.createSourceDocument signature
+    // amendment + 30-caller refactor across 10 invoking test files
+    // per RI-6 fifth-grain (existing-consumer-contract-conformance)
+    // discipline. INSERT without ingest_batch_id raises NOT NULL
+    // violation (PostgreSQL error code 23502).
     const db = adminClient();
     const doc = {
       id: crypto.randomUUID(),
@@ -251,25 +252,19 @@ describe('Phase 6 chunk 1: source_documents.ingest_batch_id column shape (Sub-Q4
       original_storage_key: `org_${SEED.ORG_HOLDING}/sources/test/${crypto.randomUUID()}.pdf`,
       original_content_hash: '0000000000000000000000000000000000000000000000000000000000000000',
       original_byte_size: 42,
-      original_filename: 'nullable-batch-test.pdf',
+      original_filename: 'not-null-batch-test.pdf',
       mime_type: 'application/pdf',
       ingest_channel: 'drag_drop_pdf',
-      // ingest_batch_id intentionally omitted — verifies nullable contract
+      // ingest_batch_id intentionally omitted — verifies NOT NULL contract
       storage_status: 'available',
       received_at: new Date().toISOString(),
       created_by: SEED.USER_CONTROLLER,
     };
 
-    const { error } = await db.from('source_documents').insert(doc);
-    expect(error).toBeNull(); // nullable column; INSERT without ingest_batch_id succeeds
-
-    // Verify the row landed with NULL ingest_batch_id
-    const { data: row } = await db
-      .from('source_documents')
-      .select('id, ingest_batch_id')
-      .eq('id', doc.id)
-      .single();
-    expect(row?.ingest_batch_id).toBeNull();
+    const { data, error } = await db.from('source_documents').insert(doc);
+    expect(error).not.toBeNull(); // NOT NULL constraint fires
+    expect(error?.code).toBe('23502'); // PostgreSQL not_null_violation
+    expect(data).toBeNull();
   });
 
   it('Test 9: source_documents.ingest_batch_id FK enforced when provided (references ingest_batches.id)', async () => {

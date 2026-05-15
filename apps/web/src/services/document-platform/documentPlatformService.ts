@@ -58,6 +58,17 @@
 //      both INSERTs atomically; returns the generated id.
 //   6. Service returns CreateSourceDocumentResult.
 //
+//   Chunk 6.2a addendum: input.ingest_batch_id is required per
+//   Sub-Q4 Step C activation (see migration 153 +
+//   docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2a.md).
+//   sourceDocumentPayload at step 4 includes ingest_batch_id;
+//   create_source_document_with_audit RPC's INSERT column list
+//   extends from 13 → 14 columns. Caller (chunk 6.2b drag-drop
+//   ingestionService; chunk 6.3 forwarded_mailbox ingestionService)
+//   creates the parent ingest_batches row first via chunk 6.1's
+//   create_ingest_batch_with_documents_with_audit RPC and passes
+//   the returned batch_id.
+//
 // =============================================================
 // v1 orphan-blob acceptance per ADR-0013 §1
 //
@@ -149,6 +160,7 @@ async function createSourceDocumentImpl(
     original_filename: input.original_filename,
     mime_type: input.mime_type,
     ingest_channel: input.ingest_channel,
+    ingest_batch_id: input.ingest_batch_id,    // NEW per Sub-Q4 Step C (migration 153)
     storage_status: 'available' as const,
     received_at: input.received_at,
     created_by: input.created_by,

@@ -11422,3 +11422,140 @@ The three-grain framing is the consolidated discipline. Phase 6 retrospective co
 - `supabase/migrations/20240152000000_ingestion_substrate.sql` — chunk 6.1 substrate; Step C + Step D deferred-with-comments block documents the deferral target for chunks 6.2/6.3 activation.
 - `010fe97` — ADR-0011 §1 amendment commit (chunk 6.1 Commit 1).
 
+---
+
+## 2026-05-15 — Path C invocation as RI-7-evidence-driven prospective discipline (Phase 6 chunk 6.2a; F-J-14 second-instance graduation)
+
+**Tier-1 codification graduation** — Path C invocation observation-grain N=2: Phase 4 chunk 3 first-instance (reactive at implementation; brief amendment cycle absorbed five framings into amended brief `c76d264`) + chunk 6.2a second-instance (prospective at brief-draft; separate brief per Path C half via `Na`/`Nb` suffix). Per the CLAUDE.md `observation-grain vs application-grain N count` convention, N=2 is below the typical N=3 codification threshold — but the prospective-vs-reactive sub-discipline distinction warrants codification at N=2 per CLAUDE.md candidate (e) shape-refinement-via-within-arc-evidence-basis pathway.
+
+**Pattern statement.** Path C invocation criteria are RI-7-evidence-driven, not gut-feel-driven. Both volume-threshold AND N≥3-framings triggers fire independently (each is sufficient on its own; neither is necessary if the other fires). The discipline operates at brief-draft (prospective), not at implementation (reactive). When invoked prospectively at brief-draft, Path C produces separate briefs per half (Na/Nb suffix at brief-grain). When invoked reactively at implementation, Path C produces a single brief covering both halves with amendment-cycle absorption (Na/Nb suffix at commit-grain only).
+
+**Prospective vs reactive distinction.** This sub-discipline is the chunk 6.2a-graduation-eligible refinement:
+
+- **Reactive Path C** (Phase 4 chunk 3 first-instance precedent): framings surface mid-implementation; brief amendment cycle absorbs the framings; single brief covers both Path C halves with Na/Nb at commit-grain. Cost: an in-flight implementation pause + framing-discovery arc + brief amendment cycle. Benefit: framings are fully understood by the time scope-lock occurs.
+- **Prospective Path C** (chunk 6.2a second-instance precedent): framings surface during brief-draft verify-from-disk pre-reading; volume forecast indicates session-budget breach; separate briefs per half land at brief-grain. Cost: two brief-draft sessions instead of one. Benefit: no in-flight implementation pause; cleaner per-commit verification; chunk 6.3 inherits constraint contracts from day 1.
+
+The discrimination criterion for prospective vs reactive: if framings surface at scope-lock pre-reading (verify-from-disk caught them before implementation), invoke prospective; if framings would only surface mid-implementation, invoke reactive (because they didn't exist at brief-draft to invoke against).
+
+**Path C invocation evidence at chunk 6.2a brief-draft.** Both RI-7 triggers fired independently:
+
+- **(i) Volume forecast trigger**: combined chunk 6.2a + 6.2b LOC forecast ~1700-2300 vs chunk-3-Phase-4 ~1400 LOC empirical anchor.
+- **(ii) Five framings trigger**: Sub-Q5 caller surface 36-not-13 (resolved to 30 across 10 invoking files), route-path convention drift (Sub-Q10 NEW), Triage Bucket PRD insufficiency, sentinel filter shape, migration 137 column-list extension shape.
+
+Plus carry-forward signals supported the invocation: chunk-arc-shape from chunk 6.1 meta-observation #1 (5-commit arc as Path-C-adjacent precedent); wiring-with-tests-pairing at each commit boundary preserved.
+
+**The brief callout pattern.** The chunk 6.2a brief includes an explicit `## Path C invocation callout` section citing the four evidence points. This is the pattern: the brief itself codifies the invocation evidence basis, not just friction-journal memory. Phase 4 chunk 3's `§Amendment §6 — Path C-dispatcher-isolated commit shape` is the analog precedent at reactive Path C grain. Future Path C invocations carry this section structure.
+
+**Cross-references.**
+
+- `docs/07_governance/retrospectives/phase-4-retrospective.md` §RI-7 + §F-J-14 — Path C first-instance codification (reactive at implementation).
+- `CLAUDE.md` `## Verify-forward-at-scope-lock for computational-shape chunks` §RI-7 — Path C invocation conditions codified at N=1.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2a.md` — chunk 6.2a brief with explicit `## Path C invocation callout` section.
+- `010b5e6` — chunk 6.2a brief commit.
+- Phase 6 retrospective at chunk 6.3 close consolidates the prospective-vs-reactive sub-discipline into RI-7 amendment.
+
+---
+
+## 2026-05-15 — Sub-Q4 split-across-chunks shape: constraint-activation chunks defer until consumer chunks ship (Phase 6 chunk 6.2a)
+
+**Tier-1 codification candidate** — sibling discipline to Path C codification (above) and to RI-6 fifth grain (chunk 6.1 entry). Sub-questions that lock at brief-drafting then split across chunks (Step A+B at chunk N; Step C+D at chunk N+M) is a new arc-shape that chunks-1-6 + Phase 4 chunks 1-3 didn't have. Chunk 6.1 close meta-observation #3 named this; chunk 6.2a Step C activation is the moment the carry-forward predicted, and the lock semantics now codify here.
+
+**Pattern statement.** Constraint-activation chunks defer until consumer chunks ship. Sub-question splits across chunks track this naturally with explicit cross-chunk activation trigger named at lock time. The lock semantics: "Sub-Q locks at brief-drafting with explicit cross-chunk activation trigger named." The trigger is a service-layer caller update + a specific column constraint (`SET NOT NULL` / `CHECK` extension / FK addition). The chunk that ships the trigger condition is the chunk that activates the constraint.
+
+**Mechanism.** Constraint-grain "land schema with consumer code" (Flag 10 at chunk 6.1 close; consolidated with Flag 4's table-grain + column-grain into the three-grain framing per the chunk 6.1 RI-6-fifth-grain entry above). When a substrate change requires consumer-side updates to satisfy the new constraint, the substrate ships as `reserved-not-omitted` per ADR-0010 (constraint deferred-with-comments) at chunk N; the consumer-update-and-constraint-activation ships at chunk N+M. The two chunks together complete the substrate evolution.
+
+**Triggering instance.** Sub-Q4 4-step sequence:
+
+- Step A: ADD COLUMN `ingest_batch_id` NULL-able with FK (chunk 6.1).
+- Step B: empty-assertion gate + sentinel-batch fallback (chunk 6.1).
+- Step C: `ALTER COLUMN ingest_batch_id SET NOT NULL` (chunk 6.2a).
+- Step D: extend `enforce_source_documents_column_immutability` trigger 12 → 13 columns (chunk 6.2a).
+
+Steps A+B shipped at chunk 6.1 with explicit deferred-with-comments blocks for Steps C+D in migration 152's body. Steps C+D shipped at chunk 6.2a with the activation trigger named at chunk 6.1 brief-draft (the consumer-update at `documentPlatformService.createSourceDocument`). The chunk 6.1 brief's deferred-with-comments structure was the load-bearing scaffolding that made the chunk 6.2a activation mechanical.
+
+**Codification grain.** N=1 observation at the Sub-Q4 firing; the pattern recurrence is Phase-6-internal at this point. Future chunks (Phase 7+ substrate constraints; Phase 8 onwards) will produce additional observation-grain instances. Friction-journal entry preserves the pattern; CLAUDE.md graduation fires at N=3.
+
+**Sibling-to-related pattern: substrate-now-enforcement-later cross-pattern.** This is a specialization of CLAUDE.md's `substrate-now-enforcement-later` pattern applied at constraint-grain. The substrate (the column shape + nullable contract) lands at chunk N; the enforcement (the constraint contract on the column) lands at chunk N+M when the consumer is ready. The two-grain separation honors the same timing surfaces the substrate-now-enforcement-later pattern names, applied to constraint contracts rather than to code-emission contracts.
+
+**Cross-references.**
+
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-1.md` §"Post-close meta-observations (2026-05-15)" #3 — chunk 6.1 close meta-observation naming the pattern.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2a.md` §Architecture > Locked sub-questions — chunk 6.2a brief codifying the activation.
+- `supabase/migrations/20240152000000_ingestion_substrate.sql` lines 276-320 — Step C + Step D deferred-with-comments scaffolding.
+- `supabase/migrations/20240153000000_phase_6_chunk_2a_consumer_conformance.sql` — Step C + Step D activation.
+- `010b5e6` — chunk 6.2a brief commit.
+
+---
+
+## 2026-05-15 — `_for_test` suffix convention for test-only RPC substrate (Phase 6 chunk 6.2a; first-instance precedent)
+
+**Tier-1 codification candidate** — first instance in the codebase of a `_for_test` suffix on a database-level RPC. Codifies as a greppable substrate-naming convention sibling to the existing `_with_audit` suffix convention (mutating RPC; F-J-ε convention from Phase 4 chunk 2).
+
+**Pattern statement.** A database-level RPC suffixed with `_for_test` denotes test-only substrate. v1 callers limited to test fixtures + helper modules under `apps/web/tests/helpers/`. Production code MUST NOT call `_for_test`-suffixed substrate. The Layer-3 service-no-emit discipline (per ADR-0010) applies: the production service layer (services under `apps/web/src/services/`) never imports or invokes a `_for_test` RPC. The discipline backs the substrate boundary at the GRANT layer — `_for_test` RPCs are GRANT EXECUTE TO `service_role` (so test fixtures running under service_role can invoke), and production code's test-aware code-review discipline keeps it out of production paths.
+
+**Naming convention discrimination.** Two existing substrate-naming suffixes in the codebase:
+
+- **`_with_audit`** (F-J-ε convention from Phase 4 chunk 2): mutating RPC that writes both an entity row + an audit_log row atomically. Used to discriminate "this RPC mutates state and emits an audit event" from pure-read or pure-audit RPCs.
+- **`_for_test`** (chunk 6.2a first-instance): test-only RPC. Used to discriminate "this RPC is fixture-layer substrate; production code never calls it" from production-callable RPCs.
+
+A future RPC could combine both suffixes if needed (e.g., `create_X_for_test_with_audit` if the test-only RPC also writes an audit_log row), though chunk 6.2a's `create_ingest_batch_for_test` does NOT write audit (test fixtures don't need real audit emission; chunk 6.1's `create_ingest_batch_with_documents_with_audit` is the production path that does).
+
+**Triggering instance.** Chunk 6.2a Sub-Q5 lock created `create_ingest_batch_for_test(p_org_id, p_ingest_channel, p_received_at, p_channel_metadata, p_trace_id)` as the test-only fixture-helper RPC backing `tests/helpers/createIngestBatchForTest.ts`. The β-helper internal shape (per Sub-Q5 lock) chose the test-only RPC over composing chunk 6.1's 5-table atomic RPC `create_ingest_batch_with_documents_with_audit`, eliminating the 5-table atomic-discipline coupling cascade across 30 unrelated test fixtures. The suffix convention was codified at the migration 153 comment block as the disambiguator.
+
+**Codification grain.** N=1 observation at the chunk 6.2a firing. Future test-only RPCs (Phase 7 + post-v1 test infrastructure; potential future chunks needing test-fixture-helper substrate at any layer) produce additional observation-grain instances. CLAUDE.md graduation fires at N=3 if the convention recurs.
+
+**Cross-references.**
+
+- `supabase/migrations/20240153000000_phase_6_chunk_2a_consumer_conformance.sql` Statement 2 — the canonical first-instance.
+- `apps/web/tests/helpers/createIngestBatchForTest.ts` — the helper module that wraps the RPC.
+- Phase 4 chunk 2 friction-journal F-J-ε convention — sibling `_with_audit` suffix precedent.
+- `010b5e6` — chunk 6.2a brief commit codifying the convention at brief grain.
+
+---
+
+## 2026-05-15 — Grain-5-test-floor enumeration as scope-lock substrate + completeness gaps surfaced at chunk 6.2a impl (Phase 6 chunk 6.2a)
+
+**Tier-1 codification candidate** — sibling discipline to F-J-14 second-instance Path C entry (above) and to chunk 6.1 RI-6-fifth-grain entry. Codifies the prospective application of Grain 5 (existing-consumer-contract-conformance) at brief-draft as scope-lock evidence basis, and surfaces three implementation-time completeness gaps that refine the Grain 5 enumeration discipline.
+
+**Pattern statement.** Before locking constraint-activation migrations at brief-draft, run an explicit grep-and-enumerate pass over consumer surfaces (production + test). Produce a per-caller signature-and-helper-invocation table. The table IS the scope-lock evidence basis — it codifies what Grain 5 verifies-from-disk at brief-draft time. The implementing agent at execution time references the table to drive per-caller refactors; divergence between the table and disk reality at execution time fires single-finding-scale friction-journal entries (per RI-10 threshold).
+
+**Two-phase Grain 5 application shape (codified at chunk 6.2a brief).** The discipline operates at two phases:
+
+- **Phase 1 (preliminary at synthesis)**: subagent enumeration during brainstorming-session pre-reading produces a rough scope ("36 across 13 files"). The preliminary count surfaces the rough scope but isn't the canonical evidence anchor.
+- **Phase 2 (final at brief-draft)**: brief-draft verify-from-disk pass produces the canonical count ("30 across 10 invoking files"). The final count is the load-bearing scope-lock evidence basis.
+
+The two-phase shape mirrors chunk 6.1's "Sub-Q4 verify gate caught production-row gap but missed consumer-impact gap" learning: the substrate-side verify gate catches one class of gap; a separate consumer-side verify gate catches another class. Chunk 6.2a explicitly fires both.
+
+**Disambiguation typology — preliminary-to-final delta resolution.** The preliminary-to-final delta has two possible explanations:
+
+- **(a) Subagent over-inclusive** (chunk 6.2a instance): regex matched comment/import refs in addition to invocations. No special handling needed beyond using the verified count.
+- **(b) Test-helper absorption**: some preliminary-counted callers are inside test-helpers that themselves get refactored; the helper's update absorbs the caller. Requires accounting separate from direct-caller refactor.
+
+Codifying the typology lets future Grain 5 applications adjudicate the delta explicitly at brief-draft rather than rediscovering the disambiguation at impl time.
+
+**Implementation-time completeness gaps (three sub-instances surfaced at chunk 6.2a impl).**
+
+The chunk 6.2a brief's Grain 5 enumeration scope-locked at "30 callers across 10 invoking test files" against `documentPlatformService.createSourceDocument` invocations. Three implementation-time findings refined the scope:
+
+- **Sub-instance 1: direct-RPC-invocation tests missed.** The Grain 5 grep was scoped to service-layer callers (`grep -E "createSourceDocument\(|\.createSourceDocument\("`); it did not enumerate tests that invoke the underlying RPC directly via `db.rpc('create_source_document_with_audit', ...)`. `tests/integration/createSourceDocumentRpcRollback.test.ts` invokes the RPC 4 times via this pattern; all 4 broke at chunk 6.2a impl when migration 153 added the `ingest_batch_id` JSONB key requirement. Refinement: Grain 5 enumeration must scope to BOTH service-layer callers AND direct-RPC-invocation tests for any RPC that participates in a constraint amendment.
+
+- **Sub-instance 2: interim-period rows estimate gap.** The chunk 6.2a brief's migration 153 comment block said "no interim-period rows expected" because the inter-chunk window between chunk 6.1 close and chunk 6.2a was assumed single-session-grain. Disk reality at chunk 6.2a impl: dev DB had 76 NULL `ingest_batch_id` rows accumulated from `pnpm test` runs since chunk 6.1 close. The constraint activation at Statement 3 raised on the first attempt; backfill statement (Statement 3a, mirroring migration 152's sentinel-batch pattern with `migration: 153` distinguisher) was added to migration 153 between Statements 2 and 3. Refinement: brief Task 1 verify-from-disk gates for constraint-activation chunks must include "check current row count against the new constraint" alongside the substrate-shape gates.
+
+- **Sub-instance 3: cross-org test-fixture nuance.** The orphan-blob test in `documentPlatformServiceIntegration.test.ts` (line 184) uses `absentOrgId` to trigger FK violation. Helper invocation with `absentOrgId` would fail BEFORE storage.put (because `ingest_batches.org_id` FK references `organizations` ON DELETE RESTRICT), breaking the orphan-blob path the test targets. Resolution: use `SEED.ORG_HOLDING` for the helper batch creation; pass `absentOrgId` for the source_document. The cross-org reference (batch in SEED.ORG_HOLDING, source_document for absentOrgId) is structurally allowed at the FK layer (no inter-row org_id matching constraint between `ingest_batches` and `source_documents`); the source_document's org_id FK fires first as the test intends. Refinement: when refactoring fixtures for FK-violation tests, the helper invocation must use a real org_id distinct from the test's deliberately-absent org_id.
+
+**Migration 152 commentary drift (small finding; absorbed in place).** Migration 152 line 318 commentary says "11-column body" but actual canonical state is 12 (verified at Gate 1 of chunk 6.2a Task 1). Off-by-one notational drift in chunk 6.1's deferred-with-comments block; not load-bearing because the actual trigger function definition at migration 135:387-398 is canonically 12 columns. Migration 153 Statement 4 redefines as 13 columns correctly per the canonical 12 + `ingest_batch_id`. No amendment needed; absorbed in place.
+
+**Brief Task 8 line-4 directive misread (small finding; absorbed in place).** Brief Task 8 specified updating "Line 4 (file-top comment)" of `ingestSubstrate.integration.test.ts`. Line 4 actually describes the test file's general purpose (no Step C deferral reference). The intended edits were to lines 237 (describe-block string), 238 (it-block string), and 240-272 (Test 8 body). Brief line-4 reference was incorrect; the substantive edits landed correctly per the brief's intent. Absorbed in place.
+
+**Codification grain.** N=1 observation at chunk 6.2a firing for the prospective-application discipline; N=3 sub-instances of completeness-gap refinement codified within this entry. The prospective Grain 5 application graduates per the same observation-grain N=2 pathway as the F-J-14 second-instance entry (above) — Grain 5's first prospective application at chunk 6.2a refines the discipline that chunk 6.1 first surfaced reactively at validation-gate amendment time. Phase 6 retrospective at chunk 6.3 close consolidates Grain 5's refinement into the four-grain → five-grain CLAUDE.md amendment.
+
+**Cross-references.**
+
+- `docs/07_governance/friction-journal.md` 2026-05-15 RI-6 fifth grain entry — chunk 6.1 codification of the existing-consumer-contract-conformance discipline.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-2a.md` §Test plan > Grain-5-test-floor enumeration — the canonical evidence-anchor table at brief grain.
+- `supabase/migrations/20240153000000_phase_6_chunk_2a_consumer_conformance.sql` Statement 3a — the sentinel-batch backfill activation per Sub-instance 2 finding.
+- `apps/web/tests/integration/createSourceDocumentRpcRollback.test.ts` — Sub-instance 1 fix instance (direct-RPC-invocation test refactored to pass `ingest_batch_id` via `buildSourceDocumentPayload` default).
+- `apps/web/tests/integration/documentPlatformServiceIntegration.test.ts` — Sub-instance 3 fix instance (orphan-blob test cross-org batch).
+- `010b5e6` — chunk 6.2a brief commit.
+- Phase 6 retrospective at chunk 6.3 close — consolidates the four findings into RI-6 amendment + CLAUDE.md update.
+

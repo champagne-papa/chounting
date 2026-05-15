@@ -38,6 +38,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import { billService } from '@/services/spend/billService';
 import { vendorPrepaymentService } from '@/services/spend/vendorPrepaymentService';
 import { periodService } from '@/services/accounting/periodService';
@@ -123,12 +124,16 @@ async function buildClassifiedCaseWithBillCandidate(
   });
   if (billErr) throw new Error(`bill seed failed: ${billErr.message}`);
 
+  // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+  const { ingest_batch_id } = await createIngestBatchForTest(orgId);
+
   const sourceResult = await documentPlatformService.createSourceDocument(
     {
       bytes: new Uint8Array([1, 2, 3, 4]),
       mime_type: 'application/pdf',
       original_filename: `3b-cross-phase-${crypto.randomUUID().slice(0, 8)}.pdf`,
       ingest_channel: 'direct_upload',
+      ingest_batch_id,
       received_at: new Date().toISOString(),
       org_id: orgId,
       created_by: ctx.caller.user_id,

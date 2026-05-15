@@ -50,6 +50,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import {
   completeCandidate,
   dispatchTrigger,
@@ -94,12 +95,16 @@ async function seedRouterCase(
   ctx: ServiceContext,
   vendorId: string,
 ): Promise<RouterCaseFixture> {
+  // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor for source_document).
+  const { ingest_batch_id } = await createIngestBatchForTest(orgId);
+
   const sourceResult = await documentPlatformService.createSourceDocument(
     {
       bytes: new Uint8Array([1, 2, 3, 4]),
       mime_type: 'application/pdf',
       original_filename: `chunk-3-dispatcher-${crypto.randomUUID().slice(0, 8)}.pdf`,
       ingest_channel: 'direct_upload',
+      ingest_batch_id,
       received_at: new Date().toISOString(),
       org_id: orgId,
       created_by: ctx.caller.user_id,

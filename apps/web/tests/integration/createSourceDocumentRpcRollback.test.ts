@@ -31,6 +31,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 
 const TRACE_ID = '00000000-0000-0000-0000-000000000aaa';
 
@@ -56,6 +57,19 @@ async function captureCounts(
   };
 }
 
+// sentinelBatchId is populated in beforeAll. Used as the default
+// ingest_batch_id for all RPC payloads in this file (chunk 6.2a Sub-Q4
+// Step C activation requires NOT NULL). For FK-violation Test 1 (org_id
+// absent), the cross-org reference (batch in SEED.ORG_HOLDING but
+// source_document for absentOrgId) is structurally allowed at the FK
+// layer (no inter-row org_id matching constraint between
+// ingest_batches and source_documents); the org_id FK fires first as
+// the test intends. Per chunk 6.2a friction-journal pre-draft (D)-filter:
+// Grain-5-completeness gap codification — the chunk 6.2a brief's
+// Grain 5 enumeration scoped to service-layer callers and missed
+// direct-RPC-invocation tests; this file is the second instance.
+let sentinelBatchId: string;
+
 function buildSourceDocumentPayload(overrides: Record<string, unknown> = {}) {
   return {
     id: crypto.randomUUID(),
@@ -69,6 +83,7 @@ function buildSourceDocumentPayload(overrides: Record<string, unknown> = {}) {
     original_filename: 'rollback-test.pdf',
     mime_type: 'application/pdf',
     ingest_channel: 'direct_upload',
+    ingest_batch_id: sentinelBatchId,
     storage_status: 'available',
     received_at: new Date().toISOString(),
     created_by: SEED.USER_CONTROLLER,
@@ -94,6 +109,12 @@ function buildAuditPayload(overrides: Record<string, unknown> = {}) {
 
 describe('Phase 1.Storage chunk N+M: create_source_document_with_audit RPC rollback', () => {
   beforeAll(async () => {
+    // Create parent ingest_batch (chunk 6.2a Sub-Q4 Step C; FK-anchor
+    // for all RPC payloads in this file via buildSourceDocumentPayload's
+    // default ingest_batch_id).
+    const result = await createIngestBatchForTest(SEED.ORG_HOLDING);
+    sentinelBatchId = result.ingest_batch_id;
+
     // Defensive: clean up any residue from prior partial runs that
     // might have left audit_log rows under TRACE_ID. source_documents
     // delete-forbidden so accumulation is OK there; audit_log allows

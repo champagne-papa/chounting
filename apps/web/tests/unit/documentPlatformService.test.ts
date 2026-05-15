@@ -81,6 +81,12 @@ const mockInput: CreateSourceDocumentInput = {
   mime_type: 'application/pdf',
   original_filename: 'test.pdf',
   org_id: mockOrgId,
+  // Mock value at unit-test grain — no real DB; chunk 6.2a Sub-Q4
+  // Step C requires the field on the input contract. Production paths
+  // obtain a real ingest_batch_id from chunk 6.1's
+  // create_ingest_batch_with_documents_with_audit RPC; integration
+  // tests use tests/helpers/createIngestBatchForTest.ts.
+  ingest_batch_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
   ingest_channel: 'direct_upload',
   received_at: '2026-05-06T00:00:00Z',
   created_by: mockUserId,
