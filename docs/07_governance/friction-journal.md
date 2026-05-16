@@ -12617,3 +12617,61 @@ remains stable.
   determined at Commit B execution time per Instance 8 above).
 
 
+
+
+## 2026-05-16 — Branch-protection-direct-push first-instance precedent at chunk-6.3b merge ceremony (Phase 6 chunk 6.3b)
+
+**Reserve 2 codification per chunk-6.3b drafting plan + Round 6 Op 2 lock.** Phase 6 chunk-6.3b retrospective consolidation closed structurally at Task 6 with merge commit `625c7df` on origin/main. The merge ceremony surfaced an informational substrate at push: branch protection notice. Reserve 2 codifies the surface as observation-on-fire per the drafting plan's reserve handler.
+
+### Pattern statement — direct-push-after-PR-flow-establishment + 247-commit-forward-merge magnitude
+
+Phase 6 chunk-6.3b ceremony fired `git merge --no-ff staging` on local main + `git push origin main`. The merge succeeded; the push emitted an informational notice from the GitHub remote:
+
+```
+remote: Changes must be made through a pull request.
+To github.com:champagne-papa/chounting.git
+   cfcf2e7..625c7df  main -> main
+```
+
+The notice surfaced but did NOT block the push. The 247-commit forward-merge (range `cfcf2e7..625c7df`) landed on origin/main; branch protection is informational-not-enforcing at the current origin/main configuration.
+
+**First-instance precedent at two distinct sub-grains:**
+
+- **direct-push-after-PR-flow-establishment sub-grain.** Prior to chunk-6.3b, origin/main had N=3 PR-flow merges (PR#7 + PR#8 + #2 at `9f0ebb3 Merge pull request #2 from champagne-papa/staging`) + N=1 direct-merge precedent (`cfcf2e7 Merge branch 'staging'`; pre-Phase-4 post-MVP era). chunk-6.3b adds **N=2 direct-merge precedent** at `625c7df`. The pattern is "direct-push to origin/main after PR-flow precedents have been established" — first-instance at this specific sub-grain.
+
+- **247-commit-forward-merge magnitude sub-grain.** Round 6 Op 2 codified the magnitude property at ~243-commit estimate per state-verify at chunk-6.3b session-onset; actual at merge fire = 247 commits (243 pre-chunk-6.3b + 4 chunk-6.3b commits including pre-Task-1 plan-commit at `850b881` per founder Option (A) decision at Task 0 close). Prior direct-merge precedent `cfcf2e7` magnitude unknown without verify-from-disk on pre-Phase-4 staging state.
+
+### Why direct-push at chunk-6.3b
+
+Per Round 6 Op 2 sub-adjudication (A) lock: `--no-ff` regular-merge with explicit Phase-6-close ceremony shape inherits from `cfcf2e7` precedent. PR flow at chunk-6.3b grain would have added PR review overhead without commensurate review benefit:
+
+- Governance trail already intact at origin/staging (3 chunk-6.3b drafting commits + pre-Task-1 plan + chunk-6.3a→6.3b transition commits)
+- Merge ceremony is closing-marker not review-surface (Phase 6 retrospective writeup itself IS the substantive ratification artifact; review fires at retrospective-reading-grain, not at merge-commit-grain)
+- Direct push preserves Phase-6-close governance marker visibility at main branch history (the 625c7df merge commit IS the Phase-6-close anchor; PR-merge-commit shape would have been parallel but added PR-flow ceremony overhead)
+- 247-commit forward-merge volume exceeds typical PR review-window practical limit; PR flow at this magnitude is reviewer-hostile
+
+### Codification grain + Phase 7+ adjudication input
+
+N=1 first-instance at each of the two sub-grains identified above. Below CLAUDE.md codification graduation threshold (typical observation-grain N=3 per `CLAUDE.md` codification convention). Observation-only F-J entry at chunk-6.3b grain.
+
+**Future merge-to-main ceremonies adjudicate at Phase 7 retrospective grain or earlier seam-grain:**
+
+- **Option (i) — Continue direct-push.** Branch protection is informational-not-enforcing; direct push continues to succeed; closing-marker visibility preserved on main. Per chunk-6.3b precedent.
+- **Option (ii) — Fire PR flow.** Inherits PR#7 + PR#8 + #2 precedents (3 instances); branch protection informational notice aligned with PR flow operationally. Adds PR review overhead per merge ceremony grain.
+- **Option (iii) — Revisit at Phase 7 retrospective.** Adjudicate per Phase 7 substantive scope-lock cycle outputs (e.g., if Phase 7 closes at smaller forward-merge magnitude → PR flow viable; if at similar/larger magnitude → direct-push inheritance from chunk-6.3b).
+
+Phase 7 retrospective Sub-Q-equivalent walks this adjudication. chunk-6.3b §6.d carry-forward at `docs/07_governance/retrospectives/phase-6-retrospective.md` documents this F-J entry as Phase 7 retrospective input.
+
+### Codify-while-deciding-at-decision-time meta-discipline check
+
+Reserve 2 F-J entry fires at the grain where the surface emerged (post-Phase-6-close ceremony observation), NOT deferred to Phase 7 retrospective Sub-Q walk. Per the meta-discipline: surface at the grain where it emerges; preserve provenance via downstream-correction-surface shape (artifact-immutability discipline shape β per chunk-6.3b retrospective §3.b Observation 3 — same-side authoring but post-substantive-arc-close downstream-correction-surface as the natural codification surface).
+
+The Reserve 2 F-J entry IS the downstream correction surface; the chunk-6.3b retrospective writeup at `9bace41` + chunk-6.3b §6.d carry-forwards are unchanged; this F-J entry sits as the post-Phase-6-close governance commit at the natural seam between substantive arcs (parallel to chunk-6.3a `a9f1071` scope-input artifact post-chunk-6.3a-close).
+
+### Cross-references
+
+- chunk-6.3b retrospective writeup §6.d at `docs/07_governance/retrospectives/phase-6-retrospective.md` — Phase 7 retrospective carry-forwards include this F-J observation as merge ceremony shape input
+- Round 6 Op 2 lock at chunk-6.3b drafting plan `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-3b-retrospective-drafting-plan.md` Task 5 — merge ceremony shape inheritance from cfcf2e7 + 9f0ebb3 precedents (cfcf2e7 = direct-merge; 9f0ebb3 = PR-flow)
+- Merge commit `625c7df` on origin/main — chunk-6.3b Phase-6-close ceremony; 247-commit-forward-merge `cfcf2e7..625c7df`
+- chunk-6.3a `a9f1071` scope-input artifact precedent — post-substantive-arc-close governance commit at natural seam shape
+- chunk-6.3b retrospective §3.b Observation 3 (artifact-immutability discipline two-shape distinction) — shape β downstream-correction-surface as the structural shape this Reserve 2 entry fires at
