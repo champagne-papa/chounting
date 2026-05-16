@@ -12392,3 +12392,228 @@ methodology refinement candidate for Phase 7+ test-count anchoring.
 - chunk 6.3a brief §"LOC forecast" — recalibrated 2000-3500 band.
 - chunk 6.3a brief §"Test plan" — 1101 ±2 target window.
 
+
+## 2026-05-16 — Phase 6 chunk-6.3b retrospective-process meta-observations (Phase 6 chunk 6.3b)
+
+**Codification scope.** Meta-observations from the chunk-6.3b
+retrospective drafting fire: the 7-round scope-lock cycle close
+plus the 3-commit drafting fire (A → B → C) per surface-precedence
+T3 > T4 > T1. The retrospective writeup itself (Phase 6
+retrospective at `docs/07_governance/retrospectives/phase-6-retrospective.md`)
+carries the war-diary substance; this F-J entry codifies the
+process-level meta-observations + carry-forward framing for Phase 7
+retrospective inheritance.
+
+### 7-round scope-lock cycle close (4 firing rounds + 3 sequential rounds)
+
+The chunk-6.3b scope-lock cycle closed at 7 rounds, matching the
+Phase 4 retrospective scope-lock cycle round count exactly (N=2
+round-count convergence at retrospective-scope-lock-cycle grain).
+The 7 rounds split into two firing-shape categories:
+
+**Firing rounds (4) — RI-10 consolidation-pressure fired:**
+
+- **Round 3 — within-scope-lock-round consolidation (N=4 entries).**
+  Flag 20 slug column gap + β-2 MailboxHash resolution + β-3/MF-2
+  ServiceContext blast radius + Sub-Q10 cards-UI discovery-mechanism
+  gap surface as one underlying pattern (brief-scope-lock-without-
+  substrate-verify-from-disk at varying sub-grains). The
+  consolidation produced the RI-6 Grain 1 reinforcement entry that
+  shipped at Commit B.
+
+- **Round 5 — within-adjudication consolidation (N=3 candidates).**
+  Candidate (b) RI-6 Grain 1 reinforcement + candidate (d) RI-6
+  Grain 5 wording extension + candidate (f) verify-from-disk-at-
+  non-standard-grain pattern surface three sub-grains of the same
+  underlying parent discipline (substrate-verify-from-disk at
+  varying grains). The Round 5 adjudication consolidated these
+  three codification candidates as graduation-eligible at Commit B.
+
+- **Round 4 (verify-from-disk catch).** Round 0 → Round 4 +
+  Round 6 produced 5 catches total (3 closed initially + 1 held
+  for Round 5 + 2 NEW from Round 4/6 verify-from-disk). The 5
+  catches are: (1) "~20+ commits" handoff body estimate vs 243
+  actual (Round 0); (2) "22 entries" commit message claim vs 26
+  actual (Round 0); (3) Phase 5.1 reviewer fabrication
+  (preserved via Phase 4 retrospective post-close correction);
+  (4) ADR-0011 third amendment naming verify (Round 4 caught);
+  (5) "first merge-to-main since pre-Phase-4 grain" framing drift
+  (Round 6 caught; cfcf2e7 + 9f0ebb3 prior merge-to-main
+  precedents exist).
+
+- **Round 6 (parallel-operation grain; verify-from-disk catch).**
+  Operations 1+2+3+4 ran in parallel (per-commit gate sequencing +
+  merge ceremony shape + push-readiness three-condition gate +
+  MEMORY.md anchor flip discipline); Round 6 also caught the
+  "first merge-to-main" framing drift via verify-from-disk on
+  `git log --merges`.
+
+**Sequential rounds (3) — RI-10 did NOT fire (negative instances):**
+
+- **Round 1 — initial reading.** Linear walk through handoff
+  prompt + scope-lock cycle substrate; no consolidation pressure;
+  individual sub-questions adjudicated in sequence.
+
+- **Round 2 — Sub-Q8 walk.** Linear walk through 26 chunk-6.3a F-J
+  entries + 6 cross-session candidates; per-entry classification;
+  no consolidation pressure (each entry resolves independently).
+
+- **Round 7 — sequential-sub-op grain.** Sub-ops 1+2+3+4+5+6 ran
+  sequentially (canonical Phase 6 next phase verification + drag-
+  drop scope-lock-deferral + parallel arc body shape refinement +
+  observation 2 refined framing + reserves verification + §6 carry-
+  forward 5-sub-section structure). Six sequential resolution items,
+  no consolidation pressure.
+
+### RI-10 firing-at-consolidation-pressure refined framing
+
+The 4-firing / 3-sequential split confirms the refined framing per
+WSL-side Round 7 + brainstorming-side terminal observation 1:
+**RI-10 fires whenever consolidation-pressure is present at multi-
+framing scale, regardless of grain dimension** (amendment-cycle
+grain at Phase 4 chunk 3; scope-lock-round grain at chunk-6.3b
+Round 3; cross-adjudication grain at chunk-6.3b Round 5). The
+discipline operates at consolidation-pressure grain, not round-
+grain. Negative-instance evidence at Round 6 (parallel-operation
+grain) + Round 7 (sequential-sub-op grain) confirms RI-10 silent
+without consolidation pressure — round-grain alone is not
+sufficient trigger.
+
+**Codification statement.** N=3 positive + N=2 negative evidence
+basis at chunk-6.3b retrospective scope-lock cycle. The framing
+refinement carries forward via Phase 6 retrospective §6.d as a
+Tier-3 candidate (positive + negative evidence as combined N-count
+basis for discipline-shape codification). The methodology — using
+both positive and negative instances to characterize discipline-
+shape — is itself a meta-codification candidate.
+
+### Codify-while-deciding firing at scope-lock-cycle-close grain (N=1 sub-grain)
+
+The codify-while-deciding-not-while-implementing discipline (per
+Phase 4 retrospective F-J entry) operates at the chunk-6.3b
+retrospective-drafting grain reflexively. Three sub-grain instances
+within Phase 6:
+
+- Chunk-6.3a Sub-Q-disposition refinements (Sub-Q1 affordance-kind
+  scope refinement; Sub-Q10 fifth-grain firing) codified at
+  decision-time rather than deferred to retrospective.
+- Chunk-6.3b Round 7 brainstorming-side micro-observation: the
+  scope-lock cycle's terminal observations themselves codified at
+  Round 7 close rather than deferred to Commit C drafting.
+- Commit B execution-side verify-from-disk drift catches (3 new
+  candidate (c) sub-instances at plan-author cluster-anchor grain)
+  codified at Commit C drafting close rather than deferred to a
+  post-close correction.
+
+**Codification statement.** Codify-while-deciding fires across the
+brainstorming → execution → retrospective-drafting → post-merge
+cycle reflexively. N=1 sub-grain at scope-lock-cycle-close grain
+(chunk-6.3b Round 7 brainstorming-side micro-observation) is the
+specific new evidence point; the broader discipline operates at
+every codification-decision surface.
+
+### Round 0 catches resolution shape (3 closed + 1 held + 2 NEW)
+
+The Round 0 state-verify produced 6 catches total: 3 closed
+initially via direct verify-from-disk; 1 held for Round 5
+adjudication (Phase 5.1 reviewer fabrication preserved via Phase 4
+retrospective post-close correction; not re-litigated at chunk-
+6.3b); 2 NEW from Round 4 + Round 6 verify-from-disk
+(ADR-0011 third amendment naming verify; "first merge-to-main
+since pre-Phase-4" framing drift). The 6-catch sequence is the
+canonical evidence basis for Verify-from-disk-at-non-standard-grain
+pattern (Commit B graduation) at the intra-handoff-quantitative-
+estimate sub-grain + intra-commit-message-entry-count sub-grain
+(NEW catch-direction sub-shape: intra-side catch where prior-
+session same-side substrate gets disk-verified at consumption-
+grain).
+
+### Parallel arc body shape inheritance carry-forward
+
+§3.b parallel arc body with three sub-property observations +
+explicit inheritance relationships (Observation 1 primary;
+Observation 2 parallel meta-discipline; Observation 3 descendant of
+Observation 1) is shape-inheritance candidate for Phase 7
+retrospective writeup. The structural property — using sub-property
+observations with explicit inheritance relationships to characterize
+scale-invariant disciplines at retrospective grain — carries
+forward as Phase 7 retrospective drafting input. Codification
+graduation at Phase 7 retrospective if Phase 7 surfaces N=2+
+evidence per parallel-arc observation.
+
+### Task 2 deviation surface (3 new candidate (c) instances)
+
+Commit B (Task 2) execution-side verify-from-disk surfaced THREE
+NEW prospective-drift instances at the drafting plan's cluster
+anchors:
+
+- **Instance 6 — T4-1 cluster-anchor drift.** Drafting plan cited
+  "Verify-forward-at-scope-lock cluster" as the insertion parent
+  for the Substrate-mod-event test-staleness review codification;
+  verify-from-disk surfaced the actual parent on disk is
+  `## Session execution conventions`. Subagent corrected the
+  insertion site at Commit B execution time.
+
+- **Instance 7 — T4-2 part 2 Grain 5 "Replace existing prose"
+  premise gap.** Drafting plan said "Replace existing Grain 5
+  prose" but no Grain 5 subsection existed in CLAUDE.md (was a
+  chunk-6.1 F-J codification candidate never promoted). Subagent
+  treated the codification as fresh-insertion rather than
+  replacement at Commit B execution time.
+
+- **Instance 8 — T4-7 + T4-8 cluster-anchor drift.** Drafting plan
+  cited parent clusters ("audit emission conventions" + "Layer 2
+  boundary validation") that don't exist in CLAUDE.md. Subagent
+  created new `## Project conventions` H2 to host T4-5/6/7/8 at
+  Commit B execution time.
+
+**Cluster-B-equivalent at plan-author grain.** The three new
+instances raise candidate (c) partial-information-recommendation-
+drift from N=5 at Round 7 scope-lock to N=8 at Commit C drafting.
+The pattern: drafting plan repeating the same partial-information-
+recommendation-drift pattern caught at chunk-6.3b handoff prompt
+drift; the plan-author cluster-anchor grain is Cluster-B-equivalent
+at plan-author grain (N=2 at Cluster-B grain across chunk-6.3a
+handoff + chunk-6.3b drafting plan). The codification at Commit B
+captures the broader candidate (c) discipline; the Cluster-B-
+equivalent framing carries forward to Phase 7 retrospective as a
+sub-discipline refinement candidate.
+
+### Validation-gate runtime stability observations
+
+The chunk-6.3b drafting fire produced N=2 runtime evidence basis
+across multiple gate runs:
+
+- Task 0 baseline (pre-Task-1): typecheck 3.542s + agent:validate
+  7.672s + test 0.953s (turbo cache hit)
+- Pre-Task-1 governance commit `850b881`: typecheck 3.361s +
+  agent:validate 7.096s + test 0.840s (turbo cache hit)
+- Task 1 Commit A `9ab5071`: typecheck 3.290s + agent:validate
+  6.772s + test 0.892s (turbo cache hit)
+- Task 2 Commit B `da5b666`: typecheck 2.923s + agent:validate
+  6.137s + test 0.853s (turbo cache hit)
+- Task 3 Commit C: appended at Step 10 of Task 3 (this commit)
+
+Runtime is stable across the 5 gate runs (typecheck 2.9-3.5s;
+agent:validate 6.1-7.7s; test 0.8-1.0s). Carry-forward observation
+for Phase 7 retrospective: validation-gate runtime stability is
+N=2 evidence at chunk-6.3a-close baseline (N=1) + chunk-6.3b
+drafting (N=2). Phase 7 retrospective produces N=3 if runtime
+remains stable.
+
+### Cross-references
+
+- `docs/07_governance/retrospectives/phase-6-retrospective.md` —
+  Phase 6 retrospective writeup (Commit C; this entry's primary
+  cross-reference).
+- `docs/07_governance/retrospectives/phase-4-retrospective.md` —
+  Phase 4 retrospective shape-inheritance precedent.
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-3b-retrospective-drafting-plan.md`
+  — chunk-6.3b drafting plan (Task 3 substrate-direction source).
+- `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-3b-retrospective-consolidation-handoff.md`
+  — chunk-6.3b session-onset handoff prompt at `e0824c2`.
+- `CLAUDE.md` `## Project conventions` H2 — new standalone cluster
+  hosting T4-5/6/7/8 codifications per Commit B (insertion site
+  determined at Commit B execution time per Instance 8 above).
+
+
