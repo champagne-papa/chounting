@@ -290,6 +290,32 @@ rule design fires at first `src/agent/pipelines/**/*` code), Q79
 Q77 (Q28 matrix fires at v1 ship). Full Phase 0 closeout at
 `docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`.
 
+### Substrate-mod-event test-staleness review
+
+When shipping a substrate modification that broadens an enum, adds
+a partial UNIQUE constraint, renames a CHECK constraint, or
+otherwise changes a column-level invariant, audit dependent tests
+at substrate-mod commit time (not at downstream test-failure time)
+for:
+
+- Assertion strings referencing constraint names (likely to drift)
+- Hardcoded values that the substrate-mod broadens or constrains
+  (likely to collide)
+- Reserved-set assertions (likely to invalidate)
+
+**Evidence basis (N=3 graduation).** chunk-2-Phase-4 β-2
+(exception_status `'matched'` broadening invalidated chunk-6 test
+assertion on still-reserved set); chunk-6-Phase-2 β-2c (audit test
+regex hardcoded constraint name that broadening migration renamed);
+chunk-6.3a β-4 (chunk-6.1 RPC rollback test hardcoded `message_id`
+collided with migration 155 idempotency partial UNIQUE index).
+
+**Trigger.** Any substrate-mod commit that touches CHECK
+constraint suffixes, enum membership, UNIQUE indexes, or column-
+level NOT NULL invariants. Discipline fires at the substrate-mod
+commit grain, before substrate changes propagate to downstream
+consumer tests.
+
 ### Plan-authoring substrate-verification at transitive-dependency grain
 
 Plan-authoring (briefs, plan files, session-start prompts) cites
@@ -455,6 +481,45 @@ signatures, type definitions, constants, and ServiceErrorCodes
 exist? Verify-from-disk on every cited substrate. This grain is
 Item C's existing scope; the four-grain refinement extends it.
 
+**Grain 1 reinforcement (chunk 6.3a evidence basis).** Four sub-
+instances at chunk-6.3a strengthen the Grain 1 discipline. Each
+fires the same underlying pattern (brief-scope-lock-without-
+substrate-verify-from-disk) at a distinct sub-grain:
+
+- **Flag 20** (`organizations.slug` column gap; column-existence
+  sub-grain): brief Sub-Q2 + Sub-Q6 walks referenced
+  `inbound+<org-slug>@inbound.chounting.com` +
+  `SELECT organizations WHERE slug = mailboxHash` without
+  disk-verify on `organizations.slug` column. Disk evidence: no
+  slug column. β-2 in-line single-finding-scale brief amendment
+  per RI-10.
+
+- **β-2** (MailboxHash resolution at impl-onset; same surface as
+  Flag 20 but caught at impl-onset grain rather than brief-draft
+  grain): execution-side caught at substrate-receipt before
+  consuming.
+
+- **β-3 / MF-2** (`ServiceContext` 111-site blast radius;
+  consumer-count sub-grain): brief Sub-Q6 Artifact 3 proposed
+  discriminated-union extension with pre-drafted conditional MF-2
+  threshold "≤10 sites in-scope; >10 sites codify scope expansion."
+  Disk evidence: 111 sites. 11x off. Brainstorming-side adjudicated
+  to sister-type Approach B at impl-onset.
+
+- **Sub-Q10** (cards-UI discovery mechanism gap; UI-consumer-
+  contract sub-grain): brief Sub-Q1 "server-only" constraint at
+  session start scoped to affordance-kind; Sub-Q10 walk surfaced
+  existing-UI-consumer-contract not verified. Cross-references
+  RI-6 Grain 5 amendment.
+
+**Pattern.** RI-10 framing-interaction-tracing operates as the
+consolidation discipline: four entries surface one underlying
+pattern. The discipline rule strengthens at chunk-6.3a evidence
+basis: cited substrate at scope-lock requires verify-from-disk at
+the cited-substrate's grain — **column-existence** for SQL
+references, **consumer-count** for blast-radius estimates,
+**UI-consumer-contract** for affordance-kind constraints.
+
 **Grain 2 — Per-trigger / per-branch semantic coverage grain.** For
 each trigger / branch / input shape the chunk dispatches over, what
 is the per-trigger semantic? Are stranded paths handled? What does
@@ -498,6 +563,33 @@ refinement synthesizes chunk-3's discipline-graduation lessons into
 one inventory item). The four-grain checklist applies retroactively
 to F-J-8 (Item C prospective application) — Item C remains Grain 1's
 canonical statement; grains 2-4 are the chunk-3-Phase-4 extension.
+
+### Grain 5 — Consumer-application grain at scope-lock
+
+Grains 1-4 verify what substrate IS shipped. Grain 5 verifies how
+shipped substrate interacts with existing CONSUMERS of the affected
+entity types. Sub-sub-grains:
+
+- **Substrate-shape consumer-application.** When cross-phase
+  consumers (services, agent tools, integration tests) read the
+  affected entity types, do they continue to behave correctly
+  post-modification? **Evidence basis:** chunk-6.1 origin —
+  cross-phase test failure surfaced consumer-contract gap;
+  Sub-Q4 4-step activation sequence codified.
+
+- **UI-consumer-contract.** When existing UI components consume
+  the affected entity types, does the scope-lock's affordance-kind
+  constraint account for the UI consumer's contract requirements?
+  **Evidence basis:** chunk-6.3a Sub-Q10 firing — forwarded_mailbox
+  ingestion would have shipped with cards-UI invisibility (operator-
+  perceives-as-broken-despite-working-correctly) without the Grain 5
+  extension catching the existing-UI-consumer gap.
+
+**Discipline rule.** Scope-lock that ships substrate affecting an
+entity type MUST verify-from-disk against all current consumers of
+that entity type — services, agent tools, integration tests, AND
+existing UI components — to confirm consumer-contract conformance
+post-modification.
 
 ### Session-budget-feasibility verification + Path C invocation conditions (RI-7)
 
@@ -634,6 +726,96 @@ graduation per Phase 4 retrospective; applies retroactively to
 F-J-11 and other ambiguous-N codifications). Future codification
 claims at chunks 4+ name the grain.
 
+### Partial-information-recommendation-drift discipline
+
+When authoring a recommendation, brief, handoff prompt, or other
+substrate that frames decisions for downstream consumption,
+partial-information recommendations (recommendations made without
+disk-verify on cited substrate) introduce drift that surfaces at
+consumption time. Two firing-shapes:
+
+- **Retrospective drift.** Recommendation references *prior work*
+  (citations to existing files / sections / decisions) without
+  disk-verify. Catch authority = reader of recommendation.
+  Discovery moment = post-recommendation reading. Codification
+  surface = drift-fix entry post-discovery.
+
+- **Prospective drift.** Recommendation frames *future work*
+  (handoff prompts / brief drafts) with quantitative anchors or
+  substrate references without disk-verify at authoring time. Catch
+  authority = execution-side session-onset state-verify. Discovery
+  moment = pre-execution at substrate-receipt. Codification surface
+  = Round 0 state-verify ratification + downstream consumption
+  surfaces.
+
+**Discipline rule.** Recommendations that cite substrate (file
+paths / section references / quantitative anchors / decision
+precedents) MUST disk-verify at authoring time. When this discipline
+fails-to-fire at authoring time, the catch is structurally located
+at the consumption surface (retrospective or prospective). Both
+shapes inherit the broader Verify-from-disk-at-non-standard-grain
+pattern at recommendation-substrate-receipt grain — see
+Verify-from-disk-at-non-standard-grain codification for the
+grain-agnostic parent discipline.
+
+**Evidence basis (N=4 graduation; N=5 with post-Round-3 evidence):**
+(1) Phase 5.1 "reviewer chunk" naming drift at Phase 4 retrospective
+drafting (retrospective drift; caught at post-close drift-fix
+`18dd608`); (2) Reading A vs B scope-lock adjudication (retrospective
+drift; brainstorming-session-internal); (3) scope-observation framing
+on Postmark webhook scope vs Reading B lock (retrospective drift;
+brainstorming-session-internal); (4) chunk-6.3b handoff prompt
+"~20+" vs 243 commits magnitude drift (prospective drift; caught at
+WSL-side Round 0 state-verify). (5) chunk-6.3b Round 6 onset
+brainstorming-side Op 2 "first merge-to-main since pre-Phase-4
+grain" framing drift (caught at Round 6 verify-from-disk; cfcf2e7 +
+9f0ebb3 prior merge-to-main precedents exist).
+
+### Verify-from-disk-at-non-standard-grain pattern
+
+Execution-side at substrate-receipt MUST disk-verify substrate before
+consuming, regardless of substrate-grain and regardless of
+substrate-authorship-provenance. The discipline is grain-agnostic
+and catch-direction-agnostic.
+
+**Sub-grains observed-to-date (chunk-6.3a → 6.3b conversation arc):**
+
+1. **Substrate-shape grain** (chunk-6.3a β-2): cited schema column
+   verified to not exist on disk. Inter-side catch.
+2. **Consumer-count grain** (chunk-6.3a β-3): cited blast-radius
+   estimate (≤10 sites) verified to be 111 on disk (11x off).
+   Inter-side catch.
+3. **Context-gap grain** (chunk-6.3a scope-input artifact): cited
+   Q1-Q4 content verified to not exist in session record.
+   Session-internal catch.
+4. **Handoff-receipt grain** (chunk-6.3a→6.3b transition): handoff
+   prompt at `e0824c2` verified against disk anchors at session-onset
+   state-verify. Inter-side catch.
+5. **Intra-handoff-quantitative-estimate grain** (chunk-6.3b Round 0
+   catch #4): "~20+ commits" handoff body estimate verified to be 243
+   on disk (~12x off). Inter-side catch.
+6. **Intra-commit-message-entry-count grain** (chunk-6.3b Round 0
+   catch #5): "22 entries" commit message claim verified to be 26 on
+   disk (1.18x off). **Intra-side catch** (NEW catch-direction
+   sub-shape).
+
+**Cross-grain instances at Phase 4:** (7) Round 3
+retrospective-scoping (Phase 5.1 "reviewer chunk" naming drift).
+(8) Post-retrospective-close drift-fix at `18dd608`.
+
+**Discipline rule.** Disk is the canonical source. Substrate-receipt
+grain — wherever it lives (impl-onset, session-onset, retrospective-
+scoping, downstream-consumption) — requires disk-verify against the
+cited substrate's grain. The substrate-author may be opposite-side
+(inter-side catch; sub-grains #1, #2, #4, #5; Phase 4 instances) or
+same-side (intra-side catch; sub-grain #6). The discipline operates
+catch-direction-agnostic — same-side substrate is not exempt from
+disk-verify-at-consumption.
+
+**Named sub-disciplines:** Partial-information-recommendation-drift
+(firing at recommendation-substrate-receipt grain; see codification
+for two-shape sub-discipline).
+
 ### Cross-references
 
 - Phase 4 retrospective writeup §3 (framing-discovery arc
@@ -696,6 +878,143 @@ Drift codification + discovery-grain framing at friction-journal
 2026-05-15 entry. Below ADR-amendment-cycle threshold;
 provenance-preserving correction shape (original cross-references
 above stay; this note appends at end of cluster).
+
+## Project conventions
+
+### Webhook route handler conventions
+
+Conventions for external-webhook routes — provider-invoked HTTP
+endpoints that receive substrate from third-party services (Postmark
+inbound mail; future Stripe / auth callbacks / etc.).
+
+**Directory convention.** Webhook routes live at
+`apps/web/src/app/api/webhooks/<provider>-<event>/route.ts`. Frontend-
+invoked routes stay at `/api/orgs/[orgId]/...`. The semantic
+distinction is **who invokes** (third-party HMAC-verified vs.
+user-session-authenticated) and **how `org_id` is derived** (resolver
+helper vs. URL parameter). Future webhook routes inherit this
+directory layout.
+
+**System-actor route handler pattern.** Webhook route handlers bypass
+`withInvariants` and construct `SystemActorServiceContext` directly
+with `caller: { user_id: null, system_actor: '<source>' }`. The
+discriminator is **invocation source**: third-party HMAC-verified
+webhook (system-actor) vs. authenticated user session (user-session).
+Future system-actor surfaces (cron, scheduled tasks, other webhook
+providers) inherit this pattern. The runtime guarantee that
+`withInvariants` normally provides (verified caller + memberships-vs-
+input-org check) is replaced by HMAC verification + provider-specific
+org-resolve at the route handler boundary.
+
+**`SystemActorServiceContext` sister type.** Sister type to
+`ServiceContext` (NOT a discriminated-union extension). Existing
+`ctx.caller.user_id` consumer sites unchanged. `recordMutation`
+widens its accepted ctx shape to `ServiceContext |
+SystemActorServiceContext`; storage provider methods widen `ctx`
+to `StorageProviderContext` (same union) to accept system-actor
+invocation at storage put time. Service methods that need to support
+**both** invocation modes declare the union at parameter type
+(explicit signature, not implicit narrowing). The "two ServiceContext
+types" cost is bounded; the alternative (consumer-site narrowing at
+discriminated-union extension) is scope-disproportionate to the
+value at one new system-actor caller grain.
+
+**HMAC constant-time signature comparison.** Webhook handlers use
+`crypto.timingSafeEqual` (node:crypto) on equal-length hex digests
+for signature verification. Direct `===` string comparison on
+signature digests is an anti-pattern (timing-attack reconstruction
+of the secret); `timingSafeEqual` is the canonical Node.js stdlib
+primitive for constant-time digest comparison. The helper pattern:
+compute expected digest → length-check → wrap in `timingSafeEqual`.
+
+**Cross-references.**
+- `apps/web/src/app/api/webhooks/postmark-inbound/route.ts` — first
+  instance precedent for all four sub-conventions at chunk 6.3a.
+- `apps/web/src/services/middleware/serviceContext.ts` —
+  `SystemActorServiceContext` sister type definition.
+- `apps/web/src/services/audit/recordMutation.ts` — union-widening
+  surface for system-actor audit emission.
+
+### Seed-data PII-shape placeholder convention
+
+When migration-seeded data includes PII or near-PII (email addresses,
+phone numbers, personal identifiers), prefer placeholder-plus-post-
+deploy convention vs. literal-values-in-migration.
+
+**Pattern.** Migration ships placeholder rows (e.g.,
+`placeholder-founder@chounting.com`); operator runs post-deploy
+`UPDATE` to substitute real values. Discipline-failure mode if
+forgotten: downstream consumer rejects all data as not-matching
+expected shape (loud, observable, not silent).
+
+**Reason.** Git history is forever; v1 audience scope (internal-only)
+does not constrain future audience. Placeholder seeds keep PII out of
+the git provenance trail.
+
+**Evidence basis (N=1 first-instance precedent at chunk-6.3a;
+load-bearing-for-future-PII-seed-migrations).** Migration 155
+Statement 3 inserts 3 allowlist seed rows with placeholder addresses
+for `internal_sender_allowlist`. Operator runs post-deploy `UPDATE`
+for each placeholder.
+
+**Cross-references.**
+- `supabase/migrations/20240155000000_forwarded_mailbox_substrate.sql`
+  Statement 3 — first-instance precedent.
+- chunk-6.2a `_for_test` suffix convention (N=1 first-instance
+  precedent) — parallel graduation pattern.
+
+### Audit-action naming convention split
+
+Audit action names split between two shapes:
+
+- **Dot-namespaced** (`forwarded_mailbox.rejected_not_allowlisted`,
+  `forwarded_mailbox.signature_invalid`): for new domain-event
+  families with anticipated taxonomy expansion. The namespace prefix
+  groups related actions under a single domain umbrella; future
+  taxonomy additions land as new sub-actions under the same prefix.
+
+- **Underscored** (`document_case_transitioned`,
+  `ingest_batch_created`): for established entity-state-transition
+  events with stable taxonomy. The flat naming reflects the stable
+  shape; no umbrella prefix needed.
+
+**Evidence basis (N=2 graduation).** chunk-6.3a forwarded_mailbox.*
+opens a new domain family (dot-namespaced); chunk-2-Phase-3
+`document_case_transitioned` is established entity-state-transition
+(underscored).
+
+**Discipline rule.** When introducing a new audit action, choose
+shape based on taxonomy stability: dot-namespaced if you anticipate
+≥3 related actions under the same domain umbrella; underscored if
+the action is standalone or part of a stable event family.
+
+### Zod strict-mode-for-our-shape vs passthrough-for-third-party
+
+Zod schemas split on `.strict()` / `.passthrough()` based on
+substrate origin:
+
+- **Our-shape schemas** use `.strict()` — typically with `.refine()`
+  sentinel-rejection layer for defense-in-depth. Detect drift early;
+  symmetric Layer-2 write-side discipline.
+
+- **Third-party-payload schemas** use `.passthrough()` — forward-
+  compat with provider API additions (new fields silently dropped at
+  our-shape construction). Sentinel-rejection NOT applied (third-
+  party payload won't naturally emit our sentinel-shape;
+  defense-in-depth marginal).
+
+**Evidence basis (N=2 graduation).**
+`DragDropChannelMetadataSchema` `.strict()` + `.refine()` for
+sentinel rejection (our-shape; chunk 6.2b);
+`PostmarkInboundWebhookSchema` `.passthrough()` for forward-compat
+with Postmark API additions like `ReplyTo`, `MessageStream`,
+`OriginalRecipient` (third-party-payload; chunk 6.3a).
+
+**Discipline rule.** Authoring a new Zod schema requires
+substrate-origin classification: our-shape gets `.strict()`; third-
+party-payload gets `.passthrough()`. PascalCase field names at the
+third-party-payload boundary transform to snake_case at our-shape
+construction.
 
 ## Phase 1 Simplifications
 
