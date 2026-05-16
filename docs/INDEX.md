@@ -10,12 +10,12 @@ rules and points here for everything else.
 ## Top-level
 
 - `README.md` — orientation for new contributors: reading order plus a compact reference list.
-- `restructure-plan.md` — Phase 1.1 closeout working plan for the docs reorganization itself; historical context for why the tree is numbered this way. Moves to `99_archive/` when fully retired.
 
 ## 00_product — vision and people
 
 - `product_vision.md` — the thesis ("deterministic financial engine with a probabilistic interface"), product boundaries, non-negotiable constraints, locked-in stack.
 - `personas.md` — the three equal-class user personas (Executive, Controller, AP Specialist) and what each needs from the product.
+- `product-map.md` — the Product map (modules / features / requirements / tasks). Documentation, not source-folder structure; per ADR-0020 source code is organized by authority layer. Tentative-until-evidenced module names; cross-references to data model, ADRs, and the four-maps mapping doc. Added 2026-05-06 per B.5 rules-substrate session.
 
 ## 01_prd — product requirements
 
@@ -33,6 +33,7 @@ deletion criterion.
 - `data_model.md` — table-by-table schema reference: columns, named CHECK constraints, triggers, indexes, RLS policies.
 - `invariants.md` — contributor-facing rollup index: every INV-ID, its layer, its leaf anchor, its code enforcement site. Carries the bidirectional-reachability proof.
 - `glossary.md` — vocabulary reference for terms with project-specific meanings (`adminClient`, `MoneyAmount`, Two Laws, canvas directive, etc.). Does not redefine GAAP/IFRS or generic software terms. Includes the `## Workflow Vocabulary` section (Arc / Phase / Session / Sub-session hierarchy + supporting terms; codified 2026-04-26).
+- `taxonomy.md` — canonical values for frontmatter fields used across ADRs, briefs, and spec / architecture / engineering documents. The single source of truth for module / phase / concern / audience value vocabularies. The linter at `scripts/adr/lint.ts` reads this file. Added 2026-05-07 per ADR-0021 (round-2 docs reorganization Session 3).
 - `open_questions.md` — unresolved questions across founder data, architectural defaults, closeout surfacings, and formalization candidates. Current leading entry: Q32 (reversal-mirror step-order discrepancy).
 
 ## 03_architecture — how the pieces fit
@@ -44,11 +45,22 @@ deletion criterion.
 - `request_lifecycle.md` — the three request paths (manual / agent / confirmation) from browser to DB and back.
 - `agent_interface.md` — durable, phase-agnostic agent contract: one voice, typed tools, structured outputs, persona discipline, onboarding flow. Phase-specific mechanics live under `09_briefs/`.
 - `ui_architecture.md` — split-screen shell (chat + Contextual Canvas + Mainframe rail), `canvas_directive` contract, component shapes, reversal UI flow.
+- `agent-ladder.md` — pointer doc for the autonomy model. Three rungs (Always Confirm / Notify & Auto-Post / Silent Auto), forward-references `docs/02_specs/agent_autonomy_model.md` (canonical) and `apps/web/src/agent/policies/agent-ladder/` (Phase 2 implementation home). Added 2026-05-05 per ADR-0020.
+- `agent-tool-architecture.md` — the canonical agent → contracts → services → core → db call chain. Per-seam defenses (Zod three-layer, `withInvariants`, idempotency, audit emission). Added 2026-05-05 per ADR-0020.
+- `authority-gradient.md` — the four-layer framing (DB / Services / Agent / Governance) and how they compose at runtime. Cross-references INV-SERVICE-001/002, INV-AUTH-001, the Two Laws, ADR-0007, ADR-0011 §14. Added 2026-05-05 per ADR-0020.
+- `branching-and-feature-flag-strategy.md` — phase-scoped trunk-compatible development; trunk language (`main` / `staging`); branch naming; `--no-ff` merge discipline; worktree strategy (current `.claude/worktrees/`, aspirational `~/projects/chounting-worktrees/`); feature-flag posture (rollout control, not authority). Added 2026-05-05 per ADR-0020.
+- `folder-structure.md` — canonical `apps/web/src/` tree with one-line semantic descriptions per CTO Handoff v2 §3 + ADR-0020 Decision item 1. Added 2026-05-05.
+- `product-workflow-delivery-mapping.md` — the four-maps matrix (Product / Workflow / Delivery / Runtime rollout) and how features traverse all four. Stage / Module / Phase vocabulary distinctions introduced conceptually; canonical glossary entries deferred to B.5 follow-on session. Added 2026-05-05 per ADR-0020.
 
 ## 04_engineering — from clone to running
 
+- `README.md` — folder context: what goes here (developer setup, scripts reference, coding conventions, branch naming, contribution rules) and what does NOT (system design → `03_architecture/`, invariants → `02_specs/`, per-phase execution → `09_briefs/`).
 - `developer_setup.md` — prerequisites, local setup, seed flow, troubleshooting recipes.
+- `DEV_WORKFLOW.md` — operational discipline accrued across Sessions 15-22 (operational tendencies, less prescriptive than `conventions.md`; patterns graduate to `conventions.md` at ≥3 fires per Documentation Routing). Calibrated for solo-operator development model. Audience: returning operator + synthesis Claude + WSL Claude.
 - `conventions.md` — branch/commit naming, contribution rules, coding conventions (camelCase API ↔ snake_case DB, permission/audit key naming, etc.). Also carries the Phase 1.5A and Phase 1.2 codified-convention catalogs and the `## Documentation Routing` convention (routing rule, write-time tripwires including the 10-second rule and `[ROUTE?]` fallback, codification thresholds, hygiene cadence, archival rule, deprecation model; codified 2026-04-26).
+- `repo-rules.md` — operational rules for the chounting monorepo: where things live, what does NOT live in the repo root, the four-layer architecture statement (root / docs / skills / scripts), and a cross-reference table mapping concerns to canonical sources. Complements `03_architecture/monorepo.md`. Added 2026-05-06 per B.5 rules-substrate session.
+- `worktree-rules.md` — when to use git worktrees and when not to; where they live (target `~/projects/chounting-worktrees/`; grandfathered `.claude/worktrees/phase-0-governance/`); creation / cleanup commands; gotchas (node_modules / hooks / env / dev-server); the load-bearing per-worktree session-lock clarification; worktree-vs-lock comparison table. Codified at N=1 (Phase 0 governance arc). Added 2026-05-06 per B.5.
+- `delivery-model.md` — how chounting moves work from idea to production: trunk language (`main` / `staging`), phase lifecycle, ratification gates, what gets feature-flagged (with the 2026-05-05 flag-naming rule), merge rules (`--no-ff`, hotfix flow R7, branch sync R9), commit cadence, phase numbering. Added 2026-05-06 per B.5.
 - `testing_strategy.md` — what to test and how; Category A floor table; env-var cascade for test DB URLs.
 - `security.md` — Canadian-region hosting constraint, env var handling, logging hygiene rules.
 
@@ -59,6 +71,15 @@ deployment runbook or backup procedure. See the folder README
 for the deletion criterion.
 
 ## 06_audit — invariant evidence
+
+> **Disambiguation:** `06_audit/` holds **financial-controls /
+> SOX-style invariant enforcement evidence** (auditor-facing
+> control matrix mapping INV-IDs to spec leaves, tests, and
+> code enforcement). It is distinct from
+> [`07_governance/audits/`](#07_governanceaudits--audit-framework),
+> which holds the **technical code-audit framework** (DESIGN.md
+> + prompts/ + per-audit-run subfolders for architecture / code
+> quality / security / performance scans).
 
 - `control_matrix.md` — auditor-facing evidence table: each INV-ID → spec leaf + test coverage + specific enforcement mechanism + failure mode.
 
@@ -72,21 +93,46 @@ for the deletion criterion.
 - `retrospectives/phase-1.1-retrospective.md` — closeout retrospective (2026-04-13): what shipped, what surprised, lessons for Phase 1.2.
 - `retrospectives/phase-1.2-retrospective.md` — closeout retrospective (2026-04-26): wins / frictions / conventions / scope. Inheritance-artifact map at §2; cross-session patterns at §3 (Pattern 1–8).
 - `retrospectives/arc-A-retrospective.md` — Arc A closeout retrospective (2026-04-24): 12-step execution arc, 9 patterns, three-role workflow meta-observations.
+- `CTO_HANDOFF_V2.md` — agent-first authority-gradient source-tree organization input; ratified into ADR-0020 (substrate-only at v1; ESLint rule activates at Phase 1 chunk 1). Cited verbatim by ADR-0020 Appendix A. Indexed at Phase 1.Storage closeout density per Class A INDEX hygiene amendment.
+- `DOCS_RESTRUCTURE_V1.md` — Round-1 docs reorganization plan, elevated to canonical-tier governance at round-2 Session 7 closure (2026-05-09). Establishes the nine-folder substrate (`00_product/` through `09_briefs/` + `99_archive/`) that round-2 V2 extends.
+- `DOCS_RESTRUCTURE_V2.md` — Round-2 docs reorganization ratification (2026-05-09 at Session 7 closure). Three Principles (canonical-axis; document-class-not-workflow-lineage with meta-arc exception; folder-placement guardrails at high-decision-cost structural surfaces), Pattern 7 conditional permission for cross-phase meta-arcs, Migration Map. Companion to DOCS_RESTRUCTURE_V1.md.
 
 ### 07_governance/adr — Architecture Decision Records
 
-- `adr/README.md` — ADR format, when-to-write rules, supersession process, current ADR index.
+- `adr/README.md` — ADR format, when-to-write rules, supersession process, frontmatter schema (ADR-0021+), pre-ratification design spec lifecycle, generated current-ADR index plus by-module / by-invariant / by-phase generated sections.
+- `adr/_template.md` — frontmatter + body skeleton for new ADRs (ADR-0021+). Field semantics documented in the comment block above the frontmatter. Per ADR-0021. Added 2026-05-07.
 - `adr/0001-reversal-semantics.md` — reversal entries are normal `journal_entries` rows with self-FK + non-empty reason; three-layer enforcement. Tiebreaker for `reversal_reason` column placement.
 - `adr/0002-confidence-as-policy-input.md` — confidence scores drive routing internally; never displayed as a number in the UI.
 - `adr/0003-one-voice-agent-architecture.md` — the user sees one agent, always. No user-facing sub-agent delegation.
 - `adr/0004-ghost-rows-visual-contract.md` — four-signal defense-in-depth for ghost rows (proposed-but-unapproved mutations); prevents "transient overlay mistaken for posted data."
 - `adr/0005-three-path-intent-schema.md` — chat / palette / Mainframe all produce the same `Intent` object; single intent schema prevents three bespoke routers.
 - `adr/0006-agent-persona-unnamed.md` — the agent is a senior bookkeeper, unnamed. No anthropomorphization in UI copy.
+- `adr/0007-three-tier-agent-architecture.md` — three-tier agent architecture; Tier 2 vs Tier 2.5 read-boundary clarification (reference data / transactional state / vendor control + payment-risk fields). Tier 1 gating prerequisite for Phase 1+ Document Platform code. Ratified 2026-05-03 with Document Platform Reframe amendment.
 - `adr/0008-layer-1-enforcement-modes.md` — Layer 1 invariant enforcement modes (CHECK constraint vs deferred constraint vs trigger).
 - `adr/0009-before-state-capture-convention.md` — `before_state` capture convention for `audit_log` rows; locked to Phase 1.5A's six-service rollout.
 - `adr/0010-reserved-enum-states.md` — reserved enum states with Phase 2 corrections; Phase 1 simplifications use placeholder values that Phase 2 fills.
+- `adr/0011-document-platform.md` — substrate spine and domain boundary map for the Document Platform reframe; forward-points storage / pipeline / bundle / relationship / AP-spend / vendor-template / router / confidence specifics to eight downstream ADRs.
+- `adr/0012-proposed-mutation-bundle.md` — atomicity envelope for multi-mutation workflows (e.g., born-paid bill); DB-transaction-atomic commitment; canonical six-state lifecycle.
+- `adr/0013-storage-provider.md` — storage abstraction enabling multi-backend (Supabase v1; SharePoint / S3 / external reserved); drift detection and integrity-check contract.
+- `adr/0014-tier-2-document-pipeline.md` — end-to-end OCR + sidecar topology + classification (Tier A rule-based + Tier C AI fallback in v1) + dedup-by-hash + vendor matcher + orphan-blob GC + replay policy.
+- `adr/0015-ap-spend-subdomain.md` — vendor prepayment lifecycle, born-paid bundle approval gate, tax-timing, balance view, receipt v1 path, payment failure lifecycle (proposal-and-confirm, not auto-reverse).
+- `adr/0016-document-relationship-graph.md` — schema for `source_document_links`; closed `linked_entity_type` and `link_role` enums; pair-validity matrix; cascade behavior; lifecycle immutability enforcement.
+- `adr/0017-vendor-template-substrate.md` — substrate-only v1: `vendor_rules` table schema, closed enums (`vendor_rule_rung` mirrors Agent Ladder; `vendor_rule_promotion_authority`), single-writer rule; enforcement deferred post-Phase-0.
+- `adr/0018-relationship-router.md` — three-subsystem algorithm (Ledger-State Candidate Completion + Ambiguity Resolution + Re-Evaluation Logic) consuming classifier output and relationship-graph state.
+- `adr/0019-confidence-calibration-policy.md` — calibration governance for v1 confidence-threshold values; per-org reserved-seat substrate; bounded-substantive-in-v1 path; system-fixed-only-at-v1 with per-org reserved.
+- `adr/0020-agent-first-authority-gradient-source-architecture.md` — agent-first source-tree organization per CTO Handoff v2 (`docs/07_governance/CTO_HANDOFF_V2.md`); 9 decision items including folder layout, `core/` not `domain/`, import boundary rules in Appendix A, ESLint rule scaffold-not-firing, and the skills tracking gap correction. Substrate-only at v1; ESLint rule activates at Phase 1 chunk 1. Ratified 2026-05-05.
+- `adr/0021-adr-frontmatter-and-tooling.md` — ADR frontmatter schema (forward-only from ADR-0021), canonical taxonomy at `docs/02_specs/taxonomy.md`, TypeScript-for-docs-tooling location convention at top-level `scripts/<area>/`, pre-ratification design specs at `docs/09_briefs/<phase>/specs/`, generator + linter as enforcement (substrate-now-enforcement-later per ADR-0010 precedent). The dogfood ADR for the system. Ratified 2026-05-08.
+- `adr/0022-adr-lifecycle-workflows.md` — Amendment-vs-supersession decision rule, `## Amendment` block format, Status-line accumulation pattern, supersession workflow symmetry. Sibling to ADR-0021 (substrate vs lifecycle). Forward-only application; legacy amended ADRs (0007 / 0010 / 0011) preserved per δ-i discipline. Ratified 2026-05-08.
 
 ### 07_governance/audits — audit framework
+
+> **Disambiguation:** `07_governance/audits/` holds the
+> **technical code-audit framework** (DESIGN.md + prompts/ +
+> per-audit-run subfolders, e.g., `phase-1.1/` and `phase-1.2/`).
+> Audits scan the codebase for architecture / code quality /
+> security / performance findings. Distinct from
+> [`06_audit/`](#06_audit--invariant-evidence), which holds
+> financial-controls / SOX-style invariant enforcement evidence.
 
 - `audits/README.md` — how to read an audit, framework summary, completed-audits index.
 - `audits/DESIGN.md` — audit framework: four-phase execution (Orientation → Category Scans → Synthesis → Write), session boundaries, category collapse rules, findings format.
@@ -155,6 +201,7 @@ for the deletion criterion.
 - `phase-1.2/session-8-c6-prereq-o2-v2-pre-zod-injection-plan.md` — Session 8 C6 prereq: OI-2 v2 pre-Zod injection plan (revision after prior plan superseded).
 - `phase-1.2/session-8-c6-prereq-o3-agent-date-context.md` — Session 8 C6 prereq: OI-3 agent date-context preparation.
 - `phase-1.2/session-8-c6-prereq-o3-execution-plan.md` — Session 8 C6 prereq: OI-3 execution plan.
+- `phase-1.2/ec-2-prompt-set.md` — Phase 1.2 EC-2 (Exit Criterion 2) Session 8 Commit 6 paid-API verification prompt set. Status: FROZEN 2026-04-20. Moved from `docs/07_governance/ec-2-prompt-set.md` during round-2 docs reorganization Session 4 (2026-05-08).
 - `phase-1.2/oi-3-class-2-fix-stack-scoping.md` — OI-3 / Class 2 fix-stack scoping doc (mechanism identified, fix surface bounded, methodology partitioned, hypothesis treatment authored; first concrete application of Meta A and Meta B at scoping time). Phase 2 carry-forward.
 - `phase-1.2/ec-matrix.md` — Phase 1.2 EC matrix (codified at C10, updated at C12). 27 ECs + 3 shipping line items across 6 sections; post-C12 totals: 21 MET / 7 DEFERRED / 2 PARTIAL / 0 MISSED.
 - `phase-1.2/session-15-brief.md` — Session 15 brief: Documentation Routing convention + Workflow Vocabulary ratification. Authority for the friction-journal split.
@@ -173,7 +220,14 @@ for the deletion criterion.
 
 - `phase-2/README.md` — folder rules; protection note for `interaction_model_extraction.md`.
 - `phase-2/obligations.md` — Phase 2 carry-forward queue from Phase 1.2 closeout: named workstreams (OI-3 / Class 2), deferred ECs, investigation queue, sensible-accounting candidates, COA gaps, architectural follow-ups, convention split-trigger watch, Documentation Routing refinement candidates.
-- `phase-2/agent_architecture_proposal.md` — three-tier agent architecture (commit / proposal / interface paths). CTO-reviewed, approved in principle 2026-04-19. Resolution path: ADR-0007 + `02_specs/agent_architecture_policy.md` during Phase 2 scoping after Phase 1.3 triage. Five open items Q27–Q31 block ADR drafting. Operationalizes ADR-0003 and Simplification 3; changes no existing invariant.
+- `phase-2/agent_architecture_proposal.md` — three-tier agent architecture (commit / proposal / interface paths). CTO-reviewed, approved in principle 2026-04-19. Source for ADR-0007 (drafted 2026-05-03 per Phase 0 governance plan; pending CTO ratification). Operationalizes ADR-0003 and Simplification 3; changes no existing invariant.
+- `phase-2/class-2-scope-decision.md` — Class 2 scope decision; load-bearing scope artifact referenced by `phase-1.2/oi-3-class-2-fix-stack-scoping.md` ("first concrete application of Meta A and Meta B at scoping time").
+- `phase-2/document_platform_reframe_design.md` — design spec for the 2026-05-02 Document Platform reframe. Architectural pivot from "AP Ingestion Initiative" → "Document Platform Initiative + Spend Initiative". Locks Option A (full reframe), Reading B (ledger service as sole writer of journal entries), the eight Phase 0 ADR list, and the canonical five-sentence lede. Drives the brief drafting / ADR drafting / Q-filing cycles documented in `2026-05-03-phase-0-governance-plan.md`.
+- `phase-2/2026-05-03-phase-0-governance-plan.md` — implementation plan for Phase 0 (governance only; no code). 31 tasks across 5 streams (Q-filing / brief drafting / ADR drafting / ratification / dependent-artifact updates) with six Decision blocks at the top (ADR dependency tiers, skeleton-first sequencing, ratification authority per ADR, parallel Q-filing, dependent-artifact stream, exit criteria, ADR numbering scheme). Closes Phase 0 when all nine exit criteria are met.
+- `phase-2/2026-05-03-agent-autonomy-bank-detail-amendment.md` — durable amendment to ADR-0007 Tier 2.5 read-boundary clarification covering vendor control / payment-risk fields (bank account, payment instructions, bank-detail-confirmed flag). Referenced in friction-journal at fb45abe.
+- `phase-2/document_platform_initiative.md` — substrate brief (skeleton; finalizes after Document Platform ADRs ratify per Phase 0 governance plan Task B3 in Session 3). Owns: storage / ingestion / extraction / classification / Relationship Router / polymorphic source-document links / ProposedMutation+Bundle+Attachment handoff / exception queue / Triage Bucket UX. First domain consumer is the Spend Initiative.
+- `phase-2/2026-05-06-phase-2-brief-pre-positioning-notes.md` — pickup anchor for next-session Phase 2 brief-creation arc; substantive scope distilled from ADR-0011 §3+§5+§6+§13 + ADR-0014 + ADR-0015 + delivery-model.md + existing brief skeleton. Landed at `1a2aec7` per Phase 1.Storage closeout cycle.
+- `phase-2/spend_initiative.md` — first domain consumer of the Document Platform substrate (renamed from `ap_ingestion_initiative.md` 2026-05-03 per the reframe). Owns: AP bills / payments / vendor prepayments / vendor credits / payment evidence / vendor master mutations / Spend reporting. Phase-numbering and content finalize in Task B4 (Session 3) after AP/Spend Subdomain ADR (ADR-0015) ratifies.
 - `phase-2/interaction_model_extraction.md` — human-authored architectural statement (five interaction primitives). Preserved verbatim from the commit-4b prelude; do not modify without explicit approval.
 - `phase-2/cmd_z_as_reversal.md` — keyboard-undo-that-posts-a-reversal pattern (the ledger is append-only per ADR-0001).
 - `phase-2/contextual_annotations.md` — inline hover markers attaching narrative "why" to P&L variances via Logic Receipts.

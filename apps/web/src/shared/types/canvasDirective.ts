@@ -16,11 +16,30 @@ export type CanvasDirective =
   | { type: 'report_balance_sheet'; orgId: string; asOfDate?: string }
   | { type: 'report_account_ledger'; orgId: string; accountId: string; periodId?: string }
   | { type: 'report_accounts_by_type'; orgId: string; accountType: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'; periodId?: string }
+  | { type: 'report_ap_aging'; orgId: string }
+  | { type: 'report_open_bills'; orgId: string }
+  | { type: 'report_vendor_balance'; orgId: string }
+  | { type: 'report_payment_approval_queue'; orgId: string }
+  | { type: 'report_active_payments'; orgId: string }
+  | { type: 'report_paid_bills_history'; orgId: string }
+  | { type: 'report_pending_approvals'; orgId: string }
   | { type: 'reversal_form'; orgId: string; sourceEntryId: string }
   | { type: 'adjustment_form'; orgId: string }
   | { type: 'recurring_template_list'; orgId: string }
   | { type: 'recurring_template_form'; orgId: string }
   | { type: 'recurring_run_list'; orgId: string; recurringTemplateId?: string }
+  | { type: 'bill_form'; orgId: string }
+  | { type: 'payment_approval_card'; orgId: string; billId: string }
+  | { type: 'payment_record_card'; orgId: string; billId: string }
+  | {
+      type: 'bill_reverse_card';
+      orgId: string;
+      billId: string;
+      returnTo?:
+        | 'report_active_payments'
+        | 'report_paid_bills_history'
+        | 'report_pending_approvals';
+    }
   | { type: 'none' }
 
   // Phase 1.2 Session 6 — form-escape surfaces + onboarding navigation:

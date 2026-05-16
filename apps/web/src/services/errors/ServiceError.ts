@@ -72,6 +72,34 @@ export type ServiceErrorCode =
   | 'RECURRING_TEMPLATE_NOT_FOUND'
   | 'RECURRING_TEMPLATE_INACTIVE'
   | 'RECURRING_RUN_NOT_PENDING'
+  // Storage (Phase 1.Storage; ADR-0013 §7 / §8 / §9).
+  // The first three codes are verbatim ADR cites. STORAGE_OPERATION_FAILED
+  // is a repo-convention catchall (not in ADR text) for unexpected storage
+  // operation failures not classified by the §7 three-way matrix —
+  // implementations should reach for the verbatim codes first; the catchall
+  // exists only when none of the three classify the failure.
+  | 'STORAGE_KEY_MALFORMED'                // ADR-0013 §7 — malformed key, illegal chars, path-too-long
+  | 'INTEGRITY_VERIFY_FAILED'              // ADR-0013 §7 + §9 — hash mismatch on integrity check
+  | 'STORAGE_PROVIDER_TRANSIENT_EXHAUSTED' // ADR-0013 §8 — retry budget exhausted on transient failure
+  | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
+  // Document core (Phase 2 chunk 2)
+  | 'INVALID_TRANSITION'
+  // Document core (Phase 2 chunk 5) — polymorphic integrity validator
+  // in documentLinkService per ADR-0011 §4 + ADR-0016 §4.
+  | 'LINKED_ENTITY_NOT_FOUND'
+  // Document core (Phase 2 chunk 6) — exception queue partial UNIQUE
+  // rejection in documentExceptionService per ADR-0011 §13.
+  // Maps from Postgres unique_violation (23505) on
+  // exception_queue_entries_open_per_case_idx.
+  | 'EXCEPTION_ALREADY_OPEN'
+  // Document core (Phase 4 chunk 3) — exception queue state-machine
+  // rejection on dispatcher-initiated cancellation per ADR-0018
+  // Subsystem 3 contract. Maps from Postgres check_violation (23514)
+  // on cancel_exception_with_audit's WHERE exception_status='open'
+  // guard when the entry has drifted to 'resolved' or 'cancelled'.
+  // Caller-side symmetric with EXCEPTION_ALREADY_OPEN (both signal
+  // "queue entry is in unexpected state for this operation").
+  | 'EXCEPTION_ALREADY_CANCELLED'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future

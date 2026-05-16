@@ -1,27 +1,31 @@
+// Per-run randomUUIDs prevent fixture-UUID collision under vitest parallel scheduling. See docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md for the fix arc context.
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient, userClientFor, SEED } from '../setup/testDb';
 
-// Test-local UUIDs in a distinctive range. Cleaned up in afterAll.
-// audit_log IDs and TEST_TRACE_ID are per-run (crypto.randomUUID) because
-// INV-AUDIT-002 (migration 20240122000000) makes audit_log append-only —
-// fixed IDs would collide on PK across runs once orphan rows accumulate.
-const TEST_IDS = {
-  vendor_holding: '99990001-0000-0000-0000-000000000001',
-  vendor_real_estate: '99990001-0000-0000-0000-000000000002',
-  je_holding: '99990002-0000-0000-0000-000000000001',
-  je_real_estate: '99990002-0000-0000-0000-000000000002',
-  ai_holding: '99990004-0000-0000-0000-000000000001',
-  ai_real_estate: '99990004-0000-0000-0000-000000000002',
-  addr_holding: '99990005-0000-0000-0000-000000000001',
-  addr_real_estate: '99990005-0000-0000-0000-000000000002',
-} as const;
+// All test-local IDs are per-run (crypto.randomUUID) and stored in
+// describe-scope `let` bindings populated in beforeAll. Fixed fixture
+// UUIDs were eliminated to prevent PK collision under vitest parallel
+// scheduling (the journal_entries.je_holding collision specifically
+// flaked at ~25% rate at full-suite). audit_log IDs are also per-run
+// because INV-AUDIT-002 makes audit_log append-only.
 
 describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
   let apClient: SupabaseClient;
   let TEST_TRACE_ID: string;
   let auditHoldingId: string;
   let auditRealEstateId: string;
+  let TEST_IDS: {
+    vendor_holding: string;
+    vendor_real_estate: string;
+    je_holding: string;
+    je_real_estate: string;
+    ai_holding: string;
+    ai_real_estate: string;
+    addr_holding: string;
+    addr_real_estate: string;
+  };
 
   beforeAll(async () => {
     const db = adminClient();
@@ -29,6 +33,17 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
     TEST_TRACE_ID = crypto.randomUUID();
     auditHoldingId = crypto.randomUUID();
     auditRealEstateId = crypto.randomUUID();
+
+    TEST_IDS = {
+      vendor_holding: crypto.randomUUID(),
+      vendor_real_estate: crypto.randomUUID(),
+      je_holding: crypto.randomUUID(),
+      je_real_estate: crypto.randomUUID(),
+      ai_holding: crypto.randomUUID(),
+      ai_real_estate: crypto.randomUUID(),
+      addr_holding: crypto.randomUUID(),
+      addr_real_estate: crypto.randomUUID(),
+    };
 
     // Get open fiscal period IDs from seed (auto-generated UUIDs)
     const { data: holdingPeriod } = await db
@@ -193,7 +208,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         .from('permissions')
         .select('permission_key');
       expect(error).toBeNull();
-      expect(data!.length).toBe(25);
+      expect(data!.length).toBe(29);
     });
 
     it('CA-37: role_permissions readable by any authenticated user', async () => {
@@ -201,7 +216,7 @@ describe('Integration Test 3: RLS isolates orgs (table-parameterized)', () => {
         .from('role_permissions')
         .select('role_id, permission_key');
       expect(error).toBeNull();
-      expect(data!.length).toBe(33);
+      expect(data!.length).toBe(39);
     });
 
     it('CA-37: roles shows system roles to any authenticated user', async () => {

@@ -62,10 +62,32 @@ function describeDirective(directive: CanvasDirective): string {
       return 'an account ledger';
     case 'report_accounts_by_type':
       return 'a per-account breakdown for one account type';
+    case 'report_ap_aging':
+      return 'the AP aging report';
+    case 'report_open_bills':
+      return 'the open bills report';
+    case 'report_vendor_balance':
+      return 'the vendor balance report';
+    case 'report_payment_approval_queue':
+      return 'the payment approval queue';
+    case 'report_active_payments':
+      return 'the active payments view';
+    case 'report_paid_bills_history':
+      return 'the paid bills history';
+    case 'report_pending_approvals':
+      return 'the pending approvals view';
     case 'reversal_form':
       return 'the reversal form';
     case 'adjustment_form':
       return 'the adjusting journal entry form';
+    case 'bill_form':
+      return 'the new bill form';
+    case 'payment_approval_card':
+      return 'the payment approval card';
+    case 'payment_record_card':
+      return 'the record payment card';
+    case 'bill_reverse_card':
+      return 'the bill reversal card';
     case 'recurring_template_list':
       return 'the recurring journal templates list';
     case 'recurring_template_form':

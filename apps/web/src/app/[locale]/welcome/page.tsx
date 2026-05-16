@@ -26,6 +26,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { env } from '@/shared/env';
 import { AgentChatPanel } from '@/components/bridge/AgentChatPanel';
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: app; Source: welcome/page.tsx; Target: @/agent/onboarding/state
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import type { OnboardingState } from '@/agent/onboarding/state';
 
 type PageProps = {

@@ -214,33 +214,38 @@ describe('accountLedgerService.get', () => {
   });
 
   it('returns ordered rows with correct running-balance for three ascending-date entries on Investments in Subsidiaries', async () => {
-    // Baseline: capture current Investments running balance
-    // (expected 0 — no other test file posts to account 1100 —
-    // but the baseline-and-delta shape is kept for robustness).
-    // Assert deltas against baseline so the test is order-
-    // independent.
-    const baseline = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: investmentsAccountId, fiscal_period_id: currentPeriodId },
-      freshCtx(),
-    );
-    const base = baseline.rows.length > 0
-      ? parseFloat(baseline.rows[baseline.rows.length - 1].running_balance)
-      : 0;
+    // The original assertion shape (delta-from-end-of-file-baseline)
+    // conflated two properties: (a) the entry got posted, and
+    // (b) the file-end running_balance shifted by the entry's
+    // amount. (b) is only meaningful if this test owns the entire
+    // ledger state, which it doesn't. running_balance is positional —
+    // computed by a window function at query time, ordered by
+    // entry_date — so past-dated entries from prior test-file runs
+    // interleave at the same entry_date and shift the find()-by-
+    // date-and-amount result's running_balance non-deterministically.
+    //
+    // The corrected assertion measures per-row CONTRIBUTION to
+    // running_balance (this row's rb minus the previous row's rb in
+    // the ordered result). Find by journal_entry_id (returned by the
+    // post call) to identify THIS run's exact row, then measure its
+    // contribution. Residue-immune by construction.
+    //
+    // The deeper fix — per-test disposable accounts so shared state
+    // doesn't accumulate at all — is tracked as a Phase 2 retrospective
+    // candidate. This change fixes the assertion's category error;
+    // the refactor addresses the test-design level.
 
-    // Entry 1 (2026-01-10): DR Investments 500 / CR Share Capital 500
-    await postEntry([
+    const post1 = await postEntry([
       { account_id: investmentsAccountId, debit_amount: '500.0000', credit_amount: '0.0000' },
       { account_id: shareCapitalAccountId, debit_amount: '0.0000', credit_amount: '500.0000' },
     ], '2026-01-10');
 
-    // Entry 2 (2026-01-15): DR Investments 300 / CR Share Capital 300
-    await postEntry([
+    const post2 = await postEntry([
       { account_id: investmentsAccountId, debit_amount: '300.0000', credit_amount: '0.0000' },
       { account_id: shareCapitalAccountId, debit_amount: '0.0000', credit_amount: '300.0000' },
     ], '2026-01-15');
 
-    // Entry 3 (2026-01-20): DR Professional Fees 200 / CR Investments 200
-    await postEntry([
+    const post3 = await postEntry([
       { account_id: professionalFeesAccountId, debit_amount: '200.0000', credit_amount: '0.0000' },
       { account_id: investmentsAccountId, debit_amount: '0.0000', credit_amount: '200.0000' },
     ], '2026-01-20');
@@ -250,25 +255,23 @@ describe('accountLedgerService.get', () => {
       freshCtx(),
     );
 
-    // Find the three new rows by date + amount. Other tests
-    // posting "today" dates could interleave; filter to the
-    // test-injected dates.
-    const e1 = result.rows.find((r) => r.entry_date === '2026-01-10' && r.debit_amount === '500.0000');
-    const e2 = result.rows.find((r) => r.entry_date === '2026-01-15' && r.debit_amount === '300.0000');
-    const e3 = result.rows.find((r) => r.entry_date === '2026-01-20' && r.credit_amount === '200.0000');
+    const i1 = result.rows.findIndex((r) => r.journal_entry_id === post1.journal_entry_id);
+    const i2 = result.rows.findIndex((r) => r.journal_entry_id === post2.journal_entry_id);
+    const i3 = result.rows.findIndex((r) => r.journal_entry_id === post3.journal_entry_id);
 
-    expect(e1).toBeDefined();
-    expect(e2).toBeDefined();
-    expect(e3).toBeDefined();
+    expect(i1).toBeGreaterThanOrEqual(0);
+    expect(i2).toBeGreaterThanOrEqual(0);
+    expect(i3).toBeGreaterThanOrEqual(0);
 
-    // Running-balance deltas relative to baseline. Because the
-    // three entries are dated 2026-01-10/15/20 and other entries
-    // posted with "today" dates are 2026-04-XX, the three test
-    // entries occupy positions ordered before today-dated
-    // entries. The deltas at e1/e2/e3 are baseline + cumulative.
-    expect(parseFloat(e1!.running_balance) - base).toBeCloseTo(500, 4);
-    expect(parseFloat(e2!.running_balance) - base).toBeCloseTo(800, 4);
-    expect(parseFloat(e3!.running_balance) - base).toBeCloseTo(600, 4);
+    // Per-row contribution: rb at this row minus rb at the previous
+    // row in the ordered result (or 0 if this row is at position 0).
+    const contrib = (idx: number) =>
+      parseFloat(result.rows[idx].running_balance) -
+      (idx > 0 ? parseFloat(result.rows[idx - 1].running_balance) : 0);
+
+    expect(contrib(i1)).toBeCloseTo(500, 4);   // DR 500 → +500
+    expect(contrib(i2)).toBeCloseTo(300, 4);   // DR 300 → +300
+    expect(contrib(i3)).toBeCloseTo(-200, 4);  // CR 200 → -200
   });
 
   it('period filter shape + pass-through (multi-period coverage deferred to 8b when accounts_by_type tests can amortize the unlock/lock fixture)', async () => {
@@ -311,17 +314,13 @@ describe('accountLedgerService.get', () => {
   });
 
   it('running_balance is debit-positive: credit contribution on Intercompany Receivables yields negative delta', async () => {
-    const baseline = await accountLedgerService.get(
-      { org_id: SEED.ORG_HOLDING, account_id: intercompanyReceivablesAccountId, fiscal_period_id: currentPeriodId },
-      freshCtx(),
-    );
-    const baseRb = baseline.rows.length > 0
-      ? parseFloat(baseline.rows[baseline.rows.length - 1].running_balance)
-      : 0;
+    // Same category-error correction as the Investments-in-Subsidiaries
+    // test above (find-by-journal_entry_id + per-row contribution rather
+    // than delta-from-end-of-file-baseline). See that comment for the
+    // full rationale. Stopgap pending Phase 2 retrospective candidate
+    // for disposable-accounts test isolation.
 
-    // DR Cash 500 / CR Intercompany Receivables 500 — single
-    // credit row on the ledger-target account.
-    await postEntry([
+    const post = await postEntry([
       { account_id: cashAccountId, debit_amount: '500.0000', credit_amount: '0.0000' },
       { account_id: intercompanyReceivablesAccountId, debit_amount: '0.0000', credit_amount: '500.0000' },
     ]);
@@ -331,18 +330,16 @@ describe('accountLedgerService.get', () => {
       freshCtx(),
     );
 
-    // Find the new row (today's date, 500.0000 credit, 0.0000 debit).
-    const today = new Date().toISOString().slice(0, 10);
-    const newRow = result.rows.find(
-      (r) => r.entry_date === today && r.credit_amount === '500.0000' && r.debit_amount === '0.0000',
-    );
+    const i = result.rows.findIndex((r) => r.journal_entry_id === post.journal_entry_id);
+    expect(i).toBeGreaterThanOrEqual(0);
 
-    expect(newRow).toBeDefined();
     // Debit-positive: credit on any account subtracts from the
     // running balance (uniform convention across account types;
     // caller flips the sign for natural-balance presentation of
-    // liabilities and contra-assets). Delta from baseline must
-    // be -500.
-    expect(parseFloat(newRow!.running_balance) - baseRb).toBeCloseTo(-500, 4);
+    // liabilities and contra-assets). Per-row contribution = this
+    // row's rb minus the previous row's rb (or 0 if first in ledger).
+    const contrib = parseFloat(result.rows[i].running_balance) -
+      (i > 0 ? parseFloat(result.rows[i - 1].running_balance) : 0);
+    expect(contrib).toBeCloseTo(-500, 4);
   });
 });

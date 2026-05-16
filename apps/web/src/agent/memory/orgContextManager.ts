@@ -14,6 +14,9 @@
 // authorized at the route layer. loadOrgContext is a read
 // helper; it does not mutate.
 
+// TODO(adr-0020-decision-6): pre-existing violation; refactor when naturally edited
+//   Layer: agent; Source: orgContextManager.ts; Target: @/db/adminClient
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 

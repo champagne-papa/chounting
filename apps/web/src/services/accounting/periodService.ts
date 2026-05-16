@@ -8,6 +8,7 @@ import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { withInvariants } from '@/services/middleware/withInvariants';
+import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
 
 export type FiscalPeriodListItem = {
   period_id: string;
@@ -233,6 +234,30 @@ export const periodService = {
       { period_id: input.period_id, action: 'period.unlocked' },
       'Fiscal period unlocked',
     );
+
+    // T8_period_reopen dispatch per ADR-0018 §item 4 + Framing F.
+    // Pattern B internal-wrap variant (F-J-11): periodService.unlock is
+    // exported as withInvariants(async (input, ctx) => ...) — the
+    // dispatch hook lands INSIDE the withInvariants async body, after
+    // the existing audit emit, before function return. Best-effort
+    // isolation (P3-i F-J-4): try/catch + log on failure; never
+    // propagate. Unconditional emission.
+    try {
+      await dispatchTrigger(
+        {
+          trigger_type: 'T8_period_reopen',
+          org_id: input.org_id,
+          period_id: input.period_id,
+          trace_id: ctx.trace_id,
+        },
+        ctx,
+      );
+    } catch (dispatchErr) {
+      log.error(
+        { err: dispatchErr, period_id: input.period_id, trigger_type: 'T8_period_reopen' },
+        'T8 dispatch failed post-period-unlock (best-effort; not propagating)',
+      );
+    }
 
     return { period_id: input.period_id };
   }),

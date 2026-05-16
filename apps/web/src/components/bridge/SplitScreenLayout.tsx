@@ -1,8 +1,15 @@
 // src/components/bridge/SplitScreenLayout.tsx
-// The Bridge shell. Three zones:
+// The Bridge shell. Four zones (post-chunk-6.2b):
 //   1. Mainframe rail (far left, ~64px, always visible)
 //   2. Agent chat panel (~380px, collapsible)
 //   3. Contextual canvas (fills remaining width)
+//   4. Document intake rail (far right, ~320px, always visible)
+//      per PRD Phase 2 vision (docs/01_prd/triage_bucket_intake.md
+//      "vertical intake rail on the far right of the canvas").
+//      Added at chunk 6.2b as a sibling to ContextualCanvas (Flag 3
+//      resolution: layout-level integration, NOT nested inside
+//      ContextualCanvas — the canvas hosts directive-typed views;
+//      the intake rail is a workflow primitive, not a directive).
 //
 // Session 7.1 Commit 5: canvas context state lifts into this shell.
 // `selectedEntity` + `directive` assemble into the `canvasContext`
@@ -30,6 +37,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { MainframeRail } from './MainframeRail';
 import { AgentChatPanel } from './AgentChatPanel';
 import { ContextualCanvas } from './ContextualCanvas';
+import { DocumentIntakeRail } from '@/components/canvas/DocumentIntakeRail';
 import { OrgSwitcher } from './OrgSwitcher';
 import { AvatarDropdown } from './AvatarDropdown';
 import type { CanvasDirective } from '@/shared/types/canvasDirective';
@@ -128,6 +136,9 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
           onDirectiveChange={handleCanvasNavigate}
           onSelectEntity={handleSelectEntity}
         />
+
+        {/* Zone 4: Document intake rail (chunk 6.2b; Sub-Q1 canvas-only lock) */}
+        <DocumentIntakeRail orgId={orgId} />
       </div>
     </div>
   );

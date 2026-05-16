@@ -79,6 +79,59 @@ Tier-1 always-relevant references:
 - [`docs/09_briefs/CURRENT_STATE.md`](docs/09_briefs/CURRENT_STATE.md) — current-state snapshot
 - [`docs/07_governance/friction-journal.md`](docs/07_governance/friction-journal.md) — engineering war diary
 
+## Folder placement
+
+Folder placement decisions at the repo root are governed by
+Principles 1, 2, and 3 ratified at
+[`docs/07_governance/DOCS_RESTRUCTURE_V2.md`](docs/07_governance/DOCS_RESTRUCTURE_V2.md).
+Before creating any new top-level folder, read this section.
+
+### Permitted top-level structural folders
+
+Verified against `ls .` at 2026-05-09:
+
+- `apps/` — workspace applications (`@chounting/web`, `@chounting/demo`).
+- `packages/` — workspace packages (`@chounting/tokens`, `@chounting/ui`).
+- `supabase/` — DB migrations + supabase config.
+- `scripts/` — cross-repo shell + TypeScript tooling.
+- `docs/` — product / spec / architecture / engineering / governance / brief documentation.
+- `eslint-rules/` — custom ESLint rules.
+- `.coordination/` — cross-session coordination locks.
+
+A new top-level structural folder requires an ADR ratifying the
+addition.
+
+### Out-of-scope folders (tooling / system-managed)
+
+The following are gitignored or system-managed; not subject to
+Principle 3:
+
+- `.git/`, `.github/`, `.turbo/`, `node_modules/`
+- `logs/`, `reports/`, `test-results/`
+- `.claude/` (mostly gitignored; `.claude/skills/` and
+  `.claude/settings.json` are tracked per ADR-0020 Decision
+  item 9)
+
+Plus repo-root config files: `.gitattributes`, `.gitignore`,
+`.mcp.json`, `.nvmrc`, `package.json`, `pnpm-lock.yaml`,
+`pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.base.mjs`,
+`turbo.json`, plus the three top-level docs (`README.md`,
+`AGENTS.md`, `CLAUDE.md`).
+
+### Decision rule + bypass
+
+For permitted top-level folders, see V2 Part 1 Principle 2 (top-
+level folders are document classes, not workflow lineages). For
+the `docs/` surface specifically, see [`docs/README.md`](docs/README.md).
+For the `apps/web/src/` surface, see
+[`apps/web/src/README.md`](apps/web/src/README.md).
+
+The bypass procedure (Pattern 7 for cross-phase meta-arcs under
+`docs/07_governance/`) is documented at V2 Part 1; the
+operational rules (canonical-source verification at execution
+time + chronological-reality verification at planning time)
+apply to all bypasses regardless of surface.
+
 ## License
 
 Proprietary. All rights reserved.

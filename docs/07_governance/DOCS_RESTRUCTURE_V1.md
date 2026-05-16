@@ -1,7 +1,21 @@
-# Documentation Restructure Plan
+# DOCS_RESTRUCTURE_V1.md — Round-1 Documentation Reorganization
 
-Phase 1.1 closeout deliverable. Working artifact, not polished doc.
-After execution, this file moves to /99_archive/restructure-plan.md.
+**Status:** Ratified V1 (round-1, 2026-04 to 2026-05-08). Elevated
+to canonical-tier governance at round-2 closure (Session 7,
+2026-05-09). Companion document: `DOCS_RESTRUCTURE_V2.md` (round-2
+ratification, this folder).
+
+**Scope:** V1 ratifies the nine-folder substrate (`00_product/`
+through `09_briefs/`, plus `99_archive/`) that round-2 then
+extended with three Principles, frontmatter conventions, the
+canonical taxonomy, the source-tree authority-layer organization
+per ADR-0020, and the three Principle 3 surface guardrails.
+
+**Reading order:** V1 establishes the substrate; V2 ratifies the
+round-2 deltas. Read V1 for the round-1 architectural reasoning;
+read V2 for the current canonical state.
+
+---
 
 ## Migration Notes
 
@@ -1156,3 +1170,53 @@ docs/99_archive/PLAN_v0.5.6.md:
 **Archive additions:** PLAN_v0.5.6.md (1) + PLAN_v1.md (moved, counted above) + README_nextjs_scaffold.md (1)
 
 **Total distinct files in new structure:** 47 (moved) + 14 (extracted) + 4 (new) + 12 (READMEs) + 2 (archive additions) = **79 files** under docs/ (excluding CLAUDE.md and AGENTS.md which stay at root and are edited in place, not counted as new files)
+
+---
+
+## Amendments — Post-V1 Decisions
+
+V1 amendments capture post-V1-write decisions with identified
+Session 5/6/7 consumers. They do not retroactively revise
+already-executed decisions (those go in `07_governance/friction-journal.md`
+as deviation entries) and they do not add speculative substrate
+without identified consumers (premature codification fails
+substrate-now-enforcement-later). V1 ships frozen at the V1→V2
+ratification gate (Session 7).
+
+### 2026-05-08 — round-2 design-conversation decisions surfaced at halftime
+
+Three decisions from the post-Session-4 round-2 design conversation
+were not previously recorded in this plan or in
+`07_governance/friction-journal.md`. Surfaced during the halftime
+check that ran after Session 4's closeout (commit `3251d7b`). All
+have identified consumers in Sessions 5/6/7; none revise
+already-executed decisions. Recorded here per the V1-amendment
+scope above.
+
+1. **Briefs convention scope.** Briefs convention ships now;
+   linter and index-generator deferred to N=3 brief instances
+   OR friction trigger. Session 5 ships convention +
+   `_template.md` only — no `scripts/briefs/*` tooling.
+   Consumer: Session 5 (Layer 0+ briefs reorganization).
+
+2. **"One canonical axis" principle.** One-liner appears in
+   the four README rewrites spanning Sessions 5 and 6. Round-2
+   architectural review contribution. Consumer: Sessions 5 + 6
+   README work.
+
+3. **"Top-level folders are document classes" principle.**
+   Ratified in V2 Part 1. Round-2 architectural contribution
+   #2. Consumer: Session 7 V2 ratification (the new
+   `docs/07_governance/DOCS_RESTRUCTURE_V2.md`).
+
+### Sibling arcs (not part of round-2)
+
+The **test-hygiene fix arc** — random-UUID fixture fix in
+`tests/integration/crossOrgRlsIsolation.test.ts` + four
+tooling-polish OUT candidates filed at
+`docs/09_briefs/post-mvp/cross-org-rls-fixture-uuid-flake-brief.md` —
+is a sibling-of-round-2, not a round-2 session. It triggers
+before Session 5 to close the Sessions 3 and 4 Condition 1
+deviation before Session 5's push. Round-2 sequence remains
+seven sessions; the V1→V2 ratification at Session 7 does not
+renumber to absorb this arc.

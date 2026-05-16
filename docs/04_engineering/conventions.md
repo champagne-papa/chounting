@@ -16,9 +16,22 @@ is agent-specific and lives in
 
 - **Branch naming:** `feat/[ticket-id]-short-description`,
   `fix/[ticket-id]-description`
+- **Phase branches:** `phase/N-short-description` (e.g.,
+  `phase/1-storage-evidence-core`). Long-lived; merge at phase
+  ratification with `--no-ff` to preserve arc topology. Existing
+  phase branches (`worktree-phase-0-governance`, etc.) retain
+  their current names — forward-applying convention only.
 - **Conventional Commits:** `feat:`, `fix:`, `chore:`, `docs:`
 - **New service function** →
   `src/services/[module]/[entity]Service.ts`
+  - Per ADR-0020 (Decision item 6), pure deterministic logic
+    that doesn't touch DB or I/O may be extracted into
+    `src/core/[area]/` and called from the service. The
+    service remains the entry point for cross-cutting concerns
+    (transactions, audit, authorization). Extraction is
+    opportunistic — when a service file is naturally edited
+    and a pure-logic block is identified, that block can move.
+    Pre-emptive extraction is not required.
 - **New agent tool** → `src/agent/tools/[toolName].ts`
 - **New Zod schema** →
   `src/shared/schemas/[module]/[entity].schema.ts`, then imported by
@@ -29,6 +42,21 @@ is agent-specific and lives in
 - **Direct database calls outside `src/services/` are rejected at
   code review.** No exceptions, no urgency override
   (INV-SERVICE-001 enforcement).
+
+### Cross-references
+
+| For | See |
+|---|---|
+| Repo shape | `docs/04_engineering/repo-rules.md` |
+| Worktree discipline | `docs/04_engineering/worktree-rules.md` |
+| Delivery model | `docs/04_engineering/delivery-model.md` |
+| Source-tree architecture | `docs/03_architecture/folder-structure.md` + ADR-0020 |
+| Authority Gradient | `docs/03_architecture/authority-gradient.md` |
+| Workflow vocabulary | `docs/02_specs/glossary.md` Workflow Vocabulary |
+| Product vocabulary | `docs/02_specs/glossary.md` Product Vocabulary |
+| Delivery vocabulary | `docs/02_specs/glossary.md` Delivery Vocabulary |
+| Product modules | `docs/00_product/product-map.md` |
+| Workflow ↔ Code mapping | `docs/03_architecture/product-workflow-delivery-mapping.md` |
 
 ---
 
@@ -1282,6 +1310,385 @@ codification. Drafted in C11 retrospective (captured in
 section (p), commit `f221bab`); first applied in OI-3
 scoping doc §7b (commit `161bff8`) with the §7c sub-type
 rename informing the final form landed here.
+
+---
+
+## Round-2 Conventions (established 2026-05-09)
+
+Codified during round-2 docs reorganization (2026-04 to
+2026-05-09) per `docs/07_governance/DOCS_RESTRUCTURE_V2.md`.
+Round-2 ratified three Principles plus four operational
+conventions captured here.
+
+### Round-N restructure plan workflow
+
+Round-N docs reorganization arcs follow a stable artifact
+pattern:
+
+- Arc-level brief lives at the docs root during the arc (e.g.,
+  `docs/restructure-plan.md` for round-1's V1, until elevated).
+- Session-level plans live at the meta-arc folder
+  (`docs/07_governance/round-N/`).
+- At arc closure, the arc-level brief elevates to
+  `docs/07_governance/DOCS_RESTRUCTURE_V<N>.md` alongside the
+  new `DOCS_RESTRUCTURE_V<N+1>.md` (which becomes the V1 source
+  for the NEXT round).
+
+The meta-arc folder under `07_governance/round-N/` is a
+Pattern 7 conditional-permission case (cross-phase meta-arc
+exception to Principle 2 of V<N>.md). First-instance precedent:
+`docs/07_governance/round-2/`.
+
+### Three-category codification taxonomy
+
+Codification thresholds vary by category. The artifact-
+codification relationship is the load-bearing distinction:
+
+- **Architectural principle.** Ratification IS codification.
+  The principle's text in V<N>.md (or in an ADR) is the
+  canonical record at the moment of ratification. Threshold:
+  N=1 per surface the principle applies to. Aggregation across
+  surfaces is NOT required — each surface independently meets
+  N=1. Worked examples: Principles 1, 2, 3 in
+  `DOCS_RESTRUCTURE_V2.md`; ADR-0020's authority-gradient
+  source organization.
+- **Procedural pattern.** Artifact's existence documents the
+  convention. The convention is in the artifact itself; reading
+  the artifact teaches the pattern. Threshold: N=1 establishes;
+  N=2 confirms; codification often coincides with artifact
+  creation. Worked examples: ADR `## Amendment` block format
+  (per ADR-0022); friction-journal entry shape; round-N
+  session-plan filename convention.
+- **Process meta-pattern.** Artifact is decoupled from
+  codification. The pattern operates on processes (how decisions
+  get made, how drift gets caught, how sequences get verified)
+  rather than on artifacts. Threshold: N=2 with shape match
+  across distinct timing surfaces or distinct contexts; N=3
+  confirms. Codification gates must catch shape-match across
+  instances, not just count. Worked examples: plan-substrate-
+  vs-canonical-reality drift meta-pattern (N=2; not yet
+  codified to a principle).
+
+### "Verify the artifact before agreeing with an alarm" rule
+
+When someone (operator, agent, doc) raises an alarm about an
+artifact's state, verify against the artifact directly before
+responding. Don't agree with the alarm based on memory of the
+prior state; read the artifact at alarm-time.
+
+Worked example: Session 6.5 plan claimed `lib/` was forbidden
+in the authority-layer enumeration; canonical
+`docs/03_architecture/folder-structure.md` actually lists `lib/`
+as a permitted forward-looking layer. Executor verified against
+folder-structure.md (canonical) before drafting; canonical won.
+
+Failure mode this prevents: "agent agrees with the alarm because
+the operator raised it" — propagating a misreading because the
+alarm felt authoritative. The discipline is: verify directly,
+then respond. The alarm-raiser may be right; the artifact is the
+tiebreaker.
+
+### Plan-substrate-vs-canonical-reality drift meta-pattern (Tier 1 codified)
+
+Forward projections embedded in plans, handoffs, or brainstorm-
+context sections drift from canonical reality at execution
+time. The meta-pattern fires across multiple timing surfaces;
+codified as Tier 1 process meta-pattern at round-2 Session 8 per
+N=3 evidence with shape match across distinct timing surfaces.
+
+**Three timing surfaces:**
+
+- **Execution-time surface.** Plan-internal substrate (forbidden
+  lists, header styles, fire counts, anchor texts) drifts from
+  canonical docs (folder-structure.md, friction-journal pattern,
+  chronological fire history, current file content). Caught at
+  execution time when Edits / greps / drafts surface
+  discrepancies.
+- **Planning-decision-time surface.** Handoff sequence
+  projections drift from chronological reality (sequence didn't
+  materialize). Caught at planning-decision time when adjudicating
+  scope-shape or dependency claims.
+- **Cross-reference-time surface.** Forward references in plans
+  / closeouts / canonical docs drift from current-state content
+  (paths moved; content evolved). Caught at execution time when
+  cross-reference grep-sweeps surface discrepancies. Mitigated
+  by path-level cross-references (cite paths, not post-rewrite
+  content).
+
+**N=3 evidence trail:**
+
+- N=1 = Session 6.5 closeout (execution-time surface; three
+  sub-instances: lib/hooks forbidden-list mismatch with
+  folder-structure.md; friction-journal entry-shape `### vs
+  bullet-list`; floor-only fire-count plan-claim N=6 vs
+  chronological N=5).
+- N=2 = Session 7 brainstorm (planning-decision-time surface;
+  Path A vs Path B sequencing question — sequence projection vs
+  chronological reality).
+- N=3 = Session 5B execution closeout (cross-reference-time
+  surface; 7 sub-instances under one meta-pattern observation:
+  ADR README anchor mismatch, "when ratified at Session 7"
+  phrasing stale, ADR/README:274 active-doc reference,
+  open_questions.md:755 reference, delivery-model.md:156 d6
+  reference, document_platform_initiative.md 5 references,
+  phase-2/README acknowledgment retainee count).
+
+Codification gates per process-meta-pattern threshold (N=3 with
+shape match across three distinct timing surfaces): satisfied at
+Session 5B closeout. Tier 1 codification ratifies at Session 8
+per this entry.
+
+**Path-reference vs content-reference sub-shapes (within
+cross-reference-time surface).**
+
+The cross-reference-time surface fires under two distinct
+sub-shapes with differential firing conditions:
+
+- **Path-reference cluster (mechanical drift).** Fires when
+  paths move during round-N work and references didn't update.
+  Worked examples (Session 5B closeout): ADR README anchor
+  mismatch; ADR/README:274 active-doc reference;
+  open_questions.md:755 reference; delivery-model.md:156
+  reference; document_platform_initiative.md 5 references.
+  Resolution shape: update path target at execution time;
+  preserve δ-i-historical references per friction-journal-is-
+  history rule.
+- **Content-reference cluster (semantic drift).** Fires when
+  state-claims go stale because state changed (e.g., "when
+  ratified at Session 7" after V2 ratifies; "empty in Phase
+  1.1" after folder populates). Worked examples: Session 5B
+  closeout (2 instances), Session 6 closeout (3 instances; all
+  content-reference, 0 path-reference because Session 6 didn't
+  move paths).
+  Resolution shape: update prose claim at execution time;
+  preserve δ-i-historical claims in closed-phase briefs.
+
+Differential firing evidence (N=2 differential firings post-
+gate): path-reference cluster fires when paths move;
+content-reference cluster fires when state evolves without path
+moves. Sub-shapes preserved per the codification-practice
+meta-question's answer (sub-shape preservation when differential
+firing evidence exists).
+
+**Inter-session dependency sub-axis (read-time / pre-flight surface).**
+
+Plans that reference prior session's state require pre-flight
+verification that the prior state actually obtains. Mechanism:
+plans cite prior commits / acceptance criteria / closeout state;
+executors verify against current canonical state at session
+start (typically Stop Condition 1); deviations halt execution
+before commits land. Different timing surface from drift's
+write-time / execution-time surfaces (which catch drift in plan
+substrate); inter-session dependency catches drift in
+cross-session inheritance.
+
+N=3 evidence:
+
+- Session 6 plan referencing Session 5B closeout state.
+- Session 7 plan referencing Session 5B + Session 6.5 closeout
+  state.
+- Session 6 execution referencing Session 5B execution closeout
+  state.
+
+Threshold met (process meta-pattern; N=2 with shape match across
+distinct timing surfaces; N=3 confirms). Codified as sub-axis
+within the drift meta-pattern; the parent category absorbs the
+sub-axis per the codification-practice meta-question's answer
+(sub-shape preservation when differential firing evidence
+exists).
+
+**Prophylactic-vs-reactive mode-of-application sub-rule.**
+
+The drift discipline applies in two modes:
+
+- **Prophylactic mode (default).** Verify against canonical
+  sources at pre-flight before drafting forward-looking content.
+  Catches drift before it fires (lower cost; verification at
+  read time).
+- **Reactive mode (fallback).** Catch drift during execution
+  via Edit anchor mismatches, grep sweeps, or surface
+  discrepancies. Higher cost (drift surfaces in flight; requires
+  in-session correction).
+
+Default to prophylactic mode where the canonical state is
+verifiable at pre-flight. Reactive mode is the catch-net when
+prophylactic verification missed an instance.
+
+N=3 evidence: Session 6.5 + Session 7 + Session 5B all applied
+prophylactic verification at pre-flight; reactive catches still
+fired during execution as expected fallback.
+
+Worked examples:
+- Prophylactic: Session 7 brainstorm caught the floor-only
+  fire-count drift by NOT projecting in the plan (verification
+  at pre-flight: read journal at execution time).
+- Reactive: Session 6.5 caught the lib/hooks forbidden-list
+  drift after the plan was written and execution began (Edit
+  anchor mismatch surfaced during drafting).
+
+**Codification-practice meta-question (settled at Session 8).**
+
+Sub-shape preservation when differential firing evidence exists;
+unification with examples otherwise. The differential-firing-
+evidence threshold is the gating criterion: if proposed
+sub-shapes have demonstrably different firing conditions
+(different surface conditions trigger different sub-shapes),
+preserve them as named sub-rules. If the proposed sub-shapes
+are structural variants of the same firing condition, unify
+with examples.
+
+This answer applies consistently across drift meta-pattern
+sub-shapes (path-reference vs content-reference; inter-session
+dependency sub-axis; prophylactic-vs-reactive mode-of-
+application). Future codification work in chounting applies the
+same practice.
+
+**Operational rules (codified in `docs/README.md` Pattern 7
+bypass procedure).**
+
+The drift discipline's operational rules live within Pattern 7's
+bypass procedure section (per V2 Part 1's framing — discipline
+operational rules are downstream of guardrail principle):
+
+- Canonical-source verification at execution time (covers
+  execution-time surface).
+- Chronological-reality verification at planning time (covers
+  planning-decision-time surface).
+- Cross-reference verification at execution time (covers
+  cross-reference-time surface; added at Session 8 C2).
+
+The three operational rules apply to all bypasses regardless of
+surface; together they cover the three timing surfaces of the
+drift meta-pattern.
+
+**Tier 3 carry-forward: recurring meta-arc placement question
+(N=1 hold).**
+
+The "should we move docs/07_governance/round-2/" question
+recurred multiple times during round-2; closed by V2's Pattern
+7 ratification. Codification candidacy: "ratification gaps
+cause recurring questions" as a discipline rule. Per process-
+meta-pattern threshold (N=2 with shape match across distinct
+contexts), N=1 is insufficient evidence. **Hold at Tier 3.**
+Codification candidacy remains; awaiting second fire (a future
+round-N or arc-X recurring question would advance to N=2).
+
+### Methodology cluster sub-categorization
+
+The methodology cluster bucket accumulated 11 inhabitants
+during round-2 sessions (soft-threshold at 10 tripped at Session
+6.5 closeout; 11th added at Session 6 brainstorm closeout).
+Session 8 ratifies sub-categorization into three clusters with
+differential character. The actual inventory spans round-2
+friction-journal entries (5A brainstorm closeout's "Methodology
+cluster (8; reasoning tools)" enumeration #3-#10 + Session 5B
+brainstorm's #16 + Session 6 brainstorm's +2); future inventories
+consult the journal as canonical record.
+
+**Cluster A: Codification-trajectory observations.**
+
+Inhabitants currently at codification trajectory: Tier 1 LIVE
+candidates, Tier 2 candidates, Tier 3 holds, or items recently
+graduated to dedicated codification.
+
+Worked examples (with current status post-Session-8):
+- Drift meta-pattern (graduated to Tier 1 ratified at Session 8
+  C1; dedicated codification at the entry above).
+- Inter-session dependency sub-axis (graduated as part of drift
+  meta-pattern at Session 8 C1).
+- Prophylactic-vs-reactive sub-rule (graduated as part of drift
+  meta-pattern at Session 8 C1).
+- Recurring meta-arc placement question (Tier 3 hold; see
+  carry-forward sub-section above).
+- Substrate-leverage phase observation (Tier 3 → Tier 2 per
+  Session 5B brainstorm closeout).
+- Floor-only push gate carve-out (graduated to ratified at
+  Session 7 C6; dedicated codification at the round-N
+  restructure plan workflow + this Round-2 Conventions section).
+- Turbo cache content-hash (Tier 1 LIVE candidate; codification
+  path TBD).
+- Variance-decomposition diagnostic (#5; N=1).
+- Handoff-prompt-commit-number-translation (#6; N=1).
+
+Character: items have a codification trajectory (toward
+ratification or hold-with-recurrence-trigger). Sub-cluster's
+own count discipline: items track their N-count toward
+codification thresholds per the three-category codification
+taxonomy.
+
+**Cluster B: Session-execution discipline observations.**
+
+Inhabitants describing operational discipline that fires within
+session execution (typically at session-start verification,
+pre-push gates, or mid-execution pattern recognition).
+
+Worked examples:
+- Mid-dispatch plan re-read pre-push verification (N=2 per
+  Session 6 brainstorm closeout).
+- Parallel-session commit visibility (N=1 per Session 6
+  brainstorm closeout).
+- Pre-execution-audit-revealing-scope-refinement (#8; N=2 across
+  Phase 3 substrate audit + 5B Decision 1 audit).
+- Fresh-pass-on-decision-revealing-refinement (#16; N=1).
+
+Character: items describe session-execution mechanics — what
+gates fire, what verifications run, what patterns surface
+during execution. Distinct from codification-trajectory
+candidates (which are about what gets ratified) and from
+scope/structural observations (which are about scope decisions).
+
+**Cluster C: Scope/structural observations.**
+
+Inhabitants describing scope decisions, structural patterns,
+and category preservation (meta-meta level).
+
+Worked examples:
+- Count-level-vs-structural-level distinction (#7; N=2 across
+  decision domains: Decision 4 commit shape + Decision 6
+  gate-path).
+- Discipline-extension pattern (#10; N=2: 5A's agency-extends-
+  to-consumer + 5B's discipline-extends-to-published-artifact-
+  accuracy).
+- 5A-closeout-framings-refined-by-5B-brainstorm (#9; N=2:
+  Decision 1 audit revision + Decision 3 binary→split).
+- Categorical-distinction-preservation meta-pattern (round-2
+  brainstorm-time observation; N=2).
+- Failure-mode taxonomy (forward vs backward) — sub-pattern
+  within structural-pattern bucket per Session 6 brainstorm
+  closeout.
+- Count-level commit pattern variance (#11 in structural-pattern
+  bucket; N=3 codification candidacy).
+
+Character: items describe scope/structural reasoning — how
+scope decisions emerge, how structural patterns hold across
+work shapes, how category boundaries preserve.
+
+Note: the structural-pattern cluster (NEW BUCKET established at
+Session 5B brainstorm Decision 7.B with #11/#12/#13) is sibling
+to the methodology cluster. Cluster C absorbs structural-pattern-
+related observations conceptually; explicit reconciliation
+between methodology cluster Cluster C and the journal's
+structural-pattern bucket can land at a future bucket-structural
+session if the two reveal differential character (currently
+treated as related sub-shape evidence).
+
+**Adding new observations to the bucket.**
+
+Future round-N or arc-X observations land in the cluster they
+match by character. New sub-cluster creation requires evidence
+of differential character (per the codification-practice
+meta-question's answer; sub-shape preservation when differential
+firing evidence exists). The bucket count limits no longer apply
+once sub-categorization is in place; instead each sub-cluster
+operates under its own count discipline.
+
+**Re-evaluation trigger.** Methodology cluster sub-categorization
+re-evaluates if any sub-cluster grows past ~8 inhabitants
+(soft-threshold 50% smaller than the parent bucket's
+10-inhabitant threshold, reflecting sub-cluster's narrower
+scope) OR if a new observation doesn't fit cleanly into A / B /
+C. The re-evaluation may add a fourth sub-cluster, split an
+existing sub-cluster, or restructure the parent bucket.
 
 ---
 

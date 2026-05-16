@@ -326,6 +326,68 @@ deferred from the phase scope.
   shared-DB full-suite; clean under `pnpm db:reset:clean`
   baseline. Resolution unblocks "clean full-suite green"
   framing if Phase 2 push-readiness requires it.
+- **5-test pollution cluster (sibling to Arc A item 27)** —
+  surfaced 2026-05-01 during the v0.1.0-mvp production-
+  promotion arc's pre-merge full-suite run (run-to-run variance
+  at the same staging HEAD: 5 failures one run, 7 failures the
+  next, no code change between). Affected tests:
+  `orgUsersViewRender` (CA-77), `ownerPartialUnique` (CA-25),
+  `userHasPermissionHelper` (CA-34), `orgProfileEditorAuthz`
+  (CA-76), `aiActionsReviewPageRender` (CA-S8-C2b). Same
+  fix-shape category as Arc A item 27 (test-isolation refactor:
+  per-test `trace_id` scoping, runtime lookup over hardcoded
+  UUIDs, fixture-SQL discipline per S33's codification
+  candidates). Broader surface than item 27 — multiple files,
+  multiple test families, all under post-Phase-1.5C
+  (membership / permissions / org users / ai_actions review)
+  substrate. Clean under `pnpm db:reset:clean && pnpm
+  db:seed:all` baseline (598/598). Source: friction-journal
+  2026-05-01 production-promotion entry.
+- **Production-environment-config validation gap (F1
+  codification follow-through)** — surfaced 2026-05-01 during
+  the v0.1.0-mvp production-promotion arc. Phase 1 Step 4
+  cleared on the strength of "staging deploy is green";
+  interpretation was structurally wrong because a Vercel
+  project's staging environment and production environment are
+  independent runtime configurations sharing only the project
+  repo. Production was missing three required env vars
+  (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`,
+  `NEXT_PUBLIC_APP_URL`) at the moment of merge; the env-
+  validation guard fired at `next build`'s page-data-collection
+  step on first deploy attempt. **Fix shape:** future
+  production-promotion sessions add a pre-flight check that
+  enumerates required env vars per environment scope (not
+  cross-environment-isomorphism inference). Either (a) extend
+  the "Re-verify Environmental Claims at Each Gate" convention
+  with a cross-environment-scope sub-clause ("verify each
+  environment's runtime configuration independently; staging-
+  green is necessary but not sufficient for production-go"),
+  or (b) add a per-environment env-var-checklist artifact to
+  the production-promotion brief template. **Codification
+  threshold:** convention amendment fires on a second instance
+  of environment-isomorphism-assumption misfire; tracked in §8
+  as a 1-datapoint process observation pending second firing.
+  Source: friction-journal 2026-05-01 Finding F1.
+- **`@chounting/ui` eslint flat-config gap (CLOSED 2026-05-02
+  as item 47)** — surfaced 2026-05-02 during Phase 4 doc-work
+  item 43 (ci.yml unfilter). The package's package.json
+  declared `"lint": "eslint"` but no `eslint.config.(js|mjs|cjs)`
+  file was wired (scaffolded empty at `000d6f7` Step 5; ESLint
+  v9 requires flat-config). Item 43 shipped at `6c4ce42` as
+  partial-completion (lint job filtered to `@chounting/web` +
+  `@chounting/demo` only). Item 47 closed the gap by adding
+  `packages/ui/eslint.config.mjs` mirroring `apps/demo`'s
+  shape (`apps/web`'s shape would have imported a custom plugin
+  and `no-restricted-imports` patterns for an `adminClient` ui
+  never touches; demo's exact passthrough of the shared base
+  was the right precedent). Filename used `.mjs` for project-
+  convention consistency (sibling configs at `apps/demo/`,
+  `apps/web/`, and the root `eslint.base.mjs` are all `.mjs`;
+  ESLint v9 flat-config reads `.js|.mjs|.cjs` interchangeably).
+  ci.yml lint job now unfiltered (3/3 workspaces); build job
+  also unfiltered (2/2 — ui has no build script). Source:
+  friction-journal 2026-05-02 Path A closeout addendum
+  follow-on.
 
 ---
 
@@ -420,6 +482,42 @@ fires on a third occurrence.
   curves (ride-on-prior-hard-work vs. targeted-investigation).
   One datapoint (C9 ride-on-prior-work); awaits a second
   instance.
+- **Environment-isomorphism assumption** — 2026-05-01
+  production-promotion arc Finding F1. Pattern: treating two
+  distinct runtime-config environments (staging vs production)
+  as if their configurations are isomorphic when they're not;
+  staging-green inferred as evidence for production-go without
+  independent per-environment verification. One datapoint;
+  codification fires on a second occurrence by extending the
+  "Re-verify Environmental Claims at Each Gate" convention
+  with a cross-environment-scope sub-clause. See §6 entry for
+  the obligations-side fix shape.
+- **Halt cadence at irreversible edges** — 2026-05-01
+  production-promotion arc Finding F2. Pattern: at irreversible
+  actions (merge to main, force-push, schema migration), the
+  assistant should explicitly request gate clearance as its
+  own halt rather than allowing the gate to be settled by
+  inference from operator's other actions. F2 fired when Gate 1
+  (diff verdict) was settled by inference from operator running
+  the merge command rather than by explicit ratification. One
+  datapoint; codification fires on a second occurrence.
+- **Claude Code Read-tool consistency on global config** —
+  2026-05-02 operator-reported bug (filed via GitHub issue, never
+  answered). Pattern: two Read tool calls against the same path
+  (`~/.claude/settings.json`) within a single session can return
+  materially different content with no on-disk changes; first Read
+  returned an apparent effective-config-merged-with-defaults view,
+  subsequent Reads returned raw on-disk bytes. Runtime permission
+  behavior matches the on-disk bytes, not the merged view. Session-
+  internal-load-bearing for any brief whose stages depend on file-
+  level inspection of permission config; preventive discipline
+  applied to `docs/09_briefs/session-config-cleanup-0430-brief.md`
+  (substrate-reads now use shell-side `cat`; Stage 4 reframed as
+  load-bearing runtime-behavior verification). One datapoint;
+  codification fires on a second occurrence OR on Anthropic
+  documenting the merge-view surface (which would resolve the bug
+  to documented-feature). Source: friction-journal 2026-05-02
+  Read-tool-consistency-bug NOTE.
 
 ---
 

@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-05-04 per Phase 0 reserved-enum variants
+identified at Session 2F closure verification check 8 (per
+docs/09_briefs/phase-2/2026-05-03-phase-0-governance-plan.md
+Task E4 anticipation). Amendment integrates Phase 0 ADR-0019 +
+ADR-0016 reserved-enum patterns as recognized variants of the
+four-element pattern.
 
 ## Date
 
@@ -123,6 +128,117 @@ Layer 3 bug (service synthesizes a reserved value instead of
 relying on the DEFAULT) is still caught by Layer 1. The DB is
 the authoritative floor under whatever defenses the service and
 schema layers provide above it.
+
+### Recognized variants of the four-element pattern (2026-05-04 amendment)
+
+Phase 0 governance work surfaced three reserved-enum variants
+that share the four-element pattern's defense-in-depth philosophy
+but diverge structurally on elements 1–3. Each variant is a
+recognized application of this ADR; future contributors
+encountering a similar shape SHALL apply the variant's discipline
+as canonically documented here.
+
+**Variant A — NULL-default forward-compatible config-column
+reservation.** Per ADR-0019 Decision item 2 Path γ
+(`docs/07_governance/adr/0019-confidence-calibration-policy.md`),
+the calibration governance pattern reserves six per-org
+configuration columns on `org_settings` (e.g.,
+`confidence_threshold_vendor_invoice`, `calibration_cadence`)
+that ship NULL-default at v1 with per-org operational activation
+forward-pointed to post-v1 amendment-or-new-ADR. The variant
+diverges from the canonical four-element pattern on elements 1
+(numeric/string columns, not enums) and 2 (NULL-default rather
+than NOT NULL DEFAULT terminal state). Element 3 (scoped CHECK
+restricting reserved values; here Layer 1 DB CHECK admits only
+NULL or legal value) and element 4 (three-layer defense) MATCH
+the canonical pattern. Future contributors reserving per-org
+configuration values for post-v1 operational activation SHALL
+follow Variant A's three-layer defense:
+
+- **Layer 1 — DB CHECK admits NULL or legal value range** (e.g.,
+  `confidence_threshold_vendor_invoice IS NULL OR
+  confidence_threshold_vendor_invoice BETWEEN 0 AND 1`).
+- **Layer 2 — Zod boundary rejects non-NULL at v1** (the
+  `org_settings` writer's Zod schema rejects any client-provided
+  non-NULL value for the reserved column).
+- **Layer 3 — Service emission filter prevents non-NULL writes**
+  at v1 (the `org_settings.*` writer per ADR-0011 §1 entity
+  ownership — `orgService` per Sub-verification 1 Outcome A —
+  literally does not have a code path that writes non-NULL to
+  the reserved column).
+
+The Phase 1 → post-v1 transition activates the variant via per-
+org-operational-activation amendment-or-new-ADR per ADR-0017
+Decision item 4 substrate-now-enforcement-later precedent. The
+NULL-default choice closes the existing-row backfill question:
+post-v1 activation SETs columns from NULL to operational values
+on a per-org per-activation basis, NOT a global migration.
+
+**Variant B — Enum-array reservation.** Per ADR-0019 Schema
+deltas, the new closed enum `amendment_cascades_fired` (used as
+enum array on Event 2 audit-event records) reserves the full
+set of amendment-cascade-target ADRs with v1 active subset
+limited to `{ADR_0014_DOCUMENT_TYPE_THRESHOLDS,
+ADR_0018_AMBIGUITY_MARGIN}`. Future post-v1 ADRs that become
+amendment-cascade targets activate by extending the v1 active
+subset. The variant matches element 1 (closed enum defines all
+reserved values) and element 4 (three-layer defense — DB CHECK
+on enum values + canonical audit-log writer per ADR-0011 §1 +
+Zod schema validation). Element 2 (terminal state default) is
+reinterpreted as **empty array `{}` represents "no cascades
+fired"** — the empty-array form is the cycle-emission terminal
+state. Element 3 (scoped CHECK on discriminator) is
+reinterpreted as **the audit-event schema itself constitutes the
+scope** — the enum array is only valid on the
+`calibration_run_completed` audit-event type, NOT on other
+audit-event types. Future contributors reserving enum-array
+fields for forward-compatibility SHALL follow Variant B's
+empty-array-as-terminal-state + audit-event-schema-scoped
+discipline.
+
+**Variant C — Pair-validity matrix reservation (two-dimensional
+reservation).** Per ADR-0016 Decision item 3
+(`docs/07_governance/adr/0016-document-relationship-graph.md`),
+the `(linked_entity_type, link_role)` pair-validity matrix
+reserves a two-dimensional joint-validity space at 756 cells with
+v1 active subset narrow. The variant extends element 1 to
+**multi-dimensional** (closed enum per dimension) and element 3
+to **joint-validity scoped CHECK** (the CHECK fires on the joint
+pair, not on either dimension independently). Element 2 (NOT
+NULL DEFAULT terminal state) does not directly apply — pair-
+validity matrices have no single "terminal" cell; instead, the
+v1 active subset defines the allowed-pairs scope. Element 4
+(three-layer defense) MATCHES the canonical pattern: Layer 1 DB
+CHECK on joint pair validity + Layer 2 documentLinkService Zod
+boundary + Layer 3 service emission filter. Future contributors
+reserving multi-dimensional joint-validity pair spaces SHALL
+follow Variant C's joint-CHECK + dimensional-extension
+discipline.
+
+**Variant evaluation discipline.** When a future feature reserves
+schema shape for a later phase, contributors SHALL evaluate which
+variant (canonical four-element, Variant A, Variant B, or
+Variant C) best fits the substantive concern. If none fits, the
+feature warrants a new variant addition to this ADR via a
+follow-up amendment, NOT divergent inline discipline. The
+canonical-evidence anchor for Phase 0 reserved-enum patterns is
+this ADR; future contributors discovering a fifth pattern SHALL
+amend this ADR rather than re-deriving discipline inconsistently.
+
+The substrate-now-enforcement-later pattern (codified as Phase 0
+governance lesson per
+`docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+§6.8) is the cross-pattern reference for all four variants
+(canonical + A + B + C). Phase 0 ratified six instances of
+substrate-now-enforcement-later: ADR-0011 reserved
+exception-resolution-actions; ADR-0014 Tier B classifier
+reserved post-v1; ADR-0014 reserved `org_settings.*` columns
+from Q73's other portion; ADR-0017 vendor-rules enforcement;
+ADR-0019 calibration substrate (Variant A); ADR-0018 T7 + T9 +
+ADR-0019 T11 reserved triggers. This ADR is the canonical
+reference for the substrate-shape mechanism; the substrate-now-
+enforcement-later pattern is the canonical reference for the
+forward-compatibility mechanism.
 
 ### Phase 2 upgrade path
 
@@ -313,14 +429,46 @@ requires a smaller migration footprint at the cutover.
   (positive capture rather than reserved-state rejection). This
   ADR follows 0009's voice and structure conventions (prose-
   heavy, bullets only for rule enumeration and alternatives).
+- **ADR-0019** (`0019-confidence-calibration-policy.md`) — the
+  first consumer of Variant A (NULL-default forward-compatible
+  config-column reservation) at Decision item 2 Path γ + Schema
+  deltas (six reserved `org_settings.*` columns) and the first
+  consumer of Variant B (enum-array reservation) at Schema
+  deltas (`amendment_cascades_fired` enum array on Event 2).
+- **ADR-0016** (`0016-document-relationship-graph.md`) — the
+  first consumer of Variant C (pair-validity matrix
+  reservation) at Decision item 3 + Schema deltas
+  (`(linked_entity_type, link_role)` 756-cell pair-validity
+  matrix).
+- **ADR-0017** (`0017-vendor-template-substrate.md`) Decision
+  item 4 — substrate-now-enforcement-later forward-pointer
+  framing inherited by ADR-0019 Variant A's per-org operational
+  activation deferral. The substrate-now-enforcement-later
+  pattern is the cross-pattern Phase 0 governance lesson
+  formalized in
+  `docs/09_briefs/phase-2/2026-05-04-d6-ratification-package.md`
+  §6.8.
 
 ## Scope bound
 
 This ADR codifies the schema-shape discipline for reserving
-Phase 2 workflow states in Phase 1. It does NOT address Phase 2
-workflow subsystems themselves — approver queue UI, state-
-transition machines, maker-checker enforcement rules, per-
-transition audit trail shape, approver-permission gating — any of
-which may require their own ADRs at the time Phase 2 ships. This
-ADR's scope is the schema-ready affordance, not the workflow
-behavior that will eventually consume the affordance.
+Phase 2 workflow states in Phase 1, plus the recognized variants
+identified at Session 2F closure verification (Variant A
+NULL-default config-column reservation; Variant B enum-array
+reservation; Variant C pair-validity matrix reservation). It
+does NOT address Phase 2 workflow subsystems themselves —
+approver queue UI, state-transition machines, maker-checker
+enforcement rules, per-transition audit trail shape,
+approver-permission gating — any of which may require their own
+ADRs at the time Phase 2 ships. It does NOT address per-org
+operational activation governance for Variant A consumers
+(ADR-0019 forward-pointed this to post-v1 amendment-or-new-ADR).
+It does NOT address amendment-cascade-target governance for
+Variant B (the audit-event-anchored governance event-driven ADR
+amendment cascade discipline lives in Framing α per
+`docs/07_governance/adr/0019-confidence-calibration-policy.md`
+Decision item 8 + Notes for future ADR writers item h, codified
+as Z1 #13 per Session 2E Task 10). This ADR's scope is the
+schema-ready affordance + recognized variants, not the workflow
+behavior or activation governance that will eventually consume
+the affordance.

@@ -60,7 +60,7 @@ const RATES_USD_PER_MTOK = {
 // Sequential shape-major iteration per Hard Constraint 10:
 // shape 12 run 1 → 2 → 3 → shape 13 run 1 → ... All 9 shapes,
 // 3 runs each = 27 invocations. Prompts verbatim from
-// docs/07_governance/ec-2-prompt-set.md lines 309-422.
+// docs/09_briefs/phase-1.2/ec-2-prompt-set.md lines 309-422.
 const SHAPES: Array<{
   shape_num: number;
   shape_label: string;

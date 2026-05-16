@@ -337,6 +337,15 @@ CHECK + service idempotency lookup). Each layer catches a
 different failure mode; the database is always the
 authoritative enforcement.
 
+**Tier 2 (data-layer entity ownership).** Where the entity
+columns live in the Document Platform data layer per ADR-0011 §1
+entity ownership boundary. NOT to be confused with Tier 2
+(agent-tier execution).
+
+**Tier 2 (agent-tier execution).** Which agent tier executes a
+write per ADR-0007 §Tier 2 strict no-write rule. NOT to be
+confused with Tier 2 (data-layer entity ownership).
+
 **Throwaway-work test.** The inclusion criterion for
 `CLAUDE.md` non-negotiable rules: does a violation cause work
 the user has to throw away or redo? If a "rule" is just style
@@ -400,6 +409,18 @@ threads that may cross phase boundaries. The two are
 complementary: phases bound scope, arcs bound continuous
 bodies of work.
 
+**Note on "Phase" disambiguation.** Where this glossary uses
+"Phase" without qualifier, it means **Delivery Phase** (the
+numbered scope-bounded chunk crossing the project — Phase
+1.1, 1.2, 1.5A/B/C, 2). A separate concept of **Workflow
+Stage** describes user-journey position within a Workflow Arc
+(Document Intake → Review → Posting); see
+`docs/03_architecture/product-workflow-delivery-mapping.md`
+for the four-maps separation. Historical docs may retain
+"Workflow Phase" terminology; new docs use "Stage" for
+workflow chapters and reserve "Phase" for delivery /
+governance timing.
+
 **Top-level work units:**
 
 - **Arc.** A continuous body of work spanning one or more
@@ -430,6 +451,74 @@ bodies of work.
 - **Commit.** Atomic change, one per logical unit.
   Carries a session label as Git trailer per Session
   Labeling Convention.
+
+**Product Vocabulary:**
+
+Product vocabulary describes WHAT exists in the software,
+separate from where the code lives. Per ADR-0020 (Decision
+item 1), source code is organized by authority layer
+(`agent/`, `services/`, `core/`, `db/`, `contracts/`), not
+by product module. Module names are documentation concepts
+that live in `docs/00_product/`, not source folders.
+
+- **Product.** The user-facing system. CHOUnting is the
+  product; "The Bridge" is its UI metaphor.
+- **Product Module.** A coherent area of product
+  capability. Examples per
+  `docs/00_product/product-map.md`: Document Core, Double
+  Entry, Client Core, Identity & Access, Audit, Reporting,
+  Agent Control Surface. Modules are documentation
+  concepts, not source folders. A feature implementation
+  slices through authority layers; the module is where the
+  feature is documented, not where its code lives.
+- **Feature.** A user-visible capability within a module.
+  Example: Document Upload (within Document Core); Post
+  Journal Entry (within Double Entry).
+- **Requirement.** A specific behavioral constraint a
+  feature must satisfy. Example: "Users can upload bank
+  statements up to 10MB in PDF format."
+- **Task.** A unit of implementation work that delivers
+  part of a requirement. Tasks usually correspond to one
+  or more commits within a Session.
+
+**Delivery Vocabulary:**
+
+Delivery vocabulary describes WHEN and WHERE work happens.
+Builds on the existing Top-level work units (Phase, Session)
+with branch and worktree concepts. Per ADR-0020-ratified
+`branching-and-feature-flag-strategy.md`, phase branches are
+the integration unit between sessions and staging.
+
+- **Phase Branch.** The git branch a Phase's work lives
+  on while in flight. Naming:
+  `phase/N-short-description` going forward (e.g.,
+  `phase/1-storage-evidence-core`). Existing branches
+  retain their current names. Phase branches merge to
+  staging at ratification with `--no-ff` to preserve arc
+  topology. See
+  `docs/03_architecture/branching-and-feature-flag-strategy.md`.
+- **Worktree.** An on-disk checkout of a Phase Branch
+  parallel to the main checkout. Per ADR-0020, the target
+  location is
+  `~/projects/chounting-worktrees/<phase-name>/`
+  (aspirational; the current Phase 0 worktree at
+  `.claude/worktrees/phase-0-governance/` is grandfathered).
+  Used for long-lived ratification-gated arcs, not short
+  feature work. See `docs/04_engineering/worktree-rules.md`.
+- **Build Chunk.** A logically coherent slice of work
+  within a Phase, larger than a Session, smaller than the
+  Phase itself. Example: "Phase 1 Chunk 1 —
+  `storageProviderService` substrate." A Build Chunk
+  usually spans 1–3 Sessions and produces one PR.
+- **Ratification Gate.** A founder-review checkpoint
+  where work-in-progress on a Phase Branch is reviewed
+  before merging to staging. Phase 0 used six gates
+  (D1–D6); smaller phases may use fewer. Not every Phase
+  needs gates — only those with ratification-shape
+  outputs (governance, conventions, ADRs, architecture
+  decisions). Already partially defined under
+  "Process/coordination units → Gate" below; this entry
+  adds the ratification-specific shape.
 
 **Process/coordination units:**
 
@@ -504,3 +593,110 @@ bodies of work.
   fix-stack, Class 2 fix-stack). Bigger than an EC,
   smaller than a Phase. Has its own scoping doc and exit
   criteria.
+
+## Governance Vocabulary
+
+Terms used across the project's governance flow — push gates,
+verification sessions, deviation documentation, codification
+discipline. Some terms are stable production use (Tier 1) with
+definitions ratified during Phase 2 of pre-Session-4 cleanup
+(2026-05-08). Other terms are still in motion (Tier 2) with
+definitions deferred to Session 7 alongside the `conventions.md`
+entries that codify the underlying patterns.
+
+### Tier 1 — defined
+
+**push-readiness gate.** The three-condition checklist applied
+before a working-branch HEAD is pushed to a shared branch
+(`main` / `staging`). Each condition (Condition 1 test-suite
+health; Condition 2 doc-sync reconciled; Condition 3 governance
+closeout) must be met OR formally documented as a deviation.
+Codified in `CLAUDE.md` § "Push readiness three-condition gate."
+
+**Condition 1 (test-suite health).** First condition of the
+push-readiness gate. EITHER `pnpm test` full-suite green at HEAD
+OR deviations documented per the [three-artifact framing](#tier-1--defined)
+((a) mechanism, (b) fix shape, (c) explicit carry-forward
+framing — retrospective, friction-journal, or filed queue
+item). "Acceptable baseline" without all three artifacts is
+not a met condition.
+
+**Condition 2 (doc-sync reconciled).** Second condition of the
+push-readiness gate. `invariants.md` ↔ `control_matrix.md` ↔
+`ledger_truth_model.md` ↔ shipped code all consistent;
+bidirectional reachability diff clean (or flagged exceptions
+documented as Phase 2 stubs); `types.ts` regenerated against
+the post-arc schema; ADRs, obligations, and any other arc-
+affected governance docs reconciled. Deviation-documentation
+shape for Condition 2 is the "Phase 2 stub" pattern — distinct
+from Condition 1's three-artifact framing.
+
+**Condition 3 (governance closeout).** Third condition of the
+push-readiness gate. Retrospective written; friction-journal
+updated with arc-scope entries; any conventions earned by fire
+count codified in `CLAUDE.md` (or `conventions.md` per
+Documentation Routing) or filed for future codification with
+provenance.
+
+**three-artifact framing.** The deviation-documentation
+discipline specific to [Condition 1](#tier-1--defined) of the
+push-readiness gate: a deviation from "full-suite green at HEAD"
+is a met condition only if accompanied by all three of (a)
+mechanism, (b) fix shape, (c) explicit carry-forward framing
+(retrospective, friction-journal, or filed queue item).
+"Acceptable baseline" handwaving without all three is not a
+met condition. The phrase is specific to Condition 1; Conditions
+2 and 3 use distinct deviation-documentation shapes (Phase 2
+stub framing for Condition 2; codification-or-filing framing
+for Condition 3).
+
+**STRUCTURAL-OBJECTION.** A verification-session status taxonomy
+member (rev 3 verification prompt status taxonomy). Used when a
+verified claim's underlying facts check out, but the workstream's
+framing or cut is questionable. Verifier flags; operator decides
+resolution; verifier still does not propose a fix.
+Distinguished from sibling status members:
+- **AMBIGUOUS** — claim true under one reading, false under
+  another; verifier states both readings.
+- **DRIFTED** — claim was likely correct at plan-write time but
+  state has moved; evidence shows current divergence.
+- **WRONG** — claim factually incorrect against current state at
+  any time.
+- **CONFIRMED** / **UNVERIFIABLE** — descriptive of fact-check
+  outcomes.
+
+STRUCTURAL-OBJECTION is the only taxonomy member that addresses
+framing questions while accepting the underlying facts.
+
+**filesystem-not-prompt rule.** A round-2 verification discipline:
+every `CONFIRMED` status in a verification-session findings
+block must cite filesystem evidence (path:line reference, grep
+result, or directory listing), not quote the dispatch prompt
+back. The dispatch prompt is the hypothesis; the filesystem is
+the ground truth. The rule applies recursively to subagents —
+the rule does not weaken because it's a subagent. "Verify
+against the dispatch prompt's claim list" is the exact failure
+mode the rule is designed to prevent.
+
+### Tier 2 — deferred
+
+Round-2 design vocabulary; definitions land with `conventions.md`
+entries in Session 7 alongside the V1→V2 paired-ratification
+elevation. Defining these terms now risks locking in ambiguity
+before the underlying concepts ratify.
+
+- **Outcome A / B / C** — filesystem-not-prompt rule outcome
+  categories (dispatch-time prevented all violations / self-
+  checks fired and caught real violations / self-checks fired
+  on false positives). N=1 evidence captured at Session 2
+  verification; codification deferred.
+- **three-category codification taxonomy** — architectural
+  principle (N=1 sufficient; ratification IS codification) /
+  procedural pattern at workflow grain (N=1 if codification
+  artifact = workflow it describes) / process meta-pattern (N=2
+  with shape match; artifact decoupled from codification).
+  Round-2 design context; `conventions.md` addition deferred to
+  Session 7.
+- **round-N restructure plan workflow** — V1+V2 paired
+  ratification structure. Round-2 design context;
+  `conventions.md` addition deferred to Session 7.

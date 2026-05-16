@@ -7,6 +7,14 @@
 //
 // This type matches Bible Section 1c (request lifecycle) and Section 15e
 // (service middleware enforcement).
+//
+// Phase 6 chunk 6.3a addition: SystemActorServiceContext sister type for
+// webhook-invoked services that bypass user-session withInvariants flow
+// (Sub-Q6 Artifact 3 + β-3 Approach B amendment). ServiceContext shape
+// unchanged; 111 existing consumer sites untouched. handleForwardedMailbox
+// (and future cron / webhook / scheduled-task system-actor surfaces)
+// accepts SystemActorServiceContext explicitly. recordMutation widens its
+// accepted ctx shape to a structural union accepting both.
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -24,6 +32,38 @@ export interface ServiceContext {
   trace_id: string;       // REQUIRED — UUID generated at the request entry point
   caller: VerifiedCaller; // REQUIRED — never trust claimed identity
   locale?: 'en' | 'fr-CA' | 'zh-Hant';
+}
+
+// =====================================================================
+// SystemActorServiceContext — system-actor sister type (chunk 6.3a)
+//
+// Used by webhook route handlers and other system-actor surfaces (cron,
+// scheduled tasks) that bypass the user-session withInvariants flow per
+// Sub-Q6 Artifact 3. Constructed directly at the route-handler entry
+// point after caller authentication (e.g., HMAC verify) and org
+// resolution (e.g., resolveOrgFromMailboxHash).
+//
+// user_id is null at runtime; system_actor names the invocation source
+// (e.g., 'postmark_inbound_webhook'). recordMutation handles user_id=null
+// for audit_log rows per migration 113 (audit_log.user_id nullable).
+//
+// org_id is REQUIRED at this shape — system-actor invocation derives
+// org from the invocation context (MailboxHash for Postmark) rather than
+// from caller memberships. Pre-resolution errors (HMAC fail, malformed
+// payload, invalid_recipient) emit audits directly at the route handler
+// via recordMutation with a route-handler-grade context shape (user_id
+// null, org_id null) — those bypass SystemActorServiceContext entirely.
+// =====================================================================
+
+export interface SystemActorCaller {
+  user_id: null;
+  system_actor: string;
+}
+
+export interface SystemActorServiceContext {
+  trace_id: string;
+  caller: SystemActorCaller;
+  org_id: string;
 }
 
 /**

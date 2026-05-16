@@ -49,8 +49,19 @@ next-env.d.ts
 # gitignored globally via ~/.gitignore_global. Note the pattern is `.claude/*`
 # (contents) not `.claude/` (directory) — git can't re-include children of an
 # excluded directory.
+#
+# 2026-05-05 (ADR-0020 substrate session): re-included .claude/skills/ as
+# load-bearing project infrastructure per CLAUDE.md ("Skills in
+# .claude/skills/ summarize and point"). The `.claude/skills/` directory
+# was silently gitignored from 2026-04-19 (skills migration) until the
+# 2026-05-05 architecture-substrate session's pre-flight surfaced the gap.
+# Both `!.claude/skills/` and `!.claude/skills/**` are required because
+# git can't re-include children of an excluded directory without first
+# re-including the directory itself plus its recursive contents.
 .claude/*
 !.claude/settings.json
+!.claude/skills/
+!.claude/skills/**
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/
@@ -67,3 +78,21 @@ test-results/
 
 # Session coordination — lock file is per-session, not tracked
 .coordination/session-lock.json
+
+# Working artifacts directory — verification reports, audit scratch, and
+# other non-canonical outputs from docs / governance arcs. Canonical records
+# live in docs/ proper. Pre-existing reports/mutation/ contents (mutation
+# testing output) become gitignored by extension; their disposition is
+# deferred to a separate cleanup arc. Round-2 docs reorganization
+# (2026-05-07) is the precondition for this rule; see
+# DOCS_RESTRUCTURE_V2.md Part 3 (Session 7) for the canonical record.
+#
+# Scope refined 2026-05-10 at chunk B5-3-D1 session #1 checkpoint #1 per
+# founder verdict: pattern updated from `reports/` (matches at any depth)
+# to `/reports/` (root-only) to align rule scope with documented intent.
+# The bare-pattern form was silently capturing application source paths
+# named `reports/` at deeper paths (e.g., `apps/web/src/services/spend/
+# reports/` D1.3 substrate + the already-tracked `apps/web/src/app/api/
+# orgs/[orgId]/reports/` API routes tree). Catch #23 + #24 logged for
+# D1 closeout friction-journal forward-pointer.
+/reports/

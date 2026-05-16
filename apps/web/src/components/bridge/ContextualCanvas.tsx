@@ -25,6 +25,17 @@ import { BasicPLView } from '@/components/canvas/BasicPLView';
 import { BasicTrialBalanceView } from '@/components/canvas/BasicTrialBalanceView';
 import { AccountLedgerView } from '@/components/canvas/AccountLedgerView';
 import { AccountsByTypeView } from '@/components/canvas/AccountsByTypeView';
+import { ApAgingView } from '@/components/canvas/ApAgingView';
+import { OpenBillsView } from '@/components/canvas/OpenBillsView';
+import { VendorBalanceView } from '@/components/canvas/VendorBalanceView';
+import { PaymentApprovalQueueView } from '@/components/canvas/PaymentApprovalQueueView';
+import { ActivePaymentsView } from '@/components/canvas/ActivePaymentsView';
+import { PaidBillsHistoryView } from '@/components/canvas/PaidBillsHistoryView';
+import { PendingApprovalsView } from '@/components/canvas/PendingApprovalsView';
+import { ManualBillForm } from '@/components/canvas/ManualBillForm';
+import { PaymentApprovalCard } from '@/components/canvas/PaymentApprovalCard';
+import { RecordPaymentCard } from '@/components/canvas/RecordPaymentCard';
+import { BillReverseCard } from '@/components/canvas/BillReverseCard';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
@@ -136,6 +147,21 @@ function renderDirective(
       return <ReversalForm orgId={d.orgId} sourceEntryId={d.sourceEntryId} onNavigate={onNavigate} />;
     case 'adjustment_form':
       return <AdjustmentForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'bill_form':
+      return <ManualBillForm orgId={d.orgId} onNavigate={onNavigate} />;
+    case 'payment_approval_card':
+      return <PaymentApprovalCard orgId={d.orgId} billId={d.billId} onNavigate={onNavigate} />;
+    case 'payment_record_card':
+      return <RecordPaymentCard orgId={d.orgId} billId={d.billId} onNavigate={onNavigate} />;
+    case 'bill_reverse_card':
+      return (
+        <BillReverseCard
+          orgId={d.orgId}
+          billId={d.billId}
+          returnTo={d.returnTo}
+          onNavigate={onNavigate}
+        />
+      );
     case 'recurring_template_list':
       return <RecurringTemplateListView orgId={d.orgId} onNavigate={onNavigate} />;
     case 'recurring_template_form':
@@ -166,6 +192,20 @@ function renderDirective(
           onSelectEntity={onSelectEntity}
         />
       );
+    case 'report_ap_aging':
+      return <ApAgingView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_open_bills':
+      return <OpenBillsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_vendor_balance':
+      return <VendorBalanceView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_payment_approval_queue':
+      return <PaymentApprovalQueueView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_active_payments':
+      return <ActivePaymentsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_paid_bills_history':
+      return <PaidBillsHistoryView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
+    case 'report_pending_approvals':
+      return <PendingApprovalsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
     case 'none':

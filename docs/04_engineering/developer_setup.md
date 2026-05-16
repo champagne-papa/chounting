@@ -50,17 +50,18 @@ contain.
 1. `git clone [repo] && cd the-bridge`
 2. `nvm use` (installs the Node version from `.nvmrc`)
 3. `pnpm install`
-4. `cp .env.example .env.local` and fill in all values
-5. `pnpm db:start` (starts local Supabase: Postgres + Auth + Studio)
-6. `pnpm db:migrate` (runs the schema migrations)
-7. `pnpm db:generate-types` (generates TypeScript types from the
+4. `bash scripts/install-hooks.sh` — installs the `.git/hooks/pre-commit` hook (session-lock check + ADR lint / index drift check per ADR-0021). Git doesn't track hooks; this step is required once per clone or worktree, and again any time `scripts/install-hooks.sh` itself changes. **Skipping this step silently bypasses the pre-commit checks** — commits land unguarded; CI catches ADR violations on push but the session-lock convention has no CI backstop.
+5. `cp .env.example .env.local` and fill in all values
+6. `pnpm db:start` (starts local Supabase: Postgres + Auth + Studio)
+7. `pnpm db:migrate` (runs the schema migrations)
+8. `pnpm db:generate-types` (generates TypeScript types from the
    schema)
-8. `pnpm db:seed:all` (creates the 2 dev orgs + 3 dev users)
-9. `pnpm dev` (starts Next.js)
-10. Open `http://localhost:3000` — sign in with one of the seed users
-11. Open Postman → import `postman/collection.json` → set `base_url`
+9. `pnpm db:seed:all` (creates the 2 dev orgs + 3 dev users)
+10. `pnpm dev` (starts Next.js)
+11. Open `http://localhost:3000` — sign in with one of the seed users
+12. Open Postman → import `postman/collection.json` → set `base_url`
     to `http://localhost:3000`
-12. Run "Health Check" — expect `{ status: "ok" }`
+13. Run "Health Check" — expect `{ status: "ok" }`
 
 ### Environment Files
 

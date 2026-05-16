@@ -1,6 +1,6 @@
 // tests/integration/soft8EntryEightReplay.test.ts
 // OI-2 fix-stack handshake Soft 8 (Phase C Step 3). Replays the
-// canonical Entry 8 prompt (docs/07_governance/ec-2-prompt-set.md
+// canonical Entry 8 prompt (docs/09_briefs/phase-1.2/ec-2-prompt-set.md
 // lines 199-208) through a mocked Anthropic client to verify the
 // foundation-commit resolver wiring fires AND the orphan-prevention
 // property holds (a pending ai_actions row paired with a

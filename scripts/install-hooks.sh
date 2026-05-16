@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 # scripts/install-hooks.sh
 #
-# One-time setup: installs .git/hooks/pre-commit for the session
-# lock file convention. Must be run once per clone / worktree;
-# git doesn't track hooks themselves.
+# One-time setup: installs .git/hooks/pre-commit. Must be run once
+# per clone / worktree; git doesn't track hooks themselves.
 #
-# See docs/04_engineering/conventions.md "Session Lock File
-# Convention" for the mechanism's role.
+# The installed hook enforces:
+#   1. Session Lock File Convention (see conventions.md).
+#   2. ADR linting + index-regeneration check (per ADR-0021) when
+#      the staged commit touches ADR-related files.
 
 set -euo pipefail
 
 HOOK_PATH=".git/hooks/pre-commit"
 
-if [[ -f "$HOOK_PATH" ]]; then
-  BACKUP="${HOOK_PATH}.pre-coordination"
-  echo "Existing pre-commit hook found; backing up to $BACKUP"
-  cp "$HOOK_PATH" "$BACKUP"
-fi
+# Write the new hook content to a temp file first so we can compare
+# with the existing hook before deciding whether to back up + install.
+TMP_HOOK=$(mktemp)
+trap 'rm -f "$TMP_HOOK"' EXIT
 
-cat > "$HOOK_PATH" <<'HOOK_EOF'
+cat > "$TMP_HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
-# Installed by scripts/install-hooks.sh. Enforces the Session
-# Lock File Convention. See conventions.md for rationale.
+# Installed by scripts/install-hooks.sh. Enforces:
+#   1. Session Lock File Convention (see conventions.md).
+#   2. ADR linting + index-regeneration check (per ADR-0021) when
+#      the staged commit touches ADR-related files.
 
 set -euo pipefail
 
+# ---- Session lock check ----
 LOCK=".coordination/session-lock.json"
 
 if [[ ! -f "$LOCK" ]]; then
@@ -32,38 +35,74 @@ if [[ ! -f "$LOCK" ]]; then
   echo "[coordination] warning: no session lock in use;" >&2
   echo "consider running scripts/session-init.sh <label> before" >&2
   echo "starting new work." >&2
-  exit 0
+else
+  LOCK_LABEL=$(grep -oE '"session":[[:space:]]*"[^"]+"' "$LOCK" | sed -E 's/.*"([^"]+)"$/\1/')
+
+  if [[ -z "${COORD_SESSION:-}" ]]; then
+    echo "[coordination] error: session lock is held by '$LOCK_LABEL'" >&2
+    echo "but COORD_SESSION is not set in your shell. If this commit" >&2
+    echo "is from session '$LOCK_LABEL', run:" >&2
+    echo "  export COORD_SESSION='$LOCK_LABEL'" >&2
+    echo "and retry. If a different session holds the lock, stop and" >&2
+    echo "resolve. Commit blocked." >&2
+    exit 1
+  fi
+
+  if [[ "$COORD_SESSION" != "$LOCK_LABEL" ]]; then
+    echo "[coordination] error: active lock is for session" >&2
+    echo "'$LOCK_LABEL' but your shell's COORD_SESSION is" >&2
+    echo "'$COORD_SESSION'. This looks like a foreign-session commit." >&2
+    echo "Stop and resolve before retrying. Commit blocked." >&2
+    exit 1
+  fi
 fi
 
-LOCK_LABEL=$(grep -oE '"session":[[:space:]]*"[^"]+"' "$LOCK" | sed -E 's/.*"([^"]+)"$/\1/')
+# ---- ADR check (only when ADR-related files have changed) ----
+ADR_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(docs/07_governance/adr/|docs/02_specs/taxonomy\.md|docs/02_specs/invariants\.md|scripts/adr/)' || true)
 
-if [[ -z "${COORD_SESSION:-}" ]]; then
-  echo "[coordination] error: session lock is held by '$LOCK_LABEL'" >&2
-  echo "but COORD_SESSION is not set in your shell. If this commit" >&2
-  echo "is from session '$LOCK_LABEL', run:" >&2
-  echo "  export COORD_SESSION='$LOCK_LABEL'" >&2
-  echo "and retry. If a different session holds the lock, stop and" >&2
-  echo "resolve. Commit blocked." >&2
-  exit 1
+if [[ -n "$ADR_CHANGED" ]]; then
+  echo "[adr] ADR-related files staged; running adr:lint and adr:index --check..."
+  if ! pnpm adr:lint; then
+    echo "[adr] error: lint failed. Fix findings before committing." >&2
+    exit 1
+  fi
+  if ! pnpm adr:index --check; then
+    echo "[adr] error: index out of sync. Run 'pnpm adr:index' and re-stage README.md." >&2
+    exit 1
+  fi
 fi
 
-if [[ "$COORD_SESSION" != "$LOCK_LABEL" ]]; then
-  echo "[coordination] error: active lock is for session" >&2
-  echo "'$LOCK_LABEL' but your shell's COORD_SESSION is" >&2
-  echo "'$COORD_SESSION'. This looks like a foreign-session commit." >&2
-  echo "Stop and resolve before retrying. Commit blocked." >&2
-  exit 1
-fi
-
-# COORD_SESSION matches LOCK_LABEL — allow silently.
 exit 0
 HOOK_EOF
 
+# Content-equivalence short-circuit: if existing hook matches the
+# new content byte-for-byte, skip backup + install + messaging.
+if [[ -f "$HOOK_PATH" ]] && cmp -s "$TMP_HOOK" "$HOOK_PATH"; then
+  echo "Pre-commit hook already installed at $HOOK_PATH (no action)."
+  exit 0
+fi
+
+# Otherwise, back up existing hook (only when content differs) and
+# install the new hook.
+if [[ -f "$HOOK_PATH" ]]; then
+  BACKUP="${HOOK_PATH}.pre-coordination"
+  echo "Existing pre-commit hook differs from new content; backing up to $BACKUP"
+  cp "$HOOK_PATH" "$BACKUP"
+fi
+
+mv "$TMP_HOOK" "$HOOK_PATH"
 chmod +x "$HOOK_PATH"
+trap - EXIT  # Disarm the cleanup since TMP_HOOK no longer exists.
 
 echo "Pre-commit hook installed at $HOOK_PATH."
 echo ""
-echo "The hook reads .coordination/session-lock.json and refuses"
-echo "commits whose COORD_SESSION env var doesn't match the"
-echo "active lock's session label. Re-run this script in every"
-echo "worktree/clone you commit from."
+echo "The hook enforces:"
+echo "  1. Session Lock File Convention (.coordination/session-lock.json"
+echo "     vs COORD_SESSION env var)."
+echo "  2. ADR linting and index regeneration when ADR-related files"
+echo "     are staged (docs/07_governance/adr/, docs/02_specs/taxonomy.md,"
+echo "     docs/02_specs/invariants.md, scripts/adr/)."
+echo ""
+echo "Re-run this script in every worktree / clone you commit from,"
+echo "and after any change to the hook content (e.g., when ADR-0021's"
+echo "tooling discipline evolves)."

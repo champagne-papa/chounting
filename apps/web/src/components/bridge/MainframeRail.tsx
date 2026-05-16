@@ -26,6 +26,14 @@ const ICONS = [
   { id: 'recurring',     label: 'Recurring Journals', icon: '\u{1F504}' },
   { id: 'pl',            label: 'P&L Report',         icon: '\u{1F4CA}' },
   { id: 'trial_balance', label: 'Trial Balance',      icon: '\u2696' },
+  { id: 'ap_aging',      label: 'AP Aging',           icon: '\u{1F4B0}' },
+  { id: 'open_bills',    label: 'Open Bills',         icon: '\u{1F4DD}' },
+  { id: 'vendor_balance', label: 'Vendor Balance',    icon: '\u{1F4B5}' },
+  { id: 'pending_approvals', label: 'Pending Approvals', icon: '\u{1F551}' },
+  { id: 'payment_approval_queue', label: 'Payment Approval Queue', icon: '\u{1F4B3}' },
+  { id: 'active_payments', label: 'Active Payments', icon: '\u{1F4B8}' },
+  { id: 'paid_bills_history', label: 'Paid Bills History', icon: '\u{1F4DC}' },
+  { id: 'bill_form',     label: 'New Bill',           icon: '\u{1F4C4}' },
   { id: 'actions',       label: 'AI Action Review',   icon: '\u2705' },
 ] as const;
 
@@ -47,6 +55,22 @@ export function MainframeRail({ orgId, onNavigate }: Props) {
         return onNavigate({ type: 'report_pl', orgId });
       case 'trial_balance':
         return onNavigate({ type: 'report_trial_balance', orgId });
+      case 'ap_aging':
+        return onNavigate({ type: 'report_ap_aging', orgId });
+      case 'open_bills':
+        return onNavigate({ type: 'report_open_bills', orgId });
+      case 'vendor_balance':
+        return onNavigate({ type: 'report_vendor_balance', orgId });
+      case 'pending_approvals':
+        return onNavigate({ type: 'report_pending_approvals', orgId });
+      case 'payment_approval_queue':
+        return onNavigate({ type: 'report_payment_approval_queue', orgId });
+      case 'active_payments':
+        return onNavigate({ type: 'report_active_payments', orgId });
+      case 'paid_bills_history':
+        return onNavigate({ type: 'report_paid_bills_history', orgId });
+      case 'bill_form':
+        return onNavigate({ type: 'bill_form', orgId });
       case 'actions':
         return router.push(`/${locale}/${orgId}/agent/actions`);
     }
