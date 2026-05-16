@@ -1710,3 +1710,54 @@ per-item processing state orthogonal to `source_documents` +
   rather than relocated per §2's "before Cross-references"
   prescription. Placement gap surfaced as Phase 6 retrospective
   inventory Flag 9.
+
+
+### Amendment 4 (2026-05-15) — Atomic-extension-via-JSONB-array channel-composition pattern
+
+**Status.** Added at chunk 6.3b retrospective Commit A per
+codification graduation T3 surface assignment.
+
+**Codification.** The chunk 6.1 atomic RPC
+`create_ingest_batch_with_documents_with_audit` (migration 152)
+accepts variable-length JSONB array parameters (`p_documents`,
+`p_case_sources`, `p_jobs`) sized per ingestion channel. The RPC
+body's `jsonb_array_elements` iteration handles arbitrary array
+sizes; per-row INSERT semantics are channel-agnostic.
+
+Channel-specific row composition lives at the service layer.
+Each channel-handler method constructs its `p_documents` /
+`p_case_sources` / `p_jobs` arrays per the channel's row-
+multiplication shape:
+
+- **drag-drop** (chunk 6.2b): N files → N source_documents + N
+  cases (1:1) + 0 case_sources + N jobs
+- **forwarded_mailbox** (chunk 6.3a): 1 email + N attachments →
+  N+1 source_documents + 1 case (per-email grain) + 1
+  case_sources (email_body role) + N+1 jobs
+
+Backward-compatible channel addition is service-layer-only.
+Adding a new channel (api_ingest at Phase 7+; direct_upload
+reserved per §1) does NOT require RPC amendment. The new
+`ingestionService` method composes the appropriate p-arrays for
+the new channel's row-multiplication shape.
+
+**Discipline rule.** Future channel additions land at the
+service-layer only. The chunk 6.1 RPC body is the canonical
+atomicity boundary; channel-specific shape lives outside.
+
+**v1 consumers.** chunks 6.2 (drag-drop) + 6.3 (forwarded_mailbox)
+shipped pre-amendment. Phase 7 `api_ingest` + Phase 5.1 amendments
+are named-future consumers per Phase 6 retrospective §6.b
+cross-phase consumer inventory.
+
+**Cross-references.**
+- `supabase/migrations/20240152000000_ingestion_substrate.sql`
+  lines 470-611 — chunk 6.1 RPC body with `jsonb_array_elements`
+  iteration
+- `apps/web/src/services/document-platform/ingestionService.ts` —
+  channel-handler methods (`handleDragDropUpload` + `handleForwardedMailbox`)
+- `docs/07_governance/friction-journal.md` chunk-6.3a F-J entry 18
+  (atomic-extension-via-JSONB-array channel-composition pattern) —
+  codification origin
+- `docs/07_governance/retrospectives/phase-6-retrospective.md` §4
+  T3 cluster — codification graduation surface
