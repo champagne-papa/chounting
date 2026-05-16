@@ -1505,7 +1505,7 @@ This retrospective does not pre-lock the sequencing.
 Two governance amendments shipped post-Phase-6-close that
 affect §6's carry-forward registry:
 
-1. **a9f1071 supersession (commit [SESSION_1_COMMIT_SHA]).**
+1. **a9f1071 supersession (commit 7265f4f).**
    The drag-drop scope-lock cycle anchored at a9f1071 has
    been superseded by the v2 scope-lock-input artifact at
    `docs/09_briefs/phase-6/2026-05-16-document-drop-and-shell-consolidation-scope-lock-input.md`
