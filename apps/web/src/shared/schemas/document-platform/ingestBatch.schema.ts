@@ -2,8 +2,9 @@
 //
 // Layer 2 boundary validation per ADR-0010 closed-discipline three-
 // layer defense. Discriminated-union on `ingest_channel`; v1-active
-// branch at chunk 6.2b = `drag_drop_pdf`. Chunk 6.3 adds the
-// `forwarded_mailbox` branch.
+// branches at chunk 6.3a = `drag_drop_pdf` + `forwarded_mailbox`.
+// `direct_upload` and `api_ingest` channel values are reserved
+// substrate per ADR-0011 §2; no Zod branch ships for them at v1.
 //
 // =============================================================
 // Sub-Q2.2 symmetric filter discipline (chunk 6.2b)
@@ -73,15 +74,46 @@ export type DragDropChannelMetadata = z.infer<
   typeof DragDropChannelMetadataSchema
 >;
 
-// Discriminated union on `ingest_channel`. v1-active branch at chunk
-// 6.2b = `drag_drop_pdf`. Chunk 6.3 adds the `forwarded_mailbox`
-// branch via:
-//   z.object({
-//     ingest_channel: z.literal('forwarded_mailbox'),
-//     channel_metadata: ForwardedMailboxChannelMetadataSchema,
-//   })
-// `direct_upload` and `api_ingest` channel values are reserved
-// substrate per ADR-0011 §2; no Zod branch ships for them at v1.
+// Forwarded-mailbox channel metadata (chunk 6.3a; Sub-Q6 Artifact 1).
+// Our-shape post-Postmark-parse: PostmarkInboundWebhookSchema parses
+// the third-party PascalCase payload at the route handler boundary;
+// ingestionService transforms to this snake_case shape before writing
+// to ingest_batches.channel_metadata.
+//
+// 5 canonical fields. raw_headers EXCLUDED (Postmark's 45-day retention
+// suffices for forensic / replay needs at v1 per Sub-Q2 sub-decision iv).
+//
+// attachment_count discipline: nullable to distinguish "we couldn't
+// determine count" (payload parse failed pre-service) from "0
+// attachments" (parsed cleanly, just no attachments). Service emits
+// `null` only on pre-parse-failure audit emissions; happy-path always
+// emits a non-negative integer.
+//
+// Dual-layer sentinel rejection (.strict() + .refine()) mirrors
+// DragDropChannelMetadataSchema. If .strict() is later relaxed, the
+// .refine() block remains as defense-in-depth.
+export const ForwardedMailboxChannelMetadataSchema = z
+  .object({
+    from: z.string().email(),
+    to: z.string().email(),
+    subject: z.string(),
+    message_id: z.string().min(1),
+    attachment_count: z.number().int().min(0),
+  })
+  .strict()
+  .refine((v) => !('sentinel' in v), {
+    message:
+      'sentinel-shape channel_metadata is not a valid ingestion event (valid forwarded_mailbox channel_metadata requires from/to/subject/message_id/attachment_count fields; see ingestBatch.schema.ts symmetric-filter discipline)',
+  });
+
+export type ForwardedMailboxChannelMetadata = z.infer<
+  typeof ForwardedMailboxChannelMetadataSchema
+>;
+
+// Discriminated union on `ingest_channel`. v1-active branches at chunk
+// 6.3a = `drag_drop_pdf` + `forwarded_mailbox`. `direct_upload` and
+// `api_ingest` channel values are reserved substrate per ADR-0011 §2;
+// no Zod branch ships for them at v1.
 export const IngestBatchChannelMetadataSchema = z.discriminatedUnion(
   'ingest_channel',
   [
@@ -89,11 +121,10 @@ export const IngestBatchChannelMetadataSchema = z.discriminatedUnion(
       ingest_channel: z.literal('drag_drop_pdf'),
       channel_metadata: DragDropChannelMetadataSchema,
     }),
-    // chunk 6.3 forward-pointer:
-    // z.object({
-    //   ingest_channel: z.literal('forwarded_mailbox'),
-    //   channel_metadata: ForwardedMailboxChannelMetadataSchema,
-    // }),
+    z.object({
+      ingest_channel: z.literal('forwarded_mailbox'),
+      channel_metadata: ForwardedMailboxChannelMetadataSchema,
+    }),
   ],
 );
 

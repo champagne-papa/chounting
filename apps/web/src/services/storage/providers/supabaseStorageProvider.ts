@@ -43,10 +43,12 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { adminClient } from '@/db/adminClient';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
-import type { StorageProvider } from '../storageProviderService';
+import type {
+  StorageProvider,
+  StorageProviderContext,
+} from '../storageProviderService';
 import type {
   PutInput,
   PutResult,
@@ -261,7 +263,7 @@ async function downloadBytes(
 
 export function createSupabaseStorageProvider(): StorageProvider {
   return {
-    async put(input: PutInput, ctx: ServiceContext): Promise<PutResult> {
+    async put(input: PutInput, ctx: StorageProviderContext): Promise<PutResult> {
       const {
         bytes,
         mime_type,
@@ -271,7 +273,7 @@ export function createSupabaseStorageProvider(): StorageProvider {
       } = input;
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const storage_key = buildStorageKey(
         org_id,
@@ -311,11 +313,11 @@ export function createSupabaseStorageProvider(): StorageProvider {
 
     async fetch(
       source_document_id: string,
-      ctx: ServiceContext,
+      ctx: StorageProviderContext,
     ): Promise<FetchResult> {
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const db = adminClient();
       const ref = await resolveCurrentStorageRef(db, source_document_id);
@@ -333,11 +335,11 @@ export function createSupabaseStorageProvider(): StorageProvider {
 
     async fetchVersion(
       source_document_version_id: string,
-      ctx: ServiceContext,
+      ctx: StorageProviderContext,
     ): Promise<FetchResult> {
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const db = adminClient();
       const ref = await resolveVersionStorageRef(db, source_document_version_id);
@@ -356,11 +358,11 @@ export function createSupabaseStorageProvider(): StorageProvider {
     async previewUrl(
       source_document_id: string,
       options: PreviewOptions,
-      ctx: ServiceContext,
+      ctx: StorageProviderContext,
     ): Promise<PreviewResult> {
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const db = adminClient();
       const ref = await resolveCurrentStorageRef(db, source_document_id);
@@ -411,11 +413,11 @@ export function createSupabaseStorageProvider(): StorageProvider {
 
     async delete(
       source_document_id: string,
-      ctx: ServiceContext,
+      ctx: StorageProviderContext,
     ): Promise<void> {
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const db = adminClient();
       const keys = await collectAllStorageKeys(db, source_document_id);
@@ -437,11 +439,11 @@ export function createSupabaseStorageProvider(): StorageProvider {
 
     async verifyIntegrity(
       source_document_id: string,
-      ctx: ServiceContext,
+      ctx: StorageProviderContext,
     ): Promise<IntegrityResult> {
       const log = loggerWith({
         trace_id: ctx.trace_id,
-        user_id: ctx.caller.user_id,
+        user_id: ctx.caller.user_id ?? undefined,
       });
       const db = adminClient();
       const ref = await resolveCurrentStorageRef(db, source_document_id);

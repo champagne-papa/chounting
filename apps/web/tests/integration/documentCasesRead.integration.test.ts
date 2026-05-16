@@ -9,6 +9,12 @@
 // m152-shape AND m153-shape fixtures per Drift 3 + MF-4 requirement
 // (narrow-filter regression to {"sentinel": true, "migration": 152}
 // would silently pass m152 fixtures while breaking m153 coverage).
+//
+// Chunk 6.3a Sub-Q10 Option B: the list endpoint now accepts
+// ingest_batch_id as OPTIONAL (was required at chunk 6.2b). When
+// omitted, returns recent N cards across all batches. The pre-existing
+// "400 when missing" test was retired here; the recent-N behavior is
+// covered by cardsEndpoint.recentN.integration.test.ts.
 
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { Mock } from 'vitest';
@@ -183,14 +189,6 @@ describe('GET /api/orgs/[orgId]/documents/cases (list + detail)', () => {
         expect(c.ingest_batch_id).toBe(batchId);
         expect(c.channel_metadata).toHaveProperty('drop_session_id');
       }
-    });
-
-    it('400 when ingest_batch_id query param is missing', async () => {
-      const url = `http://test.local/api/orgs/${SEED.ORG_HOLDING}/documents/cases`;
-      const res = await listGet(makeReq(url), {
-        params: Promise.resolve({ orgId: SEED.ORG_HOLDING }),
-      });
-      expect(res.status).toBe(400);
     });
 
     it('403 cross-org: caller without orgId in org_ids', async () => {

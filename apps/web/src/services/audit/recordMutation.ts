@@ -7,7 +7,10 @@
 // the Layer 3 truth written synchronously within the mutation transaction.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type {
+  ServiceContext,
+  SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 import { logger } from '@/shared/logger/pino';
 
 // S25 QW-07 / UF-010: PII fields stripped from before_state before
@@ -138,7 +141,7 @@ export interface AuditEntry {
  */
 export async function recordMutation(
   db: SupabaseClient,
-  ctx: ServiceContext,
+  ctx: ServiceContext | SystemActorServiceContext,
   entry: AuditEntry,
 ): Promise<void> {
   const { error } = await db.from('audit_log').insert({

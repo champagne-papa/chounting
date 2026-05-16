@@ -147,3 +147,78 @@ export interface DragDropUploadResult {
   ingest_batch_id: string;  // the newly-created batch's UUID
   document_count: number;   // mirrors input.files.length on success
 }
+
+// =============================================================
+// Forwarded-mailbox ingestion contract (chunk 6.3a)
+//
+// Sub-Q2 lock: Postmark inbound webhook + pre-parsed JSON; no MIME
+//   parser library (Sub-Q3 cascade-closed).
+// Sub-Q4 lock: Layer 2 service-enforced allowlist via
+//   internal_sender_allowlist DB table.
+// Sub-Q5 lock: 1-element p_case_sources array at service layer
+//   (role='email_body'); existing chunk 6.1 RPC unchanged.
+// Sub-Q6 lock: handleForwardedMailbox takes SystemActorServiceContext
+//   (sister type to ServiceContext per β-3 Approach B); bypasses
+//   withInvariants per Sub-Q6 Artifact 3.
+// Sub-Q7 lock: email_body filename composition at service layer
+//   from Postmark Subject. p_documents[0] = email_body source_document;
+//   p_documents[1..N] = attachments.
+//
+// Idempotency: Layer 1 partial UNIQUE index on
+//   (org_id, channel_metadata->>'message_id') WHERE ingest_channel =
+//   'forwarded_mailbox' (migration 155 Statement 1). Service performs
+//   pre-RPC SELECT check for idempotent fast-path; on rare race-
+//   condition, catches RPC unique_violation and SELECTs existing.
+// =============================================================
+
+// One file in a forwarded-mailbox batch (email_body or attachment).
+// Lean shape: bytes + content-type + filename. Service composes the
+// synthetic email_body filename (Sub-Q7 lock) at handler entry; the
+// route handler decodes Postmark base64 Content into raw bytes.
+export interface ForwardedMailboxFileInput {
+  bytes: Uint8Array;
+  mime_type: string;
+  original_filename: string;
+}
+
+// Input to ingestionService.handleForwardedMailbox — the post-Postmark
+// parsed shape (snake_case; Postmark PascalCase is transformed at route
+// boundary). org_id is pre-resolved by the route handler via
+// resolveOrgFromMailboxHash. allowlist_email = Postmark `From` after
+// .toLowerCase() normalization (used for allowlist comparison).
+export interface ForwardedMailboxUploadInput {
+  org_id: string;
+  // Canonical channel_metadata fields (matches
+  // ForwardedMailboxChannelMetadataSchema):
+  from: string;           // raw Postmark From; service lowercases for allowlist
+  to: string;             // raw Postmark To
+  subject: string;        // raw Postmark Subject; may be empty
+  message_id: string;     // Postmark MessageID (idempotency key)
+  // email_body source_document at files[0]; attachments at files[1..N].
+  // Service composes synthetic email_body filename per Sub-Q7 lock
+  // before storage put.
+  email_body: ForwardedMailboxFileInput;
+  attachments: ForwardedMailboxFileInput[];
+}
+
+// Result discriminated by `status`:
+//   - 'accepted': new ingest_batches row written + N+1 source_documents +
+//     1 case + 1 case_sources + N+1 jobs + 1 audit_log.
+//   - 'idempotent': existing batch found via message_id idempotency;
+//     zero new rows written.
+//   - 'rejected': allowlist rejection; only the rejection audit_log
+//     row was written. No ingest_batches / source_documents / etc.
+export type ForwardedMailboxUploadResult =
+  | {
+      status: 'accepted';
+      ingest_batch_id: string;
+      document_count: number;
+    }
+  | {
+      status: 'idempotent';
+      ingest_batch_id: string;
+    }
+  | {
+      status: 'rejected';
+      reason: 'not_allowlisted';
+    };

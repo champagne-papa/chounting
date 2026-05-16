@@ -63,7 +63,10 @@
 //   - Tests (chunk 6)
 // =============================================================
 
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type {
+  ServiceContext,
+  SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 import type {
   PutInput,
   PutResult,
@@ -73,20 +76,30 @@ import type {
   IntegrityResult,
 } from './types';
 
+// Phase 6 chunk 6.3a — system-actor invocation (e.g., webhook-triggered
+// forwarded_mailbox put) accepts SystemActorServiceContext here.
+// Storage providers only read `ctx.trace_id` + `ctx.caller.user_id` (for
+// log lines; null is acceptable). audit emission for storage operations
+// is the caller's responsibility (per §16 division of labor), so the
+// caller-grade ctx narrowing applies upstream of put().
+export type StorageProviderContext =
+  | ServiceContext
+  | SystemActorServiceContext;
+
 export interface StorageProvider {
   // Per ADR-0013 §1: write bytes. Implementation computes SHA-256
   // pre-write, writes bytes to the provider, re-reads bytes and
   // computes SHA-256 of the re-read bytes per §9, compares the two
   // hashes, returns { storage_key, content_hash, byte_size, provider }
   // on success. Failure modes per §7 / §8.
-  put(input: PutInput, ctx: ServiceContext): Promise<PutResult>;
+  put(input: PutInput, ctx: StorageProviderContext): Promise<PutResult>;
 
   // Per ADR-0013 §1: read bytes for the current version (resolves
   // current_version_id per §3 read-resolution path). Returns
   // { bytes, content_hash, provider }.
   fetch(
     source_document_id: string,
-    ctx: ServiceContext,
+    ctx: StorageProviderContext,
   ): Promise<FetchResult>;
 
   // Per ADR-0013 §1: read bytes for a specific version row. Used for
@@ -94,7 +107,7 @@ export interface StorageProvider {
   // prior source_document_versions row.
   fetchVersion(
     source_document_version_id: string,
-    ctx: ServiceContext,
+    ctx: StorageProviderContext,
   ): Promise<FetchResult>;
 
   // Per ADR-0013 §1 + §12: return signed URL + expiry for preview /
@@ -105,7 +118,7 @@ export interface StorageProvider {
   previewUrl(
     source_document_id: string,
     options: PreviewOptions,
-    ctx: ServiceContext,
+    ctx: StorageProviderContext,
   ): Promise<PreviewResult>;
 
   // Per ADR-0013 §1: rare path. Storage-layer delete is the bytes-
@@ -113,7 +126,7 @@ export interface StorageProvider {
   // document-platform service layer. Per ADR-0011 §4, source-document
   // deletion requires controller authority and produces an audit_log
   // entry — both enforced by the calling service layer.
-  delete(source_document_id: string, ctx: ServiceContext): Promise<void>;
+  delete(source_document_id: string, ctx: StorageProviderContext): Promise<void>;
 
   // Per ADR-0013 §1 + §9: recompute hash from bytes at the resolved
   // (provider, storage_key) and compare against the current version's
@@ -123,6 +136,6 @@ export interface StorageProvider {
   // IntegrityResult.
   verifyIntegrity(
     source_document_id: string,
-    ctx: ServiceContext,
+    ctx: StorageProviderContext,
   ): Promise<IntegrityResult>;
 }

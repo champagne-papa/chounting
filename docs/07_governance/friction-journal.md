@@ -11886,3 +11886,509 @@ and `authenticated` for future user-direct access patterns.
 - Phase 6 retrospective at chunk 6.3 close — codify the symmetric-filter discipline as a CLAUDE.md convention if it recurs.
 
 
+
+
+## 2026-05-15 — First-instance precedents shipped at chunk 6.3a close (Phase 6 chunk 6.3a)
+
+Chunk 6.3a (forwarded_mailbox ingestion via Postmark inbound) opens
+five first-instance precedents in the codebase. Each codifies a
+discipline that future Phase 7+ work inherits.
+
+### Precedent 1 — `/api/webhooks/<provider>-<event>/` route convention
+
+Webhook routes live at `apps/web/src/app/api/webhooks/<provider>-<event>/route.ts`;
+frontend-invoked routes stay at `/api/orgs/[orgId]/...`. The semantic
+distinction is **who invokes** (third-party HMAC-verified vs. user-
+session-authenticated) and **how org_id is derived** (resolver helper
+vs. URL parameter). Future webhook routes (Stripe, auth callbacks,
+other provider integrations) inherit this directory layout.
+
+Greppable anchor: `apps/web/src/app/api/webhooks/`.
+
+### Precedent 2 — Postmark-coupled service adapter shape (vendor lock-in by design at v1)
+
+`ingestionService.handleForwardedMailbox` consumes the Postmark
+payload shape after the route-handler boundary. The `PostmarkInboundWebhookSchema`
++ snake_case transform are intentionally Postmark-coupled at v1 per
+chunk 6.3a brief Sub-Q2 lock. Q41 / Phase 2.5+ multi-provider
+expansion gets its own brief; at that point, the provider-abstraction
+layer reads `postmarkWebhook.schema.ts` as the v1 anchor.
+
+Forward-pointer: NOT a regret at v1; coupling is the v1 design
+choice. Phase 6 retrospective documents the deferred multi-provider
+work as named future scope.
+
+### Precedent 3 — System-actor route handler pattern (bypasses withInvariants)
+
+The Postmark webhook route bypasses `withInvariants` and constructs
+`SystemActorServiceContext` directly with `caller: { user_id: null,
+system_actor: 'postmark_inbound_webhook' }`. The discriminator is
+**invocation source**: third-party HMAC-verified webhook (system-
+actor) vs. authenticated user session (user-session). Future system-
+actor surfaces (cron, scheduled tasks, other webhook providers)
+inherit this pattern.
+
+The runtime guarantee that withInvariants normally provides
+(verified caller + memberships-vs-input-org check) is replaced by
+HMAC verification + MailboxHash org-resolve at the route handler
+boundary. Layer 2 service-enforced allowlist (Sub-Q4 lock) layers
+on top.
+
+### Precedent 4 — System-actor ServiceContext sister type (β-3 Approach B resolution)
+
+`SystemActorServiceContext` is a sister type to `ServiceContext` (NOT
+a discriminated-union extension). 111 existing `ctx.caller.user_id`
+consumer sites remain untouched. `recordMutation` widens its accepted
+ctx shape to `ServiceContext | SystemActorServiceContext`; storage
+provider methods widen `ctx` to `StorageProviderContext` (same union)
+to accept system-actor invocation at storage put time.
+
+Future system-actor surfaces use this sister type. Service methods
+that need to support **both** invocation modes declare
+`ServiceContext | SystemActorServiceContext` at parameter type
+(explicit signature, not implicit narrowing). The "two ServiceContext
+types" cost is bounded; the alternative (111-site narrowing at
+discriminated-union extension) was rejected as scope-disproportionate
+to the value at chunk 6.3a (one new system-actor caller).
+
+See β-3 reconciliation below for the full adjudication trace.
+
+### Precedent 5 — HMAC constant-time signature comparison discipline
+
+The webhook handler uses `crypto.timingSafeEqual` (node:crypto) on
+equal-length hex digests for X-Postmark-Signature verification. Direct
+`===` string comparison on signature digests is an anti-pattern
+(timing-attack reconstruction of the secret); `timingSafeEqual` is
+the canonical Node.js stdlib primitive for constant-time digest
+comparison.
+
+Future webhook handlers (Stripe, etc.) inherit this discipline. The
+helper pattern (compute expected digest → length-check → wrap in
+`timingSafeEqual`) is greppable at
+`apps/web/src/app/api/webhooks/postmark-inbound/route.ts`
+`verifyPostmarkSignature()`.
+
+**Cross-references.**
+- `apps/web/src/app/api/webhooks/postmark-inbound/route.ts` — all five precedents materialize here.
+- `apps/web/src/services/document-platform/ingestionService.ts` — Precedent 4's sister-type consumer.
+- `apps/web/src/services/middleware/serviceContext.ts` — Precedent 4's sister-type definition.
+- `apps/web/src/services/audit/recordMutation.ts` — Precedent 4's union-widening surface.
+- `apps/web/src/services/storage/storageProviderService.ts` — Precedent 4's `StorageProviderContext` type alias.
+
+
+## 2026-05-15 — Flag codifications at chunk 6.3a close (Phase 6 chunk 6.3a)
+
+### Flag 18 — seed-data-PII-shape placeholder convention
+
+Migration 155 Statement 3 inserts 3 allowlist seed rows with
+placeholder addresses (`placeholder-founder@chounting.com`,
+`placeholder-user1@chounting.com`, `placeholder-user2@chounting.com`).
+Operator runs post-deploy `UPDATE internal_sender_allowlist SET
+sender_address = '<real_email>' WHERE sender_address = '<placeholder>'`
+for each placeholder. Failure mode if forgotten: webhook handler
+rejects all mail as not-allowlisted (loud, observable, not silent).
+
+**Convention codified.** When migration-seeded data includes PII or
+near-PII, prefer placeholder-plus-post-deploy convention vs. literal-
+values-in-migration. Reason: git history is forever; v1 audience
+scope (internal-only) does not constrain future audience. Phase 2.5+
+deprecation path retires this when UI-editable allowlists ship.
+
+### Flag 19 — terminology hygiene: `document_case_sources` vs. `source_document_links`
+
+Sub-Q5 walk surfaced conflation of two distinct tables in prior
+MEMORY.md / brief drafts:
+- `document_case_sources` (migration 145, case-grain, role enum
+  with `email_body` v1-active) — links source_documents to
+  document_cases by role.
+- `source_document_links` (migration 147, polymorphic entity-grain
+  per ADR-0016) — polymorphic spine to vendors/bills/payments/etc.
+
+**Convention codified.** Future memory entries / brief drafts /
+retrospective text referencing either table must state the
+distinction explicitly. Greppable check: never describe
+`document_case_sources` and `source_document_links` interchangeably;
+they are domain-distinct substrate. Tier-3 codification.
+
+### Flag 20 — brief-scope-lock-without-substrate-verify-from-disk on referenced schema columns
+
+Brief Sub-Q2 walk + Sub-Q6 walk both referenced
+`inbound+<org_slug>@inbound.chounting.com` address shape +
+`SELECT organizations WHERE slug = mailboxHash` resolver SQL.
+Neither verify-from-disk-confirmed that `organizations.slug` exists.
+Verify-from-disk at chunk 6.3a impl onset surfaced no slug column on
+the organizations table (`supabase/migrations/20240101000000_initial_schema.sql:72-83`
++ grep across all migrations + database.ts).
+
+**Pattern codified.** Scope-locks that depend on existing schema
+columns (e.g., "SELECT FROM table WHERE column = X") MUST
+verify-from-disk-confirm the column exists, not assume from naming
+intuition. This is the literal pattern RI-6 Grain 1 was codified to
+catch; codifying its failure-to-fire at brief-drafting is high-value.
+
+Resolution: β-2 Approach 1 (UUID-as-MailboxHash) per brainstorming-
+side adjudication; in-line single-finding-scale brief amendment per
+RI-10. See β-2 reconciliation entry below.
+
+Compound observation: this is the **second** brainstorming-side
+verify-from-disk miss in chunk 6.3a alone (Flag 20 slug column + MF-2
+ServiceContext consumer count). Strengthens RI-6 Grain 1 tier-2
+codification candidate at Phase 6 retrospective Sub-Q8 walk.
+
+### Sub-Q1 disposition refinement — "server-only" scoped to new affordances, not discovery-mechanism
+
+Sub-Q1 lock at session start scoped "server-only" to new affordances
+(no new drag-drop UI; no new visual paradigm). Sub-Q10 walk surfaced
+that **cards-UI discovery mechanism** required a Grain 5 fifth-grain
+extension via cards endpoint optional batch_id + DocumentIntakeRail
+mount-fetch (Option B). Path C split holds; "server-only" refined at
+Sub-Q10 grain to scope to **affordance-kind**, not discovery-
+mechanism.
+
+**Convention codified.** Future scope-locks adjudicate "server-only"
+granularly rather than as a single constraint. Per-affordance /
+per-discovery-mechanism / per-existing-UI-consumer dimensions each
+adjudicate separately. Tier-2 retro candidate.
+
+### Sub-Q10 — RI-6 Grain 5 fifth-grain firing codification
+
+Sub-Q1 scope-lock at session start didn't verify-from-disk on cards
+UI consumer contract for the new forwarded_mailbox batch creation
+path. Sub-Q10 walk surfaced the gap (cards endpoint requires
+batch_id; DocumentIntakeRail has no discovery mechanism). Operator
+ships forwarded_mailbox with cards invisible in UI = operator-
+perceives-as-broken-despite-working-correctly.
+
+**Pattern codified.** Grain 5 scan at scope-lock must include
+**existing-UI-consumer-contract verification**, not just new-service-
+surface caller scan. Expands Grain 5's operational definition from
+"consumer scan for new emitting code" to "consumer scan for new
+emitting code AND existing-UI-consumer of affected entity types."
+High-value codification; tier-2 retro carry-forward.
+
+**Cross-references.**
+- `supabase/migrations/20240155000000_forwarded_mailbox_substrate.sql` Statement 3 — Flag 18 placeholder seed.
+- `apps/web/src/services/document-platform/documentCaseSourceService.ts` vs. `documentLinkService.ts` — Flag 19 distinct services for distinct tables.
+- `apps/web/src/services/document-platform/resolveOrgFromMailboxHash.ts` — Flag 20 resolved via UUID-parse.
+- chunk 6.3a brief Sub-Q1 + Sub-Q10 locks — Sub-Q1 disposition refinement + Grain 5 firing source.
+
+
+## 2026-05-15 — β reconciliations during chunk 6.3a impl-time (Phase 6 chunk 6.3a)
+
+Four β reconciliations surfaced at impl-time. β-1 caught at write-
+time before substrate apply; β-2 + β-3 escalated to brainstorming-
+side adjudication; β-4 caught via test failure post-substrate-apply.
+
+### β-1 — Migration 155 Statement 1 column name (`channel` vs. `ingest_channel`)
+
+**Finding.** Brief Architecture §"Migration 155 composition" wrote
+`WHERE channel = 'forwarded_mailbox'` for the partial UNIQUE index.
+Verify-from-disk at migration-write-time
+(`supabase/migrations/20240152000000_ingestion_substrate.sql:132`)
+surfaced that the actual column name is `ingest_channel`.
+
+**Resolution.** Migration 155 ships with `WHERE ingest_channel =
+'forwarded_mailbox'`. In-line single-finding-scale correction per
+RI-10; no brief amendment cycle. Caught before substrate apply (no
+runtime cost).
+
+**Pattern.** Brief example SQL was authored from intuition / shorter
+name preference. Verify-from-disk at write-time before commit catches
+the drift. Discipline: when transcribing schema references from
+brief example code, grep the canonical migration file for the actual
+column name. Single-finding-scale tier-3.
+
+### β-2 — Brief MailboxHash resolution depended on non-existent `organizations.slug` column
+
+**Finding.** Brief Sub-Q2 + Sub-Q6 walks + Walkable proof all
+referenced `inbound+<org_slug>@inbound.chounting.com` + `SELECT
+organizations WHERE slug = mailboxHash` without verify-from-disk on
+the slug column. Disk evidence: no slug column.
+
+**Brainstorming-side adjudication.** Two paths considered:
+- Option 1: Use `org_id` UUID as MailboxHash (no substrate change;
+  ugly UX but bounded by v1 audience size).
+- Option 2: Add slug column to organizations (substrate creep;
+  slug-generation policy questions out of chunk 6.3a scope).
+
+**Resolution.** Option 1 selected. `resolveOrgFromMailboxHash` parses
+MailboxHash as UUID and SELECT WHERE `org_id = parsed`. Walkable
+proof updated in-line to UUID-shape addresses. Q41+ Phase 2.5+ adds
+slug-based addresses when per-org inbound provisioning becomes a
+thing (multi-address support preserves backwards-compat).
+
+**Pattern.** See Flag 20 codification above. Tier-2 retro carry-
+forward for RI-6 Grain 1 reinforcement.
+
+### β-3 / MF-2 — ServiceContext discriminated-union 111-site blast radius (sister type resolution)
+
+**Finding.** Brief Sub-Q6 Artifact 3 proposed `ServiceContext.caller`
+become a discriminated union. Pre-drafted conditional FJ entry MF-2
+threshold: "≤10 sites in-scope; >10 sites codify scope expansion."
+Verify-from-disk at impl onset: 111 sites in `apps/web/src/services/`
+reference `ctx.caller.user_id`. 11x threshold.
+
+**Brainstorming-side adjudication.** Three approaches considered:
+- A: Union + per-site narrowing (111-site blast radius).
+- B: Sister type `SystemActorServiceContext` (zero blast radius).
+- D: Union + withInvariants narrows (still touches 111 annotations).
+
+**Resolution.** Approach B selected. Sister type
+`SystemActorServiceContext` is structurally distinct from
+`ServiceContext`. Existing 111 consumer sites unchanged.
+`recordMutation` widens to accept union;
+`StorageProvider`-interface methods widen `ctx` to
+`StorageProviderContext` union alias. `handleForwardedMailbox`
+signature takes `SystemActorServiceContext` explicitly.
+
+**Pattern.** When a brief's discriminated-union extension surfaces
+blast radius >>10x estimate AND only a small set of new methods need
+the new variant, sister-type-with-structural-distinction is the
+canonical-discipline-aligned resolution. Approach A's 111-site
+narrowing for 1 new system-actor caller is scope-disproportionate.
+Tier-2 retro carry-forward.
+
+Compound observation: this is the **second** brainstorming-side
+verify-from-disk miss in chunk 6.3a (Flag 20 slug column + this).
+Both share the same underlying pattern (brief-scope-lock-without-
+substrate-verify-from-disk). Strengthens RI-6 Grain 1 codification
+at Phase 6 retrospective Sub-Q8 walk.
+
+### β-4 — chunk-6.1 RPC rollback test message_id staleness (broadening-event-test-staleness N=3)
+
+**Finding.** Migration 155 Statement 1 (partial UNIQUE index on
+(`org_id`, `channel_metadata->>'message_id'`) WHERE
+`ingest_channel='forwarded_mailbox'`) caused
+`tests/integration/createIngestBatchWithDocumentsRpcRollback.test.ts`
+Test 2 + Test 6 to fail. The test helper `buildBatch()` used a
+hardcoded `<msg@example.com>` message_id that worked at chunk 6.1
+(no idempotency constraint) but now collides across test runs and
+across tests within a single run.
+
+**Resolution.** Test helper updated to `<msg-${crypto.randomUUID()}@example.com>`
+per-call; in-test comment notes the chunk-6.3a migration-155 origin.
+
+**Pattern (N=3 firing graduation observation).** This is the **third**
+firing of the broadening-event-test-staleness pattern family across
+cross-phase chunks:
+- chunk-2-Phase-4 (β-2): exception_status 'matched' broadening
+  invalidated chunk-6 test assertion on "still-reserved" set.
+- chunk-6-Phase-2 (β-2c): chunk-2 audit test regex hardcoded
+  constraint name that the broadening migration renamed.
+- chunk 6.3a (β-4): chunk-6.1 RPC rollback test relied on non-
+  uniqueness of message_id; migration 155 idempotency index broke
+  that implicit assumption.
+
+**Graduation eligibility.** Pattern reaches N=3 firing across
+distinct cross-phase chunks. Tier-3 → tier-2 codification graduation
+eligibility threshold met (observation-grain N=3 per CLAUDE.md
+"Codification convention" §Cross-references). Phase 6 retrospective
+Sub-Q8 walk should evaluate graduation to a CLAUDE.md
+"substrate-mod-event test-staleness review" convention.
+
+**Convention candidate (proposed for retrospective graduation).** When
+shipping a substrate modification that broadens an enum, adds a
+partial UNIQUE constraint, renames a CHECK constraint, or otherwise
+changes a column-level invariant, audit dependent tests at
+**substrate-mod commit time** (not at downstream test-failure time)
+for:
+- Assertion strings referencing constraint names (likely to drift).
+- Hardcoded values that the substrate mod broadens or constrains
+  (likely to collide).
+- Reserved-set assertions (likely to invalidate).
+
+**Cross-references.**
+- `supabase/migrations/20240155000000_forwarded_mailbox_substrate.sql` — β-1's target file.
+- `apps/web/src/services/document-platform/resolveOrgFromMailboxHash.ts` — β-2's resolution materialized.
+- `apps/web/src/services/middleware/serviceContext.ts` — β-3's sister type lives here.
+- `apps/web/tests/integration/createIngestBatchWithDocumentsRpcRollback.test.ts` — β-4's stale helper.
+- Phase 2 friction-journal "broadening-event-test-staleness" prior precedents (chunk-2-Phase-4 β-2; chunk-6-Phase-2 β-2c).
+
+
+## 2026-05-15 — Tier-2 retro carry-forwards from chunk 6.3a (Phase 6 chunk 6.3a)
+
+Pre-drafted brief entries codifying as tier-2 retro carry-forwards
+for chunk 6.3b Phase 6 retrospective Sub-Q8 walk. Each is N=1
+within Phase 6 — graduation requires evidence accumulation at
+retrospective.
+
+### Audit-action naming convention split (dot-namespaced vs. underscored)
+
+Chunk 6.3a uses dot-namespaced action names (e.g.,
+`forwarded_mailbox.signature_invalid`,
+`forwarded_mailbox.rejected_not_allowlisted`,
+`forwarded_mailbox.malformed_payload`,
+`forwarded_mailbox.invalid_recipient`); chunk-2-Phase-3 uses
+underscored (e.g., `document_case_transitioned`). Both precedents
+valid.
+
+**Codification candidate.** Dot-namespaced for new domain-event
+families (anticipated taxonomy expansion); underscored for
+established entity-state-transition events (stable taxonomy).
+Chunk 6.3a's `forwarded_mailbox.*` opens a new domain family.
+
+### Cascade-closed sub-Q folding convention
+
+Sub-Q3 closes via Sub-Q2 lock (Postmark pre-parsed JSON eliminates
+MIME parser library decision). Cascade-closed sub-Qs fold into the
+closing sub-Q's resolution rather than getting empty placeholder
+sections.
+
+**Codification candidate.** Documented in-place where closure
+happened. Pre-empts retrospective noise from "decisions that say we
+didn't need to decide."
+
+### Migration bundling threshold convention
+
+Chunk 6.3a migration 155 bundles 3 statements (idempotency index +
+allowlist table + seed). Comparing chunk-by-chunk:
+- Migration 152 (chunk 6.1): 6+ statements (substrate-grain entity
+  family).
+- Migration 153 (chunk 6.2a): 4 statements (consumer-conformance
+  family).
+- Migration 154 (chunk 6.2b): 1 statement (cards view singleton).
+- Migration 155 (chunk 6.3a): 3 statements (idempotency + allowlist
+  + seed; same chunk + logically related).
+
+**Codification candidate.** Bundle migration statements when all
+statements ship at the same chunk AND are logically related
+(invariant-substrate vs. consumer-conformance vs. read-substrate
+families typically don't bundle). Split when concerns are domain-
+distinct.
+
+### Atomic-extension-via-JSONB-array channel-composition pattern
+
+Chunk 6.3a leverages chunk 6.1 RPC's variable-length
+`p_case_sources` / `p_documents` / `p_jobs` JSONB array parameters.
+Drag-drop (chunk 6.2b) passes empty `p_case_sources`;
+forwarded_mailbox (chunk 6.3a) passes 1-element with
+`role='email_body'`. Phase 7 will pass N+1 elements
+(role='primary'/'supporting'/'payment_evidence' for attachments).
+
+**Codification candidate.** Single atomic RPC accepts variable-row-
+count extensions via JSONB array parameters; channel-specific row
+composition at the service layer; backward-compatible channel
+addition is service-layer-only (no RPC amendment required).
+
+### Zod strict-mode-for-our-shape vs. passthrough-for-third-party convention
+
+Chunk 6.3a's two new schemas split on .strict() / .passthrough():
+- `ForwardedMailboxChannelMetadataSchema` = our-shape; `.strict()` +
+  `.refine()` sentinel-rejection. Detect drift; symmetric Layer-2
+  write-side discipline per Sub-Q2.2.
+- `PostmarkInboundWebhookSchema` = third-party; `.passthrough()`.
+  Forward-compat with Postmark API additions (ReplyTo,
+  MessageStream, OriginalRecipient already observed in dev).
+
+**Codification candidate.** Our-shape Zod schemas use `.strict()` to
+catch drift early; third-party-payload schemas use `.passthrough()`
+for forward-compat. Discipline-split tier-2 retro.
+
+### Server-only-constraint operational scope refinement
+
+Chunk 6.3a's Sub-Q1 server-only constraint at session start was
+monolithic; Sub-Q10 walk surfaced that server-only applies per-
+affordance / per-discovery-mechanism / per-existing-UI-consumer
+separately. Future scope-locks adjudicate "server-only" granularly
+rather than as a single constraint. See Flag 20 + Sub-Q1 disposition
+codification above.
+
+**Cross-references.**
+- `apps/web/src/app/api/webhooks/postmark-inbound/route.ts` — audit-action naming source for chunk 6.3a's domain-event family.
+- `supabase/migrations/20240152000000_ingestion_substrate.sql` BLOCK 5 — atomic-extension-via-JSONB-array RPC body.
+- `apps/web/src/shared/schemas/document-platform/ingestBatch.schema.ts` + `postmarkWebhook.schema.ts` — strict-vs-passthrough split lives here.
+
+
+## 2026-05-15 — Tier-3 retro carry-forwards from chunk 6.3a (Phase 6 chunk 6.3a)
+
+Lower-stakes codifications with single-chunk evidence; lighter-touch
+graduation candidates at chunk 6.3b Phase 6 retrospective Sub-Q8
+walk.
+
+### Limit-default-50 anchor for cards endpoint recent-N path
+
+Sub-Q10 Option B's `limit` default = 50 is v1-anchor-pending-
+operator-feedback. Forwarded_mailbox v1 audience volume unknown.
+Phase 7+ revises if 50 cards is too few (operator loses scroll-back
+beyond 50th card) or too many (rendering performance).
+
+### Email_body filename composition convention
+
+Synthetic filename composition at `composeEmailBodyFilename()`:
+`${subject_truncated_100chars_sanitized}.eml` with
+`email-body-${message_id_short}.eml` empty-subject fallback.
+Truncation = exact char-100 cut, no ellipsis. Sanitization = strip
+`/\:*?"<>|` chars; replace with `-`. Future channels with synthetic-
+filename needs inherit this shape.
+
+### View-grain vs row-grain operational distinguishability
+
+Drag-drop's 1:1 N-files:N-cases:N-jobs made `document_cards_view`
+grain invisible. Forwarded_mailbox's 1-case:N+1-source_documents:
+N+1-jobs surfaces grain distinguishability for the first time. When
+a new channel's row-multiplication shape diverges from existing
+channels, view-grain becomes operationally significant. Future
+channels (api_ingest, others) inherit this consideration.
+
+### ADR-0008 vs ADR-0010 layer-placement cross-reference clarity
+
+Chunk 6.3a Sub-Q2/Sub-Q4 walks surfaced ambiguity on which ADR
+covers which layer-placement question. ADR-0008 = policy-based
+runtime checks (Layer 2 service); ADR-0010 = closed-enum / substrate-
+now-enforcement-later (Layer 1 substrate). Lighter-touch
+clarification candidate; not full ADR amendment.
+
+**Cross-references.**
+- `apps/web/src/components/canvas/DocumentIntakeRail.tsx` `RECENT_CARDS_LIMIT` — limit-50 anchor.
+- `apps/web/src/services/document-platform/ingestionService.ts` `composeEmailBodyFilename` — filename composition.
+- `supabase/migrations/20240154000000_document_cards_view.sql` — view-grain locus.
+
+
+## 2026-05-15 — Volume + test-count anchor observations from chunk 6.3a (Phase 6 chunk 6.3a)
+
+### Flag 16 recalibration validation — N=1 instance at chunk 6.3a
+
+Chunk 6.2b shipped at 2335 LOC vs. 785-1185 forecast (97% above
+upper bound). Per Flag 16 codification at chunk 6.2b close, the
+forecast band recalibrated for chunk 6.3a to 2000-3500 LOC.
+
+**Chunk 6.3a actual: ~2597 LOC** (1102 modifications + 1495 new
+files; verified via `git diff --stat` + new-file `wc -l`). Sits at
+upper-half of the recalibrated band; within forecast.
+
+**Codification candidate (N=1 validation instance).** Flag 16's
+recalibration methodology (widen band post-overshoot to account for
+systematic undercount) appears to work for the first validation
+instance. Updates Flag 16's status from "tier-1 codification
+candidate" to "tier-1 codification with N=1 validation instance."
+Phase 6 retrospective Sub-Q8 walk evaluates whether this graduates
+the recalibration methodology to a stable convention.
+
+### Test-count-anchor methodology under β reconciliation surface
+
+Chunk 6.3a forecast 15 new tests; actual 28 new (+1 stale assertion
+removed; net +28). 11 over the upper tolerance (±2 → 1099-1103
+window; actual 1114). Within the +28, β reconciliations contributed
+to extra test surface:
+- β-3 (sister-type approach) added recordMutation + StorageProvider
+  widening with no test surface (signature-only change).
+- β-4 (test fragility) did NOT add tests but removed 1 stale
+  assertion.
+- Unit tests for `composeEmailBodyFilename` (β-1-adjacent Sub-Q7
+  synthetic filename) naturally split into 7 edge cases vs.
+  forecast 2.
+- Unit tests for `ForwardedMailboxChannelMetadataSchema` +
+  `PostmarkInboundWebhookSchema` naturally split into 11 sub-tests
+  vs. forecast 2.
+
+**Codification candidate.** Test count anchor methodology assumed
+clean-sub-Q-locks impl-time; β reconciliation surface added ~10-12
+tests not in the original 15-test forecast (mostly from natural-
+edge-case split of unit-test surfaces). Test-count tolerance
+methodology refinement candidate for Phase 7+ test-count anchoring.
+
+**Cross-references.**
+- chunk 6.2b friction-journal Volume-forecast-drift entry — Flag 16 origin.
+- chunk 6.3a brief §"LOC forecast" — recalibrated 2000-3500 band.
+- chunk 6.3a brief §"Test plan" — 1101 ±2 target window.
+

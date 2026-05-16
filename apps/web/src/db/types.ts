@@ -692,6 +692,13 @@ export type Database = {
             foreignKeyName: "document_artifacts_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
+          {
+            foreignKeyName: "document_artifacts_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
             referencedRelation: "source_documents"
             referencedColumns: ["id"]
           },
@@ -730,8 +737,22 @@ export type Database = {
             foreignKeyName: "document_case_sources_document_case_id_fkey"
             columns: ["document_case_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "document_case_sources_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
             referencedRelation: "document_cases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_case_sources_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
           },
           {
             foreignKeyName: "document_case_sources_source_document_id_fkey"
@@ -778,11 +799,122 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "document_cases_current_relationship_candidate_id_fk"
+            columns: ["current_relationship_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "document_relationship_candidates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_cases_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      document_jobs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          document_case_id: string
+          id: string
+          ingest_batch_id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          org_id: string
+          pipeline_trace_id: string | null
+          source_document_id: string
+          started_at: string | null
+          state: Database["public"]["Enums"]["document_job_state"]
+          trace_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          document_case_id: string
+          id?: string
+          ingest_batch_id: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          org_id: string
+          pipeline_trace_id?: string | null
+          source_document_id: string
+          started_at?: string | null
+          state: Database["public"]["Enums"]["document_job_state"]
+          trace_id: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          document_case_id?: string
+          id?: string
+          ingest_batch_id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          org_id?: string
+          pipeline_trace_id?: string | null
+          source_document_id?: string
+          started_at?: string | null
+          state?: Database["public"]["Enums"]["document_job_state"]
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_jobs_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "document_jobs_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_jobs_ingest_batch_id_fkey"
+            columns: ["ingest_batch_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["ingest_batch_id"]
+          },
+          {
+            foreignKeyName: "document_jobs_ingest_batch_id_fkey"
+            columns: ["ingest_batch_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_jobs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "document_jobs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
+          {
+            foreignKeyName: "document_jobs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -837,6 +969,13 @@ export type Database = {
             foreignKeyName: "document_relationship_candidates_document_case_id_fkey"
             columns: ["document_case_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "document_relationship_candidates_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
             referencedRelation: "document_cases"
             referencedColumns: ["id"]
           },
@@ -846,6 +985,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "document_relationship_candidates_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
           },
           {
             foreignKeyName: "document_relationship_candidates_source_document_id_fkey"
@@ -970,6 +1116,13 @@ export type Database = {
             foreignKeyName: "exception_queue_entries_document_case_id_fkey"
             columns: ["document_case_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "exception_queue_entries_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
             referencedRelation: "document_cases"
             referencedColumns: ["id"]
           },
@@ -979,6 +1132,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "exception_queue_entries_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
           },
           {
             foreignKeyName: "exception_queue_entries_source_document_id_fkey"
@@ -1021,6 +1181,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ocr_runs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extraction_runs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
           },
           {
             foreignKeyName: "extraction_runs_source_document_id_fkey"
@@ -1122,6 +1289,47 @@ export type Database = {
           },
         ]
       }
+      ingest_batches: {
+        Row: {
+          channel_metadata: Json
+          created_at: string
+          created_by: string
+          id: string
+          ingest_channel: Database["public"]["Enums"]["ingest_channel"]
+          org_id: string
+          received_at: string
+          trace_id: string
+        }
+        Insert: {
+          channel_metadata: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          ingest_channel: Database["public"]["Enums"]["ingest_channel"]
+          org_id: string
+          received_at: string
+          trace_id: string
+        }
+        Update: {
+          channel_metadata?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          ingest_channel?: Database["public"]["Enums"]["ingest_channel"]
+          org_id?: string
+          received_at?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_batches_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       intercompany_relationships: {
         Row: {
           created_at: string
@@ -1177,6 +1385,24 @@ export type Database = {
             referencedColumns: ["org_id"]
           },
         ]
+      }
+      internal_sender_allowlist: {
+        Row: {
+          added_at: string
+          notes: string | null
+          sender_address: string
+        }
+        Insert: {
+          added_at?: string
+          notes?: string | null
+          sender_address: string
+        }
+        Update: {
+          added_at?: string
+          notes?: string | null
+          sender_address?: string
+        }
+        Relationships: []
       }
       invoice_lines: {
         Row: {
@@ -1556,6 +1782,13 @@ export type Database = {
           supersedes_ocr_run_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ocr_runs_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
           {
             foreignKeyName: "ocr_runs_source_document_id_fkey"
             columns: ["source_document_id"]
@@ -2145,6 +2378,13 @@ export type Database = {
             foreignKeyName: "source_document_links_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
+          {
+            foreignKeyName: "source_document_links_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
             referencedRelation: "source_documents"
             referencedColumns: ["id"]
           },
@@ -2195,6 +2435,13 @@ export type Database = {
             foreignKeyName: "source_document_versions_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
+          {
+            foreignKeyName: "source_document_versions_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
             referencedRelation: "source_documents"
             referencedColumns: ["id"]
           },
@@ -2213,6 +2460,7 @@ export type Database = {
           created_by: string
           current_version_id: string | null
           id: string
+          ingest_batch_id: string
           ingest_channel: Database["public"]["Enums"]["ingest_channel"]
           legal_entity_id: string | null
           mime_type: string
@@ -2230,6 +2478,7 @@ export type Database = {
           created_by: string
           current_version_id?: string | null
           id?: string
+          ingest_batch_id: string
           ingest_channel: Database["public"]["Enums"]["ingest_channel"]
           legal_entity_id?: string | null
           mime_type: string
@@ -2247,6 +2496,7 @@ export type Database = {
           created_by?: string
           current_version_id?: string | null
           id?: string
+          ingest_batch_id?: string
           ingest_channel?: Database["public"]["Enums"]["ingest_channel"]
           legal_entity_id?: string | null
           mime_type?: string
@@ -2265,6 +2515,20 @@ export type Database = {
             columns: ["current_version_id"]
             isOneToOne: false
             referencedRelation: "source_document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_documents_ingest_batch_id_fkey"
+            columns: ["ingest_batch_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["ingest_batch_id"]
+          },
+          {
+            foreignKeyName: "source_documents_ingest_batch_id_fkey"
+            columns: ["ingest_batch_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_batches"
             referencedColumns: ["id"]
           },
           {
@@ -2630,11 +2894,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      document_cards_view: {
+        Row: {
+          case_created_at: string | null
+          case_id: string | null
+          channel_metadata: Json | null
+          ingest_batch_id: string | null
+          ingest_channel: Database["public"]["Enums"]["ingest_channel"] | null
+          mime_type: string | null
+          org_id: string | null
+          original_filename: string | null
+          received_at: string | null
+          source_document_id: string | null
+          state: Database["public"]["Enums"]["document_case_state"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_cases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
     }
     Functions: {
       attach_document_case_source_with_audit: {
         Args: { p_audit: Json; p_link: Json }
+        Returns: string
+      }
+      cancel_exception_with_audit: {
+        Args: { p_audit: Json; p_entry_id: string }
         Returns: string
       }
       create_candidates_with_audit: {
@@ -2643,6 +2934,30 @@ export type Database = {
       }
       create_document_case_with_audit: {
         Args: { p_audit: Json; p_case: Json }
+        Returns: string
+      }
+      create_ingest_batch_for_test: {
+        Args: {
+          p_channel_metadata?: Json
+          p_ingest_channel?: Database["public"]["Enums"]["ingest_channel"]
+          p_org_id: string
+          p_received_at?: string
+          p_trace_id?: string
+        }
+        Returns: {
+          ingest_batch_id: string
+          trace_id: string
+        }[]
+      }
+      create_ingest_batch_with_documents_with_audit: {
+        Args: {
+          p_audit: Json
+          p_batch: Json
+          p_case_sources: Json
+          p_cases: Json
+          p_documents: Json
+          p_jobs: Json
+        }
         Returns: string
       }
       create_source_document_link_with_audit: {
@@ -2712,6 +3027,10 @@ export type Database = {
           debit_total_cad: number
         }[]
       }
+      record_router_decision: {
+        Args: { p_audit: Json; p_decision: Json }
+        Returns: string
+      }
       resolve_exception_with_audit: {
         Args: { p_audit: Json; p_entry_id: string; p_resolution: Json }
         Returns: string
@@ -2720,26 +3039,11 @@ export type Database = {
         Args: { p_audit: Json; p_input: Json }
         Returns: string[]
       }
-      test_post_balanced_entry: {
+      set_case_head_pointer_with_audit: {
         Args: {
-          p_amount: number
-          p_credit_account: string
-          p_debit_account: string
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
-        }
-        Returns: string
-      }
-      test_post_unbalanced_entry: {
-        Args: {
-          p_credit_account: string
-          p_credit_amount: number
-          p_debit_account: string
-          p_debit_amount: number
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
+          p_audit_decision: Json
+          p_audit_mutation: Json
+          p_decision: Json
         }
         Returns: string
       }
@@ -2821,6 +3125,12 @@ export type Database = {
         | "committed"
         | "rejected"
         | "archived"
+      document_job_state:
+        | "queued"
+        | "in_flight"
+        | "failed_retry"
+        | "failed_permanent"
+        | "completed"
       document_type:
         | "vendor_invoice"
         | "receipt"
@@ -3200,6 +3510,13 @@ export const Constants = {
         "committed",
         "rejected",
         "archived",
+      ],
+      document_job_state: [
+        "queued",
+        "in_flight",
+        "failed_retry",
+        "failed_permanent",
+        "completed",
       ],
       document_type: [
         "vendor_invoice",

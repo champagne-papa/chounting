@@ -23,15 +23,24 @@
 //   5. On error: surface ServiceError.details inline (Sub-Q9 R1
 //      mitigation — file_index + filename + stage carries through).
 //
+// Chunk 6.3a Sub-Q10 Option B addition (cards endpoint extension +
+// DocumentIntakeRail mount-fetch). On mount, fetch recent N cards
+// across all batches (no batch_id filter; limit=50 default) so
+// forwarded_mailbox ingestions surface visually. New transitions:
+//   idle → fetching_recent → idle_with_recent_cards
+// drag-drop POST path still transitions to `showing_batch`.
+//
 // State machine:
-//   - 'idle': dropzone visible, accepting drops
+//   - 'idle': initial pre-mount-fetch state (transient)
+//   - 'fetching_recent': mount-time GET in flight
+//   - 'idle_with_recent_cards': dropzone visible + recent-N cards below
 //   - 'uploading': during fetch in flight; show file count + progress
-//   - 'showing-batch': after success; show cards from the latest batch
-//   - 'error': after failure; show ServiceError details + reset button
+//   - 'showing_batch': after drag-drop success; show batch's cards
+//   - 'error': after failure; show details + reset button
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DocumentCard } from './DocumentCard';
 
 interface Props {
@@ -51,6 +60,8 @@ interface BatchCard {
 
 type IntakeState =
   | { kind: 'idle' }
+  | { kind: 'fetching_recent' }
+  | { kind: 'idle_with_recent_cards'; cards: BatchCard[] }
   | { kind: 'uploading'; file_count: number }
   | {
       kind: 'showing_batch';
@@ -68,9 +79,45 @@ type IntakeState =
       };
     };
 
+// Sub-Q10 lock: limit default = 50 (v1-anchor-pending-operator-feedback).
+const RECENT_CARDS_LIMIT = 50;
+
 export function DocumentIntakeRail({ orgId }: Props) {
   const [state, setState] = useState<IntakeState>({ kind: 'idle' });
   const [dragOver, setDragOver] = useState(false);
+
+  // Sub-Q10 Option B mount-fetch. Transitions idle → fetching_recent
+  // → idle_with_recent_cards. Network failures degrade gracefully:
+  // stays in `idle` so dropzone remains usable (the cards section
+  // doesn't render but drag-drop is still functional).
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchRecent() {
+      setState({ kind: 'fetching_recent' });
+      try {
+        const res = await fetch(
+          `/api/orgs/${orgId}/documents/cases?limit=${RECENT_CARDS_LIMIT}`,
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          // Soft-fail: revert to idle (dropzone-only). Failure to
+          // mount-fetch should not block drag-drop affordance.
+          setState({ kind: 'idle' });
+          return;
+        }
+        const body = (await res.json()) as { cards: BatchCard[] };
+        if (cancelled) return;
+        setState({ kind: 'idle_with_recent_cards', cards: body.cards ?? [] });
+      } catch {
+        if (cancelled) return;
+        setState({ kind: 'idle' });
+      }
+    }
+    fetchRecent();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   const handleDrop = useCallback(
     async (e: React.DragEvent<HTMLDivElement>) => {
@@ -235,6 +282,20 @@ export function DocumentIntakeRail({ orgId }: Props) {
           <div data-testid="document-intake-batch-cards">
             <div className="text-xs text-neutral-500 mb-2">
               Last drop · {state.cards.length} card
+              {state.cards.length === 1 ? '' : 's'}
+            </div>
+            <div className="space-y-2">
+              {state.cards.map((card) => (
+                <DocumentCard key={card.case_id} card={card} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {state.kind === 'idle_with_recent_cards' && state.cards.length > 0 && (
+          <div data-testid="document-intake-recent-cards">
+            <div className="text-xs text-neutral-500 mb-2">
+              Recent · {state.cards.length} card
               {state.cards.length === 1 ? '' : 's'}
             </div>
             <div className="space-y-2">

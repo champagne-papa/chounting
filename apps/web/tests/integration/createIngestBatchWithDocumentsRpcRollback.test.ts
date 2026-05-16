@@ -65,7 +65,11 @@ function buildBatch(traceId: string, channel: 'drag_drop_pdf' | 'forwarded_mailb
     received_at: new Date().toISOString(),
     channel_metadata: channel === 'drag_drop_pdf'
       ? { drop_session_id: crypto.randomUUID(), chat_session_id: crypto.randomUUID(), user_id: SEED.USER_CONTROLLER }
-      : { sender_address: 'allow@example.com', subject: 'invoice', message_id: '<msg@example.com>', raw_headers: {} },
+      // chunk 6.3a (migration 155) adds a partial UNIQUE index on
+      // (org_id, channel_metadata->>'message_id') WHERE
+      // ingest_channel='forwarded_mailbox'. Per-call random message_id
+      // keeps test invocations independent.
+      : { sender_address: 'allow@example.com', subject: 'invoice', message_id: `<msg-${crypto.randomUUID()}@example.com>`, raw_headers: {} },
     trace_id: traceId,
     created_at: new Date().toISOString(),
     created_by: SEED.USER_CONTROLLER,
