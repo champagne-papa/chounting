@@ -12758,3 +12758,40 @@ documents the discipline's firing-shape for the chunk.
   chunks` §RI-7 (Session-budget-feasibility verification + Path C
   invocation conditions) — canonical RI-7 codification this F-J-14
   three-grain catalog implements at observation grain.
+
+---
+
+## 2026-05-17 — Floor-test absolute-count-assertion fragility (Phase 6.5 chunk 3 first-instance; banking entry pending post-Phase-6.5 remediation)
+
+Banking statement for first-instance precedent surfaced at Phase 6.5
+chunk 3 close: floor-test `serviceMiddlewareAuthorization` asserted
+absolute `audit_log` row count; first-fire produced count-drift
+failure (accumulated state across prior test runs invalidates
+absolute-count assertion); second-fire green after `db:reset:clean`.
+
+**Pattern.** Absolute-count assertions on tables that accumulate
+state across test runs (audit_log, document_jobs, others) are
+fragile. Test ordering, parallel execution, and accumulated state
+between runs all invalidate the assertion under conditions outside
+the test author's control.
+
+**Remediation candidate (post-Phase-6.5 dedicated session):** audit
+floor-test surface for absolute-count assertions on accumulating
+tables. Replace with delta-assertion shape (count before + count
+after; assert delta) OR relative-assertion shape (assert count ≥ N;
+bound from below).
+
+**Why banking (not codification):** N=1 first-instance precedent;
+below observation-grain N=3 codification threshold per CLAUDE.md
+`### Codification convention: observation-grain vs application-grain
+N count`. Substrate scope is floor-test-design grain; warrants
+dedicated investigation session rather than chunk-close codification
+pass.
+
+**Cross-references.**
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #8.
+- Phase 2 retrospective inventory item #5 (AccountLedgerService
+  disposable-accounts test refactor) — adjacent test-design
+  remediation grain.
