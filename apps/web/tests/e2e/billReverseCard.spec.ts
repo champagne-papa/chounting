@@ -13,7 +13,7 @@
 // E2E is informational (founder-review-workflow grain) — NOT a
 // chunk-close gate. pnpm typecheck + pnpm test are the gate.
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID } from './fixtures/auth';
 import {
   seedTestVendor,

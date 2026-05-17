@@ -1,6 +1,6 @@
 // src/components/bridge/SplitScreenLayout.tsx
 // The Bridge shell. Three zones (post-Phase-6.5 chunk 1) with multi-
-// tab substrate state lift (Phase 6.5 chunk 2a):
+// tab canvas (Phase 6.5 chunk 2 complete):
 //   1. Zone 1 — Consolidated left panel (Zone1ConsolidatedPanel;
 //      ~288px expanded, 64px collapsed rail-mode). Four regions:
 //      workspace tabs (Billing | Reports) + workspace-scoped nav +
@@ -11,34 +11,37 @@
 //      rail-mode with new-output badge).
 //   3. Zone 3 — Contextual canvas (fills remaining width).
 //
-// Phase 6.5 chunk 2a — tab data model state lift per Sub-Q11.b.α.
-// `tabsState: { tabs: ReadonlyArray<Tab>, activeTabId }` replaces the
-// pre-chunk-2 singleton `(directive, selectedEntity)` state. Each
-// Tab carries its own `directive` + `selectedEntity` + navigation
-// `history` + `historyIndex`. ContextualCanvas is now pure render-
-// from-Props for the active tab; back/forward callbacks flow from
-// SplitScreenLayout's tabsState. canvasContext derivation reads
-// active tab's directive + selectedEntity (Sub-Q18.α singleton-shape
-// preserved at TYPE level; zero touch to canvasContext.ts /
-// canvasContext.schema.ts / canvasContextSuffix.ts).
+// Phase 6.5 chunk 2 — multi-tab canvas per Sub-Q11.b.α state lift +
+// Pattern γ source-driven routing per Sub-Q11.a Rules 1-4 +
+// CanvasTabStrip UI per Sub-Q11.c.α. tabsState lives at this shell
+// grain: `tabs: ReadonlyArray<Tab> + activeTabId`. Each Tab carries
+// its own `directive` + `selectedEntity` + navigation `history` +
+// `historyIndex`. ContextualCanvas renders the active tab's directive
+// content (pure render-from-Props); back/forward callbacks navigate
+// active tab's history; CanvasTabStrip renders the open tabs above
+// ContextualCanvas's back/forward header in Zone 3. canvasContext
+// derivation reads active tab's directive + selectedEntity (Sub-Q18.α
+// singleton-shape preserved at TYPE level; zero touch to
+// canvasContext.ts / canvasContext.schema.ts / canvasContextSuffix.ts).
 //
-// Per-source callback decomposition: handleCanvasNavigate is gone;
-// three per-source handlers replace it:
-//   - handleMainframeNavigate → passed to Zone1ConsolidatedPanel as `onNavigate`
-//   - handleAgentDirective    → passed to AgentChatPanel as `onNavigate`
-//   - handleCanvasDrillDown   → passed to ContextualCanvas as `onDirectiveChange`
+// Per-source callback decomposition (chunk 2b Pattern γ refinement):
+//   - handleMainframeNavigate → Rule 3 routeReplaceActive + EC1.β
+//     window.confirm prompt (v1 always-prompts per Sub-Q11.a α₂);
+//     per-form dirty-state detection deferred per ADR-0010 substrate-
+//     now-enforcement-later; passed to Zone1ConsolidatedPanel.onNavigate
+//     AND AvatarDropdown.onTeamClick (top-nav UI is mainframe-source-like).
+//   - handleAgentDirective    → Rule 2 routeNewTab with
+//     focusExistingExactMatch (EC2.β); passed to AgentChatPanel.onNavigate.
+//   - handleCanvasDrillDown   → Rule 4 routeStayInActive (append history);
+//     passed to ContextualCanvas.onDirectiveChange.
+//   - handleCloseTab + handleSwitchTab → passed to CanvasTabStrip.onClose +
+//     .onSwitch; close handles tabs-zero state internally (creates fresh
+//     {type: 'none'} tab via canvasTabRouting.closeTab).
 //
-// At chunk-2a (this commit), all three handlers share an inlined
-// `appendToActiveTab` semantic — append directive to active tab's
-// history (matches pre-chunk-2 single-history-stack behavior;
-// preserves all existing canvas-view E2E specs). At chunk-2b
-// (Session 10b), the handlers diverge per Pattern γ Rules 1-4 +
-// edge cases:
-//   - handleMainframeNavigate → Rule 3 (replace active; EC1.β prompt)
-//   - handleAgentDirective    → Rule 2 (new tab; EC2.β focus-existing)
-//   - handleCanvasDrillDown   → Rule 4 (stays in active; append; unchanged from 2a)
-//   - chunk 3 wires handleDropEvent + onDropEvent Prop on AgentChatPanel
-//     for Rule 1 (new tab; EC3.β one-tab-per-batch).
+// chunk 3 forward-pointer: handleDropEvent + onDropEvent Prop on
+// AgentChatPanel land at chunk 3 alongside the AgentChatPanel drop-
+// handler consumer wiring (Pattern γ Rule 1 + EC3.β one-tab-per-batch);
+// canvasTabRouting.routeNewTab is the v1 consumer.
 //
 // Collapse state for both zones persists via useShellState
 // localStorage keys (chounting:shell:zone1Collapsed +
@@ -86,6 +89,14 @@ import type { UserRole } from '@/shared/types/userRole';
 
 import { AgentChatPanel } from './AgentChatPanel';
 import { AvatarDropdown } from './AvatarDropdown';
+import { CanvasTabStrip } from './CanvasTabStrip';
+import {
+  closeTab,
+  routeNewTab,
+  routeReplaceActive,
+  routeStayInActive,
+  switchTab,
+} from './canvasTabRouting';
 import { ContextualCanvas } from './ContextualCanvas';
 import { OrgSwitcher } from './OrgSwitcher';
 import { Zone1ConsolidatedPanel } from './Zone1ConsolidatedPanel';
@@ -155,67 +166,67 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
     tabsState.tabs.find((t) => t.tabId === tabsState.activeTabId) ??
     tabsState.tabs[0];
 
-  // Phase 6.5 chunk-2a: append directive to active tab's history.
-  // Pattern γ degenerate fallback — all per-source handlers share
-  // this semantic at chunk-2a (matches pre-chunk-2 single-history-
-  // stack behavior). chunk-2b refines per-source semantics per
-  // Pattern γ Rules 1-4 + EC1.β / EC2.β / EC3.β edge cases.
-  const appendToActiveTab = useCallback((directive: CanvasDirective) => {
-    setTabsState((prev) => {
-      const active = prev.tabs.find((t) => t.tabId === prev.activeTabId);
-      if (!active) return prev;
-      const newHistory = [
-        ...active.history.slice(0, active.historyIndex + 1),
-        directive,
-      ];
-      const newSelectedEntity = reduceSelection(active.selectedEntity, {
-        type: 'directive_change',
-        new_directive: directive,
-      });
-      const updatedTab: Tab = {
-        ...active,
-        directive,
-        selectedEntity: newSelectedEntity,
-        history: newHistory,
-        historyIndex: newHistory.length - 1,
-      };
-      return {
-        ...prev,
-        tabs: prev.tabs.map((t) =>
-          t.tabId === prev.activeTabId ? updatedTab : t,
-        ),
-      };
-    });
-  }, []);
-
-  // Per-source callback handlers. At chunk-2a, all three share
-  // appendToActiveTab semantics (degenerate Pattern γ). chunk-2b
-  // refines:
-  //   - handleMainframeNavigate → routeReplaceActive + EC1.β prompt
-  //   - handleAgentDirective    → routeNewTab + EC2.β focus-existing
-  //   - handleCanvasDrillDown   → continues to append (Pattern γ Rule 4)
-  // chunk 3: handleDropEvent + onDropEvent Prop on AgentChatPanel
-  // land as Pattern γ Rule 1 + EC3.β one-tab-per-batch.
+  // Per-source callback handlers per Pattern γ Rules 2-4 + EC1.β /
+  // EC2.β. Each handler consumes canvasTabRouting pure functions for
+  // the state transition; EC1.β prompt-on-replace fires as a side
+  // effect before routeReplaceActive (caller responsibility per
+  // canvasTabRouting.routeReplaceActive doc).
+  //
+  // chunk 3 forward-pointer: handleDropEvent + onDropEvent Prop on
+  // AgentChatPanel land at chunk 3 — Pattern γ Rule 1 invokes
+  // routeNewTab without focusExistingExactMatch (EC3.β one-tab-per-
+  // batch). Drop handler at chunk 3 carries drop_session_id per
+  // chunk-6.2b precedent.
   const handleMainframeNavigate = useCallback(
     (directive: CanvasDirective) => {
-      appendToActiveTab(directive);
+      // EC1.β v1 default: always-prompt-on-replace per Sub-Q11.a α₂.
+      // Per-form dirty-state detection deferred per ADR-0010
+      // substrate-now-enforcement-later (fifth UI-layer instance:
+      // v1-default-prompt-mechanism grain). At v1, prompt fires
+      // unconditionally — internal-audience friction accepted; post-
+      // v1 amendment refines based on usage signals.
+      if (typeof window !== 'undefined') {
+        const accept = window.confirm(
+          'Replace the current view?\n\nAny unsaved changes will be lost.',
+        );
+        if (!accept) return;
+      }
+      setTabsState((prev) => routeReplaceActive(prev, directive));
     },
-    [appendToActiveTab],
+    [],
   );
 
-  const handleAgentDirective = useCallback(
-    (directive: CanvasDirective) => {
-      appendToActiveTab(directive);
-    },
-    [appendToActiveTab],
-  );
+  const handleAgentDirective = useCallback((directive: CanvasDirective) => {
+    setTabsState((prev) =>
+      routeNewTab(prev, directive, { focusExistingExactMatch: true }),
+    );
+  }, []);
 
   const handleCanvasDrillDown = useCallback(
     (directive: CanvasDirective) => {
-      appendToActiveTab(directive);
+      setTabsState((prev) => {
+        const active = prev.tabs.find((t) => t.tabId === prev.activeTabId);
+        const newSelectedEntity = reduceSelection(active?.selectedEntity, {
+          type: 'directive_change',
+          new_directive: directive,
+        });
+        return routeStayInActive(prev, directive, newSelectedEntity);
+      });
     },
-    [appendToActiveTab],
+    [],
   );
+
+  // Sub-Q11.d.close.α: close tab; advance active to adjacent-right
+  // (fallback adjacent-left at rightmost; fresh 'none' tab at
+  // tabs-zero per canvasTabRouting.closeTab).
+  const handleCloseTab = useCallback((tabId: string) => {
+    setTabsState((prev) => closeTab(prev, tabId));
+  }, []);
+
+  // Sub-Q11.d.switch.α: instant active-tab switch.
+  const handleSwitchTab = useCallback((tabId: string) => {
+    setTabsState((prev) => switchTab(prev, tabId));
+  }, []);
 
   const handleSelectEntity = useCallback((entity: SelectedEntity) => {
     setTabsState((prev) => {
@@ -297,7 +308,9 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
         <AvatarDropdown
           currentUserRole={currentUserRole}
           orgId={orgId}
-          onTeamClick={() => handleAgentDirective({ type: 'org_users', orgId })}
+          onTeamClick={() =>
+            handleMainframeNavigate({ type: 'org_users', orgId })
+          }
         />
       </div>
 
@@ -320,17 +333,25 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
           firstArrival={firstArrival}
         />
 
-        {/* Zone 3: Contextual canvas (pure render-from-Props for active tab) */}
-        <ContextualCanvas
-          directive={activeTab?.directive ?? { type: 'none' }}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          historyPositionLabel={historyPositionLabel}
-          onGoBack={handleGoBack}
-          onGoForward={handleGoForward}
-          onDirectiveChange={handleCanvasDrillDown}
-          onSelectEntity={handleSelectEntity}
-        />
+        {/* Zone 3: Tab strip + contextual canvas (pure render-from-Props for active tab) */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <CanvasTabStrip
+            tabs={tabsState.tabs}
+            activeTabId={tabsState.activeTabId}
+            onSwitch={handleSwitchTab}
+            onClose={handleCloseTab}
+          />
+          <ContextualCanvas
+            directive={activeTab?.directive ?? { type: 'none' }}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            historyPositionLabel={historyPositionLabel}
+            onGoBack={handleGoBack}
+            onGoForward={handleGoForward}
+            onDirectiveChange={handleCanvasDrillDown}
+            onSelectEntity={handleSelectEntity}
+          />
+        </div>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@
 // blocked by vitest DOM-environment gap (chunk 6.2b carry-forward);
 // observable shell behavior carries through this E2E spec.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID, LOCALE } from './fixtures/auth';
 
 const ORG_ROOT = `/${LOCALE}/${CONTROLLER_ORG_ID}`;

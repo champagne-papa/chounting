@@ -5,7 +5,7 @@
 // assert the canvas view header renders, exercise the as_of_date
 // filter, and confirm the 4-bucket table structure.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID, LOCALE } from './fixtures/auth';
 
 test.describe('ApAgingView', () => {
