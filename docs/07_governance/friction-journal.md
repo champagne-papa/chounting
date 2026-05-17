@@ -12675,3 +12675,86 @@ The Reserve 2 F-J entry IS the downstream correction surface; the chunk-6.3b ret
 - Merge commit `625c7df` on origin/main — chunk-6.3b Phase-6-close ceremony; 247-commit-forward-merge `cfcf2e7..625c7df`
 - chunk-6.3a `a9f1071` scope-input artifact precedent — post-substantive-arc-close governance commit at natural seam shape
 - chunk-6.3b retrospective §3.b Observation 3 (artifact-immutability discipline two-shape distinction) — shape β downstream-correction-surface as the structural shape this Reserve 2 entry fires at
+
+---
+
+## 2026-05-17 — Path C three-grain catalog (Phase 6.5 retrospective; F-J-14 third-instance + grain-catalog consolidation)
+
+Phase 6.5 chunks 1 → 3 closure synthesizes Path C invocation evidence
+across three observation-grains. Catalogued here as consolidation
+under F-J-14's canonical Path C rule-of-record (first-instance entry
+2026-05-14 at line ~11186; second-instance graduation entry
+2026-05-15 at line ~11427):
+
+**Grain 1 — Brief-draft prospective.** Path C evaluated at the
+chunk-brief drafting grain when scope-lock surfaces volume + framing
+arithmetic that crosses the single-session-reliable-delivery bound.
+The grain catches budget-overrun BEFORE substrate-load + brief-amendment-cycle
+costs are incurred. Phase 6.5 evidence: Session 5 chunk 1 brief
+evaluated Path C at brief-draft grain — negative (single-session
+delivery feasible; chunk 1 shipped at `5a9492b` as a single
+substantive commit). Session 11 chunk 3 brief evaluated Path C at
+brief-draft grain — negative (single-session delivery feasible
+within the two-commit ceremony; chunks shipped at `29e2ba1` Commit 1
++ `eab3f5e` Commit 2 as a structural decomposition, not a Path C
+volume-driven split).
+
+**Grain 2 — Phase-A-close-prospective.** Path C evaluated at Phase A
+close grain when implementation-onset substrate-load surfaces volume
+arithmetic crossing the reliable-delivery bound. The grain catches
+budget-overrun AFTER substrate-load but BEFORE in-flight
+implementation costs are incurred. Phase 6.5 evidence: Session 10b
+chunk 2 invocation — Arc β = chunks 2a (commit `94b0411` Tasks
+1+2+3+6 substrate state lift + per-source callbacks) + 2b (commit
+`c5d7e89` Tasks 4+5+7 Pattern γ source-driven routing +
+CanvasTabStrip + RI-6 fifth-grain verification) prospective split at
+Phase A close. Cross-references the F-J-14 second-instance
+graduation entry above (Phase 6 chunk 6.2a 2026-05-15) — Phase 6.5's
+chunk 2 Arc β is the second observation-grain instance of
+prospective Path C invocation outside Phase 6.
+
+**Grain 3 — Mid-impl-reactive.** Path C evaluated mid-implementation
+when in-flight framing-revisits accumulate beyond single-session
+budget. The grain catches budget-overrun only after substrate-load
+AND in-flight implementation costs have started accruing; latest of
+the three grains, highest cost. Phase 4 chunk 3 first-instance Path
+C precedent (F-J-14 canonical entry above, 2026-05-14) — five
+framing-touching findings (Pause 2-5 amendment cycle + Path C as 5th
+finding itself) accumulated mid-implementation crossing
+volume-vs-budget arithmetic; reactive Path C split into 3a
+dispatcher-isolated + 3b cross-phase-wiring. Available grain
+throughout Phase 6.5 implementation but not invoked — operational-
+flex collapse + brief-amendment-cycle-avoidance kept implementation
+within single-session bounds for chunks 1 + 3.
+
+**Codification grain.** Three-grain catalog at F-J-14 third-instance
+entry; consolidates the temporally-distributed Path C invocation
+discipline into a single readable grain inventory. Future Path C
+invocations should evaluate at all three grains in sequence:
+brief-draft → Phase-A-close → mid-impl-reactive. Earlier-grain
+invocation preferred over later-grain invocation (catches
+budget-overrun before substrate-load + implementation effort spent).
+The Phase 6.5 evidence pattern — Grain 1 negative at chunks 1 + 3,
+Grain 2 positive at chunk 2, Grain 3 reactive surface available but
+not invoked — illustrates the canonical evaluation sequence: each
+grain is asked in turn; an earlier grain's positive answer obviates
+the later-grain evaluation; a negative answer at each grain
+documents the discipline's firing-shape for the chunk.
+
+**Cross-references.**
+
+- Phase 4 chunk 3 first-instance (F-J-14 canonical statement above,
+  2026-05-14) — reactive Path C at Grain 3.
+- Phase 6 chunk 6.2a second-instance graduation (F-J-14
+  prospective-vs-reactive sub-discipline above, 2026-05-15) —
+  prospective Path C at Grain 2.
+- Phase 6.5 chunk 2 (commits `94b0411` + `c5d7e89`; Session 10b Arc
+  β prospective split) — third-instance prospective Path C at Grain
+  2 (second observation-grain instance at the prospective surface).
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #6 for full empirical narrative.
+- `CLAUDE.md ## Verify-forward-at-scope-lock for computational-shape
+  chunks` §RI-7 (Session-budget-feasibility verification + Path C
+  invocation conditions) — canonical RI-7 codification this F-J-14
+  three-grain catalog implements at observation grain.
