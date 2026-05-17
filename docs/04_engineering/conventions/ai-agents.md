@@ -84,18 +84,18 @@ descriptive reason-string (per the `stale_status_has_timestamp`
 check constraint); operator approves the SQL before execution per
 the Mutual Hallucination-Flag-and-Retract Discipline EC-direction
 sub-track datapoint EC-#4 (see
-[`session-execution.md`](./session-execution.md)).
+[`session/iterative-catching.md`](./session/iterative-catching.md)).
 
 Composes with: **Mutual Hallucination-Flag-and-Retract Discipline
-EC-direction sub-track** (in [`session-execution.md`](./session-execution.md))
+EC-direction sub-track** (in [`session/iterative-catching.md`](./session/iterative-catching.md))
 — sibling pre-action hygiene rule; this convention verifies session
 state while EC-direction qualifies EC-claim shape; they reinforce
 rather than overlap. **Re-verify Environmental Claims at Each Gate**
-(in [`session-execution.md`](./session-execution.md)) — this
+(in [`session/iterative-catching.md`](./session/iterative-catching.md)) — this
 convention is a gate-time environmental-anchor check on agent-
 session state, making it a mechanical enforcer of that broader
 convention's intent. **Session Lock File Convention** (in
-[`session-execution.md`](./session-execution.md)) — operates within
+[`session/iterative-catching.md`](./session/iterative-catching.md)) — operates within
 active session-lock context; `session_id` from `agent_sessions` is
 distinct from the session-lock label, but both anchor at session-
 start and decay if not verified.
@@ -114,9 +114,9 @@ start and decay if not verified.
   Cluster B Item 1, commit `f221bab`)
 - Cross-references: ADR-0009 (before-state-capture convention);
   Mutual Hallucination-Flag-and-Retract Discipline EC-direction
-  sub-track (in `session-execution.md`); Re-verify Environmental
-  Claims at Each Gate (in `session-execution.md`); Session Lock
-  File Convention (in `session-execution.md`)
+  sub-track (in `session/iterative-catching.md`); Re-verify Environmental
+  Claims at Each Gate (in `session/iterative-catching.md`); Session Lock
+  File Convention (in `session/iterative-catching.md`)
 - Rename and amendment: 2026-04-26 (renamed from "Per-Entry
   Pending-Orphan Preflight" to surface row+card structural pairing
   per Obs-C, and to flip temporal framing from "preflight gating"

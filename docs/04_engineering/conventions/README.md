@@ -149,7 +149,7 @@ discipline violation requiring retroactive resolution.
   list reaches five).
 
 These are working thresholds, not laws. The Mutual Hallucination-
-Flag-and-Retract Discipline (in `session-execution.md`)'s retraction
+Flag-and-Retract Discipline (in `session/iterative-catching.md`)'s retraction
 sub-track was grandfathered at 8 datapoints; author judgment governs
 edge cases.
 
@@ -179,7 +179,7 @@ relationship is the load-bearing distinction:
   surfaces or distinct contexts; N=3 confirms. Codification gates
   must catch shape-match across instances, not just count. Worked
   examples: plan-substrate-vs-canonical-reality drift meta-pattern
-  (codified in `session-execution.md`).
+  (codified in `session/plan-authoring.md`).
 
 ---
 **Origin:**
