@@ -12795,3 +12795,52 @@ pass.
 - Phase 2 retrospective inventory item #5 (AccountLedgerService
   disposable-accounts test refactor) — adjacent test-design
   remediation grain.
+
+---
+
+## 2026-05-17 — Routing ambiguity at chunk-close trigger with subject-domain pull (observation-grain N=2, banked not codified)
+
+When a candidate codification has a chunk-close trigger (activity-grain
+→ `session/*` topical destination) AND a subject-domain pull (e.g.,
+code-discipline, test-discipline, migration-discipline → topical-by-subject
+destination), the routing rule in `conventions/README.md` does not have
+an explicit tiebreaker. Both paths are defensible; operator decision is
+required without a codified default.
+
+**Evidence (observation-grain N=2):**
+
+- **Phase 6.5 retrospective Candidate #10** (Screenshot-gate
+  verification-shape independence) — chunk-close trigger + UI-design
+  subject pull. Currently routed to `conventions/session/session-close.md`
+  per Commit A (`5f5d13c`); operator flagged for Commit D re-evaluation
+  per Commit A review.
+- **Codify-convention skill dry-run** (2026-05-17, post-Commit-B
+  `057f059`) — hypothetical N=3 candidate: post-refactor file-top
+  comment verification gate at chunk-close + code-discipline subject
+  pull. Routed to `conventions/code.md` with ambiguity surfaced via
+  the skill's "do not invent routing logic" guidance.
+
+**Why banking (not codification):** observation-grain N=2; below the
+N=3 codification threshold per CLAUDE.md `### Codification convention:
+observation-grain vs application-grain N count`. Two instances of the
+same routing-ambiguity shape is evidence the routing rule needs an
+explicit tiebreaker, but the tiebreaker shape itself wants a third
+instance to ground its evidence basis.
+
+**Disposition:** bank, await N=3 fire, then codify tiebreaker in
+`conventions/README.md` routing-rule section. The third instance will
+provide the evidence basis for what the tiebreaker should actually be;
+do not lock in guidance from N=2 evidence.
+
+**Cross-references.**
+
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  Candidate #10 (Screenshot-gate verification-shape independence).
+- `docs/04_engineering/conventions/README.md` (routing rule canonical;
+  tiebreaker lands here at N=3).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`;
+  the skill that surfaced the second instance via dry-run).
+- v2.2 reorg proposal at
+  `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` (the reorg
+  trajectory that produced both instances).
