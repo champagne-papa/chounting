@@ -74,6 +74,18 @@ interface Props {
    * SuggestedPrompts empty state.
    */
   firstArrival?: boolean;
+  /**
+   * Phase 6.5 chunk 1: when true, render the collapsed 44px rail-
+   * mode with new-output badge instead of the full chat panel.
+   * Parent SplitScreenLayout flows this from useShellState
+   * .zone2Collapsed.
+   */
+  collapsed?: boolean;
+  /**
+   * Phase 6.5 chunk 1: click-to-expand callback for the collapsed
+   * rail. Counterpart to onCollapse.
+   */
+  onExpand?: () => void;
 }
 
 export function AgentChatPanel({
@@ -85,7 +97,32 @@ export function AgentChatPanel({
   canvasContext,
   onNavigate,
   firstArrival,
+  collapsed,
+  onExpand,
 }: Props) {
+  // Phase 6.5 chunk 1: collapsed-rail unread tracking. unreadCount
+  // increments when a new assistant turn arrives WHILE collapsed;
+  // resets to 0 when collapsed flips false (expand).
+  const [unreadCount, setUnreadCount] = useState(0);
+  const collapsedRef = useRef<boolean>(collapsed ?? false);
+
+  useEffect(() => {
+    collapsedRef.current = collapsed ?? false;
+    if (!collapsed) {
+      setUnreadCount(0);
+    }
+  }, [collapsed]);
+
+  const handleAssistantTurnAdded = useCallback(() => {
+    if (collapsedRef.current) {
+      setUnreadCount((prev) => prev + 1);
+    }
+  }, []);
+
+  if (collapsed) {
+    return <CollapsedAgentRail unreadCount={unreadCount} onExpand={onExpand} />;
+  }
+
   if (initialOnboardingState) {
     return (
       <OnboardingChat
@@ -103,7 +140,50 @@ export function AgentChatPanel({
       canvasContext={canvasContext}
       onNavigate={onNavigate}
       firstArrival={firstArrival}
+      onAssistantTurnAdded={handleAssistantTurnAdded}
     />
+  );
+}
+
+// -----------------------------------------------------------------
+// CollapsedAgentRail — Phase 6.5 chunk 1
+// -----------------------------------------------------------------
+
+function CollapsedAgentRail({
+  unreadCount,
+  onExpand,
+}: {
+  unreadCount: number;
+  onExpand?: () => void;
+}) {
+  return (
+    <aside
+      data-zone="2"
+      data-collapsed="true"
+      aria-label="Agent chat collapsed rail"
+      className="flex h-full w-11 flex-col items-center border-r border-neutral-200 bg-white py-3"
+    >
+      <button
+        type="button"
+        onClick={onExpand}
+        title="Expand agent chat (Cmd+Shift+\\)"
+        aria-label="Expand agent chat"
+        className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-neutral-100"
+        data-testid="agent-collapsed-expand"
+      >
+        <span className="text-[10px] font-bold tracking-widest text-neutral-500">
+          AI
+        </span>
+        {unreadCount > 0 && (
+          <span
+            data-testid="agent-collapsed-badge"
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-neutral-800 bg-white px-1 text-[10px] font-bold text-neutral-800"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+    </aside>
   );
 }
 
@@ -118,6 +198,7 @@ function ProductionChat({
   canvasContext,
   onNavigate,
   firstArrival,
+  onAssistantTurnAdded,
 }: {
   orgId: string | null;
   onCollapse?: () => void;
@@ -125,6 +206,14 @@ function ProductionChat({
   canvasContext?: CanvasContext;
   onNavigate?: CanvasNavigateFn;
   firstArrival?: boolean;
+  /**
+   * Phase 6.5 chunk 1: fired after a new assistant turn is appended
+   * via the `send` path. Used by the AgentChatPanel wrapper to bump
+   * the collapsed-rail unread badge. Card-resolution acks (from
+   * `onCardResolved`) deliberately do NOT fire this — those are
+   * user-initiated outputs, not unsolicited agent output.
+   */
+  onAssistantTurnAdded?: () => void;
 }) {
   const tHeading = useTranslations('agent');
   const tRoot = useTranslations();
@@ -279,6 +368,7 @@ function ProductionChat({
           return [...flipped, assistantTurn];
         });
         setSessionId(data.session_id);
+        onAssistantTurnAdded?.();
       } catch (err) {
         // Network failure — fetch threw. Inline retry on user turn.
         const msg = err instanceof Error ? err.message : 'Network error';
@@ -293,7 +383,7 @@ function ProductionChat({
         setSubmitting(false);
       }
     },
-    [orgId, locale, sessionId, submitting, canvasContext],
+    [orgId, locale, sessionId, submitting, canvasContext, onAssistantTurnAdded],
   );
 
   const retryTurn = useCallback(
