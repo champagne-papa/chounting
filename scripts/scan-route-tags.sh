@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # scripts/scan-route-tags.sh
 #
-# Convention reference: docs/04_engineering/conventions.md
-# "Documentation Routing" §Write-time tripwires (Fallback rule)
-# and §Hygiene cadence step 1.
+# Convention reference: docs/04_engineering/conventions/README.md
+# §Write-time tripwires (Fallback rule) and §Hygiene cadence step 1
+# (relocated from the pre-v2.2-reorg `docs/04_engineering/conventions.md`
+# ## Documentation Routing section by Commit A of the v2.2 reorg).
 #
 # Lists [ROUTE?] tags (unresolved routing decisions) in the active
 # friction journal. Resolved [ROUTE: stays-in-journal] tags are

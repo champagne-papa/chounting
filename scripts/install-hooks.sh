@@ -5,7 +5,8 @@
 # per clone / worktree; git doesn't track hooks themselves.
 #
 # The installed hook enforces:
-#   1. Session Lock File Convention (see conventions.md).
+#   1. Session Lock File Convention (see
+#      docs/04_engineering/conventions/session/iterative-catching.md).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
 
@@ -21,7 +22,8 @@ trap 'rm -f "$TMP_HOOK"' EXIT
 cat > "$TMP_HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
 # Installed by scripts/install-hooks.sh. Enforces:
-#   1. Session Lock File Convention (see conventions.md).
+#   1. Session Lock File Convention (see
+#      docs/04_engineering/conventions/session/iterative-catching.md).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
 

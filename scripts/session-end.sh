@@ -3,8 +3,9 @@
 #
 # Removes .coordination/session-lock.json.
 #
-# See docs/04_engineering/conventions.md "Session Lock File
-# Convention" for the mechanism's role.
+# See docs/04_engineering/conventions/session/iterative-catching.md
+# "Session Lock File Convention" for the mechanism's role. (Pre-
+# v2.2-reorg location was docs/04_engineering/conventions.md.)
 
 set -euo pipefail
 

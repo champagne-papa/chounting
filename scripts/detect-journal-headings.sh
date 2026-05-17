@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # scripts/detect-journal-headings.sh
 #
-# Convention reference: docs/04_engineering/conventions.md
-# "Documentation Routing" §Write-time tripwires #2 (no embedded
-# retrospectives in the journal). H3/H4 headings inside
+# Convention reference: docs/04_engineering/conventions/README.md
+# §Write-time tripwires #2 (no embedded retrospectives in the
+# journal; relocated from the pre-v2.2-reorg
+# `docs/04_engineering/conventions.md` ## Documentation Routing
+# section by Commit A of the v2.2 reorg). H3/H4 headings inside
 # friction-journal.md signal that retrospective content has
 # overshot its container and should be routed to a retrospective.
 #

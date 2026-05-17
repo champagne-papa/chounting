@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # scripts/check-friction-journal-line-length.sh
 #
-# Convention reference: docs/04_engineering/conventions.md
-# "Documentation Routing" §Write-time tripwires #1 (10-second
-# rule). A single friction-journal entry must be readable in
-# roughly 10 seconds. Format:
+# Convention reference: docs/04_engineering/conventions/README.md
+# §Write-time tripwires #1 (10-second rule; relocated from the
+# pre-v2.2-reorg `docs/04_engineering/conventions.md` ##
+# Documentation Routing section by Commit A of the v2.2 reorg).
+# A single friction-journal entry must be readable in roughly
+# 10 seconds. Format:
 #   [date] [category] [one-line description]
 # with optional 2-3 line elaboration; entries longer than ~10
 # lines are signal that content belongs elsewhere.
