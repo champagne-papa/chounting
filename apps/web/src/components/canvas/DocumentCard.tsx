@@ -5,13 +5,14 @@
 // ingest_batch_id, channel_metadata, received_at, created_at).
 //
 // Tailwind styling mirrors ProposedEntryCard convention (rounded
-// border, padding, shadow). Consumed by DocumentIntakeRail at chunk
-// 6.2b; future surfaces (e.g., a canvas-grade documents-overview
-// view) can re-use this same card component.
+// border, padding, shadow). Consumed by PendingDocumentsView
+// (chunk 6.5 chunk 3 canvas-tab surface) post-Phase-6.5; also
+// referenced by cases/[caseId]/route.ts and ingestBatch.schema.ts.
 //
 // channel_metadata is pass-through JSONB on the wire; for drag-drop
-// at chunk 6.2b it carries `drop_session_id`. Chunk 6.3 will add
-// `sender_address` for forwarded_mailbox batches.
+// at chunk 6.2b / chunk 6.5 chunk 3 chat-input drop it carries
+// `drop_session_id`. Chunk 6.3a adds `sender_address` for
+// forwarded_mailbox batches.
 
 'use client';
 

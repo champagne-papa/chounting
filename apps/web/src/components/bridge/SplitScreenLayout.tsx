@@ -24,7 +24,8 @@
 // singleton-shape preserved at TYPE level; zero touch to
 // canvasContext.ts / canvasContext.schema.ts / canvasContextSuffix.ts).
 //
-// Per-source callback decomposition (chunk 2b Pattern γ refinement):
+// Per-source callback decomposition (chunk 2b Pattern γ refinement +
+// chunk 3 fourth handler):
 //   - handleMainframeNavigate → Rule 3 routeReplaceActive + EC1.β
 //     window.confirm prompt (v1 always-prompts per Sub-Q11.a α₂);
 //     per-form dirty-state detection deferred per ADR-0010 substrate-
@@ -34,14 +35,15 @@
 //     focusExistingExactMatch (EC2.β); passed to AgentChatPanel.onNavigate.
 //   - handleCanvasDrillDown   → Rule 4 routeStayInActive (append history);
 //     passed to ContextualCanvas.onDirectiveChange.
+//   - handleDropEvent         → Rule 1 routeNewTab WITHOUT
+//     focusExistingExactMatch (EC3.β one-tab-per-batch; every drop
+//     batch is unique via drop_session_id); passed to
+//     AgentChatPanel.onDropEvent (chunk 3 ship). Consumer side at
+//     AgentChatPanel fires onDropEvent after ingest 201 with the
+//     just-created ingest_batch_id encoded in the directive.
 //   - handleCloseTab + handleSwitchTab → passed to CanvasTabStrip.onClose +
 //     .onSwitch; close handles tabs-zero state internally (creates fresh
 //     {type: 'none'} tab via canvasTabRouting.closeTab).
-//
-// chunk 3 forward-pointer: handleDropEvent + onDropEvent Prop on
-// AgentChatPanel land at chunk 3 alongside the AgentChatPanel drop-
-// handler consumer wiring (Pattern γ Rule 1 + EC3.β one-tab-per-batch);
-// canvasTabRouting.routeNewTab is the v1 consumer.
 //
 // Collapse state for both zones persists via useShellState
 // localStorage keys (chounting:shell:zone1Collapsed +
@@ -166,17 +168,13 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
     tabsState.tabs.find((t) => t.tabId === tabsState.activeTabId) ??
     tabsState.tabs[0];
 
-  // Per-source callback handlers per Pattern γ Rules 2-4 + EC1.β /
-  // EC2.β. Each handler consumes canvasTabRouting pure functions for
-  // the state transition; EC1.β prompt-on-replace fires as a side
-  // effect before routeReplaceActive (caller responsibility per
-  // canvasTabRouting.routeReplaceActive doc).
-  //
-  // chunk 3 forward-pointer: handleDropEvent + onDropEvent Prop on
-  // AgentChatPanel land at chunk 3 — Pattern γ Rule 1 invokes
-  // routeNewTab without focusExistingExactMatch (EC3.β one-tab-per-
-  // batch). Drop handler at chunk 3 carries drop_session_id per
-  // chunk-6.2b precedent.
+  // Per-source callback handlers per Pattern γ Rules 1-4 + EC1.β /
+  // EC2.β / EC3.β. Each handler consumes canvasTabRouting pure
+  // functions for the state transition; EC1.β prompt-on-replace
+  // fires as a side effect before routeReplaceActive (caller
+  // responsibility per canvasTabRouting.routeReplaceActive doc).
+  // chunk 3 ships handleDropEvent (Rule 1) + AgentChatPanel
+  // onDropEvent Prop atomically per RI-1 strict at Prop-API grain.
   const handleMainframeNavigate = useCallback(
     (directive: CanvasDirective) => {
       // EC1.β v1 default: always-prompt-on-replace per Sub-Q11.a α₂.
@@ -215,6 +213,15 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
     },
     [],
   );
+
+  // Phase 6.5 chunk 3: Pattern γ Rule 1 + EC3.β one-tab-per-batch.
+  // Fires from AgentChatPanel.onDropEvent after ingest completion;
+  // opens a fresh tab focused (no focusExistingExactMatch — every
+  // drop batch is unique via drop_session_id; matching against open
+  // tabs would never hit by construction).
+  const handleDropEvent = useCallback((directive: CanvasDirective) => {
+    setTabsState((prev) => routeNewTab(prev, directive));
+  }, []);
 
   // Sub-Q11.d.close.α: close tab; advance active to adjacent-right
   // (fallback adjacent-left at rightmost; fresh 'none' tab at
@@ -330,6 +337,7 @@ export function SplitScreenLayout({ orgId, initialDirective, firstArrival }: Pro
           currentUserRole={currentUserRole}
           canvasContext={canvasContext}
           onNavigate={handleAgentDirective}
+          onDropEvent={handleDropEvent}
           firstArrival={firstArrival}
         />
 

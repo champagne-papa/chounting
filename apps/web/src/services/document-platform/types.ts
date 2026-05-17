@@ -98,10 +98,15 @@ export interface CreateSourceDocumentResult {
 }
 
 // =============================================================
-// Drag-drop ingestion contract (chunk 6.2b)
+// Drag-drop ingestion contract (chunk 6.2b; chat-input re-entry at
+// chunk 6.5 chunk 3)
 //
-// Sub-Q1 lock: drag-drop UX surface is canvas-only (DocumentIntakeRail
-//   on the right edge of the layout per PRD Phase 2 vision).
+// Sub-Q1 lock (chunk 6.2b): drag-drop UX surface was canvas-only
+//   (DocumentIntakeRail on the right edge of the layout per PRD Phase 2
+//   vision). Phase 6.5 chunk 3 re-entry-points the drag-drop UX surface
+//   to AgentChatPanel chat input per Cut 1 Flow (a); the underlying
+//   contract (drop_session_id + multi-file POST + atomic batch) is
+//   identical.
 // Sub-Q3 lock: multi-file POST, no explicit application-layer cap at
 //   v1 (Next.js body limits apply as implicit fallback).
 // Sub-Q9 lock: all-or-nothing + Zod pre-validate at ingress. If any

@@ -49,6 +49,17 @@ export type CanvasDirective =
   | { type: 'invite_user'; orgId: string }
   | { type: 'welcome' }
 
+  // Phase 6.5 chunk 3 — pending documents queue surface in the
+  // multi-tab canvas (Zone 3). Reached via:
+  //   (a) Pattern γ Rule 1 drop event → new tab focused (chunk 3
+  //       AgentChatPanel chat-input drop → SplitScreenLayout
+  //       handleDropEvent → routeNewTab); ingestBatchId carries
+  //       the just-created batch id so the view focuses on it.
+  //   (b) Pattern γ Rule 3 Zone 1 Billing "Pending Documents" nav
+  //       → routeReplaceActive; no ingestBatchId; view renders
+  //       recent N cards across all batches.
+  | { type: 'pending_documents'; orgId: string; ingestBatchId?: string }
+
   // Phase 2+ stubs — directive type defined now, canvas component is a
   // "Coming Soon" placeholder until the phase that builds it:
   | { type: 'ap_queue'; orgId: string }

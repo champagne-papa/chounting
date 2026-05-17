@@ -54,6 +54,7 @@ import { BillReverseCard } from '@/components/canvas/BillReverseCard';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
+import { PendingDocumentsView } from '@/components/canvas/PendingDocumentsView';
 
 interface Props {
   directive: CanvasDirective;
@@ -213,6 +214,10 @@ function renderDirective(
           Pick a view from the left panel to get started.
         </div>
       );
+
+    // Phase 6.5 chunk 3 — pending documents queue surface.
+    case 'pending_documents':
+      return <PendingDocumentsView orgId={d.orgId} ingestBatchId={d.ingestBatchId} />;
 
     // Phase 1.2 Session 6 — form-escape surfaces.
     case 'user_profile':

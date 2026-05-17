@@ -96,6 +96,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the recurring journal runs list';
     case 'none':
       return 'no canvas view';
+    case 'pending_documents':
+      return 'the pending documents queue';
     case 'user_profile':
       return 'the user profile editor';
     case 'org_profile':

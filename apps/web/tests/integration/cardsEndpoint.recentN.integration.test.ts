@@ -1,6 +1,7 @@
 // tests/integration/cardsEndpoint.recentN.integration.test.ts
 //
 // Phase 6 chunk 6.3a — Sub-Q10 Option B integration tests.
+// Phase 6.5 chunk 3 — count_only mode extension tests.
 //
 // Tests the dual-mode cards endpoint:
 //   GET /api/orgs/[orgId]/documents/cases
@@ -9,8 +10,10 @@
 //     (per-batch mode; chunk 6.2b backward-compat)
 //   GET /api/orgs/[orgId]/documents/cases?limit=N
 //     (recent-N with explicit limit)
+//   GET /api/orgs/[orgId]/documents/cases?count_only=true
+//     (head-only count mode; chunk 6.5 chunk 3 Zone 1 nav badge)
 //
-// Sentinel filtering preserved in both modes (document_cards_view
+// Sentinel filtering preserved in all modes (document_cards_view
 // bakes the sentinel WHERE clause; symmetric write/read discipline
 // per Sub-Q2.2 chunk 6.2b lock).
 
@@ -230,5 +233,46 @@ describe('Cards endpoint Sub-Q10 Option B (recent-N + per-batch dual mode)', () 
       const cm = c.channel_metadata;
       expect(cm.sentinel).toBeUndefined();
     }
+  });
+
+  // Phase 6.5 chunk 3 — count_only mode extension tests.
+  describe('Phase 6.5 chunk 3 — count_only mode', () => {
+    it('Test #12 — count_only=true returns { count: N } envelope', async () => {
+      const url = `http://test.local/api/orgs/${SEED.ORG_HOLDING}/documents/cases?count_only=true`;
+      const res = await GET(makeReq(url), {
+        params: Promise.resolve({ orgId: SEED.ORG_HOLDING }),
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { count: number };
+      // Envelope is `{ count: N }` — no `cards` array and no `ingest_batch_id`.
+      expect(typeof body.count).toBe('number');
+      expect(body).not.toHaveProperty('cards');
+      expect(body).not.toHaveProperty('ingest_batch_id');
+      // At least the 3 non-sentinel batches inserted in beforeAll are
+      // counted; sentinel batch is excluded by the view filter.
+      expect(body.count).toBeGreaterThanOrEqual(3);
+    });
+
+    it('Test #13 — count_only sentinel filter excludes m153-shape sentinels', async () => {
+      // The count_only path queries document_cards_view with the
+      // sentinel filter baked in. If the sentinel filter were missing,
+      // sentinelBatch would inflate the count by 1.
+      const urlWithSentinel = `http://test.local/api/orgs/${SEED.ORG_HOLDING}/documents/cases?count_only=true`;
+      const res1 = await GET(makeReq(urlWithSentinel), {
+        params: Promise.resolve({ orgId: SEED.ORG_HOLDING }),
+      });
+      const body1 = (await res1.json()) as { count: number };
+
+      // Cross-check against the recent-N path with a generous limit.
+      // The counts should agree (both query the same view; sentinel
+      // filter applies symmetrically).
+      const urlRecent = `http://test.local/api/orgs/${SEED.ORG_HOLDING}/documents/cases?limit=500`;
+      const res2 = await GET(makeReq(urlRecent), {
+        params: Promise.resolve({ orgId: SEED.ORG_HOLDING }),
+      });
+      const body2 = (await res2.json()) as { cards: CardRow[] };
+
+      expect(body1.count).toBe(body2.cards.length);
+    });
   });
 });

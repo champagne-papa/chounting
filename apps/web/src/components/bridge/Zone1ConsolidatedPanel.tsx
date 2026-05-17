@@ -34,6 +34,7 @@
 
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import { useShellState } from '@/hooks/useShellState';
@@ -45,6 +46,13 @@ import type {
 } from '@/shared/types/canvasDirective';
 
 import { ApiStatusDot } from './ApiStatusDot';
+
+// Phase 6.5 chunk 3: window event name fired by AgentChatPanel after
+// an ingest completes; Zone1ConsolidatedPanel listens to refresh the
+// "Pending Documents" count badge. v1 cadence: mount-fetch + event-
+// driven refresh (no polling; no real-time). Full real-time deferred
+// to post-v1 pending usage evidence per Sub-Q14/15/16.
+const PENDING_DOCUMENTS_REFRESH_EVENT = 'chounting:pending-documents-changed';
 
 interface Props {
   orgId: string;
@@ -71,6 +79,10 @@ const WORKSPACE_TABS: ReadonlyArray<WorkspaceTab> = [
 
 const BILLING_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { id: 'bill_form', label: 'New Bill', icon: '\u{1F4C4}', primaryAction: true },
+  // Phase 6.5 chunk 3: "Pending Documents" inserted as 2nd item per
+  // memory pointer project_phase_6_5_chunk_1_billing_nav_ordering —
+  // workflow-frequency reading "incoming intake → outstanding bills".
+  { id: 'pending_documents', label: 'Pending Documents', icon: '\u{1F4E5}' },
   { id: 'open_bills', label: 'Open Bills', icon: '\u{1F4DD}' },
   { id: 'ap_aging', label: 'AP Aging', icon: '\u{1F4B0}' },
   { id: 'vendor_balance', label: 'Vendor Balance', icon: '\u{1F4B5}' },
@@ -97,6 +109,8 @@ function navItemToDirective(itemId: string, orgId: string): CanvasDirective | nu
   switch (itemId) {
     case 'bill_form':
       return { type: 'bill_form', orgId };
+    case 'pending_documents':
+      return { type: 'pending_documents', orgId };
     case 'open_bills':
       return { type: 'report_open_bills', orgId };
     case 'ap_aging':
@@ -137,6 +151,35 @@ export function Zone1ConsolidatedPanel({ orgId, onNavigate }: Props) {
   const params = useParams();
   const locale = params.locale as string;
 
+  // Phase 6.5 chunk 3: "Pending Documents" count badge. Mount-fetch +
+  // event-driven refresh on ingest completion. v1 graceful degrade:
+  // network failure leaves count at null (badge hidden).
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/orgs/${orgId}/documents/cases?count_only=true`,
+      );
+      if (!res.ok) return;
+      const body = (await res.json()) as { count: number };
+      setPendingCount(body.count);
+    } catch {
+      // Soft-fail; badge hides on null.
+    }
+  }, [orgId]);
+
+  useEffect(() => {
+    refreshPendingCount();
+    function handler() {
+      refreshPendingCount();
+    }
+    window.addEventListener(PENDING_DOCUMENTS_REFRESH_EVENT, handler);
+    return () => {
+      window.removeEventListener(PENDING_DOCUMENTS_REFRESH_EVENT, handler);
+    };
+  }, [refreshPendingCount]);
+
   function handleNavClick(itemId: string) {
     if (itemId === 'actions') {
       router.push(`/${locale}/${orgId}/agent/actions`);
@@ -172,17 +215,35 @@ export function Zone1ConsolidatedPanel({ orgId, onNavigate }: Props) {
         <div className="text-[10px] font-bold tracking-widest text-neutral-500">
           {activeWorkspace.slice(0, 3).toUpperCase()}
         </div>
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => handleNavClick(item.id)}
-            title={item.label}
-            className="flex h-10 w-10 items-center justify-center rounded-md text-xl hover:bg-neutral-100"
-          >
-            {item.icon}
-          </button>
-        ))}
+        {navItems.map((item) => {
+          const showBadge =
+            item.id === 'pending_documents' &&
+            pendingCount !== null &&
+            pendingCount > 0;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleNavClick(item.id)}
+              title={
+                showBadge
+                  ? `${item.label} (${pendingCount} pending)`
+                  : item.label
+              }
+              className="relative flex h-10 w-10 items-center justify-center rounded-md text-xl hover:bg-neutral-100"
+            >
+              {item.icon}
+              {showBadge && (
+                <span
+                  data-testid="pending-documents-badge-collapsed"
+                  className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-neutral-800 bg-white px-1 text-[10px] font-bold text-neutral-800"
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
         <div className="my-1 h-px w-8 bg-neutral-200" />
         {FOOTER_ITEMS.map((item) => (
           <button
@@ -254,19 +315,26 @@ export function Zone1ConsolidatedPanel({ orgId, onNavigate }: Props) {
         data-region="7.2"
         className="flex flex-1 flex-col overflow-y-auto border-t border-neutral-200 py-1"
       >
-        {navItems.map((item) =>
-          item.primaryAction ? (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleNavClick(item.id)}
-              title={item.label}
-              className="mx-3 my-2 flex items-center gap-2 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
-            >
-              <span className="text-base leading-none">+</span>
-              <span>{item.label}</span>
-            </button>
-          ) : (
+        {navItems.map((item) => {
+          if (item.primaryAction) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleNavClick(item.id)}
+                title={item.label}
+                className="mx-3 my-2 flex items-center gap-2 rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              >
+                <span className="text-base leading-none">+</span>
+                <span>{item.label}</span>
+              </button>
+            );
+          }
+          const showBadge =
+            item.id === 'pending_documents' &&
+            pendingCount !== null &&
+            pendingCount > 0;
+          return (
             <button
               key={item.id}
               type="button"
@@ -275,10 +343,18 @@ export function Zone1ConsolidatedPanel({ orgId, onNavigate }: Props) {
               className="flex h-9 items-center gap-3 px-3 text-sm font-normal text-neutral-700 hover:bg-neutral-50"
             >
               <span className="text-base leading-none">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="flex-1 text-left">{item.label}</span>
+              {showBadge && (
+                <span
+                  data-testid="pending-documents-badge-expanded"
+                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-900 px-1.5 text-[11px] font-bold text-white"
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {/* Region 7.3 — Persistent foundational footer (cross-workspace) */}
