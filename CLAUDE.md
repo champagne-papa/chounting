@@ -402,6 +402,48 @@ shape-refinement-via-within-arc-evidence-basis meta-pathway. See
 retrospective entry (2026-05-10) Adjudication 4 for the graduation
 adjudication.
 
+### Operational-flex collapse heuristic at chunk-grade decomposition
+
+When a chunk scope-lock cycle convenes for chunk-grade decomposition,
+the cycle may **collapse cleanly** — empty cycle, no sub-question
+adjudication needed, no Path C invocation evaluation needed — when
+three conditions hold:
+
+1. All sub-questions adjudicated at the prior cycle close.
+2. All partial-information items operationalized at the brief grain.
+3. Path C evaluation belongs at session-onset Phase A grain (per
+   F-J-14 three-grain Path C catalog), not at chunk scope-lock grain.
+
+When these three conditions hold at scope-lock cycle onset, the cycle
+collapses to empty; the brief stands as canonical chunk-shipping
+substrate; implementation proceeds directly.
+
+**Why:** Empty scope-lock cycles are a positive signal — they
+indicate that pre-cycle adjudication discipline + brief-grain
+operationalization discipline + Path-C-grain-catalog discipline
+collectively absorbed the work upstream. Recognizing the empty-cycle
+condition at session onset saves a meeting-shape that produces no
+output.
+
+**How to apply:** At chunk scope-lock cycle onset, evaluate the three
+conditions. If all hold, declare empty-cycle collapse + skip directly
+to implementation grain. If any condition fails, the cycle convenes
+per existing scope-lock discipline.
+
+**Evidence basis (N=3 graduation; Phase 6.5 chunks 1 + 2 + 3):**
+Session 6 (chunk 1 scope-lock cycle) collapsed cleanly; Session 9
+(chunk 2 scope-lock cycle) collapsed cleanly; Session 12 (chunk 3
+scope-lock cycle) collapsed cleanly. Three-precedent track record at
+chunks-1-3-Phase-6.5 grain.
+
+**Cross-references.**
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #11 for full empirical narrative.
+- F-J-14 three-grain Path C catalog (friction-journal 2026-05-17
+  entry; Commit A `1752f06`) for the Path C grain-evaluation
+  discipline referenced in condition (3).
+
 ## Verify-forward-at-scope-lock for computational-shape chunks
 
 A discipline cluster that fires at scope-lock for chunks whose
@@ -798,10 +840,16 @@ and catch-direction-agnostic.
    catch #5): "22 entries" commit message claim verified to be 26 on
    disk (1.18x off). **Intra-side catch** (NEW catch-direction
    sub-shape).
+7. **Session-prompt-authoring grain** (Phase 6.5 retrospective
+   drafting plan; 2026-05-17): Session 14 prompt cited ADR location
+   as `docs/04_decisions/` verified to not exist on disk (actual
+   `docs/07_governance/adr/`); also cited "apps/web/CLAUDE.md (or
+   root)" verified to be root-only on disk. Inter-side catch at
+   plan-authoring onset state-verify (prophylactic application).
 
-**Cross-grain instances at Phase 4:** (7) Round 3
+**Cross-grain instances at Phase 4:** (8) Round 3
 retrospective-scoping (Phase 5.1 "reviewer chunk" naming drift).
-(8) Post-retrospective-close drift-fix at `18dd608`.
+(9) Post-retrospective-close drift-fix at `18dd608`.
 
 **Discipline rule.** Disk is the canonical source. Substrate-receipt
 grain — wherever it lives (impl-onset, session-onset, retrospective-
