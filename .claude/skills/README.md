@@ -25,6 +25,7 @@ canonical-source cross-reference table.
 | [`agent-tool-authoring/`](./agent-tool-authoring/SKILL.md) | Work adding or modifying files under `src/agent/tools/`, `src/agent/orchestrator/`, or `src/agent/prompts/`. |
 | [`integration-test-rules/`](./integration-test-rules/SKILL.md) | Work in `tests/integration/` or when running Category A floor tests. |
 | [`audit-scans/`](./audit-scans/SKILL.md) | When running a codebase audit, producing audit findings, or working through the process in `docs/07_governance/audits/DESIGN.md`. |
+| [`codify-convention/`](./codify-convention/SKILL.md) | Promoting a friction-journal pattern to a codified convention after N≥3 fires; walks the routing decision tree per `docs/04_engineering/conventions/README.md`. |
 
 ## Authoring rule
 
