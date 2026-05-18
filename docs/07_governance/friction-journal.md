@@ -13763,3 +13763,41 @@ was doing when they reached threshold.
 - Audit reproduction: `grep -oE '\([^()[:space:]]+\)' docs/07_governance/friction-journal.md | awk '{print length($0)-2, $0}' | sort -rn | head -40`.
 - ARC 3 prompt (unchanged): `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
   (substrate commit `f643623`).
+
+### STEP 7: ARC 2.5 close reflection (brief)
+
+**(1) Audit cleanness.** Data overlapped — bucket and non-bucket
+populations both 27-65+ chars; no clean length cutoff. The audit
+answered the question by revealing the question was wrong-shaped:
+length isn't a principled discriminator here. Clean shape boundary
+substituted (backticks, slashes). The audit grounded the constraint
+space, not the answer.
+
+**(2) Fix selection beyond audit data.** Required judgment. The
+audit ruled out pure option (a) but the cap-removal-vs-raise and
+rule-3-yes/no sub-decisions were delegated to operator. Discipline
+operated as designed: audit bounds, judgment picks within bounds.
+Both sub-decisions resolved per empirical-grounding principle
+(remove rather than raise; defer rule 3 until data shows need).
+
+**(3) Regression checks.** Passed first run. CHECK 1's N=2-vs-N=1
+mismatch was itself a prompt-prediction-vs-disk-reality instance;
+grep-verified as clean (no tag inflation). No fix-induced regressions.
+
+**Meta-observation flagged but not banked at this grain** (would be
+N=4 of caveat-prediction-vs-empirical-resolution; the family already
+graduated in this banking, so banking another instance now is
+in-flight noise — surface for ARC 3 to factor in):
+
+When ARC 3 resumes, its STEP 1 prompt expects
+`caveat-prediction-vs-empirical-resolution` at N=1 in T1 and the
+family NOT yet at N=3. ARC 2.5's banking moved the family to N=3.
+**The ARC 3 prompt itself now carries a stale prediction about a
+family that just graduated.** Same family-shape as everything ARC 2.5
+just resolved, operating one level up at the prompt-substrate grain.
+ARC 3's first action when it resumes should be to refresh its
+expectations against current disk state — the prompt's STEP 1
+verification will either need its expected-counts updated or its
+"stop on mismatch" reflex will fire on this discrepancy. Either way
+is fine; flagging the substrate state so ARC 3 doesn't STOP on a
+known and explained gap.
