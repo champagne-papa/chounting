@@ -13368,3 +13368,108 @@ family is genuinely codifiable or arc-bound.
 - Implementation commits: `64bbc31`...`1ac6dbe` (13 commits on staging).
 - Tool surfaces: `scripts/friction-journal-tally.sh`,
   `.claude/agents/friction-pattern-detector.md`.
+
+## 2026-05-19 — Friction-pattern-detector ARC 2: B1 signal-hiding resolved (3 observations across 3 families)
+
+Banking 3 observations from the ARC 2 execution that resolved the
+regex-permissive-cost-class signal-hiding subclass. Two new families
+introduced at N=1; one existing family advances to N=4.
+
+### regex-permissive-cost-class (fourth-instance — resolution)
+
+- (regex-permissive-cost-class) fourth-instance — Resolved the B1
+  signal-hiding subclass via heuristic discriminator: B1's matched
+  content must contain at least one of {digit, hyphen, non-ASCII
+  byte}; otherwise the function falls through to B2/B3. The
+  2026-05-19 empirical audit (`grep -oE '\([a-z]+\)'` against the
+  journal) confirmed zero legitimate single-word-lowercase bucket
+  IDs in the top 30 by frequency — all enumeration markers, status
+  annotations, commit-message scopes, code references, or prose
+  asides. Verification surfaced an unanticipated finding: the
+  heuristic primarily redirects attribution rather than removing
+  it — most previously-shadowed lines had a real B2-shape bucket
+  co-located in the same window; net T1.5 delta was only ~20 lines
+  (not ~518 as the original caveat predicted), because B1 was
+  preempting B2's access to the real bucket. Commits: `1296e05`
+  (script fix) + `ecc1a01` (spec amendment). The 2026-05-18 entry's
+  three first-instances plus this resolution bring the family to
+  N=4. Family-level codification evaluation deferred to ARC 3
+  (retrospective-close).
+
+  **Recursive observation:** the detector caught its own
+  construction's permissive-matching cost class. The resolution is
+  itself a fourth instance of the pattern the detector was built
+  to surface. System working as designed.
+
+### embedded-language-quote-collision (first-instance — new family)
+
+- (embedded-language-quote-collision) first-instance — When applying
+  the B1 heuristic fix to `scripts/friction-journal-tally.sh`, the
+  initial Edit introduced an awk comment containing the word
+  `don't` inside a bash-embedded awk single-quoted string. The
+  apostrophe in `don't` terminated the awk script's single-quote
+  delimiter; bash then attempted to parse the remaining awk
+  function definition as bash, producing `syntax error near
+  unexpected token 'win,'` at the function declaration line. Fix:
+  reworded the comment to `do not`.
+
+  Family-shape distinction: this is **not** an instance of
+  `tool-contract-drift` (the family for one tool's documented
+  behavior departing from another tool's contract — gawk-no-`\b`,
+  IFS-collapse). `embedded-language-quote-collision` is about
+  language **nesting** — the outer language's quote semantics
+  consuming content the inner language needed to receive intact.
+  Future instances could surface in jq scripts embedded in bash,
+  SQL heredocs containing apostrophes, Python `-c` invocations,
+  or any host-language-embeds-guest-language pattern. Distinct N
+  counting from `tool-contract-drift` preserves the bug-shape
+  boundary for future codification.
+
+### caveat-prediction-vs-empirical-resolution (first-instance — new family)
+
+- (caveat-prediction-vs-empirical-resolution) first-instance — The
+  2026-05-18 spec caveat described the B1 signal-hiding mechanism
+  using one sample (`(sustained)` shadowing 8 bare-prose
+  observations). The implicit prediction encoded in the caveat's
+  framing was that shadowed lines "belong in T1.5 rather than
+  merely add noise rows" — generalizing from the sustained sample
+  to predict that resolution would relocate ~518 lines to T1.5
+  (matching the lowercase-paren-token count from the empirical
+  audit).
+
+  Empirical resolution revealed the prediction was only partially
+  correct. Most shadowed lines had real B2-shape buckets
+  co-located; resolution redirected attribution to those buckets,
+  not to T1.5. Net T1.5 delta was ~20 lines, not ~518. The
+  caveat's framing held for those ~20 lines but didn't hold for
+  the bulk.
+
+  Family-shape: caveats written under partial empirical evidence
+  encode predictions about resolution behavior that future
+  verification may revise. Discipline implication: separate "what
+  verification will confirm" from "what verification will
+  discover" in caveat wording, even when verification feels like
+  a confirmation step. Future instances likely surface whenever a
+  caveat-deferred-pending-audit shape recurs.
+
+### Family-level codification status
+
+`regex-permissive-cost-class` now at N=4 (three first-instances from
+2026-05-18 + this resolution). Family-level codification evaluation
+sits with ARC 3 (retrospective-close graduation evaluation), per the
+codify-while-deciding-not-while-implementing principle. The two new
+families (`embedded-language-quote-collision`,
+`caveat-prediction-vs-empirical-resolution`) each at N=1; future
+independent firings required before graduation evaluation.
+
+### Cross-references
+
+- Spec amendment commit: `ecc1a01`.
+- Script fix commit: `1296e05`.
+- Spec: `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+  §Bucket extraction (now reflects resolution).
+- Prior banking: `docs/07_governance/friction-journal.md` 2026-05-18 entry
+  (three first-instances of `regex-permissive-cost-class` plus the family
+  taxonomy this entry extends).
+- Detector script: `scripts/friction-journal-tally.sh`.
+- Subagent definition: `.claude/agents/friction-pattern-detector.md`.
