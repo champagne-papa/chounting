@@ -213,6 +213,21 @@ while IFS=$'\t' read -r bucket _ _ _ _; do
   fi
 done < <(printf '%s\n' "$T1_ROWS")
 
+# Stage B: footer-grep "Promoted from: <bucket>" for phrasal buckets
+# Stage A cannot disambiguate. Only runs for Stage A's N rows.
+# See spec §Graduation check (two stages) and .claude/rules/docs-codification.md.
+#
+# DEFERRED at first implementation (2026-05-18): the codification footer
+# convention exists in some conventions/*.md files but uses descriptive
+# provenance phrases like "Phase 1.5A convention codification batch" or
+# "chunk-6.3a implementation notes" — not single-token bucket IDs.
+# Stage B as designed greps for a bucket-id-shaped value in the footer,
+# which the current footers do not carry. Until codification footers
+# start carrying single-token bucket IDs, Stage B would return zero
+# matches for every phrasal bucket and provide no signal. Reactivate
+# when the codification convention evolves to include bucket-id-style
+# provenance.
+
 # Render T1 rows. Header line + rows, padded/aligned for readability.
 printf "  %-32s  %5s  %-12s  %-10s  %s\n" "bucket_id" "count" "latest" "graduated" "source_lines"
 printf "  %-32s  %5s  %-12s  %-10s  %s\n" "--------" "-----" "------" "---------" "------------"
