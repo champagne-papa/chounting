@@ -670,3 +670,37 @@ grain" framing drift (caught at Round 6 verify-from-disk; cfcf2e7 +
   pattern (parent discipline); Phase 4 retrospective writeup
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+---
+
+## Prediction grounding (cross-reference)
+
+When a plan encodes predictions about future behavior or parameter
+values — count expectations for a verification step, byte caps,
+shape constraints, magic-number thresholds — the prediction-
+grounding discipline applies. Ground against empirical evidence at
+plan-write time, OR explicitly mark predictions as ungrounded and
+document the verification step that will check.
+
+Full discipline:
+[`../prediction-grounding.md`](../prediction-grounding.md).
+
+The discipline applies broadly (specs, prompts, ADRs, briefs, regex
+parameters); this cross-reference notes plan-authoring as one of
+the surfaces where it fires. Concrete plan-authoring instances of
+the failure mode: forecast tables in a plan (Volume-forecast
+section above), verification step expected counts, parameter
+values cited from substrate without disk-verify, "after STEP N
+this will be..." projections.
+
+---
+
+**Origin:**
+
+- First codified (cross-reference): Phase 6.5, 2026-05-19
+- Evidence basis: cross-reference to topical convention
+  `prediction-grounding.md` codified at the same moment from N=3
+  observation-grain banking
+- Promoted from: ARC 3 STEP 3 sibling-routing decision (the
+  topical convention's discipline applies at plan-authoring among
+  other surfaces)

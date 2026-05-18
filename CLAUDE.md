@@ -207,6 +207,22 @@ including the 7-sub-grain catalog:
 `docs/04_engineering/conventions/session/scope-lock.md`
 §Verify-from-disk-at-non-standard-grain pattern.
 
+### Prediction grounding (pointer to canonical home)
+
+When encoding a prediction about future behavior or a parameter
+value that asserts a constraint on data shape — in specs, plans,
+prompts, ADRs, briefs, or regex parameters — ground the prediction
+against empirical evidence at write time. When grounding isn't
+feasible, explicitly mark as ungrounded and document the
+verification step that will check. Full discipline:
+`docs/04_engineering/conventions/prediction-grounding.md`.
+
+Codified at Phase 6.5, 2026-05-19, from N=3 observation-grain
+banking across spec-caveat-writing, parameter-setting, and
+prompt-authoring surfaces. The convention's "stop, surface,
+explain" operational guidance for verification-fire-on-divergence
+holds across all three surfaces.
+
 ## Phase 1 Simplifications
 
 Phase 1 ships three temporary simplifications (synchronous audit

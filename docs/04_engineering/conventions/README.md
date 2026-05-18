@@ -46,6 +46,13 @@ file structure is topical, not chronological.
   Labeling, Session Lock, environmental re-verification, Mutual
   Hallucination-Flag-and-Retract Discipline, bidirectional
   iterative-catching termination).
+- [`prediction-grounding.md`](./prediction-grounding.md) — discipline
+  for encoding predictions and parameter values in planning artifacts
+  (specs, regex parameters, session-handoff prompts, ADRs, briefs,
+  plans): ground against empirical evidence at write time, or
+  explicitly mark as ungrounded and document the verification step.
+  Codified Phase 6.5 from `caveat-prediction-vs-empirical-resolution`
+  family at N=3.
 
 ## Routing rule
 
