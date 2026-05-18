@@ -12844,3 +12844,129 @@ do not lock in guidance from N=2 evidence.
 - v2.2 reorg proposal at
   `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` (the reorg
   trajectory that produced both instances).
+
+---
+
+## 2026-05-17 — Commit C (b54ae6b) operator review — 4 findings banked + 1 codification candidate
+
+Operator review of Commit C (v2.2 reorg `.claude/rules/` 3-file pilot
+at `b54ae6b`) surfaced four observations worth banking and one
+codification candidate worth flagging for future attention. Three are
+small, one is a Commit D carry-forward, and the codification candidate
+is the underlying-pattern angle on the third finding.
+
+### Finding 1: Manual `/hooks` reload required for fresh sessions to activate InstructionsLoaded hook (N=1)
+
+When the InstructionsLoaded hook was added to `.claude/settings.local.json`
+during Commit B/C verification setup, fresh Claude Code 2.1.143 sessions
+opened in `/home/philc/projects/chounting` did not automatically activate
+the hook. Each fresh session required invoking the `/hooks` UI menu
+once to force settings reload before the hook would fire on instruction
+loads.
+
+**Why banking (not codification):** N=1 observation. Possible causes:
+(a) the watcher only picks up settings files that existed at session
+start (per the update-config skill's settings-watcher caveat); (b) a
+Claude Code 2.1.143-specific behavior; (c) WSL-environment-specific.
+Insufficient evidence to discriminate. Wait for second instance — if it
+fires on a different machine setup or different Claude Code version, the
+pattern starts to look like a real activation discipline that should be
+codified into the hook setup procedure.
+
+### Finding 2: services.md paths deviation from v2.2 §6.1 spec (provenance)
+
+v2.2 §6.1 specified `services.md` paths as
+`apps/web/src/services/**/*.ts` + `apps/web/src/server/**/*.ts`. Actual
+landed paths: `apps/web/src/services/**/*.ts` +
+`apps/web/src/app/api/**/route.ts`. The substitution is defensible —
+chounting backend logic lives in `app/api/**/route.ts` not `server/**`,
+and route handlers are service-adjacent — but it is a deviation.
+
+**Why banking (not codification):** provenance note for future readers
+who compare the landed pilot against the v2.2 spec text and notice the
+mismatch. Not a finding per se; just recording the deviation in case
+future maintenance touches the paths and wonders about the rationale.
+
+### Finding 3: migrations.md RLS-pattern bullet had broken pointer (N=1; fixed at `417b7b3`)
+
+Commit C's `.claude/rules/migrations.md` included a 5th bullet about
+"RLS preservation" that pointed at `conventions/migrations.md` for the
+canonical discipline — but no RLS section exists there. The rule was
+projected into `.claude/rules/` without a canonical conventions home.
+
+This is the exact failure mode v2.2 §6.2 was designed to prevent —
+`.claude/rules/` files should project canonical rules, not invent rules
+with broken pointers. Operator review caught it; fix at commit
+`417b7b3` removed the bullet.
+
+**Why banking:** discipline-failure observation. The codify-convention
+skill (Commit B `057f059`) and the canonical-source-pointer principle
+in `conventions/README.md` are supposed to prevent this shape. The
+failure was that file creation happened in main context without a
+codify-convention skill invocation — the skill is invoked at
+codification time (promoting a friction-journal pattern to a codified
+convention), not at `.claude/rules/` file-authoring time. There is no
+analogous forcing function at the pilot-file-authoring grain. Worth
+considering: should `.claude/rules/` file authoring also route through
+a forcing function that verifies every claimed canonical pointer
+actually resolves to a section that exists? Future N=2 instance would
+graduate to codification candidate.
+
+### Finding 4: Commit D carry-forward — transitional pointers in `.claude/rules/migrations.md` + `docs-codification.md` need cleanup
+
+Three pointers in `.claude/rules/migrations.md` and one in
+`docs-codification.md` reference rules that "relocate to topical
+conventions at Commit D of the v2.2 reorg." The pointer wording handles
+the transitional state cleanly — readers between Commit C and Commit D
+know to look in CLAUDE.md; readers after Commit D should follow the
+post-relocation path. But when Commit D actually relocates these rules,
+the transitional parentheticals "(relocates at Commit D)" become stale
+and need to disappear, with pointers resolving directly to
+`conventions/migrations.md` (and the new home for the observation-grain-
+vs-application-grain N-count discipline).
+
+Specific updates needed at Commit D:
+- `.claude/rules/migrations.md` bullet "Seed-data PII placeholder" —
+  update pointer from CLAUDE.md to `conventions/migrations.md`.
+- `.claude/rules/migrations.md` bullet "Substrate-mod test-staleness
+  review" — same.
+- `.claude/rules/docs-codification.md` bullet "Observation-grain vs
+  application-grain N count" — update from CLAUDE.md to wherever the
+  discipline lands (likely `conventions/session/<sub>.md` or a meta
+  conventions topical).
+
+**Disposition:** add to Commit D's explicit scope.
+
+### Codification candidate (related to Finding 3): RLS through-parent + `org_id`-derived-in-RPC pattern
+
+The RLS pattern removed at `417b7b3` IS a real codification candidate —
+it's used canonically across Phase 2/3 chunks (per MEMORY.md
+`project_phase_2_chunk_3_implementation_notes`: "org_id-derived-in-RPC
+pattern shipped clean; canonical for chunks 4+"). The pattern has
+multiple application-grain instances but has never been formally
+codified in `conventions/migrations.md` or any ADR.
+
+**Why banking (not codification):** the pattern needs proper codification
+through the codify-convention skill — origin metadata, evidence basis
+with commit SHAs, destination decision (probably
+`conventions/migrations.md` as a new RLS-pattern section, but
+worth checking against existing ADR-0009/0011 territory). That's real
+codification work, not a quick fix. Should be evaluated at the next
+phase retrospective.
+
+**Disposition:** when codification happens, project the codified rule
+back into `.claude/rules/migrations.md` as a pointer-only bullet
+referencing the new canonical home.
+
+### Cross-references
+
+- Commit C at `b54ae6b` (the pilot files this review surfaced findings
+  against).
+- Commit C aftermath fix at `417b7b3` (Finding 3 resolution).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`; the
+  routing forcing function discussed in Finding 3 framing).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §6.2 (the
+  duplicate-authority-creep failure mode Finding 3 instantiates).
+- MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
+  RLS pattern's canonical implementation precedent referenced in the
+  codification-candidate framing).
