@@ -343,6 +343,58 @@ Application surfaces:
   being graduable under its own criteria is a precondition for
   codifying it at all.
 
+### Sub-shape distinctions
+
+Operational use of the criteria has surfaced sub-shape distinctions
+that refine how a criterion is met. Documented here as exploratory
+framings — observed across operational applications, subject to
+refinement as further experience accumulates.
+
+A sub-shape distinction belongs in this section when the distinction
+has been observed operationally to affect graduation decisions
+(e.g., the prescriptive/descriptive distinction below changed
+family 2's evaluation from candidate-GRADUATE to actual-DEFER).
+Distinctions that are conceptual rather than operationally
+consequential live in the relevant criterion's main body, not as
+sub-shapes.
+
+#### Load-bearing: prescriptive vs descriptive
+
+The load-bearing criterion has been observed to have a sub-shape
+distinction:
+
+- **Prescriptive load-bearing.** The pattern generates operator
+  action via imperative discipline ("when X, do Y"). Decision
+  points and operational steps are part of the convention's body.
+  Future surfaces cite the convention to invoke the discipline.
+
+- **Descriptive load-bearing.** The pattern helps understanding
+  but doesn't directly drive operator action. A heads-up, framing,
+  or model that future surfaces cite to ground a concept rather
+  than to invoke a discipline.
+
+Prescriptive load-bearing meets the criterion cleanly; descriptive
+load-bearing should be examined for an actionable sub-shape before
+counting the criterion as met. The examination: characterize what
+the pattern claims, then ask whether that claim implies any
+operational action future surfaces could cite to invoke the
+convention. If yes, restate the convention in prescriptive shape
+— "when X, do Y" — and proceed. If no, the pattern is genuinely
+descriptive and DEFER (waiting for operational sub-shape to
+surface) or DISMISS (the pattern is purely descriptive and
+unlikely to acquire operational consequence) is the right call.
+
+This sub-shape was surfaced during ARC 3's family evaluations:
+family 2 (`audit-fix-verify-surfaces-banking`) was DEFERRED on
+grounds that its discipline implication reduced to "anticipate
+banking at the verify step" — a heads-up rather than an imperative
+with decision points. Compared to family 1
+(`caveat-prediction-vs-empirical-resolution`), whose discipline
+was "stop, surface, explain — not pre-edit the prediction" with
+clear operator actions, the difference in load-bearing shape was
+visible at evaluation time. Subject to refinement as further
+operational experience accumulates.
+
 ---
 
 **Origin:**
