@@ -154,7 +154,37 @@ echo "# Source: $JOURNAL"
 echo "# Marker lines found: $MARKER_COUNT (tagged: $TAGGED_COUNT, untagged: $UNTAGGED_COUNT)"
 echo
 echo "## T1 — Tagged instances (graduate-now candidates)"
-echo "(awaiting aggregation)"
+
+# T1 aggregation: group tagged rows by bucket, count instances,
+# find latest_marker_date, collect source line numbers.
+#
+# Output columns: bucket_id | instance_count | latest_marker_date | source_lines
+#
+# At this stage graduated_yn is unknown — populated by Tasks 6-7.
+# Use a placeholder "?" for now so the column structure is stable.
+
+T1_ROWS=$(printf '%s\n' "$EXTRACTED" | awk -F'\t' '
+$1 != "" {
+  bucket = $1
+  count[bucket]++
+  # latest_date: lexicographic compare works because dates are YYYY-MM-DD.
+  if ($3 > latest[bucket]) latest[bucket] = $3
+  lines[bucket] = (lines[bucket] == "") ? $2 : lines[bucket] "," $2
+}
+END {
+  for (b in count) {
+    print b "\t" count[b] "\t" latest[b] "\t?\t" lines[b]
+  }
+}' | sort -t$'\t' -k2,2 -n -r)
+
+# Render T1 rows. Header line + rows, padded/aligned for readability.
+printf "  %-32s  %5s  %-12s  %-10s  %s\n" "bucket_id" "count" "latest" "graduated" "source_lines"
+printf "  %-32s  %5s  %-12s  %-10s  %s\n" "--------" "-----" "------" "---------" "------------"
+printf '%s\n' "$T1_ROWS" | while IFS=$'\t' read -r bucket count latest graduated lines; do
+  [[ -z "$bucket" ]] && continue
+  printf "  %-32s  %5d  %-12s  %-10s  %s\n" "$bucket" "$count" "$latest" "$graduated" "$lines"
+done
+echo
 echo
 echo "## T1.5 — Untagged instance markers (name-this candidates)"
 echo "(awaiting aggregation)"
