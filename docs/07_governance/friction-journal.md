@@ -13900,3 +13900,244 @@ decision.
   to this family's evaluation at graduation time is itself a
   notable first-run observation; banked separately in the
   forthcoming ARC 3 first-run observation entry.
+
+## 2026-05-19 — ARC 3 close: graduation outcomes + 5 first-run observations + audit-fix-verify N=4 + new-composition N=1
+
+ARC 3 closes with three family dispositions, five first-run
+observations about the codify-convention skill's first operational
+exercise, a fourth observation-grain instance of
+`audit-fix-verify-surfaces-banking` (banking only — deferral status
+unchanged per the family's re-evaluation trigger requirements), and
+N=1 of a new family covering the first run of the composition this
+arc exercised. The five first-run observations accumulate into
+substrate for a possible ARC 3.5; not pre-closed.
+
+### Outcome summary
+
+Three threshold-meeting families at ARC 3 STEP 2:
+
+| Family | Disposition | Commit / Status |
+|--------|---|---|
+| `caveat-prediction-vs-empirical-resolution` (N=3) | **GRADUATED** | `6d3a911` → `conventions/prediction-grounding.md` |
+| `audit-fix-verify-surfaces-banking` (N=3) | **DEFERRED** | `c754810` (positive choice; re-evaluation trigger documented) |
+| `regex-permissive-cost-class` (N=4 banked, N=3 distinct cost classes) | **GRADUATED** | `a10480d` → `conventions/regex-permissive-matching.md` (paired with `prediction-grounding.md`) |
+
+Detector behavior post-ARC-2.5 (and after both graduations):
+
+- STEP 1 verification passed cleanly on first run (all expected family
+  counts matched; ARC 2 + ARC 2.5 regression checks held). No
+  prompt-prediction mismatches fired this arc (ARC 3 prompt was
+  refreshed at STEP 0 reconciliation to reflect post-ARC-2.5 state).
+- Stage A graduation check picked up both graduated families on
+  the immediate next detector run after their respective commits
+  — the loop closes cleanly through canonical surfaces. The
+  detector-surfaces → operator-evaluates → codify-convention →
+  detect-as-graduated cycle is operationally proven, not just
+  designed.
+
+### audit-fix-verify-surfaces-banking (fourth-instance — observation grain only; deferral status unchanged)
+
+- (audit-fix-verify-surfaces-banking) fourth-instance — ARC 3's
+  graduation-and-codification work surfaced five first-run
+  observations beyond the arc's resolution target (the three
+  graduation decisions). The observations are enumerated below in
+  this entry. The audit-fix-verify-surfaces-banking pattern as
+  observed: arcs structured with a verification step (here, the
+  STEP 1 detector run + the per-family STEP 2 evaluations + the
+  STEP 3 codify-convention invocations) produce banking entries
+  the planning didn't anticipate.
+
+  **Banking only — deferral status unchanged.** The family's
+  deferral entry (commit `c754810`) requires the re-evaluation
+  trigger to be a 4th instance "from an operationally distinct
+  context (different substrate, different arc origin, different
+  artifact class)." ARC 3 is partially distinct (different
+  artifact class — convention files vs script edits — and
+  different arc origin — graduation work vs build/fix work), but
+  shares the friction-pattern-detector substrate with the prior
+  three instances. The re-evaluation trigger is not cleanly fired;
+  banking the 4th instance honors observation discipline without
+  prematurely re-graduating the family. Future operator
+  re-evaluation may consider whether ARC 3 should count toward
+  the diverse-context criterion.
+
+### First-run observations on codify-convention (5 distinct findings)
+
+These are surfaced from the codify-convention skill's first
+operational exercise across two graduations (families 1 and 3).
+Banked together for ARC 3.5 substrate consideration.
+
+#### Observation 1: Missing "Evaluation basis" field in codify-convention footer
+
+The skill's `Promoted from` footer template captures provenance
+(where the pattern came from, evidence basis, commits) but does
+not capture justification (the load-bearing / generalizable /
+stable reasoning that determined graduation). Future readers of a
+convention file see *what* was codified and *from where*, but not
+*why* the criteria were met.
+
+Operator-added field workaround applied inline at both family 1
+and family 3 codifications: added an "Evaluation basis" section
+after the `Origin` footer with three sub-bullets (load-bearing,
+generalizable, stable). Precedent-setting; future codifications
+inherit this shape without requiring skill amendment.
+
+Skill-amendment candidate: formalize the "Evaluation basis" field
+in the codify-convention skill's output specification.
+
+#### Observation 2: Convention applied to its sibling at graduation time
+
+When evaluating family 2 (audit-fix-verify-surfaces-banking),
+family 1's just-codified discipline (`prediction-grounding`) was
+operationally invoked as the lens — testing whether family 2's
+name encoded a prediction-without-empirical-grounding about
+generalization. Family 1's discipline-loop closed within minutes
+of its own codification.
+
+N=1 of a potential new family: "convention applied to its sibling
+at graduation time." The shape recurs when sibling families
+graduate close together — the first graduate's discipline becomes
+operational substrate for the second's evaluation. Bank for future
+N counting; observation-only at this grain.
+
+#### Observation 3: Descriptive vs prescriptive load-bearing distinction
+
+The "load-bearing" graduation criterion (from the codify-convention
+skill and CLAUDE.md codification routing) has an unnamed sub-shape
+distinction:
+
+- **Prescriptive load-bearing.** The pattern generates operator
+  action with imperative verbs and decision points. Family 1
+  ("stop, surface, explain — not pre-edit the prediction") and
+  family 3 ("anticipate cost classes; ground discriminators
+  empirically") are prescriptive.
+- **Descriptive load-bearing.** The pattern helps understanding
+  but doesn't directly drive operator action. Family 2's substance
+  ("anticipate banking at the verify step") is descriptive — a
+  heads-up rather than a discipline-with-actions.
+
+The codify-convention skill's current framing treats load-bearing
+as monolithic. Family 2's evaluation made the distinction visible:
+even with stronger generalization evidence, a descriptive-only
+pattern generates a thinner convention than a prescriptive one.
+
+Bank as N=1 of potential discipline refinement to graduation
+criteria. If the distinction surfaces again at future evaluations,
+graduation criteria may benefit from formalizing prescriptive
+load-bearing as a stricter sub-criterion.
+
+#### Observation 4: Family-misattribution by substrate vs mechanism
+
+Family 3's instance 4 (the audit-grounded resolution of cost class
+#3) was banked at ARC 2.5 close under
+`regex-permissive-cost-class` because the substrate it operated on
+was regex. But the pattern of the observation —
+empirical-audit-rather-than-magic-number — is
+`prediction-grounding`'s family-shape, not
+`regex-permissive-cost-class`'s. The banking conflated *what the
+observation was about* (mechanism: empirical grounding) with *what
+surface the observation operated on* (substrate: regex).
+
+Banking discipline question: when an observation can plausibly fit
+two family taxonomies (one by substrate, one by mechanism), which
+takes precedence? Current banking precedent: by substrate (where
+the issue manifested). Alternative: by mechanism (what discipline
+the observation instantiates).
+
+N=1 of new potential family: `family-misattribution-by-substrate-
+vs-mechanism`. Worth banking — same shape could recur whenever
+codifying meta-disciplines that span domains.
+
+#### Observation 5: Cross-reference upstream artifacts after graduation
+
+After family 1 and family 3 codifications, the
+`docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+§Bucket extraction amendments (which documented the cost-class
+discoveries that became these families) still reference the
+discoveries as caveats rather than pointing at the new convention
+files as canonical sources. The spec carries the provenance of the
+cost-class discoveries; the conventions carry the codified
+discipline.
+
+Workflow gap: codify-convention skill produces the convention file
+and registers it in conventions/README.md, but doesn't update
+upstream artifacts (specs, briefs, code comments) that referenced
+the candidate-pre-codification. Future operators reading the spec
+see the discoveries as standalone caveats rather than seeing them
+as instances of a codified discipline.
+
+Action item (not done in this arc; batched for end-of-arc cleanup):
+update friction-pattern-detector design spec §Bucket extraction to
+cross-reference `conventions/prediction-grounding.md` and
+`conventions/regex-permissive-matching.md` as canonical sources;
+spec retains discovery provenance.
+
+### first-runs-of-new-compositions (new family, N=1)
+
+ARC 3 exercised a new operational composition for the first time:
+
+  detector-surfaces-graduate-now-candidates →
+    operator-evaluates-per-family-with-framework →
+      codify-convention-produces-convention-file →
+        detector-surfaces-as-graduated
+
+The composition's pieces existed individually before ARC 3 (detector
+built ARC 1-A→F; codify-convention skill authored v2.2 reorg Commit B;
+graduation framework documented in conventions/README.md §Three-
+category codification taxonomy). ARC 3 was the first end-to-end run.
+
+The composition exercised cleanly twice in this arc (families 1
+and 3) and produced a deferral once (family 2). Two of three runs
+completed the full pipeline; one stopped at the operator-evaluates
+step.
+
+N=1 of new family `first-runs-of-new-compositions`. Future
+first-run-of-composition arcs would count from here. Banking is
+substrate for the convention-shape ARC 3 just exercised; future
+instances may surface specific composition cost classes (analogous
+to how regex-permissive-matching surfaced cost classes within
+regex permissive matching).
+
+### ARC 3.5 anticipation (kept open, not pre-closed)
+
+Five first-run observations + the family-misattribution observation +
+the N=1 of first-runs-of-new-compositions accumulate into substrate
+for a possible ARC 3.5 about codify-convention's first-run findings
+and adjacent discipline refinements.
+
+None of these are blockers for closing ARC 3. The two graduations
+landed cleanly; the deferral entry documents itself; the close
+observations are banked. Whether ARC 3.5 materializes depends on
+the operator's read of whether the accumulated observations justify
+their own arc (a skill-amendment + discipline-refinement arc) or
+whether they sit as observation-grain substrate awaiting future
+recurrence before any action.
+
+Possible ARC 3.5 scope candidates (not commitments):
+
+- Formalize "Evaluation basis" field in codify-convention skill.
+- Refine load-bearing criterion to distinguish prescriptive vs
+  descriptive sub-shapes.
+- Document substrate-vs-mechanism precedence rule for family-tag
+  banking.
+- Add an "update upstream artifacts" step to codify-convention's
+  output specification.
+- Update friction-pattern-detector design spec to cross-reference
+  the new conventions (the immediate action item).
+
+The list is enumeration, not prioritization. Operator decides if
+and when ARC 3.5 fires.
+
+### Cross-references
+
+- Family 1 graduation commit: `6d3a911`.
+- Family 2 deferral commit: `c754810`.
+- Family 3 graduation commit: `a10480d`.
+- New convention files:
+  `docs/04_engineering/conventions/prediction-grounding.md`,
+  `docs/04_engineering/conventions/regex-permissive-matching.md`.
+- ARC 3 prompt (substrate): `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (post-ARC-2.5 reconciled version at commit `b49fef8`).
+- Prior banking entries (the substrate the graduations operated on):
+  2026-05-18 H2 + three 2026-05-19 H2s above (ARC 2 banking, ARC 3
+  STEP 1 STOP banking, ARC 2.5 close banking).
