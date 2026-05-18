@@ -52,7 +52,17 @@ file structure is topical, not chronological.
   plans): ground against empirical evidence at write time, or
   explicitly mark as ungrounded and document the verification step.
   Codified Phase 6.5 from `caveat-prediction-vs-empirical-resolution`
-  family at N=3.
+  family at N=3. Paired with `regex-permissive-matching.md` for the
+  design-time-vs-resolution-time split.
+- [`regex-permissive-matching.md`](./regex-permissive-matching.md)
+  — design-time discipline for permissive regex matching against
+  non-trivial input populations: anticipate cost classes beyond the
+  classical noise/signal split (over-match into similar-shaped
+  strings, character-class incompleteness collapsing distinguishable
+  subgroups, priority-ordered preemption hiding real signal).
+  Codified Phase 6.5 from `regex-permissive-cost-class` family at
+  N=3 distinct cost classes. Paired with `prediction-grounding.md`
+  for the resolution-time discipline.
 
 ## Routing rule
 

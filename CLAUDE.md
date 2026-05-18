@@ -217,11 +217,39 @@ feasible, explicitly mark as ungrounded and document the
 verification step that will check. Full discipline:
 `docs/04_engineering/conventions/prediction-grounding.md`.
 
+**Paired with** `regex-permissive-matching` (below) for the
+design-time-vs-resolution-time split: design-time cost-class
+enumeration lives there; resolution-time empirical grounding lives
+here. The pairing is part of the discipline's shape — encountering
+one convention, look for the other.
+
 Codified at Phase 6.5, 2026-05-19, from N=3 observation-grain
 banking across spec-caveat-writing, parameter-setting, and
 prompt-authoring surfaces. The convention's "stop, surface,
 explain" operational guidance for verification-fire-on-divergence
 holds across all three surfaces.
+
+### Regex permissive-matching cost classes (pointer to canonical home)
+
+When designing a regex with permissive matching against non-trivial
+input populations, anticipate cost classes beyond the classical
+noise/signal split: over-match into similar-shaped strings,
+character-class incompleteness collapsing distinguishable subgroups,
+priority-ordered preemption hiding real signal. Full discipline:
+`docs/04_engineering/conventions/regex-permissive-matching.md`.
+
+**Paired with** `prediction-grounding` (above) for the design-time-
+vs-resolution-time split: enumerate cost classes at design time
+here; ground discriminators empirically at fix time via
+prediction-grounding. The pairing is part of the discipline's
+shape — encountering one convention, look for the other.
+
+Codified at Phase 6.5, 2026-05-19, from N=3 distinct cost classes
+observed in the friction-pattern-detector's bucket-extraction
+logic. The cost classes have general analogs in regex permissive
+matching beyond this project (URL/path regex over-match; hostname/
+version regex character-class collapse; tokenizer/parser
+priority-ordered shadowing).
 
 ## Phase 1 Simplifications
 
