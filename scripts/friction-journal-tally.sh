@@ -187,6 +187,31 @@ done
 echo
 echo
 echo "## T1.5 — Untagged instance markers (name-this candidates)"
-echo "(awaiting aggregation)"
+
+# T1.5 collection: untagged marker lines (no extractable bucket).
+# Sort by date desc so stale entries sink to the bottom per design
+# spec §Implementation handoff render rule.
+#
+# Output columns: line_no | date | line_text
+
+T15_ROWS=$(printf '%s\n' "$EXTRACTED" | awk -F'\t' '
+$1 == "" {
+  print $2 "\t" $3 "\t" $4
+}' | sort -t$'\t' -k2,2 -r)
+
+T15_COUNT=$(printf '%s\n' "$T15_ROWS" | grep -c . || true)
+echo "  Total untagged-marker lines: $T15_COUNT"
+echo
+printf "  %-6s  %-12s  %s\n" "line" "date" "text"
+printf "  %-6s  %-12s  %s\n" "----" "----" "----"
+printf '%s\n' "$T15_ROWS" | while IFS=$'\t' read -r line_no date text; do
+  [[ -z "$line_no" ]] && continue
+  # Truncate long lines for readability — full line stays in the journal at the cited line number.
+  if [[ ${#text} -gt 120 ]]; then
+    text="${text:0:117}..."
+  fi
+  printf "  %-6s  %-12s  %s\n" "$line_no" "$date" "$text"
+done
+echo
 
 exit 0
