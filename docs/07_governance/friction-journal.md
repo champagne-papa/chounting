@@ -13254,3 +13254,117 @@ third time in a context where a topical convention is the better fit.
   metacharacters).
 - MEMORY.md `project_v22_reorg_complete.md` (new project memory at
   Commit F close capturing the v2.2 reorg arc state).
+
+## 2026-05-18 — Friction-pattern-detector first-implementation + verification: 7 first-instance observations across 3 families
+
+Banking 7 first-instance pattern observations surfaced during the
+friction-pattern-detector's first-implementation execution
+(2026-05-17 → 2026-05-18) and the post-implementation verification
+round. Three families tagged for consistent within-family N counting
+when the detector itself is re-run against the journal.
+
+### Family A: tool-contract-drift (2 first-instances)
+
+- (tool-contract-drift) first-instance — GNU grep -E supports `\b`
+  word boundaries in EREs; gawk does not. gawk also escape-processes
+  `\b` into a literal backspace when passed via `-v`. Workaround in
+  `scripts/friction-journal-tally.sh`: embed the regex literal in the
+  awk script (not via `-v`) and use `\<` / `\>` (gawk's word-boundary
+  anchors) inside awk. Documented in script comment block at the
+  marker-detection awk site. Surface: tool-A's-regex-extensions ≠
+  tool-B's documented contract.
+
+- (tool-contract-drift) first-instance — bash `read` with
+  `IFS=$'\t'` collapses consecutive tab delimiters because tab is a
+  whitespace IFS char. With 5 tab-separated fields where field 3 is
+  empty, `read -r a b c d e` shifts all subsequent fields left by
+  one, masquerading as a column-misalignment bug. Workaround in
+  the same script: substitute non-empty sentinel `-` in awk output
+  for empty fields. Same family-shape as the grep/gawk finding:
+  tool's observable behavior departs from operator expectation
+  derived from the tool's surface contract.
+
+### Family B: plan-empirical-mismatch (2 first-instances)
+
+- (plan-empirical-mismatch) first-instance — Plan's Task 5 Step 3
+  verification command for T1.5 sort order used
+  `awk '{print $2}'` to extract the date column from rendered
+  output. awk default whitespace splitting collapses multi-space
+  runs, so rows with empty dates had their first text word counted
+  as the "date" field. Verification produced false-mismatch reports
+  on empty-date rows even when the underlying sort was correct.
+  Workaround during execution: extract only dated rows via filtered
+  grep before sorting. Plan-side residual: the verification command
+  needs a fixed-column extraction shape (cut/sed by character
+  position, or read TSV directly).
+
+- (plan-empirical-mismatch) first-instance — Plan's Stage B
+  graduation check (Task 7) assumed codification footers carry
+  single-token bucket IDs in `Promoted from: <bucket>` form. Actual
+  footers in `conventions/*.md` carry descriptive provenance phrases
+  ("Phase 1.5A convention codification batch", "chunk-6.3a
+  implementation notes"). Stage B as designed returns zero matches.
+  Deferred at first-implementation with a marker comment in the
+  script; reactivation requires the codification convention to
+  evolve toward bucket-id-style provenance, or Stage B to evolve
+  toward fuzzy footer-content matching.
+
+### Family C: regex-permissive-cost-class (3 first-instances)
+
+- (regex-permissive-cost-class) first-instance — B1's permissive
+  regex `\([^()[:space:]]{1,40}\)` matches status-annotation
+  parentheticals like `(sustained)`, `(see ADR-...)` that the spec
+  did not enumerate as a false-positive shape. Spec §Bucket
+  extraction accepts the cost as noise-class (operator filters the
+  T1 row in 2 seconds). Documented as such, no in-script change.
+
+- (regex-permissive-cost-class) first-instance — B2's permissive
+  regex `[A-Z][A-Z0-9-]+[A-Z0-9]` requires an uppercase tail.
+  Lowercase-suffixed bucket families (S29a, S29b, S29c) collapse
+  under the bare-prefix bucket (S29) because the lowercase
+  character is excluded from the character class. Operator
+  disambiguation cost rather than mis-attribution — all collapsed
+  instances are real S29-family observations needing a/b/c split
+  by `source_lines` inspection. Acceptable for surfacing-tool cost
+  shape; B2 refinement candidate (change tail to `[A-Z0-9a-z]`)
+  if a future audit shows the cost is too high.
+
+- (regex-permissive-cost-class) first-instance — B1's permissive
+  matching has a **signal-hiding subclass** distinct from the
+  noise-class tradeoff above: false-positive parenthesized tokens
+  like `(sustained)` shadow lines that should land in T1.5 because
+  their parenthesized form preempts the bucket extractor while the
+  real observation name sits in bare prose elsewhere on the line.
+  The operator who discards the noise row also discards the real
+  signal underneath, without seeing it. Documented as a known
+  limitation in the spec (§Bucket extraction caveat added at this
+  banking commit); resolution deferred pending empirical audit of
+  all-lowercase-letter parenthesized bucket usage before any B1
+  discriminator change.
+
+### Family-level codification status
+
+Three families surfaced together in a single implementation arc.
+Family C is at N=3 within this banking alone; Families A and B are
+at N=2 each within this banking. **No family-level codification
+fired at observation-grain** per the codify-while-deciding-not-
+while-implementing principle — these are observation-grain records
+pending future independent firings before graduation evaluation.
+The friction-pattern-detector itself, re-run after this banking,
+will surface Family C as a T1 graduate-now candidate (count=3,
+ungraduated); this is the system working as designed and is the
+prompt for a future retrospective-close evaluation of whether the
+family is genuinely codifiable or arc-bound.
+
+### Cross-references
+
+- Friction-pattern-detector design spec:
+  `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+  (§Bucket extraction caveat added at this banking commit for the
+  Family C signal-hiding entry).
+- Friction-pattern-detector implementation plan:
+  `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-plan.md`
+  (Family B entries surface against plan's Task 5 Step 3 and Task 7).
+- Implementation commits: `64bbc31`...`1ac6dbe` (13 commits on staging).
+- Tool surfaces: `scripts/friction-journal-tally.sh`,
+  `.claude/agents/friction-pattern-detector.md`.
