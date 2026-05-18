@@ -116,6 +116,51 @@ For each candidate:
   bucket's existing tagged instances.
 - **Confidence:** high / medium (only surface ≥medium).
 
+## T3 — Possible new bucket (gated, default off)
+
+**Gated behind `--explore`.** Default invocations skip T3. T3 is
+the only path that does unanchored pattern discovery, and its
+output is intrinsically noisier — surface it only when the
+operator is doing a deliberately exploratory pass (e.g., at
+retrospective close with fresh eyes).
+
+### Procedure
+
+1. Check whether `--explore` was passed. If not, skip T3
+   entirely.
+2. Read the windowed journal slice.
+3. Identify recurring patterns in the window that do NOT map to
+   any existing T1 bucket. "Recurring" means appearing in 2+
+   distinct entries with similar structure (verb, surface,
+   friction type).
+4. Before surfacing a candidate, **dedup against memory.** Read
+   `MEMORY.md` and per-topic memory files at
+   `/home/philc/.claude/projects/-home-philc-projects-chounting/memory/`.
+   If the candidate pattern is already known by name in memory,
+   do NOT surface it — memory acts as known-pattern registry.
+5. Surface only patterns that pass the memory-dedup filter.
+
+### Memory dedup is filter, not substrate
+
+Memory is read here only to answer "is this already known by
+name somewhere?" — never to count instances. Counting against
+memory would double-count observations through a derivative
+surface (spec §Substrate scope). If a pattern is in memory but
+not yet codified in a convention file, that's a codify-
+convention question, not a T3 question.
+
+### T3 output shape
+
+For each candidate:
+
+- **Suggested name:** a tentative bucket label (operator may rename).
+- **Instances:** 2+ line ranges from the journal where the pattern appears.
+- **Pattern signature:** one sentence describing the shared structure.
+- **Confidence:** low / medium / high.
+- **Memory dedup status:** unique (passed filter) — or, if a
+  near-match was found, "near-match: <memory pattern name>;
+  surfacing for operator disambiguation."
+
 ## Output shape
 
 (awaiting implementation — Task 13)
