@@ -33,7 +33,39 @@ codification surface.
 
 ## Invocation flow
 
-(awaiting implementation — Tasks 10-13)
+1. **Compute the active window.**
+   - Glob `docs/07_governance/retrospectives/*.md` for the most
+     recently dated file (filename prefix `YYYY-MM-DD`).
+   - If a most-recent retrospective exists, `window_start` =
+     that date. The window spans from `window_start` to today,
+     applied to T2 (and T3 if `--explore`).
+   - If no retrospective exists in the glob, fall back to
+     `window_start` = today minus 30 days.
+   - If the caller passes `--since YYYY-MM-DD`, that date
+     overrides both (manual window override).
+   - Window applies only to T2 and T3. T1 and T1.5 from the tally
+     script are unwindowed by design (per spec §Window) — the
+     `latest_marker_date` column lets the caller filter visually.
+
+2. **Invoke the tally script.**
+   - Run `bash scripts/friction-journal-tally.sh` (no arguments).
+   - Parse stdout into three sections: T1 table, T1.5 table,
+     Summary. Keep the bucket-ID list from T1 — this is the
+     anchor set for the T2 scan.
+   - The script always exits 0; do not treat its exit code as a
+     signal.
+
+3. **Read the windowed journal slice.**
+   - Use Read or Grep+Read to extract entries from
+     `docs/07_governance/friction-journal.md` whose nearest H2
+     date heading is on or after `window_start`.
+   - This slice is the substrate for T2 and T3.
+
+4. **(T2 scan — see body section below.)**
+
+5. **(T3 scan if `--explore` — see body section below.)**
+
+6. **Emit consolidated stdout report** (output shape section below).
 
 ## Output shape
 
