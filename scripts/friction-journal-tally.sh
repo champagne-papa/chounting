@@ -54,22 +54,30 @@ MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
 # (no date), retain the previous date until the next dated H2.
 #
 # Bucket regex priorities (first match in the window wins):
-#   B1: \([^()[:space:]]{1,40}\)     — paren-delimited single-token bucket
-#       + heuristic discriminator (added 2026-05-19). Permissive matching
-#       captures the bucket-ID-shaped span; the heuristic requires the
-#       candidate to contain at least one of {digit, hyphen, non-ASCII
-#       byte}. Accepts (cadence-β-i-a), (α), (γ'), (RI-6), (β-1), (Z1).
-#       Rejects (sustained), (a)/(b)/(c), (i)/(ii), (above), (deferred)
-#       etc. — the 2026-05-19 audit confirmed no legitimate single-word-
-#       lowercase bucket IDs exist in the journal's top-30 such tokens
-#       (all enumeration markers, status annotations, commit-message
-#       scopes, or prose asides). Fall-through: a rejected B1 match
-#       continues to B2/B3, so lines whose status-annotation parenthetical
-#       previously shadowed the bare-prose observation now correctly drop
-#       to T1.5 as "name this" candidates. Locale-independent (byte
-#       negation, not character class). Note: if a future bucket-naming
-#       convention introduces lowercase-only-letters buckets, the
-#       heuristic would reject them; revisit at that time.
+#   B1: \([^()[:space:]]+\)          — paren-delimited single-token bucket
+#       + shape rejects + heuristic discriminator. Permissive matching
+#       captures the bucket-ID-shaped span; two filters in series determine
+#       whether to return the candidate or fall through to B2/B3.
+#
+#       Length cap removed 2026-05-19 (ARC 2.5) per empirical audit of
+#       parenthesized-token length distribution in the journal: real
+#       buckets and non-bucket tokens (file paths, code refs) overlap
+#       across 27-65+ chars, so no length value cleanly separates them.
+#       Shape rejects carry the discrimination instead. See friction-journal
+#       2026-05-19 ARC 2.5 banking for the audit findings table.
+#
+#       Shape rejects (fall through to B2/B3 if any fire):
+#         - candidate starts or ends with backtick (`)  →  code/path ref
+#           wrapped in `...` (e.g., `docs/...md`, `service.method`)
+#         - candidate contains slash (/)                →  file path
+#       Heuristic discriminator (ARC 2, 2026-05-19): candidate must
+#       contain at least one of {digit, hyphen, non-ASCII byte}. Rejects
+#       all-lowercase status annotations, enumeration markers, prose
+#       asides. Accepts (cadence-β-i-a), (α), (γ'), (RI-6), (β-1), (Z1),
+#       (D2.7-gate-with-substrate-ship-only-exception), and the longer
+#       kebab-case bucket families.
+#
+#       Locale-independent (byte negation, not character class).
 #   B2: \b([A-Z][A-Z0-9-]+[A-Z0-9])\b — uppercase code-like
 #       (catches F-J-14, RI-6, Z1 when unparenthesized)
 #   B3: \b((Path|Framing|Approach|Method) [A-Z][A-Za-z']*)\b
@@ -90,25 +98,35 @@ MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
 
 EXTRACTED=$(awk '
 function extract_bucket(win,    candidate, copy) {
-  # B1: paren-delimited single-token bucket + heuristic discriminator.
-  # Heuristic (added 2026-05-19): the candidate must contain at least
-  # one of {digit, hyphen, non-ASCII byte}. Non-ASCII detection uses
-  # gsub-strip-ASCII-printable-and-check-residual because gawk regex
-  # character classes do not accept \xHH or \NNN byte-value escapes;
-  # the literal printable-range [!-~] (0x21..0x7E) approach is portable.
-  # Fall-through: when B1 matches but the heuristic rejects, control
-  # flows past the if-block to B2/B3.
-  if (match(win, /\([^()[:space:]]{1,40}\)/)) {
+  # B1: paren-delimited single-token bucket + shape rejects + heuristic.
+  # Length cap removed 2026-05-19 (ARC 2.5); shape rejects + heuristic
+  # carry discrimination. See outer comment block above for full rationale
+  # and audit reference.
+  # Fall-through: if any shape reject fires OR the heuristic rejects,
+  # control flows past the if-block to B2/B3.
+  if (match(win, /\([^()[:space:]]+\)/)) {
     candidate = substr(win, RSTART+1, RLENGTH-2)
-    if (match(candidate, /[0-9-]/)) {
-      return candidate
+    # Shape rejects (ARC 2.5):
+    #   - backtick at start/end → code/path reference wrapped in `...`
+    #   - slash anywhere        → file path
+    if (substr(candidate, 1, 1) != "`" && \
+        substr(candidate, length(candidate), 1) != "`" && \
+        index(candidate, "/") == 0) {
+      # Heuristic (ARC 2): candidate must contain at least one of
+      # {digit, hyphen, non-ASCII byte}. Non-ASCII detection uses
+      # gsub-strip-ASCII-printable-and-check-residual because gawk regex
+      # character classes do not accept \xHH or \NNN byte-value escapes;
+      # the literal printable-range [!-~] (0x21..0x7E) approach is portable.
+      if (match(candidate, /[0-9-]/)) {
+        return candidate
+      }
+      copy = candidate
+      gsub(/[!-~]/, "", copy)
+      if (length(copy) > 0) {
+        return candidate
+      }
     }
-    copy = candidate
-    gsub(/[!-~]/, "", copy)
-    if (length(copy) > 0) {
-      return candidate
-    }
-    # heuristic rejected — fall through to B2/B3
+    # shape-rejected OR heuristic-rejected — fall through to B2/B3
   }
   # B2: uppercase code-like
   if (match(win, /[A-Z][A-Z0-9-]+[A-Z0-9]/)) {
