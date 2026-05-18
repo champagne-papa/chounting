@@ -161,10 +161,30 @@ false-positive parenthesized tokens like `(sustained)` (used as a
 status annotation across many bare-prose observations) can shadow
 lines that belong in T1.5 rather than merely add noise rows, because
 their parenthesized form preempts the bucket extractor while the real
-observation name sits in bare prose elsewhere on the line; resolution
-deferred to a future session with an empirical audit of all-
-lowercase-letter parenthesized bucket usage in the journal before
-any B1 discriminator change.
+observation name sits in bare prose elsewhere on the line;
+~~resolution deferred to a future session with an empirical audit of
+all-lowercase-letter parenthesized bucket usage in the journal before
+any B1 discriminator change.~~ Resolved 2026-05-19 via heuristic
+discriminator: B1's matched content must contain at least one of
+{digit, non-ASCII byte, hyphen} to be returned; otherwise the
+function falls through to B2 and B3. The empirical audit
+(2026-05-19) of `grep -oE '\([a-z]+\)'` against the journal
+surfaced zero legitimate bucket IDs in the top 30 by frequency (all
+were enumeration markers, status annotations, commit-message scopes,
+code references, or prose asides), confirming the heuristic
+over-rejects nothing of value. Verification surfaced a finding the
+original caveat did not anticipate: **the heuristic primarily
+redirects attribution rather than removing it** — most previously-
+shadowed lines had a real B2-shape bucket co-located in the same
+window, so when B1 rejects the noise token, the fall-through to
+B2/B3 finds the real bucket. The net T1.5 increase was only ~20
+lines (not the ~518 the prior framing predicted), because most (but
+not all) shadowed observations were tagged after all; B1 was
+preempting B2's access to them. The remaining ~20 lines were
+genuinely untagged and correctly surface in T1.5 — the original
+caveat's framing held for that subset. Trade-off documented but not
+anticipated: future buckets that happen to be all-lowercase-letters-
+only would be rejected by the heuristic.
 
 ## Graduation check — two stages
 
