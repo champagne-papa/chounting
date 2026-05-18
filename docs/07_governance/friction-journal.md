@@ -12970,3 +12970,160 @@ referencing the new canonical home.
 - MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
   RLS pattern's canonical implementation precedent referenced in the
   codification-candidate framing).
+
+---
+
+## 2026-05-17 — Commit E (50365fa) operator review — 3 findings banked (1 N=3 graduated, 1 N=2 candidate, 1 cosmetic)
+
+Operator review of Commit E (v2.2 reorg two-subagent addition at
+`50365fa` + prep `c243d04`) surfaced three observations: one
+N=3-graduated codification candidate, one N=2 codification candidate
+related to a Commit C finding, and one cosmetic observation. All
+banked below the codification threshold for this commit; Finding 1's
+codification work is a separate operator-initiated activity via the
+`codify-convention` skill.
+
+### Finding 1: `.claude/*` gitignore un-ignore discipline for team-shared subdirectories (observation-grain N=3, graduated to codifiable)
+
+When adding a new `.claude/<subdir>/` as team-shared infrastructure,
+the `.gitignore`'s `.claude/*` exclude rule requires an explicit
+`!.claude/<subdir>/` + `!.claude/<subdir>/**` un-ignore pair (both
+lines required — git can't re-include children of an excluded
+directory without first re-including the directory itself). The
+un-ignore lands as a small atomic prep commit BEFORE the content
+commit. The discipline operates at two layers:
+
+- **Broader discipline.** Verify gitignore state for any
+  `.claude/<subdir>/` planned as team-shared infrastructure BEFORE
+  the content commit. If gitignore excludes it, prep commit lands
+  first; content commit lands on top.
+- **Specific mechanism (pre-flight check).** `git check-ignore -v
+  .claude/<subdir>/test-file.md` before content commit. Exit 0 with
+  match against `.claude/*` (not against the un-ignore) means the
+  gitignore prep didn't take effect; debug ordering (un-ignores must
+  come AFTER the `.claude/*` exclude in `.gitignore` ordering;
+  `git check-ignore -v` surfaces the matching rule for fast
+  debugging).
+
+**Evidence (observation-grain N=3):**
+
+- **2026-05-05 ADR-0020 substrate session:** `.claude/skills/`
+  un-ignore added after the skills directory was silently gitignored
+  from 2026-04-19 skills migration. Pre-flight gap caught at session
+  start; un-ignore prep landed before skills could be committed.
+- **2026-05-17 Commit C prep `f884d25`:** `.claude/rules/` un-ignore
+  added before the v2.2 reorg 3-file pilot at Commit C (`b54ae6b`).
+  Pre-flight gap caught during pilot dispatch.
+- **2026-05-17 Commit E prep `c243d04`:** `.claude/agents/`
+  un-ignore added before the two-subagent content commit at Commit E
+  (`50365fa`). Pre-flight gap caught during E dispatch.
+
+Three distinct contexts (ADR-0020 substrate session, v2.2 Commit C,
+v2.2 Commit E), three distinct `.claude/<subdir>/` targets (skills,
+rules, agents). Pattern surfaced as a NEW finding in each context
+per the observation-grain discipline.
+
+**Disposition: graduated to codifiable.** Codification itself needs
+the `codify-convention` skill to walk the routing decision tree;
+destination is genuinely ambiguous between `conventions/code.md`
+(repo-setup discipline) and a new meta-section in
+`conventions/README.md` (alongside codification thresholds). Per
+the skill's "do not invent routing logic" guidance, the routing
+decision should go through the skill rather than be picked
+unilaterally at banking time. Codification is a separate
+operator-initiated activity post-banking.
+
+**Mechanism note from the discipline:** the gitignore comment block
+shape (dated + reasons + cross-ref to design source) used at each
+of the three prep commits has itself stabilized into a sub-pattern
+worth noting in the eventual codification. The .gitignore at HEAD
+now has three parallel dated comment blocks (2026-05-05, 2026-05-17
+×2) following the same shape; the shape is recognizable and
+reusable for the next `.claude/<subdir>/` addition.
+
+### Finding 2: RLS canonical home gap in `conventions/migrations.md` (observation-grain N=2, codification candidate)
+
+The RLS through-parent + `org_id`-derived-in-RPC pattern is used
+canonically across Phase 2/3 chunks but has never been formally
+codified in `conventions/migrations.md` or any ADR. Two instances
+of `.claude/*` infrastructure surfacing the gap when attempting to
+reference an RLS canonical body:
+
+**Evidence (observation-grain N=2):**
+
+- **2026-05-17 Commit C fix `417b7b3`:** the original
+  `.claude/rules/migrations.md` had a 5th bullet about "RLS
+  preservation" pointing at `conventions/migrations.md` for canonical
+  discipline. Operator review surfaced that no RLS section exists
+  there. Fix at `417b7b3` removed the bullet (Option B from the
+  three-option adjudication; bank for proper codification when
+  canonical home exists).
+- **2026-05-17 Commit E migration-reviewer `50365fa`:** the new
+  `.claude/agents/migration-reviewer.md` review checklist includes a
+  "RLS preservation" item that says "Tables holding org-scoped data
+  require the 4-policy RLS pattern (SELECT/INSERT/UPDATE/DELETE
+  through-parent with `org_id` derivation)" but doesn't point at a
+  canonical home (because none exists). The check is genuinely the
+  weakest part of the migration-reviewer's checklist.
+
+Same gap, two surfaces. The pattern of `.claude/*` infrastructure
+trying to project a canonical RLS body — and finding none — is what
+N=2 captures.
+
+**Disposition: bank pending N=3 third instance OR explicit
+codification work.** Either path graduates the candidate:
+
+- If a third instance surfaces (e.g., a future `.claude/rules/` or
+  `.claude/agents/` file references RLS without canonical home), the
+  observation-grain N=3 threshold is met; codification fires via
+  `codify-convention` skill. Likely destination: a new section in
+  `conventions/migrations.md` titled "RLS through-parent + org_id
+  derivation pattern" with evidence basis from Phase 2/3 chunks.
+- If proper codification work happens before a third instance
+  surfaces (e.g., as part of a future phase retrospective or
+  migration-discipline review), the RLS section lands at
+  `conventions/migrations.md` and Finding 2 is closed retroactively.
+
+Until either path fires, both `.claude/rules/migrations.md`
+(post-Commit-C, RLS bullet removed) and
+`.claude/agents/migration-reviewer.md` (post-Commit-E, RLS check
+without canonical pointer) have the same weakness around RLS
+verification. Acceptable as banking; not acceptable as long-term
+state.
+
+### Finding 3: `ledger-reviewer` canonical-source vs checklist asymmetry (cosmetic, no graduation)
+
+The Commit E `.claude/agents/ledger-reviewer.md` cites
+`docs/02_specs/control_matrix.md` in its canonical sources list but
+the review checklist doesn't have a corresponding explicit "check
+that any new mutation has a `control_matrix` row" item. The
+checklist's audit `before_state` capture item implicitly covers
+control-matrix consultation (because audit-row mapping is the
+control_matrix's role), but the asymmetry is real — a careful reader
+of the agent body might wonder whether control_matrix is a
+load-bearing source or a residual reference.
+
+**Disposition: leave for now.** Revisit if a real
+ledger-reviewer invocation surfaces a finding that explicitly needs
+a control_matrix check. Adding an explicit checklist item now would
+be a defensive change without evidence basis.
+
+### Cross-references
+
+- Commit E content commit at `50365fa` (the subagent files this
+  review surfaced findings against).
+- Commit E prep commit at `c243d04` (Finding 1's third instance).
+- Commit C aftermath fix at `417b7b3` (Finding 2's first instance —
+  RLS bullet removed from `.claude/rules/migrations.md`).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`;
+  the routing forcing function that Finding 1 codification would
+  invoke).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §6.2 (the
+  duplicate-authority-creep failure mode Finding 2 instantiates at
+  N=2; the routing-pointer-target verification gap).
+- 2026-05-17 post-Commit-C banking entry above (Finding 2 here
+  builds on Finding 3 there — same RLS canonical-home gap surfaced
+  at two distinct `.claude/*` infrastructure files).
+- MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
+  RLS pattern's canonical implementation precedent — context for
+  Finding 2's codification candidate).
