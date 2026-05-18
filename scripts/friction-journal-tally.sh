@@ -273,4 +273,19 @@ printf '%s\n' "$T15_ROWS" | while IFS=$'\t' read -r line_no date text; do
 done
 echo
 
+echo "## Summary"
+echo
+T1_TOTAL=$(printf '%s\n' "$T1_ROWS" | grep -c . || true)
+T1_UNGRADUATED=$(printf '%s\n' "$T1_ROWS" | while IFS=$'\t' read -r bucket count _ _ _; do
+  [[ -z "$bucket" ]] && continue
+  if [[ "${GRADUATED_A[$bucket]:-0}" == "0" ]] && [[ "$count" -ge 3 ]]; then
+    echo "$bucket"
+  fi
+done | grep -c . || true)
+echo "  T1 buckets total:                              $T1_TOTAL"
+echo "  T1 graduate-now candidates (N≥3, ungraduated): $T1_UNGRADUATED"
+echo "  T1.5 untagged-marker lines:                    $T15_COUNT"
+echo
+echo "  Exit: 0 (surfacing tool; counts above are the signal)"
+
 exit 0
