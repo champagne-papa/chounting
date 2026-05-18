@@ -13127,3 +13127,130 @@ be a defensive change without evidence basis.
 - MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
   RLS pattern's canonical implementation precedent — context for
   Finding 2's codification candidate).
+
+## 2026-05-17 — Commit F (6264944) operator review + reorg-arc closeout — 3 observations banked (1 partial-completion N=1, 1 tracking, 1 memory-extended N=2)
+
+Operator review of Commit F (v2.2 reorg final commit at `6264944` —
+two skills + skills README index update + lint script + install-hooks
+4-site integration + InstructionsLoaded hook committed to team-shared
+settings) surfaced three observations: one subagent partial-completion
+recovery (triggered by an internal tool error during dispatch), one
+forward-looking tracking item for the new lint script, and one
+backslash-escaping drift at N=2 (memory-extended at Commit F close).
+All banked below codification threshold for this commit. Commit F
+closes the v2.2 reorg arc; this banking entry is the closeout-
+observations companion to the arc.
+
+### Finding 1: Subagent mid-execution tool-error and partial-completion recovery (observation-grain N=1, bank pending N=2)
+
+The Agent tool call dispatching the Commit F execution prompt returned
+an internal tool error mid-execution. The subagent had completed Steps
+1, 2, 2.5, 2c, and the file-write portion of Step 3 (lint script body
+written) before the error; the chmod+x of Step 3, the four-site
+install-hooks.sh integration of Step 4, the settings.json hook of
+Step 5, the acceptance checks, and the commit itself had not run when
+the error surfaced. The subagent left the working tree in a
+half-finished state: 4 files modified and 3 files added on disk, no
+staged changes, no commit. The skill files, CLAUDE.md trim, and skills
+README update were all spec-compliant when inspected after the error;
+the partial state was salvageable rather than corrupt.
+
+Recovery: the orchestrator (this session's main agent) verified the
+partial work against the v2 prompt's spec, then completed the remaining
+steps directly (chmod, four install-hooks.sh edits, settings.json
+hook, acceptance checks, commit) rather than re-dispatching a fresh
+subagent. Re-dispatching with the same prompt would risk the subagent
+re-doing work that was already done, including potentially overwriting
+the skill files with minor variations that would lose the v2 prompt's
+UTF-8 round-trip discipline. Direct completion preserved the partial
+work and reached commit cleanly.
+
+**Disposition: bank as N=1 observation, await N=2.** The failure mode
+is real (subagent execution is not transactional within a session;
+mid-execution tool errors can leave the working tree at an arbitrary
+intermediate state), but a single instance is below codification
+threshold. If a future multi-step subagent dispatch surfaces the same
+shape, it graduates to N=2 — the codification candidate would be
+around "operator-supervised subagent execution requires
+fallback-completion discipline" with the operator verifying partial
+work and completing the remainder rather than re-dispatching.
+
+The recovery itself encodes a sub-discipline worth noting at
+codification time: before deciding between re-dispatch and direct
+completion, the operator must verify (a) which scope items completed,
+(b) whether the partial work is spec-compliant, (c) whether
+re-dispatch would risk overwriting good work. Direct completion is
+the right move when (a) and (b) are positive AND (c) is a real risk.
+
+### Finding 2: `lint-rules-frontmatter.sh` first real-world invocation pending (forward-looking tracking item)
+
+The lint script landed at Commit F (Step 3) but no real-world invocation
+has occurred yet — Commit F itself did not stage any `.claude/rules/*.md`
+files, so the new lint section in the pre-commit hook was a no-op for
+this commit. The synthetic negative test in Check 4 confirmed the
+script catches an unquoted glob pattern; the positive test confirmed
+existing rules pass. But the canonical first invocation against a
+real edit happens at the next `.claude/rules/` modification.
+
+Whenever someone next touches `services.md`, `migrations.md`, or
+`docs-codification.md` (the 3-file pilot from Commit C), the lint runs
+at pre-commit. Two valid outcomes:
+
+- **Lint catches something.** Either the operator made an unquoted-glob
+  edit (data bug, fix and restage) or the script has a false positive
+  (script bug, surface and halt per the stuck-handling discipline in
+  the v2 prompt). Per Commit F's stuck-handling section 4, distinguishing
+  data bug from script bug is the discipline.
+- **Lint passes silently.** The rule files' globs remain well-formed
+  after the edit. This is the expected outcome on most edits.
+
+**Disposition: tracking item, no codification action.** Not a finding
+in the codification sense — it's a forward-looking observation that
+the script's design hasn't been validated against real edits yet.
+Worth noting so the first invocation is recognized as a milestone
+rather than passing unnoticed.
+
+### Finding 3: Backslash escaping drift in single-quoted heredocs (observation-grain N=2, memory-extended)
+
+The Commit F commit message body, drafted via `cat <<'EOF'` heredoc,
+contained `Unquoted globs starting with \`*\` silently` where the
+backticks around `*` were unnecessarily backslash-escaped. The
+single-quoted heredoc delimiter preserves backticks (and all shell
+metacharacters) literally — no escape needed. The escaped backslashes
+landed in commit history as visible blemishes (`` \`*\` `` instead of
+`` `*` ``).
+
+This is the same shape as the 2026-04-21 Session 8 C6 closeout
+incident where `\$0.11` was written instead of `$0.11` in a similar
+single-quoted heredoc. Both incidents share the failure mode: applying
+backslash-escape discipline as if the heredoc were double-quoted or
+unquoted (where escape would be needed) when it was actually
+single-quoted (where escape is wrong). N=2 evidence of the same
+recurring drift.
+
+**Disposition: memory-extended, no further codification.** The memory
+file `feedback_heredoc_escaping.md` (originally written 2026-04-21
+covering `$` expansion suppression only) was extended at Commit F
+close to broaden the rule to all single-quoted-heredoc metacharacters
+(`$`, `` ` ``, `\`). The friction-journal entry cites the memory
+update as the disposition. Friction-journal-level codification (i.e.,
+landing the rule in a topical conventions file) would be premature at
+N=2 for a memory-grain feedback rule; the memory file is the
+appropriate canonical home until and unless the pattern surfaces a
+third time in a context where a topical convention is the better fit.
+
+### Cross-references
+
+- Commit F content commit at `6264944` (this banking entry's review subject).
+- Commit E banking entry above (2026-05-17, three-findings precedent shape).
+- Commit C banking entry above (2026-05-17, four-findings precedent shape).
+- `.claude/skills/phase-retrospective/SKILL.md` (Commit F; this entry's
+  findings are candidate inputs for the v2.2 reorg meta-retrospective
+  that would use this skill).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §11 (Commit F
+  specification).
+- MEMORY.md `feedback_heredoc_escaping.md` (Finding 3 disposition;
+  extended at Commit F close from `$`-only to all single-quoted-heredoc
+  metacharacters).
+- MEMORY.md `project_v22_reorg_complete.md` (new project memory at
+  Commit F close capturing the v2.2 reorg arc state).
