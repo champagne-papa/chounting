@@ -173,15 +173,56 @@ $1 != "" {
 }
 END {
   for (b in count) {
-    print b "\t" count[b] "\t" latest[b] "\t?\t" lines[b]
+    # Sentinel "-" for empty latest date: bash IFS=$'"'"'\t'"'"' read collapses
+    # consecutive tabs (tab is a whitespace IFS char), so empty fields between
+    # tabs vanish on the read side and shift downstream columns. Substituting
+    # "-" preserves the column position. This also reads more clearly in the
+    # rendered table than blank.
+    latest_out = (latest[b] == "" ? "-" : latest[b])
+    print b "\t" count[b] "\t" latest_out "\t?\t" lines[b]
   }
 }' | sort -t$'\t' -k2,2 -n -r)
+
+# Stage A: bare grep across CLAUDE.md, conventions/, .claude/skills/.
+# See spec §Graduation check (two stages) + §Decisions #1.
+
+declare -A GRADUATED_A
+
+check_graduated_a() {
+  local bucket="$1"
+  # Use grep -F (fixed string) for ID-shaped buckets to avoid regex
+  # metachar issues with characters like α, β. -r searches the tree.
+  if grep -rqF -- "$bucket" \
+       CLAUDE.md \
+       docs/04_engineering/conventions/ \
+       .claude/skills/ \
+       2>/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
+# Compute graduation for every T1 bucket up front so the render step
+# doesn't repeat the grep work per row.
+while IFS=$'\t' read -r bucket _ _ _ _; do
+  [[ -z "$bucket" ]] && continue
+  if check_graduated_a "$bucket"; then
+    GRADUATED_A["$bucket"]=1
+  else
+    GRADUATED_A["$bucket"]=0
+  fi
+done < <(printf '%s\n' "$T1_ROWS")
 
 # Render T1 rows. Header line + rows, padded/aligned for readability.
 printf "  %-32s  %5s  %-12s  %-10s  %s\n" "bucket_id" "count" "latest" "graduated" "source_lines"
 printf "  %-32s  %5s  %-12s  %-10s  %s\n" "--------" "-----" "------" "---------" "------------"
-printf '%s\n' "$T1_ROWS" | while IFS=$'\t' read -r bucket count latest graduated lines; do
+printf '%s\n' "$T1_ROWS" | while IFS=$'\t' read -r bucket count latest _ lines; do
   [[ -z "$bucket" ]] && continue
+  if [[ "${GRADUATED_A[$bucket]:-0}" == "1" ]]; then
+    graduated="Y(A)"
+  else
+    graduated="N"
+  fi
   printf "  %-32s  %5d  %-12s  %-10s  %s\n" "$bucket" "$count" "$latest" "$graduated" "$lines"
 done
 echo
@@ -196,7 +237,10 @@ echo "## T1.5 — Untagged instance markers (name-this candidates)"
 
 T15_ROWS=$(printf '%s\n' "$EXTRACTED" | awk -F'\t' '
 $1 == "" {
-  print $2 "\t" $3 "\t" $4
+  # Sentinel "-" for empty date (same reason as T1: prevents IFS=$'"'"'\t'"'"'
+  # read collapse of empty fields).
+  date_out = ($3 == "" ? "-" : $3)
+  print $2 "\t" date_out "\t" $4
 }' | sort -t$'\t' -k2,2 -r)
 
 T15_COUNT=$(printf '%s\n' "$T15_ROWS" | grep -c . || true)
