@@ -58,10 +58,21 @@ next-env.d.ts
 # Both `!.claude/skills/` and `!.claude/skills/**` are required because
 # git can't re-include children of an excluded directory without first
 # re-including the directory itself plus its recursive contents.
+#
+# 2026-05-17 (v2.2 reorg Commit C): re-included .claude/rules/ as
+# load-bearing project infrastructure per v2.2 §6 — path-scoped
+# operational projections of canonical conventions. Rules must fire for
+# every team member's session against the same canonical conventions;
+# machine-local state defeats the routing forcing function. The fallback
+# spec (v2.2 §11) similarly assumes team-shared files. Follows the
+# .claude/skills/ precedent above. See
+# docs/09_briefs/phase-6.5/reorg-proposal-v2.md for the full design.
 .claude/*
 !.claude/settings.json
 !.claude/skills/
 !.claude/skills/**
+!.claude/rules/
+!.claude/rules/**
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/
