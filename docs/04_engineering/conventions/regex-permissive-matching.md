@@ -140,8 +140,11 @@ conventions, look for the other.
   - `scripts/friction-journal-tally.sh` extract_bucket() function
     (the regex site where the cost classes manifested).
 
-**Evaluation basis** (operator-added field per family 1's
-precedent-setting from this same ARC 3):
+**Evaluation basis** — added inline at ARC 3 graduation (commit
+`a10480d`) following prediction-grounding.md's precedent. The
+field was formalized at `docs/04_engineering/conventions/README.md`
+§Graduation criteria in ARC 3.5 (commit `8b241ee`). This file's
+Evaluation basis was the second precedent-setting application.
 
 - **Load-bearing (prescriptive).** The convention generates operator
   action at design time: "enumerate plausible cost classes for your

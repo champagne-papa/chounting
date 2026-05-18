@@ -100,12 +100,13 @@ shape in mind.
     keep surfacing; codification status of that family TBD this
     arc and not pre-projected here).
 
-**Evaluation basis** (operator-added field; the
-`codify-convention` skill does not currently require evaluation
-reasoning in the codification footer, but capturing it here sets
-the precedent that graduation reasoning belongs in the artifact
-trail alongside provenance — see first-run observation banking
-from ARC 3 STEP 3):
+**Evaluation basis** — added inline at ARC 3 graduation (commit
+`6d3a911`) as precedent-setting operator decision before the
+`codify-convention` skill required this field. The field was
+formalized at `docs/04_engineering/conventions/README.md`
+§Graduation criteria in ARC 3.5 (commit `8b241ee`). This file's
+Evaluation basis is preserved verbatim from the precedent-setting
+application.
 
 - **Load-bearing.** The discipline is citable by name from future
   planning artifacts. Future briefs, plans, prompts, ADRs, and

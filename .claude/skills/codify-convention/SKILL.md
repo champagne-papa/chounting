@@ -79,7 +79,8 @@ Produce two artifacts:
 
 2. **Drafted codification block.** Markdown body matching the destination
    file's voice, terminated with the standardized origin-metadata footer
-   per v2.2 §5.3:
+   per v2.2 §5.3, followed by an Evaluation basis section that captures
+   the graduation reasoning:
 
    ```markdown
    ---
@@ -88,7 +89,39 @@ Produce two artifacts:
    - Evidence basis: N=<count>, commits <sha1>, <sha2>, ...
    - Promoted from: <friction-journal entry id>
    - Cross-references: <ADR-XXXX, related conventions if applicable>
+
+   **Evaluation basis:**
+
+   - **Load-bearing.** <Assessment of how the convention
+     generates operator action or grounds future reasoning. Use
+     sub-qualifier `(prescriptive)` or `(descriptive)` per the
+     load-bearing sub-shape distinction in
+     `docs/04_engineering/conventions/README.md` §Graduation
+     criteria.>
+   - **Generalizable.** <Assessment of the pattern's reach
+     beyond its originating context. Surface diversity, known
+     general analogs, or domain breadth are typical evidence
+     shapes.>
+   - **Stable.** <Assessment of the pattern's temporal settling.
+     Use sub-qualifier `(exploratory framing)` if codifying
+     provisionally — see README §Graduation criteria for when
+     exploratory framing is appropriate.>
    ```
+
+   The Evaluation basis section is a required component of every
+   codification. The canonical framework for each criterion lives at
+   `docs/04_engineering/conventions/README.md` §Graduation criteria;
+   this section captures the graduation reasoning in the artifact
+   trail alongside provenance — future readers see both *what* was
+   codified and *why* it met the criteria.
+
+   Depth is content-driven: where graduation reasoning has substance
+   (the typical case at N=3 codifications), use paragraph per
+   criterion as in `prediction-grounding.md` and
+   `regex-permissive-matching.md`. Where reasoning is genuinely
+   brief, single-sentence assessment per criterion is acceptable.
+   The discipline is naming the criteria explicitly, not producing
+   paragraphs.
 
 ## Anti-patterns to flag
 
