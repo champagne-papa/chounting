@@ -452,6 +452,124 @@ operational experience accumulates.
   surface additional criteria, or refine the sub-shape
   distinctions documented separately.
 
+## Open codification questions
+
+Deferred meta-decisions about the codification framework itself.
+Each entry documents both positions, the evidence each currently
+has, and the re-evaluation trigger that would warrant making the
+call.
+
+Entries marked Open are currently deferred. Entries marked
+Resolved are historical record — the question was once open, and
+the entry documents the deferral context. Resolved entries
+include a pointer to the canonical surface where the resolution
+lives.
+
+**Status:** introduced at ARC 3.5 as a durable home for open
+meta-decisions. Codified at N=1 (one open question to host) with
+explicit exploratory framing — the category may refine as further
+open questions accumulate or as the structure proves inadequate.
+
+A question belongs in this section when (a) the question was
+banked in the friction-journal as an open meta-decision, and (b)
+deciding the question prematurely would foreclose evidence the
+re-evaluation depends on. Questions with sufficient evidence
+already on hand should be decided rather than deferred.
+
+### Substrate-vs-mechanism family-tag precedence
+
+**Status:** Open.
+
+**The question:** When banking an observation under a family tag,
+which precedence applies — the *substrate the observation
+operated on* (where the issue manifested) or the *mechanism of
+the observation* (what discipline the observation instantiates)?
+
+**Position A: substrate-tagging.** Tag by the surface where the
+issue manifested. Argument: matches the operator's first-pass
+attention (the substrate is what the operator was working on
+when the observation surfaced). Existing banking precedent leans
+this way — most existing family tags were assigned by substrate.
+
+**Position B: mechanism-tagging.** Tag by the discipline the
+observation instantiates. Argument: families should fire when
+the mechanism recurs, not when the substrate happens to recur.
+Mechanism-tagging produces taxonomies that generalize correctly
+when patterns cross substrates.
+
+**Evidence currently in hand:** ARC 3 first-run observation 4
+surfaced the question: family 3's instance 4 (cost-class #3's
+audit-grounded resolution) was banked under
+`regex-permissive-cost-class` because the substrate was regex,
+but its mechanism (empirical-audit-rather-than-magic-number) is
+`caveat-prediction-vs-empirical-resolution`'s family-shape. One
+instance is not enough to weigh substrate-vs-mechanism cost
+empirically.
+
+**Re-evaluation trigger:** the next family-misattribution
+instance surfacing in the friction-journal. When the discipline
+gap fires again (whether substrate-tagged or mechanism-tagged),
+that instance is the moment to make the call with grounded
+evidence about which kind of misattribution is more frequent and
+more costly.
+
+**Back-reference:** friction-journal 2026-05-19 ARC 3 close H2
+(line 14050), "Observation 4: Family-misattribution by substrate
+vs mechanism."
+
+---
+
+**Origin (this section):**
+
+- First codified: Phase 6.5 ARC 3.5, 2026-05-18
+- Evidence basis: ARC 3 first-run observation 4 surfaced an open
+  meta-decision the prior banking precedent didn't resolve.
+  ARC 3.5 STEP 2 audit confirmed the resolution had not yet been
+  made; the ARC 3.5 prompt's initial framing asserted a
+  resolution by inline assertion, which itself was a discipline
+  gap (open question resolved unilaterally). Operator direction
+  at STEP 2 redirected the prompt's resolution-by-assertion to
+  OPEN QUESTION shape.
+- Promoted from: friction-journal 2026-05-19 ARC 3 close,
+  Observation 4 (line 14050); ARC 3.5 STEP 2 audit; ARC 3.5
+  prompt Obs 3 (revised to OPEN QUESTION shape per operator
+  direction).
+- Cross-references:
+  - `docs/04_engineering/conventions/README.md` §Codification
+    thresholds, §Three-category codification taxonomy, and
+    §Graduation criteria (sibling meta-codification sections;
+    this section is the sibling that hosts deferred meta-
+    decisions).
+  - `docs/07_governance/friction-journal.md` 2026-05-19 ARC 3
+    close H2, Observation 4 (line 14050).
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The section is cited at
+  banking time when an operator identifies an open meta-decision:
+  "when banking an open meta-decision, add it here rather than
+  letting it sit unbanked or resolved-by-implication." Without
+  the section, open meta-decisions either accumulate invisibly
+  in the friction-journal or get resolved silently by
+  next-touch.
+
+- **Generalizable.** The section applies to any deferred
+  meta-decision about the codification framework, not to the
+  substrate-vs-mechanism question specifically. The substrate-
+  vs-mechanism entry is the first instance; future open meta-
+  decisions slot in as sibling entries.
+
+- **Stable (exploratory framing).** Codified now with exploratory
+  framing. The next-instance failure mode — without this section,
+  future open meta-decisions either accumulate invisibly in the
+  friction-journal or get resolved silently by next-touch — is a
+  real cost but a softer one than (e.g.) the circular-reference
+  cost that motivated codifying the graduation criteria framework.
+  The exploratory framing reflects this: N=1 of "open
+  meta-decisions deserving a durable home" with the section's
+  value to be demonstrated by future open questions accumulating
+  cleanly or by the structure proving inadequate.
+
 ## Hygiene cadence
 
 A phase-end hygiene pass is required at every phase close. The pass:
