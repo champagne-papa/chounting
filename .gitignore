@@ -67,12 +67,22 @@ next-env.d.ts
 # spec (v2.2 §11) similarly assumes team-shared files. Follows the
 # .claude/skills/ precedent above. See
 # docs/09_briefs/phase-6.5/reorg-proposal-v2.md for the full design.
+#
+# 2026-05-17 (v2.2 reorg Commit E): re-included .claude/agents/ as
+# load-bearing project infrastructure per v2.2 §8 — read-only subagents
+# (ledger-reviewer + migration-reviewer) that review changes against
+# canonical conventions. Subagents are team-shared like skills and rules;
+# machine-local state defeats the review capability. Follows the
+# .claude/skills/ and .claude/rules/ precedents above. See
+# docs/09_briefs/phase-6.5/reorg-proposal-v2.md §8 for the full design.
 .claude/*
 !.claude/settings.json
 !.claude/skills/
 !.claude/skills/**
 !.claude/rules/
 !.claude/rules/**
+!.claude/agents/
+!.claude/agents/**
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/
