@@ -258,6 +258,148 @@ relationship is the load-bearing distinction:
 - Cross-references: `docs/07_governance/DOCS_RESTRUCTURE_V2.md`,
   ADR-0020, ADR-0022
 
+## Graduation criteria
+
+When a friction-journal pattern has met the N≥3 codification
+threshold, three criteria determine whether the pattern graduates
+to a codified convention, gets dismissed, or gets deferred.
+Threshold-met-and-evaluated is the discipline gate; threshold-met
+alone is not sufficient.
+
+**Status:** observed in operational use through ARC 3 (three
+family evaluations producing two graduations and one deferral);
+codified provisionally with exploratory framing. Subject to
+refinement as further operational experience accumulates.
+
+### GRADUATE when ALL three hold
+
+- **Load-bearing.** Future work materially benefits from naming
+  the pattern explicitly. The codified convention would be cited
+  in future briefs, ADRs, plans, prompts, or other discipline
+  surfaces. A convention that no future surface would cite is
+  not load-bearing.
+
+- **Generalizable.** The pattern transcends the specific
+  situation that surfaced it. Evidence shape varies: surface
+  diversity across multiple instances (different artifact
+  classes, different substrates) is one shape; known general
+  analogs beyond the originating substrate is another. The
+  convention's reach extends beyond the immediate originating
+  arc.
+
+- **Stable.** The pattern has settled enough that the convention
+  won't immediately need amendment. Premature codification of an
+  evolving pattern produces stale conventions. Evidence shape
+  varies: multiple instances over time without the pattern's
+  shape changing across them is one shape; a pattern whose
+  explanation has been stable across operator articulations is
+  another. A pattern that surfaced new sub-shapes or required
+  name-revision recently is not yet stable.
+
+### DISMISS when ANY of these hold
+
+- **Narrow.** The pattern is specific to a one-time situation,
+  not repeatable. Future surfaces will not encounter the same
+  shape.
+
+- **Unstable.** Still evolving; premature to codify. The
+  convention would need amendment within weeks of authoring.
+
+- **Captured-elsewhere.** The same insight already lives in an
+  existing convention under a different name. Graduating creates
+  a duplicate surface; the existing convention's amendment is
+  the cleaner path.
+
+### DEFER
+
+The pattern meets some but not all GRADUATE criteria, or
+additional N is needed to demonstrate one of the criteria. A
+deferral entry should document which criteria the pattern fails
+(or partially meets), and what re-evaluation trigger would
+warrant reconsideration (e.g., "a 4th instance from operationally
+distinct context"). A deferral without a re-evaluation trigger
+becomes a parking lot.
+
+### How to apply
+
+When evaluating a graduation candidate, surface each criterion
+explicitly: name the criterion, name the evidence supporting it,
+name whether the criterion is met, partially met, or unmet. The
+Evaluation basis footer field in each codified convention
+captures this assessment for the artifact trail.
+
+Application surfaces:
+
+- At codification time, the `codify-convention` skill's
+  invocation walks the operator through the three criteria as a
+  precondition to drafting the codification block.
+- At retrospective time, the friction-journal's N-counted
+  candidates pass through the three criteria as the operator
+  decides which graduate, which defer, and which dismiss.
+- For meta-codifications (a convention about how to evaluate
+  conventions, like this section), the criteria apply
+  reflexively. This section's own Evaluation basis below is the
+  first application of the framework to itself; the framework
+  being graduable under its own criteria is a precondition for
+  codifying it at all.
+
+---
+
+**Origin:**
+
+- First codified: Phase 6.5 ARC 3.5, 2026-05-18
+- Evidence basis: Operationally applied at ARC 3 STEP 2 (three
+  family evaluations: `caveat-prediction-vs-empirical-resolution`
+  GRADUATED, `audit-fix-verify-surfaces-banking` DEFERRED,
+  `regex-permissive-cost-class` GRADUATED). ARC 3 first-run
+  observation 1 named the missing Evaluation basis field; the
+  structural gap (framework not codified) was surfaced by
+  ARC 3.5 STEP 2 audit.
+- Promoted from: ARC 3 prompt's DECISION FRAMEWORK section
+  (`docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md` lines
+  110-138, operationally inlined). The framework existed in
+  operator-prompt substrate; ARC 3.5 promotes it to canonical
+  source.
+- Cross-references:
+  - `.claude/skills/codify-convention/SKILL.md` (the skill's
+    output specification references this framework via the
+    Evaluation basis field).
+  - `docs/04_engineering/conventions/prediction-grounding.md`
+    and `docs/04_engineering/conventions/regex-permissive-matching.md`
+    (the two ARC 3 graduations whose Evaluation basis sections
+    are empirical exemplars).
+  - Three-category codification taxonomy (above) — orthogonal
+    meta-codification axis: category determines codification
+    shape, criteria determine codification gate.
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The framework generates
+  operator action at every codification decision: surface the
+  three criteria, evaluate against them, name the disposition.
+  Every future codification passes through this gate. Without
+  the framework codified, future codification decisions have no
+  canonical referent and the Evaluation basis field becomes a
+  free-form text box.
+
+- **Generalizable.** The framework applies to every
+  codification, not to any specific domain. Three operational
+  applications in ARC 3 spanned different family shapes (regex
+  cost classes, prediction discipline, audit-fix-verify
+  meta-pattern) — different substrates, consistent framework
+  behavior. The generalizability is grounded in operational
+  shape rather than abstract argument.
+
+- **Stable (exploratory framing).** Three operational
+  applications is the same evidence base that DEFERRED family 2
+  — not a strong stability signal in isolation. The framework
+  is codified with explicit exploratory framing because not
+  codifying it leaves the next codification with no canonical
+  referent, which is worse than codifying provisionally. Future
+  operational experience may refine the criteria themselves,
+  surface additional criteria, or refine the sub-shape
+  distinctions documented separately.
+
 ## Hygiene cadence
 
 A phase-end hygiene pass is required at every phase close. The pass:
