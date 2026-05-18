@@ -168,26 +168,9 @@ framework's implicit operation.
 
 ### UI-session screenshot gate
 
-Any step that ships UI changes requires a screenshot gate before
-ratification.
-
-1. Orchestrator drafts a prescribed capture sequence (typically
-   2–5 shots) with per-shot verifications.
-2. Founder captures against a fresh `pnpm db:reset:clean && pnpm
-   db:seed:all` state to eliminate accumulated test pollution.
-3. Orchestrator spot-checks each shot against the prescribed
-   verifications.
-4. Gate blocks arc / phase closeout until passed.
-
-Typical triggers: new canvas views, table structure changes,
-new clickability or navigation paths, visual discriminators on
-entry types. Steps that touch only non-visible surfaces
-(service logic, API routes, server-side guards) skip the gate.
-
-Precedent: Arc A used this pattern 6 times (Steps 7, 8a, 8b,
-9b, 10b, 12b). See
-`docs/07_governance/retrospectives/arc-A-retrospective.md` §3
-Pattern 2 for mechanism details.
+UI-session arc/phase closeout requires a screenshot capture sequence
+before ratification. Full discipline (four-step procedure + Arc A
+precedent): `.claude/skills/ui-session-screenshot-gate/SKILL.md`.
 
 ### Multi-line Edit anchor confirmation (Z1 #11.a)
 

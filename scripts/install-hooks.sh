@@ -9,6 +9,8 @@
 #      docs/04_engineering/conventions/session/iterative-catching.md).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
+#   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
+#      issue #13905) when .claude/rules/*.md files are staged.
 
 set -euo pipefail
 
@@ -26,6 +28,8 @@ cat > "$TMP_HOOK" <<'HOOK_EOF'
 #      docs/04_engineering/conventions/session/iterative-catching.md).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
+#   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
+#      issue #13905) when .claude/rules/*.md files are staged.
 
 set -euo pipefail
 
@@ -74,6 +78,17 @@ if [[ -n "$ADR_CHANGED" ]]; then
   fi
 fi
 
+# ---- .claude/rules/ frontmatter lint ----
+RULES_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^\.claude/rules/.*\.md$' || true)
+
+if [[ -n "$RULES_CHANGED" ]]; then
+  echo "[rules-lint] .claude/rules/*.md files staged; running frontmatter lint..."
+  if ! bash scripts/lint-rules-frontmatter.sh "$RULES_CHANGED"; then
+    echo "[rules-lint] error: lint failed. Fix findings before committing." >&2
+    exit 1
+  fi
+fi
+
 exit 0
 HOOK_EOF
 
@@ -104,6 +119,8 @@ echo "     vs COORD_SESSION env var)."
 echo "  2. ADR linting and index regeneration when ADR-related files"
 echo "     are staged (docs/07_governance/adr/, docs/02_specs/taxonomy.md,"
 echo "     docs/02_specs/invariants.md, scripts/adr/)."
+echo "  3. .claude/rules/ frontmatter lint (quoted globs per Claude Code"
+echo "     issue #13905) when .claude/rules/*.md files are staged."
 echo ""
 echo "Re-run this script in every worktree / clone you commit from,"
 echo "and after any change to the hook content (e.g., when ADR-0021's"

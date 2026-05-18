@@ -26,6 +26,8 @@ canonical-source cross-reference table.
 | [`integration-test-rules/`](./integration-test-rules/SKILL.md) | Work in `tests/integration/` or when running Category A floor tests. |
 | [`audit-scans/`](./audit-scans/SKILL.md) | When running a codebase audit, producing audit findings, or working through the process in `docs/07_governance/audits/DESIGN.md`. |
 | [`codify-convention/`](./codify-convention/SKILL.md) | Promoting a friction-journal pattern to a codified convention after N≥3 fires; walks the routing decision tree per `docs/04_engineering/conventions/README.md`. |
+| [`phase-retrospective/`](./phase-retrospective/SKILL.md) | Phase close — drafting a retrospective writeup; surfaces codification candidates from friction-journal, routes each via `codify-convention`, drafts retrospective doc. |
+| [`ui-session-screenshot-gate/`](./ui-session-screenshot-gate/SKILL.md) | Arc/phase closeout when shipped work included UI changes (new canvas views, table structure, navigation paths, visual discriminators). |
 
 ## Authoring rule
 

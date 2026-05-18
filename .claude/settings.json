@@ -32,5 +32,18 @@
       "Read(.mcp.json)",
       "Read(tests/e2e/.auth/**)"
     ]
+  },
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ printf '=== %s ===\\n' \"$(date -Iseconds)\"; cat; printf '\\n'; } >> /tmp/claude-instructions-loaded.log",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
