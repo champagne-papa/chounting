@@ -40,7 +40,7 @@ when a rule belongs here vs. another topical file.
   code review.** No exceptions, no urgency override
   (INV-SERVICE-001 enforcement).
 
-### Cross-references
+### Documentation cross-references
 
 | For | See |
 |---|---|
@@ -129,3 +129,52 @@ Day 1 requirement, not an afterthought.
 - Promoted from: PLAN.md §11 extraction
 - Cross-references: `docs/09_briefs/phase-1.2/agent_architecture.md`
   (structured-response contract)
+
+---
+
+## File-top comment staleness review
+
+When a session edits a file's behavior body (test logic,
+component rendering, service implementation), the session must
+also review the file's top-of-file comment for staleness — any
+description of shape, behavior, or contract the comment makes
+that the edit invalidates must be updated in the same commit,
+not deferred.
+
+Typical staleness triggers:
+- Test file headers enumerating test descriptions (pre-rewrite
+  assertion shapes, order-sensitivity claims, fresh-seed
+  assumptions).
+- Component file headers describing props, structural role, or
+  dependencies (post-extraction or post-refactor).
+- Service file headers describing function surface or returned
+  shape (post-signature change).
+
+Review checklist for any session touching a file body:
+
+1. Does the file-top comment describe what the file *does*?
+2. Do any of those descriptions rely on the pre-edit state?
+3. If yes, update the relevant lines in the same commit.
+
+Precedent: Arc A saw this pattern fire 3 times —
+AdjustmentForm.tsx comment drifted at Step 10b's LineEditor
+extraction (fixed at Step 12a item 23); test-file headers in
+reportBalanceSheet.test.ts and accountLedgerService.test.ts
+drifted at Step 12b's test-1 rewrite (fixed at Pattern 8
+codification session post-push). The pattern fires most
+commonly when a session's scope is narrow (fix-the-body only)
+and the comment is adjacent-but-not-explicitly-in-scope. See
+`docs/07_governance/retrospectives/arc-A-retrospective.md` §3
+Pattern 8 for mechanism details.
+
+---
+**Origin:**
+- First codified: Phase 1 Arc A (per Arc A precedent)
+- Evidence basis: N=3 (AdjustmentForm.tsx + reportBalanceSheet.test.ts
+  + accountLedgerService.test.ts)
+- Promoted from: Arc A retrospective §3 Pattern 8
+- Cross-references:
+  `docs/07_governance/retrospectives/arc-A-retrospective.md` §3
+  Pattern 8
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

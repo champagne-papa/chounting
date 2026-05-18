@@ -8,10 +8,6 @@ adjacent to it.
 See [`README.md`](./README.md) for the routing rule that determines
 when a rule belongs here vs. another topical file.
 
-Webhook route handler conventions are currently in repo-root
-`CLAUDE.md`; they relocate to this file at Commit D of the v2.2
-reorg (see `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1).
-
 ---
 
 ## Error-Handling Review Rule
@@ -263,3 +259,73 @@ function body runs.
   closeout
 - Cross-references: `src/services/accounting/journalEntryService.ts`,
   `withInvariants`, ADR-0001 (service layer pattern)
+
+---
+
+## Webhook route handler conventions
+
+Conventions for external-webhook routes — provider-invoked HTTP
+endpoints that receive substrate from third-party services (Postmark
+inbound mail; future Stripe / auth callbacks / etc.).
+
+**Directory convention.** Webhook routes live at
+`apps/web/src/app/api/webhooks/<provider>-<event>/route.ts`. Frontend-
+invoked routes stay at `/api/orgs/[orgId]/...`. The semantic
+distinction is **who invokes** (third-party HMAC-verified vs.
+user-session-authenticated) and **how `org_id` is derived** (resolver
+helper vs. URL parameter). Future webhook routes inherit this
+directory layout.
+
+**System-actor route handler pattern.** Webhook route handlers bypass
+`withInvariants` and construct `SystemActorServiceContext` directly
+with `caller: { user_id: null, system_actor: '<source>' }`. The
+discriminator is **invocation source**: third-party HMAC-verified
+webhook (system-actor) vs. authenticated user session (user-session).
+Future system-actor surfaces (cron, scheduled tasks, other webhook
+providers) inherit this pattern. The runtime guarantee that
+`withInvariants` normally provides (verified caller + memberships-vs-
+input-org check) is replaced by HMAC verification + provider-specific
+org-resolve at the route handler boundary.
+
+**`SystemActorServiceContext` sister type.** Sister type to
+`ServiceContext` (NOT a discriminated-union extension). Existing
+`ctx.caller.user_id` consumer sites unchanged. `recordMutation`
+widens its accepted ctx shape to `ServiceContext |
+SystemActorServiceContext`; storage provider methods widen `ctx`
+to `StorageProviderContext` (same union) to accept system-actor
+invocation at storage put time. Service methods that need to support
+**both** invocation modes declare the union at parameter type
+(explicit signature, not implicit narrowing). The "two ServiceContext
+types" cost is bounded; the alternative (consumer-site narrowing at
+discriminated-union extension) is scope-disproportionate to the
+value at one new system-actor caller grain.
+
+**HMAC constant-time signature comparison.** Webhook handlers use
+`crypto.timingSafeEqual` (node:crypto) on equal-length hex digests
+for signature verification. Direct `===` string comparison on
+signature digests is an anti-pattern (timing-attack reconstruction
+of the secret); `timingSafeEqual` is the canonical Node.js stdlib
+primitive for constant-time digest comparison. The helper pattern:
+compute expected digest → length-check → wrap in `timingSafeEqual`.
+
+**Cross-references.**
+- `apps/web/src/app/api/webhooks/postmark-inbound/route.ts` — first
+  instance precedent for all four sub-conventions at chunk 6.3a.
+- `apps/web/src/services/middleware/serviceContext.ts` —
+  `SystemActorServiceContext` sister type definition.
+- `apps/web/src/services/audit/recordMutation.ts` — union-widening
+  surface for system-actor audit emission.
+
+---
+**Origin:**
+- First codified: Phase 6 chunk 6.3a (first-instance precedent —
+  Postmark inbound webhook)
+- Evidence basis: N=1 with explicit "future webhook providers inherit
+  this pattern" framing
+- Promoted from: chunk 6.3a implementation notes
+- Cross-references:
+  `apps/web/src/app/api/webhooks/postmark-inbound/route.ts`;
+  `apps/web/src/services/middleware/serviceContext.ts`;
+  `apps/web/src/services/audit/recordMutation.ts`
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

@@ -20,15 +20,14 @@ When editing SQL migration files under `supabase/migrations/`:
   (emails, phones) ship as placeholders (e.g.,
   `placeholder-founder@chounting.com`); operator runs post-deploy
   `UPDATE` for real values. Keeps PII out of git history. See
-  repo-root `CLAUDE.md` "Seed-data PII-shape placeholder
-  convention" (relocates to `migrations.md` at Commit D of the v2.2
-  reorg).
+  `docs/04_engineering/conventions/migrations.md` "Seed-data
+  PII-shape placeholder convention".
 - **Substrate-mod test-staleness review.** Migrations broadening
   `CHECK` constraints / `ENUM` membership / `UNIQUE` indexes /
   column-level `NOT NULL` invariants require auditing dependent
-  tests at substrate-mod commit time. See repo-root `CLAUDE.md`
-  "Substrate-mod-event test-staleness review" (relocates to
-  `migrations.md` at Commit D).
+  tests at substrate-mod commit time. See
+  `docs/04_engineering/conventions/migrations.md`
+  "Substrate-mod-event test-staleness review".
 
 This is an operational projection of canonical conventions; for
 edge cases or full discipline, read the topical files above.

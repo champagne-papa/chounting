@@ -9,10 +9,427 @@ See [`README.md`](./README.md) for the sub-folder routing rule and
 the broader [`../README.md`](../README.md) for the topical routing
 rule.
 
-The RI-1 through RI-10 cluster (verify-forward-at-scope-lock for
-computational-shape chunks) and substrate-now-enforcement-later
-cross-pattern are currently in repo-root `CLAUDE.md`; they relocate
-to this file at Commit D of the v2.2 reorg.
+---
+
+## Verify-forward-at-scope-lock for computational-shape chunks
+
+A discipline cluster that fires at scope-lock for chunks whose
+substantive scope is **computational-shape** (dispatcher-style,
+re-evaluator-style, or substantively-novel-logic) rather than
+**substrate-shape** (table additions, column changes, function
+signatures, type definitions). Substrate-shape scope-locks are
+well-served by the existing verify-from-disk discipline at
+`feedback_verify_from_disk_at_brief_loop.md` (Item C). Computational-
+shape chunks need additional scope-lock-time verification to avoid
+the framing-discovery arc surfacing mid-implementation and forcing
+brief amendment cycles + Path C splits.
+
+Evidence basis: Phase 4 chunk 3 (Subsystem 3 dispatcher; commits
+`c3782e9` (3a) + `5d4e954` (3b); amended brief at `c76d264`). The
+chunk-3 7-round scope-lock locked thorough substrate-shape but
+missed computational-shape under-specification systematically; five
+framings surfaced mid-implementation as the framing-discovery arc.
+The discipline cluster below codifies the scope-lock-time
+verification that would have caught the computational-shape gaps at
+scope-lock instead of mid-implementation. See Phase 4 retrospective
+writeup §3 (framing-discovery arc centerpiece) for full evidence
+unpacking.
+
+### Consumer-presence verification before substrate addition (RI-1)
+
+Before adding a substrate field, enum value, table reservation, or
+type / function signature, verify that a v1 consumer for it exists
+or is named with explicit activation-trigger. Four-instance
+precedent met at chunk-3-Phase-4 close:
+
+- `vendor_credits` / `vendor_credit_applications` table reservation
+  per Phase 5 substrate decision (Phase 2.5 Commit A moved
+  `vendor_credit` + `vendor_credit_application` from `linked_entity_type`
+  v1-active to reserved post-v1; tables don't ship at v1; no v1
+  consumer service).
+- `backfill_vendor_prepayment_suggested` `resolution_action` value
+  introduced at chunk-6-Phase-2 close, ratified at Phase 2.5
+  Commit B follow-on (chunk-6 shipped pre-amendment substrate
+  pending Phase 2.5 Commit B amendment).
+- `paymentService.ts` / `vendorCreditService.ts` gap at chunk-3-
+  Phase-4 (T2/T4/T6 dispatcher branches reserved per Framing F
+  pending these services shipping; chunk-3 ships T2/T4/T6 as Zod
+  literal-union members + dispatcher switch handlers but no
+  service emission wiring).
+- `cancelled_at` column at chunk-3-Phase-4 Round 4.c (γ) lock
+  declined — both v1 consumer checks (UI surface, audit/reporting
+  filter) negative; cancellation = pure status flip; WHEN/WHY via
+  audit_log trace_id correlation. "Land schema with consumer
+  code" reverse-discipline applied.
+
+**Why:** Substrate without a v1 consumer becomes either dead code
+(removed at next cleanup pass) or operationally drifts (the substrate
+fires writes that no service reads, accumulating data that doesn't
+participate in any v1 workflow). Cost of deferring substrate to a
+future chunk with explicit named consumer < cost of cleaning up
+unconsumed substrate or living with operational drift.
+
+**How to apply:** At scope-lock for any substrate addition, name the
+v1 consumer (service file + line range) for the substrate. If no
+v1 consumer exists and won't ship in the same chunk, defer the
+substrate to the consumer-shipping chunk via reserved-not-omitted
+shape per ADR-0010 substrate-now-enforcement-later. Forward-pointer
+the deferral in the appropriate retrospective inventory item with
+activation-trigger named.
+
+### Read-substrate verification at scope-lock, four grains (RI-6)
+
+For dispatcher-style / re-evaluator-style / substantively-novel-
+logic chunks, scope-lock must explicitly verify-forward at four
+nested substrate grains. The first grain is well-covered by Item C
+at `feedback_verify_from_disk_at_brief_loop.md`; grains 2-4 are
+the extension this cluster adds.
+
+**Grain 1 — Substrate-shape grain.** What tables, columns, function
+signatures, type definitions, constants, and ServiceErrorCodes
+exist? Verify-from-disk on every cited substrate. This grain is
+Item C's existing scope; the four-grain refinement extends it.
+
+**Grain 1 reinforcement (chunk 6.3a evidence basis).** Four sub-
+instances at chunk-6.3a strengthen the Grain 1 discipline. Each
+fires the same underlying pattern (brief-scope-lock-without-
+substrate-verify-from-disk) at a distinct sub-grain:
+
+- **Flag 20** (`organizations.slug` column gap; column-existence
+  sub-grain): brief Sub-Q2 + Sub-Q6 walks referenced
+  `inbound+<org-slug>@inbound.chounting.com` +
+  `SELECT organizations WHERE slug = mailboxHash` without
+  disk-verify on `organizations.slug` column. Disk evidence: no
+  slug column. β-2 in-line single-finding-scale brief amendment
+  per RI-10.
+
+- **β-2** (MailboxHash resolution at impl-onset; same surface as
+  Flag 20 but caught at impl-onset grain rather than brief-draft
+  grain): execution-side caught at substrate-receipt before
+  consuming.
+
+- **β-3 / MF-2** (`ServiceContext` 111-site blast radius;
+  consumer-count sub-grain): brief Sub-Q6 Artifact 3 proposed
+  discriminated-union extension with pre-drafted conditional MF-2
+  threshold "≤10 sites in-scope; >10 sites codify scope expansion."
+  Disk evidence: 111 sites. 11x off. Brainstorming-side adjudicated
+  to sister-type Approach B at impl-onset.
+
+- **Sub-Q10** (cards-UI discovery mechanism gap; UI-consumer-
+  contract sub-grain): brief Sub-Q1 "server-only" constraint at
+  session start scoped to affordance-kind; Sub-Q10 walk surfaced
+  existing-UI-consumer-contract not verified. Cross-references
+  RI-6 Grain 5 amendment.
+
+**Pattern.** RI-10 framing-interaction-tracing operates as the
+consolidation discipline: four entries surface one underlying
+pattern. The discipline rule strengthens at chunk-6.3a evidence
+basis: cited substrate at scope-lock requires verify-from-disk at
+the cited-substrate's grain — **column-existence** for SQL
+references, **consumer-count** for blast-radius estimates,
+**UI-consumer-contract** for affordance-kind constraints.
+
+**Grain 2 — Per-trigger / per-branch semantic coverage grain.** For
+each trigger / branch / input shape the chunk dispatches over, what
+is the per-trigger semantic? Are stranded paths handled? What does
+"audit-only" vs "re-routing-functional" vs "no-op" mean per
+trigger? Build the coverage table at scope-lock.
+
+**Grain 3 — Per-trigger × per-decision-outcome conformance grain.**
+For each combination of `(trigger, prior-state, decision-outcome)`,
+what is the per-cell behavior? Is the discriminator's rule structure
+exhaustive? Are there unreachable cells? Are reachable cells
+prescribed at the right outcome? Build the rule table at scope-lock.
+
+**Grain 4 — Idempotency-and-side-effect-contract conformance
+grain.** For each cited contract (ADR-cited or chunk-cited), is the
+contract implemented at chunk close? If not, is the deferral
+explicit and named (forward-pointer inventory item + activation
+trigger)? Articulate what's implemented at chunk close and what's
+deferred at scope-lock — not at implementation.
+
+**Why:** Chunk-3-Phase-4 evidence per grain: Grain 1 surfaced two
+β-reconciliations (β-3 carried-in trigger errcode + β-4 PK column
+fix); Grain 2 surfaced Pause 3 (γ'-partial per-trigger coverage)
+mid-implementation; Grain 3 surfaced Pause 4 (D-partial 6-rule
+discriminator replacing brief's 3-rule under-specification) + the
+second-order β-5 / β-6; Grain 4 surfaced Pause 5 (D-partial-no-
+idempotency at v1). Verify-forward at all four grains at scope-lock
+would have caught these at scope-lock rather than mid-implementation.
+
+**How to apply:** At scope-lock for any computational-shape chunk,
+produce the four-grain artifacts as part of the scope-lock outputs:
+- Grain 1 verify-from-disk results per Item C.
+- Grain 2 coverage table (trigger × semantic).
+- Grain 3 conformance table (trigger × prior-state × decision-
+  outcome).
+- Grain 4 contract-implementation status (per cited contract:
+  "implemented at chunk N" or "deferred to chunk M via RI-X
+  forward-pointer with activation trigger Y").
+
+Precedent: Phase 4 chunk 3 close (single-arc evidence; four-grain
+refinement synthesizes chunk-3's discipline-graduation lessons into
+one inventory item). The four-grain checklist applies retroactively
+to F-J-8 (Item C prospective application) — Item C remains Grain 1's
+canonical statement; grains 2-4 are the chunk-3-Phase-4 extension.
+
+### Grain 5 — Consumer-application grain at scope-lock
+
+Grains 1-4 verify what substrate IS shipped. Grain 5 verifies how
+shipped substrate interacts with existing CONSUMERS of the affected
+entity types. Sub-sub-grains:
+
+- **Substrate-shape consumer-application.** When cross-phase
+  consumers (services, agent tools, integration tests) read the
+  affected entity types, do they continue to behave correctly
+  post-modification? **Evidence basis:** chunk-6.1 origin —
+  cross-phase test failure surfaced consumer-contract gap;
+  Sub-Q4 4-step activation sequence codified.
+
+- **UI-consumer-contract.** When existing UI components consume
+  the affected entity types, does the scope-lock's affordance-kind
+  constraint account for the UI consumer's contract requirements?
+  **Evidence basis:** chunk-6.3a Sub-Q10 firing — forwarded_mailbox
+  ingestion would have shipped with cards-UI invisibility (operator-
+  perceives-as-broken-despite-working-correctly) without the Grain 5
+  extension catching the existing-UI-consumer gap.
+
+**Discipline rule.** Scope-lock that ships substrate affecting an
+entity type MUST verify-from-disk against all current consumers of
+that entity type — services, agent tools, integration tests, AND
+existing UI components — to confirm consumer-contract conformance
+post-modification.
+
+### Session-budget-feasibility verification + Path C invocation conditions (RI-7)
+
+At scope-lock, compute the chunk's volume-vs-budget arithmetic and
+adjudicate whether single-session reliable delivery is achievable
+or whether Path C dispatcher-isolated invocation (or analogous
+split shape) is the right structural choice. Path C invocation
+preserves wiring-with-tests pairing at each commit boundary;
+validation-gate-green at each commit is non-negotiable.
+
+**Volume estimators at scope-lock:**
+- Source files touched (modified + created).
+- Migrations (substrate-level changes).
+- Generated `types.ts` regenerations.
+- Test surface (new tests + modified tests).
+- Pre-drafted friction-journal entries.
+- Cross-phase blast radius (number of services across phases).
+
+**Path C invocation conditions:**
+- Volume estimators sum exceeds single-session reliable delivery
+  band.
+- Scope-lock surfaces N framing-revisits (typically N≥3 framings;
+  RI-10 codifies the multi-finding shape).
+- Substantively-novel-logic scope (dispatcher-style, re-evaluator-
+  style, computational-shape chunks per this cluster).
+
+**Path C fault line declaration:**
+- Explicit declaration at scope-lock: "fault line = X-isolated vs
+  Y-cross-phase" (chunk-3-Phase-4 used dispatcher-isolated vs
+  cross-phase-wirings).
+- Each split commit preserves wiring-with-tests pairing.
+- Validation gate green at each commit non-negotiable.
+
+**Why:** Chunk-3-Phase-4 evidence: 5 framings + brief amendment
+cycle + 8 source files + 1 migration + 1 generated types.ts pushed
+chunk-3 over single-session reliable delivery. Path C dispatcher-
+isolated split (3a + 3b) was the response. The chunk-3 upper bound
+(8 files + 1 migration + 1 types.ts + 5 framings + brief amendment
+cycle) is the current empirical evidence point for Path C invocation.
+
+**How to apply:** At scope-lock, produce the volume estimate +
+framing count. If the estimate sits comfortably below chunk-3's
+empirical upper bound AND no framing-revisits surface at scope-lock,
+single-session delivery is appropriate. If the estimate approaches
+chunk-3's bound OR framing-revisits surface at scope-lock, invoke
+Path C with explicit fault-line declaration. F-J-14 tier-1
+codifies Path C invocation; this cluster carries the discipline
+forward.
+
+Precedent: Phase 4 chunk 3 (first Path C invocation at chunks-1-6 +
+Phase 4 grain; upper-bound calibration anchor). Future chunks
+calibrate downward against this anchor as evidence accumulates.
+
+### Brief amendment cycle threshold + framing-interaction matrix at N≥3 (RI-10)
+
+At single-finding scale (one or two β reconciliations per chunk),
+friction-journal-only divergence is sufficient: implementation
+surfaces are absorbed by friction-journal entries (β-N
+reconciliations); brief text stays as-shipped at scope-lock for
+chronology + provenance. At multi-finding-shape-changing scale
+(typically N≥3 framings touched), brief amendment cycle is the
+right tool — the amendment section ratifies new framings as
+authoritative; friction-journal entries codify discipline
+graduations; retrospective inventory tracks any further ADR
+amendments.
+
+**Sub-discipline — framing-interaction matrix at N≥3.** When a
+brief amendment ratifies N framings, the amendment process must
+explicitly trace each framing's interaction-with-every-other-
+framing — not just absorb the framings as-stated. Absorbing
+framings without tracing interactions yields second-order
+consequences surfacing at implementation rather than at amendment.
+
+**Why:** Chunk-3-Phase-4 evidence: five framings (γ' re-eval
+primitive + γ'-partial per-trigger coverage + D-partial 6-rule
+discriminator + D-partial-no-idempotency + Path C split) + amended
+brief at `c76d264`. The amended brief absorbed framings 1-5 at
+framing-level but didn't trace second-order consequences: β-5
+(count_after semantic ambiguity from K2-post-mutation vs
+`newCandidates.length` under D-partial-no-idempotency) and β-6
+(rule 5 reachability via T5→T1 sequence under no-supersedes-on-
+empty-rerun) are second-order consequences of Pause 5 that
+surfaced at 3a impl. Empirical bound: chunk-3's 5 framings is the
+current upper evidence point; lower bound undetermined (future
+chunks calibrate downward).
+
+**How to apply:** At single-finding scale, friction-journal entries
+absorb. At N≥3 framings, fire brief amendment cycle. As part of
+the amendment cycle, produce a framing-interaction matrix listing
+each framing × each other framing × the interaction's second-order
+consequence at substrate / discriminator / contract level. The
+matrix surfaces second-order consequences before implementation
+rather than after.
+
+Precedent: Phase 4 chunk 3 (first instance; brief amendment cycle
+at `c76d264`; F-J-15 tier-1 codifies). Future chunks calibrate the
+N≥3 threshold downward as evidence accumulates.
+
+### Verify-from-disk-at-non-standard-grain pattern
+
+Execution-side at substrate-receipt MUST disk-verify substrate before
+consuming, regardless of substrate-grain and regardless of
+substrate-authorship-provenance. The discipline is grain-agnostic
+and catch-direction-agnostic.
+
+**Sub-grains observed-to-date (chunk-6.3a → 6.3b conversation arc):**
+
+1. **Substrate-shape grain** (chunk-6.3a β-2): cited schema column
+   verified to not exist on disk. Inter-side catch.
+2. **Consumer-count grain** (chunk-6.3a β-3): cited blast-radius
+   estimate (≤10 sites) verified to be 111 on disk (11x off).
+   Inter-side catch.
+3. **Context-gap grain** (chunk-6.3a scope-input artifact): cited
+   Q1-Q4 content verified to not exist in session record.
+   Session-internal catch.
+4. **Handoff-receipt grain** (chunk-6.3a→6.3b transition): handoff
+   prompt at `e0824c2` verified against disk anchors at session-onset
+   state-verify. Inter-side catch.
+5. **Intra-handoff-quantitative-estimate grain** (chunk-6.3b Round 0
+   catch #4): "~20+ commits" handoff body estimate verified to be 243
+   on disk (~12x off). Inter-side catch.
+6. **Intra-commit-message-entry-count grain** (chunk-6.3b Round 0
+   catch #5): "22 entries" commit message claim verified to be 26 on
+   disk (1.18x off). **Intra-side catch** (NEW catch-direction
+   sub-shape).
+7. **Session-prompt-authoring grain** (Phase 6.5 retrospective
+   drafting plan; 2026-05-17): Session 14 prompt cited ADR location
+   as `docs/04_decisions/` verified to not exist on disk (actual
+   `docs/07_governance/adr/`); also cited "apps/web/CLAUDE.md (or
+   root)" verified to be root-only on disk. Inter-side catch at
+   plan-authoring onset state-verify (prophylactic application).
+
+**Cross-grain instances at Phase 4:** (8) Round 3
+retrospective-scoping (Phase 5.1 "reviewer chunk" naming drift).
+(9) Post-retrospective-close drift-fix at `18dd608`.
+
+**Discipline rule.** Disk is the canonical source. Substrate-receipt
+grain — wherever it lives (impl-onset, session-onset, retrospective-
+scoping, downstream-consumption) — requires disk-verify against the
+cited substrate's grain. The substrate-author may be opposite-side
+(inter-side catch; sub-grains #1, #2, #4, #5; Phase 4 instances) or
+same-side (intra-side catch; sub-grain #6). The discipline operates
+catch-direction-agnostic — same-side substrate is not exempt from
+disk-verify-at-consumption.
+
+**Named sub-disciplines:** Partial-information-recommendation-drift
+(firing at recommendation-substrate-receipt grain; see
+[`plan-authoring.md`](./plan-authoring.md) §Partial-information-recommendation-drift
+discipline for the two-shape sub-discipline).
+
+### Cross-references
+
+- Phase 4 retrospective writeup §3 (framing-discovery arc
+  centerpiece) and §4 (codified patterns by graduation surface) at
+  `docs/07_governance/retrospectives/phase-4-retrospective.md`.
+- ADR-0018 §item 4 amendment at `docs/07_governance/adr/0018-relationship-router.md`
+  (Phase 4 retrospective Amendment block) — canonical statement of
+  v1 Subsystem 3 dispatcher contract (γ'-partial coverage +
+  D-partial 6-rule discriminator + D-partial-no-idempotency).
+- ADR-0016 §6 amendment at `docs/07_governance/adr/0016-document-relationship-graph.md`
+  (Phase 4 retrospective Amendment block) — `pre_commit_link_rerouted`
+  v1 emission deferral forward-pointer + activation trigger.
+- `feedback_verify_from_disk_at_brief_loop.md` Item C — Grain 1's
+  canonical statement (substrate-shape verify-from-disk discipline;
+  this cluster's Grain 2-4 extension builds on Item C).
+- `docs/07_governance/friction-journal.md` — F-J-1 (chunk-N suffix
+  discipline); F-J-13 (γ' + γ'-partial + D-partial-no-idempotency
+  codification); F-J-14 (Path C dispatcher-isolated split);
+  F-J-15 (brief amendment cycle discipline at multi-finding scale);
+  Phase 4 retrospective F-J entry (codify-while-deciding meta-
+  discipline + three applied-discipline instances).
+
+### Post-close correction (2026-05-15)
+
+The cluster above shipped at Phase 4 retrospective Commit C
+(`294f9e7`, 2026-05-14) with cross-references that name "Phase 5.1
+reviewer chunk" and "Phase 7 envelope substrate" as Phase 4's
+downstream consumers. Post-close verify-from-disk at the
+next-session-recommendation grain (2026-05-15) surfaced drift:
+"Phase 5.1 reviewer chunk" is a Commit-C-drafting fabrication;
+canonical Phase 5.1 = **Phase 5 amendments** per Phase 2
+retrospective §6 line 588 (INV-DOC-001 enforcement + vendor_credits
+substrate + paymentService introduction territory). The Round 7
+scope-lock missed Phase 6 (Ingestion) as the canonical next phase
+per Phase 5 retrospective §6 sequencing (`Phase 5 → Phase 2 →
+Phase 3 → Phase 4 → Phase 6 → Phase 7 → Phase 8`). Phase 6 is
+the operationally-instantiated **pure discipline-reference
+consumer** of this cluster (Round 7 Q3 third-shape ratified
+operationally).
+
+Canonical readings authoritative at the cross-references above:
+
+- **Phase 5.1** = Phase 5 amendments (not "Phase 5.1 reviewer
+  chunk"). Both-shapes consumer of Phase 4 (activation-trigger:
+  T2 dispatcher slot via paymentService.record() post-commit
+  dispatch hook; discipline-reference: RI-1 + RI-6 + RI-7 +
+  RI-10).
+- **Phase 6** (Ingestion) — canonical next phase post-Phase-4 per
+  Phase 5 retrospective §6:380-381. Pure discipline-reference
+  consumer of Phase 4 (RI-1 + RI-6 + RI-7 + RI-10 at Phase 6
+  scope-lock; no activation-trigger work on Phase 4 substrate).
+- **Phase 7** Tier 2 pipeline — both-shapes consumer (activation-
+  trigger: γ'-partial coverage gap + RI-9 fingerprint-dedup;
+  discipline-reference: RI-1 + RI-6 + RI-7 + RI-10).
+
+Full corrected cross-phase consumer inventory + corrected
+next-session sequencing at the Phase 4 retrospective writeup's
+"## Post-close correction" section (`docs/07_governance/retrospectives/phase-4-retrospective.md`).
+Drift codification + discovery-grain framing at friction-journal
+2026-05-15 entry. Below ADR-amendment-cycle threshold;
+provenance-preserving correction shape (original cross-references
+above stay; this note appends at end of cluster).
+
+---
+**Origin:**
+- First codified: Phase 4 retrospective Commit C (`294f9e7`,
+  2026-05-14); evidence accreted through Phase 6 chunk 6.3b +
+  Phase 6.5 (sub-grain #7 added 2026-05-17)
+- Evidence basis: Phase 4 chunk 3 (5 framings + amended brief
+  `c76d264`); chunk-6.3a Grain 1 reinforcement (4 sub-instances);
+  chunk-6.3b sub-grains 5+6; Phase 6.5 sub-grain #7
+- Promoted from: Phase 4 retrospective §3 (framing-discovery arc
+  centerpiece); F-J-13/14/15 tier-1 codifications
+- Cross-references: ADR-0018 §item 4 amendment; ADR-0016 §6
+  amendment; `feedback_verify_from_disk_at_brief_loop.md` Item C
+  (Grain 1 canonical statement); F-J-1, F-J-13, F-J-14, F-J-15;
+  Phase 4 retrospective writeup §3 and §4
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1;
+  cluster ships as single codification unit per §5.3 footer
+  consolidation)
 
 ---
 
@@ -495,3 +912,110 @@ existing sub-cluster, or restructure the parent bucket.
   meta-pattern (in [`plan-authoring.md`](./plan-authoring.md));
   Three-category codification taxonomy (in
   [`../README.md`](../README.md))
+
+---
+
+## Substrate-now-enforcement-later cross-pattern
+
+When ratifying substrate (schema reservations, enum members,
+interface contracts, invariant placeholders), the enforcement
+code (lint rules, runtime checks, migrations against reserved
+values, invariant-content writeup) does not need to land at
+substrate-ratification time. Enforcement lands at implementation
+time when the first consuming code path forces the question.
+
+Mechanism: substrate at ratification time fixes the shape; the
+shape is verifiable from spec + the closed-enum / reserved-value
+discipline (Layer 1 DB CHECK + Layer 2 Zod boundary + Layer 3
+service no-emit per ADR-0010). Enforcement at implementation time
+fixes the runtime behavior; runtime behavior is verifiable from
+code + tests. Conflating the two timing surfaces produces two
+failure modes:
+- Over-specifying enforcement before consumer code shape is known
+  produces premature lock-in that the first consumer has to work
+  around.
+- Under-specifying substrate so consumer code drifts from intended
+  shape produces a migration cliff when the discrepancy surfaces.
+
+Trigger: any ratification-time decision that names a slot
+(reserved enum value, INV-ID placeholder, lint-rule placeholder,
+matrix v1-ship-gate). Substrate lands now; enforcement gate fires
+at the first consumer.
+
+Precedent: Phase 0 → Phase 1 transition. Codified at D6 §6.8 +
+ADR-0010 Variant A precedent (commit `797db40`). Three deferred-
+obligation triggers carry this pattern into Phase 1: Q29 (ESLint
+rule design fires at first `src/agent/pipelines/**/*` code), Q79
+(INV-DOC-001 shape + DOC prefix fire at first DOC-citing code),
+Q77 (Q28 matrix fires at v1 ship). Full Phase 0 closeout at
+`docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`.
+
+---
+**Origin:**
+- First codified: Phase 0 → Phase 1 transition, at D6 §6.8 +
+  ADR-0010 Variant A precedent (commit `797db40`)
+- Evidence basis: N=multiple deferred-obligation triggers (Q29,
+  Q79, Q77)
+- Promoted from: D6 §6.8 codification + ADR-0010 Variant A
+  precedent
+- Cross-references: ADR-0010 Variant A; D6 §6.8;
+  `docs/09_briefs/phase-2/2026-05-04-phase-0-closure-verification.md`
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+---
+
+## Operational-flex collapse heuristic at chunk-grade decomposition
+
+When a chunk scope-lock cycle convenes for chunk-grade decomposition,
+the cycle may **collapse cleanly** — empty cycle, no sub-question
+adjudication needed, no Path C invocation evaluation needed — when
+three conditions hold:
+
+1. All sub-questions adjudicated at the prior cycle close.
+2. All partial-information items operationalized at the brief grain.
+3. Path C evaluation belongs at session-onset Phase A grain (per
+F-J-14 three-grain Path C catalog), not at chunk scope-lock grain.
+
+When these three conditions hold at scope-lock cycle onset, the cycle
+collapses to empty; the brief stands as canonical chunk-shipping
+substrate; implementation proceeds directly.
+
+**Why:** Empty scope-lock cycles are a positive signal — they
+indicate that pre-cycle adjudication discipline + brief-grain
+operationalization discipline + Path-C-grain-catalog discipline
+collectively absorbed the work upstream. Recognizing the empty-cycle
+condition at session onset saves a meeting-shape that produces no
+output.
+
+**How to apply:** At chunk scope-lock cycle onset, evaluate the three
+conditions. If all hold, declare empty-cycle collapse + skip directly
+to implementation grain. If any condition fails, the cycle convenes
+per existing scope-lock discipline.
+
+**Evidence basis (N=3 graduation; Phase 6.5 chunks 1 + 2 + 3):**
+Session 6 (chunk 1 scope-lock cycle) collapsed cleanly; Session 9
+(chunk 2 scope-lock cycle) collapsed cleanly; Session 12 (chunk 3
+scope-lock cycle) collapsed cleanly. Three-precedent track record at
+chunks-1-3-Phase-6.5 grain.
+
+**Cross-references.**
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #11 for full empirical narrative.
+- F-J-14 three-grain Path C catalog (friction-journal 2026-05-17
+  entry; Commit A `1752f06`) for the Path C grain-evaluation
+  discipline referenced in condition (3).
+
+---
+**Origin:**
+- First codified: Phase 6.5, 2026-05-17 (Phase 6.5 retrospective
+  close)
+- Evidence basis: N=3 graduation across Phase 6.5 chunks 1+2+3
+  (Sessions 6, 9, 12 all collapsed cleanly)
+- Promoted from: Phase 6.5 retrospective §3 Candidate #11
+- Cross-references: Phase 6.5 retrospective §3 Candidate #11;
+  F-J-14 three-grain Path C catalog (friction-journal 2026-05-17
+  entry; Commit A `1752f06`)
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

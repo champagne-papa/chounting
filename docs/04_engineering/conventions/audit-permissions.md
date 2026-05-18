@@ -7,11 +7,6 @@ audit log internally consistent, even as both evolve.
 See [`README.md`](./README.md) for the routing rule that determines
 when a rule belongs here vs. another topical file.
 
-Audit-action naming split (dot-namespaced vs. underscored) is
-currently in repo-root `CLAUDE.md` under "Audit-action naming
-convention split"; it relocates to this file at Commit D of the v2.2
-reorg (see `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1).
-
 ---
 
 ## Permission Keys vs Audit Action Keys
@@ -115,3 +110,44 @@ distinguishes "created" from "mutated" when reading the audit log.
 - Promoted from: Phase 1.5A convention codification batch
 - Cross-references: ADR-0009 (before-state-capture convention);
   `recordMutation` service
+
+---
+
+## Audit-action naming convention split
+
+Audit action names split between two shapes:
+
+- **Dot-namespaced** (`forwarded_mailbox.rejected_not_allowlisted`,
+  `forwarded_mailbox.signature_invalid`): for new domain-event
+  families with anticipated taxonomy expansion. The namespace prefix
+  groups related actions under a single domain umbrella; future
+  taxonomy additions land as new sub-actions under the same prefix.
+
+- **Underscored** (`document_case_transitioned`,
+  `ingest_batch_created`): for established entity-state-transition
+  events with stable taxonomy. The flat naming reflects the stable
+  shape; no umbrella prefix needed.
+
+**Evidence basis (N=2 graduation).** chunk-6.3a forwarded_mailbox.*
+opens a new domain family (dot-namespaced); chunk-2-Phase-3
+`document_case_transitioned` is established entity-state-transition
+(underscored).
+
+**Discipline rule.** When introducing a new audit action, choose
+shape based on taxonomy stability: dot-namespaced if you anticipate
+≥3 related actions under the same domain umbrella; underscored if
+the action is standalone or part of a stable event family.
+
+---
+**Origin:**
+- First codified: Phase 6 chunk 6.3a (codified at N=2 graduation
+  across two precedents)
+- Evidence basis: N=2 graduation — chunk-6.3a forwarded_mailbox.*
+  (dot-namespaced; new domain family) + chunk-2-Phase-3
+  `document_case_transitioned` (underscored; established
+  entity-state-transition)
+- Promoted from: chunk-6.3a implementation notes
+- Cross-references: chunk-6.3a Postmark inbound webhook actions;
+  chunk-2-Phase-3 document_cases state transition actions
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

@@ -9,11 +9,6 @@ See [`README.md`](./README.md) for the sub-folder routing rule and
 the broader [`../README.md`](../README.md) for the topical routing
 rule.
 
-Plan-authoring substrate-verification at transitive-dependency grain
-(Cluster B sub-disciplines B1 + B2) is currently in repo-root
-`CLAUDE.md`; it relocates to this file at Commit D of the v2.2
-reorg.
-
 ---
 
 ## Cited-Code Verification
@@ -524,8 +519,9 @@ grain). Two-arc independent evidence basis.
 **Cross-references.**
 - Phase 6.5 retrospective §3 Candidate #9.
 - RI-7 session-budget-feasibility verification at scope-lock
-  (CLAUDE.md `## Verify-forward-at-scope-lock for computational-shape
-  chunks`).
+  ([`scope-lock.md`](./scope-lock.md) §Verify-forward-at-scope-lock
+  for computational-shape chunks → §Session-budget-feasibility
+  verification (RI-7)).
 
 ---
 **Origin:**
@@ -536,5 +532,141 @@ grain). Two-arc independent evidence basis.
 - Promoted from: Phase 6.5 retrospective §3 Candidate #9
 - Cross-references: Phase 6.5 retrospective §3 Candidate #9;
   RI-7 session-budget-feasibility verification at scope-lock
-  (CLAUDE.md `## Verify-forward-at-scope-lock for computational-shape
-  chunks`)
+  ([`scope-lock.md`](./scope-lock.md) §Session-budget-feasibility
+  verification + Path C invocation conditions (RI-7))
+
+---
+
+## Plan-authoring substrate-verification at transitive-dependency grain
+
+Plan-authoring (briefs, plan files, session-start prompts) cites
+substrate at cited-substrate grain — what's listed in the planning
+artifact. Verify-from-disk operates at transitive-dependency grain —
+what the cited substrate actually depends on, exists at, or supports.
+Gaps surface at implementer dispatch when cited substrate's
+transitive dependencies don't exist or projected scope exceeds what
+substrate enables.
+
+The discipline: at plan-authoring grain, dispatch a verify-from-disk
+recon subagent BEFORE locking scope to confirm cited substrate +
+transitive dependencies + scope feasibility. Sub-shapes:
+
+- **B1 — Substrate-citation verification.** Cited substrate may
+  reference tables, types, files, or sections that don't exist (have
+  been deferred / not yet activated / renamed / moved). Recon at
+  plan-authoring grain catches these before scope-lock.
+- **B2 — Scope-projection verification.** Plan may project scope
+  larger than substrate supports (e.g., 4 mutations cited but only
+  3 active per ADR reservation; 7 tests cited but only 6 fit the
+  test-architecture rule). Recon at plan-authoring grain catches
+  scope-substrate mismatch before scope-lock.
+
+Mechanism: cited-substrate grain is what plan-authoring sees in the
+canonical substrate; verified-from-disk grain is what actually exists
++ what the cited substrate transitively depends on + what scope the
+substrate enables. The two diverge when (a) substrate has been
+deferred to a future arc but cited as active (B1), OR (b) plan-
+authoring projects scope beyond what substrate explicitly supports
+(B2). Both surface as gaps at implementer dispatch unless caught
+preventively.
+
+Adjacent to Z1 #11.b (verbatim re-read at drafting-onset for cited
+substrate). Cluster B fires earlier: at plan-authoring-onset, before
+scope-lock. The discrimination is timing — Z1 #11.b is for drafters;
+Cluster B is for plan-authors.
+
+Trigger: any plan-authoring activity that cites substrate by section
+reference, table name, type name, or scope count (mutations, tests,
+events, files). Single-line plan items don't fire; multi-line plan
+bodies or session-start prompts do.
+
+Precedent: Phase 5 chunk B5-1 sessions #1+#2. Codified at chunk B5-1
+session #3 closeout (2026-05-10) per cross-arc N=2 graduation pathway
+via candidate (e). B1 instances: session #1 D5/(orgset-β)
+substrate-citation gap; session #2 D3 approval-gate substrate-
+misreading + D5 Q-lock notation drift; session #3 pickup-file-content-
+tracking gap (meta-evidence at pickup-file-maintenance grain). B2
+instances: session #2 D1-γ scope reduction (4→3 mutations) + D2-α
+scope reduction (7→6 tests). Runtime grain (B3) covered separately
+by `.claude/skills/integration-test-rules/` §3 dedicated-test-accounts
+pattern; not a Cluster B sub-discipline. See
+`docs/07_governance/friction-journal.md` Phase 5 chunk B5-1 closeout
+retrospective entry (2026-05-10) Adjudication 1 for full evidence
+basis.
+
+---
+**Origin:**
+- First codified: Phase 5 chunk B5-1 session #3 closeout, 2026-05-10
+- Evidence basis: N=2 graduation per cross-arc pathway candidate (e);
+  B1 instances (session #1 D5/(orgset-β) + session #2 D3 + session
+  #3 pickup-file-content-tracking gap); B2 instances (session #2
+  D1-γ + D2-α)
+- Promoted from: chunk B5-1 session #3 closeout retrospective entry
+- Cross-references:
+  `docs/07_governance/friction-journal.md` Phase 5 chunk B5-1
+  closeout retrospective entry (2026-05-10) Adjudication 1;
+  `.claude/skills/integration-test-rules/` §3 (B3 runtime grain
+  covered separately)
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+---
+
+## Partial-information-recommendation-drift discipline
+
+When authoring a recommendation, brief, handoff prompt, or other
+substrate that frames decisions for downstream consumption,
+partial-information recommendations (recommendations made without
+disk-verify on cited substrate) introduce drift that surfaces at
+consumption time. Two firing-shapes:
+
+- **Retrospective drift.** Recommendation references *prior work*
+  (citations to existing files / sections / decisions) without
+  disk-verify. Catch authority = reader of recommendation.
+  Discovery moment = post-recommendation reading. Codification
+  surface = drift-fix entry post-discovery.
+
+- **Prospective drift.** Recommendation frames *future work*
+  (handoff prompts / brief drafts) with quantitative anchors or
+  substrate references without disk-verify at authoring time. Catch
+  authority = execution-side session-onset state-verify. Discovery
+  moment = pre-execution at substrate-receipt. Codification surface
+  = Round 0 state-verify ratification + downstream consumption
+  surfaces.
+
+**Discipline rule.** Recommendations that cite substrate (file
+paths / section references / quantitative anchors / decision
+precedents) MUST disk-verify at authoring time. When this discipline
+fails-to-fire at authoring time, the catch is structurally located
+at the consumption surface (retrospective or prospective). Both
+shapes inherit the broader Verify-from-disk-at-non-standard-grain
+pattern at recommendation-substrate-receipt grain — see
+[`scope-lock.md`](./scope-lock.md) §Verify-from-disk-at-non-standard-grain
+pattern for the grain-agnostic parent discipline.
+
+**Evidence basis (N=4 graduation; N=5 with post-Round-3 evidence):**
+(1) Phase 5.1 "reviewer chunk" naming drift at Phase 4 retrospective
+drafting (retrospective drift; caught at post-close drift-fix
+`18dd608`); (2) Reading A vs B scope-lock adjudication (retrospective
+drift; brainstorming-session-internal); (3) scope-observation framing
+on Postmark webhook scope vs Reading B lock (retrospective drift;
+brainstorming-session-internal); (4) chunk-6.3b handoff prompt
+"~20+" vs 243 commits magnitude drift (prospective drift; caught at
+WSL-side Round 0 state-verify). (5) chunk-6.3b Round 6 onset
+brainstorming-side Op 2 "first merge-to-main since pre-Phase-4
+grain" framing drift (caught at Round 6 verify-from-disk; cfcf2e7 +
+9f0ebb3 prior merge-to-main precedents exist).
+
+---
+**Origin:**
+- First codified: Phase 4 retrospective close (2026-05-14); evidence
+  basis accreted through Phase 6 chunk 6.3b
+- Evidence basis: N=4 graduation (N=5 with post-Round-3 evidence) —
+  Phase 5.1 naming drift, Reading A vs B, Postmark scope-observation,
+  chunk-6.3b handoff prompt, chunk-6.3b Round 6 onset
+- Promoted from: drift-fix `18dd608` + post-Round-3 evidence
+- Cross-references:
+  [`scope-lock.md`](./scope-lock.md) §Verify-from-disk-at-non-standard-grain
+  pattern (parent discipline); Phase 4 retrospective writeup
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

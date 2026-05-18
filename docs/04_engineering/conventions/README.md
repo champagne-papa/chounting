@@ -37,15 +37,15 @@ file structure is topical, not chronological.
   exceeding the 600-line sub-split threshold per v2.2 reorg proposal
   §5.1, so this content lives in four sub-files under
   [`session/`](./session/) rather than a single
-  `session-execution.md`). Plan-authoring discipline (`session/plan-authoring.md`),
-  scope-lock conventions (`session/scope-lock.md`; RI-1 through
-  RI-10 cluster lands here when it moves out of CLAUDE.md at
-  Commit D), session-close shape (`session/session-close.md`), and
-  runtime iterative-catching (`session/iterative-catching.md` —
-  Session Labeling, Session Lock, environmental re-verification,
-  Mutual Hallucination-Flag-and-Retract Discipline; the bidirectional
-  iterative-catching termination rule from CLAUDE.md lands here at
-  Commit D).
+  `session-execution.md`). Plan-authoring discipline
+  (`session/plan-authoring.md`), scope-lock conventions
+  (`session/scope-lock.md`; includes the Verify-forward-at-scope-lock
+  RI-1 through RI-10 cluster relocated from CLAUDE.md at Commit D),
+  session-close shape (`session/session-close.md`), and runtime
+  iterative-catching (`session/iterative-catching.md` — Session
+  Labeling, Session Lock, environmental re-verification, Mutual
+  Hallucination-Flag-and-Retract Discipline, bidirectional
+  iterative-catching termination).
 
 ## Routing rule
 
@@ -152,6 +152,58 @@ These are working thresholds, not laws. The Mutual Hallucination-
 Flag-and-Retract Discipline (in `session/iterative-catching.md`)'s retraction
 sub-track was grandfathered at 8 datapoints; author judgment governs
 edge cases.
+
+### Codification convention: observation-grain vs application-grain N count
+
+When counting codification-graduation evidence (N), distinguish
+two grains:
+
+- **Observation-grain N.** The pattern surfaces as a new finding
+  in distinct sessions / chunks / contexts. Typical codification
+  threshold is observation-grain N=3 (the pattern needs to surface
+  as a new observation in 3 distinct contexts before graduating to
+  "should we normalize / codify project-wide" question).
+- **Application-grain N.** The pattern is applied N times within a
+  single session / chunk / context. Application-grain N within one
+  session is one instance from threshold-counting perspective —
+  not N independent observations.
+
+**Why:** Chunk-3-Phase-4 close evidence: F-J-11 (Pattern B variant
+split) prose conflated observation-grain N=1 (chunk-3 surfaced the
+Phase-1-internal-wrap vs Phase-2/5-external-wrap split as a single
+finding at scope-lock Round 6) with application-grain N=6 (chunk-3
+applied the split across 6 service-method modifications at 3b).
+The split is documented at chunk-3 but graduation awaits a second-
+observation-grain instance (e.g., a future chunk reaching into
+Phase 1 services or any variant-mixed service surface and re-
+surfacing the variant-aware insertion-site decision).
+
+**How to apply:** When citing N in codification claims (friction-
+journal entries, retrospective inventory ratification, conventions
+graduations), name the grain explicitly: "observation-grain N=X"
+or "application-grain N=Y." For codification threshold purposes,
+observation-grain N is the load-bearing count; application-grain N
+documents the breadth-of-application within an instance but doesn't
+contribute to the threshold count.
+
+Precedent: Phase 4 chunk 3 close (memory-only candidate (iii)
+graduation per Phase 4 retrospective; applies retroactively to
+F-J-11 and other ambiguous-N codifications). Future codification
+claims at chunks 4+ name the grain.
+
+---
+**Origin (this sub-section):**
+- First codified: Phase 4 chunk 3 close (2026-05-14)
+- Evidence basis: memory-only candidate (iii) graduation per Phase
+  4 retrospective; retroactive to F-J-11 and other ambiguous-N
+  codifications
+- Promoted from: Phase 4 retrospective memory-only graduation
+- Cross-references: F-J-11 (Pattern B variant split prose);
+  Phase 4 retrospective writeup
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1;
+  lives alongside the codification-thresholds parent section as the
+  methodological companion to N=2/N=3/N=5 thresholds)
 
 ## Three-category codification taxonomy
 

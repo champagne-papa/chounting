@@ -535,8 +535,10 @@ per the boundary refinement below.
 Phase 6.5 chunk 2 surfaced a discrimination clarifying when an
 additive surface belongs in this ADR's "substrate-now-
 enforcement-later" territory vs RI-1's "strict atomic ship with
-consumer" territory (`CLAUDE.md ## Verify-forward-at-scope-lock
-for computational-shape chunks` §RI-1):
+consumer" territory
+(`docs/04_engineering/conventions/session/scope-lock.md`
+§Verify-forward-at-scope-lock for computational-shape chunks
+→ §Consumer-presence verification before substrate addition (RI-1)):
 
 - **Functionally-independent substrate (this ADR's territory).**
   A database column, RPC parameter, enum value, table
@@ -578,12 +580,13 @@ consumer at the same commit.
 
 - Phase 6.5 retrospective at `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
   §3 Candidate #1 + Candidate #2 for full empirical narrative.
-- `CLAUDE.md ## Verify-forward-at-scope-lock for computational-shape chunks`
-  §RI-1 (Consumer-presence verification before substrate
-  addition) — sibling discipline at additive-interface grain.
-- `CLAUDE.md ### Substrate-now-enforcement-later cross-pattern` —
-  parent codification of the discipline this ADR's Phase 6.5 N=4
-  catalog instantiates.
+- `docs/04_engineering/conventions/session/scope-lock.md`
+  §Consumer-presence verification before substrate addition (RI-1)
+  — sibling discipline at additive-interface grain.
+- `docs/04_engineering/conventions/session/scope-lock.md`
+  §Substrate-now-enforcement-later cross-pattern — parent
+  codification of the discipline this ADR's Phase 6.5 N=4 catalog
+  instantiates.
 - ADR-0011 Amendment 2026-05-15 — `ingest_items` deferral as the
   parallel substrate-grain "land schema with consumer code"
   precedent in the substrate-now-enforcement-later territory.

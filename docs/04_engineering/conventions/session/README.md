@@ -38,18 +38,18 @@ topical file.
   Hallucination-Flag-and-Retract Discipline, Session Labeling
   Convention, Session Lock File Convention.
 
-## When CLAUDE.md content lands
+## Content relocated from CLAUDE.md at Commit D
 
-At Commit D of the v2.2 reorg, additional rules from CLAUDE.md
-relocate into this sub-folder:
+Commit D of the v2.2 reorg relocated five rules from CLAUDE.md
+into this sub-folder:
 
-- RI-1 through RI-10 cluster → `scope-lock.md`.
+- Verify-forward-at-scope-lock for computational-shape chunks
+  cluster (RI-1 through RI-10) → `scope-lock.md`.
 - Bidirectional iterative-catching termination → `iterative-catching.md`.
 - Substrate-now-enforcement-later → `scope-lock.md`.
 - Memory-writes-only Stage 6 firing-shape → `session-close.md`.
 - Plan-authoring substrate-verification at transitive-dependency
   grain → `plan-authoring.md`.
 
-At Commit A close-time, those rules have not yet relocated; they
-remain at their current home in CLAUDE.md. After Commit D lands,
-each sub-file should still be under ~400 lines individually.
+Origin metadata footers on each relocated section preserve
+chronological provenance per v2.2 §5.3.

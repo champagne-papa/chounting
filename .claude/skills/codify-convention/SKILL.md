@@ -26,9 +26,9 @@ forcing each codification through the routing decision tree.
 ## When to invoke
 
 - A friction-journal pattern has fired ≥3 times across distinct contexts
-  (observation-grain N=3, not application-grain — see CLAUDE.md
-  "Codification convention: observation-grain vs application-grain N
-  count").
+  (observation-grain N=3, not application-grain — see
+  `docs/04_engineering/conventions/README.md` "Codification convention:
+  observation-grain vs application-grain N count").
 - A sub-type of an existing convention has fired a second time (N=2
   split-trigger threshold).
 - A phase-end hygiene pass surfaces convention-threshold candidates.

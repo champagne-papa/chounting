@@ -10,10 +10,6 @@ See [`README.md`](./README.md) for the sub-folder routing rule and
 the broader [`../README.md`](../README.md) for the topical routing
 rule.
 
-Bidirectional iterative-catching termination is currently in
-repo-root `CLAUDE.md`; it relocates to this file at Commit D of the
-v2.2 reorg.
-
 ---
 
 ## Check HEAD before Step 2 Plan
@@ -589,3 +585,38 @@ ratification commit. Supporting tooling:
   `scripts/install-hooks.sh`
 - Env-inheritance amendment: 2026-04-22 (Session M first-activation
   finding)
+
+---
+
+## Bidirectional iterative-catching termination (Z1 #15)
+
+When two-sided work involves iterative drift-catching between
+sides, the loop terminates not at "agreement" but at canonical-
+evidence-anchor: the on-disk artifacts and commit history that
+both sides can verify against independently. Transcript inheritance
+between sessions is not load-bearing; the canonical artifacts are.
+
+Mechanism: agreement-as-termination produces convergence on shared
+mistakes when both sides drift toward the same misreading.
+Anchor-as-termination forces both sides to verify against
+artifacts that exist outside either side's working memory, which
+breaks the shared-drift mode.
+
+Trigger: any two-sided arc where iterative catching surfaces
+multiple drift candidates. Sessions that resolve cleanly on first-
+pass verification do not require the discipline.
+
+Precedent: Phase 0 governance arc Sessions 2A-2F. Codified at
+Session 2F closeout (Observation 3 path α). Full Z1 catalog at
+`docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` §4.
+
+---
+**Origin:**
+- First codified: Phase 0 governance arc, 2026-05-04 (Session 2F
+  closeout, Observation 3 path α)
+- Evidence basis: N=1 first-instance (Z1 #15 catalog entry)
+- Promoted from: Z1 #15 catalog
+- Cross-references:
+  `docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` §4
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

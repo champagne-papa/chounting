@@ -9,10 +9,6 @@ See [`README.md`](./README.md) for the sub-folder routing rule and
 the broader [`../README.md`](../README.md) for the topical routing
 rule.
 
-Memory-writes-only Stage 6 firing-shape is currently in repo-root
-`CLAUDE.md`; it relocates to this file at Commit D of the v2.2
-reorg.
-
 ---
 
 ## Verification-gate reference-classification (supersession-grep grain)
@@ -108,3 +104,47 @@ commit `eab3f5e`).
 - Promoted from: Phase 6.5 retrospective §3 Candidate #10
 - Cross-references: CLAUDE.md `### UI-session screenshot gate`;
   Phase 6.5 retrospective §3 Candidate #10 + §4 Finding A
+
+---
+
+## Memory-writes-only Stage 6 firing-shape
+
+When a session's substantive scope is fully captured by a single
+substantive commit, Stage 6 session-close fires as memory-writes-only:
+no additional commit, just pickup file refresh + MEMORY.md refresh.
+The (γ-a) bundle pattern carries: 1 substantive commit + 2 memory-
+writes (pickup + MEMORY).
+
+Trigger: any session whose substantive scope is captured in a single
+commit AND whose Stage 6 surface is limited to pickup-file refresh +
+MEMORY.md refresh. Multi-commit sessions fire Stage 6 differently
+(per substantive commit's own commit body + final memory-writes after
+the last commit).
+
+Mechanism: Stage 6 separates session-close infrastructure (pickup +
+MEMORY) from session-substance (commit). Memory-writes-only fires
+when the session's substance is single-commit-captured; the memory
+infrastructure layer rides outside the commit. Avoids creating a
+post-substance "infrastructure-only commit" that bloats history.
+
+Precedent: Phase 5 chunk B5-1 within-arc N=3 (chunk-onset
+memory-writes-only Stage 6 + session #1 close (γ-a) bundle 1+2 +
+session #2 close (γ-a) bundle 1+2). Graduated to pattern-stable at
+chunk B5-1 session #3 closeout (2026-05-10) per candidate (e)
+shape-refinement-via-within-arc-evidence-basis meta-pathway. See
+`docs/07_governance/friction-journal.md` Phase 5 chunk B5-1 closeout
+retrospective entry (2026-05-10) Adjudication 4 for the graduation
+adjudication.
+
+---
+**Origin:**
+- First codified: Phase 5 chunk B5-1 session #3 closeout, 2026-05-10
+- Evidence basis: within-arc N=3 (chunk-onset + session #1 close +
+  session #2 close)
+- Promoted from: candidate (e) shape-refinement-via-within-arc-
+  evidence-basis meta-pathway
+- Cross-references:
+  `docs/07_governance/friction-journal.md` Phase 5 chunk B5-1
+  closeout retrospective entry (2026-05-10) Adjudication 4
+- v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
+  Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)

@@ -27,10 +27,9 @@ codifications land:
   grain N (the pattern surfaces as a new finding in distinct
   sessions / chunks / contexts) is the codification threshold;
   application-grain N within one session is one instance from
-  threshold-counting perspective. See repo-root `CLAUDE.md`
-  "Codification convention: observation-grain vs application-grain
-  N count" (currently in CLAUDE.md; relocates to topical
-  conventions at Commit D of the v2.2 reorg).
+  threshold-counting perspective. See
+  `docs/04_engineering/conventions/README.md` "Codification
+  convention: observation-grain vs application-grain N count".
 - **Origin-metadata footer format.** Every codified rule carries
   a standardized footer (`First codified` / `Evidence basis` /
   `Promoted from` / `Cross-references`) per v2.2 §5.3. The
@@ -45,5 +44,5 @@ codifications land:
 This rule is the load-bearing pointer of the post-reorg routing
 forcing function. Four redundant pointers per v2.2 §10.5:
 this rule + `conventions/README.md` (canonical) +
-`codify-convention` skill + CLAUDE.md routing index section
-(lands at Commit D).
+`codify-convention` skill + CLAUDE.md "Codification routing"
+section.
