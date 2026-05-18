@@ -186,6 +186,32 @@ caveat's framing held for that subset. Trade-off documented but not
 anticipated: future buckets that happen to be all-lowercase-letters-
 only would be rejected by the heuristic.
 
+Second resolution (ARC 2.5, 2026-05-19): a separate limitation surfaced
+at ARC 3 STEP 1 verification — B1's regex had a 40-char length cap
+(`\([^()[:space:]]{1,40}\)`) set during the original brainstorm without
+empirical grounding. The family name `caveat-prediction-vs-empirical-
+resolution` (41 chars) exceeded the cap and was silently rejected,
+falling through to T1.5 as untagged. Empirical audit (2026-05-19) of
+`grep -oE '\([^()[:space:]]+\)'` against the journal surfaced the top
+40 parenthesized tokens by length and revealed that bucket and
+non-bucket populations **overlap across 27-65+ chars** — no length
+value cleanly separates them. The audit also revealed a clean shape
+boundary: non-bucket tokens (file paths, code refs) carry backtick
+wrapping or slashes; real buckets do not. Resolution: length cap
+removed entirely (B1 becomes `\([^()[:space:]]+\)`); two shape rejects
+added — candidate starts or ends with backtick (`` ` ``) → code/path
+reference; candidate contains slash (`/`) → file path. Both fall
+through to B2/B3 without invoking the heuristic. Together with the
+ARC 2 heuristic, shape rejects carry the discrimination. Audit
+findings table lives in the friction-journal 2026-05-19 ARC 2.5 close
+H2 section (the data shouldn't only live in the conversation that
+produced the decision). Trade-off documented: tokens that escape both
+shape rules and the heuristic (e.g., hyphenated camelCase code
+references that lack backticks/slashes/extensions) would become
+phantom buckets. The audit surfaced no such tokens in the top 40;
+file-extension shape rule (third potential reject) deferred per
+empirical-grounding discipline — bank if surfaced as N=1, add at N=3.
+
 ## Graduation check — two stages
 
 **Stage A (ID-shaped buckets):** Bare grep for the bucket ID in
