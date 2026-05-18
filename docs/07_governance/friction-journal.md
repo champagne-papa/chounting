@@ -13473,3 +13473,131 @@ independent firings required before graduation evaluation.
   taxonomy this entry extends).
 - Detector script: `scripts/friction-journal-tally.sh`.
 - Subagent definition: `.claude/agents/friction-pattern-detector.md`.
+
+## 2026-05-19 — ARC 3 STEP 1 STOP: 3 observations (cap finding + meta-pattern N=2 + discipline-gate firing)
+
+Banking 3 observations from ARC 3's STEP 1 detector verification, which
+stopped the arc on a sanity-check mismatch rather than pressing through.
+The arc did not proceed to STEP 2. Resolution of the underlying B1
+40-char cap issue is deferred to a separate small audit-and-fix arc
+(informally "ARC 2.5") before ARC 3 proper resumes. **Observations
+only — no fix applied to B1 in this session per
+codify-while-deciding-not-while-implementing.**
+
+### caveat-prediction-vs-empirical-resolution (second-instance — family now N=2)
+
+- (caveat-prediction-vs-empirical-resolution) second-instance — B1's
+  bucket-extraction regex caps at 40 characters
+  (`\([^()[:space:]]{1,40}\)`). The cap was set during the original
+  brainstorm without empirical grounding — no audit verified the cap
+  against actual bucket-name lengths in the journal. ARC 3's STEP 1
+  verification surfaced the gap: the family name
+  `caveat-prediction-vs-empirical-resolution` is 41 characters, one
+  over the cap, and is silently rejected by B1, falling through to
+  B2/B3 (which don't match its shape), ultimately landing in T1.5
+  as untagged. Same family-shape as the first-instance entry: a
+  confident-sounding parameter encodes a prediction that empirical
+  verification reveals as partially incorrect. N=1 was the original
+  B1 caveat's "shadowed lines belong in T1.5" prediction that the
+  redirect-vs-remove finding partially refuted; N=2 is this
+  40-char-cap finding. Family not yet at N≥3 graduation threshold.
+
+  Family-name length inventory at this banking:
+  - `tool-contract-drift`: 19 chars
+  - `plan-empirical-mismatch`: 23 chars
+  - `regex-permissive-cost-class`: 27 chars
+  - `embedded-language-quote-collision`: 33 chars
+  - `caveat-prediction-vs-empirical-resolution`: 41 chars (silently rejected)
+
+### audit-fix-verify-surfaces-banking (new family, banking N=1 + N=2 together)
+
+- (audit-fix-verify-surfaces-banking) first-instance — ARC 2's
+  resolution work (the B1 heuristic fix) surfaced two unanticipated
+  banking entries beyond the resolution target: the
+  `embedded-language-quote-collision` bug at fix-application time
+  (apostrophe-in-awk inside bash single-quotes), and the
+  redirect-vs-remove behavioral correction at fix-verification time.
+  Noted informally at ARC 2 close as N=1 of an unnamed meta-pattern;
+  formally banked here with family name.
+
+- (audit-fix-verify-surfaces-banking) second-instance — ARC 3's
+  STEP 1 detector verification (intended as a sanity-check gate
+  before STEP 2 graduation evaluation) surfaced the 40-char cap
+  finding as an unanticipated banking entry. The pattern: arcs
+  structured as audit + fix + verify reliably produce banking
+  entries beyond their resolution target, because the verification
+  step's purpose is to test against reality, and reality surfaces
+  shapes the planning did not anticipate. The shape recurs across
+  multiple arcs (ARC 2 + ARC 3 STEP 1).
+
+  Family at N=2; not at graduation threshold. Future arcs structured
+  as audit + fix + verify likely produce N=3+ instances of this
+  meta-pattern.
+
+### stop-on-mismatch-fires (new family, first-instance)
+
+- (stop-on-mismatch-fires) first-instance — ARC 3's STEP 1 prompt
+  carried a "stop on sanity-check mismatch" instruction inherited
+  from the broader CLAUDE.md discipline. When
+  `caveat-prediction-vs-empirical-resolution` failed to appear in
+  T1 with expected count, the prompt's reflex fired: STOP, surface,
+  do not proceed. Without the stop-reflex, the next steps
+  (graduation evaluation) would have run against unverified detector
+  output, potentially making graduation decisions on incomplete
+  data, or worse, silently treating one family as observation-grain
+  when it was actually invisible-to-the-tooling. The
+  discipline-gate worked as designed.
+
+  Family-shape: this is an observation about the discipline
+  structure itself — the prompt's explicit gates produce
+  intended-behavior outcomes when the gates fire. Distinct from
+  the previous two families in this banking: those are about
+  patterns the tooling/discipline catches; this one is about the
+  discipline catching itself.
+
+  Family N=1. Bank for future N counting; recurrence likely
+  whenever a discipline-gate explicitly designed to stop work
+  fires successfully.
+
+### Next-session shape (informally "ARC 2.5")
+
+ARC 3 is not "retried" — it is blocked on a small audit-and-fix
+arc that:
+
+1. Audits actual bucket-name length distribution in the journal.
+   The first-instance entry above lists the five family-name
+   lengths as a starting point; the full audit should grep all
+   parenthesized tokens in the journal and surface the
+   distribution.
+2. Decides between (a) raising the cap to N (grounded by audit
+   data), (b) removing the cap entirely, or (c) splitting B1
+   into capped-fast-path-and-uncapped-fallback. The decision is
+   ADR-shaped, not just a regex tweak.
+3. Applies the chosen resolution.
+4. Re-verifies the previously-rejected family
+   (`caveat-prediction-vs-empirical-resolution`) now surfaces
+   correctly in T1.
+5. Banks any additional observations the arc itself produces
+   (likely produces them, per audit-fix-verify-surfaces-banking
+   family — explicitly watch for N=3).
+
+ARC 3 resumes after ARC 2.5 closes. The unpushed commits stack
+accordingly: 3 ARC 2 commits + 1 ARC 3 substrate commit
+(`f643623`, prompt reconciliation) + 1 ARC 3 STEP 1 STOP banking
+commit (this one) + ARC 2.5 commits + ARC 3 work commits all land
+in one push after ARC 3 completes, per the queued sequence's
+"no push of half-resolved state" rule.
+
+### Cross-references
+
+- ARC 3 prompt (on-disk canonical):
+  `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (substrate commit `f643623`).
+- ARC 2 banking entry, prior section above (2026-05-19 H2)
+  for `caveat-prediction-vs-empirical-resolution` first-instance.
+- B1 cap site: `scripts/friction-journal-tally.sh` extract_bucket()
+  function, the `\([^()[:space:]]{1,40}\)` regex literal.
+- ARC 2 close session-end note (in the prior session's final turn):
+  flagged the audit-fix-verify-surfaces-banking meta-pattern
+  informally as "worth watching"; this banking formalizes the
+  family name and counts ARC 2 itself as N=1.
