@@ -13890,6 +13890,27 @@ graduation candidate on every run; the deferral entry is what a
 future operator reading the surfaced row checks before making any
 decision.
 
+**Amendment (2026-05-19 ARC 3 close):** ARC 3 STEP 6 verification
+surfaced that the expected `graduated=N` claim above does not hold
+on disk. Stage A's graduation check (`grep -rqF -- "$bucket"`
+across `conventions/`, `CLAUDE.md`, `.claude/skills/`) currently
+false-positives on any mention of the family tag in those surfaces
+— including cross-reference mentions in the body of other
+convention files. The `prediction-grounding.md` convention
+(graduated at `6d3a911`) cross-references this family by name in
+its body; Stage A's grep finds the tag string there and marks this
+family as `graduated=Y(A)`.
+
+The detector's `Y(A)` on this family is a **Stage A false-positive,
+not actual graduation**. The deferral status stands; the family
+remains deferred until the re-evaluation trigger above fires.
+Stage A discriminator refinement (likely shape: look for the tag
+in `Promoted from:` footer fields specifically, not anywhere in
+the body) is queued for ARC 3.5 alongside the other ARC 3 first-
+run observations. Until then, future operators reading the
+surfaced row should interpret `Y(A)` on this family as "deferred,
+but Stage A misreads."
+
 **Cross-references:**
 
 - Banked instances: friction-journal lines 13514, 13523, 13707
