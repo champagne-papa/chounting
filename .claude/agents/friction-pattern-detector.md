@@ -67,6 +67,55 @@ codification surface.
 
 6. **Emit consolidated stdout report** (output shape section below).
 
+## T2 — Anchored-semantic scan
+
+**Anchored, not exploratory.** T2 is asked a narrow question:
+given the bucket-ID list extracted from T1, are there entries in
+the active window that could plausibly belong to one of these
+buckets but weren't tagged?
+
+T2 is NOT asked to discover new buckets. New-bucket discovery is
+T3 (gated, see next section).
+
+### Procedure
+
+1. Take the bucket-ID list from T1 (Tasks 4/6/7 output).
+2. Read the windowed journal slice (from Invocation flow step 3).
+3. For each entry in the window, consider whether the entry's
+   content matches the pattern signature of any T1 bucket. The
+   pattern signature is whatever the bucket's *existing tagged
+   instances* in the journal have in common (verb-shape, context,
+   subject).
+4. If an entry plausibly matches a bucket but was not tagged with
+   that bucket's instance marker, surface it as a T2 candidate.
+
+### What counts as "plausibly matches"
+
+- Same kind of friction (substrate-receipt drift, brief-amendment
+  cycle, cross-phase reconciliation, etc.) as the bucket's prior
+  instances.
+- Same actor or surface (a `cadence-β-*` pattern is about cadence
+  observations; a finding about substrate drift wouldn't count
+  even if structurally similar).
+- Reasonable confidence (≥70%) that a careful reader would tag
+  the entry with this bucket if reviewing it now.
+
+If confidence is below that threshold, do NOT surface as T2.
+Low-confidence candidates contaminate the high-signal output and
+defeat the purpose of anchoring.
+
+### T2 output shape
+
+For each candidate:
+
+- **Bucket:** the existing bucket ID this entry plausibly belongs to.
+- **Entry line range:** start–end line numbers in
+  `friction-journal.md`.
+- **Entry date:** the H2 date the entry sits under.
+- **Why match:** one sentence linking the entry's content to the
+  bucket's existing tagged instances.
+- **Confidence:** high / medium (only surface ≥medium).
+
 ## Output shape
 
 (awaiting implementation — Task 13)
