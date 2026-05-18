@@ -29,11 +29,6 @@ When editing SQL migration files under `supabase/migrations/`:
   tests at substrate-mod commit time. See repo-root `CLAUDE.md`
   "Substrate-mod-event test-staleness review" (relocates to
   `migrations.md` at Commit D).
-- **RLS preservation.** Adding tables that hold org-scoped data
-  requires the standard 4-policy RLS pattern (SELECT/INSERT/UPDATE/
-  DELETE through-parent with `org_id` derivation). See
-  `migrations.md` and the chunk-3-Phase-2 `org_id`-derived-in-RPC
-  pattern (canonical post-chunk-3 across Phase 2/3).
 
 This is an operational projection of canonical conventions; for
 edge cases or full discipline, read the topical files above.
