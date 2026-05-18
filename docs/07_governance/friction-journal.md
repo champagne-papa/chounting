@@ -13601,3 +13601,165 @@ in one push after ARC 3 completes, per the queued sequence's
   flagged the audit-fix-verify-surfaces-banking meta-pattern
   informally as "worth watching"; this banking formalizes the
   family name and counts ARC 2 itself as N=1.
+
+## 2026-05-19 — ARC 2.5 close: B1 cap resolved (audit-grounded); 2 graduation candidates surfaced
+
+ARC 2.5 closed with B1's 40-char length cap removed entirely and
+shape-based rejects added. Empirical audit demonstrated no clean
+length boundary between buckets and non-buckets, but a clean shape
+boundary (backtick wrapping + slash containment) — shape rules now
+carry the discrimination length alone could not.
+
+Two banking entries graduate their families to N=3 in this section
+(both candidates for retrospective-close evaluation when ARC 3
+resumes). The resolution narrative is the closing of the
+40-char-cap finding (caveat-prediction-vs-empirical-resolution
+second-instance from ARC 3 STEP 1 STOP banking).
+
+### Resolution: cap-removal + shape rejects (closing the 40-char cap finding)
+
+Commits:
+- `425cac3` — fix(scripts): cap removal + shape rejects
+- `d78bf8d` — docs(brief): spec amendment
+
+B1 changes:
+- Length: `\([^()[:space:]]+\)` (cap removed; was `{1,40}`)
+- Shape rejects added (fall through to B2/B3):
+  - candidate starts or ends with `` ` `` → backtick-wrapped code/path ref
+  - candidate contains `/` → file path
+- ARC 2 heuristic preserved (digit / hyphen / non-ASCII required).
+
+Audit data summary (top-40 parenthesized tokens by length):
+
+| Length | Token | Class |
+|-------:|-------|-------|
+| 65 | `` `docs/09_briefs/phase-1.3/session-32-onboarding-posture-brief.md` `` | code/path |
+| 64 | `` `supabase/migrations/20240152000000_ingestion_substrate.sql:132` `` | code/path |
+| 51 | `` `2026-05-06-phase-2-brief-pre-positioning-notes.md` `` | filename |
+| 50 | `transient/permanent_malformed/provider_unavailable` | enum prose |
+| 49 | `` `credit_card`/`ach`/`bank_transfer`/`money_order` `` | enum prose |
+| 48 | `**codify-while-deciding-not-while-implementing**` | discipline name (bold-wrapped) |
+| 45 (×2) | path/file refs | code/path |
+| **44** | `D2.7-gate-with-substrate-ship-only-exception` | **BUCKET (longest pure)** |
+| 43 | `` `caveat-prediction-vs-empirical-resolution` `` | bucket (backtick-quoted) |
+| 41 (×2) | `caveat-prediction-vs-empirical-resolution` | **BUCKET** |
+| 39 | `` `documentRouterService.dispatchTrigger` `` | code ref |
+| 38 (×3) | bucket + UUID + filename | mixed |
+| 33-35 | mixed | mixed |
+| 27-32 | mostly buckets + some code/filename refs | mixed |
+
+Longest pure bucket: **44 chars** (`D2.7-gate-with-substrate-ship-only-exception`,
+tied with `codify-while-deciding-not-while-implementing`). Longest non-bucket:
+65 chars (backtick-wrapped path). Populations overlap across 27-65+ chars
+with no clean length cutoff. Shape boundary clean: non-buckets carry
+backticks, slashes, file extensions, or method-dot-syntax; real buckets do
+not. The audit's classification grounds the cap-removal + shape-reject
+decision. Reproducible: `grep -oE '\([^()[:space:]]+\)' docs/07_governance/friction-journal.md | awk '{print length($0)-2, $0}' | sort -rn | head -40`.
+
+Verification (STEP 3 three checks):
+- (1) `caveat-prediction-vs-empirical-resolution` now in T1 at N=2 (lines
+  13430 + 13489 — prompt's prediction of N=1 was stale; grep-verified two
+  substantively distinct observations, not tag inflation).
+- (2) Shadow tokens (sustained, a, b, c, etc.) remain absent from T1 —
+  ARC 2 heuristic still holds.
+- (3) All legitimate buckets aggregate correctly; no new phantom buckets
+  surfaced from cap removal (top-5 T1 unchanged: cadence-β-i-b, LIVE,
+  NEW, WSL, S29).
+
+### caveat-prediction-vs-empirical-resolution (third-instance — family now N=3, graduation candidate)
+
+- (caveat-prediction-vs-empirical-resolution) third-instance — Pattern
+  observed across this run of arcs: prompts written for the next
+  session encode confident-sounding predictions about disk state that
+  diverge from actual disk state when verification runs. Three
+  sub-instances visible in this session's transcript:
+
+  1. ARC 2 STEP 3 predicted ~518 T1.5 lines from the heuristic;
+     actual ~20 (banked as caveat-prediction-vs-empirical-resolution
+     first-instance — redirect-vs-remove framing).
+  2. ARC 3 STEP 1 expected caveat-prediction-vs-empirical-resolution
+     present at N=1; actual was absent entirely (banked as second-
+     instance — the 40-char cap finding).
+  3. ARC 2.5 CHECK 1 expected caveat-prediction-vs-empirical-resolution
+     in T1 at N=1; actual at N=2 because the ARC 3 STEP 1 STOP banking
+     itself added a second-instance tag that the prompt-writer didn't
+     factor in.
+
+  Family-shape: same as the first two instances (a parameter or
+  prediction encoded without empirical grounding is revealed as
+  off when verification actually runs against disk). Distinct in
+  surface: this instance is about **prompt-write-time** predictions
+  — the prompts being authored carry confident counts and behavior
+  expectations without grounding against disk state at write time.
+  Generalizable: any planning artifact that encodes predictions
+  about resolution behavior carries this risk; the discipline
+  implication is "separate what verification will confirm from what
+  verification will discover when authoring the prediction."
+
+  Family now at N=3 — **graduation candidate** for ARC 3
+  retrospective-close evaluation. Whether this family deserves a
+  convention file (and where it would land — possibly the brainstorm
+  or writing-plans skill surface rather than a topical convention) is
+  ARC 3's question, not ARC 2.5's.
+
+### audit-fix-verify-surfaces-banking (third-instance — family now N=3, graduation candidate)
+
+- (audit-fix-verify-surfaces-banking) third-instance — ARC 2.5's
+  STEP 3 verification surfaced the prompt-prediction-vs-disk-reality
+  observation (the third-instance entry above) as an unanticipated
+  banking entry beyond the arc's resolution target (which was the
+  cap fix). The meta-pattern continues across three consecutive
+  arcs:
+
+  - ARC 2 (first-instance): heuristic fix surfaced
+    embedded-language-quote-collision (apostrophe-in-awk) +
+    redirect-vs-remove behavioral correction.
+  - ARC 3 STEP 1 (second-instance): detector verification surfaced
+    the 40-char cap finding.
+  - ARC 2.5 (this instance): cap-fix verification surfaced the
+    prompt-prediction-vs-disk-reality observation.
+
+  The structural reason: arcs structured as audit + fix + verify
+  test resolution behavior against reality at the verify step, and
+  reality reliably surfaces shapes the planning didn't anticipate.
+  The recursion is the work.
+
+  Family now at N=3 — **graduation candidate** for ARC 3
+  retrospective-close evaluation. The candidate convention question
+  ARC 3 will face: does the meta-pattern deserve a topical convention
+  about how to structure resolution arcs, or is it observation-only
+  at this scale?
+
+### Family-level status going into ARC 3
+
+After this banking, the family taxonomy stands as:
+
+| Family | N | Status |
+|--------|--:|--------|
+| `tool-contract-drift` | 2 | below threshold |
+| `plan-empirical-mismatch` | 2 | below threshold |
+| `regex-permissive-cost-class` | 4 | **graduation candidate** (was N=4 going into ARC 3) |
+| `embedded-language-quote-collision` | 1 | below threshold |
+| `caveat-prediction-vs-empirical-resolution` | 3 | **graduation candidate** (NEW this banking) |
+| `stop-on-mismatch-fires` | 1 | below threshold |
+| `audit-fix-verify-surfaces-banking` | 3 | **graduation candidate** (NEW this banking) |
+
+Three families now at N=3+ for ARC 3 retrospective-close evaluation
+when it resumes. ARC 3 was originally scoped to evaluate one
+(regex-permissive-cost-class N=4); ARC 2.5's banking surfaced two
+more (caveat-prediction-vs-empirical-resolution N=3, audit-fix-verify-
+surfaces-banking N=3). Both new candidates carry recursive
+self-reference: the families describe the very kind of work ARC 2.5
+was doing when they reached threshold.
+
+### Cross-references
+
+- Script fix commit: `425cac3` (fix(scripts): cap removal + shape rejects).
+- Spec amendment commit: `d78bf8d` (docs(brief): §Bucket extraction second resolution).
+- ARC 3 STEP 1 STOP banking (prior H2 above): cap finding banked as
+  caveat-prediction-vs-empirical-resolution second-instance.
+- ARC 2 close banking (2026-05-19 first H2): original first-instance
+  + the audit-fix-verify-surfaces-banking family's first-two instances.
+- Audit reproduction: `grep -oE '\([^()[:space:]]+\)' docs/07_governance/friction-journal.md | awk '{print length($0)-2, $0}' | sort -rn | head -40`.
+- ARC 3 prompt (unchanged): `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (substrate commit `f643623`).
