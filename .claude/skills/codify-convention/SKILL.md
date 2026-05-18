@@ -70,7 +70,7 @@ section against the candidate. For sub-routing within topical conventions
 
 ## Output specification
 
-Produce two artifacts:
+Produce three artifacts:
 
 1. **Destination decision.** Name the file (with section-heading
    suggestion) where the codification block will land. If ambiguous,
@@ -122,6 +122,38 @@ Produce two artifacts:
    brief, single-sentence assessment per criterion is acceptable.
    The discipline is naming the criteria explicitly, not producing
    paragraphs.
+
+3. **Upstream-artifacts cross-reference list.** Identify upstream
+   artifacts that contain the pattern's discovery provenance —
+   spec caveats that documented the cost class, banked
+   friction-journal entries with prose explanations, plan-doc
+   amendments that surfaced the discipline, ADR sub-sections
+   that referenced the pattern as an emerging shape. For each
+   upstream artifact, add a cross-reference pointing at the new
+   canonical convention as part of the graduation commit.
+
+   The cross-reference text adapts to its host's typical citation
+   density — terse "see `conventions/<file>.md`" in prose-heavy
+   hosts like briefs; parenthetical inline cites in
+   provenance-heavy hosts like friction-journal entries; full
+   paths in structured-reference hosts like ADRs. The variation
+   matches how the host already cites other canonical sources;
+   it's not aesthetic. The discipline is the cross-reference's
+   presence and direction (upstream → canonical), not the exact
+   wording.
+
+   The cross-reference's purpose: future readers of the upstream
+   artifact see the discoveries as instances of a codified
+   discipline rather than as standalone caveats. The upstream
+   artifact retains its discovery provenance; the canonical
+   convention is the discipline's load-bearing home.
+
+   The upstream-artifacts list is its own surfaced artifact —
+   the operator reviews and approves it before the
+   cross-references get applied. This keeps the discipline
+   visible (the operator sees what's being touched) rather than
+   silent (cross-references appearing in the graduation commit
+   without explicit review).
 
 ## Anti-patterns to flag
 
