@@ -44,14 +44,119 @@ MARKER_LINES=$(grep -nE "$MARKER_ERE" "$JOURNAL" || true)
 # continue.
 MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
 
+# Run awk over the journal, tracking H2 date headings as context and
+# extracting bucket references from each marker line.
+#
+# H2 date heading shape (per journal convention):
+#   ## 2026-04-30 — Q33 partial-resolution arc
+#   ## Phase 2
+# We capture the YYYY-MM-DD prefix when present; for phase-style H2s
+# (no date), retain the previous date until the next dated H2.
+#
+# Bucket regex priorities (first match in the window wins):
+#   B1: \([^()[:space:]]{1,40}\)     — paren-delimited single-token bucket.
+#       No spaces, no nested parens. Catches (cadence-β-i-a), (α),
+#       (γ'), (RI-6) when parenthesized. Excludes prose asides like
+#       (see also F-J-14) via the no-space discriminator; B2 then
+#       catches F-J-14 cleanly. Locale-independent (byte negation,
+#       not character class).
+#   B2: \b([A-Z][A-Z0-9-]+[A-Z0-9])\b — uppercase code-like
+#       (catches F-J-14, RI-6, Z1 when unparenthesized)
+#   B3: \b((Path|Framing|Approach|Method) [A-Z][A-Za-z']*)\b
+#       — phrasal (catches Path C, Framing B')
+#
+# Window construction: marker bytes are STRUCTURALLY EXCLUDED from the
+# search window. The window = left_part " | " right_part where left_part
+# is up to 50 chars before the marker and right_part is up to 50 chars
+# after. The " | " separator prevents B1 from merging tokens across the
+# seam (without it, a half-token on the left edge could concatenate with
+# a half-token on the right edge into a phantom bucket). Priority:
+# left-first — the empirical dominant journal pattern (grep audit
+# 2026-05-18) is "(bucket) Nth-instance" with bucket parenthesized
+# immediately left-adjacent to a bare marker.
+#
+# Output TSV: bucket<TAB>line_no<TAB>date<TAB>full_line
+# Empty bucket field => T1.5 candidate (untagged marker).
+
+EXTRACTED=$(awk '
+function extract_bucket(win,    a) {
+  # B1: paren-delimited single-token bucket (no spaces, no nested parens).
+  # Locale-independent (byte negation, not character class) — Greek-letter
+  # bytes (β, γ, α) pass naturally.
+  if (match(win, /\([^()[:space:]]{1,40}\)/)) {
+    return substr(win, RSTART+1, RLENGTH-2)
+  }
+  # B2: uppercase code-like
+  if (match(win, /[A-Z][A-Z0-9-]+[A-Z0-9]/)) {
+    return substr(win, RSTART, RLENGTH)
+  }
+  # B3: phrasal
+  if (match(win, /(Path|Framing|Approach|Method) [A-Z][A-Za-z'\'']*/)) {
+    return substr(win, RSTART, RLENGTH)
+  }
+  return ""
+}
+
+# Track current H2 date as we scan.
+/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/ {
+  match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/)
+  current_date = substr($0, RSTART, RLENGTH)
+  next
+}
+/^## / {
+  # Non-dated H2 (e.g., "## Phase 2"); keep previous date.
+  next
+}
+
+# Marker lines. Regex is embedded as a literal (not passed via -v)
+# because awk -v escape-processes \b into a literal backspace; gawk
+# also does not recognize \b inside EREs. The bash MARKER_ERE variable
+# above uses \b for grep (which DOES support \b); the equivalent inside
+# awk uses \< and \> (gawk word-boundary anchors).
+{
+  if (match($0, /\<(first|second|third|fourth|fifth)-instance\>|\<N[=≥][0-9]+\>/)) {
+    marker_start = RSTART
+    marker_len = RLENGTH
+
+    # Build the search window EXCLUDING the marker bytes themselves.
+    # Prevents B1 from ever capturing the marker substring as if it
+    # were a bucket. Left side: up to 50 chars before the marker.
+    # Right side: up to 50 chars after the marker. " | " separator
+    # prevents B1 from merging tokens across the seam.
+
+    left_end = marker_start - 1
+    left_start = (left_end >= 50) ? left_end - 49 : 1
+    if (left_end >= left_start) {
+      left_part = substr($0, left_start, left_end - left_start + 1)
+    } else {
+      left_part = ""
+    }
+    right_part = substr($0, marker_start + marker_len, 50)
+
+    # Left-first priority: dominant journal pattern is "(bucket)
+    # Nth-instance" per 2026-05-18 grep audit. awk match() returns
+    # the earliest match in win, so left_part being first gives it
+    # priority while still falling through to right_part if absent.
+    win = left_part " | " right_part
+
+    bucket = extract_bucket(win)
+    print bucket "\t" NR "\t" current_date "\t" $0
+  }
+}
+' "$JOURNAL")
+
+# How many T1 vs T1.5 lines did we extract?
+TAGGED_COUNT=$(printf '%s\n' "$EXTRACTED" | awk -F'\t' '$1 != "" {n++} END {print n+0}')
+UNTAGGED_COUNT=$(printf '%s\n' "$EXTRACTED" | awk -F'\t' '$1 == "" {n++} END {print n+0}')
+
 echo "# Friction-Journal Tally"
 echo "# Source: $JOURNAL"
-echo "# Marker lines found: $MARKER_COUNT"
+echo "# Marker lines found: $MARKER_COUNT (tagged: $TAGGED_COUNT, untagged: $UNTAGGED_COUNT)"
 echo
 echo "## T1 — Tagged instances (graduate-now candidates)"
-echo "(awaiting bucket extraction)"
+echo "(awaiting aggregation)"
 echo
 echo "## T1.5 — Untagged instance markers (name-this candidates)"
-echo "(awaiting bucket extraction)"
+echo "(awaiting aggregation)"
 
 exit 0
