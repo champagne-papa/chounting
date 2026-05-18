@@ -25,12 +25,33 @@ if [[ ! -f "$JOURNAL" ]]; then
   exit 2
 fi
 
+# Marker regex (ERE): bare Nth-instance tags or bare N=/N≥ counts.
+# Word-boundary anchors (\b) protect against prefix/suffix matches
+# (e.g., "instances" plural). Grep findings 2026-05-18: the journal's
+# dominant pattern is bare Nth-instance (73 occurrences) rather than
+# parenthesized (zero occurrences); bare N=/N≥ totals 668. Captures:
+#   third-instance, fourth-instance, ...
+#   N=2, N=3, N=4, ...
+#   N≥2, N≥3, ...
+MARKER_ERE='\b(first|second|third|fourth|fifth)-instance\b|\bN[=≥][0-9]+\b'
+
+# Collect every line containing a marker, with line numbers.
+# Output format (TSV): line_number<TAB>line_text
+MARKER_LINES=$(grep -nE "$MARKER_ERE" "$JOURNAL" || true)
+
+# Sanity check: ensure we got matches. Empty result is a real
+# possibility (empty/new journal) and is not an error — print 0 and
+# continue.
+MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
+
 echo "# Friction-Journal Tally"
 echo "# Source: $JOURNAL"
+echo "# Marker lines found: $MARKER_COUNT"
 echo
 echo "## T1 — Tagged instances (graduate-now candidates)"
-echo "## T1.5 — Untagged instance markers (name-this candidates)"
+echo "(awaiting bucket extraction)"
 echo
-echo "(placeholder — implementation incoming)"
+echo "## T1.5 — Untagged instance markers (name-this candidates)"
+echo "(awaiting bucket extraction)"
 
 exit 0
