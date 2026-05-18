@@ -54,12 +54,22 @@ MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
 # (no date), retain the previous date until the next dated H2.
 #
 # Bucket regex priorities (first match in the window wins):
-#   B1: \([^()[:space:]]{1,40}\)     — paren-delimited single-token bucket.
-#       No spaces, no nested parens. Catches (cadence-β-i-a), (α),
-#       (γ'), (RI-6) when parenthesized. Excludes prose asides like
-#       (see also F-J-14) via the no-space discriminator; B2 then
-#       catches F-J-14 cleanly. Locale-independent (byte negation,
-#       not character class).
+#   B1: \([^()[:space:]]{1,40}\)     — paren-delimited single-token bucket
+#       + heuristic discriminator (added 2026-05-19). Permissive matching
+#       captures the bucket-ID-shaped span; the heuristic requires the
+#       candidate to contain at least one of {digit, hyphen, non-ASCII
+#       byte}. Accepts (cadence-β-i-a), (α), (γ'), (RI-6), (β-1), (Z1).
+#       Rejects (sustained), (a)/(b)/(c), (i)/(ii), (above), (deferred)
+#       etc. — the 2026-05-19 audit confirmed no legitimate single-word-
+#       lowercase bucket IDs exist in the journal's top-30 such tokens
+#       (all enumeration markers, status annotations, commit-message
+#       scopes, or prose asides). Fall-through: a rejected B1 match
+#       continues to B2/B3, so lines whose status-annotation parenthetical
+#       previously shadowed the bare-prose observation now correctly drop
+#       to T1.5 as "name this" candidates. Locale-independent (byte
+#       negation, not character class). Note: if a future bucket-naming
+#       convention introduces lowercase-only-letters buckets, the
+#       heuristic would reject them; revisit at that time.
 #   B2: \b([A-Z][A-Z0-9-]+[A-Z0-9])\b — uppercase code-like
 #       (catches F-J-14, RI-6, Z1 when unparenthesized)
 #   B3: \b((Path|Framing|Approach|Method) [A-Z][A-Za-z']*)\b
@@ -79,12 +89,26 @@ MARKER_COUNT=$(printf '%s' "$MARKER_LINES" | grep -c . || true)
 # Empty bucket field => T1.5 candidate (untagged marker).
 
 EXTRACTED=$(awk '
-function extract_bucket(win,    a) {
-  # B1: paren-delimited single-token bucket (no spaces, no nested parens).
-  # Locale-independent (byte negation, not character class) — Greek-letter
-  # bytes (β, γ, α) pass naturally.
+function extract_bucket(win,    candidate, copy) {
+  # B1: paren-delimited single-token bucket + heuristic discriminator.
+  # Heuristic (added 2026-05-19): the candidate must contain at least
+  # one of {digit, hyphen, non-ASCII byte}. Non-ASCII detection uses
+  # gsub-strip-ASCII-printable-and-check-residual because gawk regex
+  # character classes do not accept \xHH or \NNN byte-value escapes;
+  # the literal printable-range [!-~] (0x21..0x7E) approach is portable.
+  # Fall-through: when B1 matches but the heuristic rejects, control
+  # flows past the if-block to B2/B3.
   if (match(win, /\([^()[:space:]]{1,40}\)/)) {
-    return substr(win, RSTART+1, RLENGTH-2)
+    candidate = substr(win, RSTART+1, RLENGTH-2)
+    if (match(candidate, /[0-9-]/)) {
+      return candidate
+    }
+    copy = candidate
+    gsub(/[!-~]/, "", copy)
+    if (length(copy) > 0) {
+      return candidate
+    }
+    # heuristic rejected — fall through to B2/B3
   }
   # B2: uppercase code-like
   if (match(win, /[A-Z][A-Z0-9-]+[A-Z0-9]/)) {
