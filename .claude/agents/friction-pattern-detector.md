@@ -163,7 +163,41 @@ For each candidate:
 
 ## Output shape
 
-(awaiting implementation — Task 13)
+Emit a single stdout report with the following structure:
+
+```
+# Friction-Pattern-Detector Report
+# Window: <window_start> — <today>  (source: <retrospective | 30-day fallback | --since>)
+
+## T1 — Graduate-now candidates
+<table copied verbatim from the tally script's T1 section,
+filtered to rows where graduated_yn=N AND instance_count≥3>
+
+## T1.5 — Name-this candidates
+<table copied verbatim from the tally script's T1.5 section,
+already sorted by date desc>
+
+## T2 — Likely-missed instances (anchored)
+<one block per candidate, formatted per T2 output shape>
+
+[## T3 — Possible new buckets   ← only if --explore]
+<one block per candidate, formatted per T3 output shape>
+
+## Action checklist
+- For each T1 row above, invoke /codify-convention on that bucket.
+- For each T1.5 row above, decide whether to back-tag with a
+  bucket name in a follow-up commit.
+- For each T2 candidate, decide whether to add the bucket's
+  instance marker to the cited entry in a follow-up commit.
+- [If T3:] For each T3 candidate, decide whether to tag the
+  instances with a new bucket name, route through /codify-convention,
+  or dismiss.
+```
+
+The action checklist is the load-bearing handoff to the operator.
+Surface only the actionable rows (T1: ungraduated AND N≥3; T1.5:
+all rows since they're already filtered by the tally script; T2/T3:
+all surfaced candidates).
 
 ## Handling T1.5 output
 
