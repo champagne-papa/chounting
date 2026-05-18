@@ -13801,3 +13801,102 @@ verification will either need its expected-counts updated or its
 "stop on mismatch" reflex will fire on this discrepancy. Either way
 is fine; flagging the substrate state so ARC 3 doesn't STOP on a
 known and explained gap.
+
+## 2026-05-19 — ARC 3 STEP 2 dispositions (deferrals + dismissals)
+
+Banking ARC 3 STEP 2 family dispositions where the call was not
+graduate. Family 1 (`caveat-prediction-vs-empirical-resolution`,
+N=3) graduated at commit `6d3a911`
+(`feat(conventions): graduate caveat-prediction-vs-empirical-resolution — N=3`)
+to topical convention `prediction-grounding.md`. This H2 covers
+the families where the call was DEFER or DISMISS.
+
+### audit-fix-verify-surfaces-banking — DEFERRED at N=3
+
+- **Family:** `audit-fix-verify-surfaces-banking`
+- **N count at deferral:** 3 (friction-journal lines 13514, 13523, 13707)
+- **Status:** **DEFERRED** (not dismissed, not graduated; this is a
+  positive choice — the pattern's structural mechanism is plausible
+  but the diverse evidence required for confident graduation is
+  insufficient)
+- **Date:** 2026-05-19
+
+**Reasoning:**
+
+The three banked instances are geographically concentrated — all
+from the same recursive build-out of the friction-pattern-detector
+(ARC 2 → ARC 3 STEP 1 → ARC 2.5). The family-as-named ("audit-fix-
+verify arcs surface banking entries beyond resolution target")
+claims the load-bearing factor is the arc shape; the family-as-
+evidenced more plausibly supports a narrower pattern
+("iteratively-built-new-tools surface banking at verify steps")
+because each instance shared substrate maturity in addition to arc
+shape.
+
+Counterfactual: a typo fix in a stable, mature substrate using
+audit-fix-verify shape would plausibly NOT fire the pattern —
+verification would simply confirm the fix and surface nothing
+beyond the target. The arc shape alone isn't necessary-and-
+sufficient for the family to fire; substrate-evolution status is
+implicated. The named pattern claims more than the evidence
+supports. Codifying under the broader name would be exactly the
+failure mode family 1 just codified against (encoding a prediction
+about generalization without empirical grounding).
+
+Additional concern: the family's substance reduces to "anticipate
+banking at the verify step" — a heads-up rather than an action-
+driving discipline. Compared to family 1's "stop, surface,
+explain — not pre-edit the prediction" (imperative verbs and
+decision points), family 2 as currently named is closer to
+descriptive load-bearing than prescriptive load-bearing. Even
+with stronger generalization evidence, the operational benefit of
+codifying the named family might be thin.
+
+**Re-evaluation trigger:**
+
+A 4th instance from an operationally distinct context (different
+substrate, different arc origin, different artifact class) would
+provide the diversity evidence the current set lacks. Concretely:
+an audit-fix-verify arc operating on a **stable, mature feature**
+(NOT part of this recursive friction-pattern-detector build chain)
+that produces unanticipated banking at the verify step.
+
+If instead a 4th instance surfaces from another iteratively-built-
+new-tool context, that strengthens the **narrower** pattern
+hypothesis (substrate-evolution as load-bearing) but doesn't
+graduate the family as currently named — it would require re-
+evaluating the family's name and scope to match the narrower
+evidence before any graduation decision.
+
+**Re-evaluation action:**
+
+When the re-evaluation trigger fires, return to STEP 2-shape
+evaluation with the broader evidence base. The decision space at
+that point: GRADUATE (with possibly re-named convention reflecting
+the empirical scope), DISMISS (if the narrower-pattern hypothesis
+is confirmed and the named family is artifact-bound), or
+continued DEFER (if evidence still insufficient).
+
+**Substrate visibility:**
+
+The deferral does NOT depress the family's N count or remove the
+three instances from detector visibility. Future detector runs
+continue to surface `audit-fix-verify-surfaces-banking` in T1 at
+N≥3 with graduated=N; this deferral entry is the meta-status that
+tells the operator "yes, this is at threshold, and yes, it was
+deliberately deferred — here's why and here's the re-evaluation
+trigger." The detector remains correct to flag the family as a
+graduation candidate on every run; the deferral entry is what a
+future operator reading the surfaced row checks before making any
+decision.
+
+**Cross-references:**
+
+- Banked instances: friction-journal lines 13514, 13523, 13707
+  (commits `bcbcacc`, `bcbcacc`, `0368d7f`).
+- Family 1 graduation: commit `6d3a911`
+  (`feat(conventions): graduate caveat-prediction-vs-empirical-resolution — N=3`).
+  The application of family 1's discipline (`prediction-grounding`)
+  to this family's evaluation at graduation time is itself a
+  notable first-run observation; banked separately in the
+  forthcoming ARC 3 first-run observation entry.
