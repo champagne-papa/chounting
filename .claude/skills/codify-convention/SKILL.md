@@ -1,6 +1,6 @@
 ---
 name: codify-convention
-description: Use when promoting a friction-journal pattern to a codified convention after N≥3 fires. Walks the routing decision tree, picks the destination file, drafts the codification block with origin metadata.
+description: Use when promoting a friction-journal pattern to a codified convention after N≥3 fires. Walks the routing decision tree, picks the destination file, drafts the codification block (origin metadata + Evaluation basis), and identifies upstream artifacts needing cross-references.
 trigger: Explicit invocation when a friction-journal pattern has met the N=3 codification threshold and is about to graduate to a codified convention.
 ---
 
@@ -17,8 +17,10 @@ reference before invoking this skill on a candidate.
 This skill fires at codification time. When a friction-journal pattern has
 met the N=3 codification threshold (or N=2 for split-trigger sub-types) and
 the operator or session is about to graduate it to a codified convention,
-this skill picks the destination file and drafts the codification block
-with the standardized origin-metadata footer. The default-to-CLAUDE.md
+this skill picks the destination file, drafts the codification block
+with the standardized origin-metadata footer and Evaluation basis
+section, and identifies upstream artifacts that need cross-references
+to the new canonical source. The default-to-CLAUDE.md
 failure mode that motivated the v2.2 reorg is exactly what this skill
 prevents — it is one of four redundant routing pointers (per v2.2 §10.5)
 forcing each codification through the routing decision tree.
