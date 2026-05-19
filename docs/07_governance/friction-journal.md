@@ -14972,3 +14972,254 @@ This arc surfaced 3 meta-observations and 1 specific instance
 banking across H3 #2/#3/#4/#6. All banked at observation-grain
 N=1 (meta-observations) or as historical record (H3 #4); bank
 for future N counting where applicable.
+
+## 2026-05-19 — ARC 3.6 close: Stage A discriminator refined; prompt-author compression at N=3 codification candidate
+
+### Stage A discriminator refinement complete; family 2 false-positive resolved
+
+ARC 3.6 closes with Stage A's discriminator refined to anchor on
+Promoted-from bullet blocks. The false-positive surfaced at ARC 3
+STEP 6 verification (commit `46d3d0e`) — Stage A's bare grep
+matched cross-reference body mentions of family tags despite
+their families being deferred — is resolved.
+
+Three commits applied (per-step shape):
+
+- `89155fb` — `fix(scripts)`: Stage A awk-based bullet-block
+  discriminator.
+- `a629389` — `docs(brief)`: spec amendment at §Graduation check
+  documenting the refinement and its scope limit.
+- `015d804` — `docs(friction-journal)`: layered amendment to the
+  family 2 deferral entry, replacing the stale known-incorrect-
+  claim note with a back-reference noting the false-positive's
+  lifecycle (persisted from ARC 3 close until ARC 3.6's fix).
+
+Verification (per STEP 3): family 2's tag (`audit-fix-verify-
+surfaces-banking`, original-name reference for the renamed family
+at commit `e6297f1`) correctly reports Y(A) → N. Both ARC 3
+graduations preserved (the families codified at
+`docs/04_engineering/conventions/regex-permissive-matching.md`
+and `docs/04_engineering/conventions/prediction-grounding.md`
+remain Y(A)). No legitimate family tag downgraded. Side benefit:
+26 short-token noise false-positives correctly downgraded.
+
+### Prompt-author compression of canonical-source text — N=3 observation-grain, codification candidate
+
+Three consecutive prompts authored at session-close (ARC 3.5,
+family 2 re-evaluation, ARC 3.6) have each shipped with at least
+one compression-of-canonical-source-text that the receiving
+session's STEP 1 verify-from-disk discipline caught:
+
+- **ARC 3.5 prompt:** "five Phase A observations" framing
+  (compressed the 6 banked first-run findings to 5 operational
+  items; surfaced as Observation 1 sub-instance (a) in the
+  ARC 3.5 Phase A close banking at commit `b58e5dc`).
+
+- **Family 2 re-evaluation prompt:** three-view framing for
+  STEP 2 (compressed the deferral's Scenario A / Scenario B
+  split into views that ignored what the deferral pre-resolved;
+  surfaced as STEP 1 load-bearing finding in the family 2
+  re-evaluation close banking at commit `2aa8585`).
+
+- **ARC 3.6 prompt (this arc):** three distinct compressions
+  within one prompt (application-grain within one
+  observation-grain instance):
+  - "third iteratively-built-new-tool substrate" framing in
+    STEP 6(b) — claimed ARC 3.6 would fire the renamed family's
+    graduation trigger; the trigger text explicitly excludes
+    friction-pattern-detector (ARC 3.6's substrate), so the
+    trigger does not fire.
+  - "friction-pattern-detector substrate-grain N=3"
+    parenthetical in STEP 6(b) — internally inconsistent
+    (claims substrate-grain is at N=3 but cites
+    friction-pattern-detector which is already one of the two
+    named substrates).
+  - "§Bucket extraction references the original Stage A design"
+    framing in STEP 4(b) — Stage A is documented at §Graduation
+    check, not §Bucket extraction.
+
+All three prompts are authored by the same operator. The
+receiving-end discipline (STEP 1 verify-from-disk) operates
+correctly and catches the compressions; the authoring-end
+discipline (re-read canonicals before writing prompts) does not
+operate at the authoring point.
+
+**Pattern at observation-grain N=3.** Three prompts, each
+containing at least one compression caught at the next session.
+This is the third consecutive instance; the pattern is firing
+reliably, not occasionally. The ARC 3.6 prompt's three
+compressions within one prompt is a sharper diagnosis — the
+prompt-author was systematically working from compressed working
+memory rather than canonical text during this prompt-authoring
+session.
+
+**Codification candidate.** Applying the framework at
+`docs/04_engineering/conventions/README.md` §Graduation criteria:
+
+- **Load-bearing (prescriptive).** Yes — the discipline implied
+  is "before authoring a session-handoff prompt that references
+  canonical sources, read those sources from disk." Directly
+  actionable.
+
+- **Generalizable.** Plausibly yes; the mechanism (working from
+  compressed memory rather than verification) is domain-neutral.
+  Note the evidence base limit: three instances are all from the
+  same prompt-author on the same project. Whether the pattern
+  surfaces across prompt-authors or across projects is not yet
+  evidenced.
+
+- **Stable.** The pattern has fired consistently across three
+  consecutive prompts with no name-revision needed; the shape
+  has settled within the evidence currently available. Stability
+  across operationally distinct conditions (different time
+  pressure, different context, different operator) is not yet
+  evidenced.
+
+The candidate meets the criteria within its current evidence
+base. The graduation evaluation arc, when it fires, should
+engage explicitly whether the evidence base is sufficient for
+graduation or whether the pattern should be re-deferred for
+evidence from operationally distinct conditions (analogous to
+the renamed family's re-deferral for evidence from operationally
+distinct substrates).
+
+Per the codify-while-deciding-not-while-implementing discipline,
+this banking does NOT graduate the candidate inline; graduation
+is a separate decision arc.
+
+Queued: prompt-author-compression graduation evaluation as a new
+arc when the operator chooses.
+
+### Fourth cost-class observation for the regex permissive-matching discipline
+
+The audit at STEP 1 surfaced a fourth instance of the cost-class
+pattern codified at
+`docs/04_engineering/conventions/regex-permissive-matching.md`.
+Specifically: B2/B3 extraction patterns over-extract bucket-like
+tokens from descriptive Promoted-from prose, producing noise
+tokens in T1 detector output.
+
+This is a fourth observed sub-shape, distinct from the three
+enumerated in the codified convention:
+
+- **Sub-shape 4 (extraction from descriptive prose surrounding
+  legitimate codification anchors):** B2/B3 patterns match short
+  ALL-CAPS-with-hyphens or alphanumeric tokens in descriptive
+  Promoted-from prose. The tokens look bucket-like to the regex
+  but are acronyms/identifiers in natural prose. Specific
+  examples: "ARC" appears within "ARC 3 STEP 2..." prose in
+  Promoted-from continuation lines; "ADR-0010" in "D6 §6.8
+  codification + ADR-0010 Variant A"; "B5-1" in "chunk B5-1
+  session #3 closeout retrospective entry."
+
+  The general analog: any regex matching "bucket-id-shaped"
+  tokens within natural prose risks capturing prose-internal
+  identifiers (acronyms, ADR references, chunk labels) as if
+  they were bucket IDs.
+
+  Mitigation: extraction-layer refinement (B2/B3 regex tightening
+  or context-aware extraction), not Stage A refinement. Stage A
+  correctly identifies these tokens appear within Promoted-from
+  blocks; the noise originates upstream at the extraction layer.
+
+**Amendment decision (banked, not amended).** At ARC 3.6 STEP 6
+review, the operator decided to bank this observation rather
+than amend the convention now. The reasoning: the observation
+is at N=1 within the convention's scope; amending the
+convention to add a fourth exemplar based on one observation is
+precisely the "premature codification" concern the
+prediction-grounding discipline guards against. The
+"non-exhaustive exemplar enumeration" framing was designed for
+amendments-when-instances-recur, not amendments-when-an-
+observation-suggests-the-enumeration-could-be-longer. This
+banking entry provides the historical evidence at a future
+amendment time if the sub-shape recurs.
+
+Per the case-coverage gap finding from the substrate-vs-mechanism
+re-evaluation arc (commit `d21f318`), prose mentions of codified
+families default to file-path references when no case (a)/(b)/(c)
+applies. This entry references the convention at file path rather
+than by family tag.
+
+### Substrate-counting correction: ARC 3.6 does NOT fire evolving-substrate-verify-surfaces-banking's trigger
+
+The ARC 3.6 prompt's STEP 6(b) framing claimed ARC 3.6 would
+fire the renamed family's graduation trigger because ARC 3.6
+was operating on a "third iteratively-built-new-tool substrate."
+This is incorrect (banked as one of the three compressions in
+the preceding H3).
+
+The renamed family's trigger text (codified at commit `e6297f1`):
+"an instance from a third iteratively-built-new-tool substrate
+(different from friction-pattern-detector and codify-convention)."
+
+ARC 3.6 modifies `scripts/friction-journal-tally.sh` — part of
+the friction-pattern-detector substrate (Cluster A in the
+renamed family's lineage). NOT different from
+friction-pattern-detector. The trigger does not fire from this
+arc.
+
+The renamed family's pattern (evolving-substrate verify-step
+surfaces banking) IS plausibly instantiated by ARC 3.6's
+audit-fix-verify arc — the verify step surfaced unanticipated
+findings (the fourth cost-class observation in the preceding H3;
+the prompt-author compressions two H3s above). At
+observation-grain, this is plausibly a Cluster A instance of the
+renamed family's pattern. But at substrate-grain, ARC 3.6 doesn't
+add new evidence — it's on the existing friction-pattern-detector
+substrate, which is one of the two already in the renamed
+family's count.
+
+Per the renamed family's re-deferral re-evaluation trigger, what
+matters for graduation is a third DISTINCT substrate. ARC 3.6
+doesn't provide that. The renamed family remains at
+substrate-grain N=2; re-deferred status unchanged. If a future
+arc operates on a substrate different from
+friction-pattern-detector and codify-convention AND its verify
+step surfaces unanticipated banking, that would fire the trigger
+cleanly. ARC 3.6 is not that arc.
+
+### Session close: ARC 3.6 closes; push + one new queued arc
+
+ARC 3.6 closes with Stage A discriminator refinement complete
+(commits `89155fb` + `a629389` + `015d804`).
+
+Queued state post-arc:
+
+- **Push as-is.** Unpushed local commits sit on staging
+  (`be8854f` → today's STEP 6 commit). Push decision unchanged
+  from prior arcs: defer until all queued items feel settled OR
+  explicitly choose to push. No half-resolved state.
+
+- **Prompt-author-compression graduation evaluation (NEW).** Per
+  the second H3 above, the pattern is at observation-grain N=3
+  with the graduation criteria met within their current
+  evidence base. Graduation evaluation is its own decision arc;
+  queued for future-operator initiation. The graduation arc
+  should engage explicitly whether the evidence base is
+  sufficient for graduation or whether re-deferral for
+  cross-author / cross-project evidence is appropriate.
+
+The fourth-cost-class observation (third H3 above) is banked as
+substrate; it does not constitute a queued operator decision.
+If the sub-shape recurs in future regex permissive-matching
+work, that future arc would naturally engage whether to amend
+`docs/04_engineering/conventions/regex-permissive-matching.md`
+at that time.
+
+**Recursion observation.** ARC 3.6 surfaced exactly one new
+queued arc (prompt-author-compression graduation evaluation),
+not zero. This is not the non-recursing close — the recursion
+pattern (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2
+re-evaluation → substrate-vs-mechanism re-evaluation → ARC 3.6
+→ prompt-author-compression graduation evaluation) continues.
+Whether the recursion stops because substrate is maturing or
+whether it's structurally inherent in this work shape is still
+an open question; the next arc-close is the next opportunity to
+test it.
+
+The renamed family `evolving-substrate-verify-surfaces-banking`
+remains re-deferred at substrate-grain N=2 (commit `e6297f1`);
+ARC 3.6's substrate is friction-pattern-detector (Cluster A),
+not a third substrate (see preceding H3). The renamed family's
+trigger does NOT fire from this arc.
