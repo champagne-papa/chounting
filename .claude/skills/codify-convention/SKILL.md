@@ -157,6 +157,37 @@ Produce three artifacts:
    silent (cross-references appearing in the graduation commit
    without explicit review).
 
+   **Codified-family references in prose discussion.** A related
+   citation-density discipline applies to prose mentions of
+   codified families in non-banking contexts. When prose discusses
+   a codified family but is not itself a banking entry about that
+   family (e.g., a banking entry about a different family that
+   mentions a codified one in passing, a retrospective, or brief
+   discussion), reference the family by its canonical convention
+   file path (`docs/04_engineering/conventions/<file>.md`) rather
+   than by family-tag name. The family-tag should appear in:
+
+   (a) new banking entries that are observation-grain instances
+       of that family;
+   (b) entries explicitly about a family's status (deferrals,
+       dismissals, re-evaluations, codifications) or about
+       families-as-a-class (Open Questions and meta-discipline
+       conventions that cite specific families as evidence);
+   (c) detector output.
+
+   In other prose, file path references prevent the detector's
+   Stage A grep from miscounting prose mentions as new instances.
+   This is the citation-density discipline applied to family-tag
+   references: file path is the appropriate density when the
+   discussion is referential; the tag is appropriate when the
+   discussion is itself an instance or about the family's status.
+
+   See `docs/04_engineering/conventions/README.md` §Codification
+   thresholds §Codification convention: family-tag assignment at
+   banking and graduation-time review for the sibling resolution
+   of the substrate-vs-mechanism Open Question (Sub-shape 1: the
+   banking-time tagging convention).
+
 ## Anti-patterns to flag
 
 - **Default-to-CLAUDE.md.** If the candidate looks like it wants to go in

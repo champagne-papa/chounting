@@ -222,6 +222,114 @@ claims at chunks 4+ name the grain.
   lives alongside the codification-thresholds parent section as the
   methodological companion to N=2/N=3/N=5 thresholds)
 
+### Codification convention: family-tag assignment at banking and graduation-time review
+
+When banking an observation under a family tag, the operator
+chooses between two possible tags:
+
+- **Substrate-tagging:** by where the issue manifested.
+- **Mechanism-tagging:** by what discipline the observation
+  instantiates.
+
+**Banking-time default: substrate-tagging.** Substrate is what
+the operator was just working on; it's visceral and low-friction
+to identify at banking time. Mechanism often requires reflection
+that comes later — at graduation evaluation, after multiple
+instances accumulate and a through-line emerges. Substrate-
+tagging is the operational default at banking time.
+
+**Graduation-time discriminator: mechanism-tagging.** At
+graduation evaluation, the operator reviews the family's
+instances for through-line. Mechanism becomes visible at this
+grain — an instance tagged by substrate may turn out to
+instantiate a different family's mechanism. When this happens,
+the discriminator is to recognize the substrate-tag as evidence
+for the substrate-family's surface-recurrence but to route the
+instance's mechanism-significance to the mechanism-family at
+graduation time.
+
+**Operational example.** ARC 3 graduation evaluation surfaced
+that an instance banked at ARC 2.5 (under
+`docs/04_engineering/conventions/regex-permissive-matching.md`'s
+family, by substrate — regex) instantiated the mechanism of
+`docs/04_engineering/conventions/prediction-grounding.md`
+(empirical-audit-rather-than-magic-number). Substrate-tagging
+stood; graduation-time review recognized the cross-family
+overlap and routed each family's load-bearing evidence
+correctly. The substrate-tagged instance contributed to
+regex-permissive-matching's count (N=3 distinct cost classes,
+with instance 4 framed as resolution-meta) without inflating
+prediction-grounding's threshold-counting.
+
+**Principled when supplemented by graduation-time review.** The
+substrate-tagging default + graduation-time discriminator is
+principled when (a) banking sites preserve enough context for
+graduation-time review to recognize cross-family overlap, and
+(b) graduation evaluation actually happens (the family is
+reviewed before any codification or dismissal decision). When
+either condition fails, substrate-tagging can lock in a wrong
+tag; the discipline's safety net is graduation-time review.
+
+---
+
+**Origin:**
+
+- First codified: Phase 6.5 substrate-vs-mechanism re-evaluation
+  arc, 2026-05-19
+- Evidence basis: Two instances of family-misattribution. Instance
+  1 surfaced at ARC 3 first-run observation 4 (commit `4486cb1`);
+  Instance 2 surfaced at family 2 re-evaluation STEP 6 banking
+  (commit `2aa8585`). The Open Question's re-evaluation trigger
+  fired; resolution per Position A codifies the operational
+  practice.
+- Promoted from:
+  `docs/04_engineering/conventions/README.md` §Open codification
+  questions §Substrate-vs-mechanism family-tag precedence (banked
+  at ARC 3.5 Item 4, commit `0fbb863`; now marked Resolved).
+- Cross-references:
+  - `docs/04_engineering/conventions/README.md` §Codification
+    convention: observation-grain vs application-grain N count
+    (sibling banking-time codification convention).
+  - `docs/04_engineering/conventions/README.md` §Graduation
+    criteria (the graduation-time review surface where the
+    mechanism-discriminator operates).
+  - `.claude/skills/codify-convention/SKILL.md` §Output
+    specification artifact 3 (sibling resolution of Sub-shape 2;
+    prose convention for codified-family references).
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The convention generates
+  operator action at two surfaces: banking-time ("tag by
+  substrate") and graduation-time ("review for mechanism-family
+  overlap; route the mechanism-significance if found"). Both
+  surfaces have explicit decisions to make; the convention names
+  them.
+
+- **Generalizable.** Substrate-tagging at banking time is the
+  existing precedent across many friction-journal bankings (per
+  the original Open Question entry's observation: "most existing
+  family tags were assigned by substrate"). The convention
+  codifies this widely-applied practice plus the graduation-time
+  discriminator that makes it principled. The convention's reach
+  extends across all banking-and-graduation cycles.
+
+- **Stable.** The convention codifies operational practice that's
+  been working across many bankings. The sub-shape distinction
+  that surfaced during this re-evaluation (Sub-shape 1 vs
+  Sub-shape 2 of the broader Open Question) is what enabled
+  clean codification: the original Open Question was framed too
+  broadly; sub-shape splitting allowed each to have its own
+  resolution. The convention's pattern (substrate-tagging +
+  graduation-time discriminator) was clear once the sub-shape
+  distinction surfaced. Future instances would extend the
+  convention's coverage rather than require revision. The Stable
+  criterion's first operational application (family 2
+  re-evaluation, commit `e6297f1`) excluded a renamed-pattern's
+  graduation; this second application accepts a
+  sub-shape-clarified pattern's graduation. The criterion is
+  operating discriminatively, not as a rubber stamp.
+
 ## Three-category codification taxonomy
 
 Codification thresholds vary by category. The artifact-codification
@@ -478,7 +586,11 @@ already on hand should be decided rather than deferred.
 
 ### Substrate-vs-mechanism family-tag precedence
 
-**Status:** Open.
+**Status:** **Resolved 2026-05-19.** The Open Question's
+re-evaluation trigger fired and the resolution was made via the
+substrate-vs-mechanism re-evaluation arc. See "Trigger firing
+and resolution" section below for the resolution summary; the
+original deferral context follows as historical record.
 
 **The question:** When banking an observation under a family tag,
 which precedence applies — the *substrate the observation
@@ -514,8 +626,42 @@ evidence about which kind of misattribution is more frequent and
 more costly.
 
 **Back-reference:** friction-journal 2026-05-19 ARC 3 close H2
-(line 14050), "Observation 4: Family-misattribution by substrate
-vs mechanism."
+Observation 4 (commit `4486cb1`).
+
+**Trigger firing and resolution (2026-05-19):**
+
+The trigger fired during family 2 re-evaluation STEP 6 banking
+(commit `2aa8585`). The second instance was prose mentions of a
+codified family tag in a banking entry about other observations.
+Re-evaluation surfaced that the Open Question spans two
+sub-shapes; both were resolved separately.
+
+- **Sub-shape 1 (uncodified-family-tagging precedence at banking
+  time):** Resolved via Position A (substrate-tagging). Codified
+  at `docs/04_engineering/conventions/README.md` §Codification
+  thresholds §Codification convention: family-tag assignment at
+  banking and graduation-time review. Substrate-tagging is the
+  banking-time default; mechanism-tagging operates as a
+  graduation-time discriminator.
+
+- **Sub-shape 2 (codified-family-tag-mention-counting at
+  detector-run-time):** Resolved via combined operator-side and
+  script-side fixes. Operator-side: prose convention codified at
+  `.claude/skills/codify-convention/SKILL.md` §Output
+  specification artifact 3 — codified-family references in prose
+  use file paths rather than family-tag names. Script-side:
+  Stage A refinement queued as ARC 3.6 (will refine the
+  detector's grep to distinguish codification footers from body
+  mentions).
+
+Note: the "Evidence currently in hand" and "Re-evaluation
+trigger" sections above retain the original entry's tag-name
+mentions (`regex-permissive-cost-class`,
+`caveat-prediction-vs-empirical-resolution`) as historical
+citation. Under the prose convention codified for Sub-shape 2,
+this entry falls into case (b) — it's a meta-discipline entry
+about families-as-a-class. Tag-name mentions in historical-
+citation context are preserved as-is.
 
 ---
 
@@ -531,7 +677,7 @@ vs mechanism."
   at STEP 2 redirected the prompt's resolution-by-assertion to
   OPEN QUESTION shape.
 - Promoted from: friction-journal 2026-05-19 ARC 3 close,
-  Observation 4 (line 14050); ARC 3.5 STEP 2 audit; ARC 3.5
+  Observation 4 (commit `4486cb1`); ARC 3.5 STEP 2 audit; ARC 3.5
   prompt Obs 3 (revised to OPEN QUESTION shape per operator
   direction).
 - Cross-references:
