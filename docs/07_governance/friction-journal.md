@@ -15223,3 +15223,290 @@ remains re-deferred at substrate-grain N=2 (commit `e6297f1`);
 ARC 3.6's substrate is friction-pattern-detector (Cluster A),
 not a third substrate (see preceding H3). The renamed family's
 trigger does NOT fire from this arc.
+
+## 2026-05-18 — Prompt-author-compression graduation evaluation: RE-DEFERRED at substrate-grain N=1 (observation-grain N=4)
+
+### prompt-author-compression — RE-DEFERRED
+
+- **Family:** `prompt-author-compression`
+- **Predecessor banking:** commit `5b45004` (ARC 3.6 close H3 #2
+  banked as codification candidate at observation-grain N=3)
+- **N count at re-deferral:** observation-grain N=4; substrate-grain
+  N=1 (one prompt-author / one project)
+- **Status:** **RE-DEFERRED**
+- **Date:** 2026-05-18
+
+**Decision summary.**
+
+The graduation evaluation arc opened against ARC 3.6 close's banked
+candidate at observation-grain N=3. STEP 1 verify-from-disk surfaced
+a fourth firing of the pattern within the arc's own prompt — an
+N=3-vs-N=4 temporal compression in the prompt's description of
+family 2's re-deferral state. Observation-grain count revises to
+N=4; substrate-grain remains N=1 — all four instances are from one
+prompt-author on one project.
+
+The fourth firing is meta-significant: it occurred in a prompt
+explicitly written to evaluate the pattern itself. The
+authoring-end gap persists even when the operator is actively
+engaged with the pattern's structure. That's evidence about
+operational reliability — the pattern is not a short-window
+artifact correctable by surface attention; it operates below the
+level of explicit awareness during prompt-authoring.
+
+Decision: **RE-DEFER**. The substrate-grain N=1 evidence base does
+not satisfy the README's Generalizable criterion at the grain that
+authorizes generalization. Re-deferral preserves the pattern's
+recognition (observation-grain count and banked instances retained)
+while honoring the discipline that substrate-grain evidence is what
+authorizes the generalization claim a graduated convention would
+make.
+
+**Reasoning for re-defer (not graduate / not dismiss / not rename /
+not absorbed-into-prediction-grounding).**
+
+GRADUATE was excluded by substrate-grain N=1 < README codification
+threshold N=3. The three-criteria evaluation:
+
+- **Load-bearing (prescriptive).** Met. The discipline implied is
+  "before authoring a session-handoff prompt that references
+  canonical sources, read those sources from disk." Directly
+  actionable.
+- **Generalizable.** Not met empirically. Surface diversity at the
+  substrate-grain dimension is the README's specified evidence
+  shape. All four instances are from one prompt-author on one
+  project. Plausibility-reasoning suggests the mechanism is
+  cognitive-shape and would fire for other operators on other
+  projects, but plausibility-reasoning is not the evidence shape
+  the criterion specifies.
+- **Stable.** Met within current evidence base. The four instances
+  fired with no name-revision needed; the shape has settled.
+
+The Generalizable criterion's substrate-grain shortfall is decisive.
+Family 2's re-evaluation (commit `e6297f1`) used the same Stable-
+criterion-application discipline to exclude graduation at
+substrate-grain N=2; this candidate at substrate-grain N=1 is more
+decisively below threshold.
+
+DISMISS was excluded because four consecutive instances in ~3 weeks
+across distinct session-types (Phase A skill refinement, family
+re-eval judgment arc, audit-fix arc, this graduation evaluation arc
+itself) demonstrate the pattern IS recurring within its origin
+context. The README's DISMISS-when-narrow criterion ("specific to a
+one-time situation, not repeatable") does not apply.
+
+RENAME (analogous to family 2's rename to
+`evolving-substrate-verify-surfaces-banking`) was excluded because
+the current name correctly describes the mechanism. What's
+underspecified is the SCOPE of generalization, not the mechanism's
+framing. A narrower rename (e.g.,
+`session-handoff-prompt-from-same-author-compression`) would more
+accurately reflect the current evidence base but would not address
+the substrate-grain N=1 problem — even the narrower scope is
+bounded by single operator + single project. Per the README
+§Graduation criteria Stable criterion, a name-revision would itself
+trip Stable; the rename would add a Stable-trip without adding
+evidence. Re-defer without rename. If cross-substrate evidence
+eventually points to a narrower scope that the wider name
+misrepresents, rename at that future point.
+
+ABSORB-INTO-PREDICTION-GROUNDING (as a sub-shape amendment to
+`docs/04_engineering/conventions/prediction-grounding.md`) was
+considered and excluded as premature. The candidate is plausibly a
+sub-shape of the codified prediction-grounding family (predictions
+about canonical-source text encoded without verification). But
+sub-shape amendments to codified conventions are effectively new
+graduations within a codified container — they require the same
+generalization evidence a separate graduation would. The amendment
+path faces the same substrate-grain N=1 problem. It also pre-commits
+to family taxonomy that the family 2 re-evaluation banking entry
+(commit `2aa8585`) explicitly defers ("Don't pre-commit to
+taxonomy"). And ARC 3.5 close H2 Observation 4 (commit `b58e5dc`)
+already raised "implicit-precondition assumption" as a candidate
+sub-shape refinement for prediction-grounding — held at N=1 pending
+further evidence. The captured-elsewhere question is itself
+deferred to its own evidence base.
+
+**Evidence base: four instances.**
+
+Observation-grain instances (chronological):
+
+1. **ARC 3.5 prompt — "five Phase A observations" framing.**
+   Compressed 6 banked first-run findings to 5 operational items.
+   Caught at ARC 3.5 STEP 1; banked at commit `b58e5dc` as
+   Observation 1 sub-instance (a). Cost: MINOR (count error; no
+   downstream effect).
+
+2. **Family 2 re-evaluation prompt — "three-view framing."**
+   Compressed the deferral's Scenario A / Scenario B split into
+   views that ignored what the deferral pre-resolved
+   (graduate-as-named excluded under Scenario B). Caught at family
+   2 re-eval STEP 1; banked at commit `2aa8585` as Observation B.
+   Cost: MODERATE (could have changed arc structure; conclusion
+   unchanged but path less direct).
+
+3. **ARC 3.6 prompt — three application-grain compressions within
+   one observation-grain instance.** "Third
+   iteratively-built-new-tool substrate" framing in STEP 6(b)
+   (claimed ARC 3.6 fires the renamed family's graduation trigger;
+   canonical text explicitly excludes friction-pattern-detector
+   substrate); "friction-pattern-detector substrate-grain N=3"
+   parenthetical (internally inconsistent); "§Bucket extraction
+   references the original Stage A design" (Stage A is documented
+   at §Graduation check, not §Bucket extraction). Caught at ARC
+   3.6 STEPs 4 and 6; banked at commit `5b45004` H3 #2. Cost:
+   MODERATE–MAJOR dominant (application-grain 3A could have
+   triggered wrong graduation); 3B and 3C MINOR. The
+   application-grain sharpening (three compressions within one
+   prompt) suggested the prompt-author was systematically working
+   from compressed working memory during that authoring session.
+
+4. **This arc's prompt — N=3-vs-N=4 temporal compression of family
+   2's re-deferral state.** Prompt prose attached the N=3 figure
+   to the rename event ("the audit-fix-verify-surfaces-banking
+   family was at observation-grain N=3 but substrate-grain N=2;
+   the disciplined response was rename + re-defer"). The rename
+   actually happened at N=4, not N=3 (commit `e6297f1` line
+   14470-14472 documents "N count at re-deferral: observation-
+   grain N=4"). Two distinct lifecycle points conflated. Caught at
+   this arc's STEP 1 verify-from-disk. Cost: MINOR (immediate);
+   LATENT (the conflation of N=3 deferral state and N=4 rename
+   state in prompt prose could mislead future operators
+   referencing the prompt as canonical for family 2's lifecycle).
+
+Cost distribution across the four observation-grain instances:
+1 MODERATE–MAJOR (#3 dominant), 1 MODERATE (#2), 2 MINOR (#1, #4
+immediate). The pattern is operationally significant — instance 3A
+carried real decision-stakes; instance #4 carries a latent
+mis-citation risk for future readers. Family 2's evidence base
+contained cost variation across its three Cluster A instances; that
+variation didn't downgrade the family, and the cost variation
+across this candidate's four instances doesn't downgrade this
+banking either.
+
+Substrate-grain enumeration:
+- Distinct prompt-authors: 1 (this assistant)
+- Distinct projects: 1 (chounting)
+- README threshold: N=3 (gates graduation consistently across all
+  codification evaluations)
+
+**Re-evaluation trigger (single-path, two-step):**
+
+An instance of prompt-author-compression of canonical-source text
+caught at the receiving session's verify-from-disk discipline, from
+substrate distinct from this operator+project pair, brings the
+candidate to substrate-grain N=2. A second such instance, from a
+substrate distinct from both this operator+project pair AND the
+first new substrate, graduates the candidate at substrate-grain
+N=3 (honoring the README's codification threshold).
+
+"Substrate" for this candidate's purposes = the (prompt-author,
+project) pair. The diversifier dimension is either prompt-author or
+project. Both fire the trigger, but the evidence shapes are not
+equally strong:
+
+- **Different prompt-author on any project** tests
+  operator-generalization. Strongest diversifier — the mechanism's
+  cognitive-shape claim is most directly tested.
+- **This operator on a different project** tests
+  project-generalization. Weaker — same operator, different
+  substrate. Tests whether the project's information-density or
+  canonical-source conventions are load-bearing.
+
+The graduation evaluation when triggered should weigh the
+diversifier shape, not just the count. Two instances of the weaker
+shape (same operator, two different projects) may suffice for the
+README's count threshold but should be flagged at evaluation time
+as not yet having operator-generalization evidence, with explicit
+discussion of whether project-generalization evidence alone
+suffices for the graduation claim.
+
+**Anti-parking-lot reconsideration (event-based):**
+
+If two future session-handoff prompts authored by this operator on
+this project complete with no compressions surfaced at the
+receiving session's verify-from-disk discipline, reconsider for
+dismissal rather than continuing to defer indefinitely. Caveat:
+null findings can equally indicate (a) authoring-end discipline has
+improved (pattern abated) or (b) receiving-end discipline missed
+catches that occurred (pattern fired but invisible by
+construction). Reconsideration should weigh both interpretations
+rather than treating null findings as unambiguous abatement
+evidence.
+
+This reconsideration trigger is event-based rather than
+calendar-based. "Two future session-handoff prompts complete with
+no compressions surfaced" is an operationally identifiable event;
+future-operator can recognize it without ambiguity.
+
+**Re-evaluation action.**
+
+When either trigger fires, return to STEP 2-shape evaluation with
+the updated evidence base. Decision space at that point: GRADUATE
+(if substrate-grain reached N=3 with diverse substrates), DISMISS
+(if null findings dominate without missed-catch evidence supporting
+the alternative interpretation), or continued DEFER with refined
+trigger (only if evidence remains genuinely ambiguous AND a new
+trigger can be specified that doesn't repeat this trigger's
+specific terms).
+
+**Substrate visibility:**
+
+The candidate is tagged `prompt-author-compression` at its banked
+instances. Future detector runs will surface
+`prompt-author-compression` at observation-grain N=4 with
+graduated=N; this re-deferral entry is the meta-status that tells
+the operator "yes, this is at observation-grain N=4 with
+substrate-grain N=1, and yes, the candidate was re-deferred at
+this arc — see this entry for the re-evaluation triggers and the
+operator/project diversifier-strength note."
+
+**Cross-references (outbound):**
+
+- ARC 3.6 close H2 banking the candidate at observation-grain N=3:
+  commit `5b45004` (friction-journal H3 #2 "Prompt-author
+  compression of canonical-source text — N=3 observation-grain,
+  codification candidate").
+- Instance #1 banking (ARC 3.5 prompt "five framing"): commit
+  `b58e5dc` Observation 1 sub-instance (a).
+- Instance #2 banking (family 2 re-eval prompt "three-view
+  framing"): commit `2aa8585` Observation B.
+- Instance #3 banking (ARC 3.6 prompt three compressions): commit
+  `5b45004` H3 #2 application-grain enumeration.
+- Stable criterion canonical source:
+  `docs/04_engineering/conventions/README.md` §Graduation criteria
+  (codified at ARC 3.5 Item 1, commit `8b241ee`).
+- Family 2 precedent (rename + re-defer at substrate-grain N=2,
+  same Stable-criterion application): commit `e6297f1`.
+- Substrate-vs-mechanism family-tag resolution: commit `c0a9f28`.
+- This arc's prompt:
+  `docs/09_briefs/phase-6.5/2026-05-18-prompt-author-compression-prompt.md`
+  (commit `7c25156`).
+
+### Session close: prompt-author-compression graduation evaluation arc completes
+
+This arc closes with re-deferral. The candidate remains at
+observation-grain N=4 / substrate-grain N=1 with the two-step
+graduation trigger and the null-findings anti-parking-lot
+reconsideration trigger documented above.
+
+Queued state post-arc:
+
+- **Push as-is.** Unpushed local commits sit on staging (`be8854f`
+  → today's STEP 5 commit; STEP 6 banking will add one more
+  commit). Push decision unchanged from prior arcs: defer until
+  queued items feel settled OR explicitly choose to push. No
+  half-resolved state at this arc's close.
+
+- **No new arcs queued.** This is the first arc-close in the
+  recent sequence that does not queue a subsequent arc. The
+  recursion pattern (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2
+  re-evaluation → substrate-vs-mechanism re-evaluation → ARC 3.6
+  → this arc) closes here. The re-evaluation triggers documented
+  above are event-based — they wait for naturally-occurring
+  conditions, not pre-planned arcs. STEP 6 banking engages whether
+  this closure reflects substrate maturation, low-hanging-fruit
+  exhaustion, or arc-scope happenstance.
+
+STEP 6 banking (separate commit) handles the meta-observations
+this arc surfaced.
