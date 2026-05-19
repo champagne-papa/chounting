@@ -14619,3 +14619,166 @@ status "renamed forward, see this re-deferral entry."
 - This arc's prompt:
   `docs/09_briefs/phase-6.5/2026-05-19-family-2-reevaluation-prompt.md`
   (commit `09db3ea`).
+
+### Three compression instances surfaced by STEP 1's verify-from-disk
+
+STEP 1's verify-from-disk discipline surfaced three related
+compression instances that span session-handoff prompts and
+close-note framings. Banked together because they share a
+mechanism (operator compressing canonical-source text and
+proceeding from the compression rather than re-reading) but at
+different observation grains. Don't pre-commit to family
+taxonomy.
+
+**Observation A: ARC 3.5 close-note compression of deferral text.**
+
+The ARC 3.5 close H2's N=4 trigger satisfaction section (commit
+`b58e5dc`) compressed the family 2 deferral's text to just the
+diversity criterion:
+
+> "The family 2 deferral entry (commit c754810, amended at
+> 46d3d0e) documented a re-evaluation trigger: 'a 4th instance
+> from operationally distinct context (different substrate,
+> different arc origin, different artifact class).'"
+
+This dropped the Scenario A / Scenario B distinction the
+deferral's text encoded (stable-mature-feature path vs
+iteratively-built-new-tool path). The ARC 3.5 session-close
+note (commit `e9a536e`) then declared "trigger satisfied
+empirically" without preserving the iteratively-built-new-tool
+branch's "graduate-as-named excluded" implication. Single-step
+compression; small individually.
+
+**Observation B: Family 2 re-evaluation prompt inherited the
+compression.**
+
+The family 2 re-evaluation prompt (commit `09db3ea`) framed
+STEP 2's choice space as three views (graduate-as-named,
+re-defer with refined name, graduate with refined name), as if
+all three were live. STEP 1 verify-from-disk revealed that the
+deferral's Scenario B branch pre-resolved graduate-as-named as
+excluded — only the rename-paths were live.
+
+The prompt-author inherited the compression rather than
+re-reading the deferral fresh. Same operator who wrote the
+ARC 3.5 close-note compression. Same surface (session-handoff
+prompts). Same mechanism (proceeding from compressed working
+memory rather than verification-from-disk).
+
+This is N=2 of the prompt-author-compression pattern with
+ARC 3.5's "five Phase A observations" framing as N=1 (banked in
+ARC 3.5 close H2 Observation 1 sub-instance (a)).
+
+**Observation C: ARC 3.5 close-note diverged from ARC 3 close
+H2's caveat.**
+
+ARC 3 close H2's fourth-instance banking (commit `4486cb1`) was
+explicit:
+
+> "ARC 3 is partially distinct ... but shares the
+> friction-pattern-detector substrate with the prior three
+> instances. The re-evaluation trigger is not cleanly fired;
+> banking the 4th instance honors observation discipline
+> without prematurely re-graduating the family."
+
+ARC 3's own close-discipline read the trigger NOT cleanly fired.
+The ARC 3.5 close note (one arc later) then declared it fired
+without re-engaging with ARC 3's caveat. The compression is
+cumulative across closes: ARC 3 noted the ambiguity correctly;
+ARC 3.5 compressed past it; family 2 re-evaluation prompt
+inherited the compression.
+
+The mechanism is one-step compression at each handoff; the
+cumulative effect across multiple handoffs is unbounded drift.
+
+**Family taxonomy: not pre-committed.**
+
+Observations A, B, C share the mechanism but operate at different
+observation grains:
+
+- A is one close-note's framing compression.
+- B is the next prompt's inheritance of A's compression.
+- C is the cross-close-note divergence (ARC 3 close H2 → ARC 3.5
+  close note → family 2 re-evaluation prompt).
+
+Three plausible family framings:
+
+1. **One family at multiple grains.** All three are instances of
+   "operator compresses canonical-source text and proceeds from
+   compression rather than verification." Different grains, same
+   mechanism.
+2. **Two families.** Close-note-compression-of-canonical-source
+   (A by itself) and cross-handoff-compression-cascade (B + C as
+   related instances).
+3. **Three families.** Each observation a distinct discipline
+   pattern with its own load-bearing mechanism.
+
+Don't pre-commit to taxonomy. Future instances will resolve which
+framing the mechanism actually fits. Bank for future N counting.
+
+**Relationship to prediction-grounding family (and
+substrate-vs-mechanism Open Question second firing):**
+
+Observations A, B, and C are all plausibly instances of
+`caveat-prediction-vs-empirical-resolution` (now codified at
+`docs/04_engineering/conventions/prediction-grounding.md`) —
+operator encoded predictions about canonical-source text without
+verification, and resolution required audit.
+
+Mentions of `caveat-prediction-vs-empirical-resolution` in this
+entry's prose are references to the codified family for
+discussion, not new instances of it; the family is graduated.
+Whether prose-mentions-of-codified-families should count toward
+instance tallies is the substrate-vs-mechanism Open Question
+(`docs/04_engineering/conventions/README.md` §Open codification
+questions §Substrate-vs-mechanism family-tag precedence), now
+firing for the second time. The first instance was the
+regex-permissive-cost-class instance 4 cross-family overlap
+(originally banked at ARC 3 close H2 Observation 4 in commit
+`4486cb1`; cross-referenced at commit `1b1f370`'s Item 7
+application). The second instance is this banking entry's prose
+mentions of the codified family tag.
+
+Per the Open Question's re-evaluation trigger ("the next
+family-misattribution instance surfacing in the friction-
+journal"), this second instance fires the trigger. Bank the
+firing; do not act on it. The Open Question's re-evaluation is
+its own decision, queued for future-session.
+
+### Session close: family 2 re-evaluation arc completes; 3 arcs queued
+
+Family 2 re-evaluation arc closes with rename + re-defer
+(commit `e6297f1`). The renamed family
+`evolving-substrate-verify-surfaces-banking` begins at
+substrate-grain N=0 with an event-based reconsideration trigger
+specified.
+
+Three arcs queued at this arc's close (two inherited from ARC 3.5;
+one new, surfaced by this arc's STEP 6 banking):
+
+- **ARC 3.6 (Stage A refinement).** Substantial script
+  audit-and-fix arc inherited from ARC 3.5's Phase B. Discovers
+  whether Stage A's grep discriminator can distinguish
+  codification footers from cross-reference body mentions.
+  Originally default-deferred from ARC 3.5; no change.
+
+- **Push as-is.** Unpushed local commits sit on staging
+  (`be8854f` → today's STEP 6 commit). Push decision remains the
+  same shape as ARC 3.5 close: defer until queued arcs feel
+  settled OR explicitly choose to push. No half-resolved state
+  at this arc's close either.
+
+- **Substrate-vs-mechanism Open Question re-evaluation (NEW).**
+  This arc's STEP 6 banking surfaced the second instance of the
+  Open Question's re-evaluation trigger (see preceding H3's
+  "Relationship to prediction-grounding family" section).
+  Provenance: this banking commit. The Open Question is at
+  `docs/04_engineering/conventions/README.md` §Open codification
+  questions §Substrate-vs-mechanism family-tag precedence; its
+  trigger required a second family-misattribution instance, which
+  this banking satisfies. Re-evaluation is its own arc, queued
+  for future session.
+
+This arc surfaced 3 compression observations (see preceding H3).
+Whether those observations affect any of the queued arcs is a
+future-session question; they're banked, not acted on.
