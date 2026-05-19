@@ -108,7 +108,7 @@ formalized at `docs/04_engineering/conventions/README.md`
 Evaluation basis is preserved verbatim from the precedent-setting
 application.
 
-- **Load-bearing.** The discipline is citable by name from future
+- **Load-bearing (prescriptive).** The discipline is citable by name from future
   planning artifacts. Future briefs, plans, prompts, ADRs, and
   spec caveats can reference this convention rather than
   re-deriving the rule. The "stop, surface, explain" operational
