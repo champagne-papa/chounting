@@ -14467,3 +14467,155 @@ step), ARC 3.6 (Stage A refinement, originally default-deferred),
 push as-is. No half-resolved state — Phase A complete; queued
 arcs are separate decisions surfaced by Phase A's
 audit-fix-verify shape, not residual Phase A work.
+
+## 2026-05-19 — Family 2 re-evaluation: rename to evolving-substrate-verify-surfaces-banking + re-defer (Stable criterion application)
+
+### audit-fix-verify-surfaces-banking → evolving-substrate-verify-surfaces-banking — RENAMED + RE-DEFERRED
+
+- **Original family:** `audit-fix-verify-surfaces-banking`
+- **Renamed family:** `evolving-substrate-verify-surfaces-banking`
+- **Predecessor deferral:** commit `c754810` (ARC 3 STEP 2
+  dispositions); amendment `46d3d0e` (Stage A false-positive note)
+- **N count at re-deferral:** observation-grain N=4 (Cluster A's
+  three arcs + Cluster B's Phase A arc); substrate-grain N=2
+  (friction-pattern-detector + codify-convention skill)
+- **Status:** **RENAMED + RE-DEFERRED**
+- **Date:** 2026-05-19
+
+**Reasoning for rename:**
+
+ARC 3.5 Phase A satisfied the ARC 3 deferral's re-evaluation
+trigger empirically — a 4th instance surfaced from operationally
+distinct context (different substrate, different arc origin,
+different artifact class). The trigger fired in Scenario B
+(iteratively-built-new-tool, not stable-mature-feature), which
+the predecessor deferral's text encoded as the "narrower-pattern
+hypothesis strengthening" branch. The deferral pre-resolved that
+graduate-as-named is excluded for Scenario B evidence; rename +
+re-evaluate is the disciplined path.
+
+The rename from `audit-fix-verify-surfaces-banking` to
+`evolving-substrate-verify-surfaces-banking` reflects the
+empirical scope: the load-bearing factor in the evidence is
+substrate-evolution status (the substrate is still in active
+development, so verification surfaces shapes the planning didn't
+anticipate). The original name claimed the arc shape was
+load-bearing; the evidence consistently supports substrate-
+evolution as the mechanism, with arc shape (audit-fix-verify) as
+a necessary but not load-bearing precondition.
+
+**Load-bearing reason for re-deferral (not graduate-after-rename):**
+
+Per `docs/04_engineering/conventions/README.md` §Graduation
+criteria, the **Stable** criterion explicitly excludes patterns
+that recently required name-revision:
+
+> "A pattern that surfaced new sub-shapes or required
+> name-revision recently is not yet stable."
+
+The rename from `audit-fix-verify-surfaces-banking` to
+`evolving-substrate-verify-surfaces-banking` is itself the
+name-revision event. The Stable criterion's first operational
+application explicitly excludes graduation of just-renamed
+patterns; this re-deferral honors the criterion in its first
+application.
+
+Supporting evidence: substrate-grain N=2
+(friction-pattern-detector + codify-convention) is below the
+README's N=3 codification threshold when substrate-evolution is
+the load-bearing mechanism — the relevant grain for the renamed
+family. Observation-grain N=4 is above threshold, but for the
+substrate-evolution mechanism, the operative count is
+substrate-grain.
+
+The Stable-criterion argument is decisive even without the
+substrate-grain count; the substrate-grain count provides
+confirming evidence.
+
+**Re-evaluation trigger (single-path):**
+
+An instance from a third iteratively-built-new-tool substrate
+(different from friction-pattern-detector and codify-convention)
+graduates the renamed family at substrate-grain N=3. The renamed
+family's load-bearing claim is substrate-evolution as mechanism;
+a third instance from the substrate-class confirms (or fails to
+confirm) that the mechanism generalizes within its named
+category.
+
+The trigger is deliberately single-path. If a stable-mature-
+feature audit-fix-verify arc ever surfaces banking, that's a
+separate observation that gets banked under its own framing —
+possibly reopening the broader-pattern question at that time,
+but not as a pre-encoded path on this re-evaluation. The
+predecessor deferral's dual-path trigger created a
+compression-fragility surface that this re-evaluation's STEP 1
+caught; this re-deferral's single-path trigger is deliberately
+less compression-prone.
+
+**Anti-parking-lot reconsideration (event-based):**
+
+If the next two arcs that exercise the codify-convention skill
+complete without verify-step banking, or if a future
+iteratively-built-new-tool's first operational use completes
+without verify-step banking, that's evidence against the
+mechanism's reliability. Reconsider for dismissal at that point
+rather than continuing to defer indefinitely. Negative evidence
+(the mechanism failing to fire when it should) is itself
+diagnostic.
+
+This reconsideration trigger is event-based rather than
+calendar-based. The "next two arcs exercising the
+codify-convention skill" and "future iteratively-built-new-tool's
+first operational use" are operationally identifiable events;
+future-operator can recognize them without ambiguity.
+
+**Re-evaluation action:**
+
+When either the graduation trigger or the reconsideration
+trigger fires, return to STEP 2-shape evaluation with the
+updated evidence base. The decision space at that point:
+GRADUATE (the renamed family meets all three criteria including
+Stable, since the rename will have aged by then), DISMISS (the
+mechanism's reliability is contradicted by negative evidence),
+or continued DEFER with refined trigger (only if evidence
+remains genuinely ambiguous AND a new trigger can be specified
+that doesn't repeat this trigger's specific terms).
+
+**Substrate visibility:**
+
+The renamed family inherits the predecessor family's substrate
+visibility status. Future detector runs will surface
+`audit-fix-verify-surfaces-banking` (the original tag) at
+observation-grain N=4 with graduated=N; this re-deferral entry
+is the meta-status that tells the operator "yes, this is at
+threshold, and yes, the family was renamed to
+`evolving-substrate-verify-surfaces-banking` and re-deferred —
+here's why and here's the new trigger."
+
+**Forward-mapping accounting:**
+
+The renamed family's instance count starts at N=0 substrate-grain
+(no instances yet banked under the renamed tag, since the rename
+post-dates all extant evidence). The four pre-rename instances
+(Cluster A's three + Cluster B's one) remain tagged under the
+original name as historical record. The detector's continued
+surfacing of `audit-fix-verify-surfaces-banking` at N=4 reflects
+this historical accounting; future instances bank under
+`evolving-substrate-verify-surfaces-banking` and increment the
+renamed family's count. The rename does NOT transfer the four
+existing instances to the new tag — the new tag's count begins
+at zero; the old tag's count is frozen at N=4 with the meta-
+status "renamed forward, see this re-deferral entry."
+
+**Cross-references (outbound):**
+
+- ARC 3 deferral entry (predecessor): commit `c754810`; amendment
+  at commit `46d3d0e`.
+- ARC 3 close H2 fourth-instance banking: commit `4486cb1`.
+- ARC 3.5 close H2 N=4 trigger satisfaction: commit `b58e5dc`.
+- Stable criterion canonical source:
+  `docs/04_engineering/conventions/README.md` §Graduation criteria
+  (codified at ARC 3.5 Item 1, commit `8b241ee`).
+- This arc's prompt:
+  `docs/09_briefs/phase-6.5/2026-05-19-family-2-reevaluation-prompt.md`
+  (commit `09db3ea`).
