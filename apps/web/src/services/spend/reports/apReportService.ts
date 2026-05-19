@@ -13,13 +13,27 @@
 //
 // Disposition: supabase-js JOIN-side aggregation (RATIFIED at scope-lock
 // 2026-05-10). No Postgres RPCs; no new migrations. Read-only access via
-// adminClient. Canonical pattern: `.from(...).select(numeric_col).eq(...)`
-// + JS `.reduce()`. Catch #20: `bills.amount_due` is NOT a column — the
+// adminClient. Catch #20: `bills.amount_due` is NOT a column — the
 // per-bill `amount_due` is computed by subtracting the SUM of
 // `bill_payment_allocations.amount_cad` (for that bill_id) from
 // `bills.amount_cad`. The shared `loadBillsWithAmountDue` helper below
-// encapsulates this 2-query aggregation pattern; both `aging()` and
-// `openBills()` consume it.
+// encapsulates the aggregation; `aging()`, `openBills()`,
+// `paymentApprovalQueue()`, and `activePayments()` consume it.
+//
+// Phase 5.1 chunk 5.1c: loadBillsWithAmountDue refactored from 2-query
+// SELECT IN pattern to single PostgREST nested-select query per Cat 2
+// apReport URI-too-long N=3 graduation discipline (Phase 6.5 chunk 6.2b
+// N=1 + Phase 5.1 chunk 5.1a c228512 N=2 + Phase 5.1 chunk 5.1b 12847bf
+// N=3 → standalone substrate-fix at chunk 5.1c). The nested-select IS a
+// supabase-js JOIN-side aggregation pattern per PostgREST embed
+// semantics (FK `bill_payment_allocations.bill_id REFERENCES
+// bills.bill_id` enables the embed); scope-lock 2026-05-10 disposition
+// preserved. Cat 2 root-cause diagnostic refined at impl-onset: URI
+// pressure fired from OPEN BILLS count in the second-query IN clause
+// (254 open bills × ~37 chars/UUID ≈ 9.4KB IN list exceeded ~8KB
+// PostgREST URL limit), NOT from accumulated `bill_payment_allocations`
+// row state as initially diagnosed. Nested-select eliminates the second
+// SELECT IN entirely; URI pressure removed by construction.
 //
 // Reading B preservation (ADR-0011 §1, ADR-0007 §Tier 2): this service is
 // READ-ONLY. It does NOT call journalEntryService.post(); it does NOT INSERT
@@ -237,14 +251,25 @@ interface BillWithAmountDue {
 }
 
 /**
- * Shared 2-query aggregation pattern per catch #20 (`bills.amount_due` is
- * NOT a column). Fetches open bills then their allocations, JS-aggregates
- * allocations by bill_id, computes per-bill amount_due via subtractMoney.
+ * Shared aggregation helper per catch #20 (`bills.amount_due` is NOT a
+ * column). Fetches open bills with their allocations embedded via
+ * PostgREST nested-select, then per-row aggregates allocations to
+ * compute amount_due via subtractMoney.
  *
  * Filter: lifecycle_state IN {approved_for_payment, partially_paid} per
  * Spend brief §11.4 open-bill semantics.
  *
  * Returns the per-bill computed shape; callers further filter / bucket.
+ *
+ * Phase 5.1 chunk 5.1c refactor (Cat 2 N=3 substrate-fix): replaced
+ * 2-query SELECT IN pattern with single PostgREST nested-select. The
+ * embedded `bill_payment_allocations(amount_cad)` selects rely on the FK
+ * `bill_payment_allocations.bill_id REFERENCES bills.bill_id` enabling
+ * the PostgREST embed. Eliminates the URI-too-long firing pattern that
+ * fired when open bills count produced a SELECT IN URL exceeding ~8KB
+ * PostgREST URL limit (254-bills-in-IN ≈ 9.4KB at impl-onset). See file
+ * header for Cat 2 N=3 graduation context + chunk 5.1c brief at
+ * docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1c.md.
  */
 async function loadBillsWithAmountDue(
   db: Db,
@@ -252,13 +277,15 @@ async function loadBillsWithAmountDue(
 ): Promise<BillWithAmountDue[]> {
   const { data: bills, error: billsErr } = await db
     .from('bills')
-    .select('bill_id, vendor_id, bill_number, due_date, amount_cad, lifecycle_state')
+    .select(
+      'bill_id, vendor_id, bill_number, due_date, amount_cad, lifecycle_state, bill_payment_allocations(amount_cad)',
+    )
     .eq('org_id', org_id)
     .in('lifecycle_state', ['approved_for_payment', 'partially_paid']);
   if (billsErr) {
     throw new ServiceError(
       'READ_FAILED',
-      `ap_report: bills lookup failed: ${billsErr.message}`,
+      `ap_report: bills+allocations lookup failed: ${billsErr.message}`,
     );
   }
   const billRows = (bills ?? []) as Array<{
@@ -268,35 +295,20 @@ async function loadBillsWithAmountDue(
     due_date: string | null;
     amount_cad: string | number;
     lifecycle_state: string;
+    bill_payment_allocations: Array<{ amount_cad: string | number }>;
   }>;
   if (billRows.length === 0) {
     return [];
   }
 
-  const billIds = billRows.map((b) => b.bill_id);
-  const { data: allocs, error: allocsErr } = await db
-    .from('bill_payment_allocations')
-    .select('bill_id, amount_cad')
-    .eq('org_id', org_id)
-    .in('bill_id', billIds);
-  if (allocsErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `ap_report: bill_payment_allocations lookup failed: ${allocsErr.message}`,
-    );
-  }
-  const allocRows = (allocs ?? []) as Array<{ bill_id: string; amount_cad: string | number }>;
-
-  // Index allocations by bill_id for per-bill aggregation.
-  const allocByBill = new Map<string, MoneyAmount>();
-  for (const a of allocRows) {
-    const prev = allocByBill.get(a.bill_id) ?? zeroMoney();
-    allocByBill.set(a.bill_id, addMoney(prev, toMoneyAmount(a.amount_cad)));
-  }
-
   return billRows.map((b) => {
     const billAmount = toMoneyAmount(b.amount_cad);
-    const allocated = allocByBill.get(b.bill_id) ?? zeroMoney();
+    // Per-row aggregation over embedded allocations array. Empty array
+    // (no allocations for this bill) → zeroMoney().
+    const allocated = b.bill_payment_allocations.reduce(
+      (acc, a) => addMoney(acc, toMoneyAmount(a.amount_cad)),
+      zeroMoney(),
+    );
     const amountDue = subtractMoney(billAmount, allocated);
     return {
       bill_id: b.bill_id,
