@@ -232,15 +232,69 @@ declare -A GRADUATED_A
 
 check_graduated_a() {
   local bucket="$1"
-  # Use grep -F (fixed string) for ID-shaped buckets to avoid regex
-  # metachar issues with characters like α, β. -r searches the tree.
-  if grep -rqF -- "$bucket" \
+  # Discriminator (refined at ARC 3.6, 2026-05-19): bucket-id mention
+  # only counts if it appears within a "Promoted from:" bullet block
+  # (the Promoted-from line + any continuation lines, until the next
+  # bullet/heading/separator). This excludes cross-reference body
+  # mentions and prose mentions that previously caused false-positives
+  # — notably the family 2 case where prediction-grounding.md's
+  # Cross-references mention of audit-fix-verify-surfaces-banking
+  # caused Stage A to mis-mark family 2 graduated=Y(A) despite the
+  # family being deliberately deferred.
+  #
+  # Scope limit (by design): the discriminator operates on the bucket-
+  # id codification style established at ARC 3 (Promoted-from bullet
+  # containing a bucket-id-shaped tag). Descriptive provenance style
+  # codifications (e.g., "Phase 1.5A convention codification batch")
+  # don't contain bucket-id tags and are outside this discrimination
+  # scope by design — Stage A's question ("is this bucket-id-shaped
+  # family graduated?") only meaningfully applies to bucket-id-shaped
+  # codifications. See docs/09_briefs/phase-6.5/2026-05-17-friction-
+  # pattern-detector-design.md §Bucket extraction for the discriminator
+  # design and scope-limit rationale.
+
+  # Fast path: find files containing the bucket anywhere. If no file
+  # contains the bucket at all, it can't be graduated.
+  local candidate_files
+  if ! candidate_files=$(grep -rlF -- "$bucket" \
        CLAUDE.md \
        docs/04_engineering/conventions/ \
        .claude/skills/ \
-       2>/dev/null; then
-    return 0
+       2>/dev/null); then
+    return 1
   fi
+
+  # Slow path: for each candidate, check if bucket is within a
+  # Promoted-from bullet block using awk-based block parsing. The
+  # block:
+  #   - starts at any line matching `- Promoted from:`
+  #   - terminates at the next bullet (`- foo`), horizontal rule
+  #     (`---`), heading (`#+ `), or bold-prefix line (`**Foo:**`)
+  #   - includes continuation lines (indented, no `-`) within the
+  #     block
+  local file
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    if awk -v bucket="$bucket" '
+      BEGIN { in_promoted = 0; found = 0 }
+      /^[[:space:]]*- Promoted from:/ {
+        in_promoted = 1
+        if (index($0, bucket) > 0) { found = 1; exit }
+        next
+      }
+      /^[[:space:]]*- / { in_promoted = 0 }
+      /^---/ { in_promoted = 0 }
+      /^#+ / { in_promoted = 0 }
+      /^\*\*[^*]/ { in_promoted = 0 }
+      in_promoted {
+        if (index($0, bucket) > 0) { found = 1; exit }
+      }
+      END { exit !found }
+    ' "$file" 2>/dev/null; then
+      return 0
+    fi
+  done <<< "$candidate_files"
+
   return 1
 }
 
