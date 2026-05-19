@@ -30,14 +30,18 @@ at Step 1, INV-ADJUSTMENT-001 at Step 9a, and INV-RECURRING-001
 at Step 10a; Step 11 of Arc A formalizes all three in this
 index):
 
-- **20 distinct INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md` (14 Layer 1a, 6 Layer 2,
+- **21 distinct INV-IDs** documented in
+  `docs/02_specs/ledger_truth_model.md` (14 Layer 1a, **7 Layer 2**,
   0 Layer 1b)
-- **20 distinct INV-IDs** annotated in code (`src/` +
-  `supabase/migrations/`) (14 Layer 1a, 6 Layer 2, 0 Layer 1b)
+- **21 distinct INV-IDs** annotated in code (`src/` +
+  `supabase/migrations/`) (14 Layer 1a, 7 Layer 2, 0 Layer 1b)
 - **Symmetric difference: empty.** Every documented invariant
   has at least one annotation site in code; every annotated
   INV-ID has a corresponding leaf in the doc.
+
+Phase 5.1 chunk 5.1a (2026-05-19) added INV-DOC-001 (Layer 2;
+evidence completeness for committed bills) per ADR-0011 §15
+reservation graduation. Layer 2 count updates from 6 → 7.
 
 The verification command, reproducible at any future point:
 
@@ -77,6 +81,7 @@ layer, the order matches the order the invariants appear in
 | 18 | INV-MONEY-001 | 2 | Money at the service boundary is string-typed, never JavaScript `Number` | Branded types + Zod schemas + arithmetic helpers + decimal.js confinement (collective) | [leaf](ledger_truth_model.md#inv-money-001--money-at-the-service-boundary-is-string-typed-never-javascript-number) | `src/shared/schemas/accounting/money.schema.ts` (collective enforcement) |
 | 19 | INV-REVERSAL-001 | 2 | Reversal lines must mirror the original | TypeScript service function (5-step algorithm) | [leaf](ledger_truth_model.md#inv-reversal-001--reversal-lines-must-mirror-the-original) | `src/services/accounting/journalEntryService.ts` (function `validateReversalMirror`) |
 | 20 | INV-AUDIT-001 | 2 | Every mutating service call writes an `audit_log` row in the same transaction | TypeScript service function + call-site discipline | [leaf](ledger_truth_model.md#inv-audit-001--every-mutating-service-call-writes-an-audit_log-row-in-the-same-transaction) | `src/services/audit/recordMutation.ts` (primary); `src/services/accounting/journalEntryService.ts` (call site in `post`) |
+| 21 | INV-DOC-001 | 2 | Bills require attached primary document | TypeScript service function (Zod schema + business-logic check) | [leaf](ledger_truth_model.md#inv-doc-001--evidence-completeness-for-committed-bills-layer-2) | `src/services/spend/billService.ts` (function `post`) |
 
 ## Cross-layer pairings
 

@@ -5,16 +5,25 @@ import { TimestamptzString } from '@/shared/schemas/common.schema';
 // Reserved enum values defined in DB ENUM type but rejected here.
 // Pair-validity matrix from ADR-0016 §3 Table A enforced via .refine().
 
-// 6 v1-active linked_entity_type values at chunk 5.
+// 8 v1-active linked_entity_type values at Phase 5.1 chunk 5.1a.
 //
-// ADR-0016 §1 lists 8 v1-active values including vendor_credit and
-// vendor_credit_application, but Phase 5 substrate did not ship
-// vendor_credits / vendor_credit_applications tables. Chunk 5 ships
-// the tighter 6-value subset to match empirical codebase state. When
-// Phase 5 ships the credit substrate, a future chunk's CHECK
-// relaxes to 8 values; this enum extends; the table map below
-// extends. See chunk-5 retrospective inventory item (ADR-0016 full
-// editorial audit) for the §1-vs-codebase reconciliation question.
+// History: ADR-0016 §1 originally listed 8 v1-active values including
+// vendor_credit and vendor_credit_application. Chunk-5 (Phase 2) shipped
+// the tighter 6-value subset because Phase 5 substrate did not ship
+// vendor_credits / vendor_credit_applications tables. Phase 2.5 Commit A
+// (ADR-0016 first amendment) moved those values to reserved-post-v1.
+// Phase 5.1 chunk 5.1a (ADR-0016 third amendment) ratifies substrate per
+// Sub-Q3 β: vendor_credits + vendor_credit_applications tables ship via
+// migration 20240156000000_phase_5_1_vendor_credits_substrate.sql; this
+// enum extends to 8 values; LINKED_ENTITY_TABLE_MAP below extends
+// (PK column 'id' per vendor_prepayment precedent).
+//
+// VALID_PAIRS matrix below: NO new pair activations at chunk 5.1a per
+// Sub-Q3 β + ADR-0016 §3 validity-matrix activation discipline
+// (substrate-only without consumer = no semantic brief justifying cell
+// activation). vendor_credit + vendor_credit_application rows stay R/I
+// in ADR-0016 §3 Table B; cell activations defer to post-v1
+// vendorCreditService consumer chunk.
 export const LinkedEntityTypeSchema = z.enum([
   'bill',
   'bill_line',
@@ -22,6 +31,8 @@ export const LinkedEntityTypeSchema = z.enum([
   'bill_payment_allocation',
   'vendor_prepayment',
   'vendor_prepayment_application',
+  'vendor_credit',
+  'vendor_credit_application',
 ]);
 export type LinkedEntityType = z.infer<typeof LinkedEntityTypeSchema>;
 
@@ -143,6 +154,13 @@ export const LINKED_ENTITY_TABLE_MAP: Record<
   vendor_prepayment: { table: 'vendor_prepayments', pkColumn: 'id' },
   vendor_prepayment_application: {
     table: 'vendor_prepayment_applications',
+    pkColumn: 'id',
+  },
+  // Phase 5.1 chunk 5.1a (Sub-Q3 β substrate-tables-only).
+  // PK column 'id' per vendor_prepayment precedent (substrate parity).
+  vendor_credit: { table: 'vendor_credits', pkColumn: 'id' },
+  vendor_credit_application: {
+    table: 'vendor_credit_applications',
     pkColumn: 'id',
   },
 };

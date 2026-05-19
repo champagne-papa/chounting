@@ -3456,6 +3456,107 @@ typed `ServiceError`).
 
 ---
 
+### INV-DOC-001 — Evidence completeness for committed bills (Layer 2)
+
+**Invariant.** Every committed bill has at least one
+`source_document_links` row with `linked_entity_type='bill'`,
+`linked_entity_id=<bill_id>`, and `link_role` ∈ `{'primary_invoice',
+'receipt'}` — unless the bill row carries
+`override_evidence_completeness=true`.
+
+**Enforcement.** Layer 2 service-layer check at `billService.post()`
+in `src/services/spend/billService.ts`. The service function
+refuses to commit a bill without a `primary_document_id` input
+parameter, except when the `override_evidence_completeness`
+controller flag is set on the bill row. The flag's Layer 1
+substrate ships at Phase 5 migration
+`supabase/migrations/20240138000000_phase5_vendor_prepayment_substrate.sql:172`
+(`override_evidence_completeness boolean NOT NULL DEFAULT false`);
+the Layer 2 enforcement lands at Phase 5.1 chunk 5.1a (this leaf's
+graduation from reserved-candidate per ADR-0011 §15).
+
+The check fires AFTER Zod input validation
+(`PostBillInputSchema.parse()`) and BEFORE the entity preload
+block. If `override_evidence_completeness=false` (default) AND
+`primary_document_id` is absent, the function throws
+`ServiceError('EVIDENCE_INCOMPLETE', ...)` before any database
+mutation. If `primary_document_id` is provided, the function
+inserts the bill row + bill_lines + JE via
+`journalEntryService.post()`, then calls `documentLinkService.create()`
+to insert the `source_document_links` row with
+`link_role='primary_invoice'` in the same transaction window. The
+atomic transaction guarantees that either both the bill and the
+link row commit, or neither does.
+
+**Why Layer 2.** Per ADR-0011 §15: the relationship between
+`bills` and `source_document_links` is many-to-many via the
+polymorphic spine (ADR-0016 §1-§3), and the "at least one primary"
+requirement depends on `link_role` enum membership rather than
+referential integrity. The DB has no foreign key that would
+enforce the rule at Layer 1. The override-via-flag mechanism
+(Layer 1 substrate at migration `20240138000000:172` + Layer 2
+short-circuit) is owned by ADR-0015 §10 per the substrate-now-
+enforcement-later discipline (ADR-0010).
+
+**Interaction with the service layer.** `billService.post()` input
+schema extension at
+`src/shared/schemas/spend/bill.schema.ts:PostBillInputSchema`:
+optional `primary_document_id: string` (UUID) parameter +
+`override_evidence_completeness: boolean` defaulting to `false` at
+the Zod boundary (mirroring the Layer 1 NOT NULL DEFAULT). When
+`primary_document_id` is provided, `billService.post()` invokes
+`documentLinkService.create()` with `linked_entity_type='bill'`,
+`linked_entity_id=<bill_id>`, `link_role='primary_invoice'` (the
+canonical primary-invoice link_role for AP-domain bills per
+ADR-0016 §2:379).
+
+Per ADR-0015 §7 Scenario C, `link_role='receipt'` also satisfies
+the invariant for born-paid bundles (standalone receipt as
+primary evidence). The accepted-set adjudication at Phase 5.1
+scope-lock cycle Round 3 Sub-Q4-b ratified
+`{primary_invoice, receipt}` as the v1 accepted set.
+
+**Service-layer backstop.** None at Phase 5.1. Phase 2+ may add a
+reporting backstop at evidence-completeness audit prompt under
+`docs/07_governance/audits/prompts/` (named-future-trigger).
+
+**Adjacent commit paths.** Per Phase 5.1 scope-lock cycle Round 3
+Sub-Q4-a (per-bill granularity) + Round 4 §3.b.v verify-from-disk:
+enforcement fires at `billService.post()` only. Other bill-touching
+service paths (`billService.approveForPayment()`,
+`billService.recordPayment()` — via `paymentService.record()` per
+chunk 5.1b's partial-extraction disposition — and
+`billService.reverse()`) mutate `bills.lifecycle_state` only and
+do not re-fire INV-DOC-001 (post-time-only enforcement per
+Sub-Q4-c lock).
+
+**Backfill posture.** Per Sub-Q4-d 4-d.γ lock: pre-Phase-5.1
+posted bills without primary attachment get auto-override flag
+flipped at chunk 5.1a migration
+`supabase/migrations/20240156000000_phase_5_1_vendor_credits_substrate.sql`,
+with `bill_evidence_override_applied` audit row insertion per
+backfilled bill. Forward-only enforcement applies to bills posted
+post-Phase-5.1.
+
+**Category A floor test.** Not a Category A floor candidate at
+Phase 5.1. Category A is reserved for Phase 1.1 + Arc A core
+invariants. Phase 5.1 integration test coverage at
+`apps/web/tests/integration/billEvidenceCompleteness.test.ts`
+(3 fixtures: positive / override / failure paths).
+
+**Referenced by:** ADR-0011 §15 (reservation graduation source);
+ADR-0015 §10 (override mechanism owner); ADR-0015 §7 Scenario C
+(born-paid receipt accepted set basis); ADR-0016 §2 (v1-active
+link_role subset + primary_invoice canonical for AP-domain bills);
+ADR-0016 §6 (post-commit immutability and link_status transitions);
+`src/services/spend/billService.ts` (enforcement code site at
+`post()` function);
+`apps/web/tests/integration/billEvidenceCompleteness.test.ts`
+(integration test); `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1a.md`
+(chunk 5.1a brief).
+
+---
+
 ## Layer 3 — Temporal Truth (Events as Source of Truth)
 
 Layer 3 is where mutations become history. Every Phase 2 service

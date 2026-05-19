@@ -100,6 +100,12 @@ export type ServiceErrorCode =
   // Caller-side symmetric with EXCEPTION_ALREADY_OPEN (both signal
   // "queue entry is in unexpected state for this operation").
   | 'EXCEPTION_ALREADY_CANCELLED'
+  // Document core (Phase 5.1 chunk 5.1a) — INV-DOC-001 evidence-
+  // completeness enforcement at billService.post(); fired when neither
+  // primary_document_id nor override_evidence_completeness=true provided.
+  // Per ADR-0011 §15 reservation graduation; leaf at
+  // ledger_truth_model.md INV-DOC-001.
+  | 'EVIDENCE_INCOMPLETE'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future

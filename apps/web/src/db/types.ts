@@ -2627,6 +2627,140 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_credit_applications: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          trace_id: string
+          vendor_credit_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          trace_id: string
+          vendor_credit_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          applied_at?: string
+          bill_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          trace_id?: string
+          vendor_credit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credit_applications_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_vendor_credit_id_fkey"
+            columns: ["vendor_credit_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_credits: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          fx_rate: number | null
+          id: string
+          issue_date: string
+          legal_entity_id: string | null
+          org_id: string
+          status: string
+          trace_id: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          issue_date: string
+          legal_entity_id?: string | null
+          org_id: string
+          status?: string
+          trace_id: string
+          vendor_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          issue_date?: string
+          legal_entity_id?: string | null
+          org_id?: string
+          status?: string
+          trace_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credits_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credits_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credits_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["vendor_id"]
+          },
+        ]
+      }
       vendor_prepayment_applications: {
         Row: {
           amount_cad: number

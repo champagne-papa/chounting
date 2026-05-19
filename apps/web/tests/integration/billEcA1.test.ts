@@ -279,6 +279,8 @@ describe('bill EC-A-1: post_bill + record_bill_payment full invariant set', () =
       fiscal_period_id: fiscalPeriodId,
       entry_date: '2026-05-10',
       ap_control_account_id: apControlAccountId,
+      // INV-DOC-001 bypass per Sub-Q4-d override-as-canonical-bypass (Phase 5.1 chunk 5.1a Task 7b).
+      override_evidence_completeness: true,
     };
   }
 

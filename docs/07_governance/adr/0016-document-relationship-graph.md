@@ -1981,3 +1981,150 @@ revision). Scope is narrow (two clarification-grade
 reconciliations); broader Phase 0 review deferred per
 arc-class first-instance status framing per the Phase 2.5
 Commit A precedent.
+
+## Amendment — Phase 5.1 chunk 5.1a substrate ratification (2026-05-19)
+
+ADR-0016 is amended at Phase 5.1 chunk 5.1a substrate ship per
+the (β) reconciliation pattern: ADR text catches up to substrate
+landing. Phase 2.5 Commit A (first amendment, 2026-05-13) moved
+`vendor_credit` and `vendor_credit_application` from the
+`linked_entity_type` v1-active subset to reserved-post-v1 because
+Phase 5 substrate did not ship the `vendor_credits` /
+`vendor_credit_applications` tables. Phase 5.1 chunk 5.1a
+substrate-tables-only ratification (Sub-Q3 β disposition; Phase
+5.1 scope-lock cycle Round 2 onset) ships those tables; this
+amendment ratifies the substrate landing in ADR text.
+
+### Substance
+
+Four reconciliations:
+
+1. **§1 v1-active subset 6 → 8 (re-add `vendor_credit` and
+   `vendor_credit_application`).** Phase 2.5 Commit A moved the
+   two values to reserved-post-v1 because Phase 5 substrate did
+   not ship the tables (no v1 consumer service). Phase 5.1 chunk
+   5.1a ships the tables via migration
+   `supabase/migrations/20240156000000_phase_5_1_vendor_credits_substrate.sql`
+   per Sub-Q3 β substrate-tables-only disposition. The two values
+   return to v1-active in §1. Substrate ships without a consumer
+   service surface at chunk 5.1a; consumer service activates at
+   post-v1 vendorCreditService chunk (operational-signal-contingent
+   per Phase 5 retro §6:404 framing). Cascading edits: `§1 cell
+   counts` updates back to chunk-5 reference (substrate-back-to-
+   active without cell-validity matrix activations); §Schema-
+   deltas v1-active 6 → 8 values + reserved-post-v1 22 → 20
+   values; §Closes Q55 v1-active subset 6 → 8.
+
+2. **§3 pair-validity matrix Table A: vendor_credit and
+   vendor_credit_application rows re-positioned from Table B
+   (reserved post-v1) to Table A (v1-active) — substrate-position
+   only; NO cell activations at chunk 5.1a.** Per ADR-0016 §3
+   validity-matrix activation discipline: activating a reserved
+   cell requires (a) entity-type active OR being activated in the
+   same amendment ✓; (b) link_role active OR being activated in
+   the same amendment ✓ (link_roles unchanged); (c) semantic brief
+   explaining activation ✗ (Sub-Q3 β substrate-tables-only scope
+   has no consumer service to attach documents to vendor_credits);
+   (d) cell label flip from R to A ✗ deferred to consumer chunk;
+   (e) Layer 1/2/3 defense extension ✗ deferred. Per condition (c)
+   absence, cell activations DEFER to post-v1 vendorCreditService
+   consumer chunk. Mechanical row repositioning only at chunk 5.1a;
+   all R-labeled cells in vendor_credit + vendor_credit_application
+   rows stay R; all I-labeled cells stay I; no cells flip to A.
+
+3. **§5 cascade behavior table: vendor_credit and
+   vendor_credit_application rows re-positioned from reserved-
+   post-v1 sub-table to v1-active sub-table.** Per chunk 5.1a
+   substrate ship: the existing cascade-behavior rows for these
+   two linked_entity_types (`vendor_credit.status` flip to
+   reversed-equivalent per ADR-0015 §10; `vendor_credit_application`
+   reversal via application-reversal) carry semantically forward
+   as v1-active cascade definitions. Consumer service ship at
+   post-v1 vendorCreditService chunk activates the cascade
+   behavior in code; Phase 5.1 ratifies the cascade definitions
+   in ADR text.
+
+4. **§Schema-deltas + §Closes Q55 + §Reserved-enums table
+   reconciliations.** Cell counts and version updates per items
+   1-3 above. v1-active `linked_entity_type` cell count restores
+   to chunk-5 reference (6 → 8 v1-active values; reserved-post-v1
+   22 → 20 values). §Reserved-enums-and-audit-events table:
+   `controller_override_memo` link_role stays reserved-post-v1
+   per ADR-0016 §2:421-427 (v1 captures INV-DOC-001 override via
+   boolean flag + audit row only; PDF attachment is post-v1
+   named-future-trigger contingent on operational signal).
+
+### Why this amendment
+
+Per Phase 5.1 scope-lock cycle Round 4 §5.1 chunk 5.1a acceptance
+criteria + Round 2 Refinement 1: ADR-0016 third amendment cycle
+additive provenance-preserving per ADR-0022 §5 + Phase 2.5 Commit
+B convention. The amendment cites both Phase 2.5 Commit A
+(reservation amendment moving values to reserved-post-v1) AND
+Phase 5.1 chunk 5.1a (current amendment moving cell-position back
+to v1-active per substrate landing). Provenance discipline
+preserves the bidirectional trajectory across cycles.
+
+Cycle context: Phase 5.1 scope-lock cycle closed substantively at
+Round 4 (commit `8631a5d`) with 14 sub-questions + 8 sub-decisions
+LOCKED. Sub-Q3 β disposition (substrate-tables-only) locked at
+Round 2 onset (brainstorming-side ratified post-Round-1 per
+substrate-side validation: tables don't exist on disk yet;
+substrate landing is the right v1 disposition). Sub-Q4 Option (i)
+atomic single commit locks chunk 5.1a as a single commit shipping
+T3 + T2 + T1 surface-precedence.
+
+### Bundling
+
+Phase 5.1 chunk 5.1a ships this amendment alongside:
+
+- **INV-DOC-001 leaf graduation** at `docs/02_specs/ledger_truth_model.md`
+  (per ADR-0011 §15 reservation graduation; Phase 5.1 chunk 5.1a
+  acceptance criteria §5.1.1 (A)).
+- **invariants.md rollup row** addition (row 21; bidirectional
+  reachability statement updates 20 → 21 distinct INV-IDs; Layer 2
+  6 → 7).
+- **control_matrix.md audit row** addition at Layer 2 section.
+- **billService.post() Layer 2 enforcement code** + PostBillInputSchema
+  extension + EVIDENCE_INCOMPLETE ServiceErrorCode + integration test
+  `billEvidenceCompleteness.test.ts`.
+- **vendor_credits + vendor_credit_applications migration** at
+  `supabase/migrations/20240156000000_phase_5_1_vendor_credits_substrate.sql`
+  + LinkedEntityTypeSchema widen + LINKED_ENTITY_TABLE_MAP additions
+  + linked_entity_type CHECK 6 → 8 + Sub-Q4-d 4-d.γ backfill.
+
+Single commit per Sub-Q4 Option (i) atomic INV-DOC-001 graduation.
+
+### Cross-references
+
+- `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1a.md`
+  — chunk 5.1a brief (this amendment ships per Task 10).
+- `docs/09_briefs/phase-5.1/2026-05-19-phase-5-1-scope-lock-cycle-round-4.md`
+  — Phase 5.1 scope-lock cycle Round 4 close (`8631a5d`); §5.1
+  chunk 5.1a acceptance criteria; §7 friction-journal cycle
+  inventory (ADR-0016 third amendment named as chunk 5.1a
+  deliverable).
+- `supabase/migrations/20240156000000_phase_5_1_vendor_credits_substrate.sql`
+  — Phase 5.1 chunk 5.1a substrate migration (vendor_credits +
+  vendor_credit_applications tables + linked_entity_type CHECK 6 → 8
+  + Sub-Q4-d 4-d.γ backfill).
+- `apps/web/src/shared/schemas/document-platform/sourceDocumentLink.schema.ts`
+  — Phase 5.1 chunk 5.1a Zod schema widen (LinkedEntityTypeSchema
+  6 → 8 v1-active + LINKED_ENTITY_TABLE_MAP 2 new entries).
+- ADR-0022 §5 — additive provenance-preserving amendment-block
+  convention (this amendment honors).
+- Phase 2.5 Commit A amendment (this file lines 1751-1867) —
+  predecessor amendment moving the two values to reserved-post-v1.
+- Phase 4 retrospective amendment (this file lines 1869-1983) —
+  sibling amendment (table reconciliation; v1 deferral pattern).
+- `docs/09_briefs/phase-2.5/2026-05-13-phase-2-5-commit-a.md` —
+  Phase 2.5 Commit A brief (precedent for ADR amendment shape +
+  bundling discipline).
+
+This is **ADR-0016's third amendment** (after Phase 2.5 Commit A
+first amendment 2026-05-13 + Phase 4 retrospective second amendment
+2026-05-14). Title-line stability preserved (no title-line
+revision). Scope is narrow (four substrate-position reconciliations
+per Sub-Q3 β; no cell-validity matrix activations per ADR-0016 §3
+discipline; cell activations defer to post-v1 vendorCreditService
+consumer chunk).
