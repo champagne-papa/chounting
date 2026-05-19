@@ -243,6 +243,36 @@ has been graduated into a skill, the detector should not re-surface
 it as ungraduated. Flagged for review under §Decisions introduced in
 drafting.
 
+**Stage A discriminator refinement (added ARC 3.6, commit
+`89155fb`).** The bare grep described above produced false-positives
+on family tags that appeared in cross-reference bodies or prose
+mentions, not just codification footers. Specifically:
+`prediction-grounding.md`'s Cross-references section mentions a
+deferred family by name; Stage A's bare grep matched the mention
+and marked the family `graduated=Y(A)` despite the family being
+deferred (see friction-journal 2026-05-19 ARC 3 STEP 2 dispositions
+H2 for the originating false-positive's context).
+
+ARC 3.6 refined `check_graduated_a()` to anchor on Promoted-from
+bullet blocks: Stage A finds the bucket ID only if it appears
+within a `- Promoted from:` bullet's text span (the line plus any
+continuation lines, until the next bullet/heading/separator). The
+discriminator is implemented as an awk-based bullet-block parser
+following the structural shape of markdown bulleted lists.
+
+**Scope limit.** Stage A discriminates within bucket-id-shaped
+codifications (Promoted-from bullets containing single-token
+bucket IDs). Noise tokens extracted by B1/B2/B3 from descriptive
+Promoted-from prose (e.g., "ARC", "ADR-0010", "B5-1") remain
+visible in Stage A output as `graduated=Y(A)`. This is Stage A
+operating correctly within its scope — it identifies that these
+tokens appear within Promoted-from blocks, even though they
+aren't legitimate bucket IDs. The noise originates at the
+extraction layer (B1/B2/B3 over-extracting bucket candidates from
+descriptive prose); refining Stage A further wouldn't address it.
+The appropriate remediation, if this noise becomes operationally
+costly, is at the extraction layer.
+
 ## Window
 
 **Default:** Glob `docs/07_governance/retrospectives/*.md` for the
