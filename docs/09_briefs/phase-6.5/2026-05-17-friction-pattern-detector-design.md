@@ -212,6 +212,16 @@ phantom buckets. The audit surfaced no such tokens in the top 40;
 file-extension shape rule (third potential reject) deferred per
 empirical-grounding discipline — bank if surfaced as N=1, add at N=3.
 
+**Codified canonical sources (added ARC 3.5):** The cost classes
+documented in this section graduated to
+`docs/04_engineering/conventions/regex-permissive-matching.md`
+(design-time discipline; commit `a10480d`); the audit-grounded
+resolution mechanism graduated to
+`docs/04_engineering/conventions/prediction-grounding.md`
+(resolution-time discipline; commit `6d3a911`). This section
+retains discovery provenance; the conventions carry the codified
+disciplines.
+
 ## Graduation check — two stages
 
 **Stage A (ID-shaped buckets):** Bare grep for the bucket ID in

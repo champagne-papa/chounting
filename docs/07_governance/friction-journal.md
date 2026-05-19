@@ -13318,6 +13318,9 @@ when the detector itself is re-run against the journal.
   extraction accepts the cost as noise-class (operator filters the
   T1 row in 2 seconds). Documented as such, no in-script change.
 
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
+
 - (regex-permissive-cost-class) first-instance — B2's permissive
   regex `[A-Z][A-Z0-9-]+[A-Z0-9]` requires an uppercase tail.
   Lowercase-suffixed bucket families (S29a, S29b, S29c) collapse
@@ -13328,6 +13331,9 @@ when the detector itself is re-run against the journal.
   by `source_lines` inspection. Acceptable for surfacing-tool cost
   shape; B2 refinement candidate (change tail to `[A-Z0-9a-z]`)
   if a future audit shows the cost is too high.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
 
 - (regex-permissive-cost-class) first-instance — B1's permissive
   matching has a **signal-hiding subclass** distinct from the
@@ -13341,6 +13347,9 @@ when the detector itself is re-run against the journal.
   banking commit); resolution deferred pending empirical audit of
   all-lowercase-letter parenthesized bucket usage before any B1
   discriminator change.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
 
 ### Family-level codification status
 
@@ -13401,6 +13410,13 @@ introduced at N=1; one existing family advances to N=4.
   itself a fourth instance of the pattern the detector was built
   to surface. System working as designed.
 
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`. Instance 4's resolution mechanism also relates
+  to `conventions/prediction-grounding.md`; whether this instance
+  is more naturally tagged by its substrate or by its mechanism is
+  documented as an Open Question in `conventions/README.md` — see
+  substrate-vs-mechanism family-tag precedence.)
+
 ### embedded-language-quote-collision (first-instance — new family)
 
 - (embedded-language-quote-collision) first-instance — When applying
@@ -13451,6 +13467,9 @@ introduced at N=1; one existing family advances to N=4.
   discover" in caveat wording, even when verification feels like
   a confirmation step. Future instances likely surface whenever a
   caveat-deferred-pending-audit shape recurs.
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
 
 ### Family-level codification status
 
@@ -13508,6 +13527,9 @@ codify-while-deciding-not-while-implementing.**
   - `regex-permissive-cost-class`: 27 chars
   - `embedded-language-quote-collision`: 33 chars
   - `caveat-prediction-vs-empirical-resolution`: 41 chars (silently rejected)
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
 
 ### audit-fix-verify-surfaces-banking (new family, banking N=1 + N=2 together)
 
@@ -13701,6 +13723,9 @@ Verification (STEP 3 three checks):
   convention file (and where it would land — possibly the brainstorm
   or writing-plans skill surface rather than a topical convention) is
   ARC 3's question, not ARC 2.5's.
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
 
 ### audit-fix-verify-surfaces-banking (third-instance — family now N=3, graduation candidate)
 
