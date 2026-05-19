@@ -14187,3 +14187,271 @@ and when ARC 3.5 fires.
 - Prior banking entries (the substrate the graduations operated on):
   2026-05-18 H2 + three 2026-05-19 H2s above (ARC 2 banking, ARC 3
   STEP 1 STOP banking, ARC 2.5 close banking).
+
+## 2026-05-18 — ARC 3.5 close: Phase A 7-item completion + 4 close observations + audit-fix-verify N=4 trigger satisfaction question + ARC 3.6 queued
+
+ARC 3.5 Phase A closes with seven scope-locked items shipped plus
+one STEP 4 alignment follow-up (eight commits beyond the
+prompt-substrate commit). The codify-convention skill's first
+operational exercise from ARC 3 produced six queued observations;
+Phase A resolved five of them plus a structural framework-
+codification finding surfaced at STEP 2 audit. Phase B (Stage A
+graduation-check refinement) is queued as ARC 3.6 per the
+prompt's default deferral. Four close observations bank for
+future N counting; one trigger-satisfaction question surfaces for
+separate re-evaluation decision.
+
+### Outcome summary
+
+Phase A's commits:
+
+| Commit | Item | Description |
+|--------|------|---|
+| `be8854f` | STEP 0 | Write ARC 3.5 prompt to disk |
+| `8b241ee` | Item 1 | Codify graduation criteria framework in README (prerequisite) |
+| `9b81df7` | Item 2 | Formalize Evaluation basis field in codify-convention skill + precedent-file cleanup |
+| `1e37d21` | Item 3 | Document prescriptive/descriptive load-bearing sub-shape in README |
+| `0fbb863` | Item 4 | Introduce Open codification questions section in README (substrate-vs-mechanism entry as first) |
+| `03ff838` | Item 5 | Add upstream-artifacts cross-reference step to codify-convention output spec |
+| `1b1f370` | Item 7 | Apply Item 5 discipline retroactively to ARC 3 graduations (spec + 7 journal entries, atomic) |
+| `4994271` | Item 6 | Apply prescriptive sub-qualifier to prediction-grounding.md Load-bearing |
+| `27bc490` | STEP 4 | Align codify-convention overview with Phase A body changes |
+
+Structural goal achieved: the codify-convention skill is in a
+self-consistent state after its first operational exercise (the
+ARC 3 two-graduations-one-deferral run), with the framework it
+applies now canonically codified and all upstream-artifact
+cross-references retroactively populated for the two ARC 3
+graduations.
+
+### Observation 1: Three prompt-prediction-vs-disk-reality sub-instances this arc (one observation-grain instance toward prediction-grounding family)
+
+The ARC 3.5 prompt, written from the operator's snapshot of
+post-ARC-3-close state, encoded three predictions that diverged
+from disk reality when STEP 1 substrate reading verified against
+the friction-journal:
+
+- (a) **"five" framing** — the prompt referenced "the five Phase
+  A observations" as if they mapped 1:1 to the journal's banked
+  observations. STEP 1 substrate reading revealed the mapping was
+  5-prompt-items-to-4-journal-observations (Journal Obs 5
+  contributed two prompt items: the discipline portion + the
+  action-item portion; Journal Obs 2 was excluded from Phase A's
+  scope as observation-only). The prompt's count was a
+  compression that hid the mapping divergence.
+
+- (b) **substrate-vs-mechanism resolution-by-assertion** — the
+  prompt's Obs 3 asserted a resolution to the substrate-vs-
+  mechanism precedence question ("by mechanism, not by
+  substrate"). The originating friction-journal entry banked this
+  as an OPEN question with both positions documented; the
+  prompt's resolution was an assertion, not a derivation from
+  evidence. Phase A redirected to OPEN QUESTION shape per
+  operator direction at STEP 1.
+
+- (c) **framework-not-codified structural gap** — the prompt's
+  Obs 1 framed as "formalize the Evaluation basis field" with
+  required content "load-bearing / generalizable / stable
+  assessment." STEP 2 audit revealed the framework had no
+  canonical home on disk — it lived only in the ARC 3 prompt's
+  DECISION FRAMEWORK section. Item 1 prerequisite codification
+  was a direct consequence.
+
+All three sub-instances are instances of
+`caveat-prediction-vs-empirical-resolution` (now codified at
+`conventions/prediction-grounding.md`). Per the observation-grain
+vs application-grain rule, the three sub-instances count as ONE
+observation-grain instance toward prediction-grounding's family
+count (this is Phase A within one arc; not three independent
+contexts).
+
+**Sub-shape diversity:** Sub-instance (a) is a count-expectation
+matching prediction-grounding's existing sub-shape #3 ("session-
+handoff prompts that encode count expectations"). Sub-instances
+(b) and (c) are NOT count-expectations — they're prompt-encoded
+assumptions about the existence/state of substrates the prompt's
+reasoning depends on. See Observation 4 (implicit-precondition
+assumption as candidate sub-shape refinement) for the substantive
+framing of this split.
+
+(Codified at `conventions/prediction-grounding.md` ARC 3, commit
+`6d3a911`.)
+
+### Observation 2: STEP 4 overview-vs-body drift after multi-amendment skill changes (N=1)
+
+Items 2 and 5 amended the codify-convention skill's §Output
+specification (Item 2 added the Evaluation basis schema to
+artifact 2; Item 5 added artifact 3 for upstream-artifacts cross-
+reference). Neither was scoped to update the skill's overview
+surfaces (frontmatter description and §Purpose section), which
+continued to describe the pre-Phase-A two-artifact behavior. The
+skill's advertised behavior diverged from its required behavior.
+
+STEP 4's coherence read caught the drift; the STEP 4 follow-up
+commit `27bc490` aligned the overview surfaces with the body.
+
+The observation: multi-amendment skill changes targeting body
+sections leave overview surfaces in stale states unless
+explicitly scoped to update them. N=1 within this arc; no obvious
+analog elsewhere yet. Bank for future N counting. STEP 4's
+coherence-read discipline is the canonical surface for catching
+this kind of drift; absent STEP 4, the skill would have shipped
+in a known-inconsistent state.
+
+### Observation 3: Phase A → Phase B split as N=1 of arc-scoping pattern
+
+ARC 3.5 was structured with an explicit Phase A / Phase B split
+(Phase B = ARC 3.6 default deferred). The prompt's opening framed
+this as: "Phase A this prompt's first work ... Phase B deferred
+to ARC 3.6 by default."
+
+The same shape recurred at prior arc transitions:
+
+- ARC 2 → ARC 2.5 (audit-and-fix work earned its own arc)
+- ARC 3 → ARC 3.5 (codify-convention skill refinements earned
+  their own arc)
+- ARC 3.5 → ARC 3.6 (Stage A refinement earned its own arc)
+
+N=1 of "arcs split by scope into phased sub-arcs when surfaced
+findings exceed original arc's scope" (counting at observation-
+grain; the three prior transitions all occurred within this
+multi-week run of arcs and may count as application-grain).
+
+Could be a sibling of `audit-fix-verify-surfaces-banking` (the
+recursion *is* the surfacing) or a distinct arc-scoping
+discipline pattern. Don't pre-commit to family taxonomy; bank for
+future N counting.
+
+### Observation 4: Implicit-precondition assumption as candidate sub-shape refinement for prediction-grounding (N=1 with 2 sub-instances)
+
+Observation 1's three sub-instances split into two cost classes
+against prediction-grounding's existing sub-shape #3:
+
+- Sub-instance (a) — "five" framing — is a count-expectation
+  matching sub-shape #3 ("session-handoff prompts that encode
+  count expectations") as written.
+
+- Sub-instances (b) — substrate-vs-mechanism resolution — and
+  (c) — framework-not-codified — are NOT count-expectations.
+  They're prompt-encoded **implicit-precondition assumptions**:
+  the prompt's reasoning treats X (a resolution to an open
+  question; a canonical referent for a field's content) as a
+  precondition that must hold for the prompt's instructions to
+  make sense, without verifying X exists.
+
+**Candidate sub-shape refinement:** extend prediction-grounding's
+sub-shape #3 to cover implicit-precondition assumptions, or
+introduce a fourth sub-shape. The name "implicit-precondition
+assumption" generalizes beyond prompt-writing — a spec caveat
+assuming a function exists in an API that turns out not to, or
+an ADR section assuming a substrate that doesn't yet exist, are
+the same shape. The mechanism (the reasoning treats X as a
+precondition without verifying X exists) is more domain-neutral
+than the count-expectation framing of sub-shape #3.
+
+N=1 within this arc with 2 sub-instances (observation grain).
+Per operator direction during ARC 3.5: bank as observation to
+evaluate in a future arc; do not act on it during Phase A.
+Evidence base: Observation 1's sub-instances (b) and (c).
+
+### audit-fix-verify-surfaces-banking — N=4 trigger satisfaction (queued for separate re-evaluation decision)
+
+The family 2 deferral entry (commit `c754810`, amended at
+`46d3d0e`) documented a re-evaluation trigger: "a 4th instance
+from operationally distinct context (different substrate,
+different arc origin, different artifact class)."
+
+Phase A's audit-fix-verify arc constitutes the 4th instance.
+Phase A's operational context is operationally distinct from
+family 2's prior three instances:
+
+- **Different substrate.** Prior three instances operated on the
+  friction-pattern-detector (script + spec + journal entries).
+  Phase A operated on the codify-convention skill spec, the
+  conventions/README.md framework section, and the friction-
+  journal banking entries — different artifact classes.
+- **Different arc origin.** Prior three were build/fix work
+  (resolving B1 signal-hiding, removing the 40-char cap, etc.).
+  Phase A is skill-refinement work (formalizing fields, codifying
+  frameworks, applying disciplines retroactively).
+- **Different artifact class.** Prior three were script edits +
+  spec amendments. Phase A is skill spec + canonical conventions +
+  journal cross-references.
+
+The trigger criterion is satisfied empirically by Phase A's
+diverse-context audit-fix-verify arc.
+
+**Queued for separate re-evaluation decision.** Re-evaluating
+family 2 inside Phase A would bundle decisions the discipline
+keeps separate. Proposing the re-evaluation criteria from this
+side of the decision would itself be subject to prediction-
+grounding's discipline (the criteria are predictions about what
+evidence would suffice). The re-evaluation arc grounds its own
+criteria.
+
+No action taken in Phase A. Family 2 deferral status remains
+DEFERRED. The trigger satisfaction is banked; the re-evaluation
+is queued as a future decision the operator initiates when
+appropriate.
+
+### ARC 3.6 queue handoff
+
+ARC 3.6 inherits the Phase B observation from ARC 3.5's prompt:
+
+> **Observation 6: Refine Stage A graduation check to distinguish
+> codification from cross-reference.** The Stage A grep in
+> `scripts/friction-journal-tally.sh`'s `check_graduated_a`
+> function searches the family tag string anywhere in CLAUDE.md,
+> conventions/, and `.claude/skills/`. The grep can't distinguish
+> a Promoted-from footer (codification) from a cross-reference
+> body (mention). ARC 3's family 2 deferral surfaced this as a
+> Y(A) false-positive when prediction-grounding.md's Cross-
+> references section mentioned audit-fix-verify-surfaces-banking
+> as the paired family.
+
+ARC 3.6 inherits this as a substantial script audit-and-fix arc:
+audit of all existing convention files for actual footer format
+consistency; design decision on the discriminator shape; the fix
+itself with regression checks against ARC 3's three decided
+families; update to the family 2 deferral entry once Stage A
+correctly reports graduated=N for it.
+
+Phase A this session did not touch Phase B. The friction-journal
+serves as the durable substrate for ARC 3.6 to pick up. The ARC
+3.5 prompt at
+`docs/09_briefs/phase-6.5/2026-05-18-arc-3-5-prompt.md`
+documents Phase B's scope and rationale for the deferral.
+
+### Cross-references
+
+Outbound — what this close H2 points at:
+
+- ARC 3.5 prompt (substrate for Phase A's work):
+  `docs/09_briefs/phase-6.5/2026-05-18-arc-3-5-prompt.md` (commit
+  `be8854f`).
+- Phase A's 8 commits beyond the prompt: `8b241ee` (Item 1) →
+  `9b81df7` (Item 2) → `1e37d21` (Item 3) → `0fbb863` (Item 4) →
+  `03ff838` (Item 5) → `1b1f370` (Item 7) → `4994271` (Item 6) →
+  `27bc490` (STEP 4).
+- Phase A's substantive surface changes:
+  - `docs/04_engineering/conventions/README.md` §Graduation
+    criteria, §Sub-shape distinctions, §Open codification
+    questions (all NEW at ARC 3.5).
+  - `.claude/skills/codify-convention/SKILL.md` §Output
+    specification (artifacts 2 and 3 amended; preamble updated
+    to "three artifacts"; frontmatter and §Purpose aligned).
+  - `docs/04_engineering/conventions/prediction-grounding.md`
+    (Evaluation basis preamble cleanup + Load-bearing sub-
+    qualifier consistency).
+  - `docs/04_engineering/conventions/regex-permissive-matching.md`
+    (Evaluation basis preamble cleanup).
+  - `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+    §Bucket extraction (Item 7's cross-reference paragraph).
+  - 7 friction-journal entries with parenthetical inline cross-
+    references (cross-reference lines post-Item-7: 13321, 13335,
+    13351, 13413, 13471, 13531, 13727).
+- Family 2 deferral entry: commit `c754810` (the audit-fix-
+  verify-surfaces-banking N=3 deferral; ARC 3.5 banks N=4 trigger
+  satisfaction without acting).
+- ARC 3 close H2 (the originating substrate Phase A resolved):
+  `friction-journal.md` line 13925 (2026-05-19 H2).
