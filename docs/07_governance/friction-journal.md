@@ -15632,3 +15632,69 @@ Meta-observations from this arc are banked at the four preceding
 H3s (sub-shape amendment evidence-base, date-convention change,
 substrate-vs-mechanism tagging deviation, recursion-closure cause
 analysis).
+
+## 2026-05-18 — Push of eight-arc recursion sequence to origin/staging
+
+### Push complete
+
+26 commits propagated from local staging to origin/staging
+(pre-push origin/staging `46d3d0e` → post-push `de6bc02`).
+Push-readiness gate met at all four checks:
+
+- **Condition (1) test-suite health.** `pnpm test` 1148/1148
+  cache-validated. The 25 pre-retrospective commits touch only
+  `docs/`, `scripts/`, `.claude/skills/` — zero `apps/web/` test
+  scope; turbo cache-hit reflects actual test state for HEAD.
+- **Condition (2) doc-sync reconciled.** No schema or shipped-code
+  changes in push range. `pnpm adr:check` clean (22 ADRs scanned,
+  no errors). Arc-affected governance docs internally consistent
+  (conventions/README.md routing + topical files index,
+  substrate-vs-mechanism Open Question marked Resolved 2026-05-19,
+  codify-convention SKILL.md preamble aligned with body).
+- **Condition (3) governance closeout.** Synthesizing retrospective
+  written at
+  `docs/07_governance/retrospectives/phase-6-5-codification-arc-sequence-retrospective.md`
+  (commit `de6bc02`) — interpretation (ii) at push-arc onset:
+  explicit synthesis rather than per-arc session-close H3s treated
+  as implicit retrospective.
+- **Fourth check (tool-level subset of condition 2).** `pnpm
+  adr:check` as the tool-level ADR-reconciliation subset — passed
+  cleanly.
+
+Eight-arc recursion sequence (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5
+→ family 2 re-evaluation → substrate-vs-mechanism re-evaluation
+→ ARC 3.6 → prompt-author-compression graduation evaluation) is
+now on remote. Two intermediate pushes (d549ef9 → 46d3d0e shipping
+arcs 1-3; 46d3d0e → de6bc02 shipping arcs 4-8 + synthesizing
+retrospective + this banking) cover the sequence.
+
+No new arcs queued. The recursion closed at the prompt-author-
+compression arc (commits `9e8dc71` + `34154e3`); push closes the
+queued state.
+
+Arc-boundary verification on remote confirmed: all eight arcs'
+canonical commits visible (ARC 2.5 STEP 7 close at `5a952b9`;
+ARC 3 graduations at `6d3a911` + `a10480d` + close at `4486cb1`;
+ARC 3.5 Phase A close at `b58e5dc`; family 2 rename + re-defer at
+`e6297f1`; substrate-vs-mechanism resolution at `c0a9f28`; ARC 3.6
+Stage A refinement at `89155fb`; prompt-author-compression
+re-deferral at `9e8dc71`; synthesizing retrospective at `de6bc02`).
+
+### Carry-forward state
+
+Two re-deferred families wait for naturally-occurring conditions:
+
+- `evolving-substrate-verify-surfaces-banking` at substrate-grain
+  N=2 (commit `e6297f1`). Trigger: instance from a third
+  iteratively-built-new-tool substrate distinct from
+  friction-pattern-detector and codify-convention.
+- `prompt-author-compression` at observation-grain N=5 /
+  substrate-grain N=1 (commit `9e8dc71` re-deferral; updated to
+  N=5 at retrospective `de6bc02` §5 with three application-grain
+  sub-instances banked in the push session). Two-step
+  substrate-distinct trigger; null-findings anti-parking-lot
+  reconsideration with bivalence caveat.
+
+Several N=1 observations accumulate evidence passively (catalogued
+at `de6bc02` §6). The substrate is operational; the queue is
+empty; ordinary work resumes.
