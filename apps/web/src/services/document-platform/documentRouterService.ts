@@ -1372,8 +1372,10 @@ async function runPerCaseReEvaluation(
 // Each helper returns the list of document_case_ids that
 // runPerCaseReEvaluation should apply to for a given trigger event.
 // Per the amended brief §Per-trigger semantic-coverage table:
-//   - T1 / T3: fan-out across stranded cases in exception queue
+//   - T1 / T2 / T3: fan-out across stranded cases in exception queue
 //     (audit-only at v1; rematchCandidate returns [] for stranded).
+//     T2 added at Phase 5.1 chunk 5.1b (paymentService.record activation)
+//     per shared "new-domain-entity-created" semantic class with T1/T3.
 //   - T5: cases with pre-commit candidates pointing at the transitioned
 //     bill (re-routing-functional via rematchCandidate).
 //   - T8: cases with pre-commit candidates whose extracted_invoice_date
@@ -1382,11 +1384,11 @@ async function runPerCaseReEvaluation(
 //     has priors; audit-only if stranded).
 // ---------------------------------------------------------------------
 
-// T1 / T3 fan-out (v1 audit-only): open exception_queue_entries with
-// exception_reason='unmatched_router_candidate' for the org. Vendor-
-// targeted fan-out activates when Phase 7 ships substrate to link
-// stranded cases to vendor identifiers.
-async function computeT1T3FanOut(db: Db, org_id: string): Promise<string[]> {
+// T1 / T2 / T3 fan-out (v1 audit-only): open exception_queue_entries
+// with exception_reason='unmatched_router_candidate' for the org.
+// Vendor-targeted fan-out activates when Phase 7 ships substrate to
+// link stranded cases to vendor identifiers.
+async function computeT1T2T3FanOut(db: Db, org_id: string): Promise<string[]> {
   const { data, error } = await db
     .from('exception_queue_entries')
     .select('document_case_id')
@@ -1396,7 +1398,7 @@ async function computeT1T3FanOut(db: Db, org_id: string): Promise<string[]> {
   if (error) {
     throw new ServiceError(
       'READ_FAILED',
-      `computeT1T3FanOut failed for org ${org_id}: ${error.message}`,
+      `computeT1T2T3FanOut failed for org ${org_id}: ${error.message}`,
     );
   }
   const ids = (data ?? []).map((r) => r.document_case_id as string);
@@ -1489,12 +1491,13 @@ async function computeT8FanOut(
 // ---------------------------------------------------------------------
 // Public: dispatchTrigger (Subsystem 3 entry point).
 //
-// Layer 2 boundary: Zod parse via DispatchTriggerInputSchema (5-branch
-// discriminated union). Per-trigger fan-out via the helpers above;
-// per-case loop wrapping runPerCaseReEvaluation in try/catch.
+// Layer 2 boundary: Zod parse via DispatchTriggerInputSchema (6-branch
+// discriminated union; T2_new_payment added at Phase 5.1 chunk 5.1b).
+// Per-trigger fan-out via the helpers above; per-case loop wrapping
+// runPerCaseReEvaluation in try/catch.
 //
 // Per-trigger-type failure policy (Round 5.b-i lock):
-//   - T1 / T3 / T5 / T8: log + skip + continue (best-effort fan-out).
+//   - T1 / T2 / T3 / T5 / T8: log + skip + continue (best-effort fan-out).
 //     Failed case emits dispatch_failed audit in SEPARATE small
 //     transaction so the audit survives the per-case rollback.
 //   - T10: re-throw the original error after dispatch_failed audit.
@@ -1514,8 +1517,9 @@ export async function dispatchTrigger(
   const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
 
   // Layer 2 boundary: Zod parse at service entry. Discriminated union
-  // rejects unknown trigger_type values (T2/T4/T6 reserved per Framing
-  // F; T7/T9 reserved post-v1).
+  // rejects unknown trigger_type values (T4/T6 reserved per Framing F
+  // pending vendorCreditService; T7/T9 reserved post-v1). T2_new_payment
+  // activated at Phase 5.1 chunk 5.1b (paymentService.record ship).
   let parsed: DispatchTriggerInput;
   try {
     parsed = DispatchTriggerInputSchema.parse(input);
@@ -1537,8 +1541,9 @@ export async function dispatchTrigger(
   let fanOutCaseIds: string[];
   switch (parsed.trigger_type) {
     case 'T1_new_bill':
+    case 'T2_new_payment':
     case 'T3_new_vendor_prepayment':
-      fanOutCaseIds = await computeT1T3FanOut(db, parsed.org_id);
+      fanOutCaseIds = await computeT1T2T3FanOut(db, parsed.org_id);
       break;
     case 'T5_bill_state_transition':
       fanOutCaseIds = await computeT5FanOut(db, parsed.org_id, parsed.bill_id);

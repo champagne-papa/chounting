@@ -399,15 +399,19 @@ export type RouterDecisionOutcome = z.infer<typeof RouterDecisionOutcomeSchema>;
 // envelope per ADR-0018 §item 4. Zod discriminated union on
 // trigger_type with per-branch payload typing per Round 5.d-i.
 //
-// Framing F lock: 5 v1-active-emission-wired branches
-// (T1_new_bill, T3_new_vendor_prepayment, T5_bill_state_transition,
-// T8_period_reopen, T10_manual_override). T2/T4/T6 NOT in this
-// union — paymentService.ts and vendorCreditService.ts don't exist
-// at v1 (vendor_credits substrate reserved post-v1 per Phase 2.5
+// Framing F lock: 6 v1-active-emission-wired branches
+// (T1_new_bill, T2_new_payment, T3_new_vendor_prepayment,
+// T5_bill_state_transition, T8_period_reopen, T10_manual_override).
+// T2_new_payment activated at Phase 5.1 chunk 5.1b (paymentService.ts
+// greenfield ship + dispatcher slot activation per Round 4 §5.2 +
+// Sub-Q2 2.β LOCKED); pre-chunk-5.1b state was 5 branches with T2
+// reserved per "land schema with consumer code" reverse-discipline.
+// T4/T6 NOT in this union — vendorCreditService.ts doesn't exist at
+// v1 (vendor_credits substrate reserved post-v1 per Phase 2.5
 // Commit A); their dispatcher branches add to this union when
-// paymentService/vendorCreditService ship in a future Phase 5
-// amendment chunk. T7_vendor_master_merge and T9_document_supersession
-// are reserved post-v1 per ADR-0018 (separate from chunk-3 framing).
+// vendorCreditService ships in a future Phase 5 amendment chunk.
+// T7_vendor_master_merge and T9_document_supersession are reserved
+// post-v1 per ADR-0018 (separate from chunk-3 framing).
 //
 // The ReRoutingTriggerSchema (chunk-1 ship; 8 v1-active values
 // plus 2 reserved) is a vocabulary-level Zod schema for audit event
@@ -421,6 +425,24 @@ export const DispatchTriggerInputSchema = z.discriminatedUnion('trigger_type', [
     org_id: z.string().uuid(),
     bill_id: z.string().uuid(),
     vendor_id: z.string().uuid(),
+    trace_id: z.string().uuid(),
+  }),
+  // T2_new_payment — Phase 5.1 chunk 5.1b activates this dispatcher
+  // slot (reserved at Phase 4 chunk 3 Framing F per "land schema with
+  // consumer code" reverse-discipline). T2_new_payment LITERAL exists
+  // at ReRoutingTriggerSchema line 111 (Phase 4 chunk 3 substrate;
+  // unchanged at chunk 5.1b). chunk 5.1b adds the BRANCH to this
+  // discriminated union. Emit-side: paymentService.record() fires this
+  // dispatch post-commit (Pattern B external-wrap + P3-i F-J-4
+  // best-effort isolation). Admit-side: computeT1T2T3FanOut shares the
+  // org-wide stranded-cases fan-out semantic with T1/T3 (new-domain-
+  // entity-created class).
+  z.object({
+    trigger_type: z.literal('T2_new_payment'),
+    org_id: z.string().uuid(),
+    payment_id: z.string().uuid(),
+    vendor_id: z.string().uuid(),
+    bill_id: z.string().uuid(),
     trace_id: z.string().uuid(),
   }),
   z.object({
