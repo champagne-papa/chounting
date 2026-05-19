@@ -15483,6 +15483,126 @@ operator/project diversifier-strength note."
   `docs/09_briefs/phase-6.5/2026-05-18-prompt-author-compression-prompt.md`
   (commit `7c25156`).
 
+### Sub-shape amendment of a codified convention requires the same evidence base as separate graduation (N=1; meta-discipline framework refinement candidate)
+
+This arc's STEP 3 engaged whether to absorb the
+prompt-author-compression candidate as a sub-shape amendment to
+`docs/04_engineering/conventions/prediction-grounding.md` rather
+than codify as a separate convention. The candidate is plausibly a
+sub-shape of prediction-grounding (predictions about
+canonical-source text encoded without verification); the README's
+DISMISS-when-captured-elsewhere criterion suggests the existing
+convention's amendment as "the cleaner path."
+
+The arc's reasoning: sub-shape amendments to codified conventions
+are effectively new graduations within a codified container — they
+require the same generalization evidence a separate graduation
+would. Amending prediction-grounding to absorb the candidate would
+face the same substrate-grain N=1 problem the separate-graduation
+path faces. The choice between separate codification vs sub-shape
+amendment is a family-taxonomy question that the family 2
+re-evaluation banking explicitly defers (commit `2aa8585`: "Don't
+pre-commit to taxonomy"); it can be deferred to its own evidence
+base.
+
+**Refinement candidate for README §Graduation criteria:** the
+DISMISS-when-captured-elsewhere criterion's current text ("The
+same insight already lives in an existing convention under a
+different name. Graduating creates a duplicate surface; the
+existing convention's amendment is the cleaner path") leaves
+implicit that sub-shape amendments are lower-bar than new
+graduations. This arc's analysis surfaces that they aren't — the
+generalization evidence required is symmetric. If this pattern
+recurs (a future candidate where captured-elsewhere is invoked and
+the evidence-base symmetry matters), amend §Graduation criteria to
+make the symmetry explicit.
+
+N=1 observation-grain. Banked for future N counting. The amendment
+candidate would be load-bearing (prescriptive) — gives operators a
+clear evidence-base test rather than letting the "cleaner path"
+language imply lower-bar.
+
+### Date-convention change: H2 headers use actual system date (N=1; documentation discipline)
+
+H2 date headers in this arc's banking use actual system date
+(2026-05-18) rather than continuing the 2026-05-19 convention from
+prior recent entries (ARC 3.6 close, substrate-vs-mechanism
+resolution, family 2 re-evaluation — all dated 2026-05-19 in their
+H2 headers despite being committed 2026-05-18). The drift between
+H2 date and commit date in those prior entries is left as-is
+rather than retrospectively rewritten; this entry starts the
+corrected convention going forward.
+
+Rationale: H2 date headers diverging from commit dates create a
+small future-reader problem (reader comparing H2 to git log sees
+one-day mismatch and wonders which is canonical). The drift is
+easier to correct at creation than retrospectively. The convention
+itself wasn't documented anywhere; aligning H2 dates to actual
+commit dates is the cleaner discipline.
+
+N=1 observation-grain at the date-convention surface. Banked for
+future N counting. If the convention change holds across this and
+the next several entries, it's stable enough not to need explicit
+codification.
+
+### Substrate-vs-mechanism tagging deviation at ARC 3.6 banking — graduation-time review confirmed no misattribution (N=1; convention compliance)
+
+ARC 3.6 banking applied mechanism-tagging at banking time
+(`prompt-author-compression` names what the operator does, not
+where it manifests), deviating from the substrate-tagging default
+codified at `docs/04_engineering/conventions/README.md`
+§Codification convention: family-tag assignment at banking and
+graduation-time review (commit `c0a9f28`). Graduation-time
+discriminator review at this arc confirmed no family-
+misattribution; the tag is operationally serviceable as-is.
+
+N=1 observation-grain at convention-compliance surface. Banked for
+future N counting.
+
+### Recursion-closure cause: three-hypothesis underdetermination (N=1; arc-shape observation)
+
+This is the first arc-close in the recent recursion sequence (ARC
+2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2 re-evaluation →
+substrate-vs-mechanism re-evaluation → ARC 3.6 → this arc) that
+does not queue a subsequent arc. The closure is empirical fact;
+the cause is underdetermined at N=1.
+
+Three hypotheses:
+
+- **(H1) Substrate maturation.** The codify-convention
+  infrastructure (skill spec, README framework codification,
+  sub-shape distinctions, Open Questions section,
+  substrate-vs-mechanism resolution, Stage A discriminator
+  refinement) has reached a state where typical operational use
+  doesn't generate new arc-shaped surfaces. The infrastructure is
+  mature enough that operations stay within it.
+
+- **(H2) Low-hanging-fruit exhaustion.** The recent recursion
+  pulled at meta-disciplines that had been latent for some time
+  (graduation framework, family-tag precedence,
+  codify-while-deciding-not-while-implementing). Now those are
+  codified; the easy-to-surface meta-disciplines are gone.
+  Remaining meta-disciplines exist but require more specific
+  surfacing events.
+
+- **(H3) Arc-scope happenstance.** The prompt-author-compression
+  evaluation was a single-decision arc by design — its scope was
+  deliberately narrow. The lack of follow-up arcs may reflect
+  that scope rather than any structural shift in the recursion
+  pattern. Future arcs with broader scope could re-trigger
+  recursion.
+
+Discrimination at N=1 is not possible. (H2) and (H3) together are
+the more conservative interpretation. (H1) is a stronger claim
+that requires more evidence. Future arc-closes — particularly
+those with broader scope — will provide evidence about which
+hypothesis dominates.
+
+This observation is the first explicit cause-analysis of a
+non-recursing close. Bank for future N counting; the pattern of
+recursion closures (or re-openings) across subsequent arcs will
+be the discriminating evidence.
+
 ### Session close: prompt-author-compression graduation evaluation arc completes
 
 This arc closes with re-deferral. The candidate remains at
@@ -15504,9 +15624,11 @@ Queued state post-arc:
   re-evaluation → substrate-vs-mechanism re-evaluation → ARC 3.6
   → this arc) closes here. The re-evaluation triggers documented
   above are event-based — they wait for naturally-occurring
-  conditions, not pre-planned arcs. STEP 6 banking engages whether
-  this closure reflects substrate maturation, low-hanging-fruit
-  exhaustion, or arc-scope happenstance.
+  conditions, not pre-planned arcs. Cause analysis of the
+  non-recursing close at four preceding H3s above (recursion-
+  closure three-hypothesis underdetermination).
 
-STEP 6 banking (separate commit) handles the meta-observations
-this arc surfaced.
+Meta-observations from this arc are banked at the four preceding
+H3s (sub-shape amendment evidence-base, date-convention change,
+substrate-vs-mechanism tagging deviation, recursion-closure cause
+analysis).
