@@ -14455,3 +14455,15 @@ Outbound — what this close H2 points at:
   satisfaction without acting).
 - ARC 3 close H2 (the originating substrate Phase A resolved):
   `friction-journal.md` line 13925 (2026-05-19 H2).
+
+### Session close: push deferred
+
+Phase A reached structural close cleanly (10 commits, `be8854f`
+→ `b58e5dc`). Push deferred per ARC 3.5 prompt's STEP 6
+defer-trigger discipline: `audit-fix-verify-surfaces-banking`'s
+re-evaluation trigger satisfied empirically during Phase A.
+Queued arcs: family 2 re-evaluation (most-likely natural next
+step), ARC 3.6 (Stage A refinement, originally default-deferred),
+push as-is. No half-resolved state — Phase A complete; queued
+arcs are separate decisions surfaced by Phase A's
+audit-fix-verify shape, not residual Phase A work.
