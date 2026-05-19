@@ -516,8 +516,62 @@ forecast 500-700 LOC → A4.1 Phase-A-realized 985-1475 LOC → realized
 above cycle-grade upper bound; near Phase-A-realized at chunk-close
 grain). Two-arc independent evidence basis.
 
+### Four-curve calibration extension (Phase 5.1 close, 2026-05-19)
+
+The original three-curve calibration framing (walk-grain stable;
+cycle-close below; chunk-brief at-or-above) held across Phase 6.5
+cycle-substantive chunks and Phase 5.1 chunks 5.1a + 5.1b. Phase 5.1
+chunk 5.1c — a substrate-fix narrowness chunk addressing Cat 2
+apReport URI-too-long N=3 graduation — produced two-grain forecast-
+realization at-or-below floor at both brief-grade and impl-grade.
+The original three-curve calibration's chunk-brief curve ("at-or-
+above forecast") needs sub-curve split for substrate-fix-narrowness
+chunks:
+
+- **Sub-curve (a) — Cycle-substantive at-or-above.** Cycle-substantive
+  chunks (broader scope; INV-ID introductions; T3 ADR amendments;
+  migrations; substrate spine work) realize at-or-above the chunk-
+  brief forecast floor with +0 to +20% upside. Evidence: chunk 5.1a
+  brief 938 LOC (at-or-above ~900 LOC floor); chunk 5.1b brief 788
+  LOC (at-or-above ~750 LOC floor); Phase 6.5 chunk-brief grain
+  precedent (Sessions 5 + 8 + 11). Forecast band tighter than impl-
+  grade (brief-grade calibration captures the structured 10-section
+  template scope before substrate density variance enters at impl).
+- **Sub-curve (b) — Substrate-fix-narrowness at-or-below.** Substrate-
+  fix narrowness chunks (single-helper refactor; no INV-ID intro;
+  no T3 ADR amendments; no migration; no schema changes) realize
+  at-or-below the chunk-brief forecast floor. Evidence: chunk 5.1c
+  brief 583 LOC (~3% below ~600 floor; ~600-1000 forecast band);
+  chunk 5.1c impl +12 net LOC (~88% below ~100-300 forecast band
+  floor). Two-grain consistency at brief-grade AND impl-grade
+  confirms the sub-curve. The structural template's required
+  section coverage compresses naturally when substrate-fix scope
+  is narrow (Reading B preservation note becomes "preserved by
+  construction"; Two Laws §7 becomes "N/A per READ-ONLY service
+  refactor"; risk catalog stays focused on the single fix-shape
+  axis).
+
+**How to apply.** At chunk-brief drafting grain, classify the chunk
+scope as cycle-substantive vs substrate-fix-narrowness before
+locking the forecast band. Cycle-substantive chunks anchor on
+sub-curve (a) at-or-above framing; substrate-fix-narrowness chunks
+anchor on sub-curve (b) at-or-below framing. The classification
+question: does the chunk introduce INV-IDs, T3 ADR amendments,
+migrations, or schema changes? If yes (any one), cycle-substantive.
+If no (all four absent), substrate-fix-narrowness.
+
+**Evidence basis (Phase 5.1 close extension, N=2 two-grain
+consistency):** chunk 5.1c brief grade (583 LOC; ~3% below ~600
+floor at brief-drafting authorship grain) + chunk 5.1c impl grade
+(+12 net LOC; ~88% below ~100 floor at implementation-authorship
+grain). First substrate-fix-narrowness instance in calibration
+catalog; future substrate-fix-narrowness chunks calibrate against
+this two-grain anchor as evidence accretes.
+
 **Cross-references.**
 - Phase 6.5 retrospective §3 Candidate #9.
+- Phase 5.1 retrospective §3 Observations #24 + #27 (four-curve
+  calibration two-grain consistency at chunk 5.1c brief + impl).
 - RI-7 session-budget-feasibility verification at scope-lock
   ([`scope-lock.md`](./scope-lock.md) §Verify-forward-at-scope-lock
   for computational-shape chunks → §Session-budget-feasibility
@@ -526,11 +580,44 @@ grain). Two-arc independent evidence basis.
 ---
 **Origin:**
 - First codified: Phase 6.5, 2026-05-17 (Phase 6.5 retrospective
-  close)
-- Evidence basis: N=4 graduation (Phase 6.5 chunk 3 + Phase 6 chunk
-  6.2b Flag 16; two-arc independent evidence basis)
-- Promoted from: Phase 6.5 retrospective §3 Candidate #9
+  close); four-curve sub-curve split added at Phase 5.1,
+  2026-05-19 (Phase 5.1 retrospective close)
+- Evidence basis: N=4 graduation at Phase 6.5 (Phase 6.5 chunk 3
+  + Phase 6 chunk 6.2b Flag 16; two-arc independent evidence
+  basis); sub-curve (b) substrate-fix-narrowness extension at
+  Phase 5.1 (chunk 5.1c brief 583 LOC + impl +12 LOC; two-grain
+  consistency at brief-grade AND impl-grade)
+
+**Evaluation basis (Phase 5.1 sub-curve extension):**
+
+- **Load-bearing (prescriptive).** The sub-curve split generates
+  operator action at chunk-brief drafting grain: classify chunk
+  scope as cycle-substantive vs substrate-fix-narrowness before
+  locking the forecast band; anchor on sub-curve (a) at-or-above
+  framing OR sub-curve (b) at-or-below framing per classification.
+  Without the sub-curve split, substrate-fix-narrowness chunks
+  trigger volume-realization concern false alarms ("brief 3% below
+  floor; impl 88% below floor — is the work undersized?") when the
+  realization is in fact expected per substrate-fix narrowness.
+- **Generalizable.** The classification question (does the chunk
+  introduce INV-IDs, T3 ADR amendments, migrations, or schema
+  changes?) is general across phases; not Phase-5.1-specific. Future
+  substrate-fix-narrowness chunks at Phase 7+ (e.g., performance-
+  patch chunks; bug-fix chunks; obsoleted-substrate-removal chunks)
+  inherit sub-curve (b) calibration.
+- **Stable (exploratory framing — sub-curve (b)).** Sub-curve (a)
+  cycle-substantive at-or-above is N=4 graduated. Sub-curve (b)
+  substrate-fix-narrowness at-or-below is N=2 two-grain consistency
+  at chunk 5.1c (brief-grade + impl-grade); below the N=3 graduation
+  threshold for full codification per `codify-convention` skill.
+  Codified at exploratory framing per `docs/04_engineering/conventions/README.md`
+  §Graduation criteria: the sub-curve extension is provisional
+  until N=3 cross-phase evidence accretes (next substrate-fix-
+  narrowness chunk extends the evidence basis).
+- Promoted from: Phase 6.5 retrospective §3 Candidate #9; Phase 5.1
+  retrospective §3 Observations #24 + #27
 - Cross-references: Phase 6.5 retrospective §3 Candidate #9;
+  Phase 5.1 retrospective §3 Observations #24 + #27;
   RI-7 session-budget-feasibility verification at scope-lock
   ([`scope-lock.md`](./scope-lock.md) §Session-budget-feasibility
   verification + Path C invocation conditions (RI-7))

@@ -304,7 +304,7 @@ consuming, regardless of substrate-grain and regardless of
 substrate-authorship-provenance. The discipline is grain-agnostic
 and catch-direction-agnostic.
 
-**Sub-grains observed-to-date (chunk-6.3a → 6.3b conversation arc):**
+**Sub-grains observed-to-date (chunk-6.3a → Phase 5.1 evidence accretion):**
 
 1. **Substrate-shape grain** (chunk-6.3a β-2): cited schema column
    verified to not exist on disk. Inter-side catch.
@@ -324,12 +324,117 @@ and catch-direction-agnostic.
    catch #5): "22 entries" commit message claim verified to be 26 on
    disk (1.18x off). **Intra-side catch** (NEW catch-direction
    sub-shape).
-7. **Session-prompt-authoring grain** (Phase 6.5 retrospective
-   drafting plan; 2026-05-17): Session 14 prompt cited ADR location
-   as `docs/04_decisions/` verified to not exist on disk (actual
-   `docs/07_governance/adr/`); also cited "apps/web/CLAUDE.md (or
-   root)" verified to be root-only on disk. Inter-side catch at
-   plan-authoring onset state-verify (prophylactic application).
+7. **Session-prompt-authoring / directive-authoring grain** (Phase
+   6.5 retrospective drafting plan; 2026-05-17; broadened at Phase
+   5.1 close 2026-05-19 to include directive-authoring sub-shapes):
+   inter-side catches at the session-prompt or directive-authoring
+   onset state-verify (prophylactic application). Phase 6.5 firing:
+   Session 14 prompt cited ADR location as `docs/04_decisions/`
+   verified to not exist on disk (actual `docs/07_governance/adr/`);
+   also cited "apps/web/CLAUDE.md (or root)" verified to be root-only
+   on disk. Phase 5.1 evidence accretion (Sessions 19-23 onset firings;
+   parent consolidation candidate ratified at Phase 5.1 retrospective):
+   - **Push-state-claim sub-shape** (N=4 evidence; Sessions 19/20/21/22
+     onset). Session directive cited `origin/staging` push state without
+     verify-from-disk grounding; actual push state diverged. Sessions
+     23 + 24 directive citations explicitly verified push state via
+     `git log origin/staging -1` at directive-authoring grain
+     (avoidance trajectory empirically validates remediation pattern).
+   - **Dev-DB-state-assumption sub-shape** (N=1 at Session 23 onset).
+     Chunk 5.1c brief drafting directive assumed `bill_payment_allocations`
+     accumulated state for Cat 2 reproduction; verify-from-disk at
+     Session 23 onset surfaced row count = 0 (dev DB reset between
+     Session 22 close and Session 23 onset; brief path (i) natural-
+     accumulation framing premise-broken — see brief-drafting grain
+     sub-grain #8 sub-shape #3 below).
+   - **Directive-substrate-coverage sub-shape** (N=1 at Session 23
+     onset). Chunk 5.1c brief drafting directive cited "4 consumer
+     methods (aging / openBills / paymentApprovalQueue / activePayments)"
+     with implication of 4 direct integration tests; verify-from-disk
+     surfaced 3 direct integration tests + 1 route-grade test
+     (activePayments via `vi.spyOn` mocking; no direct service-grade
+     test). Validation-gate scope at Session 24 Phase C necessarily
+     enumerated the 3 direct + 1 route-grade + full-suite sweep per
+     test-coverage gap.
+8. **Brief-drafting metafact-assertion grain** (Phase 5.1 evidence
+   accretion 2026-05-19; new grain). Brief drafter asserts metafacts
+   at brief-drafting authorship grain (line citations, mechanism
+   diagnostics, test behavior assumptions) without verify-from-disk
+   grounding; subsequent verify-from-disk at impl-onset or downstream-
+   consumption surfaces drift. Sub-shapes:
+   - **Brief-citation-line-drift sub-shape** (N=2 at Session 22
+     directive references to chunk 5.1b brief). Brief cited
+     `EVIDENCE_INCOMPLETE at ServiceError.ts:109-114` and
+     `RecordBillPaymentInputSchema at bill.schema.ts:117-130`; impl-
+     onset verify-from-disk surfaced actual line ranges at 103-108 and
+     111-122 (consistent ~5-6 line offset; substrate shape correct).
+     Remediation pattern: structural-anchor citations
+     (e.g., "EVIDENCE_INCOMPLETE annotation in the Phase 5.1 chunk
+     5.1a comment block in `ServiceError.ts`") preferred over absolute
+     line citations at brief-drafting grade; line citations remain
+     valid at impl-time verify-from-disk grade (smaller temporal gap).
+   - **Cat 2 mechanism / URL-shape misidentification sub-shape**
+     (N=1 at Session 24 chunk 5.1c Phase A). Brief framed Cat 2
+     apReport URI-too-long firing as "accumulated bill_payment_allocations
+     row state exceeds PostgREST URL length"; impl-onset empirical
+     evidence at Session 24 Phase B Task 0 revealed firing comes from
+     "OPEN BILLS count in the SECOND-query IN clause" (254 open bills
+     × ~37 chars/UUID ≈ 9.4KB IN list exceeded ~8KB PostgREST URL
+     limit). Different mechanism; same fix shape (nested-select
+     eliminates the second SELECT IN entirely). Remediation pattern:
+     verify-from-disk URL-shape calculation at brief-drafting grade
+     for URL-pressure firings (compute the URL string and check
+     against PostgREST/nginx URL length limit before asserting the
+     mechanism).
+   - **Test-cleanup-behavior assumption sub-shape** (N=1 at Session
+     24 chunk 5.1c Phase A). Brief assumed "natural accumulation via
+     test runs" (path (i)) would produce `bill_payment_allocations`
+     accumulation state; verify-from-disk on helper-consumer test
+     files (billRecordPayment.test.ts + paymentServiceRecord.test.ts +
+     billEcA1.test.ts) revealed all DELETE allocations in `afterAll`
+     cleanup. Happy-path test runs do not accumulate. Brief's path (i)
+     premise-broken; impl-onset adjudicated path moot once root-cause
+     refinement revealed 254-bills-in-IN URL pressure was itself the
+     firing condition (no accumulation needed). Remediation pattern:
+     verify-from-disk on test cleanup behavior at brief-drafting grade
+     before asserting accumulation paths.
+9. **Session-close-report attribution grain** (Phase 5.1 evidence
+   accretion 2026-05-19; new grain). Session close report asserts
+   quantitative attributions (failure counts, instance counts,
+   per-fixture-counts) at session-close authorship grain; subsequent
+   verify-from-disk at next-session-onset surfaces drift. Sub-shape:
+   - **Fixture-count-attribution sub-shape** (N=1 at Session
+     22→23 boundary). Session 22 close report enumerated "6 failures
+     across apAging.test.ts + openBills.test.ts (×2) +
+     paymentApprovalQueue.test.ts (×3) = 6"; Session 23 brief drafting
+     verify-from-disk fixture count = 5 (apAging:2 + openBills:2 +
+     paymentApprovalQueue:1). Minor 5↔6 attribution discrepancy at
+     session-close-report grain (the (×N) parenthetical likely counted
+     failed assertions within a fixture rather than fixtures; vitest's
+     "Tests N failed" output counts test cases, not assertions).
+     Remediation pattern: verify-from-disk on vitest output structure
+     at session-close authorship grain when reporting per-test-file
+     failure counts; prefer "5 fixtures across N files" framing over
+     "(×N)" parenthetical multiplier framing.
+
+**Parent consolidation (Phase 5.1 close ratification).** Sub-grains
+#7 + #8 + #9 share a parent pattern at "brainstorming-side metafact
+drift at directive-authoring + brief-drafting + session-close-report
+grain." Seven-sub-shape evidence basis at Phase 5.1 close: push-state-
+claim (#7 N=4) + dev-DB-state-assumption (#7 N=1) + directive-
+substrate-coverage (#7 N=1) + brief-citation-line-drift (#8 N=2) +
+Cat 2 URL-shape misidentification (#8 N=1) + test-cleanup-behavior
+assumption (#8 N=1) + fixture-count-attribution (#9 N=1) = N=11
+instances across 7 sub-shapes. The parent shape is the structural
+claim: brainstorming-side asserts a metafact at authoring grain
+(directive, brief, session-close-report) that fails verify-from-disk
+grounding at downstream-consumption grain (session-onset, impl-onset,
+next-session brief-drafting). The remediation pattern is consistent
+across all seven sub-shapes: verify-from-disk grounding at
+brainstorming-side BEFORE asserting metafacts. The discipline's
+load-bearing home is this catalog extension; cousin firings at future
+phases extend the sub-grain or sub-shape enumeration as evidence
+accretes.
 
 **Cross-grain instances at Phase 4:** (8) Round 3
 retrospective-scoping (Phase 5.1 "reviewer chunk" naming drift).
@@ -416,16 +521,59 @@ above stay; this note appends at end of cluster).
 **Origin:**
 - First codified: Phase 4 retrospective Commit C (`294f9e7`,
   2026-05-14); evidence accreted through Phase 6 chunk 6.3b +
-  Phase 6.5 (sub-grain #7 added 2026-05-17)
+  Phase 6.5 (sub-grain #7 added 2026-05-17) + Phase 5.1 (sub-grain
+  #7 broadened to directive-authoring + sub-grains #8 brief-drafting
+  + #9 session-close-report added 2026-05-19; parent consolidation
+  ratified at Phase 5.1 close)
 - Evidence basis: Phase 4 chunk 3 (5 framings + amended brief
   `c76d264`); chunk-6.3a Grain 1 reinforcement (4 sub-instances);
-  chunk-6.3b sub-grains 5+6; Phase 6.5 sub-grain #7
+  chunk-6.3b sub-grains 5+6; Phase 6.5 sub-grain #7; Phase 5.1
+  Sessions 19-24 N=11 instances across 7 sub-shapes (#7 N=6: push-
+  state-claim N=4 + dev-DB-state-assumption N=1 + directive-
+  substrate-coverage N=1; #8 N=4: brief-citation-line-drift N=2 +
+  Cat 2 URL-shape misidentification N=1 + test-cleanup-behavior
+  assumption N=1; #9 N=1: fixture-count-attribution N=1)
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The catalog extension generates
+  operator action at directive-authoring + brief-drafting + session-
+  close-report grain: verify-from-disk grounding BEFORE asserting
+  metafacts. Sessions 23 + 24 directive citations empirically
+  validated the avoidance trajectory (push-state-claim N=4 → N=4
+  stable post-codification across two sessions; directive
+  explicitly verified push state via `git log origin/staging -1`).
+  Future readers consume the discipline as load-bearing scope-lock
+  + brief-drafting + close-report authoring rule.
+- **Generalizable.** Sub-shape diversity across 7 sub-shapes spanning
+  three authoring grains (directive / brief / close-report)
+  empirically demonstrates the pattern's reach beyond any single
+  authoring surface. The remediation pattern (verify-from-disk
+  grounding) is identical across all seven sub-shapes — the
+  discipline operates at the parent-shape grain regardless of which
+  specific sub-shape fires. General analog at Mechanism B
+  brainstorming-side discipline shape (parent claim at "executive-
+  side metafact assertion without verify-from-disk grounding").
+- **Stable.** N=11 instances across 4 phases (Phase 4 + Phase 6.3a-
+  6.3b + Phase 6.5 + Phase 5.1); 7 sub-shapes; pattern signature
+  consistent across all firings (metafact assertion at authoring
+  grain → verify-from-disk drift at consumption grain → remediation
+  via verify-from-disk grounding at authoring grain). Two-session
+  avoidance trajectory at Sessions 23 + 24 (push-state-claim N=4
+  stable; directive cited verified push state per remediation
+  pattern) empirically validates the discipline's stability post-
+  codification.
+
 - Promoted from: Phase 4 retrospective §3 (framing-discovery arc
-  centerpiece); F-J-13/14/15 tier-1 codifications
-- Cross-references: ADR-0018 §item 4 amendment; ADR-0016 §6
+  centerpiece); F-J-13/14/15 tier-1 codifications; Phase 5.1
+  retrospective §3 parent consolidation (Observations #16 + #19 +
+  #21 + #22 + #23 + #25 + #26)
+- Cross-references: ADR-0018 §item 4 amendments (Phase 4 retrospective
+  Amendment + Phase 5.1 retrospective Amendment); ADR-0016 §6
   amendment; `feedback_verify_from_disk_at_brief_loop.md` Item C
   (Grain 1 canonical statement); F-J-1, F-J-13, F-J-14, F-J-15;
-  Phase 4 retrospective writeup §3 and §4
+  Phase 4 retrospective writeup §3 and §4; Phase 6.5 retrospective
+  §3 Candidate #5; Phase 5.1 retrospective §3 (forthcoming)
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1;
   cluster ships as single codification unit per §5.3 footer
