@@ -14782,3 +14782,202 @@ one new, surfaced by this arc's STEP 6 banking):
 This arc surfaced 3 compression observations (see preceding H3).
 Whether those observations affect any of the queued arcs is a
 future-session question; they're banked, not acted on.
+
+## 2026-05-19 — Substrate-vs-mechanism Open Question RESOLVED (sub-shape split; Position A + combined operator/script-side fixes)
+
+The substrate-vs-mechanism family-tag precedence Open Question
+(banked at ARC 3.5 Item 4, commit `0fbb863`) had its
+re-evaluation trigger fired during family 2 re-evaluation STEP 6
+banking (commit `2aa8585`). This arc resolved the question via
+sub-shape split: Position A (substrate-tagging) for Sub-shape 1
++ combined operator/script-side fixes for Sub-shape 2.
+
+### Decision summary
+
+Resolution shape: the re-evaluation surfaced that the Open
+Question spans two structurally different sub-shapes, each
+requiring its own remediation path.
+
+- **Sub-shape 1** (uncodified-family-tagging precedence at
+  banking time): Resolved via Position A (substrate-tagging).
+  Codified at `docs/04_engineering/conventions/README.md`
+  §Codification thresholds §Codification convention: family-tag
+  assignment at banking and graduation-time review.
+  Substrate-tagging is the banking-time default; mechanism-
+  tagging operates as a graduation-time discriminator.
+
+- **Sub-shape 2** (codified-family-tag-mention-counting at
+  detector-run-time): Resolved via combined operator-side
+  (`.claude/skills/codify-convention/SKILL.md` §Output
+  specification artifact 3 prose convention — codified-family
+  references in prose use file paths rather than family-tag
+  names) and script-side (ARC 3.6 queued for Stage A
+  refinement) fixes.
+
+Open Question entry at `docs/04_engineering/conventions/README.md`
+§Open codification questions §Substrate-vs-mechanism family-tag
+precedence updated from Status: Open to Status: Resolved with
+forward-pointers to both resolutions. Stale line-number
+reference (line 14050) replaced with commit hash `4486cb1` per
+the commit-hash-only cross-reference convention adopted at
+family 2 STEP 5.
+
+Resolution applied atomically at commit `c0a9f28`; arc prompt at
+commit `400d31a`.
+
+### Open Question trigger discipline — productive sub-shape surfacing (N=1)
+
+The Open Question's re-evaluation trigger (banked at ARC 3.5
+Item 4 as "the next family-misattribution instance surfacing in
+the friction-journal") fired cleanly on family 2 re-evaluation
+STEP 6 banking. But the firing revealed something the original
+trigger didn't anticipate: the question's evidence-1
+(uncodified-family-tagging) and evidence-2 (codified-family-tag-
+counting) are structurally different. The Open Question spans
+two sub-shapes; the original framing addressed only one.
+
+This is a productive failure mode, not a trigger failure. The
+trigger worked as designed (it surfaced the next instance for
+evaluation); evaluation surfaced that the question was framed
+too broadly. The discipline gates operated correctly; the
+question's scope was the variable that turned out to need
+refinement.
+
+Future Open Question triggers should anticipate this shape: when
+banking an Open Question, consider whether the question might
+span sub-shapes that haven't yet surfaced. Mark explicitly if
+so. The re-evaluation discipline benefits from knowing whether
+to expect a single resolution or a multi-sub-shape decomposition.
+
+N=1 within Open Question discipline (this re-evaluation is the
+first Open Question re-evaluation to fire). Bank for future N
+counting.
+
+### §Codification thresholds section is acquiring scope beyond its name (N=1)
+
+The §Codification thresholds section in
+`docs/04_engineering/conventions/README.md` originally hosted
+one H3 about counting (observation-grain vs application-grain N
+count). This arc added a second H3 about banking-time
+family-tag assignment. Both are banking-time meta-conventions,
+but the section header "Codification thresholds" only describes
+the counting aspect.
+
+The mismatch is small at N=1 (two H3s with related but distinct
+scopes). The H3 titles carry the actual scope; future readers
+learn that §Codification thresholds is the home for banking-time
+meta-conventions even though the section name only suggests
+counting.
+
+If a third banking-time meta-convention lands and the mismatch
+starts hurting readability, that's the moment for a section
+rename ("Banking-time codification conventions" or similar).
+N=1; potential rename trigger if pattern recurs. Bank for future
+N counting.
+
+### Line-number staleness in README's Open Question entry — instance of the prediction-grounding discipline
+
+The README's §Open codification questions §Substrate-vs-mechanism
+family-tag precedence entry (banked at ARC 3.5 Item 4) referenced
+"friction-journal 2026-05-19 ARC 3 close H2 (line 14050)" in two
+places (the Back-reference field and the Origin Promoted from
+field). Both references were stale post-Item-7's friction-journal
+appends (which shifted the section to line 14075).
+
+Fixed during this arc's STEP 5 application (replaced with commit
+hash `4486cb1` per the commit-hash-only cross-reference
+convention adopted at family 2 STEP 5).
+
+This is an instance of the discipline codified at
+`docs/04_engineering/conventions/prediction-grounding.md` — a
+parameter (line number) was encoded without grounding against
+the substrate's volatility (the friction-journal's
+appendability). The discipline's family is graduated; this
+instance doesn't count toward its tally. Banked as historical
+record of the discipline applying at this arc's grain.
+
+Reference handling: the prose convention codified at
+`.claude/skills/codify-convention/SKILL.md` §Output specification
+artifact 3 enumerates three cases for family-tag references in
+prose. This entry doesn't fit any of them cleanly (see following
+H3 for the case-coverage gap observation). Per the convention's
+underlying citation-density principle (referential discussion →
+file path), defaulted to file path here.
+
+### Prose convention case-coverage gap (N=1; fourth-case observation)
+
+The prose convention codified at this arc (STEP 5, commit
+`c0a9f28`) at `.claude/skills/codify-convention/SKILL.md`
+§Output specification artifact 3 enumerated three cases for
+family-tag references in prose:
+
+- (a) new banking entries that are observation-grain instances
+  of that family;
+- (b) entries explicitly about a family's status (deferrals,
+  dismissals, re-evaluations, codifications) or about
+  families-as-a-class (Open Questions and meta-discipline
+  conventions that cite specific families as evidence);
+- (c) detector output.
+
+The preceding H3 (line-number staleness instance) surfaces a
+fourth case the convention didn't cover: instances of a
+graduated family's pattern firing during meta-discipline work,
+where the discussion is neither a new banking instance (a) nor
+about the family's status or families-as-a-class (b) nor
+detector output (c). The preceding H3 is about a single
+instance of the discipline applying to a small line-number
+staleness; the family is already codified and this isn't
+adding to its tally.
+
+Defaulted to file-path reference per the convention's underlying
+citation-density principle (referential discussion → file path).
+The convention's body prose said: "file path is the appropriate
+density when the discussion is referential" — that principle
+covers the preceding H3's case even though the enumerated
+(a)/(b)/(c) don't.
+
+Sibling to the preceding "§Codification thresholds scope-drift"
+observation. Both are N=1 of "recently-codified surfaces having
+scope gaps surfaced by their first operational tests." Don't
+pre-commit to family taxonomy; bank for future N counting.
+
+N=1; potential convention refinement if pattern recurs.
+
+### Session close: substrate-vs-mechanism re-evaluation arc completes; ARC 3.6 + push remain queued
+
+Substrate-vs-mechanism Open Question re-evaluation arc closes
+with sub-shape-split resolution (commits `400d31a` + `c0a9f28`).
+Open Question Status moved from Open to Resolved.
+
+§Open codification questions has completed its first operational
+test — one open question transitioned to resolved with
+historical record preserved. The section's basic lifecycle
+(open → resolved) operates correctly at this single-entry scale;
+the section's behavior under harder cases (multiple concurrent
+Open questions, reopening, dismissal of Open questions) remains
+untested.
+
+Two arcs remain queued (unchanged by this arc):
+
+- **ARC 3.6 (Stage A refinement).** Now operationally relevant:
+  this arc's Sub-shape 2 resolution (operator-side prose
+  convention) is complemented by ARC 3.6's script-side fix
+  (Stage A grep refinement to distinguish codification footers
+  from body mentions). The combined resolution depends on ARC
+  3.6 shipping for the full operational fix.
+
+- **Push as-is.** 16 unpushed local commits now on staging
+  (`be8854f` → today's STEP 5 commit `c0a9f28`; this STEP 6
+  commit will be the 17th). Push decision unchanged from prior
+  arcs: defer until queued arcs feel settled OR explicitly
+  choose to push. No half-resolved state.
+
+The substrate-vs-mechanism Open Question is no longer in the
+queue; this arc resolved it. The §Open codification questions
+section now has 0 Open entries and 1 Resolved entry (historical
+record).
+
+This arc surfaced 3 meta-observations and 1 specific instance
+banking across H3 #2/#3/#4/#6. All banked at observation-grain
+N=1 (meta-observations) or as historical record (H3 #4); bank
+for future N counting where applicable.
