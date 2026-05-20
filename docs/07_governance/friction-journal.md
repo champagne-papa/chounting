@@ -15801,3 +15801,113 @@ the cross-validation refinement.
   multiplier table (Phase 7 extension at Commit B) — codifies the
   chunk-impl-grade floor-bias signal that this F-J entry's
   per-chunk evidence table grounds empirically.
+
+## 2026-05-20 — Phase 7 retrospective T1 banking entries (Candidates #10 + #12 below-N=3-threshold)
+
+Per Phase 7 retrospective drafting Iteration 3 §2 founder-ratified
+routing table: two below-N=3-threshold codification candidates bank as
+T1-narrative exemplars at this friction-journal entry + Phase 7
+retrospective §4. Each carries promotion-trigger metadata for future-
+cycle observation-grain banking.
+
+### (γ) Orphan-tolerance composite-write grain N=2 cross-chunk (Candidate #10)
+
+**Pattern.** Composite writes (sequential INSERTs across related
+tables, where partial completion is operationally acceptable)
+exhibit orphan-tolerance discipline: if step N succeeds and step N+1
+fails, the step-N row's commit stands without rollback; operational
+reconciliation handles the partial state. Distinct from strict-
+atomicity composite-writes (where partial completion is unacceptable
+and rollback is required).
+
+**N=2 cross-chunk evidence:**
+
+- **Chunk 7.1b document_artifacts INSERT chain** (commit `4c481a9`).
+  Modal sidecar callback writes a chain of document artifact rows
+  (pages + lines + words + quality_flags) sequentially. Partial
+  completion is tolerated; the per-row commit stands without
+  upstream rollback.
+- **Chunk 7.3b Stage 7 Bundle execution** (commit `ab0f7fe`).
+  Born-paid bundle execution invokes withInvariants(billService.post)
+  followed by withInvariants(paymentService.record) sequentially.
+  If first child commits + second child fails post-success, the
+  bill commit stands; the failure routes to exception queue with
+  manual_route + reconciliation_context audit metadata per
+  Iteration 2 Note 2 default disposition.
+
+**Codification grain.** N=2 cross-chunk below observation-grain N=3
+codification threshold per Phase 6.5 Candidate #4 routing precedent.
+Banked as T1-narrative until N=3 evidence accumulates. Promotion
+trigger: third-instance at Phase 8+ (likely candidate: future multi-
+step orchestrator-driven workflows that adopt sequential best-effort
+semantics — Tier 2.5+ pipelines OR reconciliation orchestrators).
+
+**Cross-references.**
+
+- Phase 7 retrospective §4.A at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`.
+- Chunk 7.1b commit `4c481a9` for document_artifacts INSERT chain.
+- Chunk 7.3b commit `ab0f7fe` for Stage 7 Bundle execution.
+
+### (λ) + Finding E paired observation N=1 first-instance (Candidate #12; Iteration 2 Gap 2 absorption)
+
+**Pattern (paired-observation framing).** Two halves of one
+observation per Iteration 2 Gap 2 absorption.
+
+**Half 1 — Deferred substrate (retrospective inventory item #2).**
+Logic Receipt bundle-level INV-AGENT-002 event composition +
+ProposalJustificationSchema formal codification. ADR-0007 Q30
+specifies the Logic Receipt content shape (rule_id + input_features
++ historical_match_count + confidence_score + source_transactions
++ user_utterance + pipeline_trace); Phase 7 chunk 7.3b ships
+ProposedMutation/ProposedAttachment/ProposedMutationBundle with
+`justification: z.record(z.unknown()).optional()` permissive shape
+per Iteration 2 Option (c') Finding E absorption. Formal codification
+deferred to Phase 8 / post-v1 Logic Receipt consumer.
+
+**Half 2 — Deferral discipline (Candidate #12) — (λ) TS-only union
+extension cross-chunk deferral mechanism N=1 first-instance.**
+IngestDocumentOutput.status union member
+'deferred_chunk_7_3b_pending_activation' added at chunk 7.3a as a
+TS-only union extension for routing paths that chunk 7.3b activates
+(born-paid bundle + receipt-as-payment-evidence + payment_confirmation
+no-cited-bill). Chunk 7.3b activation made the status defined-but-
+not-emitted; the union member is PRESERVED with JSDoc `@deprecated`
+annotation per Iteration 2 Note 4 + ADR-0022 additive provenance-
+preserving discipline. Union shrinkage would be non-additive;
+preserving the deferred discriminator with `@deprecated` marker
+balances ADR-0022 additive constraint vs drift-prevention via
+TypeScript exhaustiveness checking.
+
+**Paired-observation framing rationale.** The deferred substrate
+(half 1) is THE THING THAT GETS DEFERRED; the deferral discipline
+(half 2) is THE MECHANISM BY WHICH THE DEFERRAL HAPPENS. They are
+two halves of one observation per Iteration 2 Gap 2 absorption.
+Both at N=1 first-instance; both below N=3 codification threshold;
+both bank as T1-narrative exemplars at this entry + Phase 7
+retrospective §4.B; both promote to convention surface candidates
+if recurrence at Phase 8+ surfaces additional "formal-substrate-
+codification-deferral-at-chunk-impl-grade" instances OR additional
+"TS-only union extension cross-chunk deferral mechanism" instances.
+
+**Codification grain.** N=1 first-instance below observation-grain
+N=3 codification threshold per Phase 6.5 Candidate #12 routing
+precedent. Banked as T1-narrative until N=3 evidence accumulates.
+Promotion trigger: third-instance at Phase 8+. Phase 8's Logic
+Receipt consumer codification fires half 1's promotion; Phase 8+
+chunks that adopt TS-only union extension as cross-chunk deferral
+mechanism fire half 2's promotion.
+
+**Cross-references.**
+
+- Phase 7 retrospective §4.B + §5.1 item #2 at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`.
+- Chunk 7.3a commit `8499189` for the TS-only union extension
+  introduction at types.ts IngestDocumentOutput.status.
+- Chunk 7.3b commit `ab0f7fe` for the @deprecated annotation
+  preserving the union member post-activation.
+- ADR-0007 Q30 for Logic Receipt content shape canonical
+  specification.
+- ADR-0022 for additive provenance-preserving discipline.
+- ADR-0012 for ProposedMutationBundle bundle-level Logic Receipt
+  emission shape (forward-pointed at Phase 8 / post-v1).
