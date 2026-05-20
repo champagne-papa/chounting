@@ -579,6 +579,154 @@ above stay; this note appends at end of cluster).
   cluster ships as single codification unit per §5.3 footer
   consolidation)
 
+### Phase 7 evidence accretion (2026-05-20): directive-grade Phase A verification discipline + (ι) + (μ) sub-grains paired-but-distinguished
+
+Phase 7 implementation cycle (Sessions 36-40; chunks 7.1a/7.1b/7.2/
+7.3a/7.3b) extends the parent verify-from-disk-at-non-standard-grain
+pattern with paired-but-distinguished sub-grain instances at
+directive-grade Phase A verification surfaces. Three Phase 7
+codification candidates synthesize as a coherent extension of the
+parent shape.
+
+**Anti-drift prospective-firing operationally validated as
+directive-grade Phase A verification discipline (Candidate #3, N=49+
+cumulative).** The discipline of anti-drift prospective-firing at
+directive-authoring grade has accumulated N=49+ instances across
+multiple phases. Phase 7 operationally validates the discipline at
+chunk-impl directive grade: Iteration 2 directive-grade Phase A
+verification (each chunk-impl directive's Phase A reads + verification
+steps) caught substantive findings BEFORE WSL dispatch rather than
+at impl-grade reactive. Chunk 7.3b's Iteration 2 alone caught 5 Phase
+A findings (A-E) at directive grade; without directive-grade Phase A
+verification, those findings would have surfaced as (β) reconciliations
+at impl-grade.
+
+Discipline rule: at directive authoring, run Phase A verification
+substeps (substrate reads + verify-from-disk on cited paths/columns/
+extensions + Iteration 2 founder review surfaces) BEFORE dispatching
+to WSL. Surfaces caught at directive grade are absorbed via
+directive amendment (Iteration 2 → Iteration 3); surfaces missed at
+directive grade surface at impl-grade reactive (β reconciliations +
+mid-impl scope corrections).
+
+**(ι) sub-grain — directive partial-information value pick
+incompatible with substrate state (N=3 cross-instance + N=4
+within-Session-40; Candidate #4).** Fires when a directive's
+partial-information value pick (e.g., "Option α default vs Option β
+override") cites a substrate value that turns out to be incompatible
+with current substrate state. Different from (μ) below: (ι) is about
+the VALUE PICK adjudication at directive-grade vs substrate state;
+(μ) is about the CITED PATH/COLUMN/EXTENSION existence at substrate.
+
+(ι) fires at directive grade between brief-author and chunk-impl
+session: brief author writes a partial-information value pick; chunk-
+impl directive author cites it; Phase A verification catches the
+substrate incompatibility before dispatch.
+
+Phase 7 evidence basis (N=3 cross-instance + N=4 within-Session-40):
+- **Session 38 — Postgres ENUM transaction-scope:** chunk 7.2
+  directive cited "ENUM ADD VALUE in same transaction as DML using
+  the new value" pattern; Phase A verification surfaced Postgres
+  ENUM transaction-scope constraint requires explicit `COMMIT`
+  between ENUM ADD VALUE + DML using new value.
+- **Session 39 — ProposedMutation/ProposedAttachment Zod absence:**
+  chunk 7.3a directive's Iteration 1 cited Bundle + Mutation +
+  Attachment Zod schemas as "existing"; Phase A revealed all three
+  schemas absent at substrate (greenfield work consolidated to
+  chunk 7.3b per Iteration 2 Option γ).
+- **Session 40 — Findings A+C+D+E (within-session N=4):**
+  chunk 7.3b directive Iteration 2 caught 5 substantive Phase A
+  findings (RI-1 5-surface path divergence at 3-of-5 surfaces +
+  ProposedMutationBundle absence at v1 + Modal sidecar deployment
+  status + ProposalJustificationSchema absence). N=4 within-session
+  firings of (ι) at single directive grade.
+
+Discipline rule: at directive authoring, verify each partial-
+information value pick's cited substrate via Phase A reads. If
+substrate incompatibility surfaces, route to Iteration 2 founder
+adjudication (override default → alternative disposition).
+
+**(μ) sub-grain — brief-cited substrate path/column/extension
+doesn't exist at substrate (N=6 conservative / N=8 expansive;
+Candidate #5).** Fires when a brief or directive cites a substrate
+path / column name / file extension / enum value / API contract
+that turns out NOT to exist at substrate. Different from (ι) above:
+(μ) is about the CITED ARTIFACT existence at substrate; (ι) is
+about the VALUE PICK adjudication at directive-grade vs substrate
+state.
+
+(μ) fires at brief grade between substrate and brief-author OR at
+directive grade between brief-author and chunk-impl session: the
+brief author cites substrate path/column/extension; Phase A
+verification at directive grade catches the substrate gap before
+dispatch.
+
+**Counting methodology callout.** Phase 7 evidence basis admits two
+counting methodologies for N count:
+
+- **Conservative N=6 counting** — each substrate-grain divergence
+  counts as ONE firing regardless of sub-surface multiplicity.
+  (Session 39 vendors.aliases + pg_trgm = N=2; Session 40 5-surface
+  RI-1 entry-point path divergence = N=1 [single structural
+  divergence]; ExceptionReasonSchema absence = N=1; LinkedEntityTypeSchema
+  outdated v1-active = N=1; document-platform/ dir convention = N=1;
+  bill.record_payment ActionName = N=1. Total N=7 conservative;
+  documenting the methodology for clarity.)
+- **Expansive N=8 counting** — multi-sub-surface divergences count
+  each sub-surface as a separate firing. (Session 39 vendors.aliases
+  + pg_trgm = N=2; Session 40 5-surface RI-1 path divergence at 3-of-5
+  surfaces = N=3 [each path is a separate firing]; ExceptionReasonSchema
+  absence = N=1; LinkedEntityTypeSchema outdated = N=1; document-platform/
+  dir convention = N=1; bill.record_payment ActionName = N=1. Total
+  N=8 expansive.)
+
+**Methodology choice.** Both are defensible; both well above N=3
+codification threshold. The choice matters at observation-grain
+banking grade (whether subsequent multi-sub-surface divergences add
+N=1 or N=multiple). At Phase 7 close, codification at the parent
+shape is unaffected by methodology choice; future evidence accretion
+banks per the elected methodology. Documenting both to prevent drift
+at future-cycle banking. The pattern's signature (cited artifact
+doesn't exist at substrate) is identical across all sub-surfaces;
+remediation is identical (verify-from-disk at directive-grade Phase
+A before dispatch).
+
+Discipline rule: at brief authoring AND at directive authoring,
+verify each cited substrate path/column/extension/enum value/API
+contract via Phase A reads. If gap surfaces, route to Iteration 2
+founder adjudication (substrate-update via amendment OR cite-correct
+to substrate-actual).
+
+**Paired-but-distinguished sub-grain framing.** (ι) and (μ) are
+related — both are substrate-citation verification disciplines at
+different verification windows. (ι) fires at directive grade
+between brief-author and chunk-impl; (μ) fires at brief grade
+between substrate and brief-author. Same family of "substrate-
+citation-verification" disciplines but different verification
+windows. Pairing them at this convention section preserves the
+cohesive convention surface; distinguishing them in convention
+text prevents future-reader conflation of the two firing-shapes.
+
+**Cross-references.**
+- F-J-14 fourth-instance entry (2026-05-20) for the chunk-impl-grade
+  evidence basis backing Candidate #3.
+- Phase 7 chunk-impl directive Iteration 2 surfaces (Sessions
+  37+38+39+40) for the (ι) + (μ) within-session firing evidence
+  basis.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidates #3 + #4 + #5 for full empirical narrative + the
+  conservative-vs-expansive counting methodology adjudication.
+
+**Origin (Phase 7 evidence accretion 2026-05-20):**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: Candidate #3 N=49+ cumulative + Candidate #4 N=3
+  cross-instance (within-Session-40 N=4) + Candidate #5 N=6-N=8
+  per counting methodology
+- Promoted from: Phase 7 retrospective §3 Candidates #3 + #4 + #5
+- Cross-references: F-J-14 fourth-instance entry; Phase 7
+  retrospective §3 Candidates #3 + #4 + #5
+
 ---
 
 ## PARTIAL Closure State-Decomposition (Meta A)

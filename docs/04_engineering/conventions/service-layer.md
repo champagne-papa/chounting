@@ -329,3 +329,138 @@ compute expected digest → length-check → wrap in `timingSafeEqual`.
   `apps/web/src/services/audit/recordMutation.ts`
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+---
+
+## Consumer-side synthetic ServiceContext for system_actor orchestrator invocations (substrate-shim discipline)
+
+Deterministic-TS orchestrators (Tier 2 document pipeline orchestrator
+per ADR-0014 §1; future Tier 2.5 orchestrators) run as
+system_actor — caller.user_id is a synthetic sentinel
+(`system_actor:<orchestrator_name>`), not a verified user UUID.
+The orchestrator invokes wrapped service functions via `withInvariants`
+to satisfy INV-AUTH-001 pre-flight checks (context shape +
+trace_id + verified caller + org-access + role-based authorization).
+`withInvariants` expects `ServiceContext` shape (`VerifiedCaller`
+with user_id: string + email + verified: true + org_ids: string[]),
+NOT `SystemActorServiceContext` shape (which has user_id: null +
+system_actor: string + org_id: string).
+
+The discipline at the consumer-side: orchestrator constructs a
+**synthetic ServiceContext** satisfying the structural shape for
+`withInvariants` pre-flight, with:
+
+```typescript
+const synthCtxForCommit: ServiceContext = {
+  trace_id: input.trace_id,
+  caller: {
+    user_id: `system_actor:${SYSTEM_ACTOR}`,
+    email: 'system@bridge.local',
+    verified: true as const,
+    org_ids: [input.org_id],
+  },
+};
+```
+
+The synthetic shape satisfies the four `withInvariants` pre-flight
+invariants:
+
+1. **ServiceContext shape** — `ctx` well-formed; `trace_id`,
+   `caller.user_id` present.
+2. **Verified caller** — `caller.verified = true as const`. The
+   sentinel user_id naming (`system_actor:<name>`) marks this as
+   structurally-verified-but-synthetic; downstream `canUserPerformAction`
+   queries will return no membership rows for the sentinel user_id
+   (the action option must therefore be omitted OR routed to a
+   role-permission that doesn't require user-grade membership).
+3. **org-access** — `caller.org_ids = [input.org_id]` satisfies
+   `withInvariants` Invariant 3 (input's org_id is a member of the
+   caller's org_ids). The orchestrator's own org-resolve guarantee
+   replaces the user-session membership query.
+4. **Role-based authorization** — if `{action}` option is provided,
+   `canUserPerformAction` runs against the sentinel user_id and
+   returns no membership; therefore action option SHOULD be omitted
+   for orchestrator-driven commits unless a system-actor-grade
+   role-permission is named at the ACTION_NAMES enum. Omission
+   skips role-based authorization while preserving Invariants 1-3.
+
+**Trigger:** any orchestrator authoring that invokes wrapped service
+functions via `withInvariants` from a system_actor calling context.
+
+**Evidence basis (N=2 cross-chunk):**
+
+- **chunk 7.3a Stage 6** (commit `8499189`) — Tier 2 document
+  pipeline orchestrator's `match_against_existing_state` stage
+  invokes `documentRouterService.completeCandidate` (Phase 4
+  Subsystem 1) via `withFailureClassification`-wrapped function
+  with `synthCtxForRouter` shape (lines 292-300 of
+  `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`).
+  First instance of consumer-side synthetic ServiceContext at
+  orchestrator-to-service boundary.
+
+- **chunk 7.3b Stage 7** (commit `ab0f7fe`) — Tier 2 document
+  pipeline orchestrator's `build_proposal` Stage 7 commit composite
+  invokes `withInvariants(billService.post, {action: 'bill.post'})`
+  and `withInvariants(paymentService.record, {action: 'bill.record_payment'})`
+  with `synthCtxForCommit` shape paralleling `synthCtxForRouter`.
+  Second instance of consumer-side synthetic ServiceContext;
+  cross-chunk evidence basis for the contract shape.
+
+**Why the shape is precise + reusable.** The 5-field synthetic
+ServiceContext is structurally identical across both instances
+(trace_id + caller{user_id: sentinel, email: 'system@bridge.local',
+verified: true, org_ids: [input.org_id]}). The sentinel user_id
+naming convention (`system_actor:<orchestrator_name>`) generalizes
+across future orchestrator surfaces; the email sentinel
+(`system@bridge.local`) is a non-routable address marking this as
+service-internal; org_ids carries the input's org_id verbatim.
+
+**Substrate-shim framing — Phase 8 ADR amendment forward-pointer.**
+The synthetic ServiceContext is a **substrate-shim**, NOT a
+permanent contract. At v1 the system_actor-vs-VerifiedCaller
+asymmetry is resolved at the consumer-side via shape coercion;
+at post-v1, the canonical resolution is widening `withInvariants`'s
+accepted ctx shape to a structural union (`ServiceContext |
+SystemActorServiceContext`), parallel to the chunk 6.3a
+`recordMutation` widening pattern. Phase 8 ADR amendment at
+ADR-0007 §Tier 2 safety contract OR ADR-0011 §1 service-layer
+contract codifies the proper widening; this convention's
+consumer-side synthetic shape phases out post-amendment.
+
+**How to apply.** At orchestrator authoring grade, construct
+synthCtx with the 5-field shape above; name the sentinel
+`system_actor:<orchestrator-name>` per orchestrator. Pass via
+`withInvariants(serviceFn)(input, synthCtx)`. Document the
+substrate-shim framing inline (cross-reference this convention)
+so future readers understand the post-v1 widening trajectory.
+
+**Cross-references.**
+- `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`
+  lines 292-300 (synthCtxForRouter) + Stage 7 commit composite
+  (synthCtxForCommit) — N=2 cross-chunk evidence.
+- `apps/web/src/services/middleware/withInvariants.ts` lines 29-93
+  — wrapper contract (4 pre-flight invariants).
+- `apps/web/src/services/middleware/serviceContext.ts` —
+  `VerifiedCaller` + `ServiceContext` + `SystemActorCaller` +
+  `SystemActorServiceContext` type definitions.
+- Phase 6 chunk 6.3a `recordMutation` widening pattern (sibling
+  precedent for ctx-shape widening at consumer-side; eventual
+  post-v1 model for `withInvariants` widening).
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #11 + retrospective inventory item #5 (Phase 8
+  post-v1 ADR amendment forward-pointer).
+
+---
+**Origin:**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: N=2 cross-chunk (chunk 7.3a `synthCtxForRouter`
+  at commit `8499189` + chunk 7.3b `synthCtxForCommit` at commit
+  `ab0f7fe`); codification at N=2 defensible per Phase 7
+  retrospective §2 §A Candidate #11 founder-ratification — contract
+  shape is precise + reusable + paired with Phase 8 post-v1 ADR
+  amendment forward-pointer (substrate-shim framing, not permanent
+  contract)
+- Promoted from: Phase 7 retrospective §3 Candidate #11
+- Cross-references: Phase 7 retrospective §3 Candidate #11 + §5
+  retrospective inventory item #5 (Phase 8 post-v1 ADR amendment)

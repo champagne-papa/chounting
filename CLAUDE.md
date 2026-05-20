@@ -166,6 +166,35 @@ See `docs/07_governance/retrospectives/arc-A-retrospective.md`
 for the arc provenance and §5 for the meta-observation on the
 framework's implicit operation.
 
+**Push-terminal-close timing pattern.** The three-condition gate
+above fires at phase retrospective close — the canonical timing
+when intermediate phase-work commits stay local on the working
+branch until the retrospective drafting cycle's three-commit
+ceremony (Commit A T3 + Commit B T4 + Commit C T1) lands and
+all three conditions are met. Intermediate chunk-impl commits
+(Sessions M-N where M+1..N are chunk implementations) bank
+locally; push fires at Session N+1 retrospective close after
+Commit C. Codified as cross-phase N=3 pattern at Phase 7
+retrospective close per Phase 5.1 + Phase 6.5 + Phase 7
+precedent.
+
+How to apply: when a phase implementation cycle closes (last
+chunk-impl session), the next session is retrospective drafting
++ terminal-close push. Mid-phase pushes are anti-pattern unless
+the three-condition gate genuinely fires (operationally rare;
+the gate's Condition 3 governance closeout requires retrospective
+written — by definition not satisfied mid-phase). The pattern's
+cost is a stale `origin/staging` between phase closes; the
+benefit is one push event per phase carrying a coherent
+retrospective + codifications + chunk-impl bundle, easier to
+review and easier to roll back atomically if a retrospective
+discovers a substrate gap requiring follow-up.
+
+Codification provenance: Phase 5.1 retrospective drafting cycle
++ Phase 6.5 retrospective drafting cycle + Phase 7 retrospective
+drafting cycle (N=3 cross-phase). Phase 7 banked the codification
+candidate as Candidate #13 per §6 carry-forward observation #4.
+
 ### UI-session screenshot gate
 
 UI-session arc/phase closeout requires a screenshot capture sequence

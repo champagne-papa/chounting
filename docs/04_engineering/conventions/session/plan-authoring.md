@@ -791,3 +791,301 @@ this will be..." projections.
 - Promoted from: ARC 3 STEP 3 sibling-routing decision (the
   topical convention's discipline applies at plan-authoring among
   other surfaces)
+
+---
+
+## Multi-iteration refinement at directive/brief/plan authoring (N=12 cross-grade)
+
+When authoring a directive, brief, plan, scope-lock input, or handoff
+prompt for substantive operational dispatch, multi-iteration refinement
+(Iteration 1 → orchestrator-and-WSL review → Iteration 2 nudges →
+Iteration 3 absorbed) reliably reduces directive-vs-substrate drift at
+dispatch time. The discipline trades short-term authoring latency for
+empirical reduction in mid-execution scope-corrections.
+
+**Trigger:** any directive/brief/plan authoring at substantive
+operational dispatch grade (chunk-brief drafting, chunk-impl directive
+authoring, scope-lock-cycle round authoring, retrospective drafting
+directive). Single-line / quick-clarification prompts don't fire;
+multi-paragraph authored substrate does.
+
+**Discipline rule.** Default to multi-iteration refinement cycle for
+substantive directive authoring. Iteration 1 = orchestrator drafts +
+WSL reviews; Iteration 2 = WSL refinement notes on adjudication
+surfaces; Iteration 3 = orchestrator absorbs nudges + dispatches.
+Single-iteration dispatch is acceptable when (a) substrate is fully
+locked + (b) precedent template inheritance is verbatim + (c)
+operational risk is low. Otherwise fire multi-iteration.
+
+**Why.** Phase 7 implementation cycle (N=5 chunk-impl sessions
+36-40) used directive-grade Phase A verification absorbed in multi-
+iteration refinement; the cycle delivered N=4 non-fire instances at
+(α) directive-grade-citation-against-substrate sub-grain (Sessions
+37+38+39+40 all caught divergence at directive grade before WSL
+dispatch rather than at impl-grade reactive). Mid-execution scope-
+corrections at chunk-impl grade are the failure-mode this discipline
+prevents.
+
+**Evidence basis (N=12 cross-grade graduation):**
+
+Cumulative N=12 firings across three directive grades during Phase 7:
+
+- **Scope-lock-cycle-round grade (N=4):** Sessions 29-32 four
+  founder-ratification rounds of Phase 7 scope-lock cycle close.
+  Each round refined the chunk decomposition + Path C probability
+  framings + 6 codification candidate inventory.
+- **Chunk-brief-drafting grade (N=3):** Sessions 33-35 chunk briefs
+  (chunks 7.1 + 7.2 + 7.3) each authored via multi-iteration
+  refinement.
+- **Chunk-impl directive grade (N=5):** Sessions 36-40 chunk-impl
+  directives (chunks 7.1a + 7.1b + 7.2 + 7.3a + 7.3b) each authored
+  via multi-iteration refinement with substantive Phase A findings
+  caught at directive grade (chunk 7.3b's Iteration 2 caught 5 Phase
+  A findings A-E before dispatch).
+- **Retrospective drafting grade (N=1 at Session 41):** this
+  retrospective drafting directive itself authored via multi-iteration
+  refinement (Iteration 1 → Iteration 2 nudges with 7 surfaces + 3
+  gaps → Iteration 3 absorbed all 10 surfaces; dispatch ready).
+
+**How to apply.** At directive authoring inception, default to
+multi-iteration. Draft Iteration 1; surface adjudication surfaces +
+verification gaps for WSL review (e.g., founder ratification surfaces
++ substrate-verification findings); WSL responds with refinement notes
++ gaps; orchestrator drafts Iteration 2 (or Iteration 3 if Iteration 2
+surfaces further adjudication). Dispatch only when adjudication
+surfaces are closed + verification gaps are absorbed.
+
+**Trade-offs.** Multi-iteration adds 1-2 turns latency per directive.
+Empirical benefit: Phase 7 N=5 chunk-impl sessions delivered with 0
+mid-execution scope-corrections at impl-grade (compare to Phase 4
+chunk 3 which fired 5 mid-impl framing-revisits + Path C reactive
+split). The trade-off favors multi-iteration for substantive
+operational dispatch.
+
+**Cross-references.**
+
+- F-J-14 fourth-instance entry (2026-05-20) — chunk-impl-grade
+  Grain 2/3 non-fire N=5 cross-validation as positive evidence of
+  multi-iteration's scope-risk absorption.
+- Scope-lock §Verify-from-disk-at-non-standard-grain pattern
+  §Session-prompt-authoring grain sub-shapes (push-state-claim
+  N=4 + dev-DB-state-assumption N=1 + directive-substrate-coverage
+  N=1) for the verification-grounding discipline that multi-iteration
+  composes with.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #1 for full empirical narrative.
+
+---
+**Origin:**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: N=12 cross-grade graduation across Phase 7
+  scope-lock-cycle-round (N=4) + chunk-brief-drafting (N=3) +
+  chunk-impl directive (N=5) + retrospective drafting directive (N=1)
+- Promoted from: Phase 7 retrospective §3 Candidate #1
+- Cross-references: F-J-14 fourth-instance (2026-05-20); scope-lock
+  §Verify-from-disk-at-non-standard-grain pattern; Phase 7
+  retrospective §3 Candidate #1
+
+---
+
+## Per-disposition-shape multiplier table at chunk-impl grade (Phase 7 extension)
+
+At chunk-impl forecast authoring, the per-disposition-shape multiplier
+table calibrates expected impl-grade volume against forecast band.
+Extends the four-curve calibration substrate above with chunk-impl-
+grade empirical anchors per chunk-disposition classification.
+
+**Trigger:** any chunk-impl directive authoring with volume forecast
+band.
+
+**Discipline rule.** Classify the chunk-impl scope along the
+per-disposition axis BEFORE locking the forecast band:
+
+| Disposition shape | Expected multiplier | Phase 7 anchor |
+|---|---|---|
+| TS-only chunks | 1.0-1.2× base forecast | chunk 7.1a +10% |
+| Cross-language chunks (TS + Python sidecar) | 1.3-1.4× base forecast | chunk 7.1b +33% |
+| Migration + test-substrate-rich chunks | 1.3-1.4× base forecast | chunk 7.2 +37% |
+| Substrate-cohesion-rich chunks WITHOUT directive-grade Phase A scope deferrals | 1.3-1.4× base forecast | chunk 7.3a +38% |
+| Substrate-cohesion-rich chunks WITH directive-grade Phase A scope deferrals + Option (c') permissive shape | 0.9-1.0× base forecast (within-band) | chunk 7.3b within-band |
+
+**Critical mechanism.** Chunks with directive-grade Phase A
+verification absorbing scope deferrals (Iteration 2 Note 1/2/3/4
+substantive findings landed at directive grade before implementation)
+empirically realize within forecast band. Chunks without directive-
+grade Phase A verification realize at +10-38% floor-bias above
+forecast upper bound.
+
+**Why.** Phase 7 N=5 chunk-impl evidence: four +10-38% floor-bias
+firings at chunks 7.1a/7.1b/7.2/7.3a (no directive-grade Phase A
+absorption at sufficient grain to bound complexity) + one within-band
+landing at chunk 7.3b (Iteration 2 directive-grade Phase A absorbed
+Option γ Bundle/Mutation/Attachment substrate deferral + Option (c')
+Finding E permissive justification shape, bounding chunk 7.3b
+complexity before implementation began).
+
+**How to apply.** At chunk-impl directive authoring, classify chunk
+scope per the table above. If directive-grade Phase A verification
+can absorb scope deferrals (Option γ-style consolidation OR Option
+(c')-style permissive shape OR analogous), forecast within-band
+(0.9-1.0× multiplier). Otherwise forecast at +10-40% above forecast
+upper bound per disposition class.
+
+**Cross-references.**
+- Four-curve calibration extension above (Phase 5.1 close,
+  2026-05-19) — sub-curve (a) cycle-substantive + sub-curve (b)
+  substrate-fix-narrowness; this Phase 7 extension adds the
+  per-disposition-shape multiplier as N=5 chunk-impl-grade
+  refinement.
+- F-J-14 fourth-instance entry (2026-05-20) for the chunk-impl-grade
+  forecast-vs-reality evidence basis.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #6.
+
+---
+**Origin:**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: N=5 chunk-impl grade across Phase 7 chunks 7.1a +
+  7.1b + 7.2 + 7.3a + 7.3b (+10% / +33% / +37% / +38% / within-band)
+- Promoted from: Phase 7 retrospective §3 Candidate #6
+- Cross-references: Four-curve calibration extension above; F-J-14
+  fourth-instance entry; Phase 7 retrospective §3 Candidate #6
+
+---
+
+## Brief task-naming vs ADR canonical stage_name canonicalization (N=8 cumulative)
+
+Brief authors use task-numbering for chunk-scope readability ("Task
+7.3a.5", "Task 7.3b.7"); ADR §13 canonical applies at trace-record
+emission grade ("stage_name = 'build_proposal'"). The two naming
+conventions diverge at chunk-impl grade — brief task numbers don't
+map 1-to-1 to ADR canonical stage_names. Reconcile at impl-time:
+trace_records emit ADR canonical names; brief task names stay as
+chunk-scope readability anchors.
+
+**Trigger:** any chunk-impl directive authoring that cites brief task
+numbers + ADR canonical stage names in the same directive surface.
+
+**Discipline rule.** At chunk-impl directive authoring, explicitly
+reconcile brief task numbering vs ADR canonical stage_name. The
+reconciliation is documented at impl-time in the orchestrator's
+inline comments (e.g., `// Stage 7 (build_proposal) per ADR-0014 §13
+canonical / brief Task 7.3b.5 "Stage 7 commit composite"`).
+trace_record emissions use the ADR canonical name; comments cite both
+for traceability.
+
+**Why.** Phase 7 evidence at chunk-impl grade: brief task numbering
+optimizes for chunk-scope readability (`Task 7.3a.5` localizes to
+chunk 7.3a's fifth task); ADR canonical stage_name (`build_proposal`)
+optimizes for trace-record emission shape (each Stage emits one
+trace_record with the canonical name). Mixing the two at trace_record
+emission produces brief-scope-bound trace records that don't
+cross-reference cleanly with ADR §13.
+
+**Evidence basis (N=8 cumulative; Phase 7 chunks 7.1b + 7.2 + 7.3a +
+7.3b):** firing at every Phase 7 chunk-impl directive that authored
+both brief tasks + ADR canonical stage_names in the same directive
+surface. Phase 7 chunk-impl directives cumulatively cite N=8 brief
+task numbers (Tasks 7.1b.1-9 + 7.2.1-9 + 7.3a.1-8 + 7.3b.0-8 = 33+
+brief tasks) mapped to 8 ADR canonical stage_names (Stages 0-7 per
+ADR-0014 §13).
+
+**How to apply.** At chunk-impl directive authoring, explicitly note
+the brief-task-vs-ADR-canonical reconciliation either in the
+directive's §0 inheritance section OR inline at the per-task
+substrate sections. Examples: "Brief Task 7.3a.3 (vendorService.matchVendor
+extension) = ADR canonical Stage 5 match_vendor"; "Brief Task 7.3a.6
+('Stage 6 proposal builder') = ADR canonical Stage 7 build_proposal
+substrate." Impl-side preserves both naming conventions at inline
+comments; trace_record emission uses ADR canonical only.
+
+**Cross-references.**
+- ADR-0014 §13 canonical stage_names for Tier 2 document pipeline.
+- chunk 7.3a + chunk 7.3b ingestDocument.ts inline comments (lines
+  23-26 + Stage 7 commit composite section) for brief-task-vs-ADR-
+  canonical reconciliation precedent at impl-grade.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #7.
+
+---
+**Origin:**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: N=8 cumulative firings across Phase 7 chunk-impl
+  directives (chunks 7.1b + 7.2 + 7.3a + 7.3b cumulative brief-task-
+  enumeration mapped to ADR-0014 §13 8-stage canonical)
+- Promoted from: Phase 7 retrospective §3 Candidate #7
+- Cross-references: ADR-0014 §13; Phase 7 chunk-impl directives;
+  Phase 7 retrospective §3 Candidate #7
+
+---
+
+## Phase B scope addition pattern at chunk-impl grade (N=3 cumulative)
+
+At chunk-impl grade Phase B (substrate authoring), impl-time
+substrate-cohesion concerns surface that motivate shared-helper
+extraction beyond the directive's enumerated substrate. The
+discipline: extract shared helpers at Phase B when substrate-
+cohesion concerns surface; document the extraction at chunk-impl
+close report; bank as Phase B scope addition observation.
+
+**Trigger:** at chunk-impl Phase B (substrate authoring), when
+substrate-cohesion concerns surface for cross-stage shared logic.
+
+**Discipline rule.** At Phase B substrate authoring, evaluate
+whether enumerated substrate produces substrate-cohesion
+concerns (duplicated logic across stages, parameterizable shared
+state, cross-stage helper-extraction opportunity). If yes, extract
+to a shared module; document the extraction at chunk-impl close
+report (Phase B scope addition observation); preserve the
+extraction's discoverability at the orchestrator entry comment.
+
+**Why.** Phase 7 evidence: chunk 7.2 + chunk 7.3a both surfaced
+Phase B substrate-cohesion concerns that motivated shared-module
+extraction. Chunk 7.2 surfaced `ON INSERT` trigger as
+substrate-helper; chunk 7.3a surfaced `aiFallbackBudget.ts` +
+`aiFallbackExtractorBase.ts` as cross-extractor shared modules.
+Without Phase B extraction, the chunks would have shipped
+duplicated logic across stages (per-extractor AI fallback budget
+counters; per-stage extraction-base shape). With Phase B
+extraction, chunks ship cohesion-positive substrate at minimal
+LOC overhead.
+
+**Evidence basis (N=3 cumulative; Phase 7 chunks 7.2 + 7.3a):**
+
+- **Chunk 7.2 (Session 38):** ON INSERT trigger as Phase B
+  substrate-cohesion helper (substrate-grade extraction at
+  schema-level, not module-level; sub-instance of the pattern).
+- **Chunk 7.3a (Session 39) — first sub-instance:**
+  `aiFallbackBudget.ts` as cross-extractor shared budget counter
+  (3 per-document-type extractors share the budget).
+- **Chunk 7.3a (Session 39) — second sub-instance:**
+  `aiFallbackExtractorBase.ts` as cross-extractor shared base for
+  AI fallback invocation shape (3 per-document-type extractors
+  share the base).
+
+**How to apply.** At chunk-impl Phase B authoring, evaluate cross-
+stage substrate for cohesion-extraction opportunity. If extraction
+reduces duplication AND preserves stage-isolation semantics,
+extract to shared module under appropriate substrate directory
+(e.g., `agent/orchestrator/extraction/aiFallback*.ts` for Phase 7
+extractor-shared substrate). Document extraction at chunk-impl
+close report.
+
+**Cross-references.**
+- chunks 7.2 + 7.3a impl notes (commits `c401296` + `8499189`)
+  for the three Phase B extraction precedents.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #9.
+
+---
+**Origin:**
+- First codified: Phase 7, 2026-05-20 (Phase 7 retrospective close)
+- Evidence basis: N=3 cumulative across Phase 7 chunks 7.2 (ON
+  INSERT trigger) + 7.3a (aiFallbackBudget.ts + aiFallbackExtractorBase.ts)
+- Promoted from: Phase 7 retrospective §3 Candidate #9
+- Cross-references: Phase 7 chunks 7.2 + 7.3a commits; Phase 7
+  retrospective §3 Candidate #9
