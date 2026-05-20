@@ -15698,3 +15698,106 @@ Two re-deferred families wait for naturally-occurring conditions:
 Several N=1 observations accumulate evidence passively (catalogued
 at `de6bc02` §6). The substrate is operational; the queue is
 empty; ordinary work resumes.
+
+
+## 2026-05-20 — F-J-14 fourth-instance: Phase 7 chunk-impl-grade Grains 2+3 non-fire N=5 cross-validation
+
+Phase 7 implementation cycle closure (Sessions 36-40; chunks 7.1a + 7.1b
++ 7.2 + 7.3a + 7.3b) synthesizes Path C invocation evidence across five
+chunk-impl-grade observations. Catalogued here as fourth-instance
+extension under F-J-14's canonical Path C rule-of-record (first-instance
+entry 2026-05-14 at line ~11186; second-instance graduation entry
+2026-05-15 at line ~11427; third-instance + grain-catalog
+consolidation entry 2026-05-17 at line ~12681):
+
+**Pattern characterization.** Across five Phase 7 implementation chunks,
+Path C Grain 2 (Phase-A-close prospective) and Grain 3 (mid-impl
+reactive) **did not fire** despite varying forecast-vs-reality gaps at
+chunk-impl grade. Each chunk delivered as single-session-feasible
+implementation; no Phase-A-close substrate-load overrun forced split;
+no mid-impl framing-revisit accumulation crossed budget threshold.
+The pattern strengthens F-J-14's catalog with positive non-fire
+cross-validation evidence: when Grain 1 (brief-draft prospective)
+absorbs scope-risk at brief-grade, Grains 2 and 3 stay quiet.
+
+**Per-chunk evidence:**
+
+| Chunk | Path C disposition | Forecast | Realized | Delta | Grain 2/3 fire? |
+|---|---|---|---|---|---|
+| 7.1a (f0fdecc) | Grain 1 SPLIT at brief-grade (chunk 7.1 → 7.1a + 7.1b) | 700-1100 | ~1210 | +10% | No |
+| 7.1b (4c481a9) | Grain 1 SPLIT companion | 750-1200 | ~1591 | +33% | No |
+| 7.2 (c401296) | Grain 1 SINGLE-CHUNK at brief-grade | 1500-2200 | ~3010 | +37% | No |
+| 7.3a (8499189) | Grain 1 SPLIT at brief-grade (chunk 7.3 → 7.3a + 7.3b) | 1100-1900 | ~2625 | +38% | No |
+| 7.3b (ab0f7fe) | Grain 1 SPLIT companion | 1200-1900 | ~1549 | within band | No |
+
+**Critical observation — within-band landing at chunk 7.3b.** The
++10/+33/+37/+38% floor-bias trend across chunks 7.1a/7.1b/7.2/7.3a
+breaks at chunk 7.3b (within forecast band; first within-band landing
+of Phase 7 implementation cycle). Iteration 2 directive-grade Phase A
+verification absorbed scope deferrals at the directive grade itself
+(Option γ Bundle/Mutation/Attachment substrate consolidation + Option
+(c') Finding E permissive justification shape), bounding chunk 7.3b
+complexity before implementation began. The mechanism is consistent
+with F-J-14's three-grain catalog: earlier-grain invocation preferred
+over later-grain invocation; directive-grade Phase A verification at
+Grain 1 ratification absorbs scope-risk that would otherwise surface
+at Grain 2 or Grain 3.
+
+**Why this is positive evidence (not absence-of-fire).** Grain 2 and
+Grain 3 are designed to catch budget-overrun WHEN earlier grains
+miss. Their non-fire across N=5 chunks despite floor-bias deltas of
++10-38% indicates Grain 1's brief-grade SPLIT decisions absorbed the
+scope-risk correctly — even when realized volume exceeded forecast
+upper bounds, the chunks remained single-session-feasible. The
+non-fire pattern validates F-J-14's "earlier-grain invocation
+preferred" guidance: Grain 1 at brief-grade caught the structural
+scope-risk at chunks 7.1 + 7.3 (SPLIT); chunk 7.2's SINGLE-CHUNK
+disposition held despite +37% floor-bias because its scope was
+structurally bounded (Stage 3 classifier + org_settings substrate
+addition; no cross-phase framing interactions).
+
+**Iteration 2 directive-grade Phase A verification as fourth grain
+candidate.** Chunk 7.3b's within-band landing surfaces a candidate
+fourth-grain refinement: **Grain 0 — Directive-grade Phase A
+verification.** When chunk-impl directive authoring incorporates
+multi-iteration refinement absorbing scope deferrals at the directive
+grade (Iteration 2 Note 1/2/3/4 substantive Phase A findings landed
+before implementation), the discipline operates earlier than Grain 1
+brief-draft prospective. Chunk 7.3b's within-band landing is N=1
+evidence for Grain 0 candidacy; further accretion at Phase 8+ chunks
+that adopt directive-grade Phase A verification would graduate the
+candidate to fourth-instance codification. Documented here as
+forward-pointer at the F-J-14 catalog rather than promoted to
+codification at N=1.
+
+**Codification grain.** Four-instance extension of F-J-14 three-grain
+catalog with chunk-impl-grade cross-validation: five-chunk non-fire
+evidence at Grains 2+3 validates the catalog's "earlier-grain
+invocation preferred" guidance; one chunk's within-band landing
+surfaces Grain 0 candidate (directive-grade Phase A verification) at
+N=1 evidence for future-cycle-watch. The catalog stays at
+three-grain canonical statement; the fourth-instance extension is
+the cross-validation refinement.
+
+**Cross-references.**
+
+- Phase 4 chunk 3 first-instance (F-J-14 canonical statement above,
+  2026-05-14) — reactive Path C at Grain 3.
+- Phase 6 chunk 6.2a second-instance graduation (F-J-14
+  prospective-vs-reactive sub-discipline above, 2026-05-15) —
+  prospective Path C at Grain 2.
+- Phase 6.5 chunk 2 + retrospective (F-J-14 third-instance entry
+  above, 2026-05-17) — three-grain catalog consolidation.
+- Phase 7 chunks 7.1a/7.1b/7.2/7.3a/7.3b (commits f0fdecc + 4c481a9
+  + c401296 + 8499189 + ab0f7fe) — fourth-instance N=5 cross-
+  validation evidence basis.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #2 for full empirical narrative + per-disposition-
+  shape multiplier table cross-reference.
+- `docs/04_engineering/conventions/session/plan-authoring.md`
+  §Volume-forecast — Phase-A-realized forecast trumps cycle-grade
+  forecast §Four-curve calibration extension → per-disposition-shape
+  multiplier table (Phase 7 extension at Commit B) — codifies the
+  chunk-impl-grade floor-bias signal that this F-J entry's
+  per-chunk evidence table grounds empirically.
