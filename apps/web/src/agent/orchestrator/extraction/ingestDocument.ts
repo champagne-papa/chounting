@@ -7,8 +7,8 @@
 // Calls Stages 0-7 in fixed sequence:
 //   Stage 0 (dedup-by-hash) → short-circuit on hash match
 //   Stage 1 (byte fetch)    → via storageProviderService.fetch
-//   Stage 2 (OCR)           → STUB at chunk 7.1a; chunk 7.1b active
-//   Stage 3 (classify)      → STUB at chunk 7.1a; chunk 7.2 active
+//   Stage 2 (OCR)           → active at chunk 7.1b (Modal sidecar)
+//   Stage 3 (classify)      → active at chunk 7.2 (Tier A + Tier C + Tier D)
 //   Stage 4 (extract)       → STUB at chunk 7.1a; chunk 7.3 active
 //   Stage 5 (matchVendor)   → STUB at chunk 7.1a; chunk 7.3 active
 //   Stage 6 (matchAgainst-  → STUB at chunk 7.1a; chunk 7.3 active
@@ -20,8 +20,12 @@
 // runs as system actor (caller.user_id = null) — invocation source is
 // `pipeline_orchestrator`.
 //
-// Per ADR-0014 §12 + failureClassification.ts: Stages 0+1 wrapped with
-// retry-on-transient + audit-event-emission discipline.
+// Per ADR-0014 §12 + failureClassification.ts: Stages 0+1+2 wrapped
+// with retry-on-transient + audit-event-emission discipline. Stage 3
+// applies the wrap selectively per Step 20 Option (c): Tier A + Tier D
+// paths wrap inside coordinateTiers; Tier C path defers to callClaude.ts
+// internal retry classification (avoids compounded retries through the
+// AI-SDK invocation).
 
 import type {
   IngestDocumentInput,
@@ -33,8 +37,8 @@ import type { SystemActorServiceContext } from '@/services/middleware/serviceCon
 import { dedupByHash } from './stages/dedupByHash';
 import { byteFetch } from './stages/byteFetch';
 import { runOCR } from './stages/runOCR';
+import { classifyDocumentType } from './classifier';
 import {
-  classifyDocumentTypeStub,
   extractFieldsStub,
   matchVendorStub,
   matchAgainstExistingStateStub,
@@ -141,16 +145,40 @@ export async function ingestDocument(
   }
   pipeline_trace.push(ocrResult.trace_record);
 
-  // Stages 3-7 — STUB (synchronous; no failure classification at chunk
-  // 7.1a since stubs don't call external services)
-  const classification = classifyDocumentTypeStub(
-    ocrResult.artifact,
-    input.trace_id,
-  );
-  pipeline_trace.push(classification.trace_record);
+  // Stage 3 — classify (active at chunk 7.2 per ADR-0014 §7).
+  // Invokes Tier A rule-based classifier, falls through to Tier C
+  // Claude Sonnet AI fallback on no Tier A match, falls through to
+  // Tier D ('unknown') on Tier C invalid / below threshold / budget
+  // exhausted. Step 20 Option (c): coordinateTiers wraps Tier A +
+  // Tier D paths in withFailureClassification internally; Tier C
+  // defers to callClaude.ts internal retry classification.
+  let classification;
+  try {
+    classification = await classifyDocumentType(
+      {
+        ocrArtifact: ocrResult.artifact,
+        source_document_id: input.source_document_id,
+        trace_id: input.trace_id,
+      },
+      ctx,
+    );
+  } catch (err) {
+    return {
+      status: 'pipeline_failed',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: classifyFailure(err),
+    };
+  }
+  for (const record of classification.trace_records) {
+    pipeline_trace.push(record);
+  }
 
+  // Stages 4-7 — STUB (synchronous; no failure classification since
+  // stubs don't call external services). Chunk 7.3 wires Stages 4-7
+  // active.
   const extracted = extractFieldsStub(
-    classification.result.document_type,
+    classification.result.documentType,
     ocrResult.artifact,
     input.trace_id,
   );

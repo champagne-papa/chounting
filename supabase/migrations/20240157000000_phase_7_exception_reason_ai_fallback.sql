@@ -1,0 +1,24 @@
+-- ============================================================
+-- Phase 7 chunk 7.2 — ExceptionReasonSchema ENUM extension
+-- ============================================================
+-- Per Sub-Q10 lock + ADR-0014 §12.3 + Session 38 directive Step 13 (γ):
+-- ExceptionReasonSchema gains 'ai_fallback_validation_failed' value as
+-- v1-active (graduates from prior OMITTED list per chunk-2-Phase-2
+-- comment-block annotation at exceptionQueueEntry.schema.ts).
+--
+-- Split-from-substrate rationale: Postgres 12+ ALTER TYPE ADD VALUE
+-- can run inside a transaction, but the new value cannot be referenced
+-- by name in the SAME transaction. The chunk_7_active CHECK constraint
+-- broadening (next migration 20240158) explicitly references
+-- 'ai_fallback_validation_failed', forcing this split.
+--
+-- Per Phase A Step 16 verification: brief Task 7.2.2 partial-information
+-- value pick ("inline in Task 7.2.1 migration") is incompatible with
+-- Postgres transaction-scope restriction. Resolution: ENUM extension
+-- isolated to this migration; CHECK broadening + substrate-add land
+-- at 20240158.
+--
+-- ADR-0022 additive provenance-preserving: enum is grown, not redefined.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'ai_fallback_validation_failed';

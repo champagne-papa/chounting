@@ -15,7 +15,7 @@
 // placeholder values for downstream-stub testing.
 
 import type {
-  ClassificationStub,
+  ClassificationResult,
   ExtractionStub,
   VendorMatchStub,
   RelationshipCandidateStub,
@@ -29,26 +29,9 @@ function hash(s: string): string {
   return crypto.createHash('sha256').update(s).digest('hex');
 }
 
-export function classifyDocumentTypeStub(
-  artifact: DocumentArtifactRow,
-  trace_id: string,
-): { result: ClassificationStub; trace_record: PipelineStageRecord } {
-  void trace_id;
-  return {
-    result: {
-      document_type: 'unknown',
-      confidence: 0.0,
-      rationale: 'stub: classifier not wired (chunk 7.2 active)',
-    },
-    trace_record: {
-      stage_name: 'classify_stub',
-      input_hash: hash(JSON.stringify(artifact)),
-      output_hash: hash('unknown'),
-      model: null,
-      timestamp: new Date().toISOString(),
-    },
-  };
-}
+// classifyDocumentTypeStub removed at chunk 7.2 — Stage 3 active wiring
+// replaces the stub. coordinateTiers + Tier A/C/D rule modules + AI
+// fallback ship at apps/web/src/agent/orchestrator/extraction/classifier/.
 
 export function extractFieldsStub(
   documentType: string,
@@ -96,7 +79,7 @@ export function matchVendorStub(
 
 export function matchAgainstExistingStateStub(
   org_id: string,
-  classification: ClassificationStub,
+  classification: ClassificationResult,
   extracted: ExtractionStub,
   vendorMatch: VendorMatchStub,
   trace_id: string,
@@ -122,7 +105,7 @@ export function matchAgainstExistingStateStub(
 
 export function buildProposalStub(args: {
   source_document_id: string;
-  classification: ClassificationStub;
+  classification: ClassificationResult;
   extracted: ExtractionStub;
   vendorMatch: VendorMatchStub;
   relCandidate: RelationshipCandidateStub;

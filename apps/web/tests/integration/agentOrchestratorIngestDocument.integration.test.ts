@@ -154,7 +154,31 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
       fetch: makeFetchMock(),
     });
     vi.mocked(invokeSidecar).mockImplementation(
-      createMockInvokeSidecar({ failureMode: null }),
+      createMockInvokeSidecar({
+        failureMode: null,
+        // Inject Invoice-shape lines so Stage 3 Tier A classifier matches
+        // vendor_invoice deterministically (avoids needing Claude
+        // fixtures for the chunk 7.1a/7.1b golden path tests).
+        artifactOverride: {
+          lines: [
+            {
+              text: 'Invoice #12345',
+              bbox: [0, 0, 100, 20],
+              confidence: 0.95,
+            },
+            {
+              text: 'Acme Vendor Co.',
+              bbox: [0, 20, 100, 40],
+              confidence: 0.95,
+            },
+            {
+              text: 'Total: $123.45',
+              bbox: [0, 40, 100, 60],
+              confidence: 0.95,
+            },
+          ],
+        },
+      }),
     );
   });
 
@@ -164,7 +188,7 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
     }
   });
 
-  it('Stages 0+1+2-7 active/stub: produces 8 pipeline_trace records on golden path', async () => {
+  it('Stages 0+1+2+3 active + Stages 4-7 stub: produces 8 pipeline_trace records on golden path (Tier A match)', async () => {
     const trace_id = crypto.randomUUID();
     traceIds.push(trace_id);
     const sourceDocId = await seedSourceDocument({ trace_id });
@@ -181,12 +205,14 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
 
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     // Per ADR-0014 §13 canonical: 'run_ocr' at chunk 7.1b (active);
-    // chunks 7.2 + 7.3 canonicalize remaining stub names.
+    // 'classify_document_type' at chunk 7.2 (active; Tier A path emits
+    // parent only per Step 14 Option (a)); chunk 7.3 canonicalizes
+    // remaining stub names.
     expect(stageNames).toEqual([
       'dedup_no_match',
       'byte_fetch',
       'run_ocr',
-      'classify_stub',
+      'classify_document_type',
       'extract_stub',
       'match_vendor_stub',
       'match_existing_state_stub',

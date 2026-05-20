@@ -108,10 +108,88 @@ export interface DocumentArtifactRow {
  * Stages 3-7 STUB return types. Per Session 36 directive Note 4:
  * placeholder shapes only at chunk 7.1a; full signatures resolve at
  * chunks 7.2 (Stage 3 classify) + 7.3 (Stages 4-7).
+ *
+ * Chunk 7.2 supersedes ClassificationStub with ClassificationResult
+ * (below); ClassificationStub retained for backward compatibility
+ * with stage 4-7 stub signatures until chunk 7.3 active wiring.
  */
 export interface ClassificationStub {
   document_type: 'unknown';
   confidence: number;
+  rationale: string;
+}
+
+/**
+ * Stage 3 classifier active types per Phase 7 chunk 7.2 + ADR-0014 §7.
+ * Three-tier strategy: Tier A rule-based; Tier C Claude Sonnet AI
+ * fallback; Tier D unknown fallback. ClassificationResult is the
+ * orchestrator-grade output across all three tiers.
+ *
+ * Per ADR-0011 §6 v1-active document_type enum: vendor_invoice,
+ * receipt, payment_confirmation, unknown.
+ */
+export type DocumentType =
+  | 'vendor_invoice'
+  | 'receipt'
+  | 'payment_confirmation'
+  | 'unknown';
+
+export interface ClassificationResult {
+  documentType: DocumentType;
+  confidence: number;
+  rationale: string;
+  tier: 'A' | 'C' | 'D';
+}
+
+export interface ClassificationInput {
+  ocrArtifact: DocumentArtifactRow;
+  source_document_id: string;
+  trace_id: string;
+}
+
+/**
+ * Tier A binary match-or-no-match output per Sub-Q8 lock. When matched,
+ * carries documentType + intrinsic confidence + rationale; on no-match
+ * the orchestrator falls through to Tier C (Sub-Q8 binary short-circuit).
+ */
+export type TierAOutput =
+  | {
+      matched: true;
+      documentType: DocumentType;
+      confidence: number;
+      rationale: string;
+    }
+  | { matched: false };
+
+/**
+ * Tier C Claude Sonnet AI fallback output per ADR-0014 §8. Carries the
+ * full ClassificationResult-equivalent shape (documentType + confidence
+ * + rationale) plus a discriminator for downstream Zod validation gate.
+ *
+ * `valid` reflects Zod-validation gate outcome; `confidenceAboveThreshold`
+ * reflects per-document-type threshold gate per ADR-0014 §7. Both gates
+ * must pass for Tier C output to populate ClassificationResult; failure
+ * routes to Tier D ('unknown') per Sub-Q8.
+ */
+export type TierCOutput =
+  | {
+      valid: true;
+      documentType: DocumentType;
+      confidence: number;
+      rationale: string;
+      confidenceAboveThreshold: boolean;
+    }
+  | {
+      valid: false;
+      reason: 'zod_validation_failed' | 'budget_exhausted' | 'invocation_failed';
+    };
+
+/**
+ * Tier D 'unknown' output per Sub-Q8. Always documentType='unknown';
+ * routes to exception queue per ADR-0011 §13.
+ */
+export interface TierDOutput {
+  documentType: 'unknown';
   rationale: string;
 }
 
