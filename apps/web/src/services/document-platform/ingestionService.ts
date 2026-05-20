@@ -139,6 +139,7 @@ import type {
   ForwardedMailboxUploadInput,
   ForwardedMailboxUploadResult,
 } from './types';
+import { ingestDocument } from '@/agent/orchestrator/extraction/ingestDocument';
 
 // v1 system-fixed per ADR-0013 §2 mechanical selection. Per-org
 // configurability lands when org_settings sub-arc ships post-v1.
@@ -376,6 +377,32 @@ async function handleDragDropUploadImpl(
     { ingest_batch_id, document_count: parsed.files.length },
     'ingestionService.handleDragDropUpload: complete',
   );
+
+  // Phase 7 chunk 7.1a Task 7.1a.8 — orchestrator invocation hook.
+  // Per Sub-Q2 sync v1 invocation lock: invoke ingestDocument per
+  // source_document post-ingestion-commit. Pattern B external-wrap
+  // best-effort isolation per Phase 5.1 chunk 5.1b T2 dispatcher
+  // precedent — pipeline failures emit failure-class audit events
+  // internally; HTTP response always returns the successful
+  // DragDropUploadResult.
+  for (const record of putRecords) {
+    try {
+      await ingestDocument({
+        org_id: parsed.org_id,
+        source_document_id: record.source_document_id,
+        trace_id: ctx.trace_id,
+      });
+    } catch (orchErr) {
+      log.error(
+        {
+          err: orchErr,
+          source_document_id: record.source_document_id,
+          trace_id: ctx.trace_id,
+        },
+        'ingestionService.handleDragDropUpload: orchestrator invocation failed (best-effort; not propagating)',
+      );
+    }
+  }
 
   return {
     ingest_batch_id,

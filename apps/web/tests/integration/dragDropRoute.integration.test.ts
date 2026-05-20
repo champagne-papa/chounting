@@ -59,7 +59,16 @@ function bindMockPut(): Mock {
       byte_size: (input.bytes as Uint8Array).byteLength,
       provider: 'supabase_storage' as const,
     }));
-  (getStorageProvider as Mock).mockReturnValue({ put: m });
+  // Phase 7 chunk 7.1a — orchestrator hook fires post-RPC.
+  // Stage 1 byteFetch calls provider.fetch; mock returns synthetic
+  // bytes so the orchestrator can complete the in-memory pipeline.
+  const fetchMock = vi.fn().mockResolvedValue({
+    bytes: new TextEncoder().encode('stub bytes'),
+    content_hash:
+      '0000000000000000000000000000000000000000000000000000000000000000',
+    provider: 'supabase_storage' as const,
+  });
+  (getStorageProvider as Mock).mockReturnValue({ put: m, fetch: fetchMock });
   return m;
 }
 

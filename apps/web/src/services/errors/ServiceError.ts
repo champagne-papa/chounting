@@ -111,7 +111,15 @@ export type ServiceErrorCode =
   // throwing a ServiceError; this code is added for future
   // service-layer firings where rate-limiting needs to flow
   // through the standard ServiceError → HTTP-status mapping.
-  | 'RATE_LIMITED';
+  | 'RATE_LIMITED'
+  // Tier 2 document pipeline (Phase 7 chunk 7.1a)
+  // Per ADR-0014 §12 verbatim: transient-retry-budget-exhausted +
+  // service-unavailable categories at Stages 0-7. Verbatim ADR
+  // text uses these codes (§12.1: "typed ServiceError with code
+  // `PIPELINE_TRANSIENT_EXHAUSTED`"; §12.2: pipeline_unavailable
+  // exception class with no-retry semantics).
+  | 'PIPELINE_TRANSIENT_EXHAUSTED'
+  | 'PIPELINE_UNAVAILABLE';
 
 export class ServiceError extends Error {
   constructor(
