@@ -224,7 +224,9 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
     // Synthetic OCR with no Tier A patterns; force fallthrough to Tier C.
     configureSidecarWithOcr(['Generic unstructured text', 'with no document type signals']);
 
-    // Seed Claude fixture: valid receipt classification at 0.85 (== threshold).
+    // Seed two Claude fixtures: one for Stage 3 classifier Tier C, one
+    // for Stage 4 receiptExtractor Tier C (per chunk 7.3a shared
+    // aiFallbackBudget: max 2 calls per source_document across stages).
     __setMockFixtureQueue([
       buildAnthropicFixture(
         JSON.stringify({
@@ -232,6 +234,13 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
           confidence: 0.85,
           rationale: 'AI fallback identified receipt-shape from text content',
           fields: { merchant_name: 'Test Merchant', total: 25.5 },
+        }),
+      ),
+      buildAnthropicFixture(
+        JSON.stringify({
+          total: 25.5,
+          merchant_text: 'Test Merchant',
+          date: '2026-02-01',
         }),
       ),
     ]);
@@ -243,7 +252,15 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Status 'committed' or 'deferred_chunk_7_3b_pending_activation'
+    // both acceptable: chunk 7.2 verified Stage 3 emits parent + child
+    // trace_records; chunk 7.3a Stage 7 proposalBuilder defers receipt
+    // routes per Iteration 2 Option γ (ProposedAttachment substrate at
+    // chunk 7.3b). Both statuses indicate Stage 3 completed cleanly.
+    expect([
+      'committed',
+      'deferred_chunk_7_3b_pending_activation',
+    ]).toContain(result.status);
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     // Tier C path: parent + child sub-stage emitted per ADR-0014 §8 + §13.
     expect(stageNames).toContain('classify_document_type');
@@ -358,7 +375,8 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       'Auth code: 12345',
     ]);
 
-    // Seed Claude fixture so Tier C provides a valid result.
+    // Seed two Claude fixtures: Stage 3 Tier C classification +
+    // Stage 4 Tier C extraction (per chunk 7.3a shared budget).
     __setMockFixtureQueue([
       buildAnthropicFixture(
         JSON.stringify({
@@ -366,6 +384,13 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
           confidence: 0.85,
           rationale: 'Adversarial classified as receipt via AI',
           fields: {},
+        }),
+      ),
+      buildAnthropicFixture(
+        JSON.stringify({
+          total: 50.0,
+          date: '2026-02-01',
+          payment_method: 'credit_card',
         }),
       ),
     ]);
@@ -377,7 +402,12 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Status acceptable as committed OR deferred (per chunk 7.3a Option γ
+    // receipt route defers to chunk 7.3b).
+    expect([
+      'committed',
+      'deferred_chunk_7_3b_pending_activation',
+    ]).toContain(result.status);
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     // Verify Tier A was bypassed: AI fallback child sub-stage emitted.
     expect(stageNames).toContain('ai_fallback_classify');

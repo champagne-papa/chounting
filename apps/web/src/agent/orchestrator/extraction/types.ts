@@ -45,17 +45,27 @@ export interface IngestDocumentInput {
 }
 
 /**
- * Orchestrator entry function output. At chunk 7.1a (Stages 0+1 active;
- * Stages 2-7 STUB), the output carries a stub proposal + the
- * accumulated pipeline_trace; chunk 7.3 active wiring of Stage 7
- * produces the full ProposedMutation / ProposedMutationBundle /
- * ProposedAttachment shapes per ADR-0014 §11.
+ * Orchestrator entry function output. At chunk 7.3a (Stages 0-7 substrate
+ * active; commit composite at chunk 7.3b), the output carries the
+ * accumulated pipeline_trace + status discriminator.
+ *
+ * 'deferred_chunk_7_3b_pending_activation' status added at chunk 7.3a
+ * per Iteration 2 Option β: TS-only union extension as cross-chunk
+ * deferral mechanism for routing paths that chunk 7.3b activates
+ * (born-paid bundle + receipt-as-payment-evidence + payment_confirmation
+ * no-cited-bill). No DB ENUM, no migration, no exception queue write.
+ * Chunk 7.3b activation makes this value defined-but-not-emitted.
  */
 export interface IngestDocumentOutput {
-  status: 'committed' | 'dedup_short_circuit' | 'pipeline_failed';
+  status:
+    | 'committed'
+    | 'dedup_short_circuit'
+    | 'pipeline_failed'
+    | 'deferred_chunk_7_3b_pending_activation';
   pipeline_trace: PipelineStageRecord[];
-  proposal_id: string | null; // stub at chunk 7.1a; populated at chunk 7.3
+  proposal_id: string | null; // stub at chunk 7.1a-7.3a; populated at chunk 7.3b
   failure_class: PipelineFailureClass | null; // populated on failure paths
+  deferred_reason?: string; // populated when status='deferred_chunk_7_3b_pending_activation'
 }
 
 /**
@@ -192,6 +202,133 @@ export interface TierDOutput {
   documentType: 'unknown';
   rationale: string;
 }
+
+/**
+ * Stage 4 extractor input. Phase 7 chunk 7.3a active wiring.
+ */
+export interface ExtractFieldsInput {
+  documentType: DocumentType;
+  ocrArtifact: DocumentArtifactRow;
+  source_document_id: string;
+  trace_id: string;
+}
+
+/**
+ * Stage 4 extractor output. Per-document-type field shape is permissive
+ * (Record<string, unknown>) at the orchestrator boundary; downstream
+ * Stage 5 + Stage 6 consume against per-document-type extraction
+ * schemas at typed boundaries.
+ */
+export interface ExtractionResult {
+  fields: Record<string, unknown>;
+  ai_fallback_invoked: boolean;
+  trace_records: PipelineStageRecord[];
+}
+
+/**
+ * Stage 5 vendor matcher input. Reads vendor identity-and-matching
+ * fields from extraction result per ADR-0011 §11 Reading B boundary.
+ */
+export interface VendorMatchInput {
+  org_id: string;
+  vendorField: VendorIdentityFields;
+  trace_id: string;
+}
+
+/**
+ * Vendor identity-and-matching fields per ADR-0007 §Tier 2 Read boundary
+ * + ADR-0014 §9. Stage 5 matcher reads name + tax_id + email + domain
+ * extracted from Stage 4 output.
+ */
+export interface VendorIdentityFields {
+  vendor_name?: string;
+  vendor_text?: string;
+  merchant_text?: string;
+  tax_id?: string;
+  email?: string;
+}
+
+/**
+ * Stage 5 vendor matcher result per ADR-0014 §9. 6-strategy cascade
+ * (exact_name + tax_id + email + domain + fuzzy_name + no_match) at
+ * chunk 7.3a per Step 15 Phase A finding (vendors.aliases column
+ * absent; alias strategy dropped from 7-strategy original cascade;
+ * banked at chunk 7.3a close report).
+ */
+export interface VendorMatchResult {
+  vendor_id: string | null;
+  confidence: number;
+  match_type:
+    | 'exact_name'
+    | 'tax_id'
+    | 'email'
+    | 'domain'
+    | 'fuzzy_name'
+    | 'no_match';
+  candidate_alternatives: VendorCandidate[];
+}
+
+export interface VendorCandidate {
+  vendor_id: string;
+  vendor_name: string;
+  match_type: VendorMatchResult['match_type'];
+  confidence: number;
+}
+
+/**
+ * Stage 7 proposal builder input. Phase 7 chunk 7.3a active wiring.
+ * Consumes Stage 3 (classification) + Stage 4 (extraction) + Stage 5
+ * (vendor match) + Stage 6 (relationship candidate) outputs.
+ */
+export interface ProposalBuilderInput {
+  source_document_id: string;
+  classification: ClassificationResult;
+  extractedFields: Record<string, unknown>;
+  vendorMatch: VendorMatchResult | null;
+  relationshipCandidates: RelationshipCandidate[];
+  trace_id: string;
+}
+
+/**
+ * Stage 6 documentRouterService.completeCandidate output shape (relaxed
+ * to avoid cross-module dependency cycles; canonical type
+ * DocumentRelationshipCandidate at
+ * @/shared/schemas/document-platform/documentRelationshipCandidate.schema).
+ * Orchestrator uses .length and confidence_score only at chunk 7.3a;
+ * downstream Stage 7 proposalBuilder consumes via brief-task-routing
+ * matrix (number-of-candidates discriminator).
+ */
+export interface RelationshipCandidate {
+  id: string;
+  document_case_id: string;
+  source_document_id: string;
+  linked_entity_type: string;
+  linked_entity_id: string;
+  link_role: string;
+  confidence_score: number;
+}
+
+/**
+ * Stage 7 proposal builder output per Phase 7 chunk 7.3a Iteration 2
+ * Option γ + Option β. Discriminated union over routing path:
+ *
+ *   - 'proposed_entry_card': ACTIVE route. vendor_invoice or
+ *     payment_confirmation cited-bill produces ProposedEntryCard.
+ *   - 'deferred_chunk_7_3b_pending_activation': DEFERRED route.
+ *     born-paid bundle, receipt attach-payment-evidence, payment_confirmation
+ *     no-cited-bill all return this discriminator at chunk 7.3a;
+ *     chunk 7.3b activates ProposedMutationBundle + ProposedAttachment
+ *     substrate.
+ */
+export type ProposalResult =
+  | {
+      kind: 'proposed_entry_card';
+      card: unknown; // ProposedEntryCard shape per @/shared/schemas/accounting/proposedEntryCard.schema
+    }
+  | {
+      kind: 'deferred_chunk_7_3b_pending_activation';
+      reason: string;
+    };
 
 export interface ExtractionStub {
   fields: Record<string, unknown>;

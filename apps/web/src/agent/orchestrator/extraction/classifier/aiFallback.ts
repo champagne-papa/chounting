@@ -46,6 +46,11 @@ import { vendorInvoicePrompt } from './prompts/vendor_invoice.prompt';
 import { receiptPrompt } from './prompts/receipt.prompt';
 import { paymentConfirmationPrompt } from './prompts/payment_confirmation.prompt';
 import { extractOcrText } from './extractOcrText';
+import {
+  tryConsumeCall,
+  AI_FALLBACK_MAX_CALLS_PER_DOCUMENT,
+  __resetCountersForTests as __resetBudgetCountersForTests,
+} from '../aiFallbackBudget';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { adminClient } from '@/db/adminClient';
 import { loggerWith } from '@/shared/logger/pino';
@@ -68,11 +73,11 @@ const CONFIDENCE_THRESHOLDS: Record<DocumentType, number> = {
   unknown: 1.0,
 };
 
-// Max 2 fallback calls per source document per ADR-0014 §8 budget.
-// Counter is module-grade per source_document_id (per directive Task
-// 7.2.7 partial-information value pick).
-const MAX_FALLBACK_CALLS = 2;
-const callCounters = new Map<string, number>();
+// Max fallback calls per source document per ADR-0014 §8 budget;
+// per-document counter shared with Stage 4 extractor modules via
+// aiFallbackBudget.ts (chunk 7.3a Iteration 2 Option α RATIFIED Phase B
+// scope addition). MAX_FALLBACK_CALLS imported from shared module
+// (was module-internal at chunk 7.2; refactored at chunk 7.3a).
 
 // Anthropic model selection per Task 7.2.7 partial-information value
 // pick: claude-sonnet-4-5 (current generation per project standard).
@@ -115,17 +120,6 @@ function assembleSystemPrompt(): string {
     '',
     'Pick the schema that best matches the OCR text and return a single JSON object per that schema. Output JSON only — no preamble, no markdown fences.',
   ].join('\n');
-}
-
-function incrementCallCounter(source_document_id: string): number {
-  const current = callCounters.get(source_document_id) ?? 0;
-  const next = current + 1;
-  callCounters.set(source_document_id, next);
-  return next;
-}
-
-function getCallCount(source_document_id: string): number {
-  return callCounters.get(source_document_id) ?? 0;
 }
 
 async function emitAuditEvent(
@@ -180,15 +174,18 @@ export async function runAiFallback(
     timestamp: new Date().toISOString(),
   };
 
-  // Budget check per ADR-0014 §8: max 2 calls per source_document_id.
-  if (getCallCount(input.source_document_id) >= MAX_FALLBACK_CALLS) {
+  // Budget check per ADR-0014 §8: shared per-document counter (max 2
+  // calls aggregate across Stages 3+4) via aiFallbackBudget.ts shared
+  // module (chunk 7.3a Iteration 2 Option α RATIFIED). tryConsumeCall
+  // atomically checks + increments; returns false if budget exhausted.
+  if (!tryConsumeCall(input.source_document_id)) {
     await emitAuditEvent(
       'extraction_failed',
       input.source_document_id,
       ctx,
       {
         failure_reason: 'ai_fallback_budget_exhausted',
-        budget: MAX_FALLBACK_CALLS,
+        budget: AI_FALLBACK_MAX_CALLS_PER_DOCUMENT,
       },
     );
     return {
@@ -202,8 +199,6 @@ export async function runAiFallback(
       },
     };
   }
-
-  incrementCallCounter(input.source_document_id);
 
   // Assemble Anthropic Messages API params per callClaude contract.
   const params: Anthropic.Messages.MessageCreateParams = {
@@ -401,9 +396,10 @@ export async function runAiFallback(
   };
 }
 
-// Test-only utility: reset the per-source-document call counter Map.
-// Enables unit tests to start with a clean budget. NOT exported for
-// production use.
+// Test-only utility: reset the shared per-source-document call counter
+// Map (chunk 7.3a Iteration 2 Option α: counter moved to shared module
+// aiFallbackBudget.ts). Re-exported here for backwards-compatible test
+// imports (chunk 7.2 aiFallback.test.ts + chunk 7.3a integration tests).
 export function __resetCallCountersForTests(): void {
-  callCounters.clear();
+  __resetBudgetCountersForTests();
 }

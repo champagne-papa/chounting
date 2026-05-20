@@ -157,8 +157,10 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
       createMockInvokeSidecar({
         failureMode: null,
         // Inject Invoice-shape lines so Stage 3 Tier A classifier matches
-        // vendor_invoice deterministically (avoids needing Claude
-        // fixtures for the chunk 7.1a/7.1b golden path tests).
+        // vendor_invoice deterministically + Stage 4 Tier A extractor
+        // resolves the three required fields (vendor_invoice_number +
+        // amount + accounting_date) so Stage 4 stays in Tier A path
+        // (no Tier C invocation needed; avoids Claude fixture seeding).
         artifactOverride: {
           lines: [
             {
@@ -172,8 +174,13 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
               confidence: 0.95,
             },
             {
-              text: 'Total: $123.45',
+              text: 'Date: 2026-01-15',
               bbox: [0, 40, 100, 60],
+              confidence: 0.95,
+            },
+            {
+              text: 'Total: $123.45',
+              bbox: [0, 60, 100, 80],
               confidence: 0.95,
             },
           ],
@@ -204,19 +211,21 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
     expect(result.pipeline_trace).toHaveLength(8);
 
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
-    // Per ADR-0014 §13 canonical: 'run_ocr' at chunk 7.1b (active);
-    // 'classify_document_type' at chunk 7.2 (active; Tier A path emits
-    // parent only per Step 14 Option (a)); chunk 7.3 canonicalizes
-    // remaining stub names.
+    // Per ADR-0014 §13 canonical (chunks 7.1b + 7.2 + 7.3a active):
+    // dedup_by_hash + byte_fetch + run_ocr + classify_document_type +
+    // extract_fields + match_vendor + match_against_existing_state +
+    // build_proposal. Tier A classification path emits parent only
+    // (no ai_fallback_classify child sub-stage); Tier A extraction
+    // path emits parent only (no ai_fallback_extract child sub-stage).
     expect(stageNames).toEqual([
       'dedup_no_match',
       'byte_fetch',
       'run_ocr',
       'classify_document_type',
-      'extract_stub',
-      'match_vendor_stub',
-      'match_existing_state_stub',
-      'build_proposal_stub',
+      'extract_fields',
+      'match_vendor',
+      'match_against_existing_state',
+      'build_proposal',
     ]);
 
     // Each record carries non-empty input_hash + ISO-8601 timestamp.
