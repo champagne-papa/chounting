@@ -996,6 +996,22 @@ exception queue with a typed `pipeline_transient_failure` exception
 v1 set — the controller can manually trigger another pipeline run
 when conditions change).
 
+**Amendment 2026-05-20 (Phase 7 chunk 7.1b ratification surface).**
+Stage 2 (OCR) overrides the per-stage ~3.5s wall-clock budget to
+~30s wall-clock per Modal cold-start substrate (5-8s typical
+cold-start first-request; up to 3 retries with exponential backoff;
+total per-stage budget accommodates cold-start + retry chain).
+Documented at `apps/web/src/agent/orchestrator/extraction/stages/runOCR.ts`
+header for operational visibility. The 3.5s budget remains canonical
+for Stages 0+1+3-7; Stage 2 is the named exception per Modal
+cold-start operational reality. Future stages with external-service
+cold-start substrate may surface analogous amendments. Per-request
+timeout (10s) is enforced at the sidecar client via `AbortController`
+per chunk 7.1 brief §4 Task 7.1b.5 partial-information value pick;
+per-attempt retry backoff (500ms base + 2x exponential + ±20% jitter)
+preserved verbatim at chunk-impl grade. Per ADR-0022 additive
+provenance-preserving discipline.
+
 #### 12.2 Persistent / unavailable
 
 AI API auth failure, sidecar service down, classifier model

@@ -1,0 +1,27 @@
+# Modal app configuration for chounting-ocr-sidecar (Phase 7 chunk 7.1b)
+#
+# Per ADR-0014 §3: Modal sidecar topology with GPU-accelerated PaddleOCR
+# inference. Container image built via Modal's image builder per main.py
+# `modal.Image.debian_slim(...).pip_install_from_requirements(...)`.
+#
+# Modal app metadata lives in main.py (`app = modal.App(...)`). This file
+# documents the Modal-side configuration intent; the actual deployment
+# manifest is generated from main.py at `modal deploy` time.
+
+app_name: chounting-ocr-sidecar
+python_version: "3.11"
+
+# v1 GPU spec: defer until paddleocr inference benchmarks justify GPU
+# allocation cost. CPU-only at v1; revisit at chunk 7.1b retrospective
+# if cold-start + inference latency exceeds 30s wall-clock budget per
+# ADR-0014 §12.1 amendment.
+gpu: null
+
+# Modal secret bound at deploy time via main.py `secrets=[modal.Secret.from_name(...)]`.
+# Operator provisions via: `modal secret create modal-ocr-hmac-secret value=<secret>`.
+secrets:
+  - modal-ocr-hmac-secret
+
+# Endpoint per main.py @modal.web_endpoint decorator. Modal generates
+# the deployed URL at `modal deploy` time; URL pattern:
+# https://<workspace>--chounting-ocr-sidecar-run-ocr.modal.run

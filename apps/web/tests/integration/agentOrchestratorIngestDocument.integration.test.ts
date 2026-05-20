@@ -15,9 +15,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
+import { createMockInvokeSidecar } from '../fixtures/sidecar/mockSidecar';
 
 vi.mock('@/services/storage/resolver', () => ({
   getStorageProvider: vi.fn(),
+}));
+
+vi.mock('@/agent/orchestrator/extraction/sidecar/client', () => ({
+  invokeSidecar: vi.fn(),
 }));
 
 const { ingestDocument } = await import(
@@ -25,6 +30,9 @@ const { ingestDocument } = await import(
 );
 const { getStorageProvider } = await import(
   '@/services/storage/resolver'
+);
+const { invokeSidecar } = await import(
+  '@/agent/orchestrator/extraction/sidecar/client'
 );
 
 const db = adminClient();
@@ -136,7 +144,7 @@ function makeFetchMock(): Mock {
   });
 }
 
-describe('Phase 7 chunk 7.1a — ingestDocument orchestrator', () => {
+describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active per chunk 7.1b)', () => {
   let traceIds: string[] = [];
 
   beforeEach(() => {
@@ -145,6 +153,9 @@ describe('Phase 7 chunk 7.1a — ingestDocument orchestrator', () => {
       put: vi.fn(),
       fetch: makeFetchMock(),
     });
+    vi.mocked(invokeSidecar).mockImplementation(
+      createMockInvokeSidecar({ failureMode: null }),
+    );
   });
 
   afterEach(async () => {
@@ -169,10 +180,12 @@ describe('Phase 7 chunk 7.1a — ingestDocument orchestrator', () => {
     expect(result.pipeline_trace).toHaveLength(8);
 
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
+    // Per ADR-0014 §13 canonical: 'run_ocr' at chunk 7.1b (active);
+    // chunks 7.2 + 7.3 canonicalize remaining stub names.
     expect(stageNames).toEqual([
       'dedup_no_match',
       'byte_fetch',
-      'ocr_stub',
+      'run_ocr',
       'classify_stub',
       'extract_stub',
       'match_vendor_stub',

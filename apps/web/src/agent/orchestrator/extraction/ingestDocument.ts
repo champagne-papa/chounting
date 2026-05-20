@@ -32,7 +32,7 @@ import type {
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
 import { dedupByHash } from './stages/dedupByHash';
 import { byteFetch } from './stages/byteFetch';
-import { runOCR } from './stages/runOCR.stub';
+import { runOCR } from './stages/runOCR';
 import {
   classifyDocumentTypeStub,
   extractFieldsStub,
@@ -112,16 +112,25 @@ export async function ingestDocument(
   }
   pipeline_trace.push(fetched.trace_record);
 
-  // Stage 2 — OCR (STUB at chunk 7.1a)
+  // Stage 2 — OCR (active at chunk 7.1b per ADR-0014 §3 Modal sidecar;
+  // wrapped in withFailureClassification per chunk 7.1a Stages 0+1
+  // precedent. Per ADR-0014 §12.1 amendment 2026-05-20: Stage 2
+  // per-stage wall-clock budget is ~30s exception per Modal cold-start.)
   let ocrResult;
   try {
-    ocrResult = await runOCR({
-      source_document_id: input.source_document_id,
-      bytes: fetched.result.bytes,
-      content_hash: fetched.result.content_hash,
-      trace_id: input.trace_id,
-      prior_trace: pipeline_trace,
-    });
+    ocrResult = await withFailureClassification(
+      'run_ocr',
+      input.source_document_id,
+      ctx,
+      () =>
+        runOCR({
+          source_document_id: input.source_document_id,
+          bytes: fetched.result.bytes,
+          content_hash: fetched.result.content_hash,
+          trace_id: input.trace_id,
+          prior_trace: pipeline_trace,
+        }),
+    );
   } catch (err) {
     return {
       status: 'pipeline_failed',

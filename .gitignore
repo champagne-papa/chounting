@@ -100,6 +100,13 @@ test-results/
 # Session coordination — lock file is per-session, not tracked
 .coordination/session-lock.json
 
+# Python artifacts for sidecar-ocr/ per Phase 7 chunk 7.1b
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
 # Working artifacts directory — verification reports, audit scratch, and
 # other non-canonical outputs from docs / governance arcs. Canonical records
 # live in docs/ proper. Pre-existing reports/mutation/ contents (mutation
