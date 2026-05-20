@@ -15,6 +15,7 @@ import { z } from 'zod';
 // ProposedEntryCardSchema (kept as the canonical output type for
 // client-side consumers).
 import { ProposedEntryCardInputSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
+import { ProposedAttachmentCardInputSchema } from '@/shared/schemas/document-platform/proposedAttachmentCard.schema';
 
 const uuid = z.string().uuid();
 
@@ -36,6 +37,14 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('proposed_entry_card'),
     card: ProposedEntryCardInputSchema,
+  }).strict(),
+  // Phase 7 chunk 7.3b — proposed_attachment_card RI-1 strict atomic
+  // 5-surface extension per chunk 7.3 brief §3.5 Task 7.3b.1 + §4 value
+  // pick #5. Sibling to proposed_entry_card; consumes the Input variant
+  // (UUIDs omitted) per Finding O2-v2 Site-2-post-fill pattern.
+  z.object({
+    type: z.literal('proposed_attachment_card'),
+    card: ProposedAttachmentCardInputSchema,
   }).strict(),
   z.object({ type: z.literal('ai_action_review_queue'), orgId: uuid }).strict(),
   z.object({

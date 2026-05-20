@@ -28,6 +28,7 @@ import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
 import { ProposedEntryCard } from '@/components/ProposedEntryCard';
+import { ProposedAttachmentCard } from '@/components/canvas/ProposedAttachmentCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 import { ReversalForm } from '@/components/canvas/ReversalForm';
@@ -208,6 +209,8 @@ function renderDirective(
       return <PendingApprovalsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
+    case 'proposed_attachment_card':
+      return <ProposedAttachmentCard card={d.card} />;
     case 'none':
       return (
         <div className="text-neutral-400 text-sm">

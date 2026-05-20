@@ -45,27 +45,32 @@ export interface IngestDocumentInput {
 }
 
 /**
- * Orchestrator entry function output. At chunk 7.3a (Stages 0-7 substrate
- * active; commit composite at chunk 7.3b), the output carries the
- * accumulated pipeline_trace + status discriminator.
+ * Orchestrator entry function output. At chunk 7.3b (Stages 0-7 active +
+ * commit composite active), the output carries the accumulated
+ * pipeline_trace + status discriminator + proposal_id (populated on
+ * ledger-touching commits per Stage 7 commit composite).
  *
  * 'deferred_chunk_7_3b_pending_activation' status added at chunk 7.3a
  * per Iteration 2 Option β: TS-only union extension as cross-chunk
- * deferral mechanism for routing paths that chunk 7.3b activates
- * (born-paid bundle + receipt-as-payment-evidence + payment_confirmation
- * no-cited-bill). No DB ENUM, no migration, no exception queue write.
- * Chunk 7.3b activation makes this value defined-but-not-emitted.
+ * deferral mechanism. Chunk 7.3b activation makes this value
+ * defined-but-not-emitted; preserved per ADR-0022 additive
+ * provenance-preserving discipline (union shrinkage is non-additive).
+ * Per Iteration 2 Note 4 sub-recommendation: JSDoc @deprecated annotation
+ * prevents drift via copy-paste from active code while preserving
+ * TypeScript exhaustiveness for defensive consumer coverage.
  */
 export interface IngestDocumentOutput {
   status:
     | 'committed'
     | 'dedup_short_circuit'
     | 'pipeline_failed'
+    /** @deprecated chunk 7.3b activation made this status defined-but-not-emitted
+     *  per ADR-0022 additive discipline; future cleanup post-Phase-7. */
     | 'deferred_chunk_7_3b_pending_activation';
   pipeline_trace: PipelineStageRecord[];
-  proposal_id: string | null; // stub at chunk 7.1a-7.3a; populated at chunk 7.3b
+  proposal_id: string | null; // populated at chunk 7.3b Stage 7 commit composite
   failure_class: PipelineFailureClass | null; // populated on failure paths
-  deferred_reason?: string; // populated when status='deferred_chunk_7_3b_pending_activation'
+  deferred_reason?: string; // populated when status='deferred_chunk_7_3b_pending_activation' (post-activation: defined-but-not-emitted)
 }
 
 /**
@@ -309,16 +314,20 @@ export interface RelationshipCandidate {
 }
 
 /**
- * Stage 7 proposal builder output per Phase 7 chunk 7.3a Iteration 2
- * Option γ + Option β. Discriminated union over routing path:
+ * Stage 7 proposal builder output per Phase 7 chunk 7.3b Iteration 2
+ * Option γ activation. ProposalResult.kind 3-value union at chunk 7.3b
+ * activation (removed transitional 'deferred_chunk_7_3b_pending_activation'
+ * discriminator from chunk 7.3a); IngestDocumentOutput.status preserves
+ * the deferred union member per ADR-0022 additive discipline
+ * (defined-but-not-emitted post-activation).
  *
- *   - 'proposed_entry_card': ACTIVE route. vendor_invoice or
- *     payment_confirmation cited-bill produces ProposedEntryCard.
- *   - 'deferred_chunk_7_3b_pending_activation': DEFERRED route.
- *     born-paid bundle, receipt attach-payment-evidence, payment_confirmation
- *     no-cited-bill all return this discriminator at chunk 7.3a;
- *     chunk 7.3b activates ProposedMutationBundle + ProposedAttachment
- *     substrate.
+ *   - 'proposed_entry_card': vendor_invoice → post_bill OR
+ *     payment_confirmation cited-bill → record_bill_payment.
+ *   - 'proposed_attachment_card': receipt → attach_payment_evidence,
+ *     payment_confirmation no-cited-bill → attach_payment_evidence,
+ *     vendor_invoice with prior bill match → attach_invoice_to_existing_bill.
+ *   - 'proposed_mutation_bundle': born-paid case → born_paid_bill bundle
+ *     (post_bill + record_bill_payment children per ADR-0012 + ADR-0014 §11).
  */
 export type ProposalResult =
   | {
@@ -326,8 +335,12 @@ export type ProposalResult =
       card: unknown; // ProposedEntryCard shape per @/shared/schemas/accounting/proposedEntryCard.schema
     }
   | {
-      kind: 'deferred_chunk_7_3b_pending_activation';
-      reason: string;
+      kind: 'proposed_attachment_card';
+      card: unknown; // ProposedAttachmentCard shape per @/shared/schemas/document-platform/proposedAttachmentCard.schema
+    }
+  | {
+      kind: 'proposed_mutation_bundle';
+      bundle: unknown; // ProposedMutationBundle shape per @/shared/schemas/accounting/proposedMutationBundle.schema
     };
 
 export interface ExtractionStub {

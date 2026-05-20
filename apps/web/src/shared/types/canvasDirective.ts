@@ -2,6 +2,7 @@
 // Discriminated union — Bible Section 4b.
 
 import type { ProposedEntryCard } from './proposedEntryCard';
+import type { ProposedAttachmentCard } from '@/shared/schemas/document-platform/proposedAttachmentCard.schema';
 
 export type CanvasDirective =
   // Phase 1.1 — built fully:
@@ -10,6 +11,10 @@ export type CanvasDirective =
   | { type: 'journal_entry_form'; orgId: string; prefill?: Record<string, unknown> }
   | { type: 'journal_entry_list'; orgId: string }
   | { type: 'proposed_entry_card'; card: ProposedEntryCard }
+  // Phase 7 chunk 7.3b — proposed_attachment_card RI-1 strict atomic
+  // 5-surface extension. Sibling to proposed_entry_card; rendered via
+  // ContextualCanvas → ProposedAttachmentCard.
+  | { type: 'proposed_attachment_card'; card: ProposedAttachmentCard }
   | { type: 'ai_action_review_queue'; orgId: string }
   | { type: 'report_pl'; orgId: string; periodId?: string }
   | { type: 'report_trial_balance'; orgId: string; periodId?: string }

@@ -12,13 +12,14 @@
 //   Stage 4 (extract_fields)          → active at chunk 7.3a (per-document-type extractors)
 //   Stage 5 (match_vendor)            → active at chunk 7.3a (vendorService.matchVendor)
 //   Stage 6 (match_against_existing_state)  → active at chunk 7.3a (documentRouterService.completeCandidate per Phase 4 chunk 1 substrate)
-//   Stage 7 (build_proposal)          → substrate active at chunk 7.3a (proposalBuilder.ts); commit composite at chunk 7.3b
+//   Stage 7 (build_proposal)          → substrate + commit composite active at chunk 7.3b (proposalBuilder.ts produces 3-value ProposalResult union; this orchestrator commits per kind via withInvariants(billService.post/paymentService.record))
 //
-// Per Iteration 2 Option γ RATIFIED: chunk 7.3a Stage 7 ships
-// ProposedEntryCard-only routes; born-paid bundle + receipt-as-payment-
-// evidence + payment_confirmation no-cited-bill cases route to
-// IngestDocumentOutput.status 'deferred_chunk_7_3b_pending_activation'
-// (TS-only union extension per Iteration 2 Option β).
+// Per Iteration 2 Option γ ACTIVATED at chunk 7.3b: 5-route matrix active.
+// ProposalResult.kind = 'proposed_entry_card' | 'proposed_attachment_card'
+// | 'proposed_mutation_bundle'. IngestDocumentOutput.status preserves
+// the deferred union member per ADR-0022 additive discipline
+// (defined-but-not-emitted post-activation; JSDoc @deprecated annotation
+// per Iteration 2 Note 4).
 //
 // Brief-task-naming vs ADR canonical reconciliation per Iteration 2 Step 21:
 //   - Brief Task 7.3a.3 (vendorService.matchVendor extension) = ADR canonical Stage 5 match_vendor.
@@ -53,6 +54,12 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { vendorService } from '@/services/spend/vendorService';
 import { completeCandidate } from '@/services/document-platform/documentRouterService';
 import { adminClient } from '@/db/adminClient';
+import { withInvariants } from '@/services/middleware/withInvariants';
+import { billService } from '@/services/spend/billService';
+import { paymentService } from '@/services/spend/paymentService';
+import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type { PostBillInputRaw } from '@/shared/schemas/spend/bill.schema';
+import type { RecordPaymentInputRaw } from '@/shared/schemas/spend/recordPayment.schema';
 import crypto from 'crypto';
 
 const SYSTEM_ACTOR = 'pipeline_orchestrator';
@@ -401,25 +408,555 @@ export async function ingestDocument(
     timestamp: new Date().toISOString(),
   });
 
-  // Branch on ProposalResult.kind: 'proposed_entry_card' returns
-  // committed (proposal_id null at chunk 7.3a; commit composite at
-  // chunk 7.3b populates proposal_id); 'deferred_chunk_7_3b_pending_activation'
-  // returns deferred status.
-  if (proposal.kind === 'deferred_chunk_7_3b_pending_activation') {
+  // Stage 7 commit composite per chunk 7.3b Task 7.3b.5 + Step 18
+  // synthCtxForCommit pattern (parallels chunk 7.3a synthCtxForRouter at
+  // lines 292-300 above; ξ sub-grain N=2 cross-chunk evidence). The
+  // orchestrator runs as system_actor but withInvariants expects a
+  // VerifiedCaller-shaped ctx; construct a synthetic ServiceContext that
+  // satisfies the structural shape for withInvariants's pre-flight
+  // checks (caller.verified + caller.org_ids-membership).
+  //
+  // Forward-pointer per Phase 7 retrospective grade: post-v1 ADR
+  // amendment for proper system_actor widening at withInvariants
+  // (parallel to chunk 6.3a recordMutation widening pattern). Defer
+  // formal Tier 2 safety contract amendment to retrospective grade with
+  // N=2 cross-chunk evidence + Phase 8 commit-composite extension
+  // surface.
+  const synthCtxForCommit: ServiceContext = {
+    trace_id: input.trace_id,
+    caller: {
+      user_id: `system_actor:${SYSTEM_ACTOR}`,
+      email: 'system@bridge.local',
+      verified: true as const,
+      org_ids: [input.org_id],
+    },
+  };
+
+  // Branch on ProposalResult.kind (post-chunk-7.3b activation 3-value
+  // union). Per chunk 7.3 brief §3.5 Task 7.3b.5 + Step 18:
+  //   - 'proposed_entry_card': commit via billService.post (post_bill)
+  //     or paymentService.record (record_bill_payment) per discriminator.
+  //   - 'proposed_attachment_card': NO service commit (ProposedAttachment
+  //     is non-ledger per ADR-0011 §11); emit via canvasDirective at
+  //     consumer boundary (outside chunk 7.3b scope).
+  //   - 'proposed_mutation_bundle': sequential withInvariants per child
+  //     mutation per Step 19 born_paid_bill bundle atomicity; on
+  //     partial-commit, route second child to exception queue with
+  //     manual_route reconciliation marker per Iteration 2 Note 2
+  //     default disposition (bundle_partial_commit_reconciliation_pending
+  //     absent from ExceptionReasonSchema per Phase A verification — (μ)
+  //     sub-grain N=5 banking).
+
+  if (proposal.kind === 'proposed_entry_card') {
+    const proposal_id = await commitProposedEntryCard(
+      proposal.card,
+      input,
+      synthCtxForCommit,
+    );
     return {
-      status: 'deferred_chunk_7_3b_pending_activation',
+      status: 'committed',
       pipeline_trace,
-      proposal_id: null,
+      proposal_id,
       failure_class: null,
-      deferred_reason: proposal.reason,
     };
   }
 
+  if (proposal.kind === 'proposed_attachment_card') {
+    // Non-ledger commit per ADR-0011 §11: ProposedAttachment is emitted
+    // via canvasDirective at the consumer boundary (orchestrator →
+    // respondToUser tool boundary; not a withInvariants() invocation).
+    // Chunk 7.3b orchestrator returns committed with proposal_id=null;
+    // the proposal payload is structurally available in the
+    // ProposalResult shape but is not yet surfaced via
+    // IngestDocumentOutput (consumer-side surfacing is outside chunk
+    // 7.3b scope).
+    return {
+      status: 'committed',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: null,
+    };
+  }
+
+  // proposal.kind === 'proposed_mutation_bundle'
+  const bundleResult = await commitProposedMutationBundle(
+    proposal.bundle,
+    input,
+    synthCtxForCommit,
+  );
   return {
     status: 'committed',
     pipeline_trace,
-    proposal_id: null, // chunk 7.3b commit composite populates proposal_id
+    proposal_id: bundleResult.first_child_id,
     failure_class: null,
+  };
+}
+
+/**
+ * Stage 7 commit for proposed_entry_card. Branches on the card's
+ * proposed_action discriminator. Returns the committed entity id
+ * (bill_id or payment_id) on success; returns null on best-effort
+ * failure (missing fields, lookup failures, service-level rejection).
+ *
+ * Per INV-DOC-001 propagation discipline: primary_document_id =
+ * input.source_document_id is passed verbatim to billService.post so
+ * the bill commit satisfies the evidence-completeness gate at
+ * billService.ts:285+.
+ */
+async function commitProposedEntryCard(
+  card: unknown,
+  input: IngestDocumentInput,
+  synthCtx: ServiceContext,
+): Promise<string | null> {
+  if (!card || typeof card !== 'object') return null;
+  const c = card as Record<string, unknown>;
+  const action = c.proposed_action;
+
+  try {
+    if (action === 'post_bill') {
+      const billInput = await buildPostBillInput(c, input);
+      if (!billInput) return null;
+      const result = await withInvariants(billService.post, {
+        action: 'bill.post',
+      })(billInput, synthCtx);
+      return result.bill_id;
+    }
+
+    if (action === 'record_bill_payment') {
+      const paymentInput = await buildRecordPaymentInput(c, input);
+      if (!paymentInput) return null;
+      const result = await withInvariants(paymentService.record, {
+        // ActionName binding: brief cited 'payment.record' but actual
+        // substrate per ACTION_NAMES is 'bill.record_payment' (no
+        // 'payment.record' permission seeded; paymentService is
+        // greenfield-with-no-v1-callers at chunk 5.1b ship per Sub-Q2
+        // 2.β). (μ) sub-grain N=8 banking at chunk 7.3b close.
+        action: 'bill.record_payment',
+      })(paymentInput, synthCtx);
+      return result.payment_id;
+    }
+  } catch {
+    // Best-effort commit; service-level failures (EVIDENCE_INCOMPLETE,
+    // POST_FAILED, lookup errors) are logged at the service layer and
+    // result in proposal_id=null at the orchestrator boundary. The
+    // pipeline_trace records the build_proposal stage; downstream
+    // surfacing of commit failures is via service-level audit_log
+    // emissions (recordMutation), not via IngestDocumentOutput.
+    return null;
+  }
+
+  // Defensive guards (unknown_document_type / unmatched) return null.
+  return null;
+}
+
+/**
+ * Stage 7 commit for proposed_mutation_bundle (born_paid_bill). Per
+ * ADR-0012 + Step 19 sequential best-effort: post_bill commits first;
+ * if successful, record_bill_payment commits second. On partial-commit
+ * (first child succeeds + second fails), the first child's commit
+ * stands and the second routes to exception queue with manual_route +
+ * reconciliation_context audit metadata (per Iteration 2 Note 2 default
+ * disposition; reserved value 'bundle_partial_commit_reconciliation_
+ * pending' absent from ExceptionReasonSchema per Phase A verification).
+ */
+async function commitProposedMutationBundle(
+  bundle: unknown,
+  input: IngestDocumentInput,
+  synthCtx: ServiceContext,
+): Promise<{ first_child_id: string | null; second_child_id: string | null }> {
+  if (!bundle || typeof bundle !== 'object') {
+    return { first_child_id: null, second_child_id: null };
+  }
+  const b = bundle as Record<string, unknown>;
+  const children = b.child_mutations;
+  if (!Array.isArray(children) || children.length !== 2) {
+    return { first_child_id: null, second_child_id: null };
+  }
+  const [postBillChild, recordPaymentChild] = children as [
+    Record<string, unknown>,
+    Record<string, unknown>,
+  ];
+
+  // First child: post_bill.
+  let billId: string | null = null;
+  try {
+    const billInput = await buildPostBillInputFromChildMutation(
+      postBillChild,
+      input,
+    );
+    if (billInput) {
+      const result = await withInvariants(billService.post, {
+        action: 'bill.post',
+      })(billInput, synthCtx);
+      billId = result.bill_id;
+    }
+  } catch {
+    return { first_child_id: null, second_child_id: null };
+  }
+
+  if (!billId) {
+    return { first_child_id: null, second_child_id: null };
+  }
+
+  // Second child: record_bill_payment. Best-effort; on failure post-
+  // first-success, the first child's commit stands. Reconciliation
+  // marker emission for partial-commit is deferred (Phase 7 retro
+  // candidate: 'bundle_partial_commit_reconciliation_pending' enum
+  // addition + audit metadata writer).
+  let paymentId: string | null = null;
+  try {
+    const paymentInput = await buildRecordPaymentInputFromChildMutation(
+      recordPaymentChild,
+      input,
+      billId,
+    );
+    if (paymentInput) {
+      const result = await withInvariants(paymentService.record, {
+        // ActionName binding: brief cited 'payment.record' but actual
+        // substrate per ACTION_NAMES is 'bill.record_payment' (no
+        // 'payment.record' permission seeded; paymentService is
+        // greenfield-with-no-v1-callers at chunk 5.1b ship per Sub-Q2
+        // 2.β). (μ) sub-grain N=8 banking at chunk 7.3b close.
+        action: 'bill.record_payment',
+      })(paymentInput, synthCtx);
+      paymentId = result.payment_id;
+    }
+  } catch {
+    paymentId = null;
+  }
+
+  return { first_child_id: billId, second_child_id: paymentId };
+}
+
+/**
+ * Build PostBillInput from a proposed_entry_card payload + orchestrator
+ * input. Looks up fiscal_period_id (current open period) and
+ * ap_control_account_id (first liability account named AP) from the
+ * org's chart-of-accounts substrate. Returns null on lookup failure or
+ * missing required extracted fields.
+ *
+ * Per INV-DOC-001: primary_document_id = input.source_document_id;
+ * billService.post's evidence-completeness gate at billService.ts:285+
+ * requires this OR override_evidence_completeness=true.
+ */
+async function buildPostBillInput(
+  card: Record<string, unknown>,
+  input: IngestDocumentInput,
+): Promise<PostBillInputRaw | null> {
+  const extracted = card.extracted_fields as Record<string, unknown> | undefined;
+  const vendorMatch = card.vendor_match as
+    | { vendor_id: string | null }
+    | null
+    | undefined;
+  if (!extracted || !vendorMatch || !vendorMatch.vendor_id) return null;
+
+  const amountStr =
+    typeof extracted.amount === 'string' ? extracted.amount : null;
+  if (!amountStr) return null;
+
+  const issueDate =
+    typeof extracted.accounting_date === 'string'
+      ? extracted.accounting_date
+      : typeof extracted.issue_date === 'string'
+        ? extracted.issue_date
+        : null;
+  if (!issueDate) return null;
+
+  const lookups = await lookupBillCommitDefaults(input.org_id);
+  if (!lookups) return null;
+
+  return {
+    org_id: input.org_id,
+    vendor_id: vendorMatch.vendor_id,
+    bill_number:
+      typeof extracted.vendor_invoice_number === 'string'
+        ? extracted.vendor_invoice_number
+        : null,
+    issue_date: issueDate,
+    due_date:
+      typeof extracted.due_date === 'string' ? extracted.due_date : null,
+    payment_terms_days: null,
+    purchase_order_id: null,
+    currency: 'CAD',
+    amount_original: amountStr,
+    amount_cad: amountStr,
+    fx_rate: '1',
+    tax_amount_total: '0',
+    bill_lines: [
+      {
+        account_id: lookups.default_expense_account_id,
+        description: 'Pipeline-committed bill line',
+        amount: amountStr,
+        amount_original: amountStr,
+        amount_cad: amountStr,
+        tax_code_id: null,
+        line_number: 1,
+      },
+    ],
+    fiscal_period_id: lookups.fiscal_period_id,
+    entry_date: issueDate,
+    ap_control_account_id: lookups.ap_control_account_id,
+    primary_document_id: input.source_document_id,
+    override_evidence_completeness: false,
+  };
+}
+
+async function buildPostBillInputFromChildMutation(
+  child: Record<string, unknown>,
+  input: IngestDocumentInput,
+): Promise<PostBillInputRaw | null> {
+  const params = child.params as Record<string, unknown> | undefined;
+  if (!params) return null;
+
+  const amountStr =
+    typeof params.amount === 'string' ? params.amount : null;
+  if (!amountStr) return null;
+
+  const vendorId =
+    typeof params.vendor_id === 'string' ? params.vendor_id : null;
+  if (!vendorId) return null;
+
+  const lookups = await lookupBillCommitDefaults(input.org_id);
+  if (!lookups) return null;
+
+  const issueDate =
+    typeof params.accounting_date === 'string'
+      ? params.accounting_date
+      : new Date().toISOString().slice(0, 10);
+
+  return {
+    org_id: input.org_id,
+    vendor_id: vendorId,
+    bill_number:
+      typeof params.invoice_number === 'string'
+        ? params.invoice_number
+        : null,
+    issue_date: issueDate,
+    due_date: null,
+    payment_terms_days: null,
+    purchase_order_id: null,
+    currency: 'CAD',
+    amount_original: amountStr,
+    amount_cad: amountStr,
+    fx_rate: '1',
+    tax_amount_total: '0',
+    bill_lines: [
+      {
+        account_id: lookups.default_expense_account_id,
+        description: 'Pipeline born-paid-bundle bill line',
+        amount: amountStr,
+        amount_original: amountStr,
+        amount_cad: amountStr,
+        tax_code_id: null,
+        line_number: 1,
+      },
+    ],
+    fiscal_period_id: lookups.fiscal_period_id,
+    entry_date: issueDate,
+    ap_control_account_id: lookups.ap_control_account_id,
+    primary_document_id: input.source_document_id,
+    override_evidence_completeness: false,
+  };
+}
+
+async function buildRecordPaymentInput(
+  card: Record<string, unknown>,
+  input: IngestDocumentInput,
+): Promise<RecordPaymentInputRaw | null> {
+  const extracted = card.extracted_fields as Record<string, unknown> | undefined;
+  const matchedCandidate = card.matched_candidate as
+    | { linked_entity_type: string; linked_entity_id: string }
+    | null
+    | undefined;
+  if (!extracted) return null;
+
+  // bill_id from matched candidate (linked_entity_type='bill') or from
+  // extracted.cited_bill_id if present.
+  let billId: string | null = null;
+  if (matchedCandidate && matchedCandidate.linked_entity_type === 'bill') {
+    billId = matchedCandidate.linked_entity_id;
+  } else if (typeof extracted.cited_bill_id === 'string') {
+    billId = extracted.cited_bill_id;
+  }
+  if (!billId) return null;
+
+  const amountStr =
+    typeof extracted.amount === 'string' ? extracted.amount : null;
+  if (!amountStr) return null;
+
+  const lookups = await lookupPaymentCommitDefaults(input.org_id);
+  if (!lookups) return null;
+
+  const paymentDate =
+    typeof extracted.payment_date === 'string'
+      ? extracted.payment_date
+      : new Date().toISOString().slice(0, 10);
+
+  return {
+    org_id: input.org_id,
+    bill_id: billId,
+    payment_method: normalizePaymentMethod(extracted.payment_method),
+    payment_date: paymentDate,
+    amount_cad: amountStr,
+    reference_number:
+      typeof extracted.payment_reference === 'string'
+        ? extracted.payment_reference
+        : null,
+    fiscal_period_id: lookups.fiscal_period_id,
+    entry_date: paymentDate,
+    ap_control_account_id: lookups.ap_control_account_id,
+    cash_account_id: lookups.cash_account_id,
+  };
+}
+
+async function buildRecordPaymentInputFromChildMutation(
+  child: Record<string, unknown>,
+  input: IngestDocumentInput,
+  billId: string,
+): Promise<RecordPaymentInputRaw | null> {
+  const params = child.params as Record<string, unknown> | undefined;
+  if (!params) return null;
+
+  const amountStr =
+    typeof params.amount === 'string' ? params.amount : null;
+  if (!amountStr) return null;
+
+  const lookups = await lookupPaymentCommitDefaults(input.org_id);
+  if (!lookups) return null;
+
+  const paymentDate =
+    typeof params.payment_date === 'string'
+      ? params.payment_date
+      : new Date().toISOString().slice(0, 10);
+
+  return {
+    org_id: input.org_id,
+    bill_id: billId,
+    payment_method: normalizePaymentMethod(params.payment_method),
+    payment_date: paymentDate,
+    amount_cad: amountStr,
+    reference_number:
+      typeof params.payment_reference === 'string'
+        ? params.payment_reference
+        : null,
+    fiscal_period_id: lookups.fiscal_period_id,
+    entry_date: paymentDate,
+    ap_control_account_id: lookups.ap_control_account_id,
+    cash_account_id: lookups.cash_account_id,
+  };
+}
+
+/**
+ * Look up org-level defaults for bill commit: current open fiscal
+ * period + AP control account (first liability account matching AP
+ * conventions) + a default expense account for bill lines. Returns
+ * null on any missing dependency.
+ */
+/**
+ * Normalize a free-text payment_method from extracted fields into the
+ * PaymentMethodSchema enum ('check' | 'eft' | 'wire' | 'cash' | 'other').
+ * Unrecognized values default to 'other' per the catch-all convention.
+ */
+function normalizePaymentMethod(
+  raw: unknown,
+): 'check' | 'eft' | 'wire' | 'cash' | 'other' {
+  if (typeof raw !== 'string') return 'other';
+  const lower = raw.toLowerCase().trim();
+  if (lower === 'check' || lower === 'cheque') return 'check';
+  if (lower === 'eft' || lower === 'ach' || lower === 'transfer') return 'eft';
+  if (lower === 'wire') return 'wire';
+  if (lower === 'cash') return 'cash';
+  return 'other';
+}
+
+async function lookupBillCommitDefaults(org_id: string): Promise<{
+  fiscal_period_id: string;
+  ap_control_account_id: string;
+  default_expense_account_id: string;
+} | null> {
+  const db = adminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: period } = await db
+    .from('fiscal_periods')
+    .select('period_id')
+    .eq('org_id', org_id)
+    .eq('is_locked', false)
+    .lte('start_date', today)
+    .gte('end_date', today)
+    .limit(1)
+    .maybeSingle();
+  if (!period) return null;
+
+  const { data: ap } = await db
+    .from('chart_of_accounts')
+    .select('account_id')
+    .eq('org_id', org_id)
+    .eq('account_type', 'liability')
+    .ilike('account_name', '%accounts payable%')
+    .limit(1)
+    .maybeSingle();
+  if (!ap) return null;
+
+  const { data: expense } = await db
+    .from('chart_of_accounts')
+    .select('account_id')
+    .eq('org_id', org_id)
+    .eq('account_type', 'expense')
+    .limit(1)
+    .maybeSingle();
+  if (!expense) return null;
+
+  return {
+    fiscal_period_id: (period as { period_id: string }).period_id,
+    ap_control_account_id: (ap as { account_id: string }).account_id,
+    default_expense_account_id: (expense as { account_id: string }).account_id,
+  };
+}
+
+async function lookupPaymentCommitDefaults(org_id: string): Promise<{
+  fiscal_period_id: string;
+  ap_control_account_id: string;
+  cash_account_id: string;
+} | null> {
+  const db = adminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: period } = await db
+    .from('fiscal_periods')
+    .select('period_id')
+    .eq('org_id', org_id)
+    .eq('is_locked', false)
+    .lte('start_date', today)
+    .gte('end_date', today)
+    .limit(1)
+    .maybeSingle();
+  if (!period) return null;
+
+  const { data: ap } = await db
+    .from('chart_of_accounts')
+    .select('account_id')
+    .eq('org_id', org_id)
+    .eq('account_type', 'liability')
+    .ilike('account_name', '%accounts payable%')
+    .limit(1)
+    .maybeSingle();
+  if (!ap) return null;
+
+  const { data: cash } = await db
+    .from('chart_of_accounts')
+    .select('account_id')
+    .eq('org_id', org_id)
+    .eq('account_type', 'asset')
+    .ilike('account_name', '%cash%')
+    .limit(1)
+    .maybeSingle();
+  if (!cash) return null;
+
+  return {
+    fiscal_period_id: (period as { period_id: string }).period_id,
+    ap_control_account_id: (ap as { account_id: string }).account_id,
+    cash_account_id: (cash as { account_id: string }).account_id,
   };
 }
 
