@@ -28,7 +28,13 @@ class OCRRequest(BaseModel):
 
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    bytes_b64: bytes
+    # bytes_b64 is base64-encoded string on the wire (JSON has no bytes type;
+    # TS-side Zod ships z.string() for this field). Pydantic 2 strict mode
+    # rejects str → bytes auto-coercion (Pydantic 1 behavior removed);
+    # declare as str + decode in main.py via base64.b64decode (which accepts
+    # both str and bytes inputs). Phase 7 v1 close demo Session 42 fix-forward
+    # 2026-05-20 — chunk-7.1b-impl-grade local-deploy-substrate-gap N=8.
+    bytes_b64: str
     content_hash: str
     trace_id: str
 

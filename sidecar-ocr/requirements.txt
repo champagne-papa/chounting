@@ -1,4 +1,20 @@
 modal>=0.62.0
-paddleocr>=2.7.0
-paddlepaddle>=2.5.0
+# paddleocr 2.7.x ↔ paddlepaddle 2.5-2.6.x compatibility window per chunk
+# 7.1b authoring. paddlepaddle 3.x introduced PIR (Paddle Intermediate
+# Representation) executor; some ops (ConvertPirAttribute2RuntimeAttribute
+# for oneDNN ArrayAttribute<DoubleAttribute>) don't fully support PIR
+# conversion path → OCR inference crash. Upper-bound paddlepaddle to <3.0
+# to stay on the stable 2.x line. Phase 7 v1 close demo Session 42
+# fix-forward 2026-05-20 — chunk-7.1b-impl-grade local-deploy-substrate-gap
+# N=9 firing.
+paddleocr>=2.7.0,<3.0.0
+paddlepaddle>=2.5.0,<3.0.0
 pydantic>=2.0.0
+fastapi[standard]>=0.110.0
+# PyMuPDF (imports as `fitz`) — PaddleOCR 2.x line uses for PDF page
+# rasterization before OCR. PaddleOCR's error message recommends
+# `pip install fitz` but that's an unrelated PyPI package; the correct
+# install is `pymupdf` (the `fitz` import name is historical from the
+# original MuPDF library). Phase 7 v1 close demo Session 42 fix-forward
+# 2026-05-20 — chunk-7.1b-impl-grade local-deploy-substrate-gap N=10.
+pymupdf>=1.23.0

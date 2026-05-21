@@ -1,0 +1,147 @@
+[
+  {
+    "fixture": {
+      "label": "vendor_invoice",
+      "filename": "vendor_invoice.pdf",
+      "expected_proposal_kind": "proposed_entry_card (post_bill route)"
+    },
+    "trace_id": "bf42882b-8c8f-43c9-b20b-38ef5e2989f6",
+    "source_document_id": "31bac865-0830-49a6-a42b-55735525b39b",
+    "document_case_id": "2ff4e90e-61bb-497d-87c7-f39b93c19da2",
+    "ingest_output": {
+      "status": "pipeline_failed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-21T01:11:52.534Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "6983e88c57dd07c371de653ab98b874e8752bbe672947a3bba4482e630df7926",
+          "output_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "model": null,
+          "timestamp": "2026-05-21T01:11:52.568Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": "transient_exhausted"
+    },
+    "elapsed_ms": 30458
+  },
+  {
+    "fixture": {
+      "label": "receipt",
+      "filename": "receipt.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence)"
+    },
+    "trace_id": "f1dbf16e-357f-47ef-94be-66dc5faa92d1",
+    "source_document_id": "d12c3a0a-96fb-49a2-959f-22977f7094be",
+    "document_case_id": "ff173629-27b0-48b8-ade1-e8c0e7428029",
+    "ingest_output": {
+      "status": "pipeline_failed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-21T01:12:22.496Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "07a315b1063cf23e721af0672ff18313a6e6e588e7b9ab004dcbb9b8e2e6f960",
+          "output_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "model": null,
+          "timestamp": "2026-05-21T01:12:22.517Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": "transient_exhausted"
+    },
+    "elapsed_ms": 29903
+  },
+  {
+    "fixture": {
+      "label": "payment_confirmation",
+      "filename": "payment_confirmation.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence; no cited bill)"
+    },
+    "trace_id": "def3f808-385f-4d32-a37d-6f7719b51353",
+    "source_document_id": "69b197a6-4191-44ae-9916-984ad0a6346d",
+    "document_case_id": "889ba44e-3477-4e87-b426-db951fcd5544",
+    "ingest_output": {
+      "status": "committed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-21T01:12:52.421Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "8cc42424acedac1c71e9e29a35ca4d4484051b88570f9712bffe072e533ab637",
+          "output_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "model": null,
+          "timestamp": "2026-05-21T01:12:52.445Z"
+        },
+        {
+          "stage_name": "run_ocr",
+          "input_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "output_hash": "37effdcfa29cf2a216d35f944b531e2515d5dd2c8d4b692447f163f579231c65",
+          "model": "paddleocr-2.7-pp-ocrv4",
+          "timestamp": "2026-05-21T01:13:09.040Z"
+        },
+        {
+          "stage_name": "classify_document_type",
+          "input_hash": "55e3e36909227ea9ff97884c280b5002c1b0a28ee08295e4cc9dee280d6c46e4",
+          "output_hash": "f3fc7fb79a8f3c2773929e9342658865911ca6780b3c6bfcf12058d407790447",
+          "model": null,
+          "timestamp": "2026-05-21T01:13:09.110Z"
+        },
+        {
+          "stage_name": "extract_fields",
+          "input_hash": "223fcd1617ed12a8828efcf6bab90a7ad42a8d371d8faae9b3ca8fed6b0c05ff",
+          "output_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "model": null,
+          "timestamp": "2026-05-21T01:13:09.110Z"
+        },
+        {
+          "stage_name": "ai_fallback_extract",
+          "input_hash": "e538cdf35e4758b0fdfc84ccf15f2c4a0fdbf41fc365be50c5c80bb4e0e5ed60",
+          "model": "claude-sonnet-4-5",
+          "timestamp": "2026-05-21T01:13:09.111Z",
+          "output_hash": "745cb5096d4c3d63d1a745c13a47e2a45b303674439c10c74d05a3da8b2f94dd"
+        },
+        {
+          "stage_name": "match_vendor",
+          "input_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "output_hash": "d9c100ce6809c07821826aced50cd284b32d1db0d7bc3ed5156b560830378128",
+          "model": null,
+          "timestamp": "2026-05-21T01:13:11.602Z"
+        },
+        {
+          "stage_name": "match_against_existing_state",
+          "input_hash": "65ad7124136f1c262c1b7f3599553e61a6ed6c23fd0861d36a00c3fb0ba38849",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-21T01:13:11.619Z"
+        },
+        {
+          "stage_name": "build_proposal",
+          "input_hash": "745cb5096d4c3d63d1a745c13a47e2a45b303674439c10c74d05a3da8b2f94dd",
+          "output_hash": "b1c5653aec8856de4bfd99c4ede786538a1f83754dab476eeac0130e99069f8e",
+          "model": null,
+          "timestamp": "2026-05-21T01:13:11.620Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 19278
+  }
+]

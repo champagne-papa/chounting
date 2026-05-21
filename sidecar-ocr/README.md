@@ -30,7 +30,14 @@ sign + verify request bodies. v1 ships manual rotation per ADR-0014 §3.
    ```
    MODAL_OCR_HMAC_SECRET=<secret>
    ```
-3. Set on Modal side: `modal secret create modal-ocr-hmac-secret value=<secret>`.
+3. Set on Modal side: `modal secret create modal-ocr-hmac-secret MODAL_OCR_HMAC_SECRET=<secret>`.
+   **Important:** the KEY name must be exactly `MODAL_OCR_HMAC_SECRET` (not
+   `value`); the KEY becomes the env var name inside the deployed Modal
+   container, and `main.py:75` reads `os.environ.get("MODAL_OCR_HMAC_SECRET")`.
+   Mismatched KEY → 503 `MODAL_OCR_HMAC_SECRET missing` at runtime. Chunk
+   7.1b shipped with `value=<secret>` documentation; Phase 7 v1 close demo
+   surfaced the mismatch + corrected per chunk-7.1b-impl-grade local-deploy-
+   substrate-gap sub-pattern N=6 (Session 42 fix-forward 2026-05-20).
 
 ### Deploy
 
@@ -65,7 +72,7 @@ default; founder runs locally post-deployment).
 ## Secret rotation policy (v1 manual)
 
 1. Generate new secret: `bash generate-secret.sh`.
-2. Update Modal secret: `modal secret update modal-ocr-hmac-secret value=<new>`.
+2. Update Modal secret: `modal secret update modal-ocr-hmac-secret MODAL_OCR_HMAC_SECRET=<new>` (KEY name must match container's env var lookup; see HMAC secret provisioning step 3).
 3. Update Next.js `.env.local` + Vercel production env: `MODAL_OCR_HMAC_SECRET=<new>`.
 4. Restart Next.js (Vercel auto-redeploys on env var change).
 

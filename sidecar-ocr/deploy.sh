@@ -21,7 +21,7 @@ if ! command -v modal &>/dev/null; then
   exit 1
 fi
 
-if ! modal token current &>/dev/null; then
+if ! modal token info &>/dev/null; then
   echo "ERROR: Modal CLI not authenticated. Run: modal token new" >&2
   exit 1
 fi
@@ -29,7 +29,10 @@ fi
 # Verify HMAC secret exists in Modal secret store (best-effort).
 if ! modal secret list 2>/dev/null | grep -q "modal-ocr-hmac-secret"; then
   echo "WARNING: modal-ocr-hmac-secret not found in Modal secret store." >&2
-  echo "Run: modal secret create modal-ocr-hmac-secret value=\$(bash generate-secret.sh)" >&2
+  echo "Run: modal secret create modal-ocr-hmac-secret MODAL_OCR_HMAC_SECRET=\$(bash generate-secret.sh)" >&2
+  # KEY name must be MODAL_OCR_HMAC_SECRET (matches main.py:75 env-var lookup).
+  # README chunk-7.1b documented `value=<secret>` was incorrect; Phase 7 v1
+  # close demo Session 42 fix-forward 2026-05-20 corrected both surfaces.
   echo "Continuing deploy; sidecar will return 503 on requests until secret is set." >&2
 fi
 

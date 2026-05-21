@@ -13,7 +13,7 @@ Authentication: HMAC-SHA256 over canonical request content (the
 {bytes_b64, content_hash, trace_id} fields serialized as canonical
 JSON) using MODAL_OCR_HMAC_SECRET; verified via middleware/hmac.py
 before any OCR work. v1 ships the signature inside the JSON body
-under __hmac_signature key (Modal @modal.web_endpoint simplification);
+under __hmac_signature key (Modal @modal.fastapi_endpoint simplification);
 ADR-0014 §3 X-Auth-HMAC header form is post-v1 amendment per chunk
 7.1b §1.2 (ζ) divergence absorption.
 
@@ -41,6 +41,12 @@ image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements.txt")
     .apt_install("libgl1", "libglib2.0-0")
+    # Phase 7 v1 close demo fix-forward (2026-05-20; chunk-7.1b-impl-grade
+    # local-deploy-substrate-gap N=5): Modal copies only the file
+    # containing @app decorators by default; sibling middleware/ + schemas/
+    # subpackages must be explicitly mounted, otherwise container crashes
+    # at cold-start with `ModuleNotFoundError: No module named 'middleware'`.
+    .add_local_python_source("middleware", "schemas")
 )
 
 
@@ -62,7 +68,7 @@ def _canonical_signing_body(payload: dict) -> bytes:
 
 
 @app.function(image=image, secrets=[modal.Secret.from_name("modal-ocr-hmac-secret")])
-@modal.web_endpoint(method="POST")
+@modal.fastapi_endpoint(method="POST")
 def run_ocr(request: dict) -> dict:
     """OCR endpoint per ADR-0014 §3 topology contract.
 
