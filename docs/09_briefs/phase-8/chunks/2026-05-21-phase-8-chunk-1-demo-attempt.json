@@ -1,0 +1,77 @@
+[
+  {
+    "fixture": {
+      "label": "vendor_invoice",
+      "filename": "vendor_invoice.pdf",
+      "expected_proposal_kind": "proposed_entry_card (post_bill route)"
+    },
+    "trace_id": "1560d240-b699-4fd1-97a4-84bb6976b023",
+    "source_document_id": "adc306a6-93d5-460c-819c-e21b3efebc21",
+    "document_case_id": "496004d3-b781-403e-bd95-9ec15f2f0437",
+    "ingest_output": {
+      "status": "dedup_short_circuit",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_short_circuit",
+          "input_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "output_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "model": null,
+          "timestamp": "2026-05-21T09:11:59.809Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 69
+  },
+  {
+    "fixture": {
+      "label": "receipt",
+      "filename": "receipt.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence)"
+    },
+    "trace_id": "c29a0dfa-dd6e-4406-88ab-c4930746669d",
+    "source_document_id": "eb9bca9d-e06e-4d12-9db2-a50372cdd7a0",
+    "document_case_id": "f9649ca7-3253-4c91-98a4-df6ec1598cf2",
+    "ingest_output": {
+      "status": "dedup_short_circuit",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_short_circuit",
+          "input_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "output_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "model": null,
+          "timestamp": "2026-05-21T09:11:59.865Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 55
+  },
+  {
+    "fixture": {
+      "label": "payment_confirmation",
+      "filename": "payment_confirmation.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence; no cited bill)"
+    },
+    "trace_id": "c0abf881-1510-4a46-ba0c-50fd46cff7ff",
+    "source_document_id": "7e64abbc-562a-4b08-9a19-fb85e95d3cd9",
+    "document_case_id": "8688877a-c3b7-4d4b-a04c-a89e2f086fe0",
+    "ingest_output": {
+      "status": "dedup_short_circuit",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_short_circuit",
+          "input_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "output_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "model": null,
+          "timestamp": "2026-05-21T09:11:59.907Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 38
+  }
+]
