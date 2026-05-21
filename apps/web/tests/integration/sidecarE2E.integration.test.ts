@@ -4,16 +4,28 @@
 // per brief §4 Task 7.1b.9 acceptance criteria.
 //
 // Gated behind MODAL_OCR_HMAC_SECRET + MODAL_OCR_SIDECAR_URL env-var
-// presence. Skips in CI by default per v1 manual-trigger design intent
-// (Note 1 bank-state-and-proceed; founder runs E2E manually post-
-// deployment).
+// presence AND explicit TEST_SIDECAR_E2E=1 opt-in. Skips in CI by
+// default per v1 manual-trigger design intent (Note 1 bank-state-and-
+// proceed; founder runs E2E manually post-deployment).
+//
+// Phase 8 chunk 1 amendment 2026-05-21: explicit TEST_SIDECAR_E2E=1
+// opt-in added per Phase 8 chunk 1 §1.2 (β) deviation absorption.
+// MODAL env-var presence in .env.local (set during Session 42 demo
+// prep) was activating this test in unintended contexts (chunk-impl
+// close gates on developer machines); test as written uses placeholder
+// content_hash + placeholder storage_key without provisioning real
+// fixture PDF (see line 37 comment) and reliably fails in those
+// contexts. Explicit opt-in restores chunk 7.1b "founder runs E2E
+// manually" design intent. Canonical fix (re-author against chunk 6.2b
+// drag-drop fixture pattern with real PDF + real hash + real storage
+// upload) is Phase 8 retrospective T1 candidate.
 //
 // To run locally:
 //   1. cd sidecar-ocr && bash deploy.sh           # deploy to Modal
-//   2. modal secret create modal-ocr-hmac-secret value=$(bash sidecar-ocr/generate-secret.sh)
+//   2. modal secret create modal-ocr-hmac-secret MODAL_OCR_HMAC_SECRET=$(bash sidecar-ocr/generate-secret.sh)
 //   3. echo "MODAL_OCR_HMAC_SECRET=<secret>" >> apps/web/.env.local
 //   4. echo "MODAL_OCR_SIDECAR_URL=<deployed-url>" >> apps/web/.env.local
-//   5. cd apps/web && pnpm test:integration tests/integration/sidecarE2E
+//   5. cd apps/web && TEST_SIDECAR_E2E=1 pnpm test tests/integration/sidecarE2E
 
 import { describe, it, expect } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
@@ -22,8 +34,10 @@ import { ingestDocument } from '@/agent/orchestrator/extraction/ingestDocument';
 const HAS_MODAL_SECRETS = Boolean(
   process.env.MODAL_OCR_HMAC_SECRET && process.env.MODAL_OCR_SIDECAR_URL,
 );
+const HAS_E2E_OPT_IN = process.env.TEST_SIDECAR_E2E === '1';
+const SHOULD_RUN_E2E = HAS_MODAL_SECRETS && HAS_E2E_OPT_IN;
 
-describe.skipIf(!HAS_MODAL_SECRETS)(
+describe.skipIf(!SHOULD_RUN_E2E)(
   'Phase 7 chunk 7.1b — Modal sidecar E2E (deployed)',
   () => {
     const db = adminClient();

@@ -22,7 +22,7 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
 import { OCRResponseSchema, type OCRResponse } from './schemas';
 
-const PER_REQUEST_TIMEOUT_MS = 10_000;
+const PER_REQUEST_TIMEOUT_MS = 60_000;
 
 export interface InvokeSidecarInput {
   bytes: Uint8Array;
