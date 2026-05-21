@@ -28,9 +28,9 @@
 - `apps/web/tests/unit/` directory (existing unit test substrate per Sub-Q18 three-surface lock)
 - `apps/web/tests/unit/components/` (NEW subdirectory per Sub-Q18 net-new framing; verify NON-existence)
 - `apps/web/tests/integration/e2e/` (existing e2e test scaffolding from chunk 7.3b ship; 3 e2e test files expected per cycle-close §10.4)
-- `apps/web/src/components/document-platform/DocumentCard.tsx` (or analogous; DocumentCard substrate from chunk 7.3b)
-- `apps/web/src/components/document-platform/ProposedAttachmentCard.tsx` (or analogous; ProposedAttachmentCard substrate from chunk 6.2b)
-- `apps/web/src/components/document-platform/PendingDocumentsView.tsx` (or analogous; PendingDocumentsView substrate from chunk 7.3b)
+- `apps/web/src/components/canvas/DocumentCard.tsx` (DocumentCard substrate from chunk 7.3b; canonical path at canvas/ subdirectory verified at Phase A grade)
+- `apps/web/src/components/canvas/ProposedAttachmentCard.tsx` (ProposedAttachmentCard substrate from chunk 6.2b; canonical path at canvas/ subdirectory verified at Phase A grade)
+- `apps/web/src/components/canvas/PendingDocumentsView.tsx` (PendingDocumentsView substrate from chunk 7.3b; canonical path at canvas/ subdirectory verified at Phase A grade)
 
 **Files NOT created:** Chunks 5 + 6 implementation substrate. Per Candidate (b) ratification: chunks 5 + 6 impl deferred to canonical §9.5 sequencing at Sessions 59+ grade.
 
@@ -287,7 +287,7 @@ Cross-reference Step 1 output against Step 2 output. Each ADR-NNNN-... in Step 1
 - [ ] **Step 3: Enumerate substrate path citations (vitest config + e2e + components + unit test substrate).**
 
 ```bash
-grep -n "vitest.config\|tests/unit\|tests/integration/e2e\|components/document-platform\|DocumentCard\|ProposedAttachmentCard\|PendingDocumentsView" docs/09_briefs/phase-8/chunks/2026-05-21-phase-8-chunks-5-6.md | head -30
+grep -n "vitest.config\|tests/unit\|tests/integration/e2e\|components/canvas\|DocumentCard\|ProposedAttachmentCard\|PendingDocumentsView" docs/09_briefs/phase-8/chunks/2026-05-21-phase-8-chunks-5-6.md | head -30
 ```
 
 Cross-reference against Phase A grade Steps 12 + 13 verified paths. Each substrate path citation in the brief must match canonical path verified at Phase A grade.
