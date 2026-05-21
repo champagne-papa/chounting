@@ -25,7 +25,7 @@
 - `docs/07_governance/adr/0011-document-platform.md` (audit trail substrate consumer surface)
 - `docs/07_governance/adr/0016-document-relationship-graph.md` (linked_entity_type substrate inheritance from chunk 2)
 - `apps/web/src/services/document-platform/documentRouterService.ts` (completeCandidate / resolveCandidates / dispatchTrigger surfaces at Phase 4 chunks 1-3 ship state)
-- `apps/web/src/agent/orchestrator/ingestDocument.ts` (pipeline_trace JSONB writer substrate from Phase 7 chunk 7.3b)
+- `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts` (pipeline_trace JSONB writer substrate from Phase 7 chunk 7.3b)
 
 **Files to grep (Phase A discovery):**
 - `apps/web/src/shared/schemas/document-platform/` (candidate_features schema location verification; consumer-only at chunk 4 grade)
@@ -124,7 +124,7 @@ Confirm Subsystem 1 (`completeCandidate`) + Subsystem 2 (`resolveCandidates`) + 
 - [ ] **Step 11: Verify ingestDocument.ts pipeline_trace JSONB writer substrate.**
 
 ```bash
-grep -n "pipeline_trace\|stage_record\|router_match" apps/web/src/agent/orchestrator/ingestDocument.ts | head -10
+grep -n "pipeline_trace\|stage_record\|router_match" apps/web/src/agent/orchestrator/extraction/ingestDocument.ts | head -10
 ```
 
 Confirm pipeline_trace writer substrate inheritance from Phase 7 chunk 7.3b ship. Identify pipeline_trace stage record extension surface for chunk 4 router_match_against_state stage record emission.
@@ -159,7 +159,7 @@ The briefing must include:
 
 (b) **Substantive scope (extracted from cycle-close §5.1 + §7.2)**: chunk 4 = framing #4 sub-chunk c integration + audit trail + downstream consumer wiring. Three named axes:
 
-- **Axis 1**: pipeline_trace JSONB router_match_against_state stage record per ADR-0018 §2 lines 492-504 Subsystem 1 audit trail framing. New pipeline_trace stage record entry at `documentRouterService.completeCandidate` function-close grade capturing chunk 2 per-document-type candidate generation outputs + chunk 3 per-feature scoring composition outputs at audit grade. Substrate writer: `apps/web/src/agent/orchestrator/ingestDocument.ts` per Phase 7 chunk 7.3b inheritance.
+- **Axis 1**: pipeline_trace JSONB router_match_against_state stage record per ADR-0018 §2 lines 492-504 Subsystem 1 audit trail framing. New pipeline_trace stage record entry at `documentRouterService.completeCandidate` function-close grade capturing chunk 2 per-document-type candidate generation outputs + chunk 3 per-feature scoring composition outputs at audit grade. Substrate writer: `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts` per Phase 7 chunk 7.3b inheritance.
 - **Axis 2**: ADR-0007 §Q30 Logic Receipt audit composition consumer surface. Chunk 4 substrate consumes chunk 3 candidate_features Zod-typed schema shape + chunk 2 per-document-type emission at Logic Receipt audit composition surface. Logic Receipt parallel field shape per Layer 2 item #B amendment ratification timing (paired with chunk 9 per Sub-Q9 substrate-grade-first lock; chunk 4 consumer-only at Logic Receipt grade). ProposalJustificationSchema formal Zod codification deferred to chunk 9 grade.
 - **Axis 3**: Downstream consumer wiring at Subsystem 2 (`resolveCandidates`) ambiguity resolution surface + Subsystem 3 (`dispatchTrigger`) re-evaluation re-routing decision wiring. Subsystem 2 consumes chunk 3 expanded scoring output surface at ambiguity-margin-zero discipline; Subsystem 3 consumes Subsystem 2 routing outcome at T-series dispatch decision grade.
 
