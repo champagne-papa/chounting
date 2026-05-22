@@ -185,7 +185,16 @@ function buildVendorInvoiceProposal(input: ProposalBuilderInput): ProposalResult
   const topCandidate = pickTopCandidate(relationshipCandidates);
 
   // Prior-bill-matched route: attach_invoice_to_existing_bill ProposedAttachment.
-  if (topCandidate && topCandidate.linked_entity_type === 'bill') {
+  // Null linked_entity_id (Scenario A inferred-target invoice-arrives-no-bill-yet
+  // per ADR-0015 §7) falls through to post_bill ProposedEntry below — chunk 4
+  // Stage 7 routing decision per chunk 4 brief Task 5.4.5 Approach A (pure
+  // guard extension): null linked_entity_id cannot attach to a non-existent
+  // bill, so create one via post_bill.
+  if (
+    topCandidate &&
+    topCandidate.linked_entity_type === 'bill' &&
+    topCandidate.linked_entity_id !== null
+  ) {
     return {
       kind: 'proposed_attachment_card',
       card: {
@@ -203,7 +212,8 @@ function buildVendorInvoiceProposal(input: ProposalBuilderInput): ProposalResult
     };
   }
 
-  // No prior bill matched: post_bill ProposedEntry.
+  // No prior bill matched (or matched candidate is Scenario A inferred-target):
+  // post_bill ProposedEntry.
   return {
     kind: 'proposed_entry_card',
     card: {
@@ -252,9 +262,13 @@ function buildPaymentConfirmationProposal(input: ProposalBuilderInput): Proposal
     };
   }
 
-  // No cited bill + matched candidate (e.g., payment row matched by
-  // amount + date): attach_payment_evidence ProposedAttachment.
-  if (topCandidate) {
+  // No cited bill + matched candidate with concrete entity (e.g., payment
+  // row matched by amount + date): attach_payment_evidence ProposedAttachment.
+  // Null linked_entity_id is type-safety defense — payment_confirmation
+  // Scenario A is NOT in chunk 4 scope (only vendor_invoice + receipt
+  // emit inferred-target candidates), so this guard is structurally
+  // unreachable at v1 but defends the widened RelationshipCandidate type.
+  if (topCandidate && topCandidate.linked_entity_id !== null) {
     return {
       kind: 'proposed_attachment_card',
       card: {
@@ -298,7 +312,15 @@ function buildReceiptProposal(input: ProposalBuilderInput): ProposalResult {
 
   const topCandidate = pickTopCandidate(relationshipCandidates);
 
-  if (topCandidate) {
+  // Concrete-entity match: attach_payment_evidence ProposedAttachment.
+  // Null linked_entity_id (Scenario A variant (payment, receipt) receipt-as-
+  // primary per ADR-0015 §7) falls through to defensive_guard below — chunk 4
+  // Stage 7 routing decision per chunk 4 brief Task 5.4.5: T2 propose_payment_
+  // record dispatch reserved pending paymentService.ts (chunk 8); at chunk 4
+  // grade orchestrator routes the defensive_guard payload to exception queue
+  // at exception_reason='inferred_target_unmatched_v1' per ADR-0010
+  // substrate-now-enforcement-later.
+  if (topCandidate && topCandidate.linked_entity_id !== null) {
     return {
       kind: 'proposed_attachment_card',
       card: {
@@ -316,7 +338,7 @@ function buildReceiptProposal(input: ProposalBuilderInput): ProposalResult {
     };
   }
 
-  // No match: defensive defer.
+  // No match (or Scenario A variant inferred-target): defensive defer.
   return {
     kind: 'proposed_entry_card',
     card: {

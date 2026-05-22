@@ -195,7 +195,7 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
     }
   });
 
-  it('Stages 0+1+2+3 active + Stages 4-7 stub: produces 8 pipeline_trace records on golden path (Tier A match)', async () => {
+  it('Stages 0+1+2+3 active + Stages 4-7 stub: produces 9 pipeline_trace records on golden path (Tier A match)', async () => {
     const trace_id = crypto.randomUUID();
     traceIds.push(trace_id);
     const sourceDocId = await seedSourceDocument({ trace_id });
@@ -208,15 +208,17 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
 
     expect(result.status).toBe('committed');
     expect(result.failure_class).toBeNull();
-    expect(result.pipeline_trace).toHaveLength(8);
+    expect(result.pipeline_trace).toHaveLength(9);
 
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
-    // Per ADR-0014 §13 canonical (chunks 7.1b + 7.2 + 7.3a active):
-    // dedup_by_hash + byte_fetch + run_ocr + classify_document_type +
-    // extract_fields + match_vendor + match_against_existing_state +
-    // build_proposal. Tier A classification path emits parent only
-    // (no ai_fallback_classify child sub-stage); Tier A extraction
-    // path emits parent only (no ai_fallback_extract child sub-stage).
+    // Per ADR-0014 §13 canonical (chunks 7.1b + 7.2 + 7.3a active) +
+    // chunk 4 Phase 8 Task 1 (Subsystem-1-grade router_match_against_state
+    // stage record per ADR-0018 §2 lines 492-504; emitted alongside the
+    // orchestrator-grade match_against_existing_state record): dedup_by_hash
+    // + byte_fetch + run_ocr + classify_document_type + extract_fields +
+    // match_vendor + match_against_existing_state + router_match_against_state
+    // + build_proposal. Tier A classification + extraction paths emit
+    // parent only (no ai_fallback child sub-stages).
     expect(stageNames).toEqual([
       'dedup_no_match',
       'byte_fetch',
@@ -225,6 +227,7 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
       'extract_fields',
       'match_vendor',
       'match_against_existing_state',
+      'router_match_against_state',
       'build_proposal',
     ]);
 

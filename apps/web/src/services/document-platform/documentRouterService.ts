@@ -259,7 +259,12 @@ interface NewCandidatePayload {
   source_document_id: string;
   supersedes_candidate_id: string | null;
   linked_entity_type: string;
-  linked_entity_id: string;
+  // Null at Scenario A inferred-target emission: vendor_invoice with
+  // linked_entity_type='bill' (invoice-arrives-no-bill-yet) per ADR-0015 §7;
+  // receipt with linked_entity_type='payment' (receipt-as-primary variant).
+  // Scenario B existing-target emissions stay non-null. Layer 1 column
+  // NULL-able per migration 20240159000000.
+  linked_entity_id: string | null;
   link_role: string;
   confidence_score: number;
   candidate_features: CandidateFeatures;
@@ -576,6 +581,25 @@ async function rematchCandidate(
     | undefined;
   let vendor_id: string | null = null;
 
+  // Defensive null-guard at Scenario A inferred-target rematch grade.
+  // Null priorCandidate.linked_entity_id at v1 is structurally unreachable
+  // per ADR-0011 §9 supersession discipline (Scenario A candidates are
+  // freshly emitted at chunk 4 grade; no prior re-match cycle has fired
+  // against them; T1/T3/T5/T8/T10 dispatches handle inferred-target
+  // maturation before any rematch). Defensive degradation matches the
+  // unrecognized-linked_entity_type fallthrough below.
+  if (priorCandidate.linked_entity_id === null) {
+    log.warn(
+      {
+        case_id,
+        candidate_id: priorCandidate.id,
+        linked_entity_type: priorCandidate.linked_entity_type,
+      },
+      'rematchCandidate: null linked_entity_id at prior candidate (Scenario A inferred-target); structurally unreachable at v1 per ADR-0011 §9; returning [] defensively',
+    );
+    return [];
+  }
+
   if (priorCandidate.linked_entity_type === 'bill') {
     const { data, error } = await db
       .from('bills')
@@ -642,7 +666,13 @@ async function rematchCandidate(
     trace_id,
   };
 
-  return await completeCandidate(reconstructedInput, ctx);
+  // Re-evaluation suppresses Scenario A inferred-target emission so an
+  // orphaned prior candidate (e.g., T5 on a bill transitioned out of the
+  // watched set) routes to exception queue at rule 4 rather than silently
+  // shifting to a Scenario A candidate_superseded outcome.
+  return await completeCandidate(reconstructedInput, ctx, {
+    suppress_inferred_target: true,
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -735,8 +765,19 @@ function computeStringMatchFeature(
 export async function completeCandidate(
   input: CompleteCandidateInputRaw,
   ctx: ServiceContext,
+  options: { suppress_inferred_target?: boolean } = {},
 ): Promise<DocumentRelationshipCandidate[]> {
   const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+
+  // suppress_inferred_target gates the chunk 4 Scenario A emission paths
+  // (vendor_invoice invoice-arrives-no-bill-yet, receipt receipt-as-primary).
+  // Subsystem 3 re-evaluation (rematchCandidate) passes true to preserve
+  // the "orphaned prior candidate → exception queue" semantic at T5/T8/T10
+  // dispatch grade per brief Task 5.4.2 framing ("Scenario A inferred-target
+  // candidates are NEWLY created via Subsystem 1 emission at chunk 4 grade;
+  // no prior re-match cycle has fired against them"). Initial Subsystem 1
+  // invocation leaves the flag at its default (false) so Scenario A emits.
+  const suppressInferredTarget = options.suppress_inferred_target === true;
 
   // Layer 2 boundary: Zod parse at service entry.
   let parsed: CompleteCandidateInput;
@@ -814,8 +855,15 @@ export async function completeCandidate(
   // §item 5(f)). Subsystem 1 avoids producing candidates that
   // duplicate an existing committed link for the same source_document.
   const existingLinks = await listLinksForCaseSourceDocuments(db, [parsed.source_document_id]);
-  const existingPairKey = (entity_type: string, entity_id: string) =>
-    `${entity_type}|${entity_id}`;
+  // Null entity_id sentinel: Scenario A inferred-target candidates carry
+  // linked_entity_id=null. Existing source_document_links always have
+  // non-null linked_entity_id per ADR-0016 §1, so the null sentinel
+  // never matches against existingKeys (read from listLinksForCaseSourceDocuments
+  // which queries source_document_links). The sentinel preserves
+  // pair-key uniqueness within candidatesToProduce for inferred-target
+  // dedup symmetry with Scenario B.
+  const existingPairKey = (entity_type: string, entity_id: string | null) =>
+    entity_id === null ? `${entity_type}|null` : `${entity_type}|${entity_id}`;
   const existingKeys = new Set(
     existingLinks.map((link) =>
       existingPairKey(link.linked_entity_type, link.linked_entity_id),
@@ -856,10 +904,15 @@ export async function completeCandidate(
 
   if (parsed.document_type === 'vendor_invoice') {
     // vendor_invoice → bill matching (link_role = primary_invoice).
-    // Scenario B existing-bill matching at chunk 2 grade per chunk 2 brief
-    // §B.3 + §2.4 F-3 scope (a) deferral framing — Scenario A inferred-target
-    // (null linked_entity_id, invoice-arrives-no-bill-yet path) deferred to
-    // chunk 4 per Session 59 amendment §B.3.
+    //   - Scenario B: existing-bill matching (chunk 2 substrate). Emits one
+    //     candidate per matching open bill.
+    //   - Scenario A inferred-target: invoice-arrives-no-bill-yet path —
+    //     emits one candidate with linked_entity_id=null per ADR-0015 §7 +
+    //     chunk 2 brief §2.4 F-3 scope (a). Fires only when no Scenario B
+    //     candidate was produced (no existing bill matched the invoice).
+    //     Subsystem 3 T1 dispatch (Stage 7 → post_bill ProposedEntry →
+    //     billService.post) matures the inferred target into a bill.
+    const scenarioBCountBefore = candidatesToProduce.length;
     const openBills = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBills) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
@@ -924,16 +977,62 @@ export async function completeCandidate(
         trace_id: parsed.trace_id,
       });
     }
+
+    // Scenario A inferred-target emission. Fires only when no Scenario B
+    // candidate was produced (no existing bill matched) and the caller did
+    // not request suppression (re-evaluation via rematchCandidate passes
+    // suppress_inferred_target=true to preserve T5/T8/T10 orphan →
+    // exception-queue semantics). Only vendor_match contributes to the
+    // score; other axes are null and normalize to 0 in composeScore.
+    if (!suppressInferredTarget && candidatesToProduce.length === scenarioBCountBefore) {
+      const inferredSignals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: null,
+        amount_raw_value: null,
+        date_within_window: null,
+        date_raw_value: null,
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const inferredComposed = composeScore(inferredSignals, 'vendor_invoice');
+      candidatesToProduce.push({
+        document_case_id: parsed.document_case_id,
+        source_document_id: parsed.source_document_id,
+        supersedes_candidate_id: null,
+        linked_entity_type: 'bill',
+        linked_entity_id: null,
+        link_role: 'primary_invoice',
+        confidence_score: inferredComposed.aggregate_score,
+        candidate_features: {
+          features: inferredComposed.features,
+          aggregate_score: inferredComposed.aggregate_score,
+          document_type: 'vendor_invoice',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
+          scenario: 'invoice_inferred_target',
+        },
+        trace_id: parsed.trace_id,
+      });
+    }
   } else if (parsed.document_type === 'receipt') {
     // Scenario A: receipt → payment (link_role = payment_evidence) — receipt
     // evidences existing payment.
     // Scenario B: receipt → bill (link_role = receipt) — receipt evidences
     // bill payment.
     //
-    // Scenario A variant (payment, receipt) receipt-as-primary DEFERRED to
-    // chunk 4 per chunk 2 brief §B.3 + §2.4 F-3 scope (b) deferral framing.
-    // Scenario C exception queue routing: confirmed via existing
-    // empty-return-from-Subsystem-1 contract below.
+    // Scenario A variant (payment, receipt) receipt-as-primary inferred-target:
+    // shipped at end of receipt branch (see below) per ADR-0015 §7 + chunk 2
+    // brief §2.4 F-3 scope (b). T2 propose_payment_record dispatch is reserved
+    // pending paymentService.ts (chunk 8); at chunk 4 grade Stage 7 routes
+    // through the existing receipt fallthrough → exception queue at
+    // exception_reason='inferred_target_unmatched_v1' per ADR-0010
+    // substrate-now-enforcement-later.
     //
     // Both scenarios use composeScore with 'receipt' document_type weights
     // per chunk 3 V1_PROVISIONAL_WEIGHTS; Scenario B (receipt→bill) lacks
@@ -944,6 +1043,7 @@ export async function completeCandidate(
     // penalizes evidence-poor Scenario B vs evidence-rich Scenario A; the
     // operational asymmetry is intentional per receipt-evidence-precision
     // disambiguation.
+    const scenarioAPaymentCountBefore = candidatesToProduce.length;
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
@@ -1071,6 +1171,59 @@ export async function completeCandidate(
           linked_entity_type: 'bill',
           classification_confidence: parsed.classification_confidence,
           scenario: 'receipt_to_bill',
+        },
+        trace_id: parsed.trace_id,
+      });
+    }
+
+    // Scenario A variant (payment, receipt) receipt-as-primary inferred-target
+    // emission. Fires only when no Scenario A existing emission (receipt →
+    // payment match) was produced — receipt-as-primary semantically means
+    // the underlying payment does not exist yet (ADR-0015 §7 variant
+    // disambiguation). Scenario B (receipt → bill) emissions don't gate
+    // this: they are an orthogonal scenario class (receipt evidences a bill
+    // payment vs receipt-as-primary creates a payment). T2 dispatch reserved
+    // pending paymentService.ts (chunk 8); Stage 7 routes through the receipt
+    // fallthrough → orchestrator exception queue.
+    //
+    // openBillsForReceipt loop pushes 'bill'-typed candidates; the predicate
+    // below checks for any payment-typed emission specifically, which is
+    // the Scenario A existing surface.
+    const hasScenarioAPaymentExisting = candidatesToProduce
+      .slice(scenarioAPaymentCountBefore)
+      .some((c) => c.linked_entity_type === 'payment');
+    if (!suppressInferredTarget && !hasScenarioAPaymentExisting) {
+      const inferredReceiptSignals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: null,
+        amount_raw_value: null,
+        date_within_window: null,
+        date_raw_value: null,
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const inferredReceiptComposed = composeScore(inferredReceiptSignals, 'receipt');
+      candidatesToProduce.push({
+        document_case_id: parsed.document_case_id,
+        source_document_id: parsed.source_document_id,
+        supersedes_candidate_id: null,
+        linked_entity_type: 'payment',
+        linked_entity_id: null,
+        link_role: 'payment_evidence',
+        confidence_score: inferredReceiptComposed.aggregate_score,
+        candidate_features: {
+          features: inferredReceiptComposed.features,
+          aggregate_score: inferredReceiptComposed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
+          scenario: 'receipt_inferred_target',
         },
         trace_id: parsed.trace_id,
       });

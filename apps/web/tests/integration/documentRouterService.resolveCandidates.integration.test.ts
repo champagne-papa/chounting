@@ -464,8 +464,11 @@ describe('documentRouterService.resolveCandidates — branch (c) happy-path (chu
   it('N=0 case → head pointer NOT set; zero candidate rows; exception_queue_entries with unmatched_router_candidate', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    // No bills seeded → completeCandidate returns [] → N=0 candidates
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate to keep N=0 at Subsystem 2 entry. Chunk 4
+    // (Phase 8) emits Scenario A inferred-target when no Scenario B
+    // matches, so calling completeCandidate against an unseeded fixture
+    // would produce N=1 not N=0. The test claim is about resolveCandidates
+    // behavior at N=0; how we get there is incidental.
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     const decision = await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
@@ -497,7 +500,7 @@ describe('documentRouterService.resolveCandidates — branch (c) happy-path (chu
   it('decision-record audit row carries before_state.branch=c + null top_confidence + empty candidate_set_ids', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (see prior test).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
@@ -736,7 +739,9 @@ describe('documentRouterService.resolveCandidates — cross-service propagation 
   it('EXCEPTION_ALREADY_OPEN from chunk-6 enqueueException propagates verbatim through branch (c)', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (chunk 4 Scenario A emission
+    // would produce N=1; cross-service propagation surface is at branch (c)
+    // when N=0 lands at Subsystem 2).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     // First invocation: branch (c) succeeds, creates exception_queue_entry
@@ -776,7 +781,8 @@ describe('documentRouterService.resolveCandidates — forensic noise on retry (c
   it('two invocations under same trace_id produce two decision-record rows with identical idempotency_key', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (forensic-noise retry surface
+    // observed at branch (c)).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     // Known-zero baseline: zero decision-record rows for trace_id

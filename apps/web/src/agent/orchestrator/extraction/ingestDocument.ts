@@ -365,6 +365,38 @@ export async function ingestDocument(
     timestamp: new Date().toISOString(),
   });
 
+  // Subsystem-1-grade audit trail per ADR-0018 §2 lines 492-504. Emitted
+  // alongside the orchestrator-grade match_against_existing_state record
+  // above (ADR-0014 §13 canonical stage name) per chunk 4 brief Task 1
+  // partial-information value pick (a): both records ship in the same
+  // pipeline_trace accumulator. input_hash captures classifier output
+  // (document_type + classification_confidence + extracted_fields) plus
+  // the domain-state snapshot fingerprint (vendor_match.vendor_id is the
+  // Phase 5 substrate key under the document_case_id scope); output_hash
+  // captures the candidate set. Subsystem 3 re-runs produce new records
+  // per ADR-0011 §9 supersession discipline.
+  pipeline_trace.push({
+    stage_name: 'router_match_against_state',
+    input_hash: crypto
+      .createHash('sha256')
+      .update(
+        JSON.stringify({
+          document_case_id: documentCaseId,
+          document_type: classification.result.documentType,
+          classification_confidence: classification.result.confidence,
+          extracted_fields: extracted.fields,
+          vendor_match: vendorMatch,
+        }),
+      )
+      .digest('hex'),
+    output_hash: crypto
+      .createHash('sha256')
+      .update(JSON.stringify(relationshipCandidates))
+      .digest('hex'),
+    model: null,
+    timestamp: new Date().toISOString(),
+  });
+
   // Stage 7 — build_proposal per ADR-0014 §13 canonical (brief Task
   // 7.3a.6 brief-named "Stage 6 proposal builder"; ADR canonical Stage 7).
   // Chunk 7.3a ships ProposedEntryCard-only routes; born-paid bundle +
@@ -765,15 +797,25 @@ async function buildRecordPaymentInput(
 ): Promise<RecordPaymentInputRaw | null> {
   const extracted = card.extracted_fields as Record<string, unknown> | undefined;
   const matchedCandidate = card.matched_candidate as
-    | { linked_entity_type: string; linked_entity_id: string }
+    | { linked_entity_type: string; linked_entity_id: string | null }
     | null
     | undefined;
   if (!extracted) return null;
 
-  // bill_id from matched candidate (linked_entity_type='bill') or from
-  // extracted.cited_bill_id if present.
+  // bill_id from matched candidate (linked_entity_type='bill', non-null
+  // linked_entity_id) or from extracted.cited_bill_id if present.
+  // Scenario A inferred-target candidates carry linked_entity_id=null;
+  // they fall through to the cited_bill_id check, then to the null
+  // early-return below if no bill_id source is available. Subsystem 3
+  // T1 dispatch matures inferred-target candidates into bills via
+  // billService.post at the orchestrator's Stage 7 commit composite
+  // (separately from this helper).
   let billId: string | null = null;
-  if (matchedCandidate && matchedCandidate.linked_entity_type === 'bill') {
+  if (
+    matchedCandidate &&
+    matchedCandidate.linked_entity_type === 'bill' &&
+    matchedCandidate.linked_entity_id !== null
+  ) {
     billId = matchedCandidate.linked_entity_id;
   } else if (typeof extracted.cited_bill_id === 'string') {
     billId = extracted.cited_bill_id;

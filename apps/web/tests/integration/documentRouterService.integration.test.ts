@@ -273,13 +273,25 @@ describe('documentRouterService.completeCandidate — happy-path Subsystem 1 mat
     }
   });
 
-  it('vendor_invoice + zero open bills for vendor → returns empty array (NOT an error)', async () => {
+  it('vendor_invoice + zero open bills for vendor → returns one Scenario A inferred-target candidate (chunk 4)', async () => {
+    // Chunk 4 (Phase 8) ships Scenario A inferred-target emission per
+    // ADR-0015 §7 + brief §2.4 F-3 scope (a): when no existing bill
+    // matches, completeCandidate emits one candidate with
+    // linked_entity_type='bill' + linked_entity_id=null signaling
+    // "create new bill" (invoice-arrives-no-bill-yet). Pre-chunk-4 this
+    // path returned an empty array; chunk 4 changes the semantic so the
+    // routing decision (attach-to-existing vs create-new) materializes
+    // at Subsystem 2.
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     // No bills seeded.
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].link_role).toBe('primary_invoice');
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 
   it('receipt + open payment for vendor → returns (payment, payment_evidence) candidate (Scenario A)', async () => {
@@ -427,23 +439,29 @@ describe('documentRouterService.completeCandidate — Tier 2.5 read filter contr
     expect(result[0].linked_entity_id).toBe(includedId);
   });
 
-  it('vendor_prepayments in refunded/fully_applied status — read helper filters correctly (verified via no-match scenario)', async () => {
+  it('vendor_prepayments in refunded/fully_applied status — read helper filters correctly (verified via inferred-target-only scenario)', async () => {
     // chunk-1 Subsystem 1 does NOT produce prepayment candidates from
     // vendor_invoice / receipt / payment_confirmation document_types
     // (no prepayment pair in chunk-5's VALID_PAIRS for these doc_types
     // at v1). The filter contract is verified by the helper's SQL
     // (status IN ('open', 'partially_applied')); this test confirms
-    // the helper at least runs without error against a vendor with
-    // mixed-status prepayments and that no candidates are produced.
+    // the helper runs without error against a vendor with mixed-status
+    // prepayments and that no Scenario B (bill/payment) candidates are
+    // produced. Chunk 4 adds Scenario A inferred-target emission so the
+    // result carries one (bill, null) candidate signaling create-new-bill.
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
     await seedOpenPrepayment(db, SEED.ORG_HOLDING, fixture.vendorId, { status: 'refunded' });
     await seedOpenPrepayment(db, SEED.ORG_HOLDING, fixture.vendorId, { status: 'fully_applied' });
-    // No bills/payments seeded — vendor_invoice should produce zero candidates.
+    // No bills/payments seeded — vendor_invoice should produce only the
+    // Scenario A inferred-target (no Scenario B existing-bill matches).
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 
   it('listLinksForCaseSourceDocuments excludes already-linked bills (double-routing detection)', async () => {
@@ -467,8 +485,15 @@ describe('documentRouterService.completeCandidate — Tier 2.5 read filter contr
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    // Already-linked → no candidate produced (double-routing prevention).
-    expect(result).toHaveLength(0);
+    // Already-linked → no Scenario B candidate (double-routing prevention
+    // at chunk-1 + chunk-5 substrate). Chunk 4 still emits the Scenario A
+    // inferred-target — the inferred target signals create-new-bill, which
+    // is structurally distinct from attach-to-existing-bill and so does not
+    // collide with the existing source_document_links row.
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 });
 
@@ -540,16 +565,23 @@ describe('documentRouterService.completeCandidate — audit-log cardinality (chu
     expect(auditRow!.entity_type).toBe('document_relationship_candidate');
   });
 
-  it('zero candidates produced → zero audit_log rows (M4 explicit callout)', async () => {
-    // Use a local context with a fresh trace_id to isolate the
-    // assertion from sibling tests in this describe block (which share
-    // the outer ctx.trace_id and accumulate audit_log rows).
+  it('Scenario A inferred-target produced → one audit_log row (M4 explicit callout, chunk 4 semantic)', async () => {
+    // Chunk 4 (Phase 8) replaces the pre-chunk-4 "zero candidates → zero
+    // audit_log rows" framing: when no existing entity matches, the
+    // Scenario A inferred-target emits one candidate (linked_entity_id=
+    // null) and the atomic RPC writes one audit_log row. The 1:1 audit
+    // cardinality with emitted candidates per the M4 callout is preserved.
+    //
+    // Use a local context with a fresh trace_id to isolate the assertion
+    // from sibling tests in this describe block (which share the outer
+    // ctx.trace_id and accumulate audit_log rows).
     const localCtx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, localCtx);
-    // No bills/payments seeded — zero matches.
+    // No bills/payments seeded — Scenario A inferred-target only.
 
     const result = await completeCandidate(buildInput(fixture, localCtx), localCtx);
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBeNull();
 
     const db = adminClient();
     const { data: auditRows } = await db
@@ -557,7 +589,7 @@ describe('documentRouterService.completeCandidate — audit-log cardinality (chu
       .select('audit_log_id')
       .eq('trace_id', localCtx.trace_id)
       .eq('action', 'document_relationship_candidate_created');
-    expect(auditRows).toHaveLength(0);
+    expect(auditRows).toHaveLength(1);
 
     // Clean up local trace_id rows (audit_log only; document_cases is
     // append-only via chunks-1-2 trigger).
