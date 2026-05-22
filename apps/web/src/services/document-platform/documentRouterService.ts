@@ -159,6 +159,8 @@ import {
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 import { LINKED_ENTITY_TABLE_MAP, VALID_PAIRS } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import type { CandidateFeatures, ScoredDocumentType } from '@/shared/schemas/document-platform/candidate_features.schema';
+import { composeScore, type RawFeatureSignals } from '@/services/document-platform/scoreComposition';
 import type { DocumentType } from '@/shared/schemas/document-platform/documentCase.schema';
 import { adminClient } from '@/db/adminClient';
 import { enqueueException } from '@/services/document-platform/documentExceptionService';
@@ -247,6 +249,11 @@ interface ExistingLinkForRouter {
 }
 
 // Internal candidate payload shape pre-RPC.
+//
+// candidate_features narrowed from Record<string, unknown> to CandidateFeatures
+// at chunk 3 (Phase 8) per chunk 3 brief Task 2 acceptance criterion — typed
+// schema replaces permissive record per ADR-0018 §2 lines 472-475 feature
+// vector recording framing.
 interface NewCandidatePayload {
   document_case_id: string;
   source_document_id: string;
@@ -255,7 +262,7 @@ interface NewCandidatePayload {
   linked_entity_id: string;
   link_role: string;
   confidence_score: number;
-  candidate_features: Record<string, unknown>;
+  candidate_features: CandidateFeatures;
   trace_id: string;
 }
 
@@ -538,7 +545,35 @@ async function rematchCandidate(
   }
 
   // Derive vendor_match.vendor_id via linked_entity_id fallback.
-  const features = priorCandidate.candidate_features as Record<string, unknown>;
+  // Reconstruction fields extracted from chunk 3 structured candidate_features
+  // shape (per CandidateFeaturesSchema at candidate_features.schema.ts):
+  //   - document_type ← candidate_features.document_type (top-level)
+  //   - classification_confidence ← candidate_features.classification_confidence (top-level optional)
+  //   - vendor_match_* ← vendor_match feature record's raw_value (match_type + confidence)
+  //   - extracted_amount ← amount_match feature record's raw_value.extracted
+  //   - extracted_invoice_date ← date_proximity feature record's raw_value.extracted
+  const candidateFeatures = priorCandidate.candidate_features;
+  const vendorFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'vendor_match',
+  );
+  const amountFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'amount_match',
+  );
+  const dateFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'date_proximity',
+  );
+  const vendorRaw = vendorFeature?.raw_value as
+    | { match_type?: string; confidence?: number }
+    | null
+    | undefined;
+  const amountRaw = amountFeature?.raw_value as
+    | { extracted?: number | null }
+    | null
+    | undefined;
+  const dateRaw = dateFeature?.raw_value as
+    | { extracted?: string | null }
+    | null
+    | undefined;
   let vendor_id: string | null = null;
 
   if (priorCandidate.linked_entity_type === 'bill') {
@@ -579,21 +614,22 @@ async function rematchCandidate(
     return [];
   }
 
-  // Reconstruct CompleteCandidateInput from candidate_features.
+  // Reconstruct CompleteCandidateInput from candidate_features (chunk 3
+  // structured shape).
   const reconstructedInput: CompleteCandidateInputRaw = {
     document_case_id: case_id,
     source_document_id: priorCandidate.source_document_id,
-    document_type: features.document_type as DocumentType,
-    classification_confidence: features.classification_confidence as number,
+    document_type: candidateFeatures.document_type as DocumentType,
+    classification_confidence: candidateFeatures.classification_confidence ?? 0,
     extracted_fields: {
-      invoice_amount: features.extracted_amount ?? null,
-      invoice_date: features.extracted_invoice_date ?? null,
-      receipt_amount: features.extracted_amount ?? null,
+      invoice_amount: amountRaw?.extracted ?? null,
+      invoice_date: dateRaw?.extracted ?? null,
+      receipt_amount: amountRaw?.extracted ?? null,
     },
     vendor_match: {
       vendor_id,
-      confidence: features.vendor_match_confidence as number,
-      match_type: features.vendor_match_type as
+      confidence: vendorRaw?.confidence ?? 0,
+      match_type: (vendorRaw?.match_type ?? 'no_match') as
         | 'exact_name'
         | 'alias'
         | 'tax_id'
@@ -809,12 +845,14 @@ export async function completeCandidate(
     return [];
   }
 
-  const baseFeatures: Record<string, unknown> = {
-    vendor_match_type: parsed.vendor_match.match_type,
-    vendor_match_confidence: parsed.vendor_match.confidence,
-    document_type: parsed.document_type,
-    classification_confidence: parsed.classification_confidence,
-  };
+  // Per-branch chunk 2 per-feature contribution surfaces feed into chunk 3
+  // composeScore() helper at scoreComposition.ts. composeScore normalizes
+  // raw signals to [0, 1] per axis, applies document_type-specific weight
+  // allocation (V1_PROVISIONAL_WEIGHTS per ADR-0019 §9 + ADR-0018 §2 lines
+  // 465-470), and sums to aggregate_score = confidence_score per chunk 3
+  // brief Task 2. vendor_match_raw_value carries vendor_match_type +
+  // vendor_match_confidence forensic reconstruction surface inherited from
+  // chunk 2 baseFeatures (consumed by rematchCandidate per F-J-13).
 
   if (parsed.document_type === 'vendor_invoice') {
     // vendor_invoice → bill matching (link_role = primary_invoice).
@@ -822,12 +860,6 @@ export async function completeCandidate(
     // §B.3 + §2.4 F-3 scope (a) deferral framing — Scenario A inferred-target
     // (null linked_entity_id, invoice-arrives-no-bill-yet path) deferred to
     // chunk 4 per Session 59 amendment §B.3.
-    //
-    // Per-feature contribution surface (chunk 2 Session 60 grade): vendor
-    // match (carried via baseFeatures) + amount match + date proximity +
-    // bill_number alignment. confidence_score stays single-feature
-    // (parsed.vendor_match.confidence) per §B.4 confirmation; composition
-    // formula at chunk 3 score composition expansion grade.
     const openBills = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBills) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
@@ -843,6 +875,37 @@ export async function completeCandidate(
         parsed.extracted_fields.invoice_number,
         bill.bill_number,
       );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.invoice_amount ?? null,
+          candidate: bill.amount_cad,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          bill_lifecycle_state: bill.lifecycle_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.invoice_date ?? null,
+          candidate: bill.issue_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: billNumberMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.invoice_number ?? null,
+          candidate: bill.bill_number,
+          match: billNumberMatch,
+        },
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const composed = composeScore(signals, 'vendor_invoice');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -850,18 +913,13 @@ export async function completeCandidate(
         linked_entity_type: 'bill',
         linked_entity_id: bill.bill_id,
         link_role: 'primary_invoice',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
-          bill_lifecycle_state: bill.lifecycle_state,
-          bill_amount_cad: bill.amount_cad,
-          extracted_amount: parsed.extracted_fields.invoice_amount ?? null,
-          extracted_invoice_date: parsed.extracted_fields.invoice_date ?? null,
-          feature_amount_match: amountFeatures.match,
-          feature_amount_diff_cad: amountFeatures.diff_cad,
-          feature_date_proximity_days: dateFeatures.proximity_days,
-          feature_date_within_window_14d: dateFeatures.within_window,
-          feature_bill_number_match: billNumberMatch,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'vendor_invoice',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
         },
         trace_id: parsed.trace_id,
       });
@@ -873,19 +931,19 @@ export async function completeCandidate(
     // bill payment.
     //
     // Scenario A variant (payment, receipt) receipt-as-primary DEFERRED to
-    // chunk 4 per chunk 2 brief §B.3 + §2.4 F-3 scope (b) deferral framing
-    // (null linked_entity_id; Session 60 second amendment scope extension
-    // joining vendor_invoice Scenario A inferred-target).
-    //
+    // chunk 4 per chunk 2 brief §B.3 + §2.4 F-3 scope (b) deferral framing.
     // Scenario C exception queue routing: confirmed via existing
-    // empty-return-from-Subsystem-1 contract below (if candidatesToProduce
-    // empty after both Scenario A + B reads → caller routes to exception
-    // queue at Subsystem 2 branch (c) per ADR-0018 §item 3).
+    // empty-return-from-Subsystem-1 contract below.
     //
-    // Per-feature contribution surface (chunk 2 Session 60 grade): vendor
-    // match + amount match + date proximity + authorization_reference +
-    // payment_method consistency (the last two apply to Scenario A only;
-    // Scenario B receipt→bill carries no payment-method semantic).
+    // Both scenarios use composeScore with 'receipt' document_type weights
+    // per chunk 3 V1_PROVISIONAL_WEIGHTS; Scenario B (receipt→bill) lacks
+    // authorization_reference + payment_method semantics → reference_match
+    // + payment_method_match passed as null → normalized to 0 per axis →
+    // Scenario B aggregate_score capped at 0.65 max per receipt weight
+    // allocation (vendor 0.25 + amount 0.25 + date 0.15). This structurally
+    // penalizes evidence-poor Scenario B vs evidence-rich Scenario A; the
+    // operational asymmetry is intentional per receipt-evidence-precision
+    // disambiguation.
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
@@ -905,6 +963,41 @@ export async function completeCandidate(
         parsed.extracted_fields.payment_method,
         payment.payment_method,
       );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          candidate: payment.amount,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          payment_state: payment.payment_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.receipt_date ?? null,
+          candidate: payment.payment_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: authorizationReferenceMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          candidate: payment.authorization_reference,
+          match: authorizationReferenceMatch,
+        },
+        payment_method_match: paymentMethodMatch,
+        payment_method_raw_value: {
+          extracted: parsed.extracted_fields.payment_method ?? null,
+          candidate: payment.payment_method,
+          match: paymentMethodMatch,
+        },
+      };
+      const composed = composeScore(signals, 'receipt');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -912,19 +1005,14 @@ export async function completeCandidate(
         linked_entity_type: 'payment',
         linked_entity_id: payment.payment_id,
         link_role: 'payment_evidence',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'receipt_to_payment',
-          payment_state: payment.payment_state,
-          payment_amount: payment.amount,
-          extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
-          feature_amount_match: amountFeatures.match,
-          feature_amount_diff_cad: amountFeatures.diff_cad,
-          feature_date_proximity_days: dateFeatures.proximity_days,
-          feature_date_within_window_14d: dateFeatures.within_window,
-          feature_authorization_reference_match: authorizationReferenceMatch,
-          feature_payment_method_match: paymentMethodMatch,
         },
         trace_id: parsed.trace_id,
       });
@@ -941,6 +1029,33 @@ export async function completeCandidate(
         parsed.extracted_fields.receipt_date,
         bill.issue_date,
       );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          candidate: bill.amount_cad,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          bill_lifecycle_state: bill.lifecycle_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.receipt_date ?? null,
+          candidate: bill.issue_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const composed = composeScore(signals, 'receipt');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -948,17 +1063,14 @@ export async function completeCandidate(
         linked_entity_type: 'bill',
         linked_entity_id: bill.bill_id,
         link_role: 'receipt',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'receipt_to_bill',
-          bill_lifecycle_state: bill.lifecycle_state,
-          bill_amount_cad: bill.amount_cad,
-          extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
-          feature_amount_match: amountFeatures.match,
-          feature_amount_diff_cad: amountFeatures.diff_cad,
-          feature_date_proximity_days: dateFeatures.proximity_days,
-          feature_date_within_window_14d: dateFeatures.within_window,
         },
         trace_id: parsed.trace_id,
       });
@@ -969,11 +1081,9 @@ export async function completeCandidate(
     // 442-449. Distinct from receipt at scoring weight allocation surface —
     // payment_confirmation's authorization_reference is bank-issued
     // (canonical identifier reliability) vs receipt's authorization_reference
-    // is merchant-issued. Chunk 3 score composition expansion ratifies the
-    // differential weight allocation; chunk 2 emits per-feature contribution
-    // surface without weight allocation (feature_authorization_reference_match
-    // here vs receipt branch both emit the boolean signal; weighting at
-    // chunk 3 grade).
+    // is merchant-issued, so payment_confirmation weight allocation per
+    // V1_PROVISIONAL_WEIGHTS at scoreComposition.ts puts reference_alignment
+    // at 0.35 (heavier) vs receipt's 0.20.
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
@@ -993,6 +1103,41 @@ export async function completeCandidate(
         parsed.extracted_fields.payment_method,
         payment.payment_method,
       );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.payment_amount ?? null,
+          candidate: payment.amount,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          payment_state: payment.payment_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.payment_date ?? null,
+          candidate: payment.payment_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: authorizationReferenceMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          candidate: payment.authorization_reference,
+          match: authorizationReferenceMatch,
+        },
+        payment_method_match: paymentMethodMatch,
+        payment_method_raw_value: {
+          extracted: parsed.extracted_fields.payment_method ?? null,
+          candidate: payment.payment_method,
+          match: paymentMethodMatch,
+        },
+      };
+      const composed = composeScore(signals, 'payment_confirmation');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -1000,19 +1145,14 @@ export async function completeCandidate(
         linked_entity_type: 'payment',
         linked_entity_id: payment.payment_id,
         link_role: 'payment_evidence',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'payment_confirmation',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'payment_confirmation_to_payment',
-          payment_state: payment.payment_state,
-          payment_amount: payment.amount,
-          extracted_amount: parsed.extracted_fields.payment_amount ?? null,
-          feature_amount_match: amountFeatures.match,
-          feature_amount_diff_cad: amountFeatures.diff_cad,
-          feature_date_proximity_days: dateFeatures.proximity_days,
-          feature_date_within_window_14d: dateFeatures.within_window,
-          feature_authorization_reference_match: authorizationReferenceMatch,
-          feature_payment_method_match: paymentMethodMatch,
         },
         trace_id: parsed.trace_id,
       });
@@ -1640,12 +1780,13 @@ async function computeT5FanOut(
   return Array.from(new Set(ids));
 }
 
-// T8 fan-out: head-of-chain candidates whose candidate_features
-// .extracted_invoice_date falls in the reopened period's date range.
-// accounting_date derivation at v1 uses extracted_invoice_date as the
-// proxy (verify-at-impl ledger item 3; brief assumed shape, verified
-// here). Phase 7 may introduce a dedicated accounting_date column on
-// the case substrate; if so, the filter migrates.
+// T8 fan-out: head-of-chain candidates whose date_proximity feature's
+// raw_value.extracted (chunk 3 structured candidate_features per
+// CandidateFeaturesSchema) falls in the reopened period's date range.
+// accounting_date derivation at v1 uses extracted invoice/receipt/payment
+// date as the proxy (verify-at-impl ledger item 3). Phase 7 may introduce
+// a dedicated accounting_date column on the case substrate; if so, the
+// filter migrates.
 async function computeT8FanOut(
   db: Db,
   org_id: string,
@@ -1687,9 +1828,16 @@ async function computeT8FanOut(
   const end = (period as { end_date: string }).end_date;
   const ids = new Set<string>();
   for (const row of data ?? []) {
-    const features = (row as { candidate_features: Record<string, unknown> })
+    const features = (row as { candidate_features: CandidateFeatures | null })
       .candidate_features;
-    const extractedDate = features?.extracted_invoice_date as string | null | undefined;
+    const dateFeature = features?.features?.find(
+      (f) => f.feature_name === 'date_proximity',
+    );
+    const dateRaw = dateFeature?.raw_value as
+      | { extracted?: string | null }
+      | null
+      | undefined;
+    const extractedDate = dateRaw?.extracted ?? null;
     if (!extractedDate) continue;
     if (extractedDate >= start && extractedDate <= end) {
       ids.add((row as { document_case_id: string }).document_case_id);

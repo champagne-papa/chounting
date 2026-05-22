@@ -7,6 +7,7 @@ import {
 } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
 import { DocumentTypeSchema } from '@/shared/schemas/document-platform/documentCase.schema';
 import { ExceptionReasonSchema } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
+import { CandidateFeaturesSchema } from '@/shared/schemas/document-platform/candidate_features.schema';
 
 // Layer 2 boundary: v1-active subsets only.
 // Reserved values defined in shared enum types but rejected here.
@@ -176,13 +177,15 @@ export type CompleteCandidateInput = z.infer<typeof CompleteCandidateInputSchema
 // Subsystem 1 implementation bug catchable here at row schema
 // parse.
 //
-// candidate_features is permissive (z.record(z.unknown())) at
-// chunk-1. Subsystem 1 produces the field; v1 readers don't
-// depend on field-level structure; Subsystem 2 (chunks 2+) is
-// the first downstream consumer. Tighten when Subsystem 2
-// surfaces feature-shape requirements; ADR-0019 calibration
-// governance is the governance-side owner of feature-shape
-// post-v1.
+// candidate_features narrowed from permissive z.record(z.unknown())
+// at chunk-1 to CandidateFeaturesSchema at chunk 3 (Phase 8) per
+// chunk 3 brief Task 2 acceptance criterion + ADR-0018 §2 lines
+// 472-475 feature vector recording framing. Schema captures the
+// structured per-feature contribution shape (5 canonical axes per
+// FEATURE_AXES + aggregate_score + document_type + linked_entity_type
+// + optional forensic context). ADR-0019 calibration governance is
+// the governance-side owner of per-feature weight allocation
+// (V1_PROVISIONAL_WEIGHTS at scoreComposition.ts) at post-v1.
 //
 // created_by: z.string() matches chunks-5-6 permissiveness. The
 // Phase 4 chunk-1 substrate RPC hardcodes 'agent' inside the RPC
@@ -201,7 +204,7 @@ export const DocumentRelationshipCandidateSchema = z
     linked_entity_id: z.string().uuid(),
     link_role: LinkRoleSchema,
     confidence_score: z.number().min(0).max(1),
-    candidate_features: z.record(z.unknown()),
+    candidate_features: CandidateFeaturesSchema,
     trace_id: z.string().uuid(),
     created_at: TimestamptzString,
     created_by: z.string(),

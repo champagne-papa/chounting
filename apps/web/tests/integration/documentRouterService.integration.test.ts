@@ -245,7 +245,10 @@ describe('documentRouterService.completeCandidate — happy-path Subsystem 1 mat
     expect(result[0].linked_entity_type).toBe('bill');
     expect(result[0].linked_entity_id).toBe(billId);
     expect(result[0].link_role).toBe('primary_invoice');
-    expect(result[0].confidence_score).toBeGreaterThanOrEqual(0.85);
+    // Chunk 3 multi-feature scoring: vendor_match.confidence (0.95) × 0.30 weight
+    // + amount_match (true from default fixture) × 0.30 weight = ~0.585; no
+    // date/invoice_number/payment_method extracted_fields in default fixture.
+    expect(result[0].confidence_score).toBeGreaterThanOrEqual(0.5);
     expect(result[0].document_case_id).toBe(fixture.caseId);
     expect(result[0].source_document_id).toBe(fixture.sourceDocId);
     expect(result[0].org_id).toBe(SEED.ORG_HOLDING);
@@ -844,6 +847,23 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
+  // Helpers for chunk 3 structured candidate_features shape (per
+  // CandidateFeaturesSchema at apps/web/src/shared/schemas/document-platform/
+  // candidate_features.schema.ts). chunk 2's flat feature_*_match keys are
+  // now inside per-feature record raw_value fields per axis.
+  function getFeature(
+    features: unknown,
+    name: string,
+  ): { raw_value: unknown; normalized_score: number; weight: number; contribution: number } | undefined {
+    const arr = (features as { features?: Array<{ feature_name: string; raw_value: unknown; normalized_score: number; weight: number; contribution: number }> })
+      .features;
+    return arr?.find((f) => f.feature_name === name);
+  }
+
+  function getRawValue<T = Record<string, unknown>>(features: unknown, name: string): T | undefined {
+    return getFeature(features, name)?.raw_value as T | undefined;
+  }
+
   it('vendor_invoice + matching extracted amount + date → candidate_features carries per-feature contributions (match=true)', async () => {
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
@@ -866,15 +886,18 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
 
     expect(result).toHaveLength(1);
     expect(result[0].linked_entity_id).toBe(billId);
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.feature_amount_match).toBe(true);
-    expect(features.feature_amount_diff_cad).toBe(0);
-    expect(features.feature_date_proximity_days).toBe(0);
-    expect(features.feature_date_within_window_14d).toBe(true);
-    expect(features.feature_bill_number_match).toBe(true);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean; diff_cad: number }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    expect(amountRaw?.diff_cad).toBe(0);
+    const dateRaw = getRawValue<{ proximity_days: number; within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(0);
+    expect(dateRaw?.within_window_14d).toBe(true);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
   });
 
-  it('vendor_invoice + non-matching extracted amount → feature_amount_match=false; diff_cad=200', async () => {
+  it('vendor_invoice + non-matching extracted amount → amount_match=false; diff_cad=200', async () => {
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
     await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
@@ -890,12 +913,13 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     );
 
     expect(result).toHaveLength(1);
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.feature_amount_match).toBe(false);
-    expect(features.feature_amount_diff_cad).toBe(200);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean; diff_cad: number }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(false);
+    expect(amountRaw?.diff_cad).toBe(200);
   });
 
-  it('vendor_invoice + date outside 14-day window → feature_date_within_window_14d=false', async () => {
+  it('vendor_invoice + date outside 14-day window → date_within_window_14d=false', async () => {
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
     await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
@@ -911,9 +935,10 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     );
 
     expect(result).toHaveLength(1);
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.feature_date_proximity_days).toBe(33);
-    expect(features.feature_date_within_window_14d).toBe(false);
+    const features = result[0].candidate_features;
+    const dateRaw = getRawValue<{ proximity_days: number; within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(33);
+    expect(dateRaw?.within_window_14d).toBe(false);
   });
 
   it('vendor_invoice + missing extracted_fields → feature contributions are null', async () => {
@@ -930,12 +955,15 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     );
 
     expect(result).toHaveLength(1);
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.feature_amount_match).toBeNull();
-    expect(features.feature_amount_diff_cad).toBeNull();
-    expect(features.feature_date_proximity_days).toBeNull();
-    expect(features.feature_date_within_window_14d).toBeNull();
-    expect(features.feature_bill_number_match).toBeNull();
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean | null; diff_cad: number | null }>(features, 'amount_match');
+    expect(amountRaw?.match).toBeNull();
+    expect(amountRaw?.diff_cad).toBeNull();
+    const dateRaw = getRawValue<{ proximity_days: number | null; within_window_14d: boolean | null }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBeNull();
+    expect(dateRaw?.within_window_14d).toBeNull();
+    const refRaw = getRawValue<{ match: boolean | null }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBeNull();
   });
 
   it('receipt + payment with authorization_reference + payment_method match → feature contributions present', async () => {
@@ -966,11 +994,15 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     expect(result).toHaveLength(1);
     expect(result[0].linked_entity_id).toBe(paymentId);
     expect(result[0].link_role).toBe('payment_evidence');
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.feature_amount_match).toBe(true);
-    expect(features.feature_date_within_window_14d).toBe(true);
-    expect(features.feature_authorization_reference_match).toBe(true);
-    expect(features.feature_payment_method_match).toBe(true);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    const dateRaw = getRawValue<{ within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.within_window_14d).toBe(true);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
+    const methodRaw = getRawValue<{ match: boolean }>(features, 'payment_method_consistency');
+    expect(methodRaw?.match).toBe(true);
   });
 
   it('payment_confirmation + matching extracted features → candidate_features carries per-feature contributions', async () => {
@@ -999,12 +1031,16 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     expect(result).toHaveLength(1);
     expect(result[0].linked_entity_id).toBe(paymentId);
     expect(result[0].link_role).toBe('payment_evidence');
-    const features = result[0].candidate_features as Record<string, unknown>;
-    expect(features.scenario).toBe('payment_confirmation_to_payment');
-    expect(features.feature_amount_match).toBe(true);
-    expect(features.feature_date_proximity_days).toBe(0);
-    expect(features.feature_authorization_reference_match).toBe(true);
-    expect(features.feature_payment_method_match).toBe(true);
+    const features = result[0].candidate_features;
+    expect((features as { scenario?: string }).scenario).toBe('payment_confirmation_to_payment');
+    const amountRaw = getRawValue<{ match: boolean }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    const dateRaw = getRawValue<{ proximity_days: number }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(0);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
+    const methodRaw = getRawValue<{ match: boolean }>(features, 'payment_method_consistency');
+    expect(methodRaw?.match).toBe(true);
   });
 
   it('all emitted candidates carry (linked_entity_type, link_role) pair in VALID_PAIRS (Task 4 structural assertion)', async () => {

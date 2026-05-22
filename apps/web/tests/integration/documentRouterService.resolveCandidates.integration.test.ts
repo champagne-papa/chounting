@@ -119,6 +119,14 @@ async function seedNOpenBillsForVendor(
   vendorId: string,
   N: number,
 ): Promise<string[]> {
+  // Bills seeded with IDENTICAL amount_cad to preserve chunk-3
+  // ambiguity-margin-zero semantics. With chunk 3 multi-feature scoring,
+  // bills with distinct amounts produce distinct aggregate confidence_scores
+  // → margin > 0 → branch (a). To exercise branch (b) ambiguous-N≥2 path,
+  // fixture must have all candidate entities producing IDENTICAL scores.
+  // (Chunk 2's single-feature scoring made margin = 0 structurally for
+  // any N≥2 per F-J-α; chunk 3 multi-feature lifts this and requires
+  // intentional fixture identity to test zero-margin path.)
   const billIds: string[] = [];
   for (let i = 0; i < N; i++) {
     const billId = crypto.randomUUID();
@@ -128,7 +136,7 @@ async function seedNOpenBillsForVendor(
       vendor_id: vendorId,
       issue_date: '2026-05-14',
       lifecycle_state: 'approved_for_payment',
-      amount_cad: 1000 + i * 100,
+      amount_cad: 1000,
     });
     if (error) throw new Error(`seedNOpenBillsForVendor failed: ${error.message}`);
     billIds.push(billId);
@@ -142,6 +150,8 @@ async function seedNOpenPaymentsForVendor(
   vendorId: string,
   N: number,
 ): Promise<string[]> {
+  // Identical amount per chunk-3 ambiguity-margin-zero discipline (see
+  // seedNOpenBillsForVendor above for rationale).
   const paymentIds: string[] = [];
   for (let i = 0; i < N; i++) {
     const paymentId = crypto.randomUUID();
@@ -150,7 +160,7 @@ async function seedNOpenPaymentsForVendor(
       org_id: orgId,
       vendor_id: vendorId,
       payment_date: '2026-05-14',
-      amount: 1000 + i * 100,
+      amount: 1000,
       payment_state: 'pending',
     });
     if (error) throw new Error(`seedNOpenPaymentsForVendor failed: ${error.message}`);
