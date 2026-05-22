@@ -108,17 +108,21 @@ async function seedOpenBill(
       | 'fully_paid'
       | 'voided'
       | 'cancelled';
+    issueDate?: string;
+    billNumber?: string;
   } = {},
 ): Promise<string> {
   const billId = crypto.randomUUID();
-  const { error } = await db.from('bills').insert({
+  const insert: Record<string, unknown> = {
     bill_id: billId,
     org_id: orgId,
     vendor_id: vendorId,
-    issue_date: '2026-05-13',
+    issue_date: opts.issueDate ?? '2026-05-13',
     lifecycle_state: opts.lifecycleState ?? 'approved_for_payment',
     amount_cad: opts.amount ?? 1000,
-  });
+  };
+  if (opts.billNumber !== undefined) insert.bill_number = opts.billNumber;
+  const { error } = await db.from('bills').insert(insert);
   if (error) throw new Error(`seedOpenBill failed: ${error.message}`);
   return billId;
 }
@@ -130,17 +134,25 @@ async function seedOpenPayment(
   opts: {
     amount?: number;
     paymentState?: 'pending' | 'paid' | 'failed';
+    paymentDate?: string;
+    authorizationReference?: string;
+    paymentMethod?: 'check' | 'eft' | 'wire' | 'cash' | 'other';
   } = {},
 ): Promise<string> {
   const paymentId = crypto.randomUUID();
-  const { error } = await db.from('payments').insert({
+  const insert: Record<string, unknown> = {
     payment_id: paymentId,
     org_id: orgId,
     vendor_id: vendorId,
-    payment_date: '2026-05-13',
+    payment_date: opts.paymentDate ?? '2026-05-13',
     amount: opts.amount ?? 1000,
     payment_state: opts.paymentState ?? 'pending',
-  });
+  };
+  if (opts.authorizationReference !== undefined) {
+    insert.authorization_reference = opts.authorizationReference;
+  }
+  if (opts.paymentMethod !== undefined) insert.payment_method = opts.paymentMethod;
+  const { error } = await db.from('payments').insert(insert);
   if (error) throw new Error(`seedOpenPayment failed: ${error.message}`);
   return paymentId;
 }
@@ -807,5 +819,274 @@ describe('documentRouterService.completeCandidate — RPC atomicity (chunk 1)', 
     expect(error!.message).toMatch(
       /document_relationship_candidates_confidence_score_v1_active/,
     );
+  });
+});
+
+// =====================================================================
+// Describe 9 — Phase 8 chunk 2 per-feature contribution surface expansion
+// (vendor_invoice + receipt + payment_confirmation per-feature signals at
+// candidate_features JSONB grade; Scenario A inferred-target + Scenario A
+// variant null linked_entity_id paths DEFERRED to chunk 4 per F-3 substrate
+// change scope discipline; VALID_PAIRS-based pair-validity emission
+// assertion per chunk 2 brief Task 4 §B.1 amendment Path β preliminary
+// recommendation)
+// =====================================================================
+
+describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-feature contribution surface expansion', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(async () => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('vendor_invoice + matching extracted amount + date → candidate_features carries per-feature contributions (match=true)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+      billNumber: 'BILL-001',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: {
+          invoice_amount: 1000,
+          invoice_date: '2026-05-13',
+          invoice_number: 'BILL-001',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(billId);
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.feature_amount_match).toBe(true);
+    expect(features.feature_amount_diff_cad).toBe(0);
+    expect(features.feature_date_proximity_days).toBe(0);
+    expect(features.feature_date_within_window_14d).toBe(true);
+    expect(features.feature_bill_number_match).toBe(true);
+  });
+
+  it('vendor_invoice + non-matching extracted amount → feature_amount_match=false; diff_cad=200', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: { invoice_amount: 1200, invoice_date: '2026-05-13' },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.feature_amount_match).toBe(false);
+    expect(features.feature_amount_diff_cad).toBe(200);
+  });
+
+  it('vendor_invoice + date outside 14-day window → feature_date_within_window_14d=false', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: { invoice_amount: 1000, invoice_date: '2026-06-15' },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.feature_date_proximity_days).toBe(33);
+    expect(features.feature_date_within_window_14d).toBe(false);
+  });
+
+  it('vendor_invoice + missing extracted_fields → feature contributions are null', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { extractedFields: {} }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.feature_amount_match).toBeNull();
+    expect(features.feature_amount_diff_cad).toBeNull();
+    expect(features.feature_date_proximity_days).toBeNull();
+    expect(features.feature_date_within_window_14d).toBeNull();
+    expect(features.feature_bill_number_match).toBeNull();
+  });
+
+  it('receipt + payment with authorization_reference + payment_method match → feature contributions present', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      paymentDate: '2026-05-13',
+      authorizationReference: 'AUTH-12345',
+      paymentMethod: 'wire',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'receipt',
+        extractedFields: {
+          receipt_amount: 1000,
+          receipt_date: '2026-05-13',
+          authorization_reference: 'AUTH-12345',
+          payment_method: 'wire',
+        },
+      }),
+      ctx,
+    );
+
+    // 1 candidate: (payment, payment_evidence). Scenario B (bill, receipt)
+    // emits zero because no bill seeded.
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(paymentId);
+    expect(result[0].link_role).toBe('payment_evidence');
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.feature_amount_match).toBe(true);
+    expect(features.feature_date_within_window_14d).toBe(true);
+    expect(features.feature_authorization_reference_match).toBe(true);
+    expect(features.feature_payment_method_match).toBe(true);
+  });
+
+  it('payment_confirmation + matching extracted features → candidate_features carries per-feature contributions', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 5000,
+      paymentDate: '2026-05-10',
+      authorizationReference: 'ACH-TRACE-99999',
+      paymentMethod: 'eft',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'payment_confirmation',
+        extractedFields: {
+          payment_amount: 5000,
+          payment_date: '2026-05-10',
+          authorization_reference: 'ACH-TRACE-99999',
+          payment_method: 'eft',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(paymentId);
+    expect(result[0].link_role).toBe('payment_evidence');
+    const features = result[0].candidate_features as Record<string, unknown>;
+    expect(features.scenario).toBe('payment_confirmation_to_payment');
+    expect(features.feature_amount_match).toBe(true);
+    expect(features.feature_date_proximity_days).toBe(0);
+    expect(features.feature_authorization_reference_match).toBe(true);
+    expect(features.feature_payment_method_match).toBe(true);
+  });
+
+  it('all emitted candidates carry (linked_entity_type, link_role) pair in VALID_PAIRS (Task 4 structural assertion)', async () => {
+    // Smoke-test: all candidates emitted across vendor_invoice + receipt +
+    // payment_confirmation branches at chunk 2 grade carry pairs in
+    // VALID_PAIRS (13-cell matrix at v1 per Sub-Q3 β substrate-tables-only-
+    // without-cell-activation discipline). Per chunk 2 brief Task 4 §B.1
+    // amendment Path β: VALID_PAIRS-based pair-validity emission assertion
+    // via service-layer assertion at Subsystem 1 output emission boundary;
+    // vendor_credit / vendor_credit_application pairs structurally excluded
+    // (zero entries in VALID_PAIRS per Phase 5.1 chunk 5.1a). The
+    // assertion in completeCandidate throws POST_FAILED on violation; this
+    // positive test verifies no v1-active emission path violates VALID_PAIRS.
+    const { VALID_PAIRS } = await import(
+      '@/shared/schemas/document-platform/sourceDocumentLink.schema'
+    );
+
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, { amount: 1000 });
+    await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, { amount: 1000 });
+
+    // vendor_invoice → primary_invoice pair.
+    const invoiceResult = await completeCandidate(
+      buildInput(fixture, ctx, { extractedFields: { invoice_amount: 1000 } }),
+      ctx,
+    );
+    for (const c of invoiceResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+
+    // receipt → payment_evidence + receipt pairs.
+    const receiptFixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    await seedOpenBill(db, SEED.ORG_HOLDING, receiptFixture.vendorId, { amount: 1000 });
+    await seedOpenPayment(db, SEED.ORG_HOLDING, receiptFixture.vendorId, {
+      amount: 1000,
+    });
+    const receiptResult = await completeCandidate(
+      buildInput(receiptFixture, ctx, {
+        documentType: 'receipt',
+        extractedFields: { receipt_amount: 1000 },
+      }),
+      ctx,
+    );
+    for (const c of receiptResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+
+    // payment_confirmation → payment_evidence pair.
+    const pcFixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    await seedOpenPayment(db, SEED.ORG_HOLDING, pcFixture.vendorId, { amount: 1000 });
+    const pcResult = await completeCandidate(
+      buildInput(pcFixture, ctx, {
+        documentType: 'payment_confirmation',
+        extractedFields: { payment_amount: 1000 },
+      }),
+      ctx,
+    );
+    for (const c of pcResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+  });
+
+  it('VALID_PAIRS structurally excludes reserved post-v1 (vendor_credit, *) + (vendor_credit_application, *) pairs', async () => {
+    // Structural prevention test: VALID_PAIRS has ZERO entries for
+    // vendor_credit + vendor_credit_application across ALL link_role
+    // values per Phase 5.1 chunk 5.1a Sub-Q3 β substrate-tables-only-
+    // without-cell-activation discipline. Any Subsystem 1 emission attempt
+    // with these linked_entity_types would fail the VALID_PAIRS.has()
+    // assertion at chunk 2 grade.
+    const { VALID_PAIRS, LinkedEntityTypeSchema, LinkRoleSchema } = await import(
+      '@/shared/schemas/document-platform/sourceDocumentLink.schema'
+    );
+
+    // Sanity: enum admits 8 values (post-Phase-5.1 chunk-5.1a ratification);
+    // VALID_PAIRS has 13 cells (no vendor_credit rows per Sub-Q3 β).
+    expect(LinkedEntityTypeSchema.options).toContain('vendor_credit');
+    expect(LinkedEntityTypeSchema.options).toContain('vendor_credit_application');
+
+    for (const linkRole of LinkRoleSchema.options) {
+      expect(VALID_PAIRS.has(`vendor_credit|${linkRole}`)).toBe(false);
+      expect(VALID_PAIRS.has(`vendor_credit_application|${linkRole}`)).toBe(false);
+    }
   });
 });

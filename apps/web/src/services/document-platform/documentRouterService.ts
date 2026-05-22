@@ -158,7 +158,7 @@ import {
   type RouterDecisionOutcome,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
-import { LINKED_ENTITY_TABLE_MAP } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import { LINKED_ENTITY_TABLE_MAP, VALID_PAIRS } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
 import type { DocumentType } from '@/shared/schemas/document-platform/documentCase.schema';
 import { adminClient } from '@/db/adminClient';
 import { enqueueException } from '@/services/document-platform/documentExceptionService';
@@ -219,6 +219,7 @@ interface OpenBillForRouter {
   amount_cad: number;
   issue_date: string;
   due_date: string | null;
+  bill_number: string | null;
 }
 
 interface OpenPaymentForRouter {
@@ -227,6 +228,8 @@ interface OpenPaymentForRouter {
   payment_state: 'pending' | 'paid';
   amount: number;
   payment_date: string;
+  authorization_reference: string | null;
+  payment_method: string;
 }
 
 interface OpenPrepaymentForRouter {
@@ -268,7 +271,7 @@ async function loadOpenBillsForVendor(
 ): Promise<OpenBillForRouter[]> {
   const { data, error } = await db
     .from('bills')
-    .select('bill_id, vendor_id, lifecycle_state, amount_cad, issue_date, due_date')
+    .select('bill_id, vendor_id, lifecycle_state, amount_cad, issue_date, due_date, bill_number')
     .eq('org_id', org_id)
     .eq('vendor_id', vendor_id)
     .in('lifecycle_state', ['approved_for_payment', 'partially_paid']);
@@ -293,7 +296,7 @@ async function loadOpenPaymentsForVendor(
 ): Promise<OpenPaymentForRouter[]> {
   const { data, error } = await db
     .from('payments')
-    .select('payment_id, vendor_id, payment_state, amount, payment_date')
+    .select('payment_id, vendor_id, payment_state, amount, payment_date, authorization_reference, payment_method')
     .eq('org_id', org_id)
     .eq('vendor_id', vendor_id)
     .in('payment_state', ['pending', 'paid']);
@@ -607,6 +610,81 @@ async function rematchCandidate(
 }
 
 // ---------------------------------------------------------------------
+// Per-feature contribution helpers (chunk 2 Session 60 grade).
+//
+// Pure functions emitting raw per-feature signal values for inclusion in
+// candidate_features JSONB at Subsystem 1 output emission grade. Chunk 2
+// emits per-feature contribution SURFACE only; composition formula
+// (per-feature weight allocation + score summing) defers to chunk 3 score
+// composition expansion per Sub-Q14 sub-chunk b decomposition + ADR-0018
+// §2 lines 450-475 confidence scoring composition framing.
+//
+// AMOUNT_TOLERANCE_CAD provisional value: $0.01 (one cent tolerance for
+// floating-point + numeric(20,4) round-trip; chunk 3 score composition
+// ratifies via ADR-0019 calibration cycle).
+//
+// DATE_PROXIMITY_WINDOW_DAYS provisional value: 14 days (per chunk 2
+// brief Task 1 partial-information value pick at v1 grade per ADR-0018
+// §2 lines 466-471 implementation-owned-at-v1 framing; chunk 3 score
+// composition expansion ratifies via ADR-0019 calibration cycle).
+// ---------------------------------------------------------------------
+const AMOUNT_TOLERANCE_CAD = 0.01;
+const DATE_PROXIMITY_WINDOW_DAYS = 14;
+
+function computeAmountFeatures(
+  extractedAmount: unknown,
+  candidateAmount: number,
+): { match: boolean | null; diff_cad: number | null } {
+  if (typeof extractedAmount !== 'number' || !Number.isFinite(extractedAmount)) {
+    return { match: null, diff_cad: null };
+  }
+  const candidateNum =
+    typeof candidateAmount === 'number' ? candidateAmount : Number(candidateAmount);
+  if (!Number.isFinite(candidateNum)) {
+    return { match: null, diff_cad: null };
+  }
+  const diff = Math.abs(extractedAmount - candidateNum);
+  return {
+    match: diff <= AMOUNT_TOLERANCE_CAD,
+    diff_cad: diff,
+  };
+}
+
+function computeDateFeatures(
+  extractedDate: unknown,
+  candidateDate: string,
+): { proximity_days: number | null; within_window: boolean | null } {
+  if (typeof extractedDate !== 'string' || extractedDate.length === 0) {
+    return { proximity_days: null, within_window: null };
+  }
+  const extractedMs = Date.parse(extractedDate);
+  const candidateMs = Date.parse(candidateDate);
+  if (!Number.isFinite(extractedMs) || !Number.isFinite(candidateMs)) {
+    return { proximity_days: null, within_window: null };
+  }
+  const diffDays = Math.round(Math.abs(extractedMs - candidateMs) / (1000 * 60 * 60 * 24));
+  return {
+    proximity_days: diffDays,
+    within_window: diffDays <= DATE_PROXIMITY_WINDOW_DAYS,
+  };
+}
+
+function computeStringMatchFeature(
+  extracted: unknown,
+  candidate: string | null | undefined,
+): boolean | null {
+  if (
+    typeof extracted !== 'string' ||
+    extracted.length === 0 ||
+    candidate === null ||
+    candidate === undefined
+  ) {
+    return null;
+  }
+  return extracted.trim().toLowerCase() === candidate.trim().toLowerCase();
+}
+
+// ---------------------------------------------------------------------
 // Public: completeCandidate (Subsystem 1 entry point).
 //
 // Layer 2 boundary: Zod parse via CompleteCandidateInputSchema.
@@ -740,9 +818,31 @@ export async function completeCandidate(
 
   if (parsed.document_type === 'vendor_invoice') {
     // vendor_invoice → bill matching (link_role = primary_invoice).
+    // Scenario B existing-bill matching at chunk 2 grade per chunk 2 brief
+    // §B.3 + §2.4 F-3 scope (a) deferral framing — Scenario A inferred-target
+    // (null linked_entity_id, invoice-arrives-no-bill-yet path) deferred to
+    // chunk 4 per Session 59 amendment §B.3.
+    //
+    // Per-feature contribution surface (chunk 2 Session 60 grade): vendor
+    // match (carried via baseFeatures) + amount match + date proximity +
+    // bill_number alignment. confidence_score stays single-feature
+    // (parsed.vendor_match.confidence) per §B.4 confirmation; composition
+    // formula at chunk 3 score composition expansion grade.
     const openBills = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBills) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.invoice_amount,
+        bill.amount_cad,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.invoice_date,
+        bill.issue_date,
+      );
+      const billNumberMatch = computeStringMatchFeature(
+        parsed.extracted_fields.invoice_number,
+        bill.bill_number,
+      );
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -757,15 +857,54 @@ export async function completeCandidate(
           bill_amount_cad: bill.amount_cad,
           extracted_amount: parsed.extracted_fields.invoice_amount ?? null,
           extracted_invoice_date: parsed.extracted_fields.invoice_date ?? null,
+          feature_amount_match: amountFeatures.match,
+          feature_amount_diff_cad: amountFeatures.diff_cad,
+          feature_date_proximity_days: dateFeatures.proximity_days,
+          feature_date_within_window_14d: dateFeatures.within_window,
+          feature_bill_number_match: billNumberMatch,
         },
         trace_id: parsed.trace_id,
       });
     }
   } else if (parsed.document_type === 'receipt') {
-    // Scenario A: receipt → payment (link_role = payment_evidence).
+    // Scenario A: receipt → payment (link_role = payment_evidence) — receipt
+    // evidences existing payment.
+    // Scenario B: receipt → bill (link_role = receipt) — receipt evidences
+    // bill payment.
+    //
+    // Scenario A variant (payment, receipt) receipt-as-primary DEFERRED to
+    // chunk 4 per chunk 2 brief §B.3 + §2.4 F-3 scope (b) deferral framing
+    // (null linked_entity_id; Session 60 second amendment scope extension
+    // joining vendor_invoice Scenario A inferred-target).
+    //
+    // Scenario C exception queue routing: confirmed via existing
+    // empty-return-from-Subsystem-1 contract below (if candidatesToProduce
+    // empty after both Scenario A + B reads → caller routes to exception
+    // queue at Subsystem 2 branch (c) per ADR-0018 §item 3).
+    //
+    // Per-feature contribution surface (chunk 2 Session 60 grade): vendor
+    // match + amount match + date proximity + authorization_reference +
+    // payment_method consistency (the last two apply to Scenario A only;
+    // Scenario B receipt→bill carries no payment-method semantic).
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.receipt_amount,
+        payment.amount,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.receipt_date,
+        payment.payment_date,
+      );
+      const authorizationReferenceMatch = computeStringMatchFeature(
+        parsed.extracted_fields.authorization_reference,
+        payment.authorization_reference,
+      );
+      const paymentMethodMatch = computeStringMatchFeature(
+        parsed.extracted_fields.payment_method,
+        payment.payment_method,
+      );
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -780,6 +919,12 @@ export async function completeCandidate(
           payment_state: payment.payment_state,
           payment_amount: payment.amount,
           extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
+          feature_amount_match: amountFeatures.match,
+          feature_amount_diff_cad: amountFeatures.diff_cad,
+          feature_date_proximity_days: dateFeatures.proximity_days,
+          feature_date_within_window_14d: dateFeatures.within_window,
+          feature_authorization_reference_match: authorizationReferenceMatch,
+          feature_payment_method_match: paymentMethodMatch,
         },
         trace_id: parsed.trace_id,
       });
@@ -788,6 +933,14 @@ export async function completeCandidate(
     const openBillsForReceipt = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBillsForReceipt) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.receipt_amount,
+        bill.amount_cad,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.receipt_date,
+        bill.issue_date,
+      );
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -802,15 +955,44 @@ export async function completeCandidate(
           bill_lifecycle_state: bill.lifecycle_state,
           bill_amount_cad: bill.amount_cad,
           extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
+          feature_amount_match: amountFeatures.match,
+          feature_amount_diff_cad: amountFeatures.diff_cad,
+          feature_date_proximity_days: dateFeatures.proximity_days,
+          feature_date_within_window_14d: dateFeatures.within_window,
         },
         trace_id: parsed.trace_id,
       });
     }
   } else if (parsed.document_type === 'payment_confirmation') {
     // payment_confirmation → payment (link_role = payment_evidence).
+    // Canonical (payment, payment_evidence) shape per ADR-0018 §2 lines
+    // 442-449. Distinct from receipt at scoring weight allocation surface —
+    // payment_confirmation's authorization_reference is bank-issued
+    // (canonical identifier reliability) vs receipt's authorization_reference
+    // is merchant-issued. Chunk 3 score composition expansion ratifies the
+    // differential weight allocation; chunk 2 emits per-feature contribution
+    // surface without weight allocation (feature_authorization_reference_match
+    // here vs receipt branch both emit the boolean signal; weighting at
+    // chunk 3 grade).
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.payment_amount,
+        payment.amount,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.payment_date,
+        payment.payment_date,
+      );
+      const authorizationReferenceMatch = computeStringMatchFeature(
+        parsed.extracted_fields.authorization_reference,
+        payment.authorization_reference,
+      );
+      const paymentMethodMatch = computeStringMatchFeature(
+        parsed.extracted_fields.payment_method,
+        payment.payment_method,
+      );
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -825,9 +1007,37 @@ export async function completeCandidate(
           payment_state: payment.payment_state,
           payment_amount: payment.amount,
           extracted_amount: parsed.extracted_fields.payment_amount ?? null,
+          feature_amount_match: amountFeatures.match,
+          feature_amount_diff_cad: amountFeatures.diff_cad,
+          feature_date_proximity_days: dateFeatures.proximity_days,
+          feature_date_within_window_14d: dateFeatures.within_window,
+          feature_authorization_reference_match: authorizationReferenceMatch,
+          feature_payment_method_match: paymentMethodMatch,
         },
         trace_id: parsed.trace_id,
       });
+    }
+  }
+
+  // VALID_PAIRS-based pair-validity emission assertion (chunk 2 Task 4 per
+  // chunk 2 brief §B.1 amendment Path β preliminary recommendation).
+  // Assert each emitted (linked_entity_type, link_role) pair is in canonical
+  // VALID_PAIRS set at sourceDocumentLink.schema.ts:68 (13-cell pair-validity
+  // matrix at v1 per Sub-Q3 β substrate-tables-only-without-cell-activation
+  // discipline inheritance from Phase 5.1 chunk 5.1a). Reserved post-v1
+  // pairs (vendor_credit, *) + (vendor_credit_application, *) structurally
+  // prevented via VALID_PAIRS zero-entry exclusion. Service-layer assertion
+  // at Subsystem 1 output emission boundary; no type-union narrowing at
+  // DocumentRelationshipCandidate.linked_entity_type (canonical 8-value
+  // LinkedEntityTypeSchema preserved per HEAD substrate at Phase 5.1 chunk
+  // 5.1a ratification grade).
+  for (const candidate of candidatesToProduce) {
+    const pairKey = `${candidate.linked_entity_type}|${candidate.link_role}`;
+    if (!VALID_PAIRS.has(pairKey)) {
+      throw new ServiceError(
+        'POST_FAILED',
+        `completeCandidate: emission with invalid (linked_entity_type, link_role) pair "${pairKey}" violates VALID_PAIRS at sourceDocumentLink.schema.ts (Sub-Q3 β substrate-tables-only-without-cell-activation discipline; reserved post-v1 pairs not emittable at v1)`,
+      );
     }
   }
 
