@@ -927,7 +927,7 @@ export type Database = {
           document_case_id: string
           id: string
           link_role: Database["public"]["Enums"]["link_role"]
-          linked_entity_id: string
+          linked_entity_id: string | null
           linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
           org_id: string
           source_document_id: string
@@ -942,7 +942,7 @@ export type Database = {
           document_case_id: string
           id?: string
           link_role: Database["public"]["Enums"]["link_role"]
-          linked_entity_id: string
+          linked_entity_id?: string | null
           linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
           org_id: string
           source_document_id: string
@@ -957,7 +957,7 @@ export type Database = {
           document_case_id?: string
           id?: string
           link_role?: Database["public"]["Enums"]["link_role"]
-          linked_entity_id?: string
+          linked_entity_id?: string | null
           linked_entity_type?: Database["public"]["Enums"]["linked_entity_type"]
           org_id?: string
           source_document_id?: string
@@ -1850,6 +1850,65 @@ export type Database = {
             foreignKeyName: "org_invitations_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      org_settings: {
+        Row: {
+          ai_fallback_budget: number
+          calibration_cadence: number | null
+          calibration_test_set_version: string | null
+          classification_fallback_order: string[]
+          confidence_threshold_ambiguity_margin: number | null
+          confidence_threshold_payment_confirmation: number | null
+          confidence_threshold_receipt: number | null
+          confidence_threshold_vendor_invoice: number | null
+          created_at: string
+          gc_cadence: string
+          gc_threshold_hours: number
+          org_id: string
+          updated_at: string
+          vendor_match_threshold: number
+        }
+        Insert: {
+          ai_fallback_budget?: number
+          calibration_cadence?: number | null
+          calibration_test_set_version?: string | null
+          classification_fallback_order?: string[]
+          confidence_threshold_ambiguity_margin?: number | null
+          confidence_threshold_payment_confirmation?: number | null
+          confidence_threshold_receipt?: number | null
+          confidence_threshold_vendor_invoice?: number | null
+          created_at?: string
+          gc_cadence?: string
+          gc_threshold_hours?: number
+          org_id: string
+          updated_at?: string
+          vendor_match_threshold?: number
+        }
+        Update: {
+          ai_fallback_budget?: number
+          calibration_cadence?: number | null
+          calibration_test_set_version?: string | null
+          classification_fallback_order?: string[]
+          confidence_threshold_ambiguity_margin?: number | null
+          confidence_threshold_payment_confirmation?: number | null
+          confidence_threshold_receipt?: number | null
+          confidence_threshold_vendor_invoice?: number | null
+          created_at?: string
+          gc_cadence?: string
+          gc_threshold_hours?: number
+          org_id?: string
+          updated_at?: string
+          vendor_match_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
           },
@@ -3181,6 +3240,29 @@ export type Database = {
         }
         Returns: string
       }
+      test_post_balanced_entry: {
+        Args: {
+          p_amount: number
+          p_credit_account: string
+          p_debit_account: string
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_credit_account: string
+          p_credit_amount: number
+          p_debit_account: string
+          p_debit_amount: number
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
       update_document_case_state_with_audit: {
         Args: {
           p_audit: Json
@@ -3294,6 +3376,7 @@ export type Database = {
         | "invariant_violation"
         | "wrong_entity_exception"
         | "drift_detected"
+        | "ai_fallback_validation_failed"
       exception_status: "open" | "resolved" | "cancelled"
       ingest_channel:
         | "drag_drop_pdf"
@@ -3682,6 +3765,7 @@ export const Constants = {
         "invariant_violation",
         "wrong_entity_exception",
         "drift_detected",
+        "ai_fallback_validation_failed",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       ingest_channel: [

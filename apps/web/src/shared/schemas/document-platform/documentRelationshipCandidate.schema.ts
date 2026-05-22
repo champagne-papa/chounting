@@ -201,7 +201,7 @@ export const DocumentRelationshipCandidateSchema = z
     source_document_id: z.string().uuid(),
     supersedes_candidate_id: z.string().uuid().nullable(),
     linked_entity_type: LinkedEntityTypeSchema,
-    linked_entity_id: z.string().uuid(),
+    linked_entity_id: z.string().uuid().nullable(),
     link_role: LinkRoleSchema,
     confidence_score: z.number().min(0).max(1),
     candidate_features: CandidateFeaturesSchema,

@@ -308,7 +308,7 @@ export interface RelationshipCandidate {
   document_case_id: string;
   source_document_id: string;
   linked_entity_type: string;
-  linked_entity_id: string;
+  linked_entity_id: string | null;
   link_role: string;
   confidence_score: number;
 }
