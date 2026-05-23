@@ -98,4 +98,35 @@ describe('Phase 7 chunk 7.2 Task 7.2.11.B — receiptRules', () => {
       expect(result.matched).toBe(false);
     });
   });
+
+  // Phase 8 dedicated-fix-chunk Task 2 — real-OCR recalibration. Real
+  // online receipts (Figma) carry a "Receipt" title + a payment-on-receipt
+  // signal ("Date paid") and CITE their invoice number as a cross-reference.
+  // That cross-ref must NOT suppress the receipt (a "Receipt" title is
+  // authoritative over an invoice cross-reference). High-precision, low-
+  // recall by design — formats this doesn't recognize fall to Tier C.
+  describe('real-OCR positive cases (Session 68 calibration)', () => {
+    it('matches a Figma receipt that cites its invoice number', () => {
+      const artifact = artifactWithLines([
+        'Receipt', 'Invoice number', '1SRPQ68M-0001', 'Date paid',
+        'CA$282.24 paid on November 18, 2025',
+      ]);
+      const result = evaluateReceipt(artifact);
+      expect(result.matched).toBe(true);
+      if (result.matched) {
+        expect(result.documentType).toBe('receipt');
+        expect(result.confidence).toBe(0.85);
+      }
+    });
+
+    it('does NOT grant the receipt-title carve-out without a paid signal', () => {
+      // A bare "Receipt" title with an invoice cross-ref but no payment-on-
+      // receipt signal and no receipt-shape signals stays no-match → Tier C.
+      const artifact = artifactWithLines([
+        'Receipt', 'Invoice number', '1SRPQ68M-0001',
+      ]);
+      const result = evaluateReceipt(artifact);
+      expect(result.matched).toBe(false);
+    });
+  });
 });
