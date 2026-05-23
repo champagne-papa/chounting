@@ -224,4 +224,95 @@ describe('Phase 7 chunk 7.2 Task 7.2.11.D — tierCoordination', () => {
       expect(result.result.documentType).toBe('unknown');
     });
   });
+
+  // Phase 8 dedicated-fix-chunk Task 4 — document-kind-defining-header
+  // precedence. When multiple Tier A rules match, a receipt or
+  // payment_confirmation match outranks a vendor_invoice match (a kind-
+  // defining header beats an invoice cross-reference). Asymmetric
+  // (vendor_invoice-only suppression) per Sub-option E primary goal.
+  //
+  // The multi-match inputs use "Statement" (a vendor_invoice header that
+  // does not trip the receipt/payment cross-reference negatives), so two
+  // rules genuinely fire and the precedence is exercised. The real-fixture
+  // cases single-match after Tasks 1-3 and lock the end-to-end intent.
+  describe('real-OCR precedence (Phase 8 Task 4 — Session 71)', () => {
+    it('a receipt match outranks a vendor_invoice match on multi-match', async () => {
+      const trace_id = crypto.randomUUID();
+      traceIds.push(trace_id);
+
+      // "Statement" → vendor_invoice (0.9); "Total" + "Visa" → receipt
+      // (0.85). Both fire (no cross-ref suppression). Precedence → receipt.
+      const input: ClassificationInput = {
+        ocrArtifact: artifactWithLines([
+          'Statement',
+          'Total $50.00',
+          'Visa ****1234',
+        ]),
+        source_document_id: crypto.randomUUID(),
+        trace_id,
+      };
+
+      const result = await coordinateTiers(input, makeCtx(trace_id));
+      expect(result.result.tier).toBe('A');
+      expect(result.result.documentType).toBe('receipt');
+    });
+
+    it('a payment_confirmation match outranks a vendor_invoice match on multi-match', async () => {
+      const trace_id = crypto.randomUUID();
+      traceIds.push(trace_id);
+
+      // "Statement" → vendor_invoice (0.9); "Payment successful" →
+      // payment_confirmation (0.9). Both fire. Precedence → payment_confirmation.
+      const input: ClassificationInput = {
+        ocrArtifact: artifactWithLines([
+          'Statement',
+          'Payment successful',
+          'Reference 123',
+        ]),
+        source_document_id: crypto.randomUUID(),
+        trace_id,
+      };
+
+      const result = await coordinateTiers(input, makeCtx(trace_id));
+      expect(result.result.tier).toBe('A');
+      expect(result.result.documentType).toBe('payment_confirmation');
+    });
+
+    it('classifies the Figma receipt as receipt end-to-end (Tier A)', async () => {
+      const trace_id = crypto.randomUUID();
+      traceIds.push(trace_id);
+
+      const input: ClassificationInput = {
+        ocrArtifact: artifactWithLines([
+          'Receipt', 'Invoice number', '1SRPQ68M-0001', 'Date paid',
+          'CA$282.24 paid on November 18, 2025',
+        ]),
+        source_document_id: crypto.randomUUID(),
+        trace_id,
+      };
+
+      const result = await coordinateTiers(input, makeCtx(trace_id));
+      expect(result.result.tier).toBe('A');
+      expect(result.result.documentType).toBe('receipt');
+    });
+
+    it('classifies the Zoho voucher as payment_confirmation end-to-end (Tier A)', async () => {
+      const trace_id = crypto.randomUUID();
+      traceIds.push(trace_id);
+
+      const input: ClassificationInput = {
+        ocrArtifact: artifactWithLines([
+          'PAYMENTS MADE', 'Payment#', '517', 'Amount Paid', 'Payment Date',
+          'Payment Mode', 'Cash', 'Payment for', 'Bill Number', 'Bill Date',
+          'Bill Amount', '1SRPQ68M0001',
+        ]),
+        source_document_id: crypto.randomUUID(),
+        trace_id,
+      };
+
+      const result = await coordinateTiers(input, makeCtx(trace_id));
+      expect(result.result.tier).toBe('A');
+      expect(result.result.documentType).toBe('payment_confirmation');
+    });
+  });
 });

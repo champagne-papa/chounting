@@ -66,8 +66,19 @@ function pickHighestConfidenceMatch(matches: TierAOutput[]): TierAOutput {
   if (matched.length === 0) {
     return { matched: false };
   }
-  matched.sort((a, b) => b.confidence - a.confidence);
-  return matched[0]!;
+
+  // Phase 8 Task 4 — document-kind-defining-header precedence (Session 71).
+  // When multiple Tier A rules match, a receipt or payment_confirmation
+  // match outranks a vendor_invoice match: a kind-defining header ("Receipt"
+  // title, "PAYMENTS MADE") beats an invoice cross-reference. Asymmetric
+  // (vendor_invoice-only suppression) per Sub-option E's primary goal —
+  // stop the vendor_invoice over-match; this is the robust place to
+  // arbitrate because per-rule negatives mutually interfere on cross-refs.
+  // Within the winning pool, keep highest-confidence-first (Sub-Q7).
+  const nonInvoice = matched.filter((m) => m.documentType !== 'vendor_invoice');
+  const pool = nonInvoice.length > 0 ? nonInvoice : matched;
+  pool.sort((a, b) => b.confidence - a.confidence);
+  return pool[0]!;
 }
 
 export async function coordinateTiers(
