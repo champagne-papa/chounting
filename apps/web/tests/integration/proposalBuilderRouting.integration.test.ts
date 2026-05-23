@@ -192,4 +192,112 @@ describe('Phase 7 chunk 7.3b Task 7.3b.6 — proposalBuilder 5-route activation 
       }
     });
   });
+
+  // ===================================================================
+  // Phase 8 chunk 4 Task 3 axis 5 — Approach A pure guard extensions
+  // for Scenario A inferred-target candidates (null linked_entity_id).
+  //
+  // Per Session 65 Decision γ-1 ratification + brief Task 5.4.5:
+  // chunk 4 widens NewCandidatePayload.linked_entity_id to string|null
+  // to admit Scenario A inferred-target candidates. At Stage 7
+  // build_proposal, ProposedAttachmentCard composition semantically
+  // requires an existing entity UUID (attach_invoice_to_existing_bill
+  // + attach_payment_evidence); null linked_entity_id candidates MUST
+  // NOT route to ProposedAttachmentCard.
+  //
+  // Approach A pure guard: extend the existing topCandidate truthy-
+  // check at proposalBuilder.ts:196 / :271 / :323 with
+  // linked_entity_id !== null. Null linked_entity_id candidates fall
+  // through to the existing per-document-type fallthroughs (post_bill
+  // for vendor_invoice; defensive_guard for payment_confirmation +
+  // receipt).
+  // ===================================================================
+  describe('Phase 8 chunk 4 axis 5 — Approach A pure guards for null linked_entity_id candidates', () => {
+    it('vendor_invoice with null linked_entity_id Scenario A candidate → falls through to proposed_entry_card (post_bill); does NOT route to attach_invoice_to_existing_bill', () => {
+      // proposalBuilder.ts:196 guard: topCandidate.linked_entity_id !== null.
+      // Scenario A inferred-target candidate (linked_entity_id=null) fails
+      // the guard and falls through to the post_bill ProposedEntry at
+      // line 217-225. Subsystem 3 T1 dispatch downstream creates the new
+      // bill via billService.proposeCreate.
+      const result = buildProposal(
+        makeInput(
+          'vendor_invoice',
+          { amount: 100, vendor_invoice_number: 'INV-1' },
+          [
+            {
+              id: crypto.randomUUID(),
+              document_case_id: crypto.randomUUID(),
+              source_document_id: crypto.randomUUID(),
+              linked_entity_type: 'bill',
+              linked_entity_id: null,
+              link_role: 'primary_invoice',
+              confidence_score: 0.5,
+            },
+          ],
+        ),
+      );
+      expect(result.kind).toBe('proposed_entry_card');
+      if (result.kind === 'proposed_entry_card') {
+        expect((result.card as { proposed_action: string }).proposed_action).toBe(
+          'post_bill',
+        );
+      }
+    });
+
+    it('payment_confirmation with null linked_entity_id Scenario A candidate → falls through to proposed_entry_card (payment_confirmation_unmatched_defensive_guard)', () => {
+      // proposalBuilder.ts:271 guard: topCandidate && topCandidate
+      // .linked_entity_id !== null. Null linked_entity_id falls through to
+      // defensive_guard at line 290-301. Orchestrator routes the
+      // defensive_guard payload to exception queue per
+      // exception_reason='inferred_target_unmatched_v1' per ADR-0010
+      // substrate-now-enforcement-later discipline.
+      const result = buildProposal(
+        makeInput('payment_confirmation', { amount: '100.0000' }, [
+          {
+            id: crypto.randomUUID(),
+            document_case_id: crypto.randomUUID(),
+            source_document_id: crypto.randomUUID(),
+            linked_entity_type: 'payment',
+            linked_entity_id: null,
+            link_role: 'payment_evidence',
+            confidence_score: 0.5,
+          },
+        ]),
+      );
+      expect(result.kind).toBe('proposed_entry_card');
+      if (result.kind === 'proposed_entry_card') {
+        expect((result.card as { proposed_action: string }).proposed_action).toBe(
+          'payment_confirmation_unmatched_defensive_guard',
+        );
+      }
+    });
+
+    it('receipt with null linked_entity_id Scenario A variant candidate → falls through to proposed_entry_card (receipt_unmatched_defensive_guard)', () => {
+      // proposalBuilder.ts:323 guard: topCandidate && topCandidate
+      // .linked_entity_id !== null. Null linked_entity_id falls through to
+      // defensive_guard at line 340-351 (Session 65 Decision γ-1 receipt
+      // route ratification: defensive_guard fallthrough, NOT post_bill,
+      // since receipt-as-primary fires T2 paymentService dispatch which
+      // is reserved pending chunk 8 paymentService.ts substrate).
+      const result = buildProposal(
+        makeInput('receipt', { amount: '25.5000' }, [
+          {
+            id: crypto.randomUUID(),
+            document_case_id: crypto.randomUUID(),
+            source_document_id: crypto.randomUUID(),
+            linked_entity_type: 'payment',
+            linked_entity_id: null,
+            link_role: 'payment_evidence',
+            confidence_score: 0.5,
+          },
+        ]),
+      );
+      expect(result.kind).toBe('proposed_entry_card');
+      if (result.kind === 'proposed_entry_card') {
+        expect((result.card as { proposed_action: string }).proposed_action).toBe(
+          'receipt_unmatched_defensive_guard',
+        );
+      }
+    });
+  });
 });

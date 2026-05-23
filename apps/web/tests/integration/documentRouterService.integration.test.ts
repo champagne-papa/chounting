@@ -1158,3 +1158,201 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     }
   });
 });
+
+// =====================================================================
+// Phase 8 chunk 4 Task 3 axis 4 — F-3 substrate change inferred-target
+// emission (Decision γ-1 conditional-emit + Decision γ-2
+// suppress_inferred_target).
+//
+// Verifies completeCandidate's chunk 4 emission paths:
+//   - vendor_invoice Scenario A inferred-target (linked_entity_type='bill',
+//     linked_entity_id=null, scenario='invoice_inferred_target') per
+//     ADR-0015 §7 invoice-arrives-no-bill-yet.
+//   - receipt Scenario A variant inferred-target
+//     (linked_entity_type='payment', linked_entity_id=null,
+//     scenario='receipt_inferred_target') per ADR-0015 §7 variant
+//     disambiguation.
+//
+// Decision γ-1 (Session 65 ratification): Scenario A inferred-target
+// fires ONLY when no Scenario B match for the same document_type
+// (mutual-exclusivity per ADR-0015 §7).
+//
+// Decision γ-2 (Session 65 ratification): completeCandidate accepts
+// suppress_inferred_target: boolean option. When true, Scenario A
+// emission paths are suppressed; rematchCandidate passes true on
+// inner completeCandidate calls to preserve pre-chunk-4 orphan-prior
+// → exception semantics at T5/T8/T10 dispatchTrigger grade.
+// =====================================================================
+
+describe('documentRouterService.completeCandidate — F-3 inferred-target emission (chunk 4 axis 4)', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(() => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('receipt + zero open payments + zero open bills → returns one Scenario A variant inferred-target candidate (linked_entity_type=payment, linked_entity_id=null)', async () => {
+    // F-3 scope (b) receipt-as-primary emission per ADR-0015 §7 variant
+    // disambiguation. completeCandidate emits a single Scenario A variant
+    // inferred-target candidate when neither Scenario A existing (payment
+    // match) nor Scenario B (bill match) candidates produced.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('payment');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].link_role).toBe('payment_evidence');
+    expect(result[0].candidate_features.scenario).toBe('receipt_inferred_target');
+  });
+
+  it('γ-1 mutual-exclusivity: vendor_invoice + Scenario B bill match → Scenario A inferred-target NOT emitted (single Scenario B candidate)', async () => {
+    // Decision γ-1: Scenario A emission is conditional on no Scenario B
+    // match. When at least one bill matches the vendor, only Scenario B
+    // candidates are emitted; no Scenario A inferred-target.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(buildInput(fixture, ctx), ctx);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBe(billId);
+    expect(result[0].link_role).toBe('primary_invoice');
+    // Verify NO Scenario A inferred-target emitted alongside Scenario B.
+    const inferredTargets = result.filter((r) => r.linked_entity_id === null);
+    expect(inferredTargets).toHaveLength(0);
+  });
+
+  it('γ-1 mutual-exclusivity: receipt + Scenario A existing payment match → Scenario A variant inferred-target NOT emitted', async () => {
+    // Decision γ-1 applied to receipt branch: when a Scenario A existing
+    // payment match emits, the Scenario A variant inferred-target path
+    // is suppressed (mutual-exclusivity per ADR-0015 §7).
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+    );
+
+    const paymentCandidate = result.find(
+      (r) => r.linked_entity_type === 'payment' && r.linked_entity_id !== null,
+    );
+    expect(paymentCandidate).toBeDefined();
+    expect(paymentCandidate!.linked_entity_id).toBe(paymentId);
+
+    // Verify NO Scenario A variant inferred-target emitted alongside
+    // Scenario A existing.
+    const inferredVariants = result.filter(
+      (r) => r.linked_entity_type === 'payment' && r.linked_entity_id === null,
+    );
+    expect(inferredVariants).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true: vendor_invoice + zero bills → ZERO candidates emitted (Scenario A suppressed)', async () => {
+    // Decision γ-2: suppress_inferred_target=true option preserves
+    // pre-chunk-4 orphan-prior-candidate → exception semantics at
+    // T5/T8/T10 dispatchTrigger re-evaluation grade. When the option is
+    // true, Scenario A inferred-target emission paths short-circuit
+    // before pushing any candidate to the produce set.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true: receipt + zero payments + zero bills → ZERO candidates emitted (Scenario A variant suppressed)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true does NOT suppress Scenario B emission: vendor_invoice + bill match → Scenario B candidate emitted', async () => {
+    // Decision γ-2 specifically gates Scenario A inferred-target emission,
+    // not Scenario B existing-target. The flag preserves T5/T8/T10
+    // dispatchTrigger semantics where rematchCandidate's inner
+    // completeCandidate call must still see Scenario B matches when bills
+    // remain in the watched set.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBe(billId);
+  });
+
+  it('γ-2 suppress_inferred_target=false (default omitted) preserves Scenario A emission: vendor_invoice + zero bills → 1 Scenario A inferred-target', async () => {
+    // Default behavior: when options.suppress_inferred_target is not
+    // passed, Scenario A inferred-target emission fires per Decision γ-1
+    // conditional-emit. This is the canonical Subsystem 1 initial-
+    // emission grade (rematchCandidate explicitly opts in to suppression).
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const resultDefault = await completeCandidate(buildInput(fixture, ctx), ctx);
+    expect(resultDefault).toHaveLength(1);
+    expect(resultDefault[0].linked_entity_id).toBeNull();
+
+    // Same input + explicit suppress_inferred_target=false produces same result.
+    const fixture2 = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const resultExplicit = await completeCandidate(
+      buildInput(fixture2, ctx),
+      ctx,
+      { suppress_inferred_target: false },
+    );
+    expect(resultExplicit).toHaveLength(1);
+    expect(resultExplicit[0].linked_entity_id).toBeNull();
+  });
+
+  it('Scenario A inferred-target candidate persists to Layer 1 with null linked_entity_id (substrate change post-migration 153)', async () => {
+    // F-3 Layer 1 verification: chunk 4 axis 4 substrate change widens
+    // document_relationship_candidates.linked_entity_id column to NULL-
+    // able (migration 20240159000000_make_linked_entity_id_nullable.sql).
+    // Read-back via DocumentRelationshipCandidateSchema parse accepts
+    // null per chunk 4 Task 5.2 Zod widening.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+
+    await completeCandidate(buildInput(fixture, ctx), ctx);
+
+    const { data: rows } = await db
+      .from('document_relationship_candidates')
+      .select('linked_entity_type, linked_entity_id, candidate_features')
+      .eq('document_case_id', fixture.caseId);
+    expect(rows).toHaveLength(1);
+    expect(rows![0].linked_entity_type).toBe('bill');
+    expect(rows![0].linked_entity_id).toBeNull();
+    expect(
+      (rows![0].candidate_features as { scenario: string }).scenario,
+    ).toBe('invoice_inferred_target');
+  });
+});

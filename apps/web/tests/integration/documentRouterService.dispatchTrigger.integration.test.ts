@@ -807,3 +807,166 @@ describe('dispatchTrigger Zod boundary', () => {
     }
   });
 });
+
+// =====================================================================
+// Phase 8 chunk 4 Task 3 axis 3b — Subsystem 3 + γ-2 suppress_inferred_target
+// re-evaluation audit-trail-semantics preservation discipline.
+//
+// Decision γ-2 from Session 65 EXPANDED impl: rematchCandidate passes
+// suppress_inferred_target=true on its inner completeCandidate call so
+// re-evaluation against a prior Scenario A inferred-target candidate
+// preserves pre-chunk-4 "orphaned prior candidate → re_routed_to_exception
+// (rule 4)" semantics. The defensive null-guard at
+// documentRouterService.ts:591-601 returns [] when priorCandidate
+// .linked_entity_id===null, which under D-partial 6-rule discriminator
+// yields decision_outcome='re_routed_to_exception' (rule 4 — empty
+// re-match result against extant prior candidate).
+//
+// Without γ-2 + null-guard, T5/T8/T10 re-evaluation on a Scenario A
+// prior candidate would silently shift to 'candidate_superseded'
+// (rule 2 — re-emission with new linked_entity_id), masking the
+// human-review surface as an auto-propose-new-entity surface.
+// =====================================================================
+
+async function seedClassifiedCaseWithScenarioAInferredTargetCandidate(
+  orgId: string,
+  ctx: ServiceContext,
+): Promise<{ fixture: RouterCaseFixture; vendorId: string }> {
+  const db = adminClient();
+  const vendorId = await seedVendor(orgId);
+  // NO bills seeded — completeCandidate emits a Scenario A inferred-target
+  // candidate (linked_entity_id=null) per ADR-0015 §7 invoice-arrives-no-
+  // bill-yet path.
+  const fixture = await seedRouterCase(orgId, ctx, vendorId);
+  await completeCandidate(buildCompleteInput(fixture, ctx), ctx);
+  await transitionCaseToClassifiedDirect(db, orgId, fixture.caseId, ctx);
+  return { fixture, vendorId };
+}
+
+describe('dispatchTrigger γ-2 suppress_inferred_target — re-evaluation against Scenario A prior candidate routes to exception (chunk 4)', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(() => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('T8 period_reopen does NOT fan out to cases with Scenario A inferred-target candidates at v1 (date_proximity feature absent for inferred-target shape)', async () => {
+    // T8 fan-out filter at computeT8FanOut (documentRouterService.ts:1936-
+    // 1999) reads candidate_features.features[].date_proximity.raw_value
+    // .extracted to match the candidate's invoice_date against the
+    // reopened period's date range. Scenario A inferred-target candidates
+    // (linked_entity_id=null) emit candidate_features.scenario=
+    // 'invoice_inferred_target' WITHOUT a populated date_proximity feature
+    // (no bill row exists to compare invoice_date against). The case is
+    // structurally excluded from T8's fan-out at v1.
+    //
+    // Zero-emission test isolation per chunk-1 #7 + chunk-2 R5.2 + chunk-3
+    // R5.2 — fresh isolated ctx asserts zero audit rows for this trace_id.
+    const isolatedCtx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const { fixture } = await seedClassifiedCaseWithScenarioAInferredTargetCandidate(
+      SEED.ORG_HOLDING,
+      isolatedCtx,
+    );
+    const db = adminClient();
+
+    const { data: period } = await db
+      .from('fiscal_periods')
+      .select('period_id')
+      .eq('org_id', SEED.ORG_HOLDING)
+      .eq('start_date', '2026-01-01')
+      .eq('end_date', '2026-12-31')
+      .single();
+
+    await dispatchTrigger(
+      {
+        trigger_type: 'T8_period_reopen',
+        org_id: SEED.ORG_HOLDING,
+        period_id: period!.period_id,
+        trace_id: isolatedCtx.trace_id,
+      },
+      isolatedCtx,
+    );
+
+    // No fan-out → no router_re_evaluation_fired audit row for this case.
+    const { data: auditRows } = await db
+      .from('audit_log')
+      .select('before_state')
+      .eq('trace_id', isolatedCtx.trace_id)
+      .eq('entity_id', fixture.caseId)
+      .eq('action', 'router_re_evaluation_fired');
+    expect(auditRows!.length).toBe(0);
+
+    // Cleanup the isolated ctx audit rows.
+    await db.from('audit_log').delete().eq('trace_id', isolatedCtx.trace_id);
+  });
+
+  it('T10 single-case dispatch on a case with Scenario A inferred-target prior candidate → decision_outcome=re_routed_to_exception (γ-2 audit semantics preserved)', async () => {
+    const { fixture } = await seedClassifiedCaseWithScenarioAInferredTargetCandidate(
+      SEED.ORG_HOLDING,
+      ctx,
+    );
+    const db = adminClient();
+
+    await dispatchTrigger(
+      {
+        trigger_type: 'T10_manual_override',
+        org_id: SEED.ORG_HOLDING,
+        case_id: fixture.caseId,
+        trace_id: ctx.trace_id,
+      },
+      ctx,
+    );
+
+    const { data: auditRows } = await db
+      .from('audit_log')
+      .select('before_state')
+      .eq('trace_id', ctx.trace_id)
+      .eq('entity_id', fixture.caseId)
+      .eq('action', 'router_re_evaluation_fired');
+    expect(auditRows!.length).toBe(1);
+    const before = auditRows![0].before_state as Record<string, unknown>;
+    expect(before.trigger_type).toBe('T10_manual_override');
+    expect(before.decision_outcome).toBe('re_routed_to_exception');
+  });
+
+  it('rematchCandidate emits no new candidates when prior candidate has null linked_entity_id (defensive null-guard returns [])', async () => {
+    // Verifies the rematchCandidate defensive null-guard at
+    // documentRouterService.ts:591-601. Post-T10 dispatch, no NEW
+    // document_relationship_candidates rows should be inserted for the
+    // case beyond the single prior Scenario A candidate (no
+    // candidate_superseded emission per γ-2 audit semantics).
+    const { fixture } = await seedClassifiedCaseWithScenarioAInferredTargetCandidate(
+      SEED.ORG_HOLDING,
+      ctx,
+    );
+    const db = adminClient();
+
+    // Snapshot candidate count before T10 dispatch.
+    const { data: before } = await db
+      .from('document_relationship_candidates')
+      .select('id')
+      .eq('document_case_id', fixture.caseId);
+    const beforeCount = before?.length ?? 0;
+
+    await dispatchTrigger(
+      {
+        trigger_type: 'T10_manual_override',
+        org_id: SEED.ORG_HOLDING,
+        case_id: fixture.caseId,
+        trace_id: ctx.trace_id,
+      },
+      ctx,
+    );
+
+    const { data: after } = await db
+      .from('document_relationship_candidates')
+      .select('id')
+      .eq('document_case_id', fixture.caseId);
+    expect(after?.length).toBe(beforeCount);
+  });
+});

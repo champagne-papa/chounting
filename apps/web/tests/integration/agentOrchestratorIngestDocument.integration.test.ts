@@ -304,3 +304,196 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
     }
   });
 });
+
+// =====================================================================
+// Phase 8 chunk 4 Task 3 — router_match_against_state stage record
+// (axis 1) + Logic Receipt audit consumer surface (axis 2 fold-in).
+//
+// Axis 2 folds into axis 1 per Session 66 Phase A Finding A
+// disposition: brief axis 2 framing cites
+// `ProposedMutation.justification.pipeline_trace` at Stage 7
+// build_proposal grade, but no HEAD code path populates that field;
+// ProposalJustificationSchema formal Zod codification deferred to
+// chunk 9 per Layer 2 item #B. Runtime Logic Receipt consumer
+// accessibility is verified at `IngestDocumentOutput.pipeline_trace`
+// boundary — the only existing consumer surface at chunk 4 grade.
+// =====================================================================
+const SHA256_HEX = /^[a-f0-9]{64}$/;
+
+describe('Phase 8 chunk 4 Task 3 — router_match_against_state pipeline_trace record (axis 1 + axis 2 folded)', () => {
+  let traceIds: string[] = [];
+
+  beforeEach(() => {
+    traceIds = [];
+    (getStorageProvider as Mock).mockReturnValue({
+      put: vi.fn(),
+      fetch: makeFetchMock(),
+    });
+    vi.mocked(invokeSidecar).mockImplementation(
+      createMockInvokeSidecar({
+        failureMode: null,
+        artifactOverride: {
+          lines: [
+            { text: 'Invoice #12345', bbox: [0, 0, 100, 20], confidence: 0.95 },
+            { text: 'Acme Vendor Co.', bbox: [0, 20, 100, 40], confidence: 0.95 },
+            { text: 'Date: 2026-01-15', bbox: [0, 40, 100, 60], confidence: 0.95 },
+            { text: 'Total: $123.45', bbox: [0, 60, 100, 80], confidence: 0.95 },
+          ],
+        },
+      }),
+    );
+  });
+
+  afterEach(async () => {
+    for (const tid of traceIds) {
+      await db.from('audit_log').delete().eq('trace_id', tid);
+    }
+  });
+
+  it('router_match_against_state record carries the full Logic Receipt shape per ADR-0007 §Q30 + ADR-0018 §2 lines 492-504', async () => {
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const sourceDocId = await seedSourceDocument({ trace_id });
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    expect(result.status).toBe('committed');
+    const record = result.pipeline_trace.find(
+      (r) => r.stage_name === 'router_match_against_state',
+    );
+    expect(record).toBeDefined();
+    // ADR-0018 §2 line 495 + ADR-0007 §Q30 line 484: five-field record shape.
+    expect(record!.stage_name).toBe('router_match_against_state');
+    expect(record!.input_hash).toMatch(SHA256_HEX);
+    expect(record!.output_hash).toMatch(SHA256_HEX);
+    // ADR-0018 §2 line 498: deterministic TypeScript, no LLM.
+    expect(record!.model).toBeNull();
+    expect(record!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  });
+
+  it('router_match_against_state input_hash captures Subsystem-1-grade fingerprint distinct from orchestrator-grade match_against_existing_state', async () => {
+    // ADR-0018 §2 lines 496-497: Subsystem-1-grade input_hash =
+    // SHA-256(classifier output + domain-state snapshot fingerprint),
+    // capturing document_type + classification_confidence + extracted_fields
+    // + vendor_match. The orchestrator-grade match_against_existing_state
+    // emission at ingestDocument.ts:354-366 hashes a narrower fingerprint
+    // ({documentCaseId, vendorMatch}); the two records co-emit per partial-
+    // info value pick (a) at chunk 4 Task 1.
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const sourceDocId = await seedSourceDocument({ trace_id });
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    const subsystemRecord = result.pipeline_trace.find(
+      (r) => r.stage_name === 'router_match_against_state',
+    );
+    const orchestratorRecord = result.pipeline_trace.find(
+      (r) => r.stage_name === 'match_against_existing_state',
+    );
+    expect(subsystemRecord).toBeDefined();
+    expect(orchestratorRecord).toBeDefined();
+    // Both records co-emit but with distinct fingerprints — Subsystem-1
+    // captures classifier output + extracted_fields, orchestrator does not.
+    expect(subsystemRecord!.input_hash).not.toBe(orchestratorRecord!.input_hash);
+  });
+
+  it('router_match_against_state output_hash matches match_against_existing_state output_hash (same candidate set hashed at both grades)', async () => {
+    // Both records hash the same `relationshipCandidates` array per
+    // ingestDocument.ts:360-363 + ingestDocument.ts:392-395; output_hashes
+    // must agree to confirm both grades observed the same Subsystem-1
+    // output state.
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const sourceDocId = await seedSourceDocument({ trace_id });
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    const subsystemRecord = result.pipeline_trace.find(
+      (r) => r.stage_name === 'router_match_against_state',
+    );
+    const orchestratorRecord = result.pipeline_trace.find(
+      (r) => r.stage_name === 'match_against_existing_state',
+    );
+    expect(subsystemRecord!.output_hash).toBe(orchestratorRecord!.output_hash);
+  });
+
+  it('router_match_against_state emits in canonical sequence position (after match_against_existing_state, before build_proposal)', async () => {
+    // ADR-0018 §2 lines 492-504 + ADR-0014 §13: Subsystem-1-grade record
+    // co-emits with orchestrator-grade record adjacent to it; build_proposal
+    // is downstream consumer surface (Stage 7).
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const sourceDocId = await seedSourceDocument({ trace_id });
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    const stageNames = result.pipeline_trace.map((r) => r.stage_name);
+    const orchestratorIdx = stageNames.indexOf('match_against_existing_state');
+    const subsystemIdx = stageNames.indexOf('router_match_against_state');
+    const buildProposalIdx = stageNames.indexOf('build_proposal');
+    expect(orchestratorIdx).toBeGreaterThanOrEqual(0);
+    expect(subsystemIdx).toBe(orchestratorIdx + 1);
+    expect(buildProposalIdx).toBe(subsystemIdx + 1);
+  });
+
+  it('axis 2 Logic Receipt consumer fold-in: router_match_against_state surfaces in IngestDocumentOutput.pipeline_trace at runtime consumer boundary per ADR-0007 §Q30', async () => {
+    // Chunk 4 axis 2 (folded into axis 1 per Session 66 Phase A Finding A):
+    // ProposalJustificationSchema formal Zod codification deferred to
+    // chunk 9 per Layer 2 item #B (Sub-Q9 substrate-grade-first lock);
+    // chunk 4 verifies runtime accessibility at the only existing consumer
+    // surface — IngestDocumentOutput.pipeline_trace — without schema-level
+    // formalization. Downstream Logic Receipt consumers read the field
+    // permissively at the optional `justification: z.record(...)` shape
+    // (proposedMutation.schema.ts:65,77 + proposedAttachmentCard.schema.ts:52)
+    // pending chunk 9 ProposalJustificationSchema formal Zod codification.
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const sourceDocId = await seedSourceDocument({ trace_id });
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    // Logic Receipt consumer surface: result.pipeline_trace is the
+    // accessible record array; downstream Logic Receipt consumers read
+    // it without schema-level Zod parse (permissive runtime consumption).
+    expect(Array.isArray(result.pipeline_trace)).toBe(true);
+    const consumerView = result.pipeline_trace.find(
+      (r) => r.stage_name === 'router_match_against_state',
+    );
+    expect(consumerView).toBeDefined();
+    // ADR-0007 §Q30 five-field consumer contract — fields readable as
+    // unknown-typed JSONB at runtime per ProposalJustificationSchema
+    // deferral.
+    expect(consumerView).toEqual(
+      expect.objectContaining({
+        stage_name: 'router_match_against_state',
+        input_hash: expect.stringMatching(SHA256_HEX),
+        output_hash: expect.stringMatching(SHA256_HEX),
+        model: null,
+        timestamp: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+        ),
+      }),
+    );
+  });
+});
