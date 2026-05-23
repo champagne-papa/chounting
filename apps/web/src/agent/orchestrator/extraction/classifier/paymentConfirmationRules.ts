@@ -17,6 +17,12 @@ import { extractOcrText } from './extractOcrText';
 
 // Positive patterns: payment-completion language + confirmation
 // number patterns + filename heuristics.
+//
+// Phase 8 real-OCR recalibration (Session 71): added high-precision
+// voucher-header positives grounded in the captured Zoho-voucher OCR —
+// a "PAYMENTS MADE" header + voucher-field vocabulary ("Amount Paid",
+// "Payment Date/Mode/Voucher") identify a real payment voucher that
+// lacks the "payment received/processed" completion language.
 const PAYMENT_CONFIRMATION_POSITIVE_PATTERNS = [
   /\bpayment\s+(received|completed|processed|successful)/i,
   /\bthank\s+you\s+for\s+your\s+payment\b/i,
@@ -24,6 +30,9 @@ const PAYMENT_CONFIRMATION_POSITIVE_PATTERNS = [
   /\bpayment\s+confirmation\b/i,
   /\bconfirmation\s+(number|of\s+payment)/i,
   /\btransaction\s+(id|reference|number)/i,
+  /\bpayments?\s+made\b/i, // Zoho "PAYMENTS MADE" header
+  /\bamount\s+paid\b/i,
+  /\bpayment\s+(date|mode|voucher)\b/i,
 ];
 
 const PAYMENT_CONFIRMATION_FILENAME_PATTERNS = [
