@@ -114,4 +114,37 @@ describe('Phase 7 chunk 7.2 Task 7.2.11.A — vendorInvoiceRules', () => {
       expect(result.matched).toBe(false);
     });
   });
+
+  // Phase 8 dedicated-fix-chunk Task 1 — real-OCR recalibration grounded
+  // against captured document_artifacts.lines (Session 68). Tier A
+  // vendor_invoice must fire on an invoice header/title, NOT on field-label
+  // cross-references ("Invoice number", "Bill Number") that appear on
+  // receipts/vouchers. Document-kind-defining headers (a "Receipt" title,
+  // "PAYMENTS MADE", "Date paid") suppress the over-match.
+  describe('real-OCR negative cases (Session 68 calibration)', () => {
+    it('does NOT match a receipt that cites an invoice number', () => {
+      const artifact = artifactWithLines([
+        'Receipt', 'Invoice number', '1SRPQ68M-0001', 'Date paid',
+        'November 18, 2025', 'CA$282.24 paid on November 18, 2025',
+      ]);
+      expect(evaluateVendorInvoice(artifact).matched).toBe(false);
+    });
+
+    it('does NOT match a payment voucher that lists a bill number', () => {
+      const artifact = artifactWithLines([
+        'PAYMENTS MADE', 'Payment#', '517', 'Amount Paid', 'Payment Date',
+        'Payment Mode', 'Cash', 'Payment for', 'Bill Number', 'Bill Date',
+        'Bill Amount', '1SRPQ68M0001',
+      ]);
+      expect(evaluateVendorInvoice(artifact).matched).toBe(false);
+    });
+
+    it('STILL matches a genuine invoice with an "Invoice" title line', () => {
+      const artifact = artifactWithLines([
+        'Invoice', 'Invoice number', '1SRPQ68M-0001', 'Date of issue',
+        'Bill to', 'CA$282.24 due November 18, 2025',
+      ]);
+      expect(evaluateVendorInvoice(artifact).matched).toBe(true);
+    });
+  });
 });

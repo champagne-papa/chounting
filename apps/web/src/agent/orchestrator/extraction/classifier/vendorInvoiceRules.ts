@@ -23,9 +23,18 @@ import { extractOcrText } from './extractOcrText';
 
 // Positive patterns: case-insensitive regex match for invoice-shape
 // headers + filename heuristics.
+//
+// Phase 8 real-OCR recalibration (Session 71): fire on an invoice
+// header/title, NOT on field-label cross-references. A receipt or
+// payment voucher that cites "Invoice number" / "Bill Number" / "Bill
+// Date" / "Bill Amount" must not trip the vendor_invoice match. The
+// negative lookahead excludes those field-label words. Note: "#"+digits
+// (e.g. "Invoice #12345") is the document's OWN identifier — a genuine
+// header element — so "#" is intentionally NOT in the exclusion list
+// (excluding it would suppress real invoices; see existing positive test).
 const VENDOR_INVOICE_HEADER_PATTERNS = [
-  /\binvoice\b/i,
-  /\bbill\b(?!\s*to)/i, // "Bill" but not "Bill to" (which appears on receipts too)
+  /\binvoice\b(?!\s*(number|no\b|date|amount|total|to\b))/i,
+  /\bbill\b(?!\s*(to|number|date|amount|no\b))/i, // not "Bill to" / field labels
   /\bstatement\b/i,
   /\btax\s+invoice\b/i,
 ];
@@ -38,19 +47,35 @@ const VENDOR_INVOICE_FILENAME_PATTERNS = [
 
 // Negative patterns: receipt-shape footers that suggest receipt, not
 // invoice. If any present, suppress vendor_invoice match (Step 18 (i)).
+//
+// Phase 8 real-OCR recalibration (Session 71): added document-kind-
+// defining headers grounded in the captured Figma-receipt OCR — a
+// "Receipt" title line / "Date paid" / "paid on" mean the doc is a
+// receipt even if it cites its invoice number as a cross-reference.
 const RECEIPT_FOOTER_NEGATIVE_PATTERNS = [
   /thank\s+you\s+for\s+your\s+(purchase|patronage|business)/i,
   /merchant\s+(id|copy|number)/i,
   /\bauth(\s+code|orization|\.?)\b/i,
   /\bapproval\s+code\b/i,
+  /^\s*receipt\b/im, // "Receipt" title line (document-kind-defining header)
+  /\bdate\s+paid\b/i,
+  /\bpaid\s+on\b/i,
 ];
 
 // Payment-confirmation language that suggests payment_confirmation, not
 // vendor_invoice. A confirmation document shouldn't carry invoice-shape
 // headers, but defensive in case OCR misreads.
+//
+// Phase 8 real-OCR recalibration (Session 71): added Zoho-voucher
+// document-kind-defining headers — "PAYMENTS MADE" header / "Payment
+// Date|Mode" / "Amount Paid" mean the doc is a payment voucher even
+// though it lists a "Bill Number" cross-reference.
 const PAYMENT_CONFIRMATION_NEGATIVE_PATTERNS = [
   /payment\s+(received|completed|processed)/i,
   /thank\s+you\s+for\s+your\s+payment/i,
+  /\bpayments?\s+made\b/i, // "PAYMENTS MADE" header
+  /\bpayment\s+(date|mode)\b/i,
+  /\bamount\s+paid\b/i,
 ];
 
 function anyMatch(text: string, patterns: RegExp[]): boolean {
