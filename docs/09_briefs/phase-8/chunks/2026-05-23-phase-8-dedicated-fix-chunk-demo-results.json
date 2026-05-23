@@ -1,0 +1,266 @@
+[
+  {
+    "fixture": {
+      "label": "vendor_invoice",
+      "filename": "vendor_invoice.pdf",
+      "expected_proposal_kind": "proposed_entry_card (post_bill route)"
+    },
+    "trace_id": "3b98196d-f41f-4ebb-9115-f20b83407812",
+    "source_document_id": "51fafc2d-ad5d-4644-8df0-6ce5f93a95f1",
+    "document_case_id": "f7807979-9145-48a2-b927-a30c69a075ce",
+    "ingest_output": {
+      "status": "committed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-23T22:05:44.867Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "d2fc1ab31f73776a3f17d20c9d8c33238d1679618ad7667392acfeb1cbd343db",
+          "output_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "model": null,
+          "timestamp": "2026-05-23T22:05:44.882Z"
+        },
+        {
+          "stage_name": "run_ocr",
+          "input_hash": "b434440fdcd0cc69c4fe882e34170029b7f5e64b717987f97de103f0fbbfcbdf",
+          "output_hash": "bf53f81dc8905cfc25a559209e3897a0581852384a392342d51335856d7a3685",
+          "model": "paddleocr-2.7-pp-ocrv4",
+          "timestamp": "2026-05-23T22:07:51.376Z"
+        },
+        {
+          "stage_name": "classify_document_type",
+          "input_hash": "785975611766e1bbb129f3c23e3f66b9093365469f3f55240ea3ec0951c9c52d",
+          "output_hash": "f3fc7fb79a8f3c2773929e9342658865911ca6780b3c6bfcf12058d407790447",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:51.428Z"
+        },
+        {
+          "stage_name": "extract_fields",
+          "input_hash": "b812cfac6bc74fd4aac199dc0ec9440c6aee97795e8fbf4f71a9a8b643fb173f",
+          "output_hash": "ef94e54cca4c4bb939b6fc2d2dcc09c9fa11f21e61df155a8202c7aeea3b6530",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:51.428Z"
+        },
+        {
+          "stage_name": "ai_fallback_extract",
+          "input_hash": "42644ef094da4f4f23a96a1ccc47077aa122c2e9cb3a26ea48a36235acedaf8b",
+          "model": "claude-sonnet-4-5",
+          "timestamp": "2026-05-23T22:07:51.429Z",
+          "output_hash": "ac2fe7ce8894227c59ec51a5dcd4c78a7516823edb76b528d13ef1136d3b3465"
+        },
+        {
+          "stage_name": "match_vendor",
+          "input_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "output_hash": "d9c100ce6809c07821826aced50cd284b32d1db0d7bc3ed5156b560830378128",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.516Z"
+        },
+        {
+          "stage_name": "match_against_existing_state",
+          "input_hash": "b753ac0dd1228e015e0634fd5bc5fdd3f1ccfaf565922d5b56884c34cbed446e",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.531Z"
+        },
+        {
+          "stage_name": "router_match_against_state",
+          "input_hash": "b89b2fa2741b1ea013fd2896027ecfbe6c525c8319961b65cfec62b1d5d897e2",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.531Z"
+        },
+        {
+          "stage_name": "build_proposal",
+          "input_hash": "5ef9d4468fd813a1ebe0160ef0886e61356e0f65d3e13b440efac7f3ced70ecd",
+          "output_hash": "7595a4e25ce19c1f70a0a3980e31b5957fc0e025e940f83dbc93cc10fe21938e",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.531Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 130818
+  },
+  {
+    "fixture": {
+      "label": "receipt",
+      "filename": "receipt.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence)"
+    },
+    "trace_id": "67c99d35-5ebc-481c-94b0-ed17824849b2",
+    "source_document_id": "baad8657-ace6-485e-88a5-34d0ae3de523",
+    "document_case_id": "a3160024-018f-47e2-8c92-c0d4833f4ea0",
+    "ingest_output": {
+      "status": "committed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.585Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "00dad250b1a16f395a93762763c9f6f7b2b9b95ea169a45f121b55b5c2b718be",
+          "output_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "model": null,
+          "timestamp": "2026-05-23T22:07:55.598Z"
+        },
+        {
+          "stage_name": "run_ocr",
+          "input_hash": "a3d98a67cf19e79fd0a6f5b6dd529368c8486008c214a574ebe70a83faa9a78c",
+          "output_hash": "637805c5723cfb2a147121ef6fcd2adb56b750ce5a4af56916c025953c4a188f",
+          "model": "paddleocr-2.7-pp-ocrv4",
+          "timestamp": "2026-05-23T22:08:00.891Z"
+        },
+        {
+          "stage_name": "classify_document_type",
+          "input_hash": "29fe40430038b0e3b2604cf650faa87fb9dfe6181b38d35628634f32b97b2615",
+          "output_hash": "2f32bbbd07e18cc8c1105aeff0c5d9cd39fb06bfc1c0ec1a2935f3b8fa466224",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:00.940Z"
+        },
+        {
+          "stage_name": "extract_fields",
+          "input_hash": "227d571cf233cea89d5488fa668c1bb0e97463cfd65dcbc973c3034946aa6731",
+          "output_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:00.941Z"
+        },
+        {
+          "stage_name": "ai_fallback_extract",
+          "input_hash": "475e03e76a50826a76d3e327b57e4a60082fd83d7ee6b82c7a7847e9e068f373",
+          "model": "claude-sonnet-4-5",
+          "timestamp": "2026-05-23T22:08:00.941Z",
+          "output_hash": "f2b5a07817bfddc667e4d9c304626b488243e8b04ef146358b8913c2b80a8034"
+        },
+        {
+          "stage_name": "match_vendor",
+          "input_hash": "acb355e283624e7028c92698b1d44e3170d47959a008e8e60cd3a84df045426e",
+          "output_hash": "d9c100ce6809c07821826aced50cd284b32d1db0d7bc3ed5156b560830378128",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.101Z"
+        },
+        {
+          "stage_name": "match_against_existing_state",
+          "input_hash": "aa77c2428231392a67534413050677d524db74729f8340447f6b0c0f6f3f6ce0",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.107Z"
+        },
+        {
+          "stage_name": "router_match_against_state",
+          "input_hash": "ca6d084cb1b11c0eda44f5c5ff7c5cc02a4ee8b795824869de51b35dc748cffe",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.107Z"
+        },
+        {
+          "stage_name": "build_proposal",
+          "input_hash": "f2b5a07817bfddc667e4d9c304626b488243e8b04ef146358b8913c2b80a8034",
+          "output_hash": "35da270da75d10f56d86ee82d785619bcb013a8c809f7afc6ca380cf50911c13",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.107Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 8575
+  },
+  {
+    "fixture": {
+      "label": "payment_confirmation",
+      "filename": "payment_confirmation.pdf",
+      "expected_proposal_kind": "proposed_attachment_card (attach_payment_evidence; no cited bill)"
+    },
+    "trace_id": "61e056d2-b38a-4cc1-9260-9db825aaaf33",
+    "source_document_id": "a29c9b4d-6e87-4085-b2bd-039a26ebd80f",
+    "document_case_id": "7195d1a5-d6a2-4f0a-a939-35f9cc15ecec",
+    "ingest_output": {
+      "status": "committed",
+      "pipeline_trace": [
+        {
+          "stage_name": "dedup_no_match",
+          "input_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "output_hash": "",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.140Z"
+        },
+        {
+          "stage_name": "byte_fetch",
+          "input_hash": "26977fec105bba908d51575c9675e94abb911d3ecd1dc3ed5e2a445c68d43a1b",
+          "output_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:04.149Z"
+        },
+        {
+          "stage_name": "run_ocr",
+          "input_hash": "9fbce00c240e91f27b9ae6bdd58a1b5682e883f3d6c0529e13effc8aac1d6aae",
+          "output_hash": "145dc86abe6eaf2220f7e6562755e338c6c340663dfa073681d5874e3ca122d7",
+          "model": "paddleocr-2.7-pp-ocrv4",
+          "timestamp": "2026-05-23T22:08:06.829Z"
+        },
+        {
+          "stage_name": "classify_document_type",
+          "input_hash": "91bd3e2d6a34547082dcdb0182665c81056a05708898468a0649a6e6166e1f56",
+          "output_hash": "784b016ba6bfab726b66eb915610f4c5f853481f891ddf0cc4d4ffae0e9217e9",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:06.865Z"
+        },
+        {
+          "stage_name": "extract_fields",
+          "input_hash": "223fcd1617ed12a8828efcf6bab90a7ad42a8d371d8faae9b3ca8fed6b0c05ff",
+          "output_hash": "c9431d6fca846aafdc4ce3742b62a9deb705fcceff4caabd585e8dccecc88737",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:06.866Z"
+        },
+        {
+          "stage_name": "ai_fallback_extract",
+          "input_hash": "c54c38ecf4affaef6c1f8f015a4fd02118a4efa06a82720eae7b7d02f8b98316",
+          "model": "claude-sonnet-4-5",
+          "timestamp": "2026-05-23T22:08:06.866Z",
+          "output_hash": "d02eb1967c8654e4bbb1489c56d2fc52e9adc1ae6142da22a23158a52fd6e184"
+        },
+        {
+          "stage_name": "match_vendor",
+          "input_hash": "42118df0a4f2cfb27bfbe89815bfee979d70ae502d32e631d1f111451a45a037",
+          "output_hash": "d9c100ce6809c07821826aced50cd284b32d1db0d7bc3ed5156b560830378128",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:09.518Z"
+        },
+        {
+          "stage_name": "match_against_existing_state",
+          "input_hash": "e8bd28e68b1fa89e460e8ef672a9c15a7e34ff34b9edc8522dbf5eee80272458",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:09.525Z"
+        },
+        {
+          "stage_name": "router_match_against_state",
+          "input_hash": "d948fb9602c2690f508ab6c9f83f486b572c40977cc273fe7e3bbf8f1c432fea",
+          "output_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:09.525Z"
+        },
+        {
+          "stage_name": "build_proposal",
+          "input_hash": "3f3486b515f60734c7f89d320826b90fc09ef11903845578ab6ac7adf4202c5e",
+          "output_hash": "77bb0952bf82187641526e9610af7e4f03e52561302f4786affefb4ea2e7744f",
+          "model": null,
+          "timestamp": "2026-05-23T22:08:09.525Z"
+        }
+      ],
+      "proposal_id": null,
+      "failure_class": null
+    },
+    "elapsed_ms": 5418
+  }
+]
