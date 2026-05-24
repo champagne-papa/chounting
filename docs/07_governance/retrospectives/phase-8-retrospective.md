@@ -165,6 +165,38 @@ New carry-forward surfaced this session (outside the original §3 four):
 auto-commit arc lands. With items 3 + 4 done and items 1 + 2 reframed,
 **Phase 8 §3 is complete; the auto-commit arc is the named carry-forward.**
 
+### Auto-commit arc closeout (2026-05-24)
+
+The auto-commit arc (the named carry-forward above) **landed this session** —
+4 commits on `staging`:
+
+- `a940ec6f` — ADR-0007 Q78 ratified (**Option A**: system actors bypass the
+  identity invariants at `withInvariants`).
+- `60b89106` — service-account substrate (**Path X**: `SYSTEM_ACTOR_USER_ID`
+  seeded; `system_user_id` on `SystemActorCaller`; `actingUserId` helper).
+- `edb260f6` — gate opened: `withInvariants` widened to admit + adapt system
+  actors; `synthCtxForCommit` retired; `service-layer.md` Candidate #11
+  retired. Routine parity held (no ledger-service edits — Approach Adapt).
+- `c67801ec` — Option II seeded gate validation (paid-API-free integration
+  test) + a `created_by`-citation correction.
+
+**§3 item-1 (chunk 10 commit-path retirement) — DONE.** **§3 item-2 (seeded
+auto-commit tests) — gate satisfied** via the Option II integration test
+(`autoCommitGate.integration.test.ts`: bill + payment auto-commit attributed
+to the service account; no-identity rejection). The original 5 **Modal-gated
+e2e `it.skip` scenarios** (full-OCR coverage) are **NOT done** — they're a
+**tracked follow-up** (paid `RUN_MODAL_E2E=1` founder-review run; only 2 of 5
+commit ledger, the other 3 are attachment-routing; depends on the fixture
+PDFs' real OCR yielding the right fields). Routine baseline **1406/0/10**.
+
+Two corrections surfaced + fixed this arc (verify-from-disk):
+- The `bills.created_by NOT NULL FK` blocker was a **misattribution** — `bills`
+  has no `created_by`; the real NOT-NULL actor column is
+  `bill_payment_allocations.created_by`. Path X unchanged + still necessary.
+- The opener brief's Commit 4 framing (paid-API-free, 1408/0/5, 5
+  seeded-commit tests) diverged from disk on all three counts. Both
+  corrections: friction-journal 2026-05-24.
+
 ## §4 Pre-push gate status
 
 - **`corpus.ts` PII scrub — DONE** (commit `b981c77`): renamed to

@@ -16007,3 +16007,44 @@ single-element arrays, reinforce the prompt, or formalize the exception-route
 as intended behavior. N=1 observation; not codifying. Empirical-exercise
 value: exactly the class of issue that lint-but-never-run code hides,
 surfaced by the first live Tier C call.
+
+## 2026-05-24 — created_by blocker misattributed from a CREATE TABLE migration; the live schema is authoritative
+
+The auto-commit arc's design hinged on a "ledger entity tables require a real
+`auth.users` identity for `created_by`" blocker, surfaced (and founder-ratified
+into Path X) as "`bills.created_by` is `uuid NOT NULL REFERENCES auth.users(id)`"
+— read from the 20240139 bill-lifecycle CREATE TABLE migration. When the
+Option II seeded test's direct `bills` insert ran, it failed: *"Could not find
+the 'created_by' column of 'bills'."* The live schema (post `db:reset`, all
+migrations applied) has **no `bills.created_by`** — the NOT-NULL `created_by`
+at 20240139 belongs to a *different* table in that multi-table migration, not
+`bills`. The actual NOT-NULL actor column in the commit path is
+`bill_payment_allocations.created_by` (payment path); `journal_entries.created_by`
++ `audit_log.user_id` are nullable. Path X (service-account uuid via the
+`withInvariants` adaptation) still solves the real blocker + attributes the
+nullable columns, so the *decision* held — but the cited justification was
+wrong, propagated into ADR-0007 + 3 code comments, and was corrected at
+`c67801ec`.
+
+Lesson: when a constraint claim drives a design decision, ground it against
+the **live schema** (`information_schema` / a reset DB), not just the CREATE
+TABLE migration text — later ALTERs, or (here) a misread of which table a
+column belongs to in a multi-table migration, make the migration-text reading
+stale. The seeded integration test caught it because it actually *inserts* the
+row; a test that only asserts end-state behavior would have hidden the
+misattribution behind the (correct) end result. N=1; not codifying, but
+verify-against-live-schema is the takeaway. Related: the opener brief's Commit
+4 framing also diverged from disk on three counts (the 5 deferred scenarios
+are real-Modal `describe.skipIf`-gated e2e, not paid-API-free; "1408/0/5
+routine" unachievable since they stay skipped routinely; only 2 of 5 commit
+ledger) — corrected to Option II (paid-API-free integration gate test) + the
+5 e2e scenarios as a tracked follow-up.
+
+**Tracked follow-up (auto-commit arc carry-forward):** the 5 Modal-gated e2e
+seeded scenarios (`documentPipeline.{vendorInvoice,receipt,paymentConfirmation}.e2e`
+`it.skip`) — full-OCR end-to-end coverage of the auto-commit path. Paid
+(`RUN_MODAL_E2E=1`; Modal + Claude-if-Tier-A-abstains). Requires
+vendor/bill/candidate seeding in `ingestPipelineHarness` + the fixture PDFs'
+real OCR yielding the right fields. The ADR-0007 Q78 gate is already satisfied
+by the Option II integration test (`autoCommitGate.integration.test.ts`); this
+is deeper coverage, done when there's appetite for a paid founder-review run.
