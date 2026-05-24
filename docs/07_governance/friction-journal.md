@@ -15956,7 +15956,7 @@ synthCtxForCommit annotated with the auth-gate finding; ADR-0007 §Tier 2
 
 ## 2026-05-23 — Permission Catalog Count Drift: the convention under-specifies the hardcoded-count site inventory
 
-Adding one permission (`payment.record`, Phase 8 chunk 8, commit a4bbeb2)
+Adding one permission (`payment.record`, Phase 8 chunk 8, commit bf1a79b)
 required updating hardcoded catalog counts at every site that asserts them —
 more than the "Permission Catalog Count Drift" convention enumerates.
 Verified sites: `permissionCatalogSeed.test.ts` (CA-28) hardcodes the count
@@ -15976,7 +15976,7 @@ ADR-0014 §1 ("Pipeline architecture overview") enumerates 8 canonical stages
 by `ingestDocument.ts` carries more distinct `stage_name` values — the
 relationship step alone splits into `match_against_existing_state` and
 `router_match_against_state`, plus dedup / ai-fallback variants — landing at
-~10 at the Session 74 e2e validation (commit a674580). Citation nuance: the
+~10 at the Session 74 e2e validation (commit 6f35281). Citation nuance: the
 code comments cite "ADR-0014 §13 canonical stage_names," but §13 is "Logic
 Receipt at proposal-creation time"; the actual stage enumeration lives in §1.
 Deferred decision (Phase 8 retrospective): amend the spec to match the runtime
