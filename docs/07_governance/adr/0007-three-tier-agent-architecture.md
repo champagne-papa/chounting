@@ -260,7 +260,56 @@ every auto-commit path carry an explicit grant? Admitting
 auto-commit tests; until then the pipeline does not auto-commit. The
 "system_actor widening at withInvariants" framing is therefore only
 partially discharged at chunk 10. See the friction-journal Phase 8
-chunk 10 entry.
+chunk 10 entry. **Resolved 2026-05-24 (Option A) — the open question
+above is closed by the auth-model resolution block immediately below;
+the PARTIAL framing is preserved per ADR-0022 additive discipline.**
+
+**Auth-model resolution for system-actor commit paths (ratified
+2026-05-24, Option A — closes Q78).** The chunk 10 PARTIAL open
+question — *does a trusted system actor bypass Invariant 4 at
+`withInvariants`, or must every auto-commit path carry an explicit
+grant?* — is resolved in favor of **bypass (Option A)**, not
+per-action grants. A `SystemActorServiceContext`
+(`caller.user_id = null`, `caller.system_actor` set) is authenticated
+**at the boundary that constructs it** (the route / job-queue / pipeline
+orchestrator), not via role-based grants. `withInvariants` is widened to
+`ServiceContext | SystemActorServiceContext`; the system-actor branch
+**bypasses the identity-coupled invariants** — Invariant 1's `user_id`
+presence check, Invariant 2 (`verified`), and Invariant 4 (role
+authorization via `canUserPerformAction`). Invariant 3 (org consistency)
+already self-skips for system actors (it guards on `caller.org_ids`,
+absent on a system actor); the widened branch may instead assert
+`ctx.org_id === input.org_id` as defense-in-depth. The `trace_id` and
+context-presence checks still run.
+
+*Precedent and trust-boundary discipline.* This extends the N=2
+structural-union type pattern (`recordMutation.ts` + `vendorService.ts`
+accept `ServiceContext | SystemActorServiceContext`), but note those two
+sites perform **no authorization** — they read union-common fields only.
+This resolution is therefore the **first** place a system actor crosses
+an authorization boundary with invariants intentionally bypassed. The
+trust boundary moves to the construction site: a `SystemActorServiceContext`
+must only be constructed where the operation is intrinsically authorized
+by the calling context. New system actors must be scoped narrowly;
+`system_actor = 'pipeline_orchestrator'` is authorized for the document
+pipeline's commit operations (`bill.post`, `payment.record`) by virtue of
+the orchestrator's own route/job-queue authentication, not by a grant
+list.
+
+*Audit attribution (INV-AUDIT-002 / INV-AUDIT-001 preserved).* Auto-
+committed ledger mutations must not land **unattributed** audit rows.
+`audit_log` gains a nullable `system_actor` column; `recordMutation`
+writes `caller.system_actor` (e.g. `'pipeline_orchestrator'`) when the
+caller is a system actor (whose `user_id` is `null`). So an
+auto-committed bill or payment is attributable to the pipeline actor in
+the audit trail, not merely `user_id = null` traceable by `trace_id`.
+
+*Mechanics.* `synthCtxForCommit` (the de-facto gate) is retired;
+`ingestDocument`'s four commit-path `withInvariants` sites pass the
+orchestrator's real `SystemActorServiceContext` directly. With the gate
+open, the document pipeline auto-commits ledger mutations for matched
+candidates; `service-layer.md` Candidate #11 (commit-shim discipline) is
+retired as structurally unnecessary post-widening.
 
 **Q31 — LLM-planned orchestration prohibition.** Verbatim rule:
 
@@ -552,6 +601,17 @@ flowing through existing handlers. New routing surface: zero.
   per-field matrix lands in `docs/02_specs/agent_architecture_policy.md`
   before v1 ships. Q77 stays open until that matrix ratifies (which
   gates v1 ship, not Phase 1 start).
+- **Q78** — System-actor authorization at `withInvariants` (auto-commit
+  auth model). Resolution (2026-05-24): **Option A** — a trusted system
+  actor (`ctx.caller.user_id === null`, `caller.system_actor` set)
+  bypasses the identity-coupled invariants (Inv 1 `user_id` presence,
+  Inv 2 `verified`, Inv 4 role authorization) at `withInvariants`; the
+  trust boundary is the route/job-queue/orchestrator that constructs the
+  `SystemActorServiceContext`. Auto-committed ledger mutations carry
+  `system_actor` attribution in `audit_log` (new nullable column) so
+  audit attribution is preserved rather than `user_id = null`. Retires
+  the `synthCtxForCommit` de-facto gate; closes the Phase 8 chunk 10
+  PARTIAL open question. See the §Tier 2 auth-model resolution block.
 
 ## Amendment — Document Platform reframe (2026-05-03)
 
