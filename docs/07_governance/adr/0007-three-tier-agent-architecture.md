@@ -236,6 +236,32 @@ their own orchestration via LLM coordination.
    both codified as `ProposalJustificationSchema` at Phase 8 chunk 9)
    so step-level reproducibility is preserved under Tier 2 pipelines.
 
+**System-actor service contexts at the invariant boundary (Phase 8
+chunk 10 — PARTIAL).** The document-pipeline orchestrator
+(`ingestDocument.ts`) runs as a *system actor*
+(`SystemActorServiceContext`: `caller.user_id = null`,
+`caller.system_actor = 'pipeline_orchestrator'`), not a verified human
+caller. Chunk 10 widened the **router-path** consumer
+`documentRouterService.completeCandidate` to accept
+`ServiceContext | SystemActorServiceContext` directly, retiring the
+`synthCtxForRouter` shim (extending the N=2 structural-union precedent
+already shipped at `recordMutation.ts:144` + `vendorService.ts:124`).
+This path does not run `withInvariants`, so no authorization semantics
+change. The **commit-path** widening of `withInvariants` itself is
+**deliberately NOT done here**: the surviving `synthCtxForCommit` shim
+downgrades the system-actor context to a synthetic *verified* caller
+whose `user_id` has no membership, so Invariant 4 (role authorization)
+denies — which is currently the de-facto gate preventing the document
+pipeline from auto-committing ledger mutations. **Open question:** does
+a trusted system actor bypass Invariant 4 at `withInvariants`, or must
+every auto-commit path carry an explicit grant? Admitting
+`SystemActorServiceContext` at `withInvariants` is a ledger-authorization
+**policy** decision deferred to a dedicated change with seeded
+auto-commit tests; until then the pipeline does not auto-commit. The
+"system_actor widening at withInvariants" framing is therefore only
+partially discharged at chunk 10. See the friction-journal Phase 8
+chunk 10 entry.
+
 **Q31 — LLM-planned orchestration prohibition.** Verbatim rule:
 
 > Orchestration between Tier 2 stages MUST be deterministic

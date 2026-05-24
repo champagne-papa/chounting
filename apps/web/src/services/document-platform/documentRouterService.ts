@@ -167,7 +167,7 @@ import { enqueueException } from '@/services/document-platform/documentException
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type { ServiceContext, SystemActorServiceContext } from '@/services/middleware/serviceContext';
 
 type Db = ReturnType<typeof adminClient>;
 
@@ -764,10 +764,19 @@ function computeStringMatchFeature(
 // ---------------------------------------------------------------------
 export async function completeCandidate(
   input: CompleteCandidateInputRaw,
-  ctx: ServiceContext,
+  // Phase 8 chunk 10 (partial): widened to admit the orchestrator's
+  // SystemActorServiceContext directly, retiring the synthCtxForRouter shim
+  // at ingestDocument.ts. This is a pure type widening — completeCandidate
+  // reads only union-common fields (trace_id, caller.user_id) and is invoked
+  // directly (NOT through withInvariants), so no role-based authorization
+  // (Invariant 4) is involved on this path. See ADR-0007 §Tier 2.
+  ctx: ServiceContext | SystemActorServiceContext,
   options: { suppress_inferred_target?: boolean } = {},
 ): Promise<DocumentRelationshipCandidate[]> {
-  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  // user_id is string|null under the widened union (null for system actors);
+  // loggerWith wants string|undefined — same `?? undefined` shape as the N=2
+  // precedent (vendorService.ts:128).
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id ?? undefined });
 
   // suppress_inferred_target gates the chunk 4 Scenario A emission paths
   // (vendor_invoice invoice-arrives-no-bill-yet, receipt receipt-as-primary).

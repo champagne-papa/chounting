@@ -15911,3 +15911,45 @@ mechanism fire half 2's promotion.
 - ADR-0022 for additive provenance-preserving discipline.
 - ADR-0012 for ProposedMutationBundle bundle-level Logic Receipt
   emission shape (forward-pointed at Phase 8 / post-v1).
+
+## 2026-05-23 — Phase 8 chunk 10 (PARTIAL): synthCtxForCommit is an auth gate, not a context-shape adapter
+
+Chunk 10 ("system_actor widening at withInvariants") set out to retire
+two `ingestDocument.ts` substrate-shims by widening `withInvariants` to
+accept `SystemActorServiceContext`. Grounding the change against disk
+showed the two shims are not equivalent. `synthCtxForRouter` feeds
+`completeCandidate` directly — no `withInvariants`, no authorization —
+and was retired cleanly by widening `completeCandidate` to
+`ServiceContext | SystemActorServiceContext` (a pure type change; it
+reads only union-common fields). But `synthCtxForCommit` downgrades the
+system-actor context to a synthetic *verified* caller whose `user_id`
+('system_actor:pipeline_orchestrator') has no membership, so the
+`{ action: 'bill.post' | 'payment.record' }` calls fail Invariant 4
+(`canUserPerformAction`) and the best-effort `try/catch` yields
+`proposal_id=null`. That shim is therefore the **de-facto gate currently
+preventing the document pipeline from auto-committing ledger mutations** —
+retiring it is a ledger-authorization **policy** change, not a refactor.
+It is deferred to a dedicated change with an explicit ADR-0007 auth-model
+statement + seeded auto-commit tests (the commit-path e2e cases that
+would observe the change are presently `it.skip`-deferred, so no routine
+test exercises the policy). Chunk 10 ships PARTIAL; Phase 8 is
+impl-incomplete by the original framing #7 and the retrospective should
+name it.
+
+Three brief inaccuracies corrected in passing: (1) the discriminator is
+`'system_actor' in ctx.caller` (nested under `caller`), not
+`'system_actor' in ctx`; (2) ADR-0007 §Tier 2 carries a numbered
+"Safety contract", not a "Layer 2 item #C" structure, so the partial
+widening was recorded as a dated amendment note with an explicit open
+question rather than a fabricated inviolable item; (3) the audit-actor
+delta on retirement is `user_id → null` (the `system_actor` name is not
+written by `recordMutation`), not a "canonical system_actor identifier."
+`service-layer.md` Candidate #11 is **left in place** (NOT retired): the
+commit-path shim survives, so the consumer-side substrate-shim discipline
+still applies.
+
+**Cross-references.** `withInvariants.ts` untouched (only the deferred
+commit path would reach it); `documentRouterService.ts` completeCandidate
+widened to the union; `ingestDocument.ts` synthCtxForRouter retired +
+synthCtxForCommit annotated with the auth-gate finding; ADR-0007 §Tier 2
+"System-actor service contexts at the invariant boundary" amendment note.

@@ -290,21 +290,11 @@ export async function ingestDocument(
   // documentRouterService.completeCandidate is Subsystem 1 per ADR-0018
   // §item 2.
   //
-  // completeCandidate signature accepts ServiceContext (VerifiedCaller);
-  // orchestrator runs as system_actor. Construct a synthetic
-  // ServiceContext that satisfies the structural shape for completeCandidate's
-  // logging needs (system_actor pattern; user_id stays as synthetic
-  // sentinel). Discipline parallels chunk 6.3a recordMutation widening
-  // pattern at the consumer side.
-  const synthCtxForRouter = {
-    trace_id: input.trace_id,
-    caller: {
-      user_id: `system_actor:${SYSTEM_ACTOR}`,
-      email: 'system@bridge.local',
-      verified: true as const,
-      org_ids: [input.org_id],
-    },
-  };
+  // Phase 8 chunk 10: synthCtxForRouter shim retired. completeCandidate now
+  // accepts SystemActorServiceContext directly (documentRouterService widened
+  // to the ServiceContext | SystemActorServiceContext union), so the
+  // orchestrator's system-actor ctx passes through unchanged. The router path
+  // does not run withInvariants, so no authorization semantics change here.
   let relationshipCandidates: RelationshipCandidate[] = [];
   if (documentCaseId) {
     try {
@@ -330,7 +320,7 @@ export async function ingestDocument(
                 : null,
               trace_id: input.trace_id,
             },
-            synthCtxForRouter,
+            ctx,
           ),
       );
       relationshipCandidates = candidates.map((c) => ({
@@ -440,20 +430,23 @@ export async function ingestDocument(
     timestamp: new Date().toISOString(),
   });
 
-  // Stage 7 commit composite per chunk 7.3b Task 7.3b.5 + Step 18
-  // synthCtxForCommit pattern (parallels chunk 7.3a synthCtxForRouter at
-  // lines 292-300 above; ξ sub-grain N=2 cross-chunk evidence). The
-  // orchestrator runs as system_actor but withInvariants expects a
-  // VerifiedCaller-shaped ctx; construct a synthetic ServiceContext that
-  // satisfies the structural shape for withInvariants's pre-flight
-  // checks (caller.verified + caller.org_ids-membership).
+  // Stage 7 commit composite per chunk 7.3b Task 7.3b.5 + Step 18.
   //
-  // Forward-pointer per Phase 7 retrospective grade: post-v1 ADR
-  // amendment for proper system_actor widening at withInvariants
-  // (parallel to chunk 6.3a recordMutation widening pattern). Defer
-  // formal Tier 2 safety contract amendment to retrospective grade with
-  // N=2 cross-chunk evidence + Phase 8 commit-composite extension
-  // surface.
+  // IMPORTANT (surfaced at Phase 8 chunk 10): synthCtxForCommit is NOT just a
+  // context-shape adapter. It downgrades the orchestrator's
+  // SystemActorServiceContext to a synthetic *verified* caller whose user_id
+  // ('system_actor:pipeline_orchestrator') has no membership row. The
+  // withInvariants calls below pass { action: 'bill.post' | 'payment.record' },
+  // so Invariant 4 (canUserPerformAction) runs, finds no membership, and
+  // DENIES; the throw is swallowed by the best-effort try/catch, yielding
+  // proposal_id=null. So this shim is the de-facto gate currently preventing
+  // the document pipeline from auto-committing ledger mutations.
+  //
+  // Retiring it — letting the system-actor ctx reach withInvariants and skip
+  // role-auth — is therefore a ledger-authorization POLICY change, not a
+  // refactor. It is deliberately deferred to its own scoped change with an
+  // explicit ADR-0007 auth-model statement + seeded auto-commit tests. See
+  // ADR-0007 §Tier 2 and the friction-journal Phase 8 chunk 10 entry.
   const synthCtxForCommit: ServiceContext = {
     trace_id: input.trace_id,
     caller: {
