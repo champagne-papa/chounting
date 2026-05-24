@@ -197,6 +197,34 @@ Two corrections surfaced + fixed this arc (verify-from-disk):
   seeded-commit tests) diverged from disk on all three counts. Both
   corrections: friction-journal 2026-05-24.
 
+### Follow-ups closeout (2026-05-24)
+
+The three tracked follow-ups (hygiene + Modal-e2e + conditional Tier C):
+
+- **§13 citation hygiene — DONE** (`b8146075`). `proposedMutationBundle.schema.ts`
+  cited "ADR-0014 §13 commit-order spec" (doubly wrong: §13 is Logic Receipt;
+  ADR-0014 §11 defers bundle commit to ADR-0012). Fixed to ADR-0012 §1 + §3.
+- **Modal-e2e seeded scenarios — PARTIAL** (`27687de3`). Harness seeding
+  helpers + 3 of 5 deferred scenarios exercised under a paid `RUN_MODAL_E2E=1`
+  run (~$0.05–0.15, Modal-only). **receipt matched-payment PASSED**;
+  vendor_invoice prior-bill + payment_confirmation cited-bill **re-skipped**
+  on a real finding — **bill-candidate generation against seeded ledger state
+  is weak/inconsistent on real OCR** (only a receipt→payment candidate
+  emitted, at confidence 0.25; no bill-candidate fired). Does **not** affect
+  the Q78 gate (Option II integration test bypasses matching). The 2
+  no-fixture scenarios (no-cited-bill payment, born-paid) reframed
+  **NEEDS-FIXTURE**. Friction-journal 2026-05-24; outcome doc
+  `docs/09_briefs/phase-8/2026-05-24-modal-e2e-followup.md`.
+- **Tier C array-vs-object codification — NOT FIRED.** Conditional on the
+  Modal-e2e run surfacing an N=2 array-vs-object instance; the 3 demo fixtures
+  classify via Tier A, so Tier C never ran. Tier C stays at **N=1** — the
+  codification gate correctly held.
+
+Open carry-forwards after this session: (a) **bill-candidate matching**
+investigation (the Modal-e2e finding — per-doc-type vendor match +
+`scoreComposition` for bill candidates); (b) the **2 NEEDS-FIXTURE** scenarios
+(new-source-document arc); (c) **Tier C extract robustness** (still N=1).
+
 ## §4 Pre-push gate status
 
 - **`corpus.ts` PII scrub — DONE** (commit `b981c77`): renamed to
