@@ -15953,3 +15953,31 @@ commit path would reach it); `documentRouterService.ts` completeCandidate
 widened to the union; `ingestDocument.ts` synthCtxForRouter retired +
 synthCtxForCommit annotated with the auth-gate finding; ADR-0007 §Tier 2
 "System-actor service contexts at the invariant boundary" amendment note.
+
+## 2026-05-23 — Permission Catalog Count Drift: the convention under-specifies the hardcoded-count site inventory
+
+Adding one permission (`payment.record`, Phase 8 chunk 8, commit a4bbeb2)
+required updating hardcoded catalog counts at every site that asserts them —
+more than the "Permission Catalog Count Drift" convention enumerates.
+Verified sites: `permissionCatalogSeed.test.ts` (CA-28) hardcodes the count
+in a header comment ("N total; controller N; ap_specialist M; executive K")
+plus the "N permissions exist", "controller has all N", "ap_specialist has
+exactly M", and "executive has exactly K" assertions; `crossOrgRlsIsolation.test.ts`
+(CA-37) hardcodes `toBe(30)` (permissions) and `toBe(41)` (role_permissions).
+At chunk 8 the ap_specialist sites were caught at impl-read and CA-37 only at
+the close gate (2 failures → fix → green). Lesson: the convention needs the
+complete grep recipe (grep the integration suite for hardcoded catalog counts
+before shipping any permission change), not a representative subset.
+
+## 2026-05-23 — ADR-0014 canonical pipeline (8 stages, §1) vs runtime pipeline_trace (~10 stage_names)
+
+ADR-0014 §1 ("Pipeline architecture overview") enumerates 8 canonical stages
+(Stage 0 dedup → Stage 7 proposal), but the runtime `pipeline_trace` emitted
+by `ingestDocument.ts` carries more distinct `stage_name` values — the
+relationship step alone splits into `match_against_existing_state` and
+`router_match_against_state`, plus dedup / ai-fallback variants — landing at
+~10 at the Session 74 e2e validation (commit a674580). Citation nuance: the
+code comments cite "ADR-0014 §13 canonical stage_names," but §13 is "Logic
+Receipt at proposal-creation time"; the actual stage enumeration lives in §1.
+Deferred decision (Phase 8 retrospective): amend the spec to match the runtime
+stage set, or trim the runtime trace to match the spec.
