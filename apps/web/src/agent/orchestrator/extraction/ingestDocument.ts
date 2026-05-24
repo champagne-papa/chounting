@@ -4,7 +4,7 @@
 // + ADR-0007 Q31 (deterministic TypeScript orchestration; LLM-planned
 // orchestration prohibited).
 //
-// Calls Stages 0-7 in fixed sequence (ADR-0014 §13 canonical stage_names):
+// Calls Stages 0-7 in fixed sequence (ADR-0014 §1 canonical stage_names):
 //   Stage 0 (dedup_by_hash)           → short-circuit on hash match
 //   Stage 1 (byte_fetch)              → via storageProviderService.fetch
 //   Stage 2 (run_ocr)                 → active at chunk 7.1b (Modal sidecar)
@@ -238,7 +238,7 @@ export async function ingestDocument(
     pipeline_trace.push(record);
   }
 
-  // Stage 5 — match_vendor per ADR-0014 §9 + §13 canonical (brief
+  // Stage 5 — match_vendor per ADR-0014 §9 + §1 canonical (brief
   // Task 7.3a.3 brief-named "matchVendor extension"). Reads vendor
   // identity-and-matching fields ONLY per Q29 ESLint boundary.
   let vendorMatch;
@@ -284,7 +284,7 @@ export async function ingestDocument(
   // chunk 1 substrate (Subsystem 1 Ledger-State Candidate Completion).
   const documentCaseId = await lookupDocumentCaseId(input.source_document_id);
 
-  // Stage 6 — match_against_existing_state per ADR-0014 §13 canonical
+  // Stage 6 — match_against_existing_state per ADR-0014 §1 canonical
   // (brief Task 7.3a.5 brief-named "Stage 5 relationship-candidate";
   // ADR canonical Stage 6 per Iteration 2 Step 21 RATIFIED).
   // documentRouterService.completeCandidate is Subsystem 1 per ADR-0018
@@ -357,7 +357,7 @@ export async function ingestDocument(
 
   // Subsystem-1-grade audit trail per ADR-0018 §2 lines 492-504. Emitted
   // alongside the orchestrator-grade match_against_existing_state record
-  // above (ADR-0014 §13 canonical stage name) per chunk 4 brief Task 1
+  // above (ADR-0014 §1 canonical stage name) per chunk 4 brief Task 1
   // partial-information value pick (a): both records ship in the same
   // pipeline_trace accumulator. input_hash captures classifier output
   // (document_type + classification_confidence + extracted_fields) plus
@@ -387,7 +387,7 @@ export async function ingestDocument(
     timestamp: new Date().toISOString(),
   });
 
-  // Stage 7 — build_proposal per ADR-0014 §13 canonical (brief Task
+  // Stage 7 — build_proposal per ADR-0014 §1 canonical (brief Task
   // 7.3a.6 brief-named "Stage 6 proposal builder"; ADR canonical Stage 7).
   // Chunk 7.3a ships ProposedEntryCard-only routes; born-paid bundle +
   // receipt + payment_confirmation no-cited-bill routes defer to chunk

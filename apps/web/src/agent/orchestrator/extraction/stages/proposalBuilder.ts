@@ -1,6 +1,6 @@
 // proposalBuilder.ts — Stage 7 build_proposal substrate per Phase 7
 // chunk 7.3b brief Task 7.3b.6 (brief-named "Stage 6 proposal builder";
-// ADR canonical Stage 7 = build_proposal per ADR-0014 §13).
+// ADR canonical Stage 7 = build_proposal per ADR-0014 §1).
 //
 // Chunk 7.3b activation: 5-route matrix per chunk 7.3 brief §4 value
 // picks #4-#6. ProposalResult.kind 3-value union (removed transitional

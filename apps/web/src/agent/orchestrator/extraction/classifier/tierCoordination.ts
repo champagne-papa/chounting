@@ -4,7 +4,7 @@
 // ADR-0014 §7 + §8.
 //
 // Per Step 14 Option (a) RATIFIED at founder review Iteration 2:
-// ADR-0014 §13 canonical stage_name 'classify_document_type' is the
+// ADR-0014 §1 canonical stage_name 'classify_document_type' is the
 // parent for all three tier paths. Per-Tier child stage_names are
 // NOT emitted at chunk 7.2:
 //   - Tier A path: emits parent 'classify_document_type' only.
@@ -138,7 +138,7 @@ export async function coordinateTiers(
       tier: 'C',
     };
     // Emit parent trace_record + child ai_fallback_classify sub-stage
-    // record per ADR-0014 §13 canonical + §8 amendment.
+    // record per ADR-0014 §1 canonical + §8 amendment.
     return {
       result,
       trace_records: [

@@ -1,8 +1,8 @@
 // src/agent/orchestrator/extraction/stages/runOCR.ts
 //
 // Phase 7 chunk 7.1b — Stage 2 OCR active wiring per ADR-0014 §2
-// (PaddleOCR v1) + §3 (Modal sidecar topology) + §13 pipeline_trace
-// canonical stage_name 'run_ocr'.
+// (PaddleOCR v1) + §3 (Modal sidecar topology) + §1 canonical
+// stage_name 'run_ocr' (pipeline_trace record shape per §13).
 //
 // Replaces chunk 7.1a runOCR.stub.ts. Function signature preserved:
 // `runOCR(input: RunOCRInput): Promise<RunOCROutput>` so the

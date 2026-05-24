@@ -130,7 +130,7 @@ export async function extractVendorInvoiceFields(
     tierAFields.vendor_invoice_number !== undefined &&
     tierAFields.accounting_date !== undefined;
 
-  // Parent trace_record always emits 'extract_fields' per ADR-0014 §13.
+  // Parent trace_record always emits 'extract_fields' per ADR-0014 §1.
   const parentTrace: PipelineStageRecord = {
     stage_name: 'extract_fields',
     input_hash: crypto.createHash('sha256').update(ocrText).digest('hex'),

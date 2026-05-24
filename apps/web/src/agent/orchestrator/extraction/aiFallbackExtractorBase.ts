@@ -5,7 +5,7 @@
 // Stage 4 extractors share the same Tier C invocation pattern (Claude
 // Sonnet via callClaude.ts; shared per-document budget via
 // aiFallbackBudget.ts; Zod-validate output; emit trace_record with
-// 'ai_fallback_extract' child sub-stage per ADR-0014 §13 + §8 amendment
+// 'ai_fallback_extract' child sub-stage per ADR-0014 §1 + §8 amendment
 // canonical). Per-document-type variation is the system prompt + Zod
 // schema. This module factors the common path.
 //
