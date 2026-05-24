@@ -112,6 +112,59 @@ sub-chunks; chunk 4 expanded and was implemented across three sessions.
   to the runtime stage set or trimming the runtime trace; either is a small
   doc/code change, not a blocker.
 
+### §3 closeout update (2026-05-23)
+
+*Additive per ADR-0022; the original four-item §3 framing above is preserved.*
+
+Phase 8 §3 is **closed** this session. The four deferred items resolved as
+follows:
+
+- **Item 4 (ADR-0014 §1/§13 stage reconciliation) — DONE** (commit
+  `f3cc0e78`). §1 amended to enumerate the runtime ~10-stage set (10
+  parent-level `stage_name` values + 2 AI-fallback child sub-stages) as the
+  canonical enumeration home (additive); §13's stale parenthetical reconciled
+  to point at §1; 11 code comments repointed from "§13 canonical
+  stage_names" to §1. **Spec reconciled to runtime, not runtime to spec** —
+  the runtime is what ships, what the real-OCR corpus tests against, and what
+  `ProposalJustificationSchema.pipeline_trace` (chunk 9) consumes.
+- **Item 3 (Tier C empirical exercise) — DONE** (commit `b2f4dee7`). The 3
+  abstaining docs ran end-to-end through full `ingestDocument` with real
+  `claude-sonnet-4-5`; Tier C validated end-to-end (Tier A abstain → live
+  classify → extract → downstream → gated commit at `proposal_id=null`, the
+  documented `synthCtxForCommit` behavior — no real ledger commit reached).
+  All three emit the full 11-record `pipeline_trace`, empirically grounding
+  the item-4 reconciliation. One finding (the founder payment-confirmation
+  doc's Tier C extract returned a top-level array → Zod gate rejected →
+  graceful degradation). Writeup:
+  `docs/09_briefs/phase-8/2026-05-23-tier-c-empirical-exercise.md`;
+  friction-journal 2026-05-23.
+- **Items 1 + 2 (chunk 10 commit-path retirement; the 5 `it.skip` seeded e2e
+  scenarios) — RE-CLASSIFIED as the *auto-commit arc*, the opening work of
+  the next phase/arc — not Phase 8 cleanup.** Reasoning: auto-committing
+  ledger mutations from the document pipeline is a **feature, not a fix**.
+  The current v1 default — pipeline proposes, human reviews via canvas, human
+  commits — is a defensible posture for a Canadian SMB accounting product
+  where ledger mutations are high-trust. Retiring `synthCtxForCommit` is a
+  ledger-authorization policy change gated on an explicit ADR-0007 auth-model
+  statement (do trusted system actors bypass Invariant 4, or carry explicit
+  grants?) **plus** seeded auto-commit tests — which subsume the 5 `it.skip`
+  scenarios (item 2). Calling this "Phase 8 cleanup" undersells what it is.
+  The auto-commit arc is the **named carry-forward** out of Phase 8.
+
+New carry-forward surfaced this session (outside the original §3 four):
+
+- **Tier C extract robustness.** Live Tier C extract can return a top-level
+  array despite an explicit single-object prompt instruction (item 3
+  finding). The Zod structural gate degrades gracefully today; a hardening
+  follow-up (tolerate/unwrap single-element arrays, reinforce the prompt, or
+  formalize the exception-route as intended behavior) is a candidate for the
+  auto-commit arc's Tier C work or a standalone item. Friction-journal
+  2026-05-23; N=1, not codified.
+
+`service-layer.md` Candidate #11 (`synthCtxForCommit`) stays live until the
+auto-commit arc lands. With items 3 + 4 done and items 1 + 2 reframed,
+**Phase 8 §3 is complete; the auto-commit arc is the named carry-forward.**
+
 ## §4 Pre-push gate status
 
 - **`corpus.ts` PII scrub — DONE** (commit `b981c77`): renamed to
