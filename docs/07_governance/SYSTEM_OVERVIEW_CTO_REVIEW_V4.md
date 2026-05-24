@@ -27,6 +27,7 @@ The substantive changes in V4:
 6. **§7 product claims toned** from "ratified" to "spec-defined / partially implemented." One named UX pattern (`triage_bucket_intake`) is formally SUPERSEDED.
 7. **§9 capability template** reframed as default-with-escape; to be validated on AR before being mandated slice-wide.
 8. **§13 doc-creation plan** now routes new docs through the ADR-0022 supersession/status-header workflow.
+9. **Pre-flight gap-closers (post-draft patch, 2026-05-24):** named the Two Laws of Service Architecture (§5); restored the three degraded-mode operational guarantees (§11.3); added the multi-framework declaration note (§9.3); stated the Domain Event / Audit Event / Logic Receipt tripod in one place (§12.0); footnoted the SharePoint two-sub-arc distinction (§13.3).
 
 A correction ledger with the exact before/after for every cell is in **Appendix K** (new).
 
@@ -257,6 +258,8 @@ Naming stack: **The Bridge** = product UI shell · **External Systems Layer** = 
 
 The Agent Ladder is not a permissions feature. It is the trust architecture. **It is also currently bypassed on the one live ledger-mutation autonomy path (§2.5), which is why this section's status is 🟡 "substrate-only and not yet on the live path."**
 
+**Foundational invariants the whole architecture inherits — the Two Laws of Service Architecture** (per `docs/02_specs/glossary.md`): *Law 1: all database access goes through `src/services/` only; Law 2: all journal entries are created by `journalEntryService.post()` only* — encoded by INV-SERVICE-001 / INV-SERVICE-002. Both are absolute and apply to every capability slice and every commit path. The auto-commit path (§2.5) runs *through* `withInvariants`/services, so it honors the Two Laws — it bends the *authority* gate (`canUserPerformAction`), not the Two Laws. A new slice author inherits both Laws by default.
+
 ### §5.1 Two separate gates
 
 ```
@@ -475,6 +478,8 @@ Accounting features are not isolated modules. Every capability is a vertical sli
 
 Adds 10: user-facing surfaces · Four Questions rendering · reporting framework/basis · headless operability · i18n discipline · institutional-memory contribution · multi-entity behavior · engagement context · security/data access · reporting impact.
 
+**Multi-framework note:** the *reporting framework/basis* declaration is not single-valued — a slice may declare **multiple frameworks** when it serves different reporting contexts (e.g., ASPE for an operating company's books, IFRS for public-facing consolidation, tax basis for slip/return preparation). The family-office reality is multi-framework (per the principal-multiplicity framing in §3.3); the template carries that multiplicity rather than assuming one basis per slice.
+
 ### §9.4 Reframe (new in V4): default-with-escape, validated on AR first
 
 The template is proven on exactly one slice (AP). **Mandating all 25 declarations for every slice before the template is exercised a second time risks ceremony overhead.** Treat Lite(15) as the default and Full(25) as the foundational/high-risk default, with an explicit "right-size" escape recorded in the slice's brief when a declaration is genuinely N/A — mirroring the project's own single-vs-multi-chunk-brief practice. **Validate the template on AR (the next slice) before mandating it slice-wide.**
@@ -546,11 +551,33 @@ The product vision names ~50 entities. **The thin substrate already partly exist
 
 OAuth token theft → encrypted storage + rotation + scope-minimization. Webhook replay → signature verification + idempotency keys + timestamp checks. Prompt injection from emails → untrusted-input handling. Cross-tenant leakage via shared agent state → RLS + org-scoped service contexts + `withInvariants`. External-system mutations bypassing CHOUnting → drift detection + `external_operations` reconciliation. Model-provider data exposure → per-org redaction + audit logging.
 
+### §11.3 Degraded-mode resilience (three operational guarantees)
+
+Degraded mode is testable only if "good" is defined. Any capability provider can be down — Anthropic (classification/extraction fallback), Modal/OCR, embeddings, or external sync. The slice-template degraded-mode declaration (§9.2 item 15) is measured against three guarantees:
+
+1. **Read-only operation always works.** Reports, ledger and account views, document viewing, and previously-captured proposals remain available when AI / OCR / external providers are down.
+2. **Pre-AI work continues to flow.** Manual journal entry, manual bill entry, and document upload (queued for later processing) do not depend on AI availability.
+3. **Manual paths stay unblocked for deadline-bearing workflows.** Any workflow with a legal or operational deadline (period close, filing, payment) has a manual path that requires no capability provider.
+
+Each slice's declaration must state, per provider dependency, which guarantee holds and the fallback behavior. The capability-provider health substrate (§13.2 item 7) is 🔴 unbuilt; the per-provider downtime scenario matrix (Anthropic / Modal / embeddings / external-sync) is Appendix H.
+
 ---
 
 ## §12 The Evidence Chain (target architecture, status-annotated)
 
 Documents do not directly create accounting truth. Documents produce assertions; assertions produce proposals; proposals (approved or Ladder-allowed) produce mutations; mutations produce Logic Receipts, audit events, and domain events.
+
+### §12.0 Domain Events vs Audit Events vs Logic Receipts (the trust tripod)
+
+Three records are easy to conflate but are distinct legs of the same trust architecture, with different consumers:
+
+| Record | Answers | Drives | Today |
+|---|---|---|---|
+| **Domain Event** | *What happened that the system must react to?* | async reactions / orchestration | 🟡 `events` reserved seat, no writers |
+| **Audit Event** | *What happened, for the record?* | observability / accountability | 🟢 `audit_log` via `recordMutation` |
+| **Logic Receipt** | *Why was this consequential mutation justified?* | defensibility / CRA reconstruction | 🟡 `ProposalJustificationSchema` (Zod on JSONB); no table |
+
+A consequential mutation typically produces all three: the audit row records *that* a bill posted; the Logic Receipt records *why* the agent proposed it (rule version, evidence-pack IDs, model metadata); the domain event lets downstream work react. They must not be collapsed into one record — each leg serves a different principal (§3.3). The evidence chain below threads all three.
 
 ### §12.1 The chain — what exists vs what is target
 
@@ -624,6 +651,8 @@ New docs must carry the house status-header block and follow the ADR-0022 supers
 ### §13.3 Phase C — Next product slices
 
 AR / Invoicing / Customers (biggest gap; mirrors AP; required for multi-entity) → Reporting Center / snapshots → Bank Reconciliation → GST/HST Tax Treatment → GST/HST Tax Filing → Multi-Entity Automation → SharePoint bidirectional Connector → Outbound Communication Connector → Tax Research / Advice (last).
+
+*Footnote — SharePoint activation is two sub-arcs, not one:* **Sub-arc A** (projection: CHOUnting → SharePoint, lifecycle/folder projection) and **Sub-arc B** (ingestion: SharePoint → CHOUnting, folder-watch). They ship independently and have different customer triggers, so "SharePoint activation" is not a single approvable unit. Detail deferred to the eventual SharePoint activation brief.
 
 ### §13.4 Decision dependency graph
 
