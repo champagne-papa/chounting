@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateTierA } from '@/agent/orchestrator/extraction/classifier/tierCoordination';
 import type { DocumentArtifactRow } from '@/agent/orchestrator/extraction/types';
-import { REAL_OCR_CORPUS } from '../fixtures/classifier/real-ocr/corpus';
+import { REAL_OCR_CORPUS } from '../fixtures/classifier/real-ocr/corpus.sanitized';
 
 function artifactWithLines(textLines: string[]): DocumentArtifactRow {
   return {

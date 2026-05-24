@@ -1,0 +1,5 @@
+# Capture-script output. apps/web/scripts/capture-real-ocr-fixtures.ts writes
+# raw OCR line-text (with real third-party + founder PII) to corpus.ts here.
+# Keep it out of git — the committed, tracked fixture is the sanitized sibling
+# corpus.sanitized.ts. Never commit raw corpus.ts.
+corpus.ts
