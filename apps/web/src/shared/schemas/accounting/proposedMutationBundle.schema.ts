@@ -34,7 +34,8 @@ import { ProposedMutationSchema } from './proposedMutation.schema';
 import { ProposalJustificationSchema } from './proposalJustification.schema';
 
 // Born-paid bundle children: post_bill MUST precede record_bill_payment
-// per ADR-0012 sequential best-effort + ADR-0014 §13 commit-order spec.
+// per ADR-0012 §1 + §3 (children commit in declared order inside the
+// bundle transaction: post_bill then record_bill_payment, not the reverse).
 const BornPaidBillChildrenTuple = z.tuple([
   ProposedMutationSchema.refine(
     (m) => m.proposal_type === 'post_bill',
