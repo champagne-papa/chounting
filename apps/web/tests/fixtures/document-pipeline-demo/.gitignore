@@ -1,0 +1,8 @@
+# Demo + synthetic pipeline fixtures. The 3 demo PDFs were never committed; the
+# 2 synthetic PDFs are regenerated deterministically by
+# ../../../scripts/generate-synthetic-fixtures.ts. The committed canonical input
+# the tests consume is the sanitized OCR line-text in
+# ../classifier/real-ocr/corpus.sanitized.ts — not these binaries. Also excludes
+# Windows NTFS *:Zone.Identifier artifacts.
+*
+!.gitignore

@@ -47,7 +47,7 @@ type ExpectedType = 'vendor_invoice' | 'receipt' | 'payment_confirmation';
 interface CorpusDoc {
   label: string;
   expectedType: ExpectedType;
-  source: 'demo' | 'founder';
+  source: 'demo' | 'founder' | 'synthetic';
   file: string; // absolute path
 }
 
@@ -64,13 +64,35 @@ const CORPUS: CorpusDoc[] = [
   { label: 'bestbuy_receipt', expectedType: 'receipt', source: 'founder', file: path.join(DROP_DIR, 'BestBuy_12082025_263464558_$125.15_Receipt.pdf') },
   { label: 'mattjanzen_receipt', expectedType: 'receipt', source: 'founder', file: path.join(DROP_DIR, 'MattJanzen_INV-000778_10312025_$1433.25_Receipt.pdf') },
   { label: 'mattjanzen_payment', expectedType: 'payment_confirmation', source: 'founder', file: path.join(DROP_DIR, 'MattJanzen_INV-000778_10312025_$1433.25_Payment.png') },
+  // Synthetic fixtures — Modal-e2e NEEDS-FIXTURE closeout (2026-05-24).
+  // source:'synthetic' keeps them in the abstain-tolerant high-precision guard
+  // and OUT of the forced-match demo-calibration block in
+  // classifierRealOcr.integration.test.ts.
+  { label: 'synthetic_no_cited_payment', expectedType: 'payment_confirmation', source: 'synthetic', file: path.join(DEMO_DIR, 'payment_no_cited_bill.pdf') },
+  { label: 'synthetic_born_paid', expectedType: 'payment_confirmation', source: 'synthetic', file: path.join(DEMO_DIR, 'born_paid_invoice.pdf') },
 ];
 
 async function main() {
   const { invokeSidecar } = await import('../src/agent/orchestrator/extraction/sidecar/client');
 
+  const labelFilter = process.env.LABELS?.split(',').map((s) => s.trim()).filter(Boolean);
+  if (labelFilter?.length) {
+    const unknown = labelFilter.filter((l) => !CORPUS.some((d) => d.label === l));
+    if (unknown.length) {
+      console.error(`Unknown LABELS: ${unknown.join(', ')}`);
+      process.exit(1);
+    }
+  }
+  const targets = labelFilter?.length
+    ? CORPUS.filter((d) => labelFilter.includes(d.label))
+    : CORPUS;
+  console.log(
+    `Capturing ${targets.length} of ${CORPUS.length} fixtures` +
+      `${labelFilter?.length ? ` (LABELS=${labelFilter.join(',')})` : ''}.`,
+  );
+
   const captured: Array<{ doc: CorpusDoc; lines: string[]; error?: string }> = [];
-  for (const doc of CORPUS) {
+  for (const doc of targets) {
     const bytes = new Uint8Array(fs.readFileSync(doc.file));
     const content_hash = crypto.createHash('sha256').update(bytes).digest('hex');
     const trace_id = crypto.randomUUID();
@@ -133,7 +155,7 @@ export type RealOcrExpectedType =
 
 export interface RealOcrFixture {
   label: string;
-  source: 'demo' | 'founder';
+  source: 'demo' | 'founder' | 'synthetic';
   expectedType: RealOcrExpectedType;
   captureError?: string;
   lines: string[];
@@ -143,8 +165,23 @@ export const REAL_OCR_CORPUS: RealOcrFixture[] = [
 ${body}
 ];
 `;
-  fs.writeFileSync(OUT_PATH, out);
-  console.log(`\nWrote ${captured.length} fixtures to ${OUT_PATH}`);
+  if (labelFilter?.length) {
+    const PARTIAL_PATH = path.join(
+      APP_WEB_DIR, 'tests', 'fixtures', 'classifier', 'real-ocr', 'corpus.partial.ts',
+    );
+    const partial = `// AUTO-GENERATED fragment (LABELS-filtered capture) — RAW OCR, gitignored.
+// Sanitize these entries into corpus.sanitized.ts's REAL_OCR_CORPUS array, then
+// DELETE this file. Never commit raw OCR.
+export const REAL_OCR_CORPUS_PARTIAL = [
+${body}
+];
+`;
+    fs.writeFileSync(PARTIAL_PATH, partial);
+    console.log(`\nWrote ${captured.length} fragment fixtures to ${PARTIAL_PATH}`);
+  } else {
+    fs.writeFileSync(OUT_PATH, out);
+    console.log(`\nWrote ${captured.length} fixtures to ${OUT_PATH}`);
+  }
   const failures = captured.filter((c) => c.error || c.lines.length === 0);
   if (failures.length > 0) {
     console.log(`\nWARNING: ${failures.length} doc(s) produced no lines / errored:`);

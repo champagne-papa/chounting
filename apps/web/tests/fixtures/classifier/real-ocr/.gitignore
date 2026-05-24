@@ -3,3 +3,4 @@
 # Keep it out of git — the committed, tracked fixture is the sanitized sibling
 # corpus.sanitized.ts. Never commit raw corpus.ts.
 corpus.ts
+corpus.partial.ts

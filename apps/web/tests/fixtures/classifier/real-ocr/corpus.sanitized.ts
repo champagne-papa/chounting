@@ -26,7 +26,7 @@ export type RealOcrExpectedType =
 
 export interface RealOcrFixture {
   label: string;
-  source: 'demo' | 'founder';
+  source: 'demo' | 'founder' | 'synthetic';
   expectedType: RealOcrExpectedType;
   captureError?: string;
   lines: string[];
@@ -1004,6 +1004,35 @@ export const REAL_OCR_CORPUS: RealOcrFixture[] = [
     "(hello@sunnytreats.example)",
     "CAD",
     "CAD",
+    ],
+  },
+  {
+    label: "synthetic_no_cited_payment",
+    source: "synthetic",
+    expectedType: "payment_confirmation",
+    lines: [
+    "PAYMENTS MADE",
+    "Payee: Figma, Inc.",
+    "Payment Date: 2025-11-18",
+    "Amount Paid: $282.24",
+    "Payment Mode: EFT",
+    "Paid Through: Operating Account",
+    ],
+  },
+  {
+    label: "synthetic_born_paid",
+    source: "synthetic",
+    expectedType: "payment_confirmation",
+    lines: [
+    "PAYMENTS MADE - BORN-PAID RECEIPT",
+    "Vendor: Figma, Inc..",
+    "Vendor Tax ID: 100000000RT9999",
+    "Bill Number: 1ABCD23M-0002",
+    "Bill Date: 2025-11-18",
+    "Bill Amount: $282.24.",
+    "Payment Date: 2025-11-18",
+    "Amount Paid: $282.24",
+    "Payment Mode: EFT",
     ],
   },
 ];
