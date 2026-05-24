@@ -1,64 +1,67 @@
 // tests/integration/e2e/documentPipeline.paymentConfirmation.e2e.test.ts
 //
-// Phase 7 chunk 7.3b — End-to-end test for payment_confirmation
-// pipeline. Verifies two routes:
-//   - cited-bill-matched → ProposedEntryCard record_bill_payment →
-//     withInvariants(paymentService.record) commits + T2_new_payment
-//     dispatcher emission.
-//   - no-cited-bill + matched payment candidate → ProposedAttachmentCard
-//     attach_payment_evidence (non-ledger commit).
+// Phase 8 chunk 6 sub-chunk b — payment_confirmation end-to-end against the
+// real Modal sidecar. Verifies the full orchestrator traversal (Stages 0-7)
+// for the payment_confirmation fixture.
 //
-// Also verifies born-paid-bundle path: payment_confirmation citing
-// invoice + payment fields → ProposedMutationBundle (born_paid_bill) →
-// sequential withInvariants(billService.post) + withInvariants(paymentService.record).
+// SCOPE (Session 74, Sub-option 3 — observed-runtime assertions): the
+// unseeded fixture commits with NO ledger mutation (proposal_id=null) —
+// without a cited bill / seeded candidate, no payment is recorded. The
+// seeded scenarios (cited-bill-matched record_bill_payment, no-cited-bill
+// matched-candidate, born-paid bundle) are deferred to the Phase 8
+// retrospective (see the chunk 6 close report).
 //
-// Gated behind MODAL_OCR_HMAC_SECRET + MODAL_OCR_SIDECAR_URL env-var
-// presence per chunk 7.1b sidecarE2E precedent + Step 21.
+// GATING (opt-in, per Session 74 δ-1): hits the real billable Modal
+// sidecar; gated behind RUN_MODAL_E2E in addition to secret presence —
+// routine `pnpm test` SKIPS it. To run:
+//   cd apps/web && RUN_MODAL_E2E=1 pnpm test:integration tests/integration/e2e/documentPipeline.paymentConfirmation.e2e
 
 import { describe, it, expect } from 'vitest';
+import { runIngestPipeline } from './ingestPipelineHarness';
 
-const HAS_MODAL_SECRETS = Boolean(
-  process.env.MODAL_OCR_HMAC_SECRET && process.env.MODAL_OCR_SIDECAR_URL,
+const RUN_E2E = Boolean(
+  process.env.MODAL_OCR_HMAC_SECRET &&
+    process.env.MODAL_OCR_SIDECAR_URL &&
+    process.env.RUN_MODAL_E2E,
 );
 
-describe.skipIf(!HAS_MODAL_SECRETS)(
-  'Phase 7 chunk 7.3b — payment_confirmation end-to-end (deployed Modal sidecar)',
+const MODAL_TIMEOUT_MS = 180_000;
+
+describe.skipIf(!RUN_E2E)(
+  'Phase 8 chunk 6 — payment_confirmation end-to-end (deployed Modal sidecar)',
   () => {
-    it('payment_confirmation cited-bill matched: ProposedEntryCard record_bill_payment route → withInvariants(paymentService.record) commits + T2_new_payment dispatcher emission', async () => {
-      // 1. Seed an existing bill row.
-      // 2. Seed source_document for payment_confirmation citing that bill.
-      // 3. Invoke ingestDocument.
-      // 4. Assert status='committed' + proposal_id populated (payment_id).
-      // 5. Assert audit_log contains payment_recorded + T2_new_payment events.
-      // 6. Assert bill_payment_allocations row created linking payment → bill.
-      expect(HAS_MODAL_SECRETS).toBe(true);
-    });
+    it(
+      'payment_confirmation (unseeded, no cited bill): full Stage 0-7 traversal → committed, no ledger mutation (proposal_id=null)',
+      async () => {
+        const { output } = await runIngestPipeline('payment_confirmation.pdf');
 
-    it('payment_confirmation no-cited-bill + matched payment candidate: ProposedAttachmentCard attach_payment_evidence route → no service commit', async () => {
-      // 1. Seed an existing payment row matching by amount + date.
-      // 2. Seed a document_relationship_candidate linking source_document → payment.
-      // 3. Invoke ingestDocument.
-      // 4. Assert status='committed' + proposal_id=null (non-ledger).
-      // 5. Assert pipeline_trace shows attach_payment_evidence discriminator.
-      expect(HAS_MODAL_SECRETS).toBe(true);
-    });
+        expect(output.status).toBe('committed');
+        expect(output.failure_class).toBeNull();
 
-    it('payment_confirmation born-paid case (cited invoice + payment fields): ProposedMutationBundle born_paid_bill route → sequential commits with partial-commit reconciliation marker on failure-injection', async () => {
-      // 1. Seed source_document for a payment confirmation that cites an
-      //    invoice AND contains payment evidence.
-      // 2. Invoke ingestDocument.
-      // 3. Assert status='committed' + proposal_id populated (first child bill_id).
-      // 4. Assert sequential audit_log entries: bill_created + T1_new_bill;
-      //    then payment_recorded + T2_new_payment.
-      // 5. Failure-injection variant: simulate second-child commit failure
-      //    (e.g., locked fiscal_period or invalid amounts); assert first
-      //    child's commit stands and second routes to exception queue
-      //    with manual_route + reconciliation_context audit metadata
-      //    (per Iteration 2 Note 2 default disposition;
-      //    'bundle_partial_commit_reconciliation_pending' reserved value
-      //    absent from ExceptionReasonSchema per Phase A verification —
-      //    (μ) sub-grain N=5 banking at chunk 7.3b close).
-      expect(HAS_MODAL_SECRETS).toBe(true);
-    });
+        const stages = output.pipeline_trace.map((s) => s.stage_name);
+        expect(stages).toContain('run_ocr'); // Modal sidecar invoked
+        expect(stages).toContain('classify_document_type');
+        expect(stages).toContain('match_vendor');
+        expect(stages).toContain('match_against_existing_state');
+        expect(stages).toContain('router_match_against_state');
+        expect(stages[stages.length - 1]).toBe('build_proposal');
+        expect(stages.length).toBeGreaterThanOrEqual(9);
+
+        // No cited bill / matched candidate → no payment recorded → committed
+        // with no ledger mutation.
+        expect(output.proposal_id).toBeNull();
+      },
+      MODAL_TIMEOUT_MS,
+    );
+
+    // DEFERRED to Phase 8 retrospective (Session 74 Sub-option 3): each
+    // requires substantial seeding matched to OCR-extracted fields —
+    //  - cited-bill matched → ProposedEntryCard record_bill_payment (seed bill);
+    //  - no-cited-bill + matched candidate → ProposedAttachmentCard (seed payment + candidate);
+    //  - born-paid bundle → ProposedMutationBundle + partial-commit reconciliation.
+    // See the chunk 6 close report for the deferred-scenario inventory.
+    it.skip('payment_confirmation cited-bill matched: ProposedEntryCard record_bill_payment → proposal_id=payment_id [DEFERRED]', async () => {});
+    it.skip('payment_confirmation no-cited-bill + matched candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null [DEFERRED]', async () => {});
+    it.skip('payment_confirmation born-paid (cited invoice + payment): ProposedMutationBundle born_paid_bill + partial-commit reconciliation [DEFERRED]', async () => {});
   },
 );

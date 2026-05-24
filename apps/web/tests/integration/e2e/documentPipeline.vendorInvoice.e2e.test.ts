@@ -1,52 +1,77 @@
 // tests/integration/e2e/documentPipeline.vendorInvoice.e2e.test.ts
 //
-// Phase 7 chunk 7.3b — End-to-end test for vendor_invoice pipeline.
-// Verifies full orchestrator Stages 0-7 active for the vendor_invoice
-// path:
-//   Stage 0 dedup_by_hash → Stage 1 byte_fetch → Stage 2 run_ocr
-//   (Modal sidecar) → Stage 3 classify (Tier A vendor_invoice rules) →
-//   Stage 4 extract_fields → Stage 5 match_vendor → Stage 6
-//   match_against_existing_state → Stage 7 build_proposal +
-//   commit composite (withInvariants(billService.post) on post_bill
-//   route).
+// Phase 8 chunk 6 sub-chunk b — vendor_invoice end-to-end against the real
+// Modal sidecar. Verifies the full orchestrator traversal (Stages 0-7) for
+// the vendor_invoice fixture: dedup → byte_fetch → run_ocr (Modal) →
+// classify_document_type (Tier A) → extract_fields → match_vendor →
+// match_against_existing_state / router_match_against_state → build_proposal.
 //
-// Gated behind MODAL_OCR_HMAC_SECRET + MODAL_OCR_SIDECAR_URL env-var
-// presence per chunk 7.1b sidecarE2E precedent + chunk 7.3 brief §3.5
-// Task 7.3b.7 + Step 21 (Modal sidecar deployment status check).
+// SCOPE (Session 74, Sub-option 3 — observed-runtime assertions): the
+// unseeded fixture commits with NO ledger mutation (proposal_id=null) —
+// without a matching seeded vendor, Subsystem 1 skips bill creation. The
+// seeded ledger-mutation scenarios (prior-bill-matched, etc.) are deferred
+// to the Phase 8 retrospective (see the chunk 6 close report) because they
+// require seeding vendors/bills/candidates matched to the OCR-extracted
+// fields, which the brief under-specifies.
 //
-// To run locally:
+// GATING (opt-in, per Session 74 δ-1): this hits the real billable Modal
+// sidecar, so it is gated behind RUN_MODAL_E2E in ADDITION to secret
+// presence — routine `pnpm test` SKIPS it (hermetic; no Modal). To run:
 //   1. cd sidecar-ocr && bash deploy.sh           # deploy to Modal
-//   2. echo "MODAL_OCR_HMAC_SECRET=<secret>" >> apps/web/.env.local
-//   3. echo "MODAL_OCR_SIDECAR_URL=<deployed-url>" >> apps/web/.env.local
-//   4. cd apps/web && pnpm test:integration tests/integration/e2e/documentPipeline.vendorInvoice.e2e
+//   2. ensure MODAL_OCR_HMAC_SECRET + MODAL_OCR_SIDECAR_URL in apps/web/.env.local
+//   3. cd apps/web && RUN_MODAL_E2E=1 pnpm test:integration tests/integration/e2e/documentPipeline.vendorInvoice.e2e
 
 import { describe, it, expect } from 'vitest';
+import { runIngestPipeline } from './ingestPipelineHarness';
 
-const HAS_MODAL_SECRETS = Boolean(
-  process.env.MODAL_OCR_HMAC_SECRET && process.env.MODAL_OCR_SIDECAR_URL,
+const RUN_E2E = Boolean(
+  process.env.MODAL_OCR_HMAC_SECRET &&
+    process.env.MODAL_OCR_SIDECAR_URL &&
+    process.env.RUN_MODAL_E2E,
 );
 
-describe.skipIf(!HAS_MODAL_SECRETS)(
-  'Phase 7 chunk 7.3b — vendor_invoice end-to-end (deployed Modal sidecar)',
-  () => {
-    it('vendor_invoice no-prior-match: Stages 0-7 active → ProposedEntryCard post_bill route → withInvariants(billService.post) commits + T1_new_bill dispatcher emission', async () => {
-      // End-to-end test against deployed Modal sidecar:
-      //   1. Seed source_document for vendor_invoice fixture PDF.
-      //   2. Invoke ingestDocument orchestrator.
-      //   3. Assert status='committed' + proposal_id populated (bill_id).
-      //   4. Assert pipeline_trace contains stage records for Stages 0-7.
-      //   5. Assert audit_log contains bill_created + T1_new_bill events.
-      //   6. Assert source_document_links row created with primary_invoice link_role.
-      expect(HAS_MODAL_SECRETS).toBe(true);
-    });
+const MODAL_TIMEOUT_MS = 180_000; // Modal cold-start can exceed 60s (retries).
 
-    it('vendor_invoice prior-bill-matched: Stage 6 candidate → ProposedAttachmentCard attach_invoice_to_existing_bill route → no service commit (proposal_id=null)', async () => {
-      // 1. Seed an existing bill row + source_document for the invoice.
-      // 2. Seed a document_relationship_candidate matching bill.
-      // 3. Invoke ingestDocument.
-      // 4. Assert status='committed' + proposal_id=null (ProposedAttachment is non-ledger).
-      // 5. Verify pipeline_trace shows build_proposal stage with attach_invoice_to_existing_bill discriminator.
-      expect(HAS_MODAL_SECRETS).toBe(true);
-    });
+describe.skipIf(!RUN_E2E)(
+  'Phase 8 chunk 6 — vendor_invoice end-to-end (deployed Modal sidecar)',
+  () => {
+    it(
+      'vendor_invoice (unseeded, no prior match): full Stage 0-7 traversal → committed, no ledger mutation (proposal_id=null)',
+      async () => {
+        const { output } = await runIngestPipeline('vendor_invoice.pdf');
+
+        // Pipeline completed without a failure.
+        expect(output.status).toBe('committed');
+        expect(output.failure_class).toBeNull();
+
+        const stages = output.pipeline_trace.map((s) => s.stage_name);
+        // Full traversal: an 'unknown' classification short-circuits right
+        // after classify_document_type, so reaching build_proposal proves
+        // the doc classified to a known type and every stage ran.
+        expect(stages).toContain('run_ocr'); // Modal sidecar invoked
+        expect(stages).toContain('classify_document_type');
+        expect(stages).toContain('match_vendor');
+        expect(stages).toContain('match_against_existing_state');
+        expect(stages).toContain('router_match_against_state');
+        expect(stages[stages.length - 1]).toBe('build_proposal');
+        expect(stages.length).toBeGreaterThanOrEqual(9);
+
+        // Unseeded v1 path: no matching vendor → Subsystem 1 skips bill
+        // creation → committed with no ledger mutation. A populated
+        // proposal_id requires a seeded ledger-commit route (deferred).
+        expect(output.proposal_id).toBeNull();
+      },
+      MODAL_TIMEOUT_MS,
+    );
+
+    // DEFERRED to Phase 8 retrospective (Session 74 Sub-option 3): requires
+    // seeding a vendor matching the OCR-extracted fields + an existing bill +
+    // a document_relationship_candidate so the pipeline routes to
+    // ProposedAttachmentCard attach_invoice_to_existing_bill. See the chunk 6
+    // close report for the deferred-scenario inventory.
+    it.skip(
+      'vendor_invoice prior-bill-matched: Stage 6 candidate → ProposedAttachmentCard attach_invoice_to_existing_bill → proposal_id=null [DEFERRED]',
+      async () => {},
+    );
   },
 );
