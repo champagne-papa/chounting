@@ -29,6 +29,7 @@ The substantive changes in V4:
 8. **§13 doc-creation plan** now routes new docs through the ADR-0022 supersession/status-header workflow.
 9. **Pre-flight gap-closers (post-draft patch, 2026-05-24):** named the Two Laws of Service Architecture (§5); restored the three degraded-mode operational guarantees (§11.3); added the multi-framework declaration note (§9.3); stated the Domain Event / Audit Event / Logic Receipt tripod in one place (§12.0); footnoted the SharePoint two-sub-arc distinction (§13.3).
 10. **Pre-flight V2 gap-closers (post-draft patch, 2026-05-24):** added the *capability providers produce candidates, not domain truth* principle (§4); the *discovery is not authority* principle for bidirectional Connectors (§8.2); surfaced the **Unified Work Inbox** as the work-centric user surface (§10); aligned the multi-entity spine component list (§13.2 ↔ §10.2); clarified AR substrate status in the §13.3 sequence.
+11. **ADR-0014 §11 factual amendment applied (2026-05-24, this branch):** the factual portion of the auto-commit reconciliation now lives inline in ADR-0014 §11 (closing the doc-vs-code drift V4 §16 Risk #2 flags); the governance/remediation portion is held pending Decision 2c. §2.5, §13.1, and Appendix L updated to the factual/governance split.
 
 A correction ledger with the exact before/after for every cell is in **Appendix K** (new).
 
@@ -135,7 +136,7 @@ Exact anchors (verified at `5eade62f`):
 
 ### Where the gate is missing
 
-The auto-commit path runs **no Agent Ladder rung check, no system-ceiling check (INV-AGENT-001 through 006 are not registered), and bypasses `canUserPerformAction`.** ADR-0007 treats the Ladder and the tier policy as *orthogonal* — not as gate-before-commit. And **ADR-0014 §11 is unreconciled**: it still reads *"Tier 1 commit-time confirmation per ADR-0007 (auto-post deferred post-v1 per spec §11)"* at line 1004 (and again at line 1859). A whole-file search for `2026-05-24` in ADR-0014 returns zero — ADR-0007 closed Q78, but ADR-0014 was never amended to match the shipped behavior.
+The auto-commit path runs **no Agent Ladder rung check, no system-ceiling check (INV-AGENT-001 through 006 are not registered), and bypasses `canUserPerformAction`.** ADR-0007 treats the Ladder and the tier policy as *orthogonal* — not as gate-before-commit. And **ADR-0014 §11's factual drift is now reconciled** (on this V4 branch): the original §11 line still reads *"auto-post deferred post-v1 per spec §11"* at line 1004 (preserved per ADR-0022 forward-only discipline), but an inline **Amendment 2026-05-24 (auto-commit factual reconciliation)** now records the live system-actor auto-commit behavior. That amendment is deliberately **factual only** — the governance posture (whether/how to gate this path) is held for Decision 2c, not presupposed, because ADR-0007 Q78 intentionally treats the Ladder and tier policy as orthogonal.
 
 This is the V3/V4 §16 Risk #2 ("Agent Ladder becomes a permissions checkbox; the trust architecture quietly evaporates") **partially realized in production.**
 
@@ -145,7 +146,7 @@ Decision 2 is a **remediation** decision, not a future-prevention decision. The 
 
 1. **INV-AGENT-001 (system-ceiling check)** registers on the *existing* commit sites in `ingestDocument.ts` (lines 535/544/605/631), not on hypothetical future ones.
 2. **Phase B item "Agent Ladder pure-rule math in `core/agent-ladder/`"** becomes load-bearing-now, not preparatory — it gates the live path.
-3. **ADR-0014 §11 needs an amendment block** reconciling "auto-post deferred post-v1" with shipped behavior (V4 ships alongside a proposed ADR-0014 §11 amendment — see Appendix L).
+3. **ADR-0014 §11's factual amendment is applied on this branch** (Amendment 2026-05-24, factual portion — closes the doc-vs-code drift). The **governance/remediation portion is held pending this Decision 2c** and lands as a follow-on amendment if 2c ratifies (see Appendix L).
 4. The CTO is asked to approve Decision 2 *with this remediation framing.*
 
 This is the section that changes the urgency of the entire proposal.
@@ -641,7 +642,7 @@ New docs must carry the house status-header block and follow the ADR-0022 supers
 - `docs/03_architecture/degraded-mode-architecture.md` — new
 - `docs/03_architecture/security-and-data-governance.md` — new
 - `docs/03_architecture/evidence-chain.md` — new (with the §12.1 status table)
-- **Amendment:** `docs/07_governance/adr/0014-tier-2-document-pipeline.md` §11 — reconcile "auto-post deferred post-v1" with shipped auto-commit (Appendix L)
+- **Amendment (factual portion applied 2026-05-24 on this branch):** `docs/07_governance/adr/0014-tier-2-document-pipeline.md` §11 now records the live system-actor auto-commit; the governance/remediation portion is held pending Decision 2c (Appendix L)
 
 ### §13.2 Phase B — Infrastructure before breadth
 
@@ -786,7 +787,11 @@ AR/Invoicing/Customers next → Reporting snapshots → Bank reconciliation → 
 
 ### Appendix L — Proposed ADR-0014 §11 amendment block (draft)
 
-> **Amendment (2026-05-24) — auto-commit reconciliation.** §11's statement "auto-post deferred post-v1 per spec §11" is superseded for the system-actor commit path. As of the auto-commit arc (`60b89106`→`8a6c9bc3`, ratified `a940ec6f`; ADR-0007 Q78 Option A), `ingestDocument` auto-commits matched `post_bill` and `record_bill_payment` mutations via `withInvariants(SystemActorServiceContext)`, which bypasses Invariants 1/2/4. This path runs no Agent Ladder rung or system-ceiling check (INV-AGENT-001 unregistered). Tier-1 commit-time confirmation remains the rule for *user-initiated* proposals; auto-commit is now live for system-actor pipeline commits. Registering Ladder enforcement on this path is tracked as the Decision 2c remediation (system-overview V4 §2.5 / §13.2 items 3–4).
+**Status:** the *factual portion* below is **APPLIED** to ADR-0014 §11 on this branch (inline Amendment 2026-05-24). The *governance/remediation portion* is **held pending CTO ratification of Decision 2c** and lands as a follow-on amendment if/when 2c is approved.
+>
+> **Factual portion (APPLIED to ADR-0014 §11).** §11's "auto-post deferred post-v1" statement is superseded for the system-actor commit path. As of the auto-commit arc (`60b89106`→`8a6c9bc3`, ratified `a940ec6f`; ADR-0007 Q78 Option A), `ingestDocument` auto-commits matched `post_bill` and `record_bill_payment` mutations via `withInvariants(SystemActorServiceContext)`, which bypasses Invariants 1/2/4. This path runs no Agent Ladder rung or system-ceiling check (INV-AGENT-001 unregistered). Tier-1 commit-time confirmation remains the rule for *user-initiated* proposals; auto-commit is now live for system-actor pipeline commits.
+>
+> **Governance portion (DEFERRED to Decision 2c).** Registering Ladder enforcement on the system-actor commit path — INV-AGENT-001 on the existing `ingestDocument.ts` sites + the Phase B §13.2 items 3–4 retrofit — is the governance remediation. It is **not** asserted in the ADR until Decision 2c ratifies, to avoid presupposing the CTO's framing (ADR-0007 Q78 intentionally treats the Ladder and tier policy as orthogonal; the CTO may choose to keep them so).
 
 ---
 

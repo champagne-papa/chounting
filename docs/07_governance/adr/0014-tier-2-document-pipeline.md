@@ -1004,6 +1004,23 @@ ProposedMutation and ProposedMutationBundle approval is always
 Tier 1 commit-time confirmation per ADR-0007 (auto-post deferred
 post-v1 per spec §11).
 
+**Amendment 2026-05-24 (auto-commit factual reconciliation).** The
+"auto-post deferred post-v1" statement above is superseded **for the
+system-actor commit path**. As of the auto-commit arc
+(`60b89106`→`8a6c9bc3`, ratified `a940ec6f`; ADR-0007 Q78 Option A),
+`ingestDocument` auto-commits matched `post_bill` and `record_bill_payment`
+mutations via `withInvariants(SystemActorServiceContext)`, which bypasses
+Invariants 1/2/4. This path runs no Agent Ladder rung or system-ceiling
+check (INV-AGENT-001 unregistered). Tier-1 commit-time confirmation remains
+the rule for **user-initiated** proposals; auto-commit is now live for
+system-actor pipeline commits. This block records the **factual** state of
+the codebase only — the governance posture (whether and how to gate this
+path) is the subject of System Overview V4 §2.5 / Decision 2c (drafted, not
+yet ratified) and lands as a follow-on amendment if/when that ratifies. Per
+ADR-0022 additive discipline this amendment preserves the original statement
+above. Origin: auto-commit arc closeout `8a6c9bc3`; operator-directed
+application 2026-05-24.
+
 ### 12. Failure-classification matrix (mirrors ADR-0013's shape)
 
 Pipeline failures fall into the same three categories as
