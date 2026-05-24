@@ -17,7 +17,14 @@
 //   cd apps/web && RUN_MODAL_E2E=1 pnpm test:integration tests/integration/e2e/documentPipeline.paymentConfirmation.e2e
 
 import { describe, it, expect } from 'vitest';
-import { runIngestPipeline } from './ingestPipelineHarness';
+import {
+  runIngestPipeline,
+  seedVendor,
+  seedApprovedBill,
+  cleanupSeededVendor,
+  getPaymentById,
+  DEMO_FIGMA,
+} from './ingestPipelineHarness';
 
 const RUN_E2E = Boolean(
   process.env.MODAL_OCR_HMAC_SECRET &&
@@ -54,14 +61,55 @@ describe.skipIf(!RUN_E2E)(
       MODAL_TIMEOUT_MS,
     );
 
-    // DEFERRED to Phase 8 retrospective (Session 74 Sub-option 3): each
-    // requires substantial seeding matched to OCR-extracted fields —
-    //  - cited-bill matched → ProposedEntryCard record_bill_payment (seed bill);
-    //  - no-cited-bill + matched candidate → ProposedAttachmentCard (seed payment + candidate);
-    //  - born-paid bundle → ProposedMutationBundle + partial-commit reconciliation.
-    // See the chunk 6 close report for the deferred-scenario inventory.
-    it.skip('payment_confirmation cited-bill matched: ProposedEntryCard record_bill_payment → proposal_id=payment_id [DEFERRED]', async () => {});
-    it.skip('payment_confirmation no-cited-bill + matched candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null [DEFERRED]', async () => {});
-    it.skip('payment_confirmation born-paid (cited invoice + payment): ProposedMutationBundle born_paid_bill + partial-commit reconciliation [DEFERRED]', async () => {});
+    // cited-bill scenario UNSKIPPED (auto-commit arc Modal-e2e follow-up,
+    // 2026-05-24): the seeded open bill drives a Stage 6 bill-candidate →
+    // record_bill_payment → real ledger commit.
+    // RE-SKIPPED after the 2026-05-24 live run: no bill-candidate emitted →
+    // billId did not resolve → no payment committed (proposal_id was null).
+    // Same finding as the vendorInvoice scenario: bill-candidate generation
+    // against the seeded open bill did not fire on real OCR (only a
+    // receipt→payment candidate emitted in the whole run, at confidence 0.25).
+    // Root cause deferred — not fix-forward. Body correct + ready to re-enable
+    // once bill-candidate matching is investigated. See friction-journal
+    // 2026-05-24.
+    it.skip(
+      'payment_confirmation cited-bill matched: seeded vendor + open bill → Stage 6 bill-candidate → record_bill_payment → proposal_id=payment_id',
+      async () => {
+        const vendorId = await seedVendor();
+        // billId resolves from the generated bill-candidate (ingestDocument
+        // buildRecordPaymentInput path a). The OCR'd cited_bill_id is the
+        // invoice NUMBER string '1ABCD23M0001' (not a uuid), so the cited_bill_id
+        // path does NOT resolve; the candidate path does. Seed the open bill so
+        // Stage 6 matches the payment to it.
+        await seedApprovedBill({
+          vendor_id: vendorId,
+          bill_number: DEMO_FIGMA.citedBillNumber,
+        });
+        try {
+          const { output } = await runIngestPipeline('payment_confirmation.pdf');
+          expect(output.status).toBe('committed');
+          expect(output.failure_class).toBeNull();
+          // Auto-commit: a real payment is recorded → proposal_id = payment_id,
+          // attributed to the pipeline service account (ADR-0007 Q78 Path X).
+          expect(output.proposal_id).not.toBeNull();
+          const payment = await getPaymentById(output.proposal_id!);
+          expect(payment).toBeTruthy();
+          expect(payment!.vendor_id).toBe(vendorId);
+        } finally {
+          await cleanupSeededVendor(vendorId);
+        }
+      },
+      MODAL_TIMEOUT_MS,
+    );
+
+    // DEFERRED — NEEDS NEW FIXTURES (auto-commit arc Modal-e2e follow-up):
+    // these two cannot be exercised with the existing 3 demo fixtures. The
+    // payment_confirmation fixture HAS a cited bill (and is not a born-paid
+    // doc), so it cannot drive a no-cited-bill route or a born-paid bundle.
+    // Both need NEW source documents (a no-cited-bill payment; an
+    // invoice+payment born-paid doc) — their own fixture-sourcing + OCR-capture
+    // + corpus arc, not a follow-up. See friction-journal 2026-05-24.
+    it.skip('payment_confirmation no-cited-bill + matched candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null [NEEDS FIXTURE]', async () => {});
+    it.skip('payment_confirmation born-paid (cited invoice + payment): ProposedMutationBundle born_paid_bill + partial-commit reconciliation [NEEDS FIXTURE]', async () => {});
   },
 );

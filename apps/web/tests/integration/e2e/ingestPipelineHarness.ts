@@ -137,3 +137,137 @@ export async function runIngestPipeline(fixtureFilename: string): Promise<Pipeli
 
   return { output, source_document_id: docId, document_case_id: caseId, trace_id };
 }
+
+// ===========================================================================
+// Seeded-scenario helpers (Modal-e2e follow-up, auto-commit arc 2026-05-24).
+//
+// The 3 fixture-covered deferred scenarios need ledger state seeded so the
+// pipeline's Stage 6 (documentRouterService.completeCandidate) GENERATES a
+// relationship candidate from it — routing then keys off that candidate
+// (proposalBuilder). Seed values match the demo fixtures' OCR
+// (corpus.sanitized.ts): vendor 'Figma, Inc.' (GST 100000000RT9999), amount
+// CA$282.24, invoice number '1ABCD23M-0001'; the Zoho payment cites
+// '1ABCD23M0001' (hyphen-stripped). SEED.ORG_HOLDING already has '2000
+// Accounts Payable' + '1000 Cash' + an open fiscal period, so the pipeline's
+// payment-commit lookups (lookupPaymentCommitDefaults) resolve.
+//
+// RUNTIME DEPENDENCY (the central unknown the paid run resolves): routing
+// hinges on the relationship scorer (scoreComposition) clearing the per-type
+// confidence threshold (0.85 invoice/payment, 0.80 receipt) from the seeded
+// state + live OCR fields. If it doesn't clear, the scenario routes to
+// no-match (proposal_id=null, no candidate) — a finding about real-OCR scorer
+// behaviour, not a test bug.
+// ===========================================================================
+
+export const DEMO_FIGMA = {
+  vendorName: 'Figma, Inc.',
+  taxId: '100000000RT9999',
+  amountCad: '282.2400',
+  invoiceNumber: '1ABCD23M-0001',
+  citedBillNumber: '1ABCD23M0001', // Zoho payment cites the hyphen-stripped form
+  issueDate: '2025-11-18',
+} as const;
+
+export async function seedVendor(
+  opts: { name?: string; tax_id?: string } = {},
+): Promise<string> {
+  const admin = adminClient();
+  const vendor_id = crypto.randomUUID();
+  const { error } = await admin.from('vendors').insert({
+    vendor_id,
+    org_id: SEED.ORG_HOLDING,
+    name: opts.name ?? DEMO_FIGMA.vendorName,
+    tax_id: opts.tax_id ?? DEMO_FIGMA.taxId,
+  });
+  if (error) throw new Error(`seedVendor failed: ${error.message}`);
+  return vendor_id;
+}
+
+export async function seedApprovedBill(opts: {
+  vendor_id: string;
+  bill_number: string;
+  amount_cad?: string;
+}): Promise<string> {
+  const admin = adminClient();
+  const bill_id = crypto.randomUUID();
+  const { error } = await admin.from('bills').insert({
+    bill_id,
+    org_id: SEED.ORG_HOLDING,
+    vendor_id: opts.vendor_id,
+    bill_number: opts.bill_number,
+    issue_date: DEMO_FIGMA.issueDate,
+    amount_original: opts.amount_cad ?? DEMO_FIGMA.amountCad,
+    amount_cad: opts.amount_cad ?? DEMO_FIGMA.amountCad,
+    currency: 'CAD',
+    fx_rate: '1.00000000',
+    lifecycle_state: 'approved_for_payment',
+  });
+  if (error) throw new Error(`seedApprovedBill failed: ${error.message}`);
+  return bill_id;
+}
+
+export async function seedPayment(opts: {
+  vendor_id: string;
+  amount_cad?: string;
+}): Promise<string> {
+  const admin = adminClient();
+  const payment_id = crypto.randomUUID();
+  const { error } = await admin.from('payments').insert({
+    payment_id,
+    org_id: SEED.ORG_HOLDING,
+    vendor_id: opts.vendor_id,
+    payment_date: DEMO_FIGMA.issueDate,
+    amount: opts.amount_cad ?? DEMO_FIGMA.amountCad,
+    currency: 'CAD',
+    payment_method: 'other',
+    payment_purpose: 'bill_payment',
+    payment_state: 'paid',
+    applied_to: 'bill',
+    reference_number: null,
+  });
+  if (error) throw new Error(`seedPayment failed: ${error.message}`);
+  return payment_id;
+}
+
+export interface SeededCandidate {
+  linked_entity_type: string;
+  linked_entity_id: string | null;
+}
+
+export async function getCandidatesForCase(
+  document_case_id: string,
+): Promise<SeededCandidate[]> {
+  const admin = adminClient();
+  const { data } = await admin
+    .from('document_relationship_candidates')
+    .select('linked_entity_type, linked_entity_id')
+    .eq('document_case_id', document_case_id);
+  return (data ?? []) as SeededCandidate[];
+}
+
+export async function getPaymentById(
+  payment_id: string,
+): Promise<{ payment_id: string; vendor_id: string | null } | null> {
+  const admin = adminClient();
+  const { data } = await admin
+    .from('payments')
+    .select('payment_id, vendor_id')
+    .eq('payment_id', payment_id)
+    .maybeSingle();
+  return (data as { payment_id: string; vendor_id: string | null } | null) ?? null;
+}
+
+/** Best-effort teardown. JE/JL rows are append-only and accumulate (Item 20). */
+export async function cleanupSeededVendor(vendor_id: string): Promise<void> {
+  const admin = adminClient();
+  const { data: bills } = await admin
+    .from('bills')
+    .select('bill_id')
+    .eq('vendor_id', vendor_id);
+  for (const b of (bills ?? []) as { bill_id: string }[]) {
+    await admin.from('bill_payment_allocations').delete().eq('bill_id', b.bill_id);
+  }
+  await admin.from('payments').delete().eq('org_id', SEED.ORG_HOLDING).eq('vendor_id', vendor_id);
+  await admin.from('bills').delete().eq('org_id', SEED.ORG_HOLDING).eq('vendor_id', vendor_id);
+  await admin.from('vendors').delete().eq('vendor_id', vendor_id);
+}

@@ -22,7 +22,14 @@
 //   3. cd apps/web && RUN_MODAL_E2E=1 pnpm test:integration tests/integration/e2e/documentPipeline.vendorInvoice.e2e
 
 import { describe, it, expect } from 'vitest';
-import { runIngestPipeline } from './ingestPipelineHarness';
+import {
+  runIngestPipeline,
+  seedVendor,
+  seedApprovedBill,
+  cleanupSeededVendor,
+  getCandidatesForCase,
+  DEMO_FIGMA,
+} from './ingestPipelineHarness';
 
 const RUN_E2E = Boolean(
   process.env.MODAL_OCR_HMAC_SECRET &&
@@ -69,9 +76,45 @@ describe.skipIf(!RUN_E2E)(
     // a document_relationship_candidate so the pipeline routes to
     // ProposedAttachmentCard attach_invoice_to_existing_bill. See the chunk 6
     // close report for the deferred-scenario inventory.
+    // RE-SKIPPED after the 2026-05-24 live run: the seeded open bill yielded
+    // NO Stage 6 bill-candidate (assertion failed). The run emitted only one
+    // candidate total — a receipt→payment candidate (confidence 0.25); the
+    // vendor_invoice→bill and payment_confirmation→bill matches produced none.
+    // So relationship-candidate generation against seeded ledger state is
+    // weak/inconsistent on real OCR (the Option II integration gate passed
+    // because it bypasses matching with synthesized fields). Root cause
+    // (per-doc-type vendor match + scoreComposition inputs) deferred — not
+    // fix-forward. Body is correct + ready to re-enable once bill-candidate
+    // matching is investigated. See friction-journal 2026-05-24.
     it.skip(
-      'vendor_invoice prior-bill-matched: Stage 6 candidate → ProposedAttachmentCard attach_invoice_to_existing_bill → proposal_id=null [DEFERRED]',
-      async () => {},
+      'vendor_invoice prior-bill-matched: seeded vendor + open bill → Stage 6 bill-candidate → ProposedAttachmentCard attach_invoice_to_existing_bill → proposal_id=null',
+      async () => {
+        const vendorId = await seedVendor();
+        await seedApprovedBill({
+          vendor_id: vendorId,
+          bill_number: DEMO_FIGMA.invoiceNumber,
+        });
+        try {
+          const { output, document_case_id } =
+            await runIngestPipeline('vendor_invoice.pdf');
+          expect(output.status).toBe('committed');
+          expect(output.failure_class).toBeNull();
+          // attach_invoice_to_existing_bill is a non-ledger route → proposal_id
+          // =null (same terminal value as the unseeded test). The seeded-vs-
+          // unseeded distinction is the Stage 6 candidate: the seeded open bill
+          // yields a bill-candidate; the unseeded run yields none.
+          expect(output.proposal_id).toBeNull();
+          const candidates = await getCandidatesForCase(document_case_id);
+          expect(
+            candidates.some(
+              (c) => c.linked_entity_type === 'bill' && c.linked_entity_id !== null,
+            ),
+          ).toBe(true);
+        } finally {
+          await cleanupSeededVendor(vendorId);
+        }
+      },
+      MODAL_TIMEOUT_MS,
     );
   },
 );

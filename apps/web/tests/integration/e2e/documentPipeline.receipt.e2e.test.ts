@@ -16,7 +16,13 @@
 //   cd apps/web && RUN_MODAL_E2E=1 pnpm test:integration tests/integration/e2e/documentPipeline.receipt.e2e
 
 import { describe, it, expect } from 'vitest';
-import { runIngestPipeline } from './ingestPipelineHarness';
+import {
+  runIngestPipeline,
+  seedVendor,
+  seedPayment,
+  cleanupSeededVendor,
+  getCandidatesForCase,
+} from './ingestPipelineHarness';
 
 const RUN_E2E = Boolean(
   process.env.MODAL_OCR_HMAC_SECRET &&
@@ -57,9 +63,25 @@ describe.skipIf(!RUN_E2E)(
     // document_relationship_candidate so the pipeline routes to
     // ProposedAttachmentCard attach_payment_evidence. See the chunk 6 close
     // report for the deferred-scenario inventory.
-    it.skip(
-      'receipt with matched payment candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null [DEFERRED]',
-      async () => {},
+    it(
+      'receipt with matched payment candidate: seeded vendor + payment → Stage 6 payment-candidate → ProposedAttachmentCard attach_payment_evidence → proposal_id=null',
+      async () => {
+        const vendorId = await seedVendor();
+        await seedPayment({ vendor_id: vendorId });
+        try {
+          const { output, document_case_id } = await runIngestPipeline('receipt.pdf');
+          expect(output.status).toBe('committed');
+          expect(output.failure_class).toBeNull();
+          // attach_payment_evidence is non-ledger → proposal_id=null; the
+          // seeded payment yields a Stage 6 candidate (unseeded yields none).
+          expect(output.proposal_id).toBeNull();
+          const candidates = await getCandidatesForCase(document_case_id);
+          expect(candidates.some((c) => c.linked_entity_id !== null)).toBe(true);
+        } finally {
+          await cleanupSeededVendor(vendorId);
+        }
+      },
+      MODAL_TIMEOUT_MS,
     );
   },
 );

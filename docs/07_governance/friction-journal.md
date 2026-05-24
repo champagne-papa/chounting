@@ -16048,3 +16048,44 @@ vendor/bill/candidate seeding in `ingestPipelineHarness` + the fixture PDFs'
 real OCR yielding the right fields. The ADR-0007 Q78 gate is already satisfied
 by the Option II integration test (`autoCommitGate.integration.test.ts`); this
 is deeper coverage, done when there's appetite for a paid founder-review run.
+
+## 2026-05-24 — Modal-e2e seeded run: bill-candidate generation weak/absent on real OCR
+
+The auto-commit arc's deeper-coverage follow-up ran the 3 fixture-covered
+deferred Modal-e2e scenarios (`RUN_MODAL_E2E=1`, Modal-OCR-only ~$0.05–0.15)
+with a seeded vendor/bill/payment matched to `corpus.sanitized.ts`. Outcome:
+**1 of 3 passed** (receipt → payment-candidate → attach → `proposal_id=null`);
+**2 failed** (vendor_invoice→bill and payment_confirmation→bill both produced
+**NO Stage 6 bill-candidate**). Writeup:
+`docs/09_briefs/phase-8/2026-05-24-modal-e2e-followup.md`.
+
+The run emitted exactly **one** relationship candidate — the receipt→payment
+candidate, **confidence 0.25**; emission is **not** threshold-gated (0.25 <
+the 0.80 receipt threshold, yet it emitted). So the finding is **not** a
+threshold / fuzzy-match-precision issue — an earlier hypothesis ("fuzzy match
+~0.818 below the 0.85 invoice/payment threshold"), corrected by querying the
+emitted candidates. The accurate finding: **relationship-candidate generation
+against seeded ledger state is weak/inconsistent on real OCR** — bill-candidate
+generation against a seeded open bill did not fire at all, and the one
+candidate that did fire scored very low (0.25).
+
+This does **not** affect the ADR-0007 Q78 gate (satisfied by the Option II
+integration test, which bypasses matching with synthesized fields). It is a
+finding about the deeper real-OCR matching path: **not yet reliable for
+bill-routing**. Root cause (per-doc-type vendor-match outcome +
+`scoreComposition` inputs for bill candidates) deferred to investigation — not
+fix-forward. The 2 re-skipped scenario bodies are correct + ready to re-enable;
+the receipt scenario stays unskipped (passing). Harness seeding helpers
+(`seedVendor`/`seedApprovedBill`/`seedPayment`/…) are durable infra.
+
+Lesson (verify-from-disk, again): the first root-cause hypothesis (threshold ×
+fuzzy match) was plausible from the asymmetry but **wrong** — querying the
+actually-emitted candidate (one payment-candidate at 0.25, emitted below
+threshold) corrected it. Don't assert a mechanism from a plausible inference;
+query the emitted state.
+
+**Needs-fixture (separate deferred item):** the no-cited-bill payment scenario
+and the born-paid bundle scenario cannot be exercised with the existing 3 demo
+fixtures (the payment_confirmation fixture HAS a cited bill and is not a
+born-paid doc). Both require NEW source documents — their own
+fixture-sourcing + OCR-capture + corpus-sanitization arc, not a follow-up.
