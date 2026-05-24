@@ -24,13 +24,14 @@
 // pending' absent at ExceptionReasonSchema per Phase A verification — bank
 // (μ) sub-grain at close report).
 //
-// justification field: permissive z.record(z.unknown()).optional() shape
-// per Iteration 2 Option (c') Finding E absorption. Formal
-// ProposalJustificationSchema codification deferred to Phase 8 / post-v1
-// Logic Receipt consumer per ADR-0007 Q30.
+// justification field: formal ProposalJustificationSchema (Phase 8 chunk 9,
+// Layer 2 item #B) — resolves the Phase 7 chunk 7.3b permissive placeholder
+// and closes ADR-0007 Q30. See
+// @/shared/schemas/accounting/proposalJustification.schema.
 
 import { z } from 'zod';
 import { ProposedMutationSchema } from './proposedMutation.schema';
+import { ProposalJustificationSchema } from './proposalJustification.schema';
 
 // Born-paid bundle children: post_bill MUST precede record_bill_payment
 // per ADR-0012 sequential best-effort + ADR-0014 §13 commit-order spec.
@@ -51,10 +52,9 @@ export const ProposedMutationBundleSchema = z
     source_document_id: z.string().uuid(),
     trace_id: z.string().uuid(),
     child_mutations: BornPaidBillChildrenTuple,
-    // justification permissive per Iteration 2 Option (c') Finding E
-    // absorption; formal ProposalJustificationSchema codification deferred
-    // to Phase 8 / post-v1 Logic Receipt consumer per ADR-0007 Q30.
-    justification: z.record(z.string(), z.unknown()).optional(),
+    // justification formalized at Phase 8 chunk 9 (Layer 2 item #B);
+    // ProposalJustificationSchema closes ADR-0007 Q30.
+    justification: ProposalJustificationSchema.optional(),
   })
   .strict();
 export type ProposedMutationBundle = z.infer<typeof ProposedMutationBundleSchema>;

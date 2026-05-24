@@ -16,16 +16,17 @@
 // chunk 5.1a expansion; chunk 7.3b consumes the current substrate).
 // link_role per LinkRoleSchema.
 //
-// justification field: permissive z.record(z.unknown()).optional() shape
-// per Iteration 2 Option (c') Finding E absorption. Formal
-// ProposalJustificationSchema codification deferred to Phase 8 / post-v1
-// Logic Receipt consumer per ADR-0007 Q30.
+// justification field: formal ProposalJustificationSchema (Phase 8 chunk 9,
+// Layer 2 item #B) — resolves the Phase 7 chunk 7.3b permissive placeholder
+// and closes ADR-0007 Q30. See
+// @/shared/schemas/accounting/proposalJustification.schema.
 
 import { z } from 'zod';
 import {
   LinkedEntityTypeSchema,
   LinkRoleSchema,
 } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import { ProposalJustificationSchema } from './proposalJustification.schema';
 
 export const ProposedAttachmentProposalTypeSchema = z.enum([
   'attach_payment_evidence',
@@ -46,10 +47,9 @@ export const ProposedAttachmentSchema = z
     linked_entity_id: z.string().uuid(),
     link_role: LinkRoleSchema,
     trace_id: z.string().uuid(),
-    // justification permissive per Iteration 2 Option (c') Finding E
-    // absorption; formal ProposalJustificationSchema codification deferred
-    // to Phase 8 / post-v1 Logic Receipt consumer per ADR-0007 Q30.
-    justification: z.record(z.string(), z.unknown()).optional(),
+    // justification formalized at Phase 8 chunk 9 (Layer 2 item #B);
+    // ProposalJustificationSchema closes ADR-0007 Q30.
+    justification: ProposalJustificationSchema.optional(),
   })
   .strict();
 export type ProposedAttachment = z.infer<typeof ProposedAttachmentSchema>;

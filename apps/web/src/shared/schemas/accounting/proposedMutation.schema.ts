@@ -9,14 +9,13 @@
 //   - 'post_bill' (vendor_invoice → no prior bill match)
 //   - 'record_bill_payment' (payment_confirmation cited-bill matched)
 //
-// justification field: permissive z.record(z.unknown()).optional() shape
-// per Iteration 2 Option (c') Finding E absorption. Formal
-// ProposalJustificationSchema codification deferred to Phase 8 / post-v1
-// Logic Receipt consumer per ADR-0007 Q30 (rule_id + input_features +
-// historical_match_count + confidence_score + source_transactions +
-// user_utterance + pipeline_trace).
+// justification field: formal ProposalJustificationSchema (Phase 8 chunk 9,
+// Layer 2 item #B) — resolves the Phase 7 chunk 7.3b permissive placeholder
+// (z.record(z.string(), z.unknown())) and closes ADR-0007 Q30. See
+// @/shared/schemas/accounting/proposalJustification.schema.
 
 import { z } from 'zod';
+import { ProposalJustificationSchema } from './proposalJustification.schema';
 
 export const ProposedMutationProposalTypeSchema = z.enum([
   'post_bill',
@@ -62,10 +61,9 @@ export const ProposedMutationSchema = z.discriminatedUnion('proposal_type', [
       source_document_id: z.string().uuid(),
       trace_id: z.string().uuid(),
       params: PostBillParamsSchema,
-      // justification permissive per Iteration 2 Option (c') Finding E
-      // absorption; formal ProposalJustificationSchema codification deferred
-      // to Phase 8 / post-v1 Logic Receipt consumer per ADR-0007 Q30.
-      justification: z.record(z.string(), z.unknown()).optional(),
+      // justification formalized at Phase 8 chunk 9 (Layer 2 item #B);
+      // ProposalJustificationSchema closes ADR-0007 Q30.
+      justification: ProposalJustificationSchema.optional(),
     })
     .strict(),
   z
@@ -74,7 +72,7 @@ export const ProposedMutationSchema = z.discriminatedUnion('proposal_type', [
       source_document_id: z.string().uuid(),
       trace_id: z.string().uuid(),
       params: RecordBillPaymentParamsSchema,
-      justification: z.record(z.string(), z.unknown()).optional(),
+      justification: ProposalJustificationSchema.optional(),
     })
     .strict(),
 ]);

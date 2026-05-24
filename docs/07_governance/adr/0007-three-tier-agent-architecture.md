@@ -231,8 +231,10 @@ their own orchestration via LLM coordination.
 5. **Populate existing `ProposedMutation.justification.*` fields.**
    The Logic Receipt (INV-AGENT-002) is produced by Tier 1 as
    today. Per Q30 resolution below, `justification` extends with a
-   `pipeline_trace: PipelineStageRecord[]` field so step-level
-   reproducibility is preserved under Tier 2 pipelines.
+   `pipeline_trace: PipelineStageRecord[]` field (and a parallel
+   `bundle_audit_trace: BundleAuditRecord[]` field per ADR-0012 §6,
+   both codified as `ProposalJustificationSchema` at Phase 8 chunk 9)
+   so step-level reproducibility is preserved under Tier 2 pipelines.
 
 **Q31 — LLM-planned orchestration prohibition.** Verbatim rule:
 
@@ -487,6 +489,23 @@ flowing through existing handlers. New routing surface: zero.
   This is the choice the AP brief's §4 already mandated, and the
   Document Platform reframe spec preserves it. Schema extension
   lands with Tier 2's first system (the AP Agent).
+
+  **Amendment (Phase 8 chunk 9, Layer 2 item #B) — RESOLVED in
+  code.** The `justification` field is formally codified as
+  `ProposalJustificationSchema` at
+  `@/shared/schemas/accounting/proposalJustification.schema`,
+  superseding the Phase 7 chunk 7.3b permissive placeholder
+  (`z.record(z.string(), z.unknown()).optional()`) carried on
+  ProposedMutation, ProposedAttachment, ProposedMutationBundle, and
+  ProposedAttachmentCard. The schema carries the `pipeline_trace:
+  PipelineStageRecord[]` field above **plus** a parallel
+  `bundle_audit_trace: BundleAuditRecord[]` field for
+  bundle-composition Logic Receipts per ADR-0012 §6 INV-AGENT-002
+  (`bundle_id`, `composition_at`, `child_proposal_ids`,
+  `invariant_class`). Both traces are required (possibly empty
+  arrays); the remaining Logic-Receipt fields (`user_utterance`,
+  `rule_id`, `input_features`, `historical_match_count`,
+  `confidence_score`, `source_transactions`) are optional.
 
 - **Q31** — LLM-planned orchestration prohibition. Resolution:
   verbatim rule (in the Tier 2 safety-contract subsection above).

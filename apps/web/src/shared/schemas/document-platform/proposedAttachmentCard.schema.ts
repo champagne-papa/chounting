@@ -15,16 +15,17 @@
 // chunk 7.3b consumes current substrate (brief cited outdated "6-value
 // v1-active" — (μ) sub-grain N=6 cross-instance banking).
 //
-// justification field: permissive z.record(z.unknown()).optional() shape
-// per Iteration 2 Option (c') Finding E absorption. Formal
-// ProposalJustificationSchema codification deferred to Phase 8 / post-v1
-// Logic Receipt consumer per ADR-0007 Q30.
+// justification field: formal ProposalJustificationSchema (Phase 8 chunk 9,
+// Layer 2 item #B) — resolves the Phase 7 chunk 7.3b permissive placeholder
+// and closes ADR-0007 Q30. Cross-domain import from
+// @/shared/schemas/accounting/proposalJustification.schema.
 
 import { z } from 'zod';
 import {
   LinkedEntityTypeSchema,
   LinkRoleSchema,
 } from './sourceDocumentLink.schema';
+import { ProposalJustificationSchema } from '@/shared/schemas/accounting/proposalJustification.schema';
 
 export const ProposedAttachmentCardProposalTypeSchema = z.enum([
   'attach_payment_evidence',
@@ -46,10 +47,9 @@ export const ProposedAttachmentCardSchema = z
     linked_entity_type: LinkedEntityTypeSchema,
     linked_entity_id: z.string().uuid(),
     link_role: LinkRoleSchema,
-    // justification permissive per Iteration 2 Option (c') Finding E
-    // absorption; formal ProposalJustificationSchema codification deferred
-    // to Phase 8 / post-v1 Logic Receipt consumer per ADR-0007 Q30.
-    justification: z.record(z.string(), z.unknown()).optional(),
+    // justification formalized at Phase 8 chunk 9 (Layer 2 item #B);
+    // ProposalJustificationSchema closes ADR-0007 Q30.
+    justification: ProposalJustificationSchema.optional(),
     confidence_score: z.number(),
     idempotency_key: z.string().uuid(),
     trace_id: z.string().uuid(),
