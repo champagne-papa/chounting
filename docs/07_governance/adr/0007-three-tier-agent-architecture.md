@@ -304,8 +304,12 @@ necessary but not sufficient. Resolution: **one seeded service-account
 `auth.users` row** (`SYSTEM_ACTOR_USER_ID`, `system_actor =
 'pipeline_orchestrator'`) with **no memberships or roles** (auth is
 bypassed, so it needs none). System actors carry its uuid as
-`caller.system_user_id`; `created_by` **and** audit `user_id` both resolve
-to it via the `actingUserId(ctx)` helper. So an auto-committed bill/payment
+`caller.system_user_id`; at the commit gate `withInvariants` bypasses the
+identity invariants and **adapts** the system-actor context to a verified
+`ServiceContext` whose `user_id` is that uuid, so `created_by` **and** audit
+`user_id` resolve to it automatically downstream — **no ledger-service
+changes** (`billService` / `paymentService` / `journalEntryService`
+untouched). So an auto-committed bill/payment
 is attributed to a real, joinable service-account identity — **no
 `audit_log` schema change is required** (the service-account uuid in
 `user_id` is the attribution; this supersedes an earlier draft that

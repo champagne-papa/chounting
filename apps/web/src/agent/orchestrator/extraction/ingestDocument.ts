@@ -57,7 +57,7 @@ import { adminClient } from '@/db/adminClient';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { billService } from '@/services/spend/billService';
 import { paymentService } from '@/services/spend/paymentService';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import { SYSTEM_ACTOR_USER_ID } from '@/services/middleware/serviceContext';
 import type { PostBillInputRaw } from '@/shared/schemas/spend/bill.schema';
 import type { RecordPaymentInputRaw } from '@/shared/schemas/spend/recordPayment.schema';
 import crypto from 'crypto';
@@ -69,7 +69,14 @@ export async function ingestDocument(
 ): Promise<IngestDocumentOutput> {
   const ctx: SystemActorServiceContext = {
     trace_id: input.trace_id,
-    caller: { user_id: null, system_actor: SYSTEM_ACTOR },
+    caller: {
+      user_id: null,
+      system_actor: SYSTEM_ACTOR,
+      // Service-account uuid the pipeline commits AS (created_by + audit)
+      // per ADR-0007 Q78 Path X. withInvariants adapts to it at the commit
+      // gate; caller.user_id stays null as the authorization discriminant.
+      system_user_id: SYSTEM_ACTOR_USER_ID,
+    },
     org_id: input.org_id,
   };
 
@@ -432,30 +439,14 @@ export async function ingestDocument(
 
   // Stage 7 commit composite per chunk 7.3b Task 7.3b.5 + Step 18.
   //
-  // IMPORTANT (surfaced at Phase 8 chunk 10): synthCtxForCommit is NOT just a
-  // context-shape adapter. It downgrades the orchestrator's
-  // SystemActorServiceContext to a synthetic *verified* caller whose user_id
-  // ('system_actor:pipeline_orchestrator') has no membership row. The
-  // withInvariants calls below pass { action: 'bill.post' | 'payment.record' },
-  // so Invariant 4 (canUserPerformAction) runs, finds no membership, and
-  // DENIES; the throw is swallowed by the best-effort try/catch, yielding
-  // proposal_id=null. So this shim is the de-facto gate currently preventing
-  // the document pipeline from auto-committing ledger mutations.
-  //
-  // Retiring it — letting the system-actor ctx reach withInvariants and skip
-  // role-auth — is therefore a ledger-authorization POLICY change, not a
-  // refactor. It is deliberately deferred to its own scoped change with an
-  // explicit ADR-0007 auth-model statement + seeded auto-commit tests. See
-  // ADR-0007 §Tier 2 and the friction-journal Phase 8 chunk 10 entry.
-  const synthCtxForCommit: ServiceContext = {
-    trace_id: input.trace_id,
-    caller: {
-      user_id: `system_actor:${SYSTEM_ACTOR}`,
-      email: 'system@bridge.local',
-      verified: true as const,
-      org_ids: [input.org_id],
-    },
-  };
+  // Auto-commit arc (ADR-0007 Q78 Option A + Path X): the synthCtxForCommit
+  // shim is RETIRED. The orchestrator's SystemActorServiceContext (ctx) is
+  // passed directly to the commit-path withInvariants sites below;
+  // withInvariants bypasses the identity invariants for the system actor and
+  // adapts to the seeded service account (SYSTEM_ACTOR_USER_ID) so created_by
+  // + audit resolve to a real auth.users identity. The pipeline now
+  // auto-commits matched ledger mutations. See ADR-0007 §Tier 2 (Q78
+  // resolution) + service-layer.md Candidate #11 (RETIRED).
 
   // Branch on ProposalResult.kind (post-chunk-7.3b activation 3-value
   // union). Per chunk 7.3 brief §3.5 Task 7.3b.5 + Step 18:
@@ -476,7 +467,7 @@ export async function ingestDocument(
     const proposal_id = await commitProposedEntryCard(
       proposal.card,
       input,
-      synthCtxForCommit,
+      ctx,
     );
     return {
       status: 'committed',
@@ -507,7 +498,7 @@ export async function ingestDocument(
   const bundleResult = await commitProposedMutationBundle(
     proposal.bundle,
     input,
-    synthCtxForCommit,
+    ctx,
   );
   return {
     status: 'committed',
@@ -531,7 +522,7 @@ export async function ingestDocument(
 async function commitProposedEntryCard(
   card: unknown,
   input: IngestDocumentInput,
-  synthCtx: ServiceContext,
+  commitCtx: SystemActorServiceContext,
 ): Promise<string | null> {
   if (!card || typeof card !== 'object') return null;
   const c = card as Record<string, unknown>;
@@ -543,7 +534,7 @@ async function commitProposedEntryCard(
       if (!billInput) return null;
       const result = await withInvariants(billService.post, {
         action: 'bill.post',
-      })(billInput, synthCtx);
+      })(billInput, commitCtx);
       return result.bill_id;
     }
 
@@ -558,7 +549,7 @@ async function commitProposedEntryCard(
         // 'bill.record_payment' because 'payment.record' was unseeded at
         // chunk 7.3b close.
         action: 'payment.record',
-      })(paymentInput, synthCtx);
+      })(paymentInput, commitCtx);
       return result.payment_id;
     }
   } catch {
@@ -588,7 +579,7 @@ async function commitProposedEntryCard(
 async function commitProposedMutationBundle(
   bundle: unknown,
   input: IngestDocumentInput,
-  synthCtx: ServiceContext,
+  commitCtx: SystemActorServiceContext,
 ): Promise<{ first_child_id: string | null; second_child_id: string | null }> {
   if (!bundle || typeof bundle !== 'object') {
     return { first_child_id: null, second_child_id: null };
@@ -613,7 +604,7 @@ async function commitProposedMutationBundle(
     if (billInput) {
       const result = await withInvariants(billService.post, {
         action: 'bill.post',
-      })(billInput, synthCtx);
+      })(billInput, commitCtx);
       billId = result.bill_id;
     }
   } catch {
@@ -645,7 +636,7 @@ async function commitProposedMutationBundle(
         // 'bill.record_payment' because 'payment.record' was unseeded at
         // chunk 7.3b close.
         action: 'payment.record',
-      })(paymentInput, synthCtx);
+      })(paymentInput, commitCtx);
       paymentId = result.payment_id;
     }
   } catch {

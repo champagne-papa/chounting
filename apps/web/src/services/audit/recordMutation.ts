@@ -11,7 +11,6 @@ import type {
   ServiceContext,
   SystemActorServiceContext,
 } from '@/services/middleware/serviceContext';
-import { actingUserId } from '@/services/middleware/serviceContext';
 import { logger } from '@/shared/logger/pino';
 
 // S25 QW-07 / UF-010: PII fields stripped from before_state before
@@ -147,12 +146,13 @@ export async function recordMutation(
 ): Promise<void> {
   const { error } = await db.from('audit_log').insert({
     org_id: entry.org_id,
-    // actingUserId resolves the attribution identity for both caller shapes:
-    // human -> caller.user_id; system actor -> caller.system_user_id (the
-    // service account, ADR-0007 Q78 Path X) or null. Behaviour-preserving
-    // for current callers (humans + the mailbox webhook, which sets no
-    // system_user_id -> null as before).
-    user_id: actingUserId(ctx),
+    // Commit-path attribution (auto-commit arc, ADR-0007 Q78 Path X) is
+    // handled upstream by withInvariants, which adapts a system actor to a
+    // verified service-account ServiceContext before the mutation runs — so
+    // ctx.caller.user_id is the service-account uuid here for auto-committed
+    // ledger writes. Non-commit system-actor audits (e.g. the mailbox
+    // webhook) keep user_id=null as before.
+    user_id: ctx.caller.user_id,
     trace_id: ctx.trace_id,
     action: entry.action,
     entity_type: entry.entity_type,

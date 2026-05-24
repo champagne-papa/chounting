@@ -334,6 +334,18 @@ compute expected digest → length-check → wrap in `timingSafeEqual`.
 
 ## Consumer-side synthetic ServiceContext for system_actor orchestrator invocations (substrate-shim discipline)
 
+> **RETIRED 2026-05-24 (auto-commit arc, Candidate #11 discharged).** The
+> post-v1 widening this convention forward-pointed to has shipped:
+> `withInvariants` now accepts `ServiceContext | SystemActorServiceContext`
+> and, for a system actor, bypasses the identity invariants (ADR-0007 Q78
+> Option A) and **adapts** to a verified service-account `ServiceContext`
+> (Path X — `SYSTEM_ACTOR_USER_ID`). The consumer-side synthetic shape
+> (`synthCtxForCommit`) is deleted; orchestrators pass their
+> `SystemActorServiceContext` directly. This discipline was correct at
+> codification (N=2 substrate-shim) but is structurally unnecessary
+> post-widening; the body below is preserved for provenance only. Consult
+> **ADR-0007 §Tier 2 (Q78 resolution)** for the live contract.
+
 Deterministic-TS orchestrators (Tier 2 document pipeline orchestrator
 per ADR-0014 §1; future Tier 2.5 orchestrators) run as
 system_actor — caller.user_id is a synthetic sentinel

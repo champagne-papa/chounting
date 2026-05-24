@@ -99,6 +99,18 @@ export function actingUserId(
 }
 
 /**
+ * Type guard: is this a system-actor context? Discriminates the
+ * ServiceContext | SystemActorServiceContext union by caller.user_id
+ * (null only for system actors). Narrows to SystemActorServiceContext so
+ * callers can read ctx.org_id + caller.system_user_id.
+ */
+export function isSystemActorContext(
+  ctx: ServiceContext | SystemActorServiceContext,
+): ctx is SystemActorServiceContext {
+  return ctx.caller.user_id === null;
+}
+
+/**
  * Builds a ServiceContext for an incoming Next.js API route request.
  * Validates the Supabase Auth JWT, fetches the caller's memberships,
  * generates a trace_id, and returns a ready-to-use ServiceContext.
