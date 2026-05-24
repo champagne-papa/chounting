@@ -28,6 +28,7 @@ The substantive changes in V4:
 7. **§9 capability template** reframed as default-with-escape; to be validated on AR before being mandated slice-wide.
 8. **§13 doc-creation plan** now routes new docs through the ADR-0022 supersession/status-header workflow.
 9. **Pre-flight gap-closers (post-draft patch, 2026-05-24):** named the Two Laws of Service Architecture (§5); restored the three degraded-mode operational guarantees (§11.3); added the multi-framework declaration note (§9.3); stated the Domain Event / Audit Event / Logic Receipt tripod in one place (§12.0); footnoted the SharePoint two-sub-arc distinction (§13.3).
+10. **Pre-flight V2 gap-closers (post-draft patch, 2026-05-24):** added the *capability providers produce candidates, not domain truth* principle (§4); the *discovery is not authority* principle for bidirectional Connectors (§8.2); surfaced the **Unified Work Inbox** as the work-centric user surface (§10); aligned the multi-entity spine component list (§13.2 ↔ §10.2); clarified AR substrate status in the §13.3 sequence.
 
 A correction ledger with the exact before/after for every cell is in **Appendix K** (new).
 
@@ -252,6 +253,8 @@ Status annotations: 🟢 shipped · 🟡 partial/substrate · 🔴 missing. (App
 
 Naming stack: **The Bridge** = product UI shell · **External Systems Layer** = integration architecture · **Connector families** = storage, ledger, bank feed, filing authority, communication, calendar, payment, workpaper · **Providers** = concrete adapters (SharePoint, QBO, Plaid, etc.). Appendix A holds the high-resolution diagram.
 
+**Capability providers produce candidates, not domain truth.** OCR, LLM extraction (Tier C), and embedding retrieval emit *candidate* outputs (assertions, retrieved context) into the pipeline; **domain services decide what becomes CHOUnting state.** This is the architectural reason a provider can be swapped (PaddleOCR → another OCR engine; one Claude model → the next) without touching accounting meaning — and the reason no provider output writes ledger state directly.
+
 ---
 
 ## §5 The Agent Ladder Spine
@@ -423,6 +426,8 @@ Providers           = SharePoint, QBO, Plaid, CRA, Gmail, etc.
 
 External systems hold external state. CHOUnting holds meaning, proposals, audit, approvals, evidence, and lifecycle.
 
+**Discovery is not authority.** External *location* and external *labels* are UX conveniences for the human, never classification signals for the agent. A PDF dropped in a SharePoint `/AP/` folder is not therefore a payable; a QBO "Bills"-tab entry, a bank-assigned "Office Expenses" category, or a calendar event titled "GST Filing" do not bind CHOUnting's classification or authorize an action. The agent classifies from *contents* and proposes through the Ladder; external metadata is an input to UX, not to truth. This holds for every bidirectional Connector.
+
 | External system | What it holds | What CHOUnting holds |
 |---|---|---|
 | SharePoint / OneDrive / GDrive / Box | Document bytes | Meaning, classification, lifecycle, evidence chain |
@@ -491,6 +496,8 @@ Appendix B walks AP through all 25 declarations using shipped code. Appendix C w
 ---
 
 ## §10 Product Capability Map
+
+**§10 is the record-centric view.** The complementary *work-centric* view — the **Unified Work Inbox**, generalizing the existing document-scoped exception queue across slices into one daily landing (bills awaiting approval, bank transactions awaiting match, invoices awaiting send, documents awaiting classification, filings awaiting review, Connector drift, low-confidence proposals) — is the AP Specialist persona's primary surface and a key differentiator from record-centric (Zoho-shaped) products. It is treated as cross-cutting in the capability template (§9.2 item 11).
 
 | User-facing area | CHOUnting slice | Status | Primary dependency |
 |---|---|---|---|
@@ -645,12 +652,12 @@ New docs must carry the house status-header block and follow the ADR-0022 supers
 5. Connector authority-semantics codification
 6. Report snapshots / materialized views
 7. Capability-provider health substrate + degraded-mode UI
-8. Thin multi-entity spine — add `entity_group`/`consolidation_scope`/`related_party` + `entity_id` discipline (the intercompany/currency seats already exist)
+8. Thin multi-entity spine — add `entity_group`, membership, `consolidation_scope`, `party_link`, `related_party`, cross-entity permissions + `entity_id` discipline on every record (the intercompany/currency seats already exist; full component list per §10.2)
 9. Logic Receipt schema expansion (§12.2 → first-class table)
 
 ### §13.3 Phase C — Next product slices
 
-AR / Invoicing / Customers (biggest gap; mirrors AP; required for multi-entity) → Reporting Center / snapshots → Bank Reconciliation → GST/HST Tax Treatment → GST/HST Tax Filing → Multi-Entity Automation → SharePoint bidirectional Connector → Outbound Communication Connector → Tax Research / Advice (last).
+AR / Invoicing / Customers (biggest gap — initial-schema tables exist; no service/routes yet; mirrors AP; required for multi-entity) → Reporting Center / snapshots → Bank Reconciliation → GST/HST Tax Treatment → GST/HST Tax Filing → Multi-Entity Automation → SharePoint bidirectional Connector → Outbound Communication Connector → Tax Research / Advice (last).
 
 *Footnote — SharePoint activation is two sub-arcs, not one:* **Sub-arc A** (projection: CHOUnting → SharePoint, lifecycle/folder projection) and **Sub-arc B** (ingestion: SharePoint → CHOUnting, folder-watch). They ship independently and have different customer triggers, so "SharePoint activation" is not a single approvable unit. Detail deferred to the eventual SharePoint activation brief.
 
