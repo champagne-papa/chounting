@@ -15981,3 +15981,29 @@ code comments cite "ADR-0014 §13 canonical stage_names," but §13 is "Logic
 Receipt at proposal-creation time"; the actual stage enumeration lives in §1.
 Deferred decision (Phase 8 retrospective): amend the spec to match the runtime
 stage set, or trim the runtime trace to match the spec.
+
+## 2026-05-23 — Tier C payment-confirmation extract returns a top-level array; Zod gate rejects, pipeline degrades gracefully
+
+The first live exercise of Tier C (Phase 8 §3 closeout —
+`docs/09_briefs/phase-8/2026-05-23-tier-c-empirical-exercise.md`) ran the 3
+Session-72 abstaining docs through full `ingestDocument` with real
+`claude-sonnet-4-5`. Two ran clean; the founder payment-confirmation doc
+classified correctly (`payment_confirmation`) but its Tier C *extract* call
+returned a top-level JSON array, which the extract Zod schema rejected
+(`expected object, received array, path []`) — despite the
+payment_confirmation prompt's explicit "Output a single JSON object … and
+nothing else." The Zod structural-defense gate (ADR-0014 §8) caught it:
+`ai_fallback_validation_failed` → `extraction_failed` audit events fired, and
+the pipeline degraded gracefully (full 11-stage traversal → `committed` /
+`proposal_id=null`, no crash; in a real flow the `extraction_failed` routes
+to the exception queue per ADR-0011 §13).
+
+Finding shape: the v1 single-object output contract is not robust to live LLM
+output variance on real inputs — Claude ignored the single-object instruction
+on this doc. The Zod gate working as designed is the mitigating half; the
+silently-lost extraction is the finding half. Scoped follow-up (deferred —
+auto-commit arc Tier C hardening, or standalone): tolerate/unwrap
+single-element arrays, reinforce the prompt, or formalize the exception-route
+as intended behavior. N=1 observation; not codifying. Empirical-exercise
+value: exactly the class of issue that lint-but-never-run code hides,
+surfaced by the first live Tier C call.
