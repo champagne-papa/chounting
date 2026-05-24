@@ -59,9 +59,9 @@ export interface ServiceContext {
 // system actors attribute ledger writes to (created_by + audit user_id)
 // per ADR-0007 Q78 Path X. System actors bypass authorization at
 // withInvariants (caller.user_id stays null for the auth discriminant) but
-// commit AS this service account, so created_by NOT NULL FKs (e.g.
-// bills.created_by -> auth.users) are satisfied and audit rows carry a
-// real, joinable identity rather than null. Seeded in
+// commit AS this service account, so the NOT-NULL actor column in the
+// commit path (bill_payment_allocations.created_by) is satisfied and audit
+// rows carry a real, joinable identity rather than null. Seeded in
 // scripts/seed-auth-users.ts + src/db/seed/dev.sql — those literals MUST
 // match this constant.
 export const SYSTEM_ACTOR_USER_ID = '00000000-0000-0000-0000-0000000000a1';

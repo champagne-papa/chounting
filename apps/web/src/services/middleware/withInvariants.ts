@@ -61,8 +61,9 @@ export function withInvariants<I, O>(
     // role grants — so it BYPASSES the identity-coupled invariants (Inv 1
     // user_id presence, Inv 2 verified, Inv 4 role). It then commits AS the
     // seeded service account: we adapt to a verified ServiceContext whose
-    // user_id is the service-account uuid, so created_by NOT NULL FKs and
-    // audit attribution resolve to a real, joinable identity. The trace_id
+    // user_id is the service-account uuid, so the NOT-NULL actor column
+    // (bill_payment_allocations.created_by) and audit attribution resolve to
+    // a real, joinable identity. The trace_id
     // and org-consistency (vs ctx.org_id) checks still run.
     if (isSystemActorContext(ctx)) {
       if (!ctx.trace_id) {

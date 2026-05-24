@@ -297,10 +297,12 @@ the orchestrator's own route/job-queue authentication, not by a grant
 list.
 
 *Created-by + audit attribution — Path X (ratified 2026-05-24).* The
-ledger entity tables require a real `auth.users` identity for `created_by`
-(`bills.created_by` is `uuid NOT NULL REFERENCES auth.users(id)`), so a
-null-`user_id` system actor cannot insert them — opening the gate is
-necessary but not sufficient. Resolution: **one seeded service-account
+payment commit path carries a NOT-NULL actor column
+(`bill_payment_allocations.created_by`); `journal_entries.created_by` and
+`audit_log.user_id` are nullable, and `bills` / `payments` have no
+`created_by` column. So a null-`user_id` system actor cannot complete a
+payment commit (the allocation insert violates NOT NULL) — opening the gate
+is necessary but not sufficient. Resolution: **one seeded service-account
 `auth.users` row** (`SYSTEM_ACTOR_USER_ID`, `system_actor =
 'pipeline_orchestrator'`) with **no memberships or roles** (auth is
 bypassed, so it needs none). System actors carry its uuid as
@@ -622,9 +624,10 @@ flowing through existing handlers. New routing surface: zero.
   trust boundary is the route/job-queue/orchestrator that constructs the
   `SystemActorServiceContext`. Auto-committed ledger mutations are
   attributed to a seeded service-account `auth.users` identity (Path X)
-  via `created_by` + audit `user_id` (resolved by `actingUserId`) —
-  satisfying the `created_by` NOT NULL FK and preserving audit attribution
-  with no `audit_log` schema change. Retires the `synthCtxForCommit`
+  via `created_by` + audit `user_id` (resolved by the `withInvariants`
+  service-account adaptation) — satisfying the one NOT-NULL actor column in
+  the commit path (`bill_payment_allocations.created_by`) and preserving
+  audit attribution with no `audit_log` schema change. Retires the `synthCtxForCommit`
   de-facto gate; closes the Phase 8 chunk 10 PARTIAL open question. See the
   §Tier 2 auth-model resolution block.
 
