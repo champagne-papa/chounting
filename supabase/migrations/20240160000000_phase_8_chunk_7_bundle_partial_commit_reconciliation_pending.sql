@@ -1,0 +1,36 @@
+-- ============================================================
+-- Phase 8 chunk 7 — exception_reason ENUM extension
+-- ============================================================
+-- Framing #2 post-v1 reconciliation orchestrator (brief §2.1 Axis 2):
+-- exception_reason gains 'bundle_partial_commit_reconciliation_pending' as
+-- v1-active. Named v1 consumer: postV1ReconciliationOrchestrator at
+-- apps/web/src/services/document-platform/postV1ReconciliationOrchestrator.ts
+-- (Stage 7 Bundle partial-commit reconciliation path) — routes the case to
+-- the manual reconciliation queue when a born_paid_bill bundle's payment leg
+-- fails after the bill leg committed.
+--
+-- Split-from-substrate rationale (Phase 7 chunk 7.2 precedent at
+-- 20240157000000_phase_7_exception_reason_ai_fallback.sql): Postgres 12+
+-- ALTER TYPE ADD VALUE can run inside a transaction, but the new value
+-- cannot be referenced by name in the SAME transaction. The chunk_8_active
+-- CHECK constraint broadening (next migration 20240161) explicitly
+-- references 'bundle_partial_commit_reconciliation_pending', forcing this
+-- split. ENUM extension is isolated to this migration; the Layer 1 CHECK
+-- broaden lands at 20240161.
+--
+-- Migration-slot note: brief §2.1/§3.2 named slots 20240159 + 20240160 at
+-- Session 55 composition (latest migration then = 20240158). By Session 75
+-- impl-onset, slot 20240159 had been taken by an unrelated Phase 8 chunk 4
+-- migration (20240159000000_make_linked_entity_id_nullable). This
+-- substrate-pair shifts +1 to 20240160 + 20240161 per the Session 75
+-- ratified mechanical slot-shift (brief-vs-substrate-state temporal-locality
+-- drift); ADD VALUE / CHECK ordering and the chunk_8_active suffix are
+-- unchanged.
+--
+-- ADR-0010 admit framework: Layer 1 DB CHECK admits NULL or legal value
+-- range; the new value is admitted at the chunk_8_active CHECK grade
+-- (next migration). ADR-0022 additive provenance-preserving: enum is grown,
+-- not redefined.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'bundle_partial_commit_reconciliation_pending';

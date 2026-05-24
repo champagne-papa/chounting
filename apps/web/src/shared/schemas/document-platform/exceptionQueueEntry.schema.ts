@@ -34,7 +34,7 @@ export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
 export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
-// 7 v1-active exception_reason values. Each has a named v1 consumer
+// 8 v1-active exception_reason values. Each has a named v1 consumer
 // in a ratified ADR. Reserved 2 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
 // §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
@@ -57,6 +57,11 @@ export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 // candidates (pipeline_transient_failure, pipeline_unavailable,
 // pipeline_schema_mismatch, case_requires_reserved_role) remain
 // OMITTED per the chunk-6 framing.
+//
+// Phase 8 chunk 7 addendum: 'bundle_partial_commit_reconciliation_
+// pending' graduates to v1-active (8th value). Named v1 consumer:
+// postV1ReconciliationOrchestrator (Stage 7 Bundle partial-commit
+// reconciliation path).
 export const ExceptionReasonSchema = z.enum([
   'manual_route',
   'low_confidence_classification',
@@ -65,6 +70,7 @@ export const ExceptionReasonSchema = z.enum([
   'multi_candidate_ambiguity',
   'invariant_violation',
   'ai_fallback_validation_failed',
+  'bundle_partial_commit_reconciliation_pending',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 
