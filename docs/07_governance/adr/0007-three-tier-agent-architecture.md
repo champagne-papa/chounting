@@ -296,13 +296,22 @@ pipeline's commit operations (`bill.post`, `payment.record`) by virtue of
 the orchestrator's own route/job-queue authentication, not by a grant
 list.
 
-*Audit attribution (INV-AUDIT-002 / INV-AUDIT-001 preserved).* Auto-
-committed ledger mutations must not land **unattributed** audit rows.
-`audit_log` gains a nullable `system_actor` column; `recordMutation`
-writes `caller.system_actor` (e.g. `'pipeline_orchestrator'`) when the
-caller is a system actor (whose `user_id` is `null`). So an
-auto-committed bill or payment is attributable to the pipeline actor in
-the audit trail, not merely `user_id = null` traceable by `trace_id`.
+*Created-by + audit attribution — Path X (ratified 2026-05-24).* The
+ledger entity tables require a real `auth.users` identity for `created_by`
+(`bills.created_by` is `uuid NOT NULL REFERENCES auth.users(id)`), so a
+null-`user_id` system actor cannot insert them — opening the gate is
+necessary but not sufficient. Resolution: **one seeded service-account
+`auth.users` row** (`SYSTEM_ACTOR_USER_ID`, `system_actor =
+'pipeline_orchestrator'`) with **no memberships or roles** (auth is
+bypassed, so it needs none). System actors carry its uuid as
+`caller.system_user_id`; `created_by` **and** audit `user_id` both resolve
+to it via the `actingUserId(ctx)` helper. So an auto-committed bill/payment
+is attributed to a real, joinable service-account identity — **no
+`audit_log` schema change is required** (the service-account uuid in
+`user_id` is the attribution; this supersedes an earlier draft that
+proposed a nullable `audit_log.system_actor` column). `caller.user_id`
+stays `null` for the authorization discriminant; the service-account uuid
+is used only for attribution, never for authorization.
 
 *Mechanics.* `synthCtxForCommit` (the de-facto gate) is retired;
 `ingestDocument`'s four commit-path `withInvariants` sites pass the
@@ -607,11 +616,13 @@ flowing through existing handlers. New routing surface: zero.
   bypasses the identity-coupled invariants (Inv 1 `user_id` presence,
   Inv 2 `verified`, Inv 4 role authorization) at `withInvariants`; the
   trust boundary is the route/job-queue/orchestrator that constructs the
-  `SystemActorServiceContext`. Auto-committed ledger mutations carry
-  `system_actor` attribution in `audit_log` (new nullable column) so
-  audit attribution is preserved rather than `user_id = null`. Retires
-  the `synthCtxForCommit` de-facto gate; closes the Phase 8 chunk 10
-  PARTIAL open question. See the §Tier 2 auth-model resolution block.
+  `SystemActorServiceContext`. Auto-committed ledger mutations are
+  attributed to a seeded service-account `auth.users` identity (Path X)
+  via `created_by` + audit `user_id` (resolved by `actingUserId`) —
+  satisfying the `created_by` NOT NULL FK and preserving audit attribution
+  with no `audit_log` schema change. Retires the `synthCtxForCommit`
+  de-facto gate; closes the Phase 8 chunk 10 PARTIAL open question. See the
+  §Tier 2 auth-model resolution block.
 
 ## Amendment — Document Platform reframe (2026-05-03)
 

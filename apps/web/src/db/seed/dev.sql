@@ -110,7 +110,12 @@ INSERT INTO user_profiles (user_id, first_name, last_name, display_name)
 VALUES
   ('00000000-0000-0000-0000-000000000001', 'Exec', 'User', 'Executive User'),
   ('00000000-0000-0000-0000-000000000002', 'Controller', 'User', 'Controller User'),
-  ('00000000-0000-0000-0000-000000000003', 'AP', 'Specialist', 'AP Specialist')
+  ('00000000-0000-0000-0000-000000000003', 'AP', 'Specialist', 'AP Specialist'),
+  -- Pipeline service account (ADR-0007 Q78 Path X): system-actor identity
+  -- for auto-committed ledger writes (created_by + audit). No membership
+  -- (auth bypassed at withInvariants). id MUST match SYSTEM_ACTOR_USER_ID
+  -- in src/services/middleware/serviceContext.ts.
+  ('00000000-0000-0000-0000-0000000000a1', 'Pipeline', 'Orchestrator', 'Pipeline Orchestrator')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 5. One open fiscal period per org (current calendar year)

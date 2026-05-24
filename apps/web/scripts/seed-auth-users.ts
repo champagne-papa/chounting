@@ -29,6 +29,18 @@ const SEED_USERS = [
     password: 'DevSeed!ApSpec#1',
     role_label: 'ap_specialist',
   },
+  // Pipeline service account (ADR-0007 Q78 Path X). NOT a human; never
+  // logs in. Exists so system-actor ledger commits satisfy created_by
+  // NOT NULL FKs (e.g. bills.created_by -> auth.users) and carry a real,
+  // joinable audit identity. No memberships/roles seeded (auth is bypassed
+  // at withInvariants). id MUST match SYSTEM_ACTOR_USER_ID in
+  // src/services/middleware/serviceContext.ts.
+  {
+    id: '00000000-0000-0000-0000-0000000000a1',
+    email: 'pipeline@thebridge.local',
+    password: 'DevSeed!Pipeline#1',
+    role_label: 'system_actor',
+  },
 ];
 
 async function main() {
