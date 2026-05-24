@@ -16089,3 +16089,42 @@ and the born-paid bundle scenario cannot be exercised with the existing 3 demo
 fixtures (the payment_confirmation fixture HAS a cited bill and is not a
 born-paid doc). Both require NEW source documents — their own
 fixture-sourcing + OCR-capture + corpus-sanitization arc, not a follow-up.
+
+## 2026-05-24 — Born-paid bundle non-functional at v1 (WRONG; 3 sub-findings)
+
+Building the 2 NEEDS-FIXTURE Modal-e2e scenarios surfaced that the born-paid
+bundle feature has zero working code paths at v1. Dominant category **WRONG**
+(broken code in `buildBornPaidBundle`); the two schema-gap sub-findings are
+**NOTE** (structural dead-code, not a defect fixed this session).
+
+1. **(NOTE) `isBornPaidBundleCandidate` receipt branch structurally dead.**
+   `ReceiptExtractionSchema` has no `cited_invoice_number` / `cited_bill_id`
+   field; a receipt-classified document cannot satisfy `hasCitedBill`. Branch
+   defined but unreachable.
+2. **(NOTE) `isBornPaidBundleCandidate` vendor_invoice branch structurally
+   dead.** `VendorInvoiceExtractionSchema` has no `payment_reference` /
+   `payment_method` field; a vendor_invoice-classified document cannot satisfy
+   `hasPaymentFields`. Branch defined but unreachable.
+3. **(WRONG) `buildBornPaidBundle` (proposalBuilder.ts:136,152) field-name +
+   type mismatch.** Reads `extractedFields.amount` and checks
+   `typeof … === 'string'`. `PaymentConfirmationExtractionSchema` emits
+   `payment_amount` as `z.number()`. The bundle's `post_bill` child gets
+   `amount: undefined` → `buildPostBillInputFromChildMutation`
+   (ingestDocument.ts:730) returns null → bill commit skipped →
+   `proposal_id=null`. Same mismatch on the `record_bill_payment` child.
+
+The payment_confirmation branch of `isBornPaidBundleCandidate` IS reachable
+(payment_confirmation classification + Tier C extracting `cited_invoice_number`
++ a payment field), but routing to `buildBornPaidBundle` then hits sub-finding 3
+deterministically. So no born-paid bundle has ever committed.
+
+N=1 on **born-paid feature non-functionality at v1** — a single finding with 3
+sub-mechanisms. Distinct from the 2026-05-24 bill-candidate finding (that is
+Stage 6 candidate matching against seeded state on real OCR; this is the
+proposal-builder + extraction-schema substrate).
+
+**Disposition:** built the born-paid fixture + scenario body as durable infra;
+left the scenario `it.skip` with `[NEEDS-FIX]` pointing here. Did NOT spend paid
+Modal $ on its e2e (the failure is statically proven). Born-paid bundle fix is
+the named next arc. Grounding came from the closeout work; see
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`.

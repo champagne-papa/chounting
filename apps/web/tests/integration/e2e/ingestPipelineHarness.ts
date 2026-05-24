@@ -257,6 +257,28 @@ export async function getPaymentById(
   return (data as { payment_id: string; vendor_id: string | null } | null) ?? null;
 }
 
+export async function getBillsByVendor(
+  vendor_id: string,
+): Promise<Array<{ bill_id: string; vendor_id: string; bill_number: string | null; amount_cad: string }>> {
+  const admin = adminClient();
+  const { data } = await admin
+    .from('bills')
+    .select('bill_id, vendor_id, bill_number, amount_cad')
+    .eq('vendor_id', vendor_id);
+  return (data ?? []) as Array<{ bill_id: string; vendor_id: string; bill_number: string | null; amount_cad: string }>;
+}
+
+export async function getPaymentsByVendor(
+  vendor_id: string,
+): Promise<Array<{ payment_id: string; vendor_id: string | null; amount: string }>> {
+  const admin = adminClient();
+  const { data } = await admin
+    .from('payments')
+    .select('payment_id, vendor_id, amount')
+    .eq('vendor_id', vendor_id);
+  return (data ?? []) as Array<{ payment_id: string; vendor_id: string | null; amount: string }>;
+}
+
 /** Best-effort teardown. JE/JL rows are append-only and accumulate (Item 20). */
 export async function cleanupSeededVendor(vendor_id: string): Promise<void> {
   const admin = adminClient();

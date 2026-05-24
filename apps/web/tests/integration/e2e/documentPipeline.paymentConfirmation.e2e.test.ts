@@ -21,8 +21,11 @@ import {
   runIngestPipeline,
   seedVendor,
   seedApprovedBill,
+  seedPayment,
   cleanupSeededVendor,
   getPaymentById,
+  getBillsByVendor,
+  getPaymentsByVendor,
   DEMO_FIGMA,
 } from './ingestPipelineHarness';
 
@@ -109,7 +112,61 @@ describe.skipIf(!RUN_E2E)(
     // Both need NEW source documents (a no-cited-bill payment; an
     // invoice+payment born-paid doc) — their own fixture-sourcing + OCR-capture
     // + corpus arc, not a follow-up. See friction-journal 2026-05-24.
-    it.skip('payment_confirmation no-cited-bill + matched candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null [NEEDS FIXTURE]', async () => {});
-    it.skip('payment_confirmation born-paid (cited invoice + payment): ProposedMutationBundle born_paid_bill + partial-commit reconciliation [NEEDS FIXTURE]', async () => {});
+    // Fixture-blocked scenario, now unskipped (Modal-e2e closeout 2026-05-24).
+    // A no-cited-bill payment_confirmation doc + a seeded matching payment →
+    // Stage 6 emits a payment-candidate (loadOpenPaymentsForVendor) →
+    // buildPaymentConfirmationProposal Branch 2 (no cited bill +
+    // topCandidate.linked_entity_id !== null) → attach_payment_evidence
+    // ProposedAttachmentCard → proposal_id=null (non-ledger, ingestDocument.ts).
+    // Branch 2 is NOT threshold-gated, and the payment→payment candidate path
+    // already fired in the 2026-05-24 run (at 0.25), so this has better odds
+    // than the bill-candidate scenarios.
+    it(
+      'payment_confirmation no-cited-bill + matched candidate: ProposedAttachmentCard attach_payment_evidence → proposal_id=null',
+      async () => {
+        const vendorId = await seedVendor();
+        await seedPayment({ vendor_id: vendorId });
+        try {
+          const { output } = await runIngestPipeline('payment_no_cited_bill.pdf');
+          expect(output.status).toBe('committed');
+          expect(output.failure_class).toBeNull();
+          expect(output.proposal_id).toBeNull();
+        } finally {
+          await cleanupSeededVendor(vendorId);
+        }
+      },
+      MODAL_TIMEOUT_MS,
+    );
+    // NEEDS-FIX (NOT NEEDS-FIXTURE): the fixture exists, classifies, and
+    // extracts correctly, but buildBornPaidBundle (proposalBuilder.ts:136,152)
+    // reads extractedFields.amount as a string while
+    // PaymentConfirmationExtractionSchema emits payment_amount as z.number().
+    // The post_bill child gets amount: undefined →
+    // buildPostBillInputFromChildMutation returns null (ingestDocument.ts:730)
+    // → bundle commit skipped → proposal_id=null. Deterministic static bug;
+    // born-paid is non-functional at v1 (also: the receipt + vendor_invoice
+    // branches of isBornPaidBundleCandidate are structurally dead — schema
+    // gaps). Re-enable once the bundle field-name + type mismatch is fixed.
+    // See friction-journal 2026-05-24 (born-paid non-functionality entry).
+    it.skip(
+      'payment_confirmation born-paid (cited invoice + payment): ProposedMutationBundle born_paid_bill + partial-commit reconciliation [NEEDS-FIX]',
+      async () => {
+        const vendorId = await seedVendor();
+        try {
+          const { output } = await runIngestPipeline('born_paid_invoice.pdf');
+          expect(output.status).toBe('committed');
+          expect(output.failure_class).toBeNull();
+          expect(output.proposal_id).not.toBeNull();
+          const bills = await getBillsByVendor(vendorId);
+          const payments = await getPaymentsByVendor(vendorId);
+          expect(bills.length).toBe(1);
+          expect(payments.length).toBe(1);
+          expect(bills[0]!.bill_id).toBe(output.proposal_id);
+        } finally {
+          await cleanupSeededVendor(vendorId);
+        }
+      },
+      MODAL_TIMEOUT_MS,
+    );
   },
 );

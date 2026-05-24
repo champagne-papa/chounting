@@ -225,6 +225,41 @@ investigation (the Modal-e2e finding — per-doc-type vendor match +
 `scoreComposition` for bill candidates); (b) the **2 NEEDS-FIXTURE** scenarios
 (new-source-document arc); (c) **Tier C extract robustness** (still N=1).
 
+### NEEDS-FIXTURE closeout (2026-05-24)
+
+The 2 NEEDS-FIXTURE Modal-e2e scenarios deferred at the follow-ups close
+(`5eade62f`), closed asymmetrically:
+
+- **No-cited-bill payment scenario — PASS, closes the item.** Synthetic fixture
+  (no-dep PDF generator) + corpus regression entry (`source:'synthetic'`) +
+  harness extensions (`getBillsByVendor` / `getPaymentsByVendor`) + scenario
+  body unskipped + paid Modal-e2e. Branch 2 of `buildPaymentConfirmationProposal`
+  fired (no cited bill + matched payment candidate → `attach_payment_evidence`
+  ProposedAttachmentCard → `proposal_id=null`). The receipt matched-payment
+  scenario was re-run incidentally (shared `attach_payment_evidence` substring)
+  and also passed — two classification entry points (receipt + payment_confirmation)
+  both reached Branch 2 against low-confidence candidates, reinforcing that
+  Branch 2 is **not threshold-gated**.
+- **Born-paid bundle scenario — DEFERRED as `[NEEDS-FIX]`, not run.** Grounding
+  surfaced 3 confirmed sub-findings (friction-journal 2026-05-24) rendering
+  born-paid non-functional at v1: 2 structurally-dead branches in
+  `isBornPaidBundleCandidate` (schema gaps in the receipt + vendor_invoice
+  extractors) + a deterministic field-name + type mismatch in
+  `buildBornPaidBundle` (proposalBuilder.ts:136,152 reads `extractedFields.amount`
+  as string; the schema emits `payment_amount` as number). Fixture + scenario
+  body + corpus entry shipped as durable infra; the `it.skip` is `[NEEDS-FIX]`.
+  No paid Modal $ spent (failure statically proven).
+
+The original §3 framing scoped born-paid as a fixture-availability problem. This
+grounding closes that framing: the feature is non-functional independent of
+fixture availability. **Born-paid bundle fix is now the named next arc.**
+
+Open carry-forwards after this session: (a) **bill-candidate matching**
+investigation — still the open 2026-05-24 finding, no new evidence this session;
+(b) **born-paid bundle fix** (the 3-sub-finding entry — likely a 1–2 commit arc);
+(c) **Tier C extract robustness** (still N=1). Outcome doc:
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`.
+
 ## §4 Pre-push gate status
 
 - **`corpus.ts` PII scrub — DONE** (commit `b981c77`): renamed to
