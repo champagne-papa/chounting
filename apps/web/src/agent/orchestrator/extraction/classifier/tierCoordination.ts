@@ -29,6 +29,7 @@ import { withFailureClassification } from '../failureClassification';
 import type {
   ClassificationInput,
   ClassificationResult,
+  DocumentArtifactRow,
   PipelineStageRecord,
   TierAOutput,
 } from '../types';
@@ -81,6 +82,23 @@ function pickHighestConfidenceMatch(matches: TierAOutput[]): TierAOutput {
   return pool[0]!;
 }
 
+/**
+ * Pure Tier A classification verdict: evaluate all three rule modules and
+ * resolve multi-matches via document-kind-defining-header precedence.
+ * Returns the matched type (or { matched: false } → caller falls to Tier C).
+ * Extracted from coordinateTiers so the real-OCR corpus test (Phase 8
+ * Task 5) can assert Tier A behavior without the DB/Claude coordination
+ * surface.
+ */
+export function evaluateTierA(artifact: DocumentArtifactRow): TierAOutput {
+  const matches: TierAOutput[] = [
+    evaluateVendorInvoice(artifact),
+    evaluateReceipt(artifact),
+    evaluatePaymentConfirmation(artifact),
+  ];
+  return pickHighestConfidenceMatch(matches);
+}
+
 export async function coordinateTiers(
   input: ClassificationInput,
   ctx: SystemActorServiceContext,
@@ -92,14 +110,7 @@ export async function coordinateTiers(
     'classify_document_type',
     input.source_document_id,
     ctx,
-    async () => {
-      const matches: TierAOutput[] = [
-        evaluateVendorInvoice(input.ocrArtifact),
-        evaluateReceipt(input.ocrArtifact),
-        evaluatePaymentConfirmation(input.ocrArtifact),
-      ];
-      return pickHighestConfidenceMatch(matches);
-    },
+    async () => evaluateTierA(input.ocrArtifact),
   );
 
   if (tierAMatch.matched) {
