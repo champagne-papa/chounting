@@ -1,6 +1,6 @@
 // tests/integration/permissionCatalogSeed.test.ts
 // CA-28: 3 roles × correct permission counts
-// (29 total; controller 29; ap_specialist 6; executive 4).
+// (30 total; controller 30; ap_specialist 7; executive 4).
 
 import { describe, it, expect } from 'vitest';
 import { adminClient } from '../setup/testDb';
@@ -15,23 +15,23 @@ describe('CA-28: permission catalog seed integrity', () => {
     expect(keys).toEqual(['ap_specialist', 'controller', 'executive']);
   });
 
-  it('29 permissions exist', async () => {
+  it('30 permissions exist', async () => {
     const { data } = await db.from('permissions').select('permission_key');
-    expect(data).toHaveLength(29);
+    expect(data).toHaveLength(30);
   });
 
-  it('controller has all 29 permissions', async () => {
+  it('controller has all 30 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'controller').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(29);
+    expect(perms).toHaveLength(30);
   });
 
-  it('ap_specialist has exactly 6 permissions', async () => {
+  it('ap_specialist has exactly 7 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'ap_specialist').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(6);
+    expect(perms).toHaveLength(7);
     const keys = (perms ?? []).map((p: { permission_key: string }) => p.permission_key).sort();
-    expect(keys).toEqual(['ai_actions.read', 'bill.post', 'bill.record_payment', 'chart_of_accounts.read', 'journal_entry.post', 'user.profile.update']);
+    expect(keys).toEqual(['ai_actions.read', 'bill.post', 'bill.record_payment', 'chart_of_accounts.read', 'journal_entry.post', 'payment.record', 'user.profile.update']);
   });
 
   it('executive has exactly 4 permissions', async () => {

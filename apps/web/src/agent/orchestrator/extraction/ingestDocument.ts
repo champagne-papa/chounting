@@ -558,12 +558,13 @@ async function commitProposedEntryCard(
       const paymentInput = await buildRecordPaymentInput(c, input);
       if (!paymentInput) return null;
       const result = await withInvariants(paymentService.record, {
-        // ActionName binding: brief cited 'payment.record' but actual
-        // substrate per ACTION_NAMES is 'bill.record_payment' (no
-        // 'payment.record' permission seeded; paymentService is
-        // greenfield-with-no-v1-callers at chunk 5.1b ship per Sub-Q2
-        // 2.β). (μ) sub-grain N=8 banking at chunk 7.3b close.
-        action: 'bill.record_payment',
+        // ActionName binding: 'payment.record'. The dedicated permission is
+        // seeded at Phase 8 chunk 8 (migration 20240162
+        // role_permissions_payment_record; controller + ap_specialist).
+        // Resolves the (μ) sub-grain N=8 placeholder where this site bound
+        // 'bill.record_payment' because 'payment.record' was unseeded at
+        // chunk 7.3b close.
+        action: 'payment.record',
       })(paymentInput, synthCtx);
       return result.payment_id;
     }
@@ -644,12 +645,13 @@ async function commitProposedMutationBundle(
     );
     if (paymentInput) {
       const result = await withInvariants(paymentService.record, {
-        // ActionName binding: brief cited 'payment.record' but actual
-        // substrate per ACTION_NAMES is 'bill.record_payment' (no
-        // 'payment.record' permission seeded; paymentService is
-        // greenfield-with-no-v1-callers at chunk 5.1b ship per Sub-Q2
-        // 2.β). (μ) sub-grain N=8 banking at chunk 7.3b close.
-        action: 'bill.record_payment',
+        // ActionName binding: 'payment.record'. The dedicated permission is
+        // seeded at Phase 8 chunk 8 (migration 20240162
+        // role_permissions_payment_record; controller + ap_specialist).
+        // Resolves the (μ) sub-grain N=8 placeholder where this site bound
+        // 'bill.record_payment' because 'payment.record' was unseeded at
+        // chunk 7.3b close.
+        action: 'payment.record',
       })(paymentInput, synthCtx);
       paymentId = result.payment_id;
     }
