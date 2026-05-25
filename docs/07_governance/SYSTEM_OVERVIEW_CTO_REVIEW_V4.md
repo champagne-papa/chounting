@@ -3,7 +3,7 @@
 **Title:** CHOUnting System Overview: Architecture, Decisions, and Capability Standard
 **Date:** 2026-05-24
 **Version:** V4 (re-grounded against HEAD)
-**Status:** CTO review draft — ready for sending
+**Status:** CTO decision memo — ready for sending. Appendices K–L are complete; Appendices A–J are approved follow-on authoring targets to land after ratification (not required for the first CTO decision).
 **Filed:** top-level governance artifact at `docs/07_governance/SYSTEM_OVERVIEW_CTO_REVIEW_V4.md`, matching the `CTO_HANDOFF_V2` / `DOCS_RESTRUCTURE_V*` precedent. A `07_governance/proposals/` document-class subfolder was considered and **deferred to N=2** per the docs-tree folder guardrail (`docs/README.md` ambiguous-case rule → would require a ratifying ADR; top-level placement is an already-permitted pattern, so no ADR is warranted at N=1).
 **Supersedes:** "CHOUnting CTO Review Package V3 — Final" (system-overview draft, never committed to repo)
 **Distinct from:** `docs/09_briefs/phase-6/2026-05-16-cto-proposal-v3-document-drop-shell-consolidation.md` (a *different*, already-signed-off proposal about the Phase 6.5 shell consolidation — the "V3" name collision that motivated this rename)
@@ -28,8 +28,9 @@ The substantive changes in V4:
 7. **§9 capability template** reframed as default-with-escape; to be validated on AR before being mandated slice-wide.
 8. **§13 doc-creation plan** now routes new docs through the ADR-0022 supersession/status-header workflow.
 9. **Pre-flight gap-closers (post-draft patch, 2026-05-24):** named the Two Laws of Service Architecture (§5); restored the three degraded-mode operational guarantees (§11.3); added the multi-framework declaration note (§9.3); stated the Domain Event / Audit Event / Logic Receipt tripod in one place (§12.0); footnoted the SharePoint two-sub-arc distinction (§13.3).
-10. **Pre-flight V2 gap-closers (post-draft patch, 2026-05-24):** added the *capability providers produce candidates, not domain truth* principle (§4); the *discovery is not authority* principle for bidirectional Connectors (§8.2); surfaced the **Unified Work Inbox** as the work-centric user surface (§10); aligned the multi-entity spine component list (§13.2 ↔ §10.2); clarified AR substrate status in the §13.3 sequence.
+10. **Pre-flight V2 gap-closers (post-draft patch, 2026-05-24):** added the *capability providers produce candidates, not domain truth* principle (§4); the *discovery is not authority* principle for bidirectional Connectors (§8.2); surfaced the **Unified Work Inbox** as the work-centric user surface (§10); aligned the multi-entity spine component list (§13.2.2 ↔ §10.2); clarified AR substrate status in the §13.3 sequence.
 11. **ADR-0014 §11 factual amendment applied (2026-05-24, this branch):** the factual portion of the auto-commit reconciliation now lives inline in ADR-0014 §11 (closing the doc-vs-code drift V4 §16 Risk #2 flags); the governance/remediation portion is held pending Decision 2c. §2.5, §13.1, and Appendix L updated to the factual/governance split.
+12. **Pre-flight V3 — Phase B0 risk-control + safety-first sequencing (patch, 2026-05-24):** split Phase B into **B0** (immediate auto-commit risk control — interim posture A/B/C + a document-assertion V0 snapshot for every auto-commit), **B1** (auto-commit gate retrofit — Ladder math, INV-AGENT-001 on the existing sites, receipt capture, ADR-0014 governance amendment), and **B2** (cross-cutting infra for breadth); safety is now sequenced ahead of breadth (§13.2.0–.2). Split Decision 2 → 2a/2b/2c in the §1 table; added the Ladder-evaluator fail-closed rule (§11.3); resolved §15 #9 into Decision 2c; tightened the status header and the §1 "partially built" wording.
 
 A correction ledger with the exact before/after for every cell is in **Appendix K** (new).
 
@@ -37,7 +38,7 @@ A correction ledger with the exact before/after for every cell is in **Appendix 
 
 ## §1 Executive Summary
 
-CHOUnting is an invariant-enforced accounting system where agents participate through typed tools, propose consequential work, operate external systems through connectors, and leave evidence, approvals, and audit trails behind every action. The substrate is real and shipped; the target architecture is roughly half-built.
+CHOUnting is an invariant-enforced accounting system where agents participate through typed tools, propose consequential work, operate external systems through connectors, and leave evidence, approvals, and audit trails behind every action. The load-bearing substrate is real and shipped; the cross-cutting governance and breadth layers are partially built.
 
 **Headline finding (new in V4):** as of 2026-05-24 the document pipeline **auto-commits matched ledger mutations** via a seeded system-actor service account that **bypasses the user-authority gate (`canUserPerformAction`) and runs no Agent Ladder rung or system-ceiling check** (the INV-AGENT invariants are not registered). The feature shipped ahead of the trust architecture meant to gate it. See §2.5. This does not weaken Decision 2 — it makes it urgent and changes its framing from prevention to remediation.
 
@@ -48,7 +49,9 @@ This proposal asks the CTO to approve six architecture decisions and acknowledge
 | # | Decision | Reason |
 |---|---|---|
 | 1 | Adopt the five-section runtime architecture | Locks canonical system overview |
-| 2 | Promote Agent Ladder to structural spine; bind Settings to its policy side; **retrofit Ladder enforcement onto the already-live auto-commit path before any new auto-post surface** | Prevents permissions-feature misframing and unsafe configuration; closes the live gap in §2.5 |
+| 2a | Adopt the Agent Ladder as the structural trust spine (§5) | Prevents the Ladder being built as a permissions checkbox |
+| 2b | Bind Settings to the Ladder's policy side (§5.5) | Prevents the Settings UI configuring around system ceilings |
+| 2c | Choose + ratify the auto-commit remediation posture — interim risk control (Phase B0, §13.2.0) + Ladder retrofit (Phase B1, §13.2.1); ADR-0014 §11 factual amendment applied now, governance on ratification | **Closes the live gap in §2.5 — auto-commit is shipped ungated** |
 | 3 | Position eval/replay as vertical sidecar that validates the immutable evidence substrate (does not replace it) | Prevents agent-output-testing misframing; preserves audit defensibility |
 | 4 | Rename integration layer to "External Systems Layer"; adopt Connector vocabulary for families inside it | Adopt precise layered vocabulary to enable the connector-authority-semantics model (prevents a *prospective* "Bridge" collision — see §8.0) |
 | 5 | Adopt the capability-slice model with a tiered template (Lite + Full) as the default standard for new accounting features | Prevents drift to module-shaped thinking |
@@ -145,7 +148,7 @@ This is the V3/V4 §16 Risk #2 ("Agent Ladder becomes a permissions checkbox; th
 Decision 2 is a **remediation** decision, not a future-prevention decision. The Ladder must be retrofitted onto the already-live system-actor path **before any new auto-post surface ships.** Concretely:
 
 1. **INV-AGENT-001 (system-ceiling check)** registers on the *existing* commit sites in `ingestDocument.ts` (lines 535/544/605/631), not on hypothetical future ones.
-2. **Phase B item "Agent Ladder pure-rule math in `core/agent-ladder/`"** becomes load-bearing-now, not preparatory — it gates the live path.
+2. **Phase B1 item (Agent Ladder pure-rule math in `core/agent-ladder/`, §13.2.1)** becomes load-bearing-now, not preparatory — it gates the live path.
 3. **ADR-0014 §11's factual amendment is applied on this branch** (Amendment 2026-05-24, factual portion — closes the doc-vs-code drift). The **governance/remediation portion is held pending this Decision 2c** and lands as a follow-on amendment if 2c ratifies (see Appendix L).
 4. The CTO is asked to approve Decision 2 *with this remediation framing.*
 
@@ -567,7 +570,9 @@ Degraded mode is testable only if "good" is defined. Any capability provider can
 2. **Pre-AI work continues to flow.** Manual journal entry, manual bill entry, and document upload (queued for later processing) do not depend on AI availability.
 3. **Manual paths stay unblocked for deadline-bearing workflows.** Any workflow with a legal or operational deadline (period close, filing, payment) has a manual path that requires no capability provider.
 
-Each slice's declaration must state, per provider dependency, which guarantee holds and the fallback behavior. The capability-provider health substrate (§13.2 item 7) is 🔴 unbuilt; the per-provider downtime scenario matrix (Anthropic / Modal / embeddings / external-sync) is Appendix H.
+Each slice's declaration must state, per provider dependency, which guarantee holds and the fallback behavior. The capability-provider health substrate (§13.2.2) is 🔴 unbuilt; the per-provider downtime scenario matrix (Anthropic / Modal / embeddings / external-sync) is Appendix H.
+
+**Fail-closed rule.** If the Agent Ladder policy evaluator or its ceiling-check dependency is unavailable, all consequential autonomy fails closed to **proposal-only** — the system never silently auto-commits when the gate cannot be evaluated.
 
 ---
 
@@ -644,17 +649,35 @@ New docs must carry the house status-header block and follow the ADR-0022 supers
 - `docs/03_architecture/evidence-chain.md` — new (with the §12.1 status table)
 - **Amendment (factual portion applied 2026-05-24 on this branch):** `docs/07_governance/adr/0014-tier-2-document-pipeline.md` §11 now records the live system-actor auto-commit; the governance/remediation portion is held pending Decision 2c (Appendix L)
 
-### §13.2 Phase B — Infrastructure before breadth
+### §13.2 Phase B — Infrastructure (safety first, then breadth)
 
-1. Domain events / outbox spine (the `events` seat exists; add producers/consumers/dispatch)
-2. Generalized work inbox from the exception queue
-3. **Agent Ladder pure-rule math in `core/agent-ladder/` — load-bearing-now: it gates the live auto-commit path (§2.5), not just future surfaces**
-4. **Register INV-AGENT-001 on the existing `ingestDocument.ts` commit sites (auto-commit retrofit)**
-5. Connector authority-semantics codification
-6. Report snapshots / materialized views
-7. Capability-provider health substrate + degraded-mode UI
-8. Thin multi-entity spine — add `entity_group`, membership, `consolidation_scope`, `party_link`, `related_party`, cross-entity permissions + `entity_id` discipline on every record (the intercompany/currency seats already exist; full component list per §10.2)
-9. Logic Receipt schema expansion (§12.2 → first-class table)
+Phase B reorders around §2.5: the auto-commit safety work (B0 + B1) precedes the cross-cutting infrastructure for breadth (B2). The live-but-ungated path is the reason the sequence changed from "infrastructure for breadth" to "safety, then breadth."
+
+#### §13.2.0 Phase B0 — Immediate auto-commit risk control (do first)
+
+1. **Interim posture (CTO choice, Decision 2c)** for the live auto-commit path until B1 lands:
+   - **Option A — fail closed:** auto-commit disabled; the pipeline proposes, a human confirms. Safest; loses the interim auto-commit benefit.
+   - **Option B — restricted allowlist:** auto-commit only for a whitelist of document types under an amount ceiling; everything else proposes.
+   - **Option C — accept the current open posture** with a high-risk event logged on every auto-commit.
+   - *Recommendation:* **Option B for staging / internal dogfood** — the `autoCommitGate` integration test shows the path is CI-exercised and staging auto-commit volume is low and observable; **Option A for any production cutover** until B1 Ladder enforcement lands.
+2. **Document-assertion V0 snapshot for every auto-commit.** Auto-commit must not proceed without preserving the exact extracted facts that supported the mutation. Until the first-class `document_assertions` table lands (B2), capture this inline in the `ProposalJustificationSchema` JSONB (`justification`): vendor (name + confidence); bill/invoice number (raw + normalized); date (raw + normalized); subtotal / tax / total (each with confidence); currency; match basis (vendor rule? historical match? AI inference?); `source_document_id` + version hash; overall extraction confidence; `pipeline_trace` reference; model-invocation metadata (provider, model version, prompt version). This preserves the auto-commit path's audit-defensibility before the table exists.
+
+#### §13.2.1 Phase B1 — Auto-commit gate retrofit (load-bearing safety work)
+
+1. Agent Ladder pure-rule math in `core/agent-ladder/` (the decision-tree gates, separable from DB).
+2. Register **INV-AGENT-001** (system-ceiling check) on the existing `ingestDocument.ts` commit sites (lines 535/544/605/631).
+3. Minimum policy-evaluation + Logic-Receipt capture on every auto-commit (decision-tree steps 8–9).
+4. **ADR-0014 §11 governance amendment** — the deferred portion of Appendix L; lands on Decision 2c ratification.
+
+#### §13.2.2 Phase B2 — Cross-cutting infrastructure for breadth
+
+1. Domain events / outbox spine (the `events` seat exists; add producers/consumers/dispatch).
+2. Generalized work inbox from the exception queue (the Unified Work Inbox, §10).
+3. Connector authority-semantics codification.
+4. Report snapshots / materialized views.
+5. Capability-provider health substrate + degraded-mode UI.
+6. Thin multi-entity spine — add `entity_group`, membership, `consolidation_scope`, `party_link`, `related_party`, cross-entity permissions + `entity_id` discipline on every record (the intercompany/currency seats already exist; full component list per §10.2).
+7. Logic Receipt first-class table (§12.2) — sequenced soon after the B1 gate, so the receipt the Ladder writes has a queryable immutable home.
 
 ### §13.3 Phase C — Next product slices
 
@@ -694,13 +717,13 @@ Thin multi-entity spine required before:
 | 1 | Adopt five-section runtime architecture (§4) | Yes |
 | 2a | Promote Agent Ladder to structural spine (§5) | Yes |
 | 2b | Bind Settings UI to Ladder policy side (§5.5) | Yes (depends on 2a) |
-| **2c** | **Retrofit Ladder enforcement onto the live auto-commit path before any new auto-post surface; amend ADR-0014 §11 (§2.5)** | **Yes — recommended as blocking** |
+| **2c** | **Choose + ratify the auto-commit remediation posture — interim risk control (Phase B0, §13.2.0) + Ladder retrofit (Phase B1, §13.2.1); ADR-0014 §11 factual amendment applied now, governance portion on ratification (§2.5, Appendix L)** | **Yes — recommended as blocking** |
 | 3a | Position eval/replay as vertical sidecar (§6.3) | Yes |
 | 3b | Adopt eval-validates / evidence-is-substrate framing (§6.1) | Yes (depends on 3a) |
 | 4a | Rename to External Systems Layer (§8.0/§8.1) | Yes |
 | 4b | Adopt Connector / Provider naming stack (§8.1) | Yes (depends on 4a) |
 | 5 | Adopt capability-slice model with tiered template as **default-with-escape** (§9) | Yes |
-| 6 | Build domain events / outbox before major expansion (§13.2) | Yes |
+| 6 | Build domain events / outbox before major expansion (§13.2.2) | Yes |
 
 ### Recommended product framings (non-blocking)
 
@@ -725,7 +748,8 @@ AR/Invoicing/Customers next → Reporting snapshots → Bank reconciliation → 
 6. **Payroll** — build native or integrate Wagepoint/Payworks?
 7. **Provincial corporate tax (Quebec)** — in scope for the filing slice?
 8. **Reporting framework defaults** — ASPE assumed default? IFRS for which entity classes?
-9. **(new) Auto-commit autonomy posture** — now that the pipeline auto-commits without the Ladder, what is the interim risk posture until 2c lands? Freeze auto-commit to a whitelist of document types/amount ceilings, or accept the current open posture on staging only?
+
+*(Former #9 "auto-commit interim posture" is now a bounded decision, not an open question — it is Decision 2c / Phase B0 §13.2.0: choose Option A / B / C.)*
 
 ---
 
@@ -791,7 +815,7 @@ AR/Invoicing/Customers next → Reporting snapshots → Bank reconciliation → 
 >
 > **Factual portion (APPLIED to ADR-0014 §11).** §11's "auto-post deferred post-v1" statement is superseded for the system-actor commit path. As of the auto-commit arc (`60b89106`→`8a6c9bc3`, ratified `a940ec6f`; ADR-0007 Q78 Option A), `ingestDocument` auto-commits matched `post_bill` and `record_bill_payment` mutations via `withInvariants(SystemActorServiceContext)`, which bypasses Invariants 1/2/4. This path runs no Agent Ladder rung or system-ceiling check (INV-AGENT-001 unregistered). Tier-1 commit-time confirmation remains the rule for *user-initiated* proposals; auto-commit is now live for system-actor pipeline commits.
 >
-> **Governance portion (DEFERRED to Decision 2c).** Registering Ladder enforcement on the system-actor commit path — INV-AGENT-001 on the existing `ingestDocument.ts` sites + the Phase B §13.2 items 3–4 retrofit — is the governance remediation. It is **not** asserted in the ADR until Decision 2c ratifies, to avoid presupposing the CTO's framing (ADR-0007 Q78 intentionally treats the Ladder and tier policy as orthogonal; the CTO may choose to keep them so).
+> **Governance portion (DEFERRED to Decision 2c).** Registering Ladder enforcement on the system-actor commit path — INV-AGENT-001 on the existing `ingestDocument.ts` sites + the Phase B1 retrofit (§13.2.1) — is the governance remediation. It is **not** asserted in the ADR until Decision 2c ratifies, to avoid presupposing the CTO's framing (ADR-0007 Q78 intentionally treats the Ladder and tier policy as orthogonal; the CTO may choose to keep them so).
 
 ---
 
