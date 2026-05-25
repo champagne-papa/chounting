@@ -3,12 +3,12 @@
 **Title:** CHOUnting System Overview: Architecture, Decisions, and Capability Standard
 **Date:** 2026-05-24
 **Version:** V4 (re-grounded against HEAD)
-**Status:** CTO decision memo — ready for sending. Appendices K–L are complete; Appendices A–J are approved follow-on authoring targets to land after ratification (not required for the first CTO decision).
-**Filed:** top-level governance artifact at `docs/07_governance/SYSTEM_OVERVIEW_CTO_REVIEW_V4.md`, matching the `CTO_HANDOFF_V2` / `DOCS_RESTRUCTURE_V*` precedent. A `07_governance/proposals/` document-class subfolder was considered and **deferred to N=2** per the docs-tree folder guardrail (`docs/README.md` ambiguous-case rule → would require a ratifying ADR; top-level placement is an already-permitted pattern, so no ADR is warranted at N=1).
+**Status:** CTO decision memo — ready for sending. Appendices K–M are complete; Appendices A–J are approved follow-on authoring targets to land after ratification (not required for the first CTO decision).
+**Filed:** top-level governance artifact at `docs/07_governance/SYSTEM_OVERVIEW_CTO_REVIEW_V4.md`, matching the `CTO_HANDOFF_V2` / `DOCS_RESTRUCTURE_V*` precedent. A `07_governance/proposals/` document-class subfolder was considered and **deferred to N=2** per the docs-tree folder guardrail (`docs/README.md` ambiguous-case rule → would require a ratifying ADR; top-level placement is an already-permitted pattern, so no ADR is warranted at N=1). **N=2 forward-pointer:** a `07_governance/proposals/` subfolder promotion is anticipated at the N=2 firing per the docs-tree guardrail; this file moves into it when the second governance proposal lands.
 **Supersedes:** "CHOUnting CTO Review Package V3 — Final" (system-overview draft, never committed to repo)
 **Distinct from:** `docs/09_briefs/phase-6/2026-05-16-cto-proposal-v3-document-drop-shell-consolidation.md` (a *different*, already-signed-off proposal about the Phase 6.5 shell consolidation — the "V3" name collision that motivated this rename)
 **Grounding anchor:** every 🟢/🟡/🔴 status cell and every file:line citation in this document was verified against `staging` at commit **`5eade62f`** (tree clean of tracked changes, 2026-05-24). Re-verify against the SHA you send if HEAD has advanced.
-**Format:** Two-layer package — Executive Decision Memo (this document) + Appendices A–J (reference only; several appendices are authoring stubs, flagged in the index).
+**Format:** Two-layer package — Executive Decision Memo (this document) + Appendices A–M (A–J are reference/authoring stubs flagged in the index; K, L, M are complete).
 **Length target:** Executive memo readable in 8 minutes; full proposal walkable in 30; appendices reference only.
 
 ---
@@ -31,6 +31,7 @@ The substantive changes in V4:
 10. **Pre-flight V2 gap-closers (post-draft patch, 2026-05-24):** added the *capability providers produce candidates, not domain truth* principle (§4); the *discovery is not authority* principle for bidirectional Connectors (§8.2); surfaced the **Unified Work Inbox** as the work-centric user surface (§10); aligned the multi-entity spine component list (§13.2.2 ↔ §10.2); clarified AR substrate status in the §13.3 sequence.
 11. **ADR-0014 §11 factual amendment applied (2026-05-24, this branch):** the factual portion of the auto-commit reconciliation now lives inline in ADR-0014 §11 (closing the doc-vs-code drift V4 §16 Risk #2 flags); the governance/remediation portion is held pending Decision 2c. §2.5, §13.1, and Appendix L updated to the factual/governance split.
 12. **Pre-flight V3 — Phase B0 risk-control + safety-first sequencing (patch, 2026-05-24):** split Phase B into **B0** (immediate auto-commit risk control — interim posture A/B/C + a document-assertion V0 snapshot for every auto-commit), **B1** (auto-commit gate retrofit — Ladder math, INV-AGENT-001 on the existing sites, receipt capture, ADR-0014 governance amendment), and **B2** (cross-cutting infra for breadth); safety is now sequenced ahead of breadth (§13.2.0–.2). Split Decision 2 → 2a/2b/2c in the §1 table; added the Ladder-evaluator fail-closed rule (§11.3); resolved §15 #9 into Decision 2c; tightened the status header and the §1 "partially built" wording.
+13. **Post-close forward-pointers (patch, 2026-05-24):** added the `07_governance/proposals/` N=2 promotion pointer to the `Filed:` block; added **Appendix M** capturing the items deliberately out of scope for V4 (tracked, not lost).
 
 A correction ledger with the exact before/after for every cell is in **Appendix K** (new).
 
@@ -782,6 +783,7 @@ AR/Invoicing/Customers next → Reporting snapshots → Bank reconciliation → 
 | J | Naming-collision migration: doc-mentions of "Bridge Layer" → "External Systems Layer" | stub — note: §8.0 shows the collision is prospective, so this is a forward-naming guard, not a repo sweep |
 | **K** | **Correction ledger — every V3→V4 cell change with before/after + evidence** | **new — see below** |
 | **L** | **Proposed ADR-0014 §11 amendment block (auto-commit reconciliation)** | **new — draft below** |
+| **M** | **Deferred-from-V4 carry-forward — out-of-scope items + their future homes** | **new — see below** |
 
 ### Appendix K — Correction ledger (V3 → V4)
 
@@ -817,6 +819,21 @@ AR/Invoicing/Customers next → Reporting snapshots → Bank reconciliation → 
 >
 > **Governance portion (DEFERRED to Decision 2c).** Registering Ladder enforcement on the system-actor commit path — INV-AGENT-001 on the existing `ingestDocument.ts` sites + the Phase B1 retrofit (§13.2.1) — is the governance remediation. It is **not** asserted in the ADR until Decision 2c ratifies, to avoid presupposing the CTO's framing (ADR-0007 Q78 intentionally treats the Ladder and tier policy as orthogonal; the CTO may choose to keep them so).
 
+### Appendix M — Deferred-from-V4 carry-forward (out of scope for V4, not lost)
+
+Items deliberately excluded from V4's scope, with their future home — recorded so they don't evaporate after ratification:
+
+| Deferred item | Why out of scope for V4 | Future home |
+|---|---|---|
+| Phase A doc-sequencing detail (which of the nine §13.1 docs block Phase B vs. draft in parallel) | A kickoff sequencing question, not a V4 decision | Phase A kickoff; default is parallel — only the agent-ladder-runtime doc + the ADR-0014 amendment gate the retrofit |
+| Applying Appendix L's **governance** amendment to ADR-0014 §11 | Conditional on Decision 2c ratification | Follow-on amendment on 2c approval (the known next-action) |
+| SharePoint failure-mode framing (Mode 1 transient / Mode 2 partial / Mode 3 vendor end-of-life) | SharePoint-activation-brief grain | SharePoint activation brief (with the §13.3 Sub-arc A/B split) |
+| Tax knowledge-graph schema (`tax_authorities` / `tax_provisions` / `tax_cross_references` / `tax_embeddings`) | Tax Research slice grain | Tax Research / Advice slice spec (§10.1; sequences last) |
+| Tactical Ladder UI surfaces (Limit Change Preview, Agency Health view) | Implementation-grain UI, not control architecture | agent-ladder-runtime-enforcement doc (§13.1) / the Ladder slice |
+| Anthropic-API-in-artifacts recursion + Postmark UUID-addressing notes | Operational detail, not a decision surface | `agent_autonomy_model.md` / ingestion brief, as encountered |
+
+*Reference only — none of these block the V4 decision. They are tracked here so the next governance proposal author and the post-ratification implementer inherit them rather than rediscover them.*
+
 ---
 
-*End of V4 decision memo. Appendices A–J are authoring stubs; K and L are complete. Re-verify all 🟢/🟡/🔴 cells against the SHA at send time.*
+*End of V4 decision memo. Appendices A–J are authoring stubs; K, L, and M are complete. Re-verify all 🟢/🟡/🔴 cells against the SHA at send time.*
