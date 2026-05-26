@@ -67,9 +67,9 @@ makes.
 The user-facing surface for the rule core grows in three stages, each gated on a
 substrate dependency. Only Stage 1 is the v1 deliverable.
 
-**Stage 1 — Minimum viable canvas.** A list view of the org's Rules plus three row
-actions (promote / demote / rename) and a promotion-ceremony modal, with the agent as
-the primary authoring path. *Substrate dependency:* Ring 1 (`rule_registry` +
+**Stage 1 — Minimum viable canvas.** A list view of the org's Rules plus four row
+actions (promote / demote / rename / retire) and a promotion-ceremony modal, with the
+agent as the primary authoring path. *Substrate dependency:* Ring 1 (`rule_registry` +
 `rule_track_records`, or the deferral interim path per V3.1 §5.10) **plus** the first
 Ring 2A workflow evaluator (the drag-drop bill `pattern` evaluator). This is what the
 brief specifies in detail (§4–§7).
@@ -108,8 +108,9 @@ A scannable list of Rules for the controller's current org. At v1 substrate, the
 is scoped to `vendor_rules` rows enriched with their `rule_registry` and
 `rule_track_records` counterparts — or with cross-cutting metadata synthesized by the
 repository adapter if Ring 1 takes the deferral interim path (V3.1 §5.10). The canvas
-consumes whichever the Ring 1 ADR ships; it reads through `ruleEvaluationService` /
-repositories, never the tables directly (V3.1 §2 dependency direction).
+consumes whichever the Ring 1 ADR ships; it reads through a catalog/query service or
+repository-backed read model — **not** through `ruleEvaluationService`, which is the
+runtime evaluator path — never the tables directly (V3.1 §2 dependency direction).
 
 Each row exposes, at minimum:
 
@@ -129,16 +130,17 @@ Each row exposes, at minimum:
   matches in the last 30 days. See Q-RC-AT-1: this is a *derived windowed read*, not a
   stored cumulative counter (`clean_approval_count` in V3.1 §5.9 is cumulative; the
   30-day window is computed from the audit corpus).
-- **Last-fired timestamp** — when the Rule last matched. See Q-RC-AT-2: V3.1 §5.9
-  stores outcome-specific anchors (`last_clean_approval_at`, `last_rejection_at`,
-  `last_guardrail_fire_at`) but no single "last matched" column; "last-fired" needs a
-  precise definition and a read path.
+- **Last winning match** — the most recent evaluation in which the Rule won conflict
+  resolution. See Q-RC-AT-2: V3.1 §5.9 stores outcome-specific anchors
+  (`last_clean_approval_at`, `last_rejection_at`, `last_guardrail_fire_at`) but no
+  single such timestamp; the semantic is pinned and the canonical column label is a
+  product/UX sub-question.
 
 Sort and filter axes (affordances are downstream-spec; the brief names the axes): by
 rung, by lifecycle state, by track-record health (recent rejection rate), by recency
-(last-fired).
+(last winning match).
 
-### Three row actions
+### Four row actions
 
 - **Promote.** Available when the Rule's `promotion_eligible` is true (≥15 primary
   matches AND ≥95% approval rate AND 30-day window, V3.1 §5.9). Opens the
@@ -153,6 +155,16 @@ rung, by lifecycle state, by track-record health (recent rejection rate), by rec
   `rule_metadata_updated`; historical Logic Receipts store `rule_name_snapshot` so
   past Four Questions renderings remain reproducible. See Q-RC-AT-3 on the
   `rule_name_snapshot` dependency on the Logic Receipt write path.
+- **Retire.** Available for any Rule at `lifecycle_state ∈ {active, demoted}`.
+  Requires a confirmation step (the only Stage 1 row action that does — retired
+  is terminal per V3.1 §5.8, with no `retired → active` transition; friction
+  matches terminality). Authority: any controller (V3.1 §5.8, "controller
+  explicitly retires" — Stage 1 does not unilaterally escalate to owner; see
+  Q-RC-AT-7). Emits `rule_retired` with `successor_rule_id = null` (explicit
+  retirement only; the retire-and-create-new amendment path is Ring 3, not
+  Stage 1). Sets `lifecycle_state = retired`; the Rule no longer participates
+  in evaluation. Once retired, the Rule's row remains for audit but does not
+  appear in the canvas's default `lifecycle_state ∈ {active, demoted}` filter.
 
 ### Promotion-ceremony modal contract
 
@@ -164,14 +176,53 @@ from the org owner (Q24 controller-proposes / owner-approves). The brief specifi
 *what the modal shows*, inheriting the canonical ceremony; sample-selection logic,
 impact-preview computation, and the back-end query shape are downstream-spec concerns.
 
+### Stage 1 detail surface (behavior, not logic)
+
+Stage 1 includes a detail surface — a drawer or panel opened by selecting a
+Rule from the list view — but the surface renders **behavior, not logic**.
+
+The detail surface answers *what has this Rule been doing*:
+
+- Identity header: rule name (renameable inline per the Rename row action),
+  rule type, current rung, lifecycle state. The two badges (rung + lifecycle)
+  remain visible at the top.
+- Track-record trend: primary clean-approval rate over the last 30 days
+  (windowed read; see Q-RC-AT-1), recent rejection rate, guardrail-fire and
+  guardrail-resolved-into-primary-bounds counts.
+- Recent matches: the last N evaluations in which the Rule's trigger fired,
+  each row showing match classification (`primary_match`, `guardrail_match`,
+  `almost_match`), the proposal it matched against (linked to that proposal's
+  canonical surface), the disposition (approved / rejected / auto-posted /
+  routed-to-Needs-Attention), and the resulting effective action.
+- Last winning match: the most recent evaluation in which the Rule won
+  conflict resolution (`winning_rule_id`). See Q-RC-AT-2 for the label/naming
+  sub-question.
+
+The detail surface does **not** render the Rule's Trigger / Condition / Action
+structure — no Branch flowchart, no Condition predicates, no
+`max_outcome_action` exposed. That surface is Stage 2's flowchart canvas; it
+is the surface that makes form-based authoring viable, and rendering rule
+logic at Stage 1 collapses the Stage 1 / Stage 2 boundary.
+
+This split — *what the Rule did* (Stage 1) vs *what the Rule is* (Stage 2) —
+is the load-bearing scope guard. Demote and retire decisions are driven by
+behavior: a Rule is misbehaving when its recent matches show the wrong
+classifications or its track record is degrading, not because its predicates
+look wrong on inspection. Stage 1's detail surface gives controllers exactly
+what they need to decide demote and retire confidently, and nothing more.
+Inspecting *what the Rule is* — its logic — is Stage 2 territory because it
+lives on the same axis as authoring the Rule's logic from a form.
+
 ### What Stage 1 does NOT include
 
 - **Form-based rule authoring.** Rules come from the conversational surface (§5) or
   from `vendorRuleService` writes via service-layer fixtures during testing.
   Form-based authoring is a Stage 2 surface.
-- **Flowchart rule detail view.** The full Trigger/Condition/Action structure is not
-  rendered to the user at v1. The list view's badges and counters are the v1
-  visibility surface. Detail-view flowchart rendering is Stage 2.
+- **Flowchart rule detail view (logic rendering).** The full
+  Trigger/Condition/Action structure is not rendered to the user at Stage 1.
+  Stage 1's detail surface renders behavior (recent matches, track-record
+  trend, last winning match), not logic. The Branch / Condition / Action
+  flowchart is Stage 2.
 - **System-proposed Rules.** The learner is Ring 3, post-v1. No `lifecycle_state =
   proposed` rows appear at Stage 1 (but see Q-RC-AT-4 on reserving the lane).
 - **Predecessor/successor chain navigation.** The retire-and-create-new lineage (V3.1
@@ -194,6 +245,15 @@ closed library (`field_equals(vendor_id, …)`, `field_in_range(amount, 0, 500)`
 `otherwise_if` guardrail Branches the controller didn't ask for explicitly
 (out-of-range amount → `route_to_exception_queue_with_reason`), and set
 `max_outcome_action` from the stated intent (`auto_post_at_rung_2` for "auto-post").
+
+**Expectation-setting in the agent's confirmation.** When the controller's stated
+intent is "auto-post," the agent's chat-side confirmation makes the v1 authority
+discipline explicit: *"I'll create this as an auto-post-capable rule, but it will
+start at Always Confirm. It can auto-post after the promotion ceremony, once it has a
+track record of 15 primary matches with ≥95% approval over 30 days."* This reinforces
+V3.1 §14's load-bearing clarification 1 — promotion changes authority, not rule logic
+— at the moment of rule creation, not after the controller discovers the new rule
+isn't auto-posting yet.
 
 **Authority discipline.** The agent drafts; the controller confirms. The agent does
 not write to the registry directly — it produces a typed Rule object that surfaces in
@@ -242,7 +302,9 @@ A visible per-org configuration UI lands when the columns activate, post-v1.
 ## 7. Implicit tuning via approval behavior
 
 This is the surface most product specs miss: every controller approval, rejection, and
-edit mutates rule state. Per V3.1 §5.9 + §8.5:
+edit emits audit events that update the Rule's TrackRecord mirrors. The audit log is
+canonical per `docs/07_governance/adr/0011-document-platform.md` §1; TrackRecord
+counters are fast-lookup denormalizations. Per V3.1 §5.9 + §8.5:
 
 - Approve a Rule's primary-branch proposal → `clean_approval_count` increments; audit
   event `rule_match_confirmed`.
@@ -284,11 +346,22 @@ review and for the Ring 1 substrate ADR.
   satisfy the indicator. Whichever path Ring 1 picks must meet the freshness bar named
   in §7 — track-record state must be fresh-enough-to-be-useful, since implicit tuning
   mutates rule state during normal day-to-day work.
-- **Q-RC-AT-2 — "Last-fired" definition and column.** V3.1 §5.9 stores outcome-specific
-  anchors but no single "last matched" timestamp. *Proposed:* define last-fired as the
-  most recent evaluation in which the Rule won conflict resolution; Ring 1 decides
-  whether this is a stored `last_matched_at` column or a derived read from
-  `rule_evaluated` audit events.
+- **Q-RC-AT-2 — "Last winning match" semantic + canonical column label.** V3.1
+  §5.9 stores outcome-specific anchors (`last_clean_approval_at`,
+  `last_rejection_at`, `last_guardrail_fire_at`) but no single timestamp for
+  the Rule's most recent winning evaluation. *Semantic, pinned:* "the most
+  recent evaluation in which the Rule won conflict resolution
+  (`winning_rule_id = this.rule_id`)." Ring 1 decides whether this is a
+  stored `last_winning_match_at` column or a derived read from
+  `rule_evaluated` audit events (this read is governed by the same freshness
+  bar as Q-RC-AT-1, §7). *Canonical UI label, deferred to product/UX:* the
+  natural English candidates are "last matched" (collides with V3.1 §5.7's
+  `also_matched_rules` vocabulary, where "matched" covers losers too) and
+  "last applied" (collides downstream toward ledger-posting, which is gated
+  by `effective_action` and is not the same as winning conflict resolution).
+  This brief uses the descriptive phrase "last winning match" in prose
+  without committing to a UI label; the canonical label is a product/UX
+  naming sub-question.
 - **Q-RC-AT-3 — `rule_name_snapshot` depends on the Logic Receipt write path.** Rename
   emits `rule_metadata_updated` and relies on `rule_name_snapshot` for reproducible
   past renderings, but the Logic Receipt write path (INV-AGENT-002) is
@@ -313,6 +386,15 @@ review and for the Ring 1 substrate ADR.
   canvas serves controllers operating across multiple orgs or is scoped one-org-at-a-
   time. *Proposed:* one-org-at-a-time at Stage 1 (the canvas is org-scoped); multi-org
   switching is a product-scope question for the future product/UX review.
+- **Q-RC-AT-7 — Retire authority at Stage 1.** V3.1 §5.8 specifies controller
+  authority for explicit retirement ("controller explicitly retires"). The
+  Stage 1 Retire action follows that authority shape (§4 row actions). *Open
+  for product/UX:* whether the terminal nature of retirement warrants owner
+  gating in addition to controller authority — terminal operations elsewhere
+  in the system (e.g., the silent_auto promotion ceremony per
+  `agent_autonomy_model.md` §4.1) require owner co-sign. This brief commits
+  to V3.1's authority shape; if owner-gating Retire is desirable, that is a
+  finding for the rule-core spec to absorb, not a brief decision.
 
 ---
 
@@ -334,8 +416,10 @@ Inherited verbatim; cited, not re-stated.
   four-item drift reconciled at Ring 1).
 - `docs/07_governance/adr/0020-agent-first-authority-gradient-source-architecture.md` —
   the `agent/policies/agent-ladder/` empty home; dependency direction.
-- `apps/web/src/agent/policies/agent-ladder/README.md` — the source-tree home this
-  brief's UI components eventually populate, downstream of the Stage 1 spec.
+- `apps/web/src/agent/policies/agent-ladder/README.md` — the policy/source
+  home for Agent Ladder logic per ADR-0020. **Not** the UI home; UI
+  components for the Stage 1 canvas live in the eventual product-surface
+  location chosen by the Ring 2A UI spec, which is downstream of this brief.
 
 ---
 
@@ -345,8 +429,9 @@ The brief is not asking for CTO ratification (V3.1 carries that). It asks for pr
 UX agreement on four points:
 
 1. **Stage 1 scope is correct** — the minimum viable canvas (list view +
-   promote/demote/rename + promotion-ceremony modal) plus the conversational authoring
-   surface, with form-based authoring deferred to Stage 2.
+   promote/demote/rename/retire + promotion-ceremony modal + behavior-not-logic detail
+   surface) plus the conversational authoring surface, with form-based authoring
+   deferred to Stage 2.
 2. **Stages 2 and 3 are deferred but named** — their substrate dependencies (§3) are
    correctly identified; they are real future surfaces, not vaporware.
 3. **The implicit-tuning surface (§7) is a product concern, not just an architectural
