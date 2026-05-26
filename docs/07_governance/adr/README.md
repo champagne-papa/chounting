@@ -269,6 +269,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0021](./0021-adr-frontmatter-and-tooling.md) | ADR Frontmatter and Tooling | Ratified | 2026-05-08 |
 | [ADR-0022](./0022-adr-lifecycle-workflows.md) | ADR Lifecycle Workflows — Amendment vs Supersession | Ratified | 2026-05-08 |
 | [ADR-0023](./0023-rule-type-core-substrate.md) | Rule Type Core Substrate and ADR-0017 Reconciliation | Ratified | 2026-05-26 |
+| [ADR-0024](./0024-ring2a-core.md) | Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate | Ratified | 2026-05-26 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -283,10 +284,16 @@ and the Status-line clause-accumulation pattern.
 ### agent
 
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+
+### core
+
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 
 ### db
 
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 
 ### infra
 
@@ -312,6 +319,7 @@ _No ADRs with this field populated yet. The first ADR with frontmatter values po
 ### post-mvp
 
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 <!-- END:generated-by-phase -->
 
 ## Related files

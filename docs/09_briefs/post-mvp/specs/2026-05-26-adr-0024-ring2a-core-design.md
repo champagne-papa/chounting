@@ -1,5 +1,7 @@
 # ADR-0024 Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate — Design Spec
 
+**RATIFIED 2026-05-26 as [ADR-0024](../../../07_governance/adr/0024-ring2a-core.md).** Per ADR-0021 §4, this design spec is now preserved as historical reference; the ratified ADR carries the canonical record — including four pre-commit review refinements not reflected in the notes below (`disposition` set-at-insert-only semantics + nullable CHECK, row-per-rule-evaluation framing, the composite `(rule_id, org_id)` identity FK, and the Branch/Condition-persistence non-decision; see ADR-0024 Decisions 1–2 and Non-decisions). The INV-ID open question is resolved there too (reserve INV-RULE-001 only; frontmatter `invariants: []`). The notes below describe the pre-ratification state.
+
 **Status:** Pre-ratification design spec per ADR-0021 §4 (Decision item 4). **NOT an ADR** and carries no `proposed` status — routes through the design-spec genre. Informs the eventual `docs/07_governance/adr/0024-ring2a-core.md` (`status: ratified` at CTO ratification). Reserves the **0024** ADR number. Container precedent: `docs/09_briefs/post-mvp/specs/2026-05-26-adr-0023-rule-type-core-substrate-design.md`.
 
 **Date:** 2026-05-26 · **HEAD anchor:** `63c1d65c`, branch `staging`. · **Revision:** V0.1 (first draft).
