@@ -405,6 +405,52 @@ confirm at design-spec onset.
 
 ---
 
-*Verification pass. Not committed; not pushed. Next: chat-ratify OQ-1 + OQ-3,
-route OQ-5/6 to product/UX, then open the Ring 2A-core authoring design spec
-(Decisions A–J coherent; Decision E now lands `shared/rules/capping.ts`).*
+## 11. Ratifications (resolved 2026-05-26)
+
+The chat-ratification items the verification pass surfaced are resolved as
+follows. The design spec carries these as locked inputs.
+
+- **OQ-1 (specificity weights):** 3/2/1 with named constants
+  (`SPECIFICITY_CLOSED_SET = 3`, `SPECIFICITY_RANGE = 2`,
+  `SPECIFICITY_PATTERN = 1`). Co-located with the predicate-evaluator registry
+  per Decision A. Ring 2B extends the constant set; re-numbering reserved for a
+  future tier-insertion need.
+- **OQ-3a (log↔counter txn boundary):** Separate transactions. The log is the
+  source-of-truth append-only record; counters are reconcilable from the log
+  corpus if the counter write fails.
+- **OQ-3b (Logic Receipt reconciliation):** Path A — design spec carries a
+  one-sentence reconciliation: `rule_evaluation_log` (INV-RULE-001) is the
+  concrete realization of the abstract "Logic Receipt" surface §5.7 named;
+  INV-AGENT-002 stays reserved for the broader cross-agent Logic Receipt concern.
+  The `rule-type-core.md` §5.7 amendment is forward-flagged for a future
+  doc-hygiene pass, not this arc.
+- **OQ-3c (recordEvaluation home):** Method on `ruleEvaluationService`. Named
+  sole writer for `rule_evaluation_log`, mirroring `ruleRegistryService` ↔
+  `rule_registry`.
+- **OQ-7 (design spec structure):** One design spec covering Decisions A–J;
+  authoring split across multiple commits along the five module seams
+  (`core/rules/` → `agent/policies/agent-ladder/` → `services/rules/` →
+  `app/api/.../rules/` → `components/canvas/RuleRegistryView.tsx`). F-coupling
+  supports this shape.
+
+**Open for product/UX (parked):**
+
+- **OQ-5 (Q-RC-AT-2 UI label):** product/UX picks from carried candidates. Disk
+  found `rule_track_records.last_winning_match_at` is already provisioned (Ring 1
+  substrate, ADR-0023 Decision 2), so any winner-only label costs zero substrate
+  work — read it directly from `rule_track_records` rather than amending the 30d
+  view. "Last evaluated" (matches the existing view aggregate) is the
+  no-substrate-change alternative.
+- **OQ-6 (inert promotion-modal copy):** product/UX's call; deferrable to
+  canvas-build time (the exact disabled-state wording).
+
+The design spec carries OQ-5/OQ-6 as open placeholders in the canvas section
+(Decision I); resolution happens in parallel without blocking the spec.
+
+---
+
+*Verification pass + ratifications, banked on `origin/staging`. Next: open the
+Ring 2A-core authoring design spec in a fresh session (Decisions A–J coherent;
+Decision E lands `shared/rules/capping.ts`), with the §11 ratifications as locked
+inputs and OQ-5/OQ-6 as product/UX-open placeholders in the canvas (Decision I)
+section.*
