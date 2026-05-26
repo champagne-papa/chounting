@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0007", "0010", "0011", "0017", "0020", "0023"]
-invariants: []
+invariants: ["INV-RULE-001"]
 ---
 
 # ADR-0024: Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate
@@ -21,6 +21,14 @@ Ratified 2026-05-26 by phil per the Ring 2A-core design spec
 (`docs/09_briefs/post-mvp/specs/2026-05-26-adr-0024-ring2a-core-design.md`,
 V0.1 at `29a92a92`) and the CTO chat-ratification of that design spec on
 2026-05-26.
+
+**Amended 2026-05-26** (Ring 2A-core migration arc) to add INV-RULE-001 to
+the frontmatter `invariants:` field, following its registration in
+`invariants.md` when migration `20240164000000_rule_evaluation_log.sql`
+landed the RLS enforcement. INV-RULE-001 is reserved at Decision 9; the
+frontmatter was `[]` at ratification (forced by the ADR-0021 linter + the
+spec-without-enforcement rule, since the enforcement did not yet exist in
+code) and now reflects the registered invariant.
 
 This ADR is **net-new substrate plus consumer wiring**. It does **not** amend or
 supersede any prior ADR: ADR-0023's substrate (the registry, track-record, enum,

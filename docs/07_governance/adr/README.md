@@ -307,7 +307,9 @@ and the Status-line clause-accumulation pattern.
 > without frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-invariant -->
-_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
+### INV-RULE-001
+
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 <!-- END:generated-by-invariant -->
 
 ## By phase
