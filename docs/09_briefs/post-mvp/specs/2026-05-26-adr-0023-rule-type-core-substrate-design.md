@@ -1,5 +1,7 @@
 # ADR-0023 Rule Type Core Substrate and ADR-0017 Reconciliation — Design Spec
 
+**RATIFIED 2026-05-26 as [ADR-0023](../../../07_governance/adr/0023-rule-type-core-substrate.md).** Per ADR-0021 §4, this design spec is now preserved as historical reference; the ratified ADR carries the canonical record. The notes below describe the pre-ratification state.
+
 **Status:** Pre-ratification design spec per ADR-0021 §4 (Decision item 4). **NOT an ADR** and carries no `proposed` status — chounting routes pre-ratification design through the design-spec genre, not through `status: proposed` ADR files (ADR-0021 Alternative 5). This spec informs the eventual `docs/07_governance/adr/0023-rule-type-core-substrate.md`, which is created with `status: ratified` at CTO ratification. Reserves the **0023** ADR number.
 
 **Date:** 2026-05-26 · **HEAD anchor:** `baeeb862`, branch `staging`.

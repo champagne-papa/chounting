@@ -2,7 +2,7 @@
 
 ## Status
 
-Ratified 2026-05-04 by CTO with named follow-ups per D4 ratification package §3.3.
+Ratified 2026-05-04 by CTO with named follow-ups per D4 ratification package §3.3; amended 2026-05-26 per Rule Type Core substrate reconciliation (ADR-0023) — rung naming/placement, `clean_approval_count` placement, `legal_entity_id` FK/default/uniqueness semantics, `created_by` shape.
 
 ## Date
 
@@ -1461,3 +1461,69 @@ framing is the correct shape.
   `documentLinkService` for link rows, `vendorRuleService` for
   vendor-rule rows); future substrate tables in subsequent ADRs
   are expected to follow the same single-writer pattern.
+
+## Amendment 2026-05-26 — Rule Type Core substrate reconciliation (ADR-0023)
+
+> Placement note: ADR-0022 Decision item 2 puts amendment blocks before the
+> parent's `## Cross-references`. ADR-0017 is a legacy §-numbered ADR whose
+> Cross-references sits mid-document (with Closes / Consequences / Alternatives /
+> Notes after it), so this block is placed at the end of the body — the "end of
+> the ADR body" intent — rather than burying it mid-document.
+
+### Triggered by
+
+Rule Type Core ratified at V3.2 (`docs/02_specs/rule-type-core.md`, `baeeb862`);
+its Ring 1 substrate ADR (ADR-0023, ratified 2026-05-26) lands the rule-core
+tables and, in doing so, reconciles four ADR-0017 substrate items where the live
+schema and/or ADR-0017's text needed correction. Full reasoning and the migration
+outline live in ADR-0023; this block records what changed within ADR-0017's scope
+and points there.
+
+### Scope
+
+ADR-0017's core decision — the vendor template substrate (the `vendor_rules`
+mechanism, the `born_paid_bill` bundle type, the Agent Ladder rung reservation,
+the single-writer rule, the v1-no-enforcement contract) — **stays in force**.
+This amendment reconciles four substrate placements/shapes; it does **not**
+re-decide vendor templating. Per ADR-0022 Decision item 1 this is an amendment
+(parent + amendment read as a coherent decision), not a supersession. Per ADR-0022
+Decision item 4 it changes no frontmatter (ADR-0017 is a legacy ADR without
+frontmatter; amendments are body-content + Status-clause only).
+
+### Decision items (forward-only, numbered within this amendment)
+
+1. **Rung naming and placement.** ADR-0017's `vendor_rule_rung` enum (values
+   `always_confirm | notify_and_auto_post | silent_auto`) is renamed
+   `rule_autonomy_rung`, and the rung column moves from `vendor_rules` to
+   `rule_registry.current_rung`. The live `autonomy_tier` column/enum (short
+   values `always_confirm | notify_auto | silent`) is dropped. The rung is a
+   registry-level (cross-rule) concept, so a `vendor_`-scoped name no longer fits.
+   (ADR-0023 Decision 4.)
+2. **`clean_approval_count` placement.** ADR-0017's `clean_approval_count`
+   requirement (the post-v1 substrate seat named by ADR-0015 §2) is satisfied on
+   `rule_track_records.clean_approval_count`, **not** on `vendor_rules`. ADR-0017
+   no longer requires a `vendor_rules.clean_approval_count` column. (ADR-0023
+   Decision 2.)
+3. **`legal_entity_id` FK / default / uniqueness semantics.** `legal_entity_id`
+   ships on `vendor_rules` as nullable `uuid REFERENCES organizations(org_id)`
+   with app-layer `org_id` defaulting; uniqueness is enforced by an expression
+   unique index on `(org_id, COALESCE(legal_entity_id, org_id), vendor_id,
+   bundle_type)`, **not** the plain `(org_id, legal_entity_id, vendor_id,
+   bundle_type)` constraint ADR-0017's text described (a plain constraint does not
+   enforce when `legal_entity_id IS NULL`). (ADR-0023 Decision 3.)
+4. **`created_by` actor-reference shape.** `created_by` is `uuid REFERENCES
+   auth.users(id)` per the ADR-0007 Q78 / Path X standard, **not** the `text`
+   shape ADR-0017's text described. (ADR-0023 Decision 5.)
+
+`bundle_type` and the `(…, bundle_type)` uniqueness land per ADR-0017's text (the
+`bundle_type` enum is created at Ring 1, as ADR-0012 §12 specifies but no migration
+had shipped) — fulfillment of ADR-0017, not an amendment to it, noted here only
+for completeness.
+
+### Cross-references
+
+- **ADR-0023** ([`./0023-rule-type-core-substrate.md`](./0023-rule-type-core-substrate.md))
+  — the amending ADR; full reasoning, the six Ring 1 decisions, the migration
+  outline.
+- **ADR-0022** ([`./0022-adr-lifecycle-workflows.md`](./0022-adr-lifecycle-workflows.md))
+  — the amendment workflow this block follows.
