@@ -2055,6 +2055,91 @@ transaction isolation rule.
 
 ---
 
+### INV-RULE-001 — rule_evaluation_log is append-only, user-path (Layer 1a)
+
+**Invariant.** Rows in `rule_evaluation_log` are append-only against
+the **user path**: no `UPDATE` and no `DELETE` through a user-scoped
+(`authenticated`) client, and no user-path `INSERT`. Once
+`ruleEvaluationService` writes an evaluation row via the service-role
+client, the user path cannot modify it. This is the first member of the
+**`INV-RULE-*` domain family** — rule-core invariants, properties of the
+Rule Type Core substrate and its evaluator / gate / canvas consumers
+(ADR-0024 §9). Reserved at ADR-0024 ratification; registered here at the
+migration arc, when the enforcement landed in code (the
+spec-without-enforcement rule).
+
+**Scope — user-path, not all-path (read this before relying on it).**
+INV-RULE-001 is **not** equivalent to INV-AUDIT-002 / INV-LEDGER-003,
+which are *trigger-authoritative* — append-only against every role
+including `service_role`. INV-RULE-001 is enforced by RLS only (ADR-0024
+specified no triggers, no `REVOKE`s), and `service_role` **bypasses RLS**:
+
+- **User path:** append-only, DB-enforced — RLS `USING (false)` on
+  UPDATE/DELETE plus no user-path INSERT policy (default-deny).
+- **Service path:** append-only by **single-writer discipline only**
+  (`ruleEvaluationService` is the sole writer per ADR-0024 Decision 6 and
+  inserts only). The database does **not** stop a `service_role` caller
+  from updating or deleting rows. A future service path that mutated
+  `rule_evaluation_log` would not be caught by the DB — on the service
+  side the guarantee is convention, not constraint.
+
+This is the same shape as INV-RLS-001 (an RLS invariant `service_role`
+bypasses by design) and as the project's single-writer substrate posture
+(`ruleRegistryService` / `ruleTrackRecordService` / `vendorRuleService`
+likewise rely on single-writer discipline + RLS for the user-path
+surface, not trigger-armor).
+
+**Threat model.** Protects the operational evaluation trace against
+user-path tampering; the single-writer discipline protects against
+service-path accidental double-write / overwrite. It deliberately does
+**not** carry the all-path tamper-proofing of INV-AUDIT-002, because
+`rule_evaluation_log` is a high-volume operational log (one row per
+evaluation, win or lose), not the canonical legal audit trail —
+per-row trigger validation would be a material cost at that volume, and
+the trustworthiness bar is below `audit_log`'s.
+
+**Enforcement.** RLS, defined in
+`supabase/migrations/20240164000000_rule_evaluation_log.sql`:
+
+```sql
+ALTER TABLE rule_evaluation_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY rule_evaluation_log_select ON rule_evaluation_log
+  FOR SELECT USING (user_has_org_access(org_id));
+-- no INSERT policy: service-emitted only (audit_log / events precedent;
+-- RLS-enabled-no-policy denies the user path; service_role bypasses).
+CREATE POLICY rule_evaluation_log_no_update ON rule_evaluation_log
+  FOR UPDATE USING (false);
+CREATE POLICY rule_evaluation_log_no_delete ON rule_evaluation_log
+  FOR DELETE USING (false);
+```
+
+The explicit `USING (false)` UPDATE/DELETE policies are functionally
+redundant with default-deny but surface the append-only intent at the
+RLS layer (discoverable from `\d rule_evaluation_log`) and guard against
+a future migration accidentally adding a permissive policy — the same
+rationale INV-AUDIT-002 gives for `audit_log_no_update` /
+`audit_log_no_delete`.
+
+**Scope is the table, not the view.** The invariant is on
+`rule_evaluation_log`. `rule_evaluation_30d_view` is a read-only derived
+view (`security_invoker = true`); its content is append-only by
+derivation from the base table, and it is not itself a write target.
+
+**Future evolution.** If the trustworthiness bar later rises (e.g.,
+evaluation traces become inputs to a regulated decision record),
+INV-RULE-001 can be promoted to trigger-authoritative all-path
+append-only via a follow-on migration + an ADR-0024 amendment, mirroring
+INV-AUDIT-002's trigger + `REVOKE` defense-in-depth. That is a deliberate
+non-decision at Ring 2A-core.
+
+**Annotation site.**
+`supabase/migrations/20240164000000_rule_evaluation_log.sql`
+(`-- INV-RULE-001`), establishing bidirectional reachability with this
+leaf.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the

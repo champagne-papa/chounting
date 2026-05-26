@@ -159,6 +159,13 @@ Invariants."
 - **Non-bypassable from application layer:** the deferred constraint runs at COMMIT regardless of which client (user-scoped or service-role) issued the INSERT. The service layer's Zod refine is a pre-flight ergonomic check, not authoritative enforcement.
 - **Pairing with INV-LEDGER-001:** INV-RECURRING-001 guards the recurring-journal template; INV-LEDGER-001 guards the posted journal entry that results from `approveRun`. Together: a broken template cannot produce unbalanced posted entries because either (a) the template write fails at RECURRING-001's CONSTRAINT TRIGGER, or (b) `approveRun` reads balanced template lines and the resulting `journal_entries` / `journal_lines` INSERT must also balance per LEDGER-001. Registered as a cross-layer pairing in `docs/02_specs/invariants.md`.
 
+#### INV-RULE-001 — rule_evaluation_log is append-only, user-path (Layer 1a)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-001`](../02_specs/ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a)
+- **Test coverage:** **None at HEAD** — `rule_evaluation_log` has no consumers yet (the services + evaluator are the Ring 2A-authoring arc). The test-update arc (next after this migration) adds an RLS isolation test (cross-org SELECT denied; user-path UPDATE/DELETE denied; no user-path INSERT) and the `security_invoker` behavior test (a non-controller operator querying `rule_evaluation_30d_view` directly gets RLS-filtered rows, not the owner-bypass leak `document_cards_view` carries). Recorded in `docs/09_briefs/post-mvp/2026-05-26-adr-0024-migration-test-staleness.md`.
+- **Code enforcement:** RLS on `rule_evaluation_log` in `supabase/migrations/20240164000000_rule_evaluation_log.sql` — `rule_evaluation_log_no_update` (`FOR UPDATE USING (false)`), `rule_evaluation_log_no_delete` (`FOR DELETE USING (false)`), and no INSERT policy (RLS-enabled default-deny for the user path; `service_role` bypasses). `ruleEvaluationService` (Ring 2A-authoring) is the sole writer and inserts only (ADR-0024 Decision 6).
+- **Non-bypassable from application layer — user path only.** RLS blocks the `authenticated` (user-scoped) path absolutely. It does **not** bind `service_role` (which bypasses RLS); ADR-0024 specified RLS-only (no triggers / `REVOKE`s), so service-path append-only is single-writer discipline, not DB enforcement — materially weaker than INV-AUDIT-002's trigger-authoritative all-path append-only. See the INV-RULE-001 leaf "Scope" + "Threat model" subsections. The view inherits this RLS via `security_invoker = true`.
+
 ### Layer 2 — Operational Truth (6 invariants)
 
 #### INV-AUTH-001 — Every mutating service call is authorized
