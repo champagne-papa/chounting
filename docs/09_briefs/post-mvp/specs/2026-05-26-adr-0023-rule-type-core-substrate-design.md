@@ -4,6 +4,8 @@
 
 **Date:** 2026-05-26 · **HEAD anchor:** `baeeb862`, branch `staging`.
 
+**Revision:** V0.2 (2026-05-26) — precision pass folding seven review items: `org_id` on `rule_registry` (tenant ownership) + composite child FK; stored lifecycle audit anchors (`promoted/demoted/retired`); broadened ADR-0017 amendment list (two → four); migration NOT-NULL-via-backfill safety + duplicate-detection preflight; non-negative counter `CHECK`s; lineage-integrity `CHECK`s + 1:1 partial unique indexes; frontmatter invariant-comment fix. V0.1 was the first full draft (committed `0c7befbb`).
+
 **Voice:** decision-bearing. The Rule Type Core architecture is ratified at V3.2 (`docs/02_specs/rule-type-core.md`); this spec lands substrate calls, not semantics. Decisions are made, not opened. It is deliberately much shorter than the spec it implements.
 
 **Inputs (read before this spec):**
@@ -12,7 +14,14 @@
 - `docs/02_specs/rule-type-core.md` (V3.2, ratified) — §5, §6, §8.4, §8.5, §10.
 - ADR-0017 (`0017-vendor-template-substrate.md`), ADR-0012 §12, ADR-0007 §Q78 / Path X, ADR-0010, ADR-0011 §10.
 
-**Amends ADR-0017 (recorded at ratification, not here).** Two columns: enum naming (`vendor_rule_rung` → `rule_autonomy_rung`, relocated to `rule_registry`) and `created_by` shape (`text` → `uuid`). This is an **amendment, not supersession** — ADR-0017 stays in force; this ADR reconciles two drift items against it. Recorded via `related: ["0017"]` plus the Decision 4 / Decision 5 body notes. The paired ADR-0022 amendment status-clause edit to ADR-0017 lands **at ratification of ADR-0023** — pre-ratification design specs do not mutate ratified ADRs (ADR-0021 §4 lifecycle).
+**Amends ADR-0017 (recorded at ratification, not here).** ADR-0023 amends ADR-0017 in **four substrate places**:
+
+1. **Rung naming and placement** — `vendor_rule_rung` → `rule_autonomy_rung`, relocated from `vendor_rules` to `rule_registry.current_rung` (Decision 4).
+2. **Clean-approval-counter placement** — ADR-0017's `clean_approval_count` requirement is satisfied on `rule_track_records.clean_approval_count`, **not** `vendor_rules.clean_approval_count` (Decision 2).
+3. **Legal-entity FK / default / uniqueness semantics** — nullable `uuid REFERENCES organizations(org_id)` with app-layer `org_id` defaulting and a `COALESCE(legal_entity_id, org_id)` expression unique index, rather than a plain `(org_id, legal_entity_id, vendor_id, bundle_type)` constraint or a direct `legal_entities` table (Decision 3).
+4. **`created_by` actor-reference shape** — `text` → `uuid REFERENCES auth.users(id)` (Decision 5).
+
+This is an **amendment, not supersession** — ADR-0017 stays in force; ADR-0023 reconciles these four drift items and signals what ADR-0017 **no longer requires** (notably: no `vendor_rules.clean_approval_count`, and no plain quadruple unique constraint). Recorded via `related: ["0017"]` plus the Decision 2 / 3 / 4 / 5 body notes. The paired ADR-0022 amendment status-clause edit to ADR-0017 lands **at ratification of ADR-0023** — pre-ratification design specs do not mutate ratified ADRs (ADR-0021 §4 lifecycle).
 
 ---
 
@@ -32,8 +41,9 @@ phase: "post-mvp"
 supersedes: []              # amendment, not supersession
 superseded_by: []
 related: ["0007", "0010", "0011", "0012", "0015", "0017"]
-invariants: []              # substrate-only and inert at Ring 1; no enforced invariant lands
-                            # until Ring 2 wires the evaluator. INV-ID assignment is a Ring 2 concern.
+invariants: []              # no INV-* runtime invariant assigned at Ring 1; DB constraints/FKs/
+                            # indexes/CHECKs still land as substrate enforcement. INV-ID assignment
+                            # is a Ring 2 concern (when the evaluator wires runtime enforcement).
 ```
 
 There is **no `amends` field** in the ADR-0021 frontmatter schema. The ADR-0017 amendment is carried by `related: ["0017"]` + Decision 4/5 body prose + the paired ADR-0022 status-clause edit applied to ADR-0017 at ratification.
@@ -59,16 +69,32 @@ Three empirical HEAD findings reframe the substrate scope and are load-bearing f
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `uuid PRIMARY KEY` | rule identity; `vendor_rules.rule_id` references it 1:1 |
+| `org_id` | `uuid NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE` | tenant ownership; the registry is the tenant-scoping surface for all rule materializations (§5.1 lists `org_id` as a Rule field) |
 | `rule_type` | `rule_type NOT NULL` | §5.3 enum |
 | `lifecycle_state` | `rule_lifecycle_state NOT NULL` | §5.8 enum |
 | `current_rung` | `rule_autonomy_rung NOT NULL DEFAULT 'always_confirm'` | source-of-truth from creation (Decision 4) |
 | `name` | `text NULL` | mutable display metadata (§5.1); null until named (system-proposed rules) |
 | `created_by` | `uuid REFERENCES auth.users(id)` | actor-reference standard (Decision 5) |
 | `created_at` | `timestamptz NOT NULL DEFAULT now()` | |
-| `predecessor_rule_id` | `uuid NULL REFERENCES rule_registry(id)` | amendment lineage (§5.8) |
-| `successor_rule_id` | `uuid NULL REFERENCES rule_registry(id)` | amendment lineage (§5.8) |
+| `promoted_at` | `timestamptz NULL` | §5.1 `audit_anchors` (promotion ceremony) |
+| `promoted_by` | `uuid NULL REFERENCES auth.users(id)` | §5.1 `audit_anchors` |
+| `demoted_at` | `timestamptz NULL` | §5.1 `audit_anchors` (demotion §4.3) |
+| `demoted_by` | `uuid NULL REFERENCES auth.users(id)` | §5.1 `audit_anchors` |
+| `retired_at` | `timestamptz NULL` | §5.1 `audit_anchors` |
+| `retired_by` | `uuid NULL REFERENCES auth.users(id)` | §5.1 `audit_anchors` |
+| `predecessor_rule_id` | `uuid NULL REFERENCES rule_registry(id)` | amendment lineage (§5.8); scalar — strictly 1:1 |
+| `successor_rule_id` | `uuid NULL REFERENCES rule_registry(id)` | amendment lineage (§5.8); scalar — strictly 1:1 |
+
+**Table-level constraints:**
+- `UNIQUE (id, org_id)` — the composite key the child FK targets, so a parent rule and its child materialization cannot diverge on `org_id`.
+- `CHECK (predecessor_rule_id IS NULL OR predecessor_rule_id <> id)` and `CHECK (successor_rule_id IS NULL OR successor_rule_id <> id)` — a Rule never succeeds itself.
+- partial `UNIQUE INDEX (predecessor_rule_id) WHERE predecessor_rule_id IS NOT NULL` and partial `UNIQUE INDEX (successor_rule_id) WHERE successor_rule_id IS NOT NULL` — enforce the strictly 1:1 bidirectional lineage §5.8 / §9.3 describe (retire-and-create-new sets one predecessor and one successor in a single transaction; the spec defines neither rule-split nor merge, and the scalar link columns already preclude both — these indexes enforce it at the DB. If a future spec amendment introduces rule-splitting, it would change `successor_rule_id` to a collection and revisit these indexes).
 
 After the migration `vendor_rules` retains only vendor-scope columns (see migration sketch §e and the note below).
+
+**Tenant ownership lives on the registry.** `org_id` on `rule_registry` makes the parent identity table the tenant-scoping surface: cross-rule lookups by `rule_registry.id` and RLS both scope on `rule_registry.org_id`, and a future non-vendor materialization inherits org ownership centrally instead of reinventing it. §5.10's source-of-truth allocation is silent on `org_id` placement (it allocates `legal_entity_id` to `vendor_rules` as vendor-scope, which Decision 3 keeps); ADR-0023 fills that gap from §5.1's `Rule.org_id` field, consistent with the registry-as-identity-surface principle. `vendor_rules` retains `org_id` for its own unique index, and the composite FK `(rule_id, org_id) → rule_registry(id, org_id)` keeps the two from diverging.
+
+**Audit anchors are stored, not derived.** The registry carries the four `audit_anchors` §5.1 enumerates — `created_*`, `promoted_*`, `demoted_*`, `retired_*`. Stored rather than derived from the `audit_log` corpus for two reasons: the Four Questions (§6.4) compose promotion/demotion history into their answer, and a stored anchor is a single registry-row read versus a corpus scan that grows with the audit log; and stored anchors are stable against any future audit-retention trimming. **No `activated_*` anchor is added** — §5.1's `audit_anchors` set is closed at four and omits activation, and the `proposed→active` / `demoted→active` transitions are captured by the `rule_activated` audit event (§8.5), not a stored column; adding `activated_*` would deviate from the ratified field list.
 
 **Load-bearing reason.** Deferring `rule_registry` reproduces the exact pattern Ring 1 exists to fix. ADR-0017 named substrate, deferred the migration, and the live schema drifted from canon (Context, above). Parking the registry's cross-cutting metadata on `vendor_rules` "for now" with a known-future migration to move it plants the seed of the next ADR-0017 while reconciling the current one. The cheapest way to not repeat the drift is to not create a second instance of it.
 
@@ -76,7 +102,7 @@ After the migration `vendor_rules` retains only vendor-scope columns (see migrat
 
 **Vendor-scope retention note.** `vendor_rules` retains `org_id`, `vendor_id`, `default_account_id`, `approved_at`, `approved_by` (the vendor-template approval-ceremony columns are vendor-scope per ADR-0017), plus the new `bundle_type` and `legal_entity_id` (Decision 3); `rule_id` is now PK **and** FK. `created_at` / `created_by` are carried by `rule_registry` as rule-identity audit; the migration drops the `vendor_rules` copies to avoid a dual source of the same fact (flagged for the migration pass).
 
-**Deferred registry columns — keeps Decision 6 honest.** §5.10 also assigns `triggers`, `applies_to_intent_types`, and `applies_to_source_triggers` (the eligibility-gating columns) to the registry. This ADR **does not** add them: they consume `trigger_type`, which Ring 1 keeps reserve-only (Decision 6). Adding them now would make `trigger_type` load-bearing and pull Branch/eligibility substrate into Ring 1. They land with the Branch/eligibility ring.
+**Deferred registry columns — keeps Decision 6 honest.** §5.10 also assigns `triggers`, `applies_to_intent_types`, and `applies_to_source_triggers` (the eligibility-gating columns) to the registry. This ADR **does not** add them: they consume `trigger_type`, which Ring 1 keeps reserve-only (Decision 6). Adding them now would make `trigger_type` load-bearing and pull Branch/eligibility substrate into Ring 1. They land with the Branch/eligibility ring. Until that ring lands, `rule_registry` is the identity / lifecycle / rung / tenant substrate, **not** the complete evaluable Rule substrate.
 
 **Alternatives rejected.**
 - *Defer the registry (§5.10 interim path).* Rejected — reproduces the ADR-0017 drift this ADR reconciles; partial substrate with a known-future migration is the failure mode, not a savings.
@@ -104,6 +130,8 @@ After the migration `vendor_rules` retains only vendor-scope columns (see migrat
 
 One row per rule, co-created with the `rule_registry` row in the same transaction (Decision 5).
 
+**Table-level constraints.** Non-negative `CHECK`s on all five counters — `CHECK (clean_approval_count >= 0)`, `CHECK (rejection_count >= 0)`, `CHECK (guardrail_fire_count >= 0)`, `CHECK (guardrail_confirmed_count >= 0)`, `CHECK (guardrail_resolved_into_primary_bounds_count >= 0)` — enforce the spec's non-negative TrackRecord invariant (§5.9) at the DB.
+
 **Load-bearing reason.** Isolating hot counter-writes off the rule-identity row is sound with one backing rule table or five, and it resolves ADR-0017's `clean_approval_count` cleanly — the counter lands here, **not** on `vendor_rules`, which avoids the "interim column, migrate later" move Decision 1 rejects.
 
 **Q-RC-AT-1 (windowed read) is deferred to Ring 2A.** The Stage 1 canvas's last-30-day indicator is a derived windowed read; Ring 1 stores cumulative counters and reserves the read contract but does not build it. The audit corpus of `rule_evaluated` events is empty at v1 (verification §1d — `audit_log.action` is text, zero emitters), and the consumer (the canvas) ships at Ring 2A, which owns both the emitter and the reader. Building a materialized view now would mean tuning a refresh cadence against zero rows.
@@ -115,7 +143,7 @@ One row per rule, co-created with the `rule_registry` row in the same transactio
 ### 3. ADR-0017 drift reconciliation (`vendor_rules`)
 
 **The call.** Two column additions to `vendor_rules`:
-- `bundle_type bundle_type NOT NULL` (the enum is created in this ADR — Decision 6; the column has no DB default, but `vendor_rules` is empty so NOT NULL is satisfiable).
+- `bundle_type bundle_type NOT NULL`, no permanent DB default (the enum is created in this ADR — Decision 6). Added safely via add-nullable → backfill legacy rows to `born_paid_bill` → `SET NOT NULL` (migration §e), so the NOT NULL holds whether or not manual rows exist; future writers set the value explicitly.
 - `legal_entity_id uuid REFERENCES organizations(org_id) ON DELETE RESTRICT`, **nullable, no DB default** — matching the project's uniform idiom (verification §2: identical shape in `source_documents`, `vendor_prepayments`, `vendor_credits`; "defaults to org_id in v1" is an application-layer convention via `NULLIF(...)→NULL`, never a schema `DEFAULT`; no `legal_entities` table exists).
 
 One uniqueness constraint, as an **expression unique index**:
@@ -143,7 +171,7 @@ UNIQUE INDEX ON vendor_rules (org_id, COALESCE(legal_entity_id, org_id), vendor_
 
 **Load-bearing reason.** Three names exist on disk (verification §1e): live `autonomy_tier` (`always_confirm | notify_auto | silent`), ADR-0017 *text* `vendor_rule_rung`, and spec §10 `rule_autonomy_rung`. With zero readers and zero rows, there is no consumer to break and no data to migrate, so the canonical long-form values are adopted at no cost. `rule_autonomy_rung` wins on a substantive ground, not a coin flip: post-collapse the rung lives on `rule_registry`, so a `vendor_`-prefixed name (`vendor_rule_rung`) would name a registry-level concept after one of its backing tables — it is actively wrong.
 
-**Amends ADR-0017.** ADR-0017's `vendor_rule_rung` naming on this column is superseded by `rule_autonomy_rung` on `rule_registry.current_rung`. This is an amendment (ADR-0017 otherwise stands); recorded via `related: ["0017"]` and the paired ADR-0022 status-clause edit applied to ADR-0017 at ratification.
+**Amends ADR-0017.** ADR-0017's `vendor_rule_rung` naming on this column is amended to `rule_autonomy_rung` on `rule_registry.current_rung`. This is an amendment (ADR-0017 otherwise stands); recorded via `related: ["0017"]` and the paired ADR-0022 status-clause edit applied to ADR-0017 at ratification.
 
 **Alternative rejected.** *Amend ADR-0017 to ratify `autonomy_tier`/`vendor_rule_rung` as canonical.* Rejected — keeps a `vendor_`-scoped name for a registry-level column and the short value variants the spec already moved away from.
 
@@ -160,7 +188,7 @@ All three ship **defined-but-inert** at Ring 1; no v1 caller exercises them. Thi
 
 **Cross-table reads.** Either service may perform read-only joins across the two tables; neither writes outside its own table. The Stage 1 canvas (Ring 2A) joining `rule_registry` + `rule_track_records` is a read-side concern, not a writer-boundary violation. Default: `ruleRegistryService` owns identity-anchored reads (including the CTI join to `vendor_rules`); `ruleTrackRecordService` owns counter reads.
 
-**`created_by` actor-reference standard.** `rule_registry.created_by` is `uuid REFERENCES auth.users(id)` per ADR-0007 Q78 / Path X (verification §3). The human/system distinction is carried at the service-context layer (`caller.user_id` null + `caller.system_actor` string) and collapses to the seeded service-account uuid (`SYSTEM_ACTOR_USER_ID`) at write time — system-proposed rules attribute via the `withInvariants` service-account adaptation. **No `actor_type` column.** ADR-0017's `created_by text` is drift; this ADR supersedes it on that column (amendment, per Decision 4's mechanism).
+**`created_by` actor-reference standard.** `rule_registry.created_by` is `uuid REFERENCES auth.users(id)` per ADR-0007 Q78 / Path X (verification §3). The human/system distinction is carried at the service-context layer (`caller.user_id` null + `caller.system_actor` string) and collapses to the seeded service-account uuid (`SYSTEM_ACTOR_USER_ID`) at write time — system-proposed rules attribute via the `withInvariants` service-account adaptation. **No `actor_type` column.** ADR-0017's `created_by text` is drift; this ADR amends it on that column (per Decision 4's mechanism).
 
 ### 6. Reserve enums, columns, and audit-event vocabulary
 
@@ -201,13 +229,14 @@ The two columns carrying their own closed value sets (`rule_type_preference`, `a
 The executable migration is a separate pass after ratification. Order:
 
 a. **Create new enums** — `rule_type`, `rule_lifecycle_state`, `rule_autonomy_rung`, `bundle_type`, `condition_type`, `action_type`, `trigger_type`, plus the two `org_settings` value-set enums (`rule_type_preference`, `agent_verbosity_for_rules`). All ship full closed membership per Decision 6.
-b. **Create `rule_registry`** — columns per Decision 1, self-FKs for predecessor/successor.
-c. **Create `rule_track_records`** — columns per Decision 2; `rule_id` PK + FK to `rule_registry(id) ON DELETE CASCADE`.
-d. **Backfill `rule_registry` (+ co-created `rule_track_records`) from `vendor_rules`** — for each existing row: `id = rule_id`, `rule_type = 'pattern'`, `lifecycle_state` from `approved_at` (`approved_at IS NOT NULL → 'active'` else `'proposed'`), `current_rung` mapped from `autonomy_tier` (`always_confirm→always_confirm`, `notify_auto→notify_and_auto_post`, `silent→silent_auto`), `created_by`/`created_at` carried over, `name = NULL`; insert the all-zero `rule_track_records` row. **No-op in reproducible environments** (`vendor_rules` empty — verification §1a); retained as an idempotent safety step.
-e. **Alter `vendor_rules`** — add `bundle_type bundle_type NOT NULL`; add `legal_entity_id uuid REFERENCES organizations(org_id) ON DELETE RESTRICT` (nullable, no default); add the FK from `rule_id` to `rule_registry(id)`; drop the now-redundant `created_at`/`created_by` copies (rule-identity audit lives on `rule_registry`).
-f. **Create the expression unique index** on `vendor_rules (org_id, COALESCE(legal_entity_id, org_id), vendor_id, bundle_type)` per Decision 3.
-g. **Drop** `vendor_rules.autonomy_tier` column, then **drop** the `autonomy_tier` enum type (after the §d backfill).
-h. **Add reserved `org_settings` columns** (nullable) per Decision 6 / §8.4.
+b. **Create `rule_registry`** — columns per Decision 1, including `org_id` and the `promoted_*`/`demoted_*`/`retired_*` audit anchors; `UNIQUE (id, org_id)`; the two self-reference `CHECK`s; the two partial unique lineage indexes (predecessor, successor); self-FKs for predecessor/successor.
+c. **Create `rule_track_records`** — columns per Decision 2; `rule_id` PK + FK to `rule_registry(id) ON DELETE CASCADE`; the five non-negative counter `CHECK`s.
+d. **Backfill `rule_registry` (+ co-created `rule_track_records`) from `vendor_rules`** — for each existing row: `id = rule_id`, `org_id = vendor_rules.org_id`, `rule_type = 'pattern'`, `lifecycle_state` from `approved_at` (`approved_at IS NOT NULL → 'active'` else `'proposed'`), `current_rung` mapped from `autonomy_tier` (`always_confirm→always_confirm`, `notify_auto→notify_and_auto_post`, `silent→silent_auto`), `created_by`/`created_at` carried over, `name = NULL`; insert the all-zero `rule_track_records` row. **No-op in reproducible environments** (`vendor_rules` empty — verification §1a); retained as an idempotent safety step.
+e. **Alter `vendor_rules`** — add `bundle_type` **nullable first**, then `UPDATE vendor_rules SET bundle_type = 'born_paid_bill' WHERE bundle_type IS NULL` (legacy/manual rows take the v1-active value), then `ALTER COLUMN bundle_type SET NOT NULL` (no permanent DB default — future writers set it explicitly); add `legal_entity_id uuid REFERENCES organizations(org_id) ON DELETE RESTRICT` (nullable, no default); add the composite FK `(rule_id, org_id) → rule_registry(id, org_id) ON DELETE CASCADE`; drop the now-redundant `created_at`/`created_by` copies (rule-identity audit lives on `rule_registry`).
+f. **Duplicate-detection preflight** — assert no duplicate `(org_id, COALESCE(legal_entity_id, org_id), vendor_id, bundle_type)` rows exist on `vendor_rules` (a diagnostic `SELECT … GROUP BY … HAVING count(*) > 1`); abort with a readable error if any exist, so the migration fails cleanly here rather than on the index build. Runs **after** §e because the key references `bundle_type`, which §e adds and backfills.
+g. **Create the expression unique index** on `vendor_rules (org_id, COALESCE(legal_entity_id, org_id), vendor_id, bundle_type)` per Decision 3.
+h. **Drop** `vendor_rules.autonomy_tier` column, then **drop** the `autonomy_tier` enum type (after the §d backfill).
+i. **Add reserved `org_settings` columns** (nullable) per Decision 6 / §8.4.
 
 (The substrate-mod test-staleness review per `.claude/rules/migrations.md` fires at migration-authoring time — broadening enums / dropping a type / new unique index all qualify.)
 
@@ -223,7 +252,7 @@ This ADR explicitly does **not**:
 - Change audit-payload storage. Only the event-name vocabulary is reserved (Decision 6 caveat).
 - Build the Stage 1 canvas UI (Ring 2A).
 - Integrate any service caller. All three services ship defined-but-inert.
-- Establish or modify an INV-ID. Substrate is inert at Ring 1; the enforced invariant lands when Ring 2 wires the evaluator.
+- Assign an INV-* runtime invariant ID. Ring 1 *does* land DB-level enforcement (FKs, unique indexes, `CHECK`s, enum closure, NOT NULL); what defers to Ring 2 is the runtime INV-* invariant with an assigned ID, which lands when the evaluator wires runtime enforcement.
 
 ---
 
@@ -234,12 +263,14 @@ This ADR explicitly does **not**:
 - Ring 2A's rung consumers read `rule_registry.current_rung`; the don't-resurrect-`autonomy_tier` discipline carries forward as a standing note.
 - The `COALESCE(scoped_fk, org_id)` expression-unique-index pattern becomes project-canon for the "scoped FK in a unique constraint, app-layer-defaulted to org_id" shape; future tables follow it instead of re-deriving.
 - ADR-0017 is reconciled completely (not partially): the registry/track-record split, the `bundle_type` enum + column + constraint, the `legal_entity_id` column, and the enum-naming/`created_by` amendments all land in one migration.
+- The registry is the **tenant-scoping identity surface** for all rule materializations (`rule_registry.org_id`); cross-rule queries and RLS scope there, and the composite child FK `(rule_id, org_id)` prevents parent/child org divergence. Future non-vendor materializations inherit org ownership centrally rather than reinventing it.
+- **Cascade is hard-delete cleanup, not retirement.** `ON DELETE CASCADE` (organizations → `rule_registry` → `vendor_rules` / `rule_track_records`) fires only on an actual row delete (admin / tenant teardown). Retirement is a `lifecycle_state = retired` transition that never deletes a row — a retired rule's registry, track-record, and lineage rows persist for audit. A future implementer reading the cascade should not infer that retiring a rule deletes anything.
 
 **Constrains / costs.**
 - `rule_evaluated`'s event-name reservation **requires** Ring 2 to settle audit-payload storage before emitting — a named dependency, not a free reservation.
 - Creating the `bundle_type` enum pulls a slice of ADR-0012 §12 substrate into Ring 1 (the enum was unmigrated). This is deliberate — partial reconciliation would re-create the drift Ring 1 fixes — but it is a real scope reach beyond the rule core, surfaced for CTO acknowledgment.
 - The co-creation rule (Decision 5) is a deviation from strict single-writer; it is named and bounded (creation only; updates stay single-writer) but is a complexity the reader must hold.
-- Seven new enums + three reserve-only enums show up in generated types immediately while remaining inert — generated-type surface grows ahead of consumers (the ADR-0010 reserved-state cost, accepted).
+- Nine new enum types (four load-bearing for `rule_registry` / `vendor_rules` columns; five reserve-only — `condition_type`, `action_type`, `trigger_type`, and the two `org_settings` value-set enums) show up in generated types immediately while remaining inert at v1 — generated-type surface grows ahead of consumers (the ADR-0010 reserved-state cost, accepted).
 
 ---
 
