@@ -1687,7 +1687,7 @@ reproducibility but is not user-emphasized.
 
 - **Q-RTC-1:** Ring 1 substrate timing — does `rule_registry` ship at Ring 1, or is
   it deferred until the second backing rule table exists? Recommendation (§5.10) is
-  to ship; alternative is to defer. CTO call.
+  to ship; alternative is to defer. Ring 1 ADR decision.
 - **Q-RTC-2:** Enum naming reconciliation — rename `autonomy_tier` to
   `rule_autonomy_rung` (matching ADR-0017 text but breaking the live schema) or
   amend ADR-0017 to ratify `autonomy_tier` as canonical (matching the live schema
@@ -1804,8 +1804,8 @@ Three load-bearing clarifications the contract now makes explicit:
    successor with `predecessor_rule_id` lineage. Historical MatchResults always
    point at the rule logic that actually fired.
 
-The spec commits to one Ring 1 recommendation the CTO should weigh in on
-(class-table inheritance for the Registry, §5.10, with the polymorphic spine as the
+The spec carries one Ring 1 recommendation (class-table inheritance for the
+Registry, §5.10, with the polymorphic spine as the
 considered-and-rejected alternative citing `source_document_links` precedent),
 surfaces twelve other open questions, surfaces a four-item ADR-0017 text-vs-schema
 drift that Ring 1 must reconcile as a precondition, and is honest that the
