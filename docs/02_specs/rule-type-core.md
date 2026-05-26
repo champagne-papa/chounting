@@ -1,21 +1,18 @@
-# Rule Type Core — CTO Proposal (Final / V3.2)
+# Rule Type Core
 
-**Status:** Draft for CTO review. Not ratified. Consolidates V2 + the V2.1
-precision patch into a single document suitable for turning into a spec.
+**Status:** Ratified 2026-05-26 by CTO. Canonical spec for the rule-core domain
+layer. Post-ratification location per ADR-0021; ratified from
+`docs/09_briefs/post-mvp/2026-05-25-cto-proposal-rule-type-core.md` at commit
+`2fd2a5ca` on `staging`.
 
-**Posture:** This proposal asks the CTO to ratify an *architectural
-commitment* and a *delivery sequence*, not an implementation. The commitment is
-that rules are a domain concept with their own invariants, lifecycle, and
-evaluation semantics; the delivery sequence is one ratified spec (this document)
-plus three substrate-and-implementation rings downstream. The proposal commits
-to interface, defers substrate and behavior to downstream ADRs per the
+**Scope:** This spec ratifies an architectural commitment and a delivery
+sequence for the rule core, not an implementation. The commitment is that rules
+are a domain concept with their own invariants, lifecycle, and evaluation
+semantics; the delivery sequence is this spec plus three
+substrate-and-implementation rings downstream. The spec commits to interface;
+substrate and behavior are deferred to downstream ADRs per the
 substrate-now-enforcement-later precedent established by ADR-0014, ADR-0017, and
 ADR-0019.
-
-**Pre-ratification location per ADR-0021:** This proposal currently lives outside
-the canonical tree at the pre-ratification location. On ratification it lands at
-`docs/02_specs/rule-type-core.md` with an `INDEX.md` entry; the substrate ADR
-(Ring 1) is a separate downstream deliverable.
 
 **Revision history**
 
@@ -77,10 +74,16 @@ the canonical tree at the pre-ratification location. On ratification it lands at
   names guardrail audit events as activating with the first Ring 2A evaluator that
   supports `otherwise_if` branches, removing the v1-active ambiguity between §8.5
   and §11's worked examples.
+- **Ratified** — 2026-05-26. CTO ratification of V3.2 with no requested changes.
+  Document moves from
+  `docs/09_briefs/post-mvp/2026-05-25-cto-proposal-rule-type-core.md` to
+  `docs/02_specs/rule-type-core.md` per ADR-0021. Status flips from
+  pre-ratification proposal to canonical spec; framing in §1 and §14 updated
+  accordingly. Downstream Ring 1 substrate ADR drafting unblocked.
 
 ---
 
-## 1. Why this proposal exists
+## 1. Why this spec exists
 
 The Chounting architecture has the Agent Ladder gate ratified at Seam 1 of the
 call chain (`agent-tool-architecture.md`), and one concrete rule materialization
@@ -101,12 +104,12 @@ transactions will need it. Categorization of novel items will need it. Without a
 specified domain layer, each consuming workflow will invent its own rule
 dialect, and Phase 3+ will spend significant effort reconciling six dialects.
 
-This proposal specifies the domain layer.
+This spec defines the domain layer.
 
 **Dependency note.** A parallel session is drafting
 `docs/02_specs/document-v2-workflow.md` covering the drag-drop bill workflow.
-The workflow document will reference this proposal once both are ratified. At the
-time of drafting, the workflow document does not yet exist on disk; this proposal
+The workflow document will reference this spec once both are ratified. At the
+time of drafting, the workflow document does not yet exist on disk; this spec
 stands alone but its first concrete consumer is that workflow.
 
 ---
@@ -116,7 +119,7 @@ stands alone but its first concrete consumer is that workflow.
 **Rules are a domain concept, not a storage concept.**
 
 This is the single sentence everything else flows from, and the one architectural
-claim the CTO is being asked to ratify.
+claim this spec ratifies.
 
 Rules have **invariants** — track record is non-negative, rung transitions are a
 legal state machine, predicates must be parseable, promoted rules must satisfy
@@ -160,7 +163,7 @@ implying core imports persistence.
 
 ## 3. Substrate reality check — ADR-0017 text-vs-schema divergence
 
-This subsection is a **precondition** for the proposal's substantive claims. It
+This subsection is a **precondition** for the spec's substantive claims. It
 exists because earlier drafts cited ADR-0017 substrate (`vendor_rule_rung`,
 `clean_approval_count`) as if it were live, and disk verification surfaced that
 the substrate diverges from the ratified ADR text in four places.
@@ -193,7 +196,7 @@ with `autonomy_tier` enum values `('always_confirm', 'notify_auto', 'silent')`.
 | `bundle_type` column (per-vendor per-bundle-type cardinality) | column does not exist; the table has per-vendor cardinality only |
 | `legal_entity_id` + `(org_id, legal_entity_id, vendor_id, bundle_type)` unique constraint | column and constraint do not exist |
 
-**Consequences for this proposal:**
+**Consequences for this spec:**
 
 - The "per-vendor per-bundle-type materialization" phrasing must be read as
   ADR-0017 text *intent*, not shipped fact. This document phrases it as "the
@@ -217,7 +220,7 @@ path is chosen.
 
 Why this is a §3 precondition rather than a §12 open question: the drift was the
 most consequential issue surfaced in review. Surfacing it prominently — rather
-than burying it in cross-references — is what makes the rest of the proposal
+than burying it in cross-references — is what makes the rest of the spec
 honest. The architectural claim in §2 survives intact (it doesn't depend on which
 substrate columns currently exist); the citation discipline tightens; the Ring 1
 sequence sharpens.
@@ -261,7 +264,7 @@ sequence sharpens.
   cycle per ADR-0019.
 - The UI for rule authoring and the promotion ceremony. Product surface.
 - Materiality band default values, thresholds, or band definitions. Future ADR;
-  this proposal reserves only the concept that rule evaluation *may* later consume
+  this spec reserves only the concept that rule evaluation *may* later consume
   materiality posture.
 - Rule logic versioning infrastructure (a `rule_version_id` field). V1 uses
   retire-and-create-new (§5.1); a future ADR may introduce versioning if
@@ -273,7 +276,7 @@ sequence sharpens.
   future ADR.
 - Any amendment to `agent_autonomy_model.md`, `intent_model.md`,
   `mutation_lifecycle.md`, ADR-0007, ADR-0011, ADR-0012, or ADR-0019. The
-  proposal inherits all of these verbatim.
+  spec inherits all of these verbatim.
 - ADR-0017 amendment scope. The four-item drift reconciliation lives in the
   Ring 1 substrate ADR, not in an ADR-0017 amendment, because the Ring 1 ADR is
   also establishing the registry shape and the two decisions are interdependent.
@@ -283,7 +286,7 @@ sequence sharpens.
 ## 5. Domain concepts
 
 The rule core comprises **nine ratified concepts plus one Ring 1 registry
-recommendation**. Each is defined at the level the proposal needs to ratify;
+recommendation**. Each is defined at the level the spec ratifies;
 details deferred to Ring 1 and Ring 2 implementation.
 
 ### 5.1 Rule
@@ -955,7 +958,7 @@ The procedure above spans two architectural layers. The numbering relative to
 - §7 Steps 3–5 (per-transaction limit, daily aggregate, track-record health) are
   Agent Ladder gate checks applied **after** MatchResult.
 
-The numbering relative to this proposal's §6.1 local procedure:
+The numbering relative to this spec's §6.1 local procedure:
 
 - Local Steps 2–5 are the pure rule-core path (`core/rules/`): given indexed
   Rules and a payload, return a typed MatchResult. No DB, no I/O, no agent
@@ -973,7 +976,7 @@ architectural separation §2's load-bearing commitment depends on. Conflict
 resolution's tiebreaker in step 4b uses a `tiebreak_effective_action` computed
 inside the pure core for ordering candidates only — it is not propagated to the
 orchestrator as the authoritative outcome. (Where exactly the gate code lives —
-service vs. orchestrator — is a Ring 2 decision; this proposal commits to the
+service vs. orchestrator — is a Ring 2 decision; this spec commits to the
 separation, not to a file shape.)
 
 ### 6.2 Where the System ceiling fits
@@ -995,7 +998,7 @@ The integration point: the orchestrator calls a ceiling check first (per the
 existing §7 step 1), then calls `ruleEvaluationService.evaluate(proposal)` if the
 ceiling did not fire. The ceiling check has its own service path
 (`systemCeilingService` or named per implementation); the rule core is
-downstream. This proposal does not specify the ceiling check; it commits to
+downstream. This spec does not specify the ceiling check; it commits to
 consuming ceiling-check results before its own evaluation runs.
 
 ### 6.3 Reversal proposals — defensive guard, not normal flow
@@ -1080,7 +1083,7 @@ justification with its own `rule_id`, and each child has its own justification
 with its own `rule_id`. Both can match.
 
 Following ADR-0012 §9's `bundle_effective_ceiling = max(child_mutation.ceiling)`,
-the proposal commits to: `bundle_effective_autonomy = strictest(any participating
+the spec commits to: `bundle_effective_autonomy = strictest(any participating
 rule's effective action)` using the conservatism ordering from §6.1 step 4b
 (applied at the Agent Ladder gate, since effective action is gate-computed per
 §6.1.1).
@@ -1251,7 +1254,7 @@ rule core. A novice org might be configured with `rule_proposal_threshold = 25`
 `rule_proposal_threshold = 8` and `terse`. Same rule core; different per-org
 defaults; same audit story.
 
-**Materiality posture is reserved as a concept, not defined here.** The proposal
+**Materiality posture is reserved as a concept, not defined here.** The spec
 commits to: rule evaluation *may* later consume materiality posture for additional
 gating beyond rung-level autonomy. The bands, thresholds, and defaults are a future
 ADR. No `org_settings.*` columns for materiality are reserved at v1; Ring 1 decides
@@ -1309,10 +1312,10 @@ operational concern, not a Ring 0 concern.
 
 ## 9. Agent-maintained rule-system differentiators
 
-This section names the three capabilities the proposal commits to enabling, which
+This section names the three capabilities the spec commits to enabling, which
 together produce the categorical differentiation from existing accounting software
 with rule systems. (The conversation called these the Claude-Code-shaped
-capabilities; this proposal names them generically because they describe what the
+capabilities; this spec names them generically because they describe what the
 system *does*, not which adjacent system it resembles.)
 
 ### 9.1 Post-hoc anomaly surfacing on auto-posted entries (Ring 2)
@@ -1390,10 +1393,10 @@ the refinements land in.
 
 ## 10. Four-stage delivery sequence
 
-The proposal delivers in four stages: Ring 0 (this spec) plus three downstream
+The rule core delivers in four stages: Ring 0 (this spec) plus three downstream
 rings (substrate, per-workflow implementations, post-v1 learner).
 
-### Ring 0 — This proposal
+### Ring 0 — This spec
 
 A spec document at `docs/02_specs/rule-type-core.md`. No code. Defines: the nine
 ratified domain concepts plus the Registry recommendation (§5); the
@@ -1692,7 +1695,7 @@ reproducibility but is not user-emphasized.
 - **Q-RTC-3:** Rule similarity metric for the system-proposed Rule path. Reserved
   post-v1; first calibration cycle picks the metric.
 - **Q-RTC-4:** The `rule_proposal_threshold` value. Reserved per ADR-0019.
-- **Q-RTC-5:** Materiality bands. Future ADR territory; this proposal reserves the
+- **Q-RTC-5:** Materiality bands. Future ADR territory; this spec reserves the
   concept only.
 - **Q-RTC-6:** Continuous reconciliation feedback into TrackRecord. Future ADR.
 - **Q-RTC-7:** Workflow-level autonomy promotion. When all rules in a workflow are
@@ -1704,7 +1707,7 @@ reproducibility but is not user-emphasized.
 - **Q-RTC-10:** The `cashReceiptService.applyCustomerPayment` (or equivalent)
   AR-side service does not exist on disk. The §11.4 example posits it as future work
   materializing when the AR/reconciliation workflow lands. Naming and service shape
-  are owned by that future workflow, not by this proposal.
+  are owned by that future workflow, not by this spec.
 - **Q-RTC-11:** Bundle-type cardinality in `vendor_rules`. ADR-0017 text specifies
   per-vendor per-bundle-type cardinality; the live schema is per-vendor only. Ring 1
   decides whether to add `bundle_type` per ADR-0017 intent or revise the cardinality
@@ -1719,7 +1722,7 @@ reproducibility but is not user-emphasized.
 
 ## 13. Cross-references
 
-Canonical sources the proposal inherits verbatim:
+Canonical sources the spec inherits verbatim:
 
 - `docs/02_specs/agent_autonomy_model.md` — Agent Ladder, rungs, limits,
   ceremonies, System ceiling, decision tree, promotion thresholds (§4, §4.1–§4.3,
@@ -1757,15 +1760,15 @@ Canonical sources the proposal inherits verbatim:
   — source-tree placement; Appendix A dependency direction;
   `agent/policies/agent-ladder/` empty home.
 - `apps/web/src/agent/policies/agent-ladder/README.md` — the empty source-tree home
-  this proposal populates.
+  this spec populates.
 - `supabase/migrations/20240101000000_initial_schema.sql` — canonical source for the
   live `vendor_rules` shape cited in §3.
 
 ---
 
-## 14. What this proposal asks the CTO to ratify
+## 14. What this spec commits to
 
-**In one paragraph:** The CTO is asked to ratify that rules are a domain concept
+**In one paragraph:** This spec commits to: rules are a domain concept
 with their own invariants, lifecycle, evaluation semantics, and learning rules,
 expressible in a closed Trigger / Condition / Action grammar (structurally similar
 to the WHEN / CHECK-IF / DO grammar that workflow-automation systems like Asana have
@@ -1776,7 +1779,7 @@ authority-capped effective actions, integrated with the existing Agent Ladder an
 System ceiling without amendment to either, and delivered in four stages (this
 interface spec now; a substrate ADR consolidating the Registry + ADR-0017 drift
 reconciliation next; per-workflow implementations as workflows ship; learner
-machinery post-v1 after two calibration cycles of v1 traffic). The proposal enables
+machinery post-v1 after two calibration cycles of v1 traffic). The spec enables
 three agent-maintained rule-system differentiators — post-hoc anomaly surfacing on
 auto-posted entries, shadow-mode execution for new rules, and a rule-refinement loop
 where the agent proposes rule changes for controller approval — which together
@@ -1801,7 +1804,7 @@ Three load-bearing clarifications the contract now makes explicit:
    successor with `predecessor_rule_id` lineage. Historical MatchResults always
    point at the rule logic that actually fired.
 
-The proposal commits to one Ring 1 recommendation the CTO should weigh in on
+The spec commits to one Ring 1 recommendation the CTO should weigh in on
 (class-table inheritance for the Registry, §5.10, with the polymorphic spine as the
 considered-and-rejected alternative citing `source_document_links` precedent),
 surfaces twelve other open questions, surfaces a four-item ADR-0017 text-vs-schema
@@ -1809,8 +1812,9 @@ drift that Ring 1 must reconcile as a precondition, and is honest that the
 categorical differentiation from existing accounting software emerges over months of
 use as the rule library matures — not on day one.
 
-If the architectural commitment in §2 ratifies, Ring 1 substrate proceeds as a
-downstream ADR consolidating the Registry shape and the ADR-0017 reconciliation,
-Ring 2 implementations proceed per workflow, and Ring 3 learner machinery proceeds
-after sufficient v1 corpus accumulates. If the commitment does not ratify, this
-proposal is the right place to find out before code lands.
+With ratification complete, Ring 1 substrate ADR drafting proceeds as the
+next workstream — consolidating the Registry shape, the ADR-0017
+reconciliation, the `rule_track_records` table, the enum naming
+reconciliation, and the single-writer rules. Ring 2 implementations proceed
+per workflow once the Ring 1 substrate ADR ratifies. Ring 3 learner
+machinery proceeds post-v1 after sufficient v1 corpus accumulates.

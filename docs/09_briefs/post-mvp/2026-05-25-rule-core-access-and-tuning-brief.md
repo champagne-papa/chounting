@@ -4,8 +4,8 @@
 amendment to V3.1. Specifies the user-facing surface of the rule core downstream of
 the architecture ratified in the Rule Type Core CTO Proposal (V3.1).
 
-**Anchor:** `00250f34` on `staging` — the V3.1 commit
-(`docs/09_briefs/post-mvp/2026-05-25-cto-proposal-rule-type-core.md`). This brief
+**Anchor:** `00250f34` on `staging` — the V3.1 commit (the document has since been
+ratified and moved to the canonical spec at `docs/02_specs/rule-type-core.md`). This brief
 inherits V3.1's domain model wholesale and does not extend it. Where a user-facing
 surface appears to need something V3.1 does not provide, the brief surfaces it as an
 open question (§8), never as a unilateral change.
@@ -402,8 +402,8 @@ review and for the Ring 1 substrate ADR.
 
 Inherited verbatim; cited, not re-stated.
 
-- `docs/09_briefs/post-mvp/2026-05-25-cto-proposal-rule-type-core.md` — V3.1, the
-  architectural ancestor; this brief inherits its domain model wholesale.
+- `docs/02_specs/rule-type-core.md` — the canonical rule-core spec
+  (ratified). This brief inherits its domain model wholesale.
 - `docs/02_specs/agent_autonomy_model.md` — promotion ceremony (§4.1), demotion /
   Re-Probate (§4.3), decision-tree steps (§7), Agent Policies canvas + template
   language (§8).
