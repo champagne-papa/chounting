@@ -2428,6 +2428,65 @@ export type Database = {
           },
         ]
       }
+      rule_evaluation_log: {
+        Row: {
+          created_at: string
+          disposition: string | null
+          effective_action: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace: Json
+          id: string
+          match_classification: string
+          org_id: string
+          proposed_mutation_id: string | null
+          rule_id: string
+          trace_id: string
+          winning_branch_max_action:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          disposition?: string | null
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace: Json
+          id?: string
+          match_classification: string
+          org_id: string
+          proposed_mutation_id?: string | null
+          rule_id: string
+          trace_id: string
+          winning_branch_max_action?:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          disposition?: string | null
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace?: Json
+          id?: string
+          match_classification?: string
+          org_id?: string
+          proposed_mutation_id?: string | null
+          rule_id?: string
+          trace_id?: string
+          winning_branch_max_action?:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_evaluation_log_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
       rule_registry: {
         Row: {
           created_at: string
@@ -3281,6 +3340,35 @@ export type Database = {
           },
         ]
       }
+      rule_evaluation_30d_view: {
+        Row: {
+          almost_match_count: number | null
+          disposition_auto_posted_count: number | null
+          disposition_blocked_count: number | null
+          disposition_pending_count: number | null
+          disposition_routed_count: number | null
+          effective_auto_post_rung_2_count: number | null
+          effective_auto_post_rung_3_count: number | null
+          effective_block_count: number | null
+          effective_route_count: number | null
+          effective_suggest_count: number | null
+          evaluation_count: number | null
+          guardrail_match_count: number | null
+          last_evaluated_at: string | null
+          org_id: string | null
+          primary_match_count: number | null
+          rule_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_evaluation_log_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
     }
     Functions: {
       attach_document_case_source_with_audit: {
@@ -3407,6 +3495,29 @@ export type Database = {
           p_audit_decision: Json
           p_audit_mutation: Json
           p_decision: Json
+        }
+        Returns: string
+      }
+      test_post_balanced_entry: {
+        Args: {
+          p_amount: number
+          p_credit_account: string
+          p_debit_account: string
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_credit_account: string
+          p_credit_amount: number
+          p_debit_account: string
+          p_debit_amount: number
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
         }
         Returns: string
       }
