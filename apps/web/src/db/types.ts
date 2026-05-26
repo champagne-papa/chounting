@@ -1857,6 +1857,9 @@ export type Database = {
       }
       org_settings: {
         Row: {
+          agent_verbosity_for_rules:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
           ai_fallback_budget: number
           calibration_cadence: number | null
           calibration_test_set_version: string | null
@@ -1866,13 +1869,23 @@ export type Database = {
           confidence_threshold_receipt: number | null
           confidence_threshold_vendor_invoice: number | null
           created_at: string
+          default_initial_rung_for_new_rules:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
           gc_cadence: string
           gc_threshold_hours: number
           org_id: string
+          rule_proposal_threshold: number | null
+          rule_type_preference:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
           updated_at: string
           vendor_match_threshold: number
         }
         Insert: {
+          agent_verbosity_for_rules?:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
           ai_fallback_budget?: number
           calibration_cadence?: number | null
           calibration_test_set_version?: string | null
@@ -1882,13 +1895,23 @@ export type Database = {
           confidence_threshold_receipt?: number | null
           confidence_threshold_vendor_invoice?: number | null
           created_at?: string
+          default_initial_rung_for_new_rules?:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
           gc_cadence?: string
           gc_threshold_hours?: number
           org_id: string
+          rule_proposal_threshold?: number | null
+          rule_type_preference?:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
           updated_at?: string
           vendor_match_threshold?: number
         }
         Update: {
+          agent_verbosity_for_rules?:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
           ai_fallback_budget?: number
           calibration_cadence?: number | null
           calibration_test_set_version?: string | null
@@ -1898,9 +1921,16 @@ export type Database = {
           confidence_threshold_receipt?: number | null
           confidence_threshold_vendor_invoice?: number | null
           created_at?: string
+          default_initial_rung_for_new_rules?:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
           gc_cadence?: string
           gc_threshold_hours?: number
           org_id?: string
+          rule_proposal_threshold?: number | null
+          rule_type_preference?:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
           updated_at?: string
           vendor_match_threshold?: number
         }
@@ -2395,6 +2425,135 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      rule_registry: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_rung: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at: string | null
+          demoted_by: string | null
+          id: string
+          lifecycle_state: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name: string | null
+          org_id: string
+          predecessor_rule_id: string | null
+          promoted_at: string | null
+          promoted_by: string | null
+          retired_at: string | null
+          retired_by: string | null
+          rule_type: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_rung?: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at?: string | null
+          demoted_by?: string | null
+          id?: string
+          lifecycle_state: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name?: string | null
+          org_id: string
+          predecessor_rule_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          rule_type: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_rung?: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at?: string | null
+          demoted_by?: string | null
+          id?: string
+          lifecycle_state?: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name?: string | null
+          org_id?: string
+          predecessor_rule_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          rule_type?: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_registry_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rule_registry_predecessor_rule_id_fkey"
+            columns: ["predecessor_rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_registry_successor_rule_id_fkey"
+            columns: ["successor_rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_track_records: {
+        Row: {
+          clean_approval_count: number
+          guardrail_confirmed_count: number
+          guardrail_fire_count: number
+          guardrail_resolved_into_primary_bounds_count: number
+          last_clean_approval_at: string | null
+          last_guardrail_fire_at: string | null
+          last_rejection_at: string | null
+          last_winning_match_at: string | null
+          model_version: string | null
+          rejection_count: number
+          rule_id: string
+        }
+        Insert: {
+          clean_approval_count?: number
+          guardrail_confirmed_count?: number
+          guardrail_fire_count?: number
+          guardrail_resolved_into_primary_bounds_count?: number
+          last_clean_approval_at?: string | null
+          last_guardrail_fire_at?: string | null
+          last_rejection_at?: string | null
+          last_winning_match_at?: string | null
+          model_version?: string | null
+          rejection_count?: number
+          rule_id: string
+        }
+        Update: {
+          clean_approval_count?: number
+          guardrail_confirmed_count?: number
+          guardrail_fire_count?: number
+          guardrail_resolved_into_primary_bounds_count?: number
+          last_clean_approval_at?: string | null
+          last_guardrail_fire_at?: string | null
+          last_rejection_at?: string | null
+          last_winning_match_at?: string | null
+          model_version?: string | null
+          rejection_count?: number
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_track_records_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: true
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2980,10 +3139,9 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
-          autonomy_tier: Database["public"]["Enums"]["autonomy_tier"]
-          created_at: string
-          created_by: string | null
+          bundle_type: Database["public"]["Enums"]["bundle_type"]
           default_account_id: string | null
+          legal_entity_id: string | null
           org_id: string
           rule_id: string
           vendor_id: string
@@ -2991,10 +3149,9 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
-          autonomy_tier?: Database["public"]["Enums"]["autonomy_tier"]
-          created_at?: string
-          created_by?: string | null
+          bundle_type: Database["public"]["Enums"]["bundle_type"]
           default_account_id?: string | null
+          legal_entity_id?: string | null
           org_id: string
           rule_id?: string
           vendor_id: string
@@ -3002,10 +3159,9 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
-          autonomy_tier?: Database["public"]["Enums"]["autonomy_tier"]
-          created_at?: string
-          created_by?: string | null
+          bundle_type?: Database["public"]["Enums"]["bundle_type"]
           default_account_id?: string | null
+          legal_entity_id?: string | null
           org_id?: string
           rule_id?: string
           vendor_id?: string
@@ -3019,11 +3175,25 @@ export type Database = {
             referencedColumns: ["account_id"]
           },
           {
+            foreignKeyName: "vendor_rules_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "vendor_rules_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_rules_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "vendor_rules_vendor_id_fkey"
@@ -3240,29 +3410,6 @@ export type Database = {
         }
         Returns: string
       }
-      test_post_balanced_entry: {
-        Args: {
-          p_amount: number
-          p_credit_account: string
-          p_debit_account: string
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
-        }
-        Returns: string
-      }
-      test_post_unbalanced_entry: {
-        Args: {
-          p_credit_account: string
-          p_credit_amount: number
-          p_debit_account: string
-          p_debit_amount: number
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
-        }
-        Returns: string
-      }
       update_document_case_state_with_audit: {
         Args: {
           p_audit: Json
@@ -3288,8 +3435,15 @@ export type Database = {
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
       accounting_framework: "aspe" | "ifrs" | "us_gaap" | "other"
+      action_type:
+        | "auto_post_at_rung_2"
+        | "auto_post_at_rung_3"
+        | "suggest_with_required_approval"
+        | "route_to_exception_queue_with_reason"
+        | "block_with_reason"
       address_type: "mailing" | "physical" | "registered" | "payment_stub"
       adjustment_status: "posted" | "pending_approval" | "approved" | "rejected"
+      agent_verbosity_for_rules: "terse" | "standard" | "educational"
       ai_action_status:
         | "pending"
         | "confirmed"
@@ -3297,7 +3451,6 @@ export type Database = {
         | "auto_posted"
         | "stale"
         | "edited"
-      autonomy_tier: "always_confirm" | "notify_auto" | "silent"
       bill_lifecycle_state:
         | "draft"
         | "pending_approval"
@@ -3306,6 +3459,10 @@ export type Database = {
         | "fully_paid"
         | "voided"
         | "cancelled"
+      bundle_type:
+        | "born_paid_bill"
+        | "final_invoice_with_applied_deposit"
+        | "vendor_credit_applied_to_bill"
       business_structure:
         | "sole_prop"
         | "partnership"
@@ -3321,6 +3478,17 @@ export type Database = {
         | "drift_controller_override"
         | "drift_rejected_kept_original"
         | "unknown_drift"
+      condition_type:
+        | "field_equals"
+        | "field_in_range"
+        | "field_outside_range"
+        | "field_in_set"
+        | "field_matches_pattern"
+        | "source_trigger_equals"
+        | "schedule_matches"
+        | "cadence_matches"
+        | "semantic_match_above_threshold"
+        | "category_classification_matches"
       confidence_level: "high" | "medium" | "low" | "novel"
       document_artifact_engine: "paddleocr" | "tesseract" | "claude_vision_3_5"
       document_case_source_role:
@@ -3503,6 +3671,17 @@ export type Database = {
         | "route_to_bank_reconciliation"
         | "route_to_AR_future"
         | "backfill_vendor_prepayment_suggested"
+      rule_autonomy_rung:
+        | "always_confirm"
+        | "notify_and_auto_post"
+        | "silent_auto"
+      rule_lifecycle_state: "proposed" | "active" | "demoted" | "retired"
+      rule_type: "pattern" | "temporal" | "inferential"
+      rule_type_preference:
+        | "pattern_preferred"
+        | "temporal_preferred"
+        | "inferential_preferred"
+        | "no_preference"
       storage_provider:
         | "supabase_storage"
         | "sharepoint_drive"
@@ -3521,6 +3700,15 @@ export type Database = {
         | "at_final_invoice"
         | "review_required"
         | "controller_chooses_per_invoice"
+      trigger_type:
+        | "proposed_mutation_generated"
+        | "proposed_mutation_bundle_generated"
+        | "scheduled_time_occurs"
+        | "external_event_ingested"
+        | "user_drag_drop"
+        | "user_form_submit"
+        | "user_palette_action"
+        | "agent_proposal"
       user_role: "executive" | "controller" | "ap_specialist"
       vendor_prepayment_status:
         | "open"
@@ -3670,8 +3858,16 @@ export const Constants = {
     Enums: {
       account_type: ["asset", "liability", "equity", "revenue", "expense"],
       accounting_framework: ["aspe", "ifrs", "us_gaap", "other"],
+      action_type: [
+        "auto_post_at_rung_2",
+        "auto_post_at_rung_3",
+        "suggest_with_required_approval",
+        "route_to_exception_queue_with_reason",
+        "block_with_reason",
+      ],
       address_type: ["mailing", "physical", "registered", "payment_stub"],
       adjustment_status: ["posted", "pending_approval", "approved", "rejected"],
+      agent_verbosity_for_rules: ["terse", "standard", "educational"],
       ai_action_status: [
         "pending",
         "confirmed",
@@ -3680,7 +3876,6 @@ export const Constants = {
         "stale",
         "edited",
       ],
-      autonomy_tier: ["always_confirm", "notify_auto", "silent"],
       bill_lifecycle_state: [
         "draft",
         "pending_approval",
@@ -3689,6 +3884,11 @@ export const Constants = {
         "fully_paid",
         "voided",
         "cancelled",
+      ],
+      bundle_type: [
+        "born_paid_bill",
+        "final_invoice_with_applied_deposit",
+        "vendor_credit_applied_to_bill",
       ],
       business_structure: [
         "sole_prop",
@@ -3706,6 +3906,18 @@ export const Constants = {
         "drift_controller_override",
         "drift_rejected_kept_original",
         "unknown_drift",
+      ],
+      condition_type: [
+        "field_equals",
+        "field_in_range",
+        "field_outside_range",
+        "field_in_set",
+        "field_matches_pattern",
+        "source_trigger_equals",
+        "schedule_matches",
+        "cadence_matches",
+        "semantic_match_above_threshold",
+        "category_classification_matches",
       ],
       confidence_level: ["high", "medium", "low", "novel"],
       document_artifact_engine: ["paddleocr", "tesseract", "claude_vision_3_5"],
@@ -3903,6 +4115,19 @@ export const Constants = {
         "route_to_AR_future",
         "backfill_vendor_prepayment_suggested",
       ],
+      rule_autonomy_rung: [
+        "always_confirm",
+        "notify_and_auto_post",
+        "silent_auto",
+      ],
+      rule_lifecycle_state: ["proposed", "active", "demoted", "retired"],
+      rule_type: ["pattern", "temporal", "inferential"],
+      rule_type_preference: [
+        "pattern_preferred",
+        "temporal_preferred",
+        "inferential_preferred",
+        "no_preference",
+      ],
       storage_provider: [
         "supabase_storage",
         "sharepoint_drive",
@@ -3923,6 +4148,16 @@ export const Constants = {
         "at_final_invoice",
         "review_required",
         "controller_chooses_per_invoice",
+      ],
+      trigger_type: [
+        "proposed_mutation_generated",
+        "proposed_mutation_bundle_generated",
+        "scheduled_time_occurs",
+        "external_event_ingested",
+        "user_drag_drop",
+        "user_form_submit",
+        "user_palette_action",
+        "agent_proposal",
       ],
       user_role: ["executive", "controller", "ap_specialist"],
       vendor_prepayment_status: [
