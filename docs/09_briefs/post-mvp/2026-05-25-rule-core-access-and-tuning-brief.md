@@ -281,7 +281,9 @@ review and for the Ring 1 substrate ADR.
   indicator is a derived windowed read, but V3.1 §5.9's `clean_approval_count` is a
   cumulative counter. *Proposed:* Ring 1 defines a windowed read (audit-corpus query or
   a 30-day materialized view) feeding the canvas; the cumulative counter alone does not
-  satisfy the indicator.
+  satisfy the indicator. Whichever path Ring 1 picks must meet the freshness bar named
+  in §7 — track-record state must be fresh-enough-to-be-useful, since implicit tuning
+  mutates rule state during normal day-to-day work.
 - **Q-RC-AT-2 — "Last-fired" definition and column.** V3.1 §5.9 stores outcome-specific
   anchors but no single "last matched" timestamp. *Proposed:* define last-fired as the
   most recent evaluation in which the Rule won conflict resolution; Ring 1 decides
@@ -293,7 +295,11 @@ review and for the Ring 1 substrate ADR.
   reserved-but-not-yet-registered (V3.1 §5.7). *Proposed:* rename ships at Stage 1
   (V3.1 §8.5 marks `rule_metadata_updated` v1-active); the `rule_name_snapshot`
   reproducibility guarantee is contingent on the Logic Receipt write path landing, and
-  Ring 1 should note the dependency rather than assume the guarantee holds at v1.
+  Ring 1 should note the dependency rather than assume the guarantee holds at v1. At
+  v1, until INV-AGENT-002 lands, rename ships without snapshot storage — audit
+  references resolve to the Rule's current name at read time, not the name it held at
+  fire time. A small, acceptable audit/UX cost; Ring 1 either accepts it or accelerates
+  the Logic Receipt write path.
 - **Q-RC-AT-4 — Reserve the `proposed` lane in the Stage 1 canvas.** Ring 3 ships the
   learner post-v1, so no `lifecycle_state = proposed` rows exist at Stage 1. *Proposed:*
   yes — leave the proposed lane as a placeholder in the canvas's information
