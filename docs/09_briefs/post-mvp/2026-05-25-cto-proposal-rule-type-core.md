@@ -1,4 +1,4 @@
-# Rule Type Core — CTO Proposal (Final / V3.1)
+# Rule Type Core — CTO Proposal (Final / V3.2)
 
 **Status:** Draft for CTO review. Not ratified. Consolidates V2 + the V2.1
 precision patch into a single document suitable for turning into a spec.
@@ -60,6 +60,23 @@ the canonical tree at the pre-ratification location. On ratification it lands at
   reflect the pure-core-vs-Agent-Ladder-gate separation introduced by this patch;
   diagrams are rendered separately and updated alongside V3.1 before the CTO packet
   ships.
+- **V3.2** — pre-CTO-review precision pass over V3.1; no architectural changes.
+  Seven local fixes: separates §6.1.1's step numbering against
+  `agent_autonomy_model.md` §7 (canonical decision-tree steps 3–5 are gate
+  concerns, not pure-core concerns; this proposal's local steps 2–5 are pure core,
+  7–8 are gate); rewrites §5.2's `max_outcome_action` bullet to remove the residual
+  "ceiling caps effective action" implication and align it with §5.6 / §6.2's
+  short-circuit semantics; adds an explicit §5.2 paragraph distinguishing
+  `applies_to_source_triggers` (payload-compatibility gating) from the
+  `source_trigger_equals` Condition (specificity-contributing predicate); tightens
+  §5.7's `also_matched_rules` ordering language to specify conservatism of
+  `tiebreak_effective_action`; adds a §6.4 composition-of-inputs paragraph
+  clarifying that Four Questions populate from MatchResult (Q2 / Q3) plus the gate's
+  `effective_action` (Q4 outcome clause), preventing Ring 2 implementers from wiring
+  the UI to MatchResult alone; corrects §14's open-question count (eleven → twelve);
+  names guardrail audit events as activating with the first Ring 2A evaluator that
+  supports `otherwise_if` branches, removing the v1-active ambiguity between §8.5
+  and §11's worked examples.
 
 ---
 
@@ -340,9 +357,12 @@ The decision logic within a Rule. Each Branch has:
   Order is significant for diagnostic determinism (§5.7).
 - `max_outcome_action` — exactly one terminal Action from the closed library
   (§5.6), expressing the **maximum permitted** outcome for this branch. The
-  *effective* runtime action is capped by `current_rung`, the System ceiling,
-  per-transaction limits, daily aggregate limits, and track-record health
-  (§6.1 effective action computation).
+  *effective* runtime action is computed downstream by the Agent Ladder gate
+  (§6.1 steps 7–8, §6.1.1) from `current_rung`, per-transaction limits, daily
+  aggregate limits, and track-record health. System ceilings are checked
+  upstream before rule evaluation and short-circuit the rule core entirely
+  (§6.2); the ceiling does not cap effective actions, it prevents them from
+  being computed.
 - `applies_to_evaluation_triggers` — optional. When a Rule declares multiple
   Evaluation Triggers, a Branch may restrict itself to a subset; Branches whose
   `applies_to_evaluation_triggers` excludes the current event are skipped during
@@ -357,6 +377,17 @@ The decision logic within a Rule. Each Branch has:
 - `annotations` — optional, non-authoritative metadata consumed by the
   orchestrator for side-effect hints (e.g., "tag for the reconciliation lens").
   Annotations cannot alter the autonomy outcome.
+
+**`applies_to_source_triggers` vs `source_trigger_equals` Condition (§5.5):**
+Use `applies_to_source_triggers` for payload-compatibility gating — it decides
+whether the Branch is *eligible* to evaluate at all. Branches whose
+`applies_to_source_triggers` excludes the current proposal's `source_trigger`
+are skipped before any Condition is evaluated. Use `source_trigger_equals` when
+the proposal source is part of the logical predicate and should contribute to
+specificity and to the explanation surfaced in the Four Questions. The two are
+not redundant: the first is a structural guard preventing
+field-not-present-on-payload errors; the second is a Condition with specificity
+weight participating in conflict resolution.
 
 **Branch types:**
 
@@ -573,7 +604,8 @@ Fields:
 - `match_classification` — one of the three states below.
 - `also_matched_rules` — Rules that matched but lost on conflict resolution.
   Ordered by the full conflict-resolution ordering: specificity descending, then
-  conservatism descending, then recency descending, then stable UUID.
+  conservatism of `tiebreak_effective_action` descending (per §6.1 step 4b), then
+  recency descending, then stable UUID.
 - `almost_match_rules` — Rules whose Trigger matched but no Branch matched. Each
   entry carries `rule_id`; `closest_branch_id` (the Branch with the most
   Conditions that passed; deterministic tiebreak: lowest `branch_order` wins);
@@ -914,17 +946,23 @@ through `proposed_mutation_generated` per §5.4):
 
 ### 6.1.1 Pure core vs. Agent Ladder gate
 
-The procedure above spans two architectural layers and corresponds to Steps 2–5 of
-`agent_autonomy_model.md` §7's decision tree (Step 1, the System ceiling, is
-upstream per §6.2):
+The procedure above spans two architectural layers. The numbering relative to
+`agent_autonomy_model.md` §7's canonical decision tree:
 
-- **Steps 2–5 are the pure rule core** (`core/rules/`): given indexed Rules and a
-  payload, return a typed MatchResult. No DB, no I/O, no agent imports;
-  deterministic and reproducible. (Step 1 — trigger-index lookup and input
-  assembly — is the service layer feeding the pure core; the pure core receives
-  already-indexed Rules and TrackRecord snapshots.)
-- **Steps 7–8 are the Agent Ladder gate** (service/orchestrator layer): given a
-  MatchResult and the canonical rung / limit / track-record state, compute the
+- §7 Step 1 (System ceiling) is upstream of rule evaluation entirely (§6.2).
+- §7 Step 2 (rule match) is implemented by `ruleEvaluationService` plus the pure
+  rule core.
+- §7 Steps 3–5 (per-transaction limit, daily aggregate, track-record health) are
+  Agent Ladder gate checks applied **after** MatchResult.
+
+The numbering relative to this proposal's §6.1 local procedure:
+
+- Local Steps 2–5 are the pure rule-core path (`core/rules/`): given indexed
+  Rules and a payload, return a typed MatchResult. No DB, no I/O, no agent
+  imports; deterministic and reproducible. (Local Step 1 — trigger-index lookup
+  and input assembly — is the service layer feeding the pure core.)
+- Local Steps 7–8 are the Agent Ladder gate (service/orchestrator layer): given
+  a MatchResult and the canonical rung / limit / track-record state, compute the
   runtime `effective_action` and dispatch.
 
 The pure core does the rule logic; the gate does the authority decision. The pure
@@ -976,6 +1014,16 @@ rule core robust to orchestrator bugs. Ceiling semantics stay in their canonical
 home (`agent_autonomy_model.md` §6) without leaking into the rule core.
 
 ### 6.4 Four Questions population
+
+**Composition of inputs.** The final Four Questions rendering is composed from two
+inputs: the MatchResult produced by the pure rule core (§6.1 step 5), and the
+`effective_action` produced by the Agent Ladder gate (§6.1 steps 7–8, §6.1.1). The
+MatchResult populates the rule-identity, predicate-explanation, and track-record
+fields of Q2 and Q3; the gate's `effective_action` populates the outcome language
+of Q4 ("auto-posted" vs. "routed to approval" vs. "routed to Needs Attention" vs.
+"blocked"). Q2 and Q3 are owned by the pure core's MatchResult; Q4's outcome clause
+is owned by the gate's `effective_action`. The UI templating
+(`messages/{locale}.json` per `intent_model.md` §6) consumes both.
 
 This refines `intent_model.md` §5. The grammar is unchanged; the contract for how
 rule evaluation populates each question is specified.
@@ -1244,9 +1292,13 @@ Reserved event types (per ADR-0010 reserved-enum-states discipline):
 
 **v1 active subset** for controller-authored Rules: `rule_activated`,
 `rule_promoted`, `rule_demoted`, `rule_retired`, `rule_metadata_updated`,
-`rule_evaluated`, `rule_match_confirmed`, `rule_match_rejected`. Proposal,
-guardrail, and refinement events activate when their corresponding service paths
-land.
+`rule_evaluated`, `rule_match_confirmed`, `rule_match_rejected`. Proposal events
+activate when the Ring 3 learner ships. Refinement events activate when the
+rule-refinement loop ships. **Guardrail events activate with the first workflow
+evaluator that supports `otherwise_if` guardrail branches.** If the first Ring 2A
+drag-drop bill evaluator ships guardrails in v1, then `rule_guardrail_fired`,
+`rule_guardrail_confirmed`, and `rule_guardrail_resolved_into_primary_bounds` are
+v1-active for that workflow.
 
 **Audit volume note.** `rule_evaluated` emission is per-evaluation. If volume
 becomes prohibitive at scale, an amendment may narrow emission to material outcomes
@@ -1752,7 +1804,7 @@ Three load-bearing clarifications the contract now makes explicit:
 The proposal commits to one Ring 1 recommendation the CTO should weigh in on
 (class-table inheritance for the Registry, §5.10, with the polymorphic spine as the
 considered-and-rejected alternative citing `source_document_links` precedent),
-surfaces eleven other open questions, surfaces a four-item ADR-0017 text-vs-schema
+surfaces twelve other open questions, surfaces a four-item ADR-0017 text-vs-schema
 drift that Ring 1 must reconcile as a precondition, and is honest that the
 categorical differentiation from existing accounting software emerges over months of
 use as the rule library matures — not on day one.
