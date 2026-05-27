@@ -18,6 +18,20 @@ export type RuleLifecycleState = Database['public']['Enums']['rule_lifecycle_sta
 export type ConditionType = Database['public']['Enums']['condition_type'];
 export type TriggerType = Database['public']['Enums']['trigger_type'];
 
+// --- db-origin Row subsets (gate inputs reach them via shared; agent ↛ db) ---
+/**
+ * The subset of `rule_registry` the Agent Ladder gate reads (ADR-0025 §5 /
+ * Decision 5). Derived via `Pick` from the live generated Row (the `rule_registry`
+ * table is part of the Ring 1 rule-type-core substrate, live at HEAD) so a future
+ * column rename breaks loudly at `tsc` here rather than silently at the orchestrator
+ * construction site. The gate reads `current_rung`; `id` is carried for stub
+ * activation (post-v1). The orchestrator (Commit 3+) constructs this from the full Row.
+ */
+export type RuleRegistryRow = Pick<
+  Database['public']['Tables']['rule_registry']['Row'],
+  'id' | 'current_rung'
+>;
+
 // §5.4 trigger roles. Evaluation Triggers are what rule evaluation runs against;
 // a Rule's Trigger Set contains only these two. The remaining trigger_type values
 // are Proposal-Source triggers, filtered via a source_trigger_equals Condition —
