@@ -314,6 +314,10 @@ and the Status-line clause-accumulation pattern.
 ### INV-RULE-001
 
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+
+### INV-RULE-002
+
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 <!-- END:generated-by-invariant -->
 
 ## By phase

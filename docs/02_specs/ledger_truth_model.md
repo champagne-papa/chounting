@@ -2140,6 +2140,57 @@ leaf.
 
 ---
 
+### INV-RULE-002 — the pure-core rule evaluator is deterministic (Layer 2)
+
+**Invariant.** `evaluate(rules, context)`
+(`apps/web/src/core/rules/evaluator.ts`) is a pure function: identical
+inputs produce a byte-identical `MatchResult` on every call — same
+`winning_rule_id`, same `also_matched_rules` / `almost_match_rules`
+ordering, same `evaluation_trace`. The second member of the
+**`INV-RULE-*` domain family** (ADR-0025). Reserved as a candidate at
+ADR-0024 Decision 9 / ADR-0025; registered here at the Ring 2A-core
+authoring rollout's Commit 1, when the evaluator + its determinism test
+landed (the spec-without-enforcement rule).
+
+**Scope — code property, test-verified (read this before relying on
+it).** Unlike INV-RULE-001 (DB/RLS-enforced, Layer 1a) and most Layer 2
+invariants (structural / runtime-enforced via a guard, type, or export
+contract), determinism is a property *across invocations* rather than
+*within* one. No single-run check can validate it — there is no sentinel
+that rejects a "non-deterministic" evaluation, because non-determinism is
+about identity across runs, not a rule violation in any one run. The
+verification site is the `tests/unit/ruleEvaluator.test.ts` determinism
+block (byte-identical `JSON.stringify` + reorder-invariance). **This is
+the first test-verified INV in the registry**; future test-verified
+invariants follow the same shape — a named property plus a verifying
+test, annotated at the property's code home.
+
+**Threat model.** Protects the §7 purity contract — reproducibility and
+auditability. The same proposal must re-derive the same rule outcome
+across runs, so `rule_evaluation_log` traces are replayable,
+`also_matched` / `almost_match` orderings are stable, and a rule decision
+can be re-derived for audit. Non-determinism would make the evaluation
+log non-reproducible and orderings unstable, undermining the log's
+evidentiary value.
+
+**Enforcement.** Test-verified (byte-identical `JSON.stringify` +
+reorder-invariance). Structurally reinforced by
+`agent-first-import-boundaries` precluding `db/` / `services/` / `agent/`
+imports in `core/`, which removes the most common non-determinism vectors
+(DB reads, network). Clock and RNG (`Date.now()`, `Math.random()`,
+`performance.now()`) are JavaScript globals, **not** import-gated —
+adding one to a predicate evaluator would compile cleanly through the
+import boundary and break only the determinism test, which is therefore
+the load-bearing check.
+
+**Annotation site.** `apps/web/src/core/rules/evaluator.ts`
+(`// INV-RULE-002`), establishing bidirectional reachability with this
+leaf. The reachability diff scans `src/` + `supabase/migrations/` (not
+`tests/`), so the annotation lives at the property's code home; the
+determinism test is the verification.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the

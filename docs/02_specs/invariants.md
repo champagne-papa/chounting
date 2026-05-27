@@ -52,6 +52,17 @@ from 21 → 22. INV-RULE-001 is *user-path* append-only (RLS-only;
 discipline) — not the trigger-authoritative all-path shape of
 INV-AUDIT-002; see its leaf "Scope" subsection.
 
+ADR-0025 (2026-05-26) added INV-RULE-002 (Layer 2; the pure-core rule evaluator
+is deterministic) at the Ring 2A-core authoring rollout's Commit 1, when the
+evaluator + its determinism test landed. Layer 2 count updates from 7 → 8; total
+distinct INV-IDs from 22 → 23. INV-RULE-002 is the **first test-verified INV** in
+the registry — a property *across invocations* (byte-identical output for identical
+input), verified by a unit test rather than DB-enforced or runtime-guarded; see its
+leaf "Scope" subsection. (The "## The 20 invariants" heading below + the
+`control_matrix.md` section-heading counts remain frozen snapshots, reconciled at a
+dedicated doc-sync pass — not per-addition; the reachability statement here is the
+live count.)
+
 The verification command, reproducible at any future point:
 
 ```bash
@@ -92,6 +103,7 @@ layer, the order matches the order the invariants appear in
 | 20 | INV-AUDIT-001 | 2 | Every mutating service call writes an `audit_log` row in the same transaction | TypeScript service function + call-site discipline | [leaf](ledger_truth_model.md#inv-audit-001--every-mutating-service-call-writes-an-audit_log-row-in-the-same-transaction) | `src/services/audit/recordMutation.ts` (primary); `src/services/accounting/journalEntryService.ts` (call site in `post`) |
 | 21 | INV-DOC-001 | 2 | Bills require attached primary document | TypeScript service function (Zod schema + business-logic check) | [leaf](ledger_truth_model.md#inv-doc-001--evidence-completeness-for-committed-bills-layer-2) | `src/services/spend/billService.ts` (function `post`) |
 | 22 | INV-RULE-001 | 1a | `rule_evaluation_log` is append-only (user-path) | RLS policy (user-path; UPDATE/DELETE `USING(false)`, no user INSERT) | [leaf](ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a) | `supabase/migrations/20240164000000_rule_evaluation_log.sql` (policies `rule_evaluation_log_no_update` / `rule_evaluation_log_no_delete`) |
+| 23 | INV-RULE-002 | 2 | The pure-core rule evaluator is deterministic | Pure-function property (test-verified) | [leaf](ledger_truth_model.md#inv-rule-002--the-pure-core-rule-evaluator-is-deterministic-layer-2) | `apps/web/src/core/rules/evaluator.ts` (`evaluate`); verified by `apps/web/tests/unit/ruleEvaluator.test.ts` |
 
 ## Cross-layer pairings
 

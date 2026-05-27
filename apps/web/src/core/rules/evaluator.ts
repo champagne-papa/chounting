@@ -66,6 +66,10 @@ function byRuleId(a: AlmostMatchRule, b: AlmostMatchRule): number {
  * Evaluate the pre-filtered candidate `rules` against `context`. The service layer
  * has already restricted `rules` to those whose Trigger Set includes the evaluation
  * trigger (rule-type-core §6.1 step 1); the pure core does branch + conflict logic.
+ *
+ * INV-RULE-002 (determinism): identical (rules, context) yields a byte-identical
+ * MatchResult on every call. Verified by tests/unit/ruleEvaluator.test.ts; leaf at
+ * docs/02_specs/ledger_truth_model.md#inv-rule-002.
  */
 export function evaluate(rules: Rule[], context: EvaluationContext): MatchResult {
   const matches: RuleMatch[] = [];

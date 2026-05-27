@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0007", "0010", "0011", "0017", "0020", "0023", "0024"]
-invariants: []
+invariants: ["INV-RULE-002"]
 ---
 
 # ADR-0025: Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas
@@ -28,6 +28,17 @@ does **not** amend or supersede any prior ADR: ADR-0024's substrate
 2A-core shape are ratified canon, consumed here and made concrete — not
 relitigated. The `related` set records the ADRs these seams read from; none is
 amended. `supersedes: []`.
+
+**Amended 2026-05-26** (Ring 2A-core authoring rollout, Commit 1) to add
+INV-RULE-002 to the frontmatter `invariants:` field, following its registration in
+`invariants.md` / `ledger_truth_model.md` / `control_matrix.md` when the pure-core
+evaluator + its determinism test landed. The frontmatter was `[]` at ratification
+(no enforcement existed yet — the spec-without-enforcement rule); it now reflects
+the registered invariant. INV-RULE-002 (evaluator determinism; Layer 2;
+test-verified) is the **first of two** INV-RULE candidates this rollout registers —
+the second, INV-RULE-003 (single-writer for `rule_evaluation_log`), is expected to
+land an analogous amendment at Commit 3 close, when
+`ruleEvaluationService.recordEvaluation` becomes the sole writer.
 
 ## Date
 
