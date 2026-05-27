@@ -1,5 +1,7 @@
 # Ring 2A-core Implementation Seams — Pure-Core Evaluator, Agent Ladder Gate, Services, Route Handler, Stage 1 Canvas
 
+**RATIFIED 2026-05-26 as [ADR-0025](../../../07_governance/adr/0025-ring2a-core-implementation-seams.md).** Per ADR-0021 §4, this design spec is now preserved as historical reference; the ratified ADR carries the canonical record. One ratification-time correction not in the V0.2 content below: the `modules` frontmatter omits `shared` (not a `taxonomy.md` module token — it would fail `adr:lint`), landing `[db, agent, core]` to match ADR-0024; the V0.2 planned `[…, shared]` is corrected in ADR-0025's Context (the `shared/rules/` work is fully described in Decisions 3 + 5 regardless). All other decisions carry verbatim. The content below describes the pre-ratification (V0.2) state.
+
 **Status:** Pre-ratification design spec (ADR-0021 §4 / Alternative 5). Routes
 through `docs/09_briefs/post-mvp/specs/`; lands at
 `docs/07_governance/adr/0025-ring2a-core-implementation-seams.md` with `status:
