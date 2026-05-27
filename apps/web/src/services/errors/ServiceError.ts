@@ -119,7 +119,13 @@ export type ServiceErrorCode =
   // `PIPELINE_TRANSIENT_EXHAUSTED`"; §12.2: pipeline_unavailable
   // exception class with no-retry semantics).
   | 'PIPELINE_TRANSIENT_EXHAUSTED'
-  | 'PIPELINE_UNAVAILABLE';
+  | 'PIPELINE_UNAVAILABLE'
+  // Rule services (Ring 2A-core Commit 3; ADR-0025 §6). Generic IO failures
+  // reuse READ_FAILED / POST_FAILED (periodService precedent); these are the
+  // rule-domain semantic codes.
+  | 'RULE_NOT_FOUND'          // rule_registry / vendor_rules lookup miss
+  | 'RULE_LIFECYCLE_INVALID'  // illegal lifecycle transition (e.g. promote/demote/retire a retired rule)
+  | 'RULE_CREATE_FAILED';     // create_vendor_rule_atomic RPC failure
 
 export class ServiceError extends Error {
   constructor(
