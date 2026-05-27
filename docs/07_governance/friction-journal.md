@@ -16128,3 +16128,74 @@ left the scenario `it.skip` with `[NEEDS-FIX]` pointing here. Did NOT spend paid
 Modal $ on its e2e (the failure is statically proven). Born-paid bundle fix is
 the named next arc. Grounding came from the closeout work; see
 `docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`.
+
+## 2026-05-27 — Four-category prompt-drift typology from the ADR-0025 Ring 2A-core rollout (NOTE)
+
+The ADR-0025 five-commit authoring rollout (Commits 1–5, `8a69ab8f` →
+`dc1d959e`, closed 2026-05-27) produced four structurally distinct categories of
+prompt-vs-reality drift, each first surfaced in a different commit and each caught
+by a different mechanism. Recording the set converts individual catches into a
+*family of expected catches* — a checklist a future rollout's HEAD pass can run
+against its own prompt, rather than rediscovering each class cold.
+
+**(A) prompt-vs-disk.** Commit 2 (`101e7920`): the prompt assumed `rule_registry`
+would land in Commit 3, but disk already had it at HEAD (shipped by a prior Ring 1
+arc). Caught by the HEAD-pass disk read before authoring. The discriminator is
+*the disk* — read the substrate you are about to build on; don't trust the
+prompt's account of what exists.
+
+**(B) prompt-vs-ratified-ADR.** Commit 3 (`eaccc37d`): five service-method
+signatures in the prompt had drifted from ADR-0025's ratified Decisions 6/7 during
+the prompt-drafting pass. Caught by reading the ADR's Decisions section directly
+during the HEAD pass. The discriminator is *the ratified contract* — re-read the
+ADR text, not the rollout summary's paraphrase of it.
+
+**(C) prompt-vs-local-environment.** Commit 3 test session: the prompt did not
+specify migration-apply ordering against the integration gate, and the local DB
+returned PGRST202 (RPC-not-found) until migration `20240165` was applied — an
+earlier gate run would have given incomplete signal. The discriminator is *the
+running environment* — a migration-bearing commit needs an explicit "migration
+applied locally before the gate run" step.
+
+**(D) gap-fill discovered at consumer.** Commit 4 (`c326adb8`): Commit 3 added
+`RULE_NOT_FOUND` / `RULE_LIFECYCLE_INVALID` / `RULE_CREATE_FAILED` to
+`ServiceError.ts` without HTTP-status mappings; Commit 4's routes were the first
+consumers and the gap surfaced at authoring. Category D is **not** a prompt-vs-
+truth mismatch — it is *deferred completion*: Commit N leaves a thread that Commit
+N+1 picks up. Its discipline is not "verify against disk" but "verify the consumer
+side resolves the producer side's open threads" — the **category-D forward-scan**.
+
+**The loop-closing meta-instance.** The category-D forward-scan, named at Commit 4
+close and designed into the Commit 5 prompt, then caught a drift *in that very
+prompt*: the Commit 5 prompt asserted `RULE_LIFECYCLE_INVALID` → 422, but Commit
+4's `serviceErrorToStatus` maps it to **409** (state-conflict, mirroring
+`PERIOD_ALREADY_LOCKED`). The executor's forward-scan read the mapping from disk,
+caught the 422, and the Commit 5 component test asserts 409 (`dc1d959e`). A
+discipline designed to catch class X caught an instance of X *in the structure
+that created the discipline* — the prompt itself. This is the strongest available
+validation of the forward-scan: not designed-then-unexercised, but earned on a
+live catch, and the catch was against its own author.
+
+**Standing disciplines (carry-forward to future arcs).** Two disciplines earned
+their place across this rollout and now apply to every multi-commit arc's
+prompt-drafting and HEAD-pass workflow:
+
+- The **count-citation guard** (Commit 4 — `ACTION_NAMES` / CA-28 / CA-37): cite
+  the *current* count from disk before authoring a delta; three-layer count
+  agreement (`ACTION_NAMES` = DB seed = CA-28 = CA-37) holds atomically in one
+  commit.
+- The **category-D forward-scan** (Commit 4/5): before authoring Commit N+1, scan
+  Commit N's outputs for unwired threads the new work will consume.
+
+The load-bearing observation underneath both: **the drafter is not exempt from the
+disciplines the prompt enforces on the executor.** The 422-vs-409 instance is the
+proof — the prompt that instructed the executor to verify against disk was itself
+wrong about disk, and only the executor's verification caught it. Future
+prompt-drafting (Web Claude or otherwise) should HEAD-pass its own count citations
+and consumer-thread assumptions with the same rigor it asks of the executor.
+
+N=4 categories across one rollout (observation-grain: each category a distinct
+commit + distinct catch mechanism). Recorded as a friction-journal typology;
+whether the typology + its two standing disciplines graduate to a codified
+convention (`conventions/`) is a separate routing decision (see the
+`codify-convention` skill) deferred to the operator.
