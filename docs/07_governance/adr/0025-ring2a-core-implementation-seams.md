@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0007", "0010", "0011", "0017", "0020", "0023", "0024"]
-invariants: ["INV-RULE-002"]
+invariants: ["INV-RULE-002", "INV-RULE-003"]
 ---
 
 # ADR-0025: Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas
@@ -39,6 +39,16 @@ test-verified) is the **first of two** INV-RULE candidates this rollout register
 the second, INV-RULE-003 (single-writer for `rule_evaluation_log`), is expected to
 land an analogous amendment at Commit 3 close, when
 `ruleEvaluationService.recordEvaluation` becomes the sole writer.
+
+**Amended 2026-05-27** (Ring 2A-core authoring rollout, Commit 3) to add
+INV-RULE-003 to the frontmatter `invariants:` field, following its registration in
+`invariants.md` / `ledger_truth_model.md` / `control_matrix.md` when
+`ruleEvaluationService.recordEvaluation` became the sole writer of
+`rule_evaluation_log`. INV-RULE-003 (single-writer; Layer 2; runtime/structural —
+sole-writer service pattern + code-review discipline) is the **second** of the two
+INV-RULE candidates this rollout registers, and establishes the second Layer-2
+enforcement sub-type (runtime/structural), distinct from INV-RULE-002's
+test-verified sub-type. This completes the rollout's invariant registrations.
 
 ## Date
 

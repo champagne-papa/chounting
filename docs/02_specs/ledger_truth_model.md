@@ -2191,6 +2191,69 @@ determinism test is the verification.
 
 ---
 
+### INV-RULE-003 — rule_evaluation_log has a single writer (Layer 2)
+
+**Invariant.** `ruleEvaluationService.recordEvaluation`
+(`apps/web/src/services/rules/ruleEvaluationService.ts`) is the sole append site
+to `rule_evaluation_log` — no other code inserts rows. The third member of the
+**`INV-RULE-*` domain family** (ADR-0025). Named as the rollout's second candidate
+at ADR-0025 (frontmatter `invariants:` anticipation + the §Status "Amended" note);
+registered here at the Ring 2A-core authoring rollout's Commit 3, when
+`ruleEvaluationService.recordEvaluation` became that sole writer (the
+spec-without-enforcement rule — the enforcement site exists in code now).
+
+**Scope — code property, runtime/structural sub-type (read this before relying on
+it).** INV-RULE-003 establishes the **second Layer-2 enforcement sub-type**. The
+Layer-2 family now spans two:
+
+  - **(a) test-verified** — a named property plus a verifying test; a test failure
+    surfaces a violation. **INV-RULE-002** (evaluator determinism, asserted by
+    `tests/unit/ruleEvaluator.test.ts`) is the exemplar.
+  - **(b) runtime/structural** — the enforcement site is a *code pattern* (a single
+    function owns the write) plus *code-review discipline*; there is no test that
+    asserts "only `recordEvaluation` writes," and no DB constraint binds it.
+    **INV-RULE-003** is the exemplar.
+
+INV-RULE-003 is sub-type **(b)**. **Future Layer-2 INVs should declare which
+sub-type they fall under** — this is the standing taxonomy the registry carries
+forward from here.
+
+Single-writer is **discipline, not DB enforcement** — the same materially-weaker
+shape as INV-RULE-001's service path. INV-RULE-001's RLS makes the log append-only
+against the *user* path (`USING(false)`), but `service_role` bypasses RLS, so any
+service *could* insert into `rule_evaluation_log`; that no service other than
+`ruleEvaluationService.recordEvaluation` does is enforced by the code pattern +
+review, not by the database.
+
+**Threat model.** `rule_evaluation_log` is the source-of-truth evaluation record
+(ADR-0025 §7 / OQ-3a — counters are reconcilable from the log corpus). A second
+writer could append rows that bypass `recordEvaluation`'s row-per-candidate
+expansion + winner-attribute discipline (winner attrs populated only on the winning
+row; `effective_action` / `disposition` set only post-gate), corrupting the log's
+shape, the `rule_evaluation_30d_view` aggregates derived from it, and the
+log-as-source-of-truth reconciliation property. Concentrating the write in one
+service keeps the append shape canonical.
+
+**Enforcement.** Runtime/structural: `recordEvaluation` is the only code that
+inserts into `rule_evaluation_log`; the orchestrator
+(`agent/policies/agent-ladder/ruleEvaluationOrchestrator.ts`) and every other
+caller reach the log *through* it, never inlining an insert. Reinforced by
+`agent-first-import-boundaries` (`'error'`) — only `services/` may write `db/`, so
+the agent layer cannot insert directly — and by the ADR-0025 §6 (OQ-3c) two-method
+split, which keeps the append in `recordEvaluation` rather than `evaluate`. There
+is no runtime sentinel and no test asserting the sole-writer property; **code review
+at the service boundary is the load-bearing check** (the runtime/structural
+sub-type's defining characteristic).
+
+**Annotation site.** `apps/web/src/services/rules/ruleEvaluationService.ts`
+(`// INV-RULE-003` at `recordEvaluation`), establishing bidirectional reachability
+with this leaf. The annotation landed in the Commit 3 feature commit; this leaf +
+the `invariants.md` row + the `control_matrix.md` row land in the registration
+commit — mirroring INV-RULE-002's Commit-1-annotation / registration-commit-docs
+split.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the

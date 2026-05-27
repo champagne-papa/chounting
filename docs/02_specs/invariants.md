@@ -63,6 +63,19 @@ leaf "Scope" subsection. (The "## The 20 invariants" heading below + the
 dedicated doc-sync pass — not per-addition; the reachability statement here is the
 live count.)
 
+ADR-0025 (2026-05-27) added INV-RULE-003 (Layer 2; `rule_evaluation_log` has a
+single writer — `ruleEvaluationService.recordEvaluation` is the sole append site)
+at the Ring 2A-core authoring rollout's Commit 3, when that service became the
+sole writer. Layer 2 count updates from 8 → 9; total distinct INV-IDs from
+23 → 24. INV-RULE-003 establishes the **second Layer-2 enforcement sub-type**:
+*runtime/structural* (the enforcement site is a code pattern + reviewer
+attention), distinct from INV-RULE-002's *test-verified* sub-type. The Layer-2
+family now spans two sub-types — (a) test-verified (INV-RULE-002: a deterministic
+test failure surfaces a violation) and (b) runtime/structural (INV-RULE-003:
+sole-writer service pattern + code-review discipline; no test asserts "only this
+function writes," no DB constraint binds it). Future Layer-2 INVs should name which
+sub-type they fall under; see its leaf "Scope" + "Enforcement" subsections.
+
 The verification command, reproducible at any future point:
 
 ```bash
@@ -104,6 +117,7 @@ layer, the order matches the order the invariants appear in
 | 21 | INV-DOC-001 | 2 | Bills require attached primary document | TypeScript service function (Zod schema + business-logic check) | [leaf](ledger_truth_model.md#inv-doc-001--evidence-completeness-for-committed-bills-layer-2) | `src/services/spend/billService.ts` (function `post`) |
 | 22 | INV-RULE-001 | 1a | `rule_evaluation_log` is append-only (user-path) | RLS policy (user-path; UPDATE/DELETE `USING(false)`, no user INSERT) | [leaf](ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a) | `supabase/migrations/20240164000000_rule_evaluation_log.sql` (policies `rule_evaluation_log_no_update` / `rule_evaluation_log_no_delete`) |
 | 23 | INV-RULE-002 | 2 | The pure-core rule evaluator is deterministic | Pure-function property (test-verified) | [leaf](ledger_truth_model.md#inv-rule-002--the-pure-core-rule-evaluator-is-deterministic-layer-2) | `apps/web/src/core/rules/evaluator.ts` (`evaluate`); verified by `apps/web/tests/unit/ruleEvaluator.test.ts` |
+| 24 | INV-RULE-003 | 2 | `rule_evaluation_log` has a single writer | Runtime/structural (sole-writer service pattern + code-review discipline) | [leaf](ledger_truth_model.md#inv-rule-003--rule_evaluation_log-has-a-single-writer-layer-2) | `apps/web/src/services/rules/ruleEvaluationService.ts` (`recordEvaluation`, the sole append site; `// INV-RULE-003`) |
 
 ## Cross-layer pairings
 
