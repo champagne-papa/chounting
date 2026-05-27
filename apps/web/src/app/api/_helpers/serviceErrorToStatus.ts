@@ -30,6 +30,7 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'MEMBERSHIP_NOT_FOUND':
     case 'AGENT_SESSION_NOT_FOUND':
     case 'RECURRING_TEMPLATE_NOT_FOUND':
+    case 'RULE_NOT_FOUND':
       return 404;
 
     // Gone (resource expired)
@@ -53,6 +54,9 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     // Conflict (state mismatch — server state differs from caller expectation)
     case 'PERIOD_ALREADY_LOCKED':
     case 'PERIOD_NOT_LOCKED':
+    // Rule lifecycle transition rejected (e.g. promote/demote/retire a retired
+    // rule) — state-conflict, mirroring the period-lifecycle cases above.
+    case 'RULE_LIFECYCLE_INVALID':
       return 409;
 
     // Business rule rejections (request is valid but can't be processed)
@@ -96,6 +100,7 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     case 'ADDRESS_WRITE_FAILED':
     case 'PROFILE_UPDATE_FAILED':
     case 'INVITATION_WRITE_FAILED':
+    case 'RULE_CREATE_FAILED':
     default:
       return 500;
   }

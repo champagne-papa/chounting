@@ -18,7 +18,7 @@ import { withInvariants } from '@/services/middleware/withInvariants';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
-import type { RuleAutonomyRung } from '@/shared/rules/types';
+import type { RuleAutonomyRung, RuleLifecycleState } from '@/shared/rules/types';
 
 type Db = ReturnType<typeof adminClient>;
 
@@ -38,6 +38,28 @@ type RuleRegistryReadRow = {
   promoted_at: string | null;
   demoted_at: string | null;
   retired_at: string | null;
+};
+
+// Filter value-sets for listForCanvas. An invalid value on an enum column would
+// error at the DB, so filters apply only for recognized values. Grounded against
+// the rule_autonomy_rung / rule_lifecycle_state enums (migration 20240163).
+const RUNGS = ['always_confirm', 'notify_and_auto_post', 'silent_auto'] as const;
+const LIFECYCLE_STATES = ['proposed', 'active', 'demoted', 'retired'] as const;
+
+/** Enriched per-rule row for the Stage 1 canvas list (ADR-0025 §9). */
+type RuleCanvasRow = {
+  id: string;
+  name: string | null;
+  rule_type: string;
+  current_rung: RuleAutonomyRung;
+  lifecycle_state: RuleLifecycleState;
+  created_at: string;
+  /** Surfaced top-level (Q-RC-AT-2); also the default 'recent' sort key. From rule_track_records. */
+  last_winning_match_at: string | null;
+  /** Cumulative counters (rule_track_records) or null if the row is absent. */
+  track_record: Record<string, unknown> | null;
+  /** Trailing-30-day windowed indicators (rule_evaluation_30d_view) or null. */
+  window_30d: Record<string, unknown> | null;
 };
 
 async function readRow(db: Db, rule_id: string, org_id: string): Promise<Record<string, unknown> & { lifecycle_state: string }> {
@@ -224,5 +246,91 @@ export const ruleRegistryService = {
       .order('created_at', { ascending: false });
     if (error) throw new ServiceError('READ_FAILED', error.message);
     return (data ?? []) as RuleRegistryReadRow[];
+  }),
+
+  /**
+   * Enriched list for the Stage 1 canvas (ADR-0025 §9): rule_registry joined with
+   * rule_track_records (cumulative counters) + rule_evaluation_30d_view (windowed
+   * indicators), merged by rule_id. Read-path — withInvariants (no `action`)
+   * supplies the org-access check via Invariant 3 (input.org_id ∈ caller.org_ids →
+   * ORG_ACCESS_DENIED), mirroring journalEntryService.list. Filters (lifecycle/rung)
+   * apply only for recognized enum values; sort is JS-side because the default order
+   * key (last_winning_match_at) lives on rule_track_records, not the registry.
+   */
+  listForCanvas: withInvariants(async (
+    input: { org_id: string; lifecycle?: string; rung?: string; sort?: string },
+    _ctx: ServiceContext,
+  ): Promise<RuleCanvasRow[]> => {
+    const db = adminClient();
+
+    let q = db
+      .from('rule_registry')
+      .select('id, rule_type, lifecycle_state, current_rung, name, created_at')
+      .eq('org_id', input.org_id);
+    if (input.lifecycle && (LIFECYCLE_STATES as readonly string[]).includes(input.lifecycle)) {
+      q = q.eq('lifecycle_state', input.lifecycle);
+    }
+    if (input.rung && (RUNGS as readonly string[]).includes(input.rung)) {
+      q = q.eq('current_rung', input.rung);
+    }
+    const { data: regRows, error: regErr } = await q;
+    if (regErr) throw new ServiceError('READ_FAILED', regErr.message);
+    const rules = (regRows ?? []) as Array<{
+      id: string;
+      rule_type: string;
+      lifecycle_state: RuleLifecycleState;
+      current_rung: RuleAutonomyRung;
+      name: string | null;
+      created_at: string;
+    }>;
+    if (rules.length === 0) return [];
+
+    const ids = rules.map((r) => r.id);
+    const { data: trRows, error: trErr } = await db
+      .from('rule_track_records').select('*').in('rule_id', ids);
+    if (trErr) throw new ServiceError('READ_FAILED', trErr.message);
+    const trByRule = new Map(
+      (trRows ?? []).map((t) => [(t as { rule_id: string }).rule_id, t as Record<string, unknown>]),
+    );
+
+    const { data: viewRows, error: viewErr } = await db
+      .from('rule_evaluation_30d_view').select('*').eq('org_id', input.org_id).in('rule_id', ids);
+    if (viewErr) throw new ServiceError('READ_FAILED', viewErr.message);
+    const viewByRule = new Map(
+      (viewRows ?? []).map((v) => [(v as { rule_id: string }).rule_id, v as Record<string, unknown>]),
+    );
+
+    const merged: RuleCanvasRow[] = rules.map((r) => {
+      const tr = trByRule.get(r.id) ?? null;
+      return {
+        id: r.id,
+        name: r.name,
+        rule_type: r.rule_type,
+        current_rung: r.current_rung,
+        lifecycle_state: r.lifecycle_state,
+        created_at: r.created_at,
+        last_winning_match_at: (tr?.last_winning_match_at as string | null | undefined) ?? null,
+        track_record: tr,
+        window_30d: viewByRule.get(r.id) ?? null,
+      };
+    });
+
+    const sort = input.sort ?? 'recent';
+    if (sort === 'name') {
+      merged.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    } else if (sort === 'created') {
+      merged.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+    } else {
+      // 'recent' (default): last_winning_match_at DESC, nulls last.
+      merged.sort((a, b) => {
+        const av = a.last_winning_match_at;
+        const bv = b.last_winning_match_at;
+        if (av === bv) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return av < bv ? 1 : -1;
+      });
+    }
+    return merged;
   }),
 };

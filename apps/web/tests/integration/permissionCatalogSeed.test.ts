@@ -1,6 +1,6 @@
 // tests/integration/permissionCatalogSeed.test.ts
 // CA-28: 3 roles × correct permission counts
-// (30 total; controller 30; ap_specialist 7; executive 4).
+// (34 total; controller 34; ap_specialist 7; executive 4).
 
 import { describe, it, expect } from 'vitest';
 import { adminClient } from '../setup/testDb';
@@ -15,15 +15,15 @@ describe('CA-28: permission catalog seed integrity', () => {
     expect(keys).toEqual(['ap_specialist', 'controller', 'executive']);
   });
 
-  it('30 permissions exist', async () => {
+  it('34 permissions exist', async () => {
     const { data } = await db.from('permissions').select('permission_key');
-    expect(data).toHaveLength(30);
+    expect(data).toHaveLength(34);
   });
 
-  it('controller has all 30 permissions', async () => {
+  it('controller has all 34 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'controller').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(30);
+    expect(perms).toHaveLength(34);
   });
 
   it('ap_specialist has exactly 7 permissions', async () => {

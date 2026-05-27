@@ -53,6 +53,11 @@ export const ACTION_NAMES = [
   'bill.reverse',
   // AP/Spend (Phase 8 chunk 8)
   'payment.record',
+  // Rule governance (Ring 2A-core Commit 4; controller-only per ADR-0025 §9)
+  'rule.promote',
+  'rule.demote',
+  'rule.rename',
+  'rule.retire',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];
