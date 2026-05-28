@@ -198,3 +198,141 @@ trigger layer; substrate read of migration 20240133000000 and the
 See `docs/07_governance/friction-journal.md` Phase 5 chunk B5-2
 closeout retrospective entry (2026-05-10) for the codification
 adjudication.
+
+### 3.3 Append-only spine-substrate accumulation-acceptance (mechanism-extension)
+
+`document_relationship_candidates` and `source_documents` are
+**append-only** at the database layer — same mechanism class as
+§3.2's JE/JL, with different specific enforcement:
+
+- **`document_relationship_candidates`** — append-only per RLS
+  `document_relationship_candidates_no_delete` policy +
+  `REVOKE DELETE ON document_relationship_candidates FROM service_role`
+  (migration `20240149000000_document_relationship_candidates_substrate.sql:209-220`).
+  Versioning via `supersedes_candidate_id` per **ADR-0011 §9 rule 3**.
+- **`source_documents`** — append-only per RLS
+  `source_documents_no_delete` policy + `trg_source_documents_no_delete`
+  trigger (migration `20240135000000_storage_substrate.sql:344, 421`).
+  **Service-role does NOT bypass triggers** (same Catch #18
+  substrate-mechanism as JE/JL).
+
+The discipline at cleanup grain: any integration test that writes
+rows to these substrates must NOT attempt DELETE cleanup in
+`afterAll`. Rows accumulate canonically across runs. Tests that
+track row IDs for diagnostic purposes preserve them as `void`
+references — no cleanup attempted. Same pattern as §3.2's
+`createdJeIds` shape.
+
+The discipline at empty-state-assumption grain: tests must NOT
+assume the substrate is empty at session start. Full-suite
+integration sweeps run via `pnpm test:full` (defined in root
+`package.json`) which prepends `pnpm db:reset:clean` to clear all
+substrate before the suite runs. Single-file dev runs rely on
+operator-side manual `pnpm db:reset:clean` invocation between
+iterations when empty-state matters.
+
+**Read-side scoping for tests asserting on substrate state.**
+Filter by per-test identifiers to scope queries to your own
+test's rows — `trace_id` for `document_relationship_candidates`,
+`ingest_batch_id` for `source_documents`. This is per-test
+scoping, not the aggregate cleanliness pattern §3.2 establishes
+for COA-counting tests (neither substrate carries a stable
+test-vs-real tag, so positive-filter-to-your-own-test is the
+natural shape):
+
+```typescript
+// document_relationship_candidates — filter by traceId
+const mineCandidates = candidates.filter((c) => c.trace_id === traceId);
+
+// source_documents — filter by per-test ingest_batch_id
+const mineSources = docs.filter((d) => d.ingest_batch_id === batchId);
+```
+
+**Per-run uniqueness for UNIQUE constraints.** Neither
+`document_relationship_candidates` nor `source_documents` has
+UNIQUE constraints beyond PK (gen_random_uuid() suffices). If
+future append-only spine substrates carry UNIQUE constraints,
+derive per-run unique values from `traceId` analogous to §3.1's
+T-prefix pattern and §3.2's `source_external_id` pattern.
+
+**Canonical afterAll pattern** for tests writing to these
+substrates:
+
+```typescript
+afterAll(async () => {
+  // document_relationship_candidates is append-only (RLS no_delete +
+  // REVOKE DELETE; supersedes_candidate_id versioning per ADR-0011 §9).
+  // source_documents is append-only (RLS no_delete +
+  // trg_source_documents_no_delete; service_role does NOT bypass
+  // triggers). Rows accumulate across runs; full-suite sweeps reset
+  // via pnpm test:full → pnpm db:reset:clean.
+  void createdCandidateIds;
+  void createdSourceDocumentIds;
+});
+```
+
+Trigger: any integration test that writes rows to
+`document_relationship_candidates` or `source_documents` —
+Subsystem-3 candidate-resolution tests;
+`documentPlatformService.createSourceDocument` tests; any test
+invoking `complete_candidate` or `create_candidates_with_audit`
+RPCs.
+
+The cross-substrate root cause: §3.3 and §3.2 share root cause —
+substrate is structurally append-only at the database layer;
+cleanup must happen at the session-boundary layer via
+`pnpm db:reset:clean` (wired into `pnpm test:full`), not at the
+test-boundary layer via `afterAll DELETE`. §3.3 extends §3.2's
+pattern to spine substrates beyond the journal ledger.
+
+---
+**Origin:**
+- First codified: Umbrella test-isolation discipline arc,
+  2026-05-28
+- Evidence basis: N=2 substrate-grain mechanism-extension within
+  §3 discipline class. `document_relationship_candidates`
+  accumulation (2438 rows at HEAD-pass; drift from 1834 at T8
+  closeout 2026-05-28); `source_documents` accumulation (implicit
+  in `trg_source_documents_no_delete` schema + acknowledged
+  inline in `storageProviderIntegration.test.ts:30-33`). Verified
+  via HEAD-pass empirical audit of `apps/web/tests/integration/`.
+- Promoted from: umbrella arc HEAD-pass audit findings.
+- Cross-references: ADR-0011 §9 rule 3 (insert-only spine
+  versioning); §3.2 (sibling discipline for JE/JL same-mechanism);
+  CLAUDE.md "What done means" Condition 1 (`pnpm test:full`
+  push-readiness gate); `docs/04_engineering/conventions/testing.md`
+  (operational discipline naming the substrate-deletability split
+  + full-suite-vs-dev-iteration command pattern).
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The discipline generates
+  concrete operator action: when authoring integration tests
+  that write to these substrates, do NOT add DELETE cleanup in
+  `afterAll` (would be silently rejected — same Catch #18
+  mechanism); do NOT assume empty starting state; use
+  `pnpm test:full` for empty-state-sensitive full-suite sweeps.
+  Without §3.3, a new test author would default to the afterAll-
+  DELETE pattern (matching most other tables) and reproduce the
+  silent-cleanup-rejection failure mode that Catch #18 documented
+  for JE/JL. The discipline closes that failure path at authoring
+  time.
+
+- **Generalizable.** The mechanism class is "append-only spine
+  substrates" — generalizes to any future substrate with REVOKE
+  DELETE + RLS no_delete policy or trigger-blocked DELETE. The
+  candidate and source_documents instances are not coincidental
+  same-shape data; they're two instances of an architectural
+  pattern (insert-only spine versioning per ADR-0011 §9 rule 3
+  plus trigger-enforced append-only-ness). Future spine substrates
+  added to the architecture should be auditable for this
+  discipline at substrate-creation grain.
+
+- **Stable (substrate-mechanism-anchored).** The discipline is
+  anchored in the database layer's structural enforcement (RLS
+  policies + REVOKE statements + triggers). The substrate
+  enforcement is itself stable; the discipline derived from it is
+  therefore stable. Not exploratory — the same Catch #18
+  mechanism that established §3.2 establishes §3.3 by the same
+  evidence shape (substrate-level finding via verify-from-disk on
+  migration files).
