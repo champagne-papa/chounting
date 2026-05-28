@@ -16355,3 +16355,184 @@ available evidence the discipline generalizes — same loop-closing
 meta-shape as item 1's four-category-vigilance-catches-drift-in-the-
 prompt-that-asks-for-vigilance, now extended in the closeout phase to
 catches-drift-in-the-adjudication-that-asks-for-vigilance.
+
+## 2026-05-28 — T8 dispatchTrigger investigation arc closeout: PostgREST truncation diagnosed; F3 pagination shipped (NOTE)
+
+The T8 dispatchTrigger investigation arc — the Condition-1 carry-forward
+from the hygiene-post-ring2a-core closeout (`9f320ded`) — closed today
+after 2 fix commits plus this closeout entry. Arc lineage: `e78f6a9f` →
+`36e8eaaf` → [this closeout commit], all on `staging`, +3 ahead of
+`origin/staging` at close. Cumulative diff: 1 file
+(`apps/web/src/services/document-platform/documentRouterService.ts`),
++83 insertions / -39 deletions. Service-layer-only; no migrations; no
+schema changes.
+
+The hygiene-arc closeout characterized the T8 deviation as "most likely
+date-arithmetic class, date-relative-to-today filter implicated" via a
+T4-scope-bounded read of the test code. The investigation arc's HEAD-pass
+falsified that hypothesis against disk and surfaced the actual mechanism:
+**PostgREST silent truncation of an unbounded fan-out query against
+across-run-accumulation-polluted substrate.** The fix shape adjudicated
+to F3 (uniform pagination) with F1b (SQL-side filter via stored function)
+deferred as the correctness-ceiling fix. Same-bug-different-site
+(`computeT1T2T3FanOut`) brought into scope by empirical audit.
+
+**Diagnostic narrative — hypothesis falsified, mechanism surfaced.** The
+HEAD-pass grep against `documentRouterService.ts` returned zero matches
+for `Date.now` / `new Date()` / `today` / `relativeTo` / `days_ago` in the
+T8 dispatch path. The T8 filter at L2004 is a pure string-range check
+(`extractedDate >= start && extractedDate <= end`); today's date is
+mechanically irrelevant. Static analysis through `buildCompleteInput` →
+`completeCandidate` → vendor_invoice branch → `composeScore` → T8 fan-out
+predicted the test should pass. The disk query then revealed: the test's
+candidate IS on disk with predicted shape
+(`date_proximity.raw_value.extracted='2026-05-14'`,
+`supersedes_candidate_id=null`, correct `org_id`), but the fan-out's
+unbounded `.select()` against `document_relationship_candidates` returns
+only 1000 rows (PostgREST `PGRST_DB_MAX_ROWS=1000` per
+`supabase/config.toml:18`); the org's actual head-of-chain count is 1834
+(via `count: 'exact', head: true` query); the test's freshly-seeded
+candidate is in the 834 silently truncated.
+
+**Same-bug-different-site finding.** `computeT1T2T3FanOut` (L1903) shares
+the same architectural shape (unbounded `.select()` with no `.range()` or
+`.order()`). Currently sub-threshold in test substrate (T1 fan_out_count
+=134, T3=135) so the truncation has not fired at this site, but it's
+latent at operational scale. `computeT5FanOut` is structurally different
+(tightly bounded by `linked_entity_id` equality) and is not the same
+bug. Other `.select()` callsites in `documentRouterService.ts` audited
+(16 total); no other instances. Empirical-not-nominal discriminator
+honored: same-bug-different-site is "same architectural defect at second
+site," not "second site near first."
+
+**Fix shape — F3 uniform pagination, F1b deferred.** F3 paginates via
+`.order('id'|'exception_queue_entry_id', { ascending: true })` +
+`.range()` batched iteration; JS-side filter applies per-batch unchanged.
+Service-layer-only; no migration risk during what's named as an
+investigation-and-fix arc. F1b (Postgres RPC with SQL-side JSONB date
+filter) is the correctness-ceiling shape that avoids loading all
+head-of-chain rows; deferred as substrate-evolution work until perf
+telemetry surfaces need. In-code forward-flags at both fix sites name
+F1b as deferred-not-rejected — discoverable by future-Claude grep on
+perf investigation. Same per-instance-judgment-with-honest-disclaimer
+pattern banked at hygiene-arc closeout (item 7).
+
+**Banked observations (rolled into this closeout; below codification
+threshold).**
+
+- **Closeout-characterization-precision — within-single-run vs across-
+  run pollution distinction.** The hygiene-arc closeout's "DB-state-
+  pollution ruled out (stable in isolation)" framing covered within-
+  single-run pollution (test-order pollution, Arc A item 27 / Phase
+  1.5C precedent) but did NOT rule out across-run-accumulation pollution
+  (the 1834 head-of-chain rows accumulated across many integration test
+  runs). Technically correct within the framing's scope but operationally
+  narrower than the wording suggested. Future arcs reading similar
+  "stable in isolation" framings should not infer broader pollution-class
+  exclusion than the evidence supports.
+- **Diagnostic-revealed-scope-expansion in T4-correct ways.** Scope
+  expanded from "fix T8 test" to "fix production-correctness bug at two
+  sites" because the diagnostic surfaced the same-bug-different-site
+  pattern, not because the drafter pulled in adjacent work. T4 permits
+  diagnostic-driven scope expansion; it forbids drafter-side absorption
+  of adjacent issues. The discriminator is empirical: same architectural
+  defect at the second site (`computeT1T2T3FanOut` qualified) vs nearby
+  but structurally distinct (`computeT5FanOut` did not).
+- **F1b-deferred-not-rejected.** F3 chosen for near-term shipping
+  (service-layer-only, uniform pattern, no migration). F1b remains the
+  correctness-ceiling — load-all-then-filter is structurally suboptimal
+  even with pagination; the in-code forward-flags ensure future-Claude
+  encountering F3 doesn't infer it as the considered-correct shape.
+- **Storage suite failure as same-class-different-substrate pollution.**
+  The full-suite post-fix run surfaced
+  `tests/integration/storageProviderIntegration.test.ts`'s `bucket-not-
+  found (Sub-Q D b: drop-and-recreate)` failure with `StorageApiError:
+  The bucket you tried to delete is not empty`. Orthogonal to this arc's
+  diff scope (service code only) but same class as the candidate-table
+  accumulation pollution this arc surfaced — across-run local-suite-
+  state accumulation, different storage substrate (blob objects vs
+  Postgres rows). See Condition-1 deviation below.
+- **`_tmp_*.ts` repo-hygiene observation.** The arc introduced three
+  diagnostic scripts under `apps/web/scripts/` (`_tmp_jsonb_path_probe.ts`,
+  `_tmp_t8_candidate_query.ts`, `_tmp_t8_count_check.ts`) following a
+  pre-existing pattern (`_tmp_classify_check.ts` already present
+  untracked). Deleted at arc-closeout as working-tree housekeeping
+  (separate from this commit). `.gitignore` does not currently match the
+  `_tmp_*` pattern; future arcs using this scaffolding shape would benefit
+  from explicit gitignore handling. Sibling concern to the test-isolation
+  pollution carry-forwards.
+
+**T4 multi-arc-handoff evidence (N=1 positive instance).** The hygiene-
+arc T4 codification listed as worked-instance #4 "this codification's
+own bounded read of the T8 dispatchTrigger deviation held to
+characterization, not investigation." The investigation arc then
+discovered the bounded read's hypothesis was wrong on substance (date-
+arithmetic was not the failure class). T4 worked as designed: the
+closeout characterized within its scope without committing to a fix
+shape; the investigation arc surfaced the correct mechanism without
+inheriting a wrong fix shape from the closeout. N=1 positive instance
+of T4's value in the multi-arc-handoff direction (not just intra-arc);
+below codification threshold but valuable substrate for future arcs
+revisiting T4's effects across arc boundaries.
+
+### Condition-1 deviation — storageProviderIntegration test failure
+
+The arc's closeout-time `pnpm test` full-suite run at HEAD `36e8eaaf`
+showed **1546 passed | 0 failed | 11 skipped (1557 total)** with **1 test
+file failed**. Vitest counts file-level failures (setup/hook errors)
+separately from test-level failures; the storage failure surfaced in a
+hook path. Compared to hygiene-arc baseline (1546/1/10/1557): -1 failed
+(T8 resolved), +1 skipped (storage tests not run due to setup-path
+failure).
+
+Failing file:
+`tests/integration/storageProviderIntegration.test.ts > Phase 1.Storage chunk N+M: supabaseStorageProvider integration > bucket-not-found (Sub-Q D b: drop-and-recreate)`
+— `StorageApiError: The bucket you tried to delete is not empty`.
+
+Orthogonality to this arc verified: arc commits touched only
+`documentRouterService.ts`; the failing file exercises
+supabaseStorageProvider. Mechanically impossible for this arc's diff to
+have caused the failure.
+
+**(a) Mechanism:** local Supabase Storage state accumulation. Prior test
+runs left blob objects in a test bucket; subsequent runs hit the
+`bucket-not-empty` error during the test's drop-recreate logic. Same
+class as the candidate-table accumulation pollution that surfaced as
+this arc's diagnostic substrate; different storage substrate.
+
+**(b) Fix shape:** test-isolation cleanup at the supabaseStorageProvider
+test level — `afterAll`-style blob clearing before bucket drop.
+Operationally analogous to "afterAll candidate cleanup" for the
+candidate-table substrate. Both fall under a broader "integration test
+isolation discipline" umbrella.
+
+**(c) Carry-forward:** umbrella "integration test isolation" arc covering
+candidate-table pollution + storage-bucket pollution + audit for other
+substrates + `_tmp_*` repo-hygiene observation. Not in this arc's named
+scope (T4-correct adjacent-issue carry-forward). The umbrella arc's
+HEAD-pass would grep for `afterAll` / `beforeEach` cleanup patterns
+across the integration test suite and characterize the discipline-gap
+scope.
+
+This deviation does NOT block arc closeout per CLAUDE.md Condition 1's
+"OR deviations documented" clause.
+
+### Arc character
+
+The arc earned its scope through diagnostic discipline. The closeout's
+date-arithmetic hypothesis was falsified at HEAD-pass; the actual
+mechanism (PostgREST truncation against polluted substrate) lived outside
+the closeout's bounded read by design — T4 characterized within the
+scope it could see and deferred the diagnosis to the investigation arc.
+The multi-arc-handoff direction produced a clean diagnostic-then-fix
+sequence without inheriting a wrong fix shape. T4 working as designed.
+
+The substantive scope expansion (T8 → T8 + T1/T2/T3 same-bug-different-
+site) was diagnostic-driven, not drafter-expansion. The fix-shape
+adjudication (F3 chosen, F1b deferred) traded perfect correctness for
+shipping-grade fitness with explicit deferred-follow-up substrate banked
+at the fix sites. Two commits, single file, service-layer-only,
++83/-39 lines. Same arc-character framing as the hygiene-arc closeout
+that preceded it: the arc shipped substantively without expanding scope,
+and the disciplines made the substance possible — not the other way
+around.
