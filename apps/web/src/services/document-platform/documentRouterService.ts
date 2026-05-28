@@ -1901,22 +1901,46 @@ async function runPerCaseReEvaluation(
 // Vendor-targeted fan-out activates when Phase 7 ships substrate to
 // link stranded cases to vendor identifiers.
 async function computeT1T2T3FanOut(db: Db, org_id: string): Promise<string[]> {
-  const { data, error } = await db
-    .from('exception_queue_entries')
-    .select('document_case_id')
-    .eq('org_id', org_id)
-    .eq('exception_status', 'open')
-    .eq('exception_reason', 'unmatched_router_candidate');
-  if (error) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `computeT1T2T3FanOut failed for org ${org_id}: ${error.message}`,
-    );
+  // Paginated fetch: PostgREST's PGRST_DB_MAX_ROWS (1000 in this project
+  // per supabase/config.toml) silently truncates an unbounded .select() to
+  // 1000 rows. Without explicit .order('exception_queue_entry_id')+.range()
+  // iteration, an org with >1000 open unmatched-router-candidate
+  // exceptions would silently drop rows from the fan-out. Same
+  // architectural shape as computeT8FanOut (T8 investigation arc
+  // 2026-05-28, same-bug-different-site defensive fix; current fan-out
+  // counts in test substrate are below 1000 — T1=134, T3=135 — so this
+  // site has not yet fired the truncation but is latent at scale).
+  // SQL-side filter via stored function (F1b in the arc's adjudication)
+  // is the correctness-ceiling fix; deferred until perf telemetry
+  // surfaces need.
+  const PAGE_SIZE = 1000;
+  const ids = new Set<string>();
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from('exception_queue_entries')
+      .select('document_case_id')
+      .eq('org_id', org_id)
+      .eq('exception_status', 'open')
+      .eq('exception_reason', 'unmatched_router_candidate')
+      .order('exception_queue_entry_id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `computeT1T2T3FanOut failed for org ${org_id}: ${error.message}`,
+      );
+    }
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      ids.add(row.document_case_id as string);
+    }
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
-  const ids = (data ?? []).map((r) => r.document_case_id as string);
   // De-duplicate (partial UNIQUE on open status guarantees uniqueness
   // per case, but be defensive).
-  return Array.from(new Set(ids));
+  return Array.from(ids);
 }
 
 // T5 fan-out: head-of-chain candidates pointing at the transitioned bill.
