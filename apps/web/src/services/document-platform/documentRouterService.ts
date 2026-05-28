@@ -1974,36 +1974,56 @@ async function computeT8FanOut(
   }
 
   // Filter head-of-chain candidates by extracted_invoice_date in range.
-  const { data, error } = await db
-    .from('document_relationship_candidates')
-    .select('document_case_id, candidate_features')
-    .eq('org_id', org_id)
-    .is('supersedes_candidate_id', null);
-  if (error) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `computeT8FanOut head-of-chain query failed: ${error.message}`,
-    );
-  }
-
+  //
+  // Paginated fetch: PostgREST's PGRST_DB_MAX_ROWS (1000 in this project
+  // per supabase/config.toml) silently truncates an unbounded .select() to
+  // 1000 rows. Without explicit .order('id')+.range() iteration, an org
+  // with >1000 head-of-chain candidates silently drops rows from the
+  // fan-out (T8 investigation arc 2026-05-28 — local substrate held 1834
+  // head-of-chain candidates for ORG_HOLDING from accumulated integration
+  // test runs; the failing test's freshly-seeded candidate was in the
+  // 834 silently truncated). The date filter is applied per-batch in JS.
+  // SQL-side filter via stored function (F1b in the arc's adjudication)
+  // is the correctness-ceiling fix that avoids loading all head-of-chain
+  // rows; deferred until perf telemetry surfaces need.
+  const PAGE_SIZE = 1000;
   const start = (period as { start_date: string }).start_date;
   const end = (period as { end_date: string }).end_date;
   const ids = new Set<string>();
-  for (const row of data ?? []) {
-    const features = (row as { candidate_features: CandidateFeatures | null })
-      .candidate_features;
-    const dateFeature = features?.features?.find(
-      (f) => f.feature_name === 'date_proximity',
-    );
-    const dateRaw = dateFeature?.raw_value as
-      | { extracted?: string | null }
-      | null
-      | undefined;
-    const extractedDate = dateRaw?.extracted ?? null;
-    if (!extractedDate) continue;
-    if (extractedDate >= start && extractedDate <= end) {
-      ids.add((row as { document_case_id: string }).document_case_id);
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from('document_relationship_candidates')
+      .select('document_case_id, candidate_features')
+      .eq('org_id', org_id)
+      .is('supersedes_candidate_id', null)
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `computeT8FanOut head-of-chain query failed: ${error.message}`,
+      );
     }
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      const features = (row as { candidate_features: CandidateFeatures | null })
+        .candidate_features;
+      const dateFeature = features?.features?.find(
+        (f) => f.feature_name === 'date_proximity',
+      );
+      const dateRaw = dateFeature?.raw_value as
+        | { extracted?: string | null }
+        | null
+        | undefined;
+      const extractedDate = dateRaw?.extracted ?? null;
+      if (!extractedDate) continue;
+      if (extractedDate >= start && extractedDate <= end) {
+        ids.add((row as { document_case_id: string }).document_case_id);
+      }
+    }
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
   return Array.from(ids);
 }
