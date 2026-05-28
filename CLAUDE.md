@@ -283,6 +283,19 @@ matching beyond this project (URL/path regex over-match; hostname/
 version regex character-class collapse; tokenizer/parser
 priority-ordered shadowing).
 
+### Ratified-contract scope discipline (pointer to canonical home)
+
+When a ratified contract — an ADR, a ratified design spec, a governing
+statement in canonical specs — names the scope of a reconciliation,
+amendment, or deferred follow-up pass, that scope binds the drafter.
+Adjacent issues uncovered during the named work get carry-forward
+framing, not absorbed into the current arc. Full discipline:
+`docs/04_engineering/conventions/ratified-contract-scope.md`.
+
+Codified at hygiene-post-ring2a-core arc closeout, 2026-05-27, from N=4
+observation-grain banking across items 3 / 5 / 6 / 8 plus the loop-
+closing meta-instance at item 6 → 6.5 split.
+
 ## Phase 1 Simplifications
 
 Phase 1 ships three temporary simplifications (synchronous audit

@@ -16199,3 +16199,159 @@ commit + distinct catch mechanism). Recorded as a friction-journal typology;
 whether the typology + its two standing disciplines graduate to a codified
 convention (`conventions/`) is a separate routing decision (see the
 `codify-convention` skill) deferred to the operator.
+
+## 2026-05-27 — hygiene-post-ring2a-core arc closeout: T4 codification + deferred-work carry-forwards (NOTE)
+
+The `hygiene-post-ring2a-core` arc — the post-Ring-2A-core doc-hygiene
+clearing pass — closed today after 9 commits across 8 named queue items
+plus 1 split straggler (item 6.5). Arc lineage: `ef100ed6` → `8b324fcd`
+→ `327e9cf6` → `dee35849` → `92a79e25` → `4da0f01f` → `4ef072a9` →
+`b03090c8` → `00491e2c`, all on `staging`, +9 ahead of `origin/staging`
+at close.
+
+The arc's substance was clearing the carry-forward queue accumulated
+post-Ring-2A-core: doc-sync reconciliations (invariants count, taxonomy
+vocabulary, prose alignments), forward-flags for deferred work (canvas
+types, read endpoint), and codifications of disciplines that
+crystallized during arc execution. Each item shipped under per-commit
+review; each disk-truth verification surfaced something the prompt
+didn't name.
+
+**T4 codification — ratified-contract scope discipline.** The arc's
+primary load-bearing codification: when a ratified contract names the
+scope of a reconciliation or amendment, that scope binds the drafter —
+adjacent issues carry-forward, not absorb into the current arc. Fired
+N=4 across items 3 / 5 / 6 / 8 plus the loop-closing meta-instance at
+item 6 → 6.5 split. Codified to
+`docs/04_engineering/conventions/ratified-contract-scope.md` in this
+closeout commit.
+
+**Carry-forward observations (banked for future arcs; not graduating
+yet).**
+
+- **T1 + T6 paired (whole-repo grep on count-bearing prose).** N=2:
+  item 4's atomic-coupled invariants.md ↔ control_matrix.md count
+  reconciliation paired with the straggler grep catching invariants.md's
+  L3 opener; item 6.5's CLAUDE.md L14 uncoupled straggler caught at
+  item-6 disk-read. After any frozen-count reconciliation, grep the
+  whole repo, not just the docs the coupling-rule names.
+- **Count-prose-elsewhere-is-drift-risk principle.** N=2 across items 4
+  (the `20` → `24` retroactive) and 6 (the bare `five` Category A floor
+  count, dropped pre-emptively in favor of "Category A floor test
+  suite"). When a count's source-of-truth lives in a different file,
+  cite the source by name, not by number.
+- **Per-instance-judgment-with-honest-disclaimer pattern.** Item 7's
+  `RuleRegistryView.tsx` comment named "no general type-sharing-
+  threshold convention this instantiates" — one sentence preventing
+  the failure mode of a future reader inferring a non-existent
+  convention.
+- **Forward-flag venue hierarchy.** Three-tier hierarchy applied
+  cleanly across items 7 + 8: open question → `open_questions.md`;
+  deferred-known-needed work with substance → `post-mvp/` brief;
+  site-specific code-anchored flag → in-file comment.
+- **Bounded-read T4-line-in-practice catalog.** Three tempted-but-
+  resisted moments during the Condition-1 characterization below: (1)
+  following a service-code line reference in a sibling-test comment,
+  (2) forming hypotheses beyond the three named classes, (3) reading
+  the seed function. The resists are a miniature catalog of what the
+  T4 line looks like operationally.
+
+**Meta-observations.**
+
+- **"Every prompt gets the four-category check at HEAD pass" generalized
+  from feature arcs to hygiene arcs.** Item 1's typology entry banked
+  the discipline as feature-arc-specific; this arc demonstrated it
+  generalizes — the same vigilance caught drift in the hygiene
+  continuation prompts at items 1 (lock-state assumption), 2
+  (cwd-script no-op), 6 (single-comment framing), and the codify-
+  convention skill invocation for item 8 (route-shape adjudication).
+  Arc-shape-agnostic.
+- **ADR-named-the-pass pattern across items 3, 5, 8.** Three different
+  forward-flag sites in ADRs (the taxonomy gap at ADR-0023/0024/0025;
+  ADR-0025 §8; ADR-0025 §10) explicitly named the doc-hygiene work that
+  this arc executed. The pattern: an ADR ratification names a deferred
+  follow-up; a later hygiene arc executes it; the executing arc cites
+  the ADR's naming as the discipline's provenance. Codified in the T4
+  topical's "Worked instances." (Item 4 — invariants-count reconciliation
+  triggered by `invariants.md`'s "Bidirectional reachability statement"
+  — is an instance of the broader T4 discipline but not of the narrower
+  ADR-named-the-pass sub-pattern; the governing source was a canonical-
+  spec statement, not an ADR. Item 6 is the locale-overlap case, also
+  not ADR-flagged.)
+- **Four-category vigilance extends from drafter-side to reviewer-side.**
+  The closeout's adjudication phase surfaced three manifestations of the
+  same projection-from-model-without-disk-check pattern: (i)
+  **conversation-substrate projection** — assumed orchestrator session
+  continuity without verifying the orchestrator's session was continuous
+  with the prior composition; (ii) **file-format projection** —
+  recommended a reformat to "friction-journal idiom" based on
+  `friction-journal/arc-A.md`'s archive-sub-file naming, without HEAD-
+  passing against the active rolling `friction-journal.md`'s current
+  precedent (item 1 at L16132, structured-doc shape); (iii)
+  **attribution-content projection** — propagated an items-3/4/5
+  ADR-named-the-pass mis-attribution from the original Artifact 3
+  without cross-checking against the pattern's own definition. All
+  three caught by the orchestrator's disk-truth verification before
+  commit. The arc's load-bearing claim — "the drafter is not exempt
+  from the disciplines the prompt enforces on the executor" (item 1
+  closing observation) — extends symmetrically: **the reviewer is not
+  exempt either.** Same loop-closing meta-shape as item 6 → 6.5's split
+  practicing T4 within the arc that codifies T4. Banked, not graduated;
+  three manifestations of one underlying pattern (projection-from-
+  model-without-disk-check), distinct enough in surface form that
+  codification waits on a fourth manifestation.
+
+### Condition-1 deviation — T8 dispatchTrigger stable failure
+
+The arc's closeout-time `pnpm test` full-suite run at HEAD `00491e2c`
+showed **1 failed | 1546 passed | 10 skipped (1557)** vs. the Commit-5
+1547/0/10 baseline.
+
+Failing test:
+`tests/integration/documentRouterService.dispatchTrigger.integration.test.ts > T8 only fan-outs cases whose extracted_invoice_date falls in the reopened period`
+at L492 (`expect(auditRows!.length).toBe(1)` → 0).
+
+Orthogonality to this arc verified: all 9 arc commits touched
+docs/CLAUDE.md/comments only; no path to `documentRouterService` /
+`audit_log` / dispatch logic. Three attempts (1 full-suite + 2 isolated)
+all failed with the same assertion at the same line — test-order
+pollution ruled out.
+
+**(a) Mechanism:** stable failure, most likely **date-arithmetic
+class**. The test's fixture hardcodes `extracted_invoice_date='2026-05-14'`
+and looks up the FY-2026 fiscal_period (`2026-01-01..2026-12-31`); today
+is 2026-05-27. The sibling γ-2 test exercising the same `T8_period_reopen`
+dispatch path with a Scenario-A fixture passes, isolating the failure to
+this fixture's specific date configuration. Fixture-shape ruled out as
+the dispatch failure (sibling-test isolation). DB-state-pollution ruled
+out (stable in isolation, `trace_id`-scoped).
+
+**(b) Fix shape:** unknown without investigation arc. Plausible
+test-side shapes: rotate fixture dates to a date relative to now;
+refactor the test to inject a "now" boundary. The date-relative-to-today
+filter implicated lives in service code; characterizing it precisely is
+investigation-arc work.
+
+**(c) Carry-forward:** new investigation arc (next-after-closeout); not
+in any current arc's scope. **The FY-2026 fixture is the canary** —
+investigator picks up there.
+
+This deviation does NOT block arc closeout per CLAUDE.md Condition 1's
+"OR deviations documented" clause. Pollution-class lineage (Arc A item
+27 / Phase 1.5C 5-test cluster) shifted away by stable-in-isolation
+evidence; different precedent class.
+
+### Arc character
+
+The arc shipped substantively without expanding scope, and the
+disciplines made the substance possible — not the other way around. The
+four-category vigilance fired catches across items 3, 5, 6, 8 and the
+closeout's bounded read held the T4 line cleanly. Each "stop-and-think"
+moment converted a likely-wrong default into a disk-grounded call.
+
+The arc earned the right to codify T4 by practicing it well. Codifying a
+discipline that the codification act itself practices is the strongest
+available evidence the discipline generalizes — same loop-closing
+meta-shape as item 1's four-category-vigilance-catches-drift-in-the-
+prompt-that-asks-for-vigilance, now extended in the closeout phase to
+catches-drift-in-the-adjudication-that-asks-for-vigilance.

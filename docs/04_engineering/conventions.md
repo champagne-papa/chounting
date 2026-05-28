@@ -25,6 +25,8 @@ archival rule, and deprecation model.
   pragmatic reduction at chunk close.
 - [`conventions/ai-agents.md`](./conventions/ai-agents.md) —
   agent-mediated session discipline.
+- [`conventions/ratified-contract-scope.md`](./conventions/ratified-contract-scope.md) —
+  named-scope binds the drafter; adjacent issues carry-forward, not absorb.
 - [`conventions/session/`](./conventions/session/) — session-
   execution conventions sub-folder (plan-authoring, scope-lock,
   session-close, iterative-catching).
