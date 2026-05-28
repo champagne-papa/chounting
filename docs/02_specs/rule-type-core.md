@@ -602,8 +602,10 @@ Fields:
   dictates (what the rule logic *permitted*). MatchResult does **not** carry a
   final `effective_action`: that is computed downstream by the Agent Ladder gate
   (§6.1 steps 7–8, §6.1.1) from `current_rung` + limits + track-record health, and
-  is recorded on the Logic Receipt per INV-AGENT-002 — not on the pure core's
-  MatchResult.
+  is recorded on the Logic Receipt — not on the pure core's MatchResult. (The
+  rule-core append of the Logic Receipt landed as `rule_evaluation_log` /
+  INV-RULE-001 per ADR-0024; INV-AGENT-002 — the broader cross-agent Logic
+  Receipt write path — remains reserved, per ADR-0025 §8.)
 - `match_classification` — one of the three states below.
 - `also_matched_rules` — Rules that matched but lost on conflict resolution.
   Ordered by the full conflict-resolution ordering: specificity descending, then
@@ -621,9 +623,11 @@ Fields:
   Four Questions grammar (§6.4).
 - `evaluation_trace` — typed audit record (Triggers fired, Rules evaluated,
   Branches considered, conflict-resolution decision, tiebreak-capping applied).
-  Routes to the Logic Receipt per INV-AGENT-002 (note: INV-AGENT-002 is
-  reserved-but-not-yet-registered; the Logic Receipt write path lands when its
-  consuming service materializes, per `agent_autonomy_model.md` §10).
+  Routes to the Logic Receipt (note: the rule-core append landed as
+  `rule_evaluation_log` / INV-RULE-001 per ADR-0024; the broader cross-agent
+  INV-AGENT-002 Logic Receipt write path remains reserved-but-not-yet-registered,
+  landing when its consuming service materializes per `agent_autonomy_model.md`
+  §10 — reconciled here per ADR-0025 §8).
 
 **Three-state match taxonomy:**
 
