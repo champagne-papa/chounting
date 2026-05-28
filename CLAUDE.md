@@ -108,7 +108,9 @@ full mechanism.
 
 1. `pnpm agent:validate` passes — runs typecheck, the
    no-hardcoded-URLs grep check, and the Category A floor test
-   suite. `pnpm test` is the full vitest suite; `pnpm test:e2e`
+   suite. `pnpm test` is the bare full vitest suite;
+   `pnpm test:full` prepends `pnpm db:reset:clean` for push-readiness
+   sweeps (Condition 1 evidence). `pnpm test:e2e`
    runs the Playwright harness at `tests/e2e/` — see the
    `tests/e2e/README.md` for setup and founder review workflow.
    `pnpm lint` is a separate ESLint sweep with non-overlapping
@@ -134,7 +136,7 @@ Rules that fire on file globs live in `.claude/rules/` (pilot).
 Push from the working branch to a shared branch requires three
 conditions met. Any condition unmet holds the push.
 
-1. **Test-suite health.** `pnpm test` full-suite green at HEAD,
+1. **Test-suite health.** `pnpm test:full` green at HEAD,
    OR deviations documented with (a) mechanism, (b) fix shape,
    (c) explicit carry-forward framing (retrospective, friction-
    journal, or filed queue item). "Acceptable baseline" without
@@ -156,7 +158,7 @@ Pre-push sanity sequence (run from working-branch HEAD):
 git log --oneline origin/main..HEAD | wc -l    # or origin/staging..HEAD
 git status --short                              # expect clean
 pnpm agent:validate                             # 26/26 green
-pnpm test                                       # Condition 1 evidence
+pnpm test:full                                  # Condition 1 evidence
 pnpm typecheck                                  # green
 ```
 

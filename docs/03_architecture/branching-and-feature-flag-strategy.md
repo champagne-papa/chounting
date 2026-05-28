@@ -307,7 +307,7 @@ merge that preserves the arc.
 
 Per the Push readiness three-condition gate codified in CLAUDE.md:
 
-1. **Test-suite health.** `pnpm test` full-suite green at HEAD,
+1. **Test-suite health.** `pnpm test:full` green at HEAD,
    OR deviations documented with mechanism + fix shape +
    carry-forward framing.
 2. **Doc-sync reconciled.** `invariants.md` ↔
