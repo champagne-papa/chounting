@@ -10,6 +10,8 @@ archival rule, and deprecation model.
 
 - [`conventions/code.md`](./conventions/code.md) — contribution
   rules, performance, i18n.
+- [`conventions/lint-and-validation.md`](./conventions/lint-and-validation.md) —
+  `agent:validate` vs full `pnpm lint` scope, "lint clean" claim discipline.
 - [`conventions/service-layer.md`](./conventions/service-layer.md) —
   service template, three-consumer pattern, error-handling review.
 - [`conventions/schema.md`](./conventions/schema.md) — Zod
