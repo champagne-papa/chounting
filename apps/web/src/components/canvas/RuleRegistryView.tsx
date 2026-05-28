@@ -33,6 +33,16 @@ import { InertPromotionModal } from '@/components/canvas/InertPromotionModal';
 // --- Response contract (mirrors ruleRegistryService.listForCanvas / Commit 4).
 // track_record + window_30d arrive as opaque JSON objects on the wire; typed
 // here from the rule_track_records / rule_evaluation_30d_view column sets.
+//
+// Forward-flag: TrackRecord + Window30d are locally declared because this
+// file is the sole consumer of the list-route response shape today. If a
+// second consumer appears (Stage 2 canvas, Ring 2B, any other reader of
+// /api/orgs/[orgId]/rules), promote both types to a new module at
+// apps/web/src/shared/rules/canvas-types.ts — the shared/rules/ directory
+// already exists with capping.ts + disposition.ts + types.ts; the promotion
+// creates a new file alongside them. Per-instance judgment — there is no
+// general type-sharing-threshold convention this instantiates. Forward-flag
+// added at the hygiene-post-ring2a-core arc (item 7), post-dc1d959e.
 
 type Rung = 'always_confirm' | 'notify_and_auto_post' | 'silent_auto';
 type Lifecycle = 'proposed' | 'active' | 'demoted' | 'retired';
