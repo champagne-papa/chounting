@@ -1,6 +1,6 @@
 # Invariants Index
 
-The canonical index for the 20 Phase 0-1.1 + Arc A invariants.
+The canonical index for the 24 invariants.
 The single place to look up "what are all the rules, where are
 they documented, and where are they enforced in code?"
 
@@ -76,19 +76,28 @@ sole-writer service pattern + code-review discipline; no test asserts "only this
 function writes," no DB constraint binds it). Future Layer-2 INVs should name which
 sub-type they fall under; see its leaf "Scope" + "Enforcement" subsections.
 
+The `hygiene-post-ring2a-core` doc-sync pass (2026-05-27) reconciled the frozen-count
+snapshots to the live 24: the heading below (`## The 20 invariants` → `## The 24
+invariants`) and the `control_matrix.md` section-heading counts (20/14/6 → 24/15/9). It
+also corrected the reverse-direction grep in the verification command below — and its
+twin in `control_matrix.md` — from `src/` to `apps/web/src/` (post-monorepo path). Per
+the convention above: the per-addition notes in this narrative are the live count; the
+heading + `control_matrix.md` counts reconcile in dedicated doc-sync passes, not
+per-addition.
+
 The verification command, reproducible at any future point:
 
 ```bash
 diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u) \
-     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
+     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
 Expected output: empty (no diff).
 
-## The 20 invariants
+## The 24 invariants
 
 The order matches the leaf's Summary section: Layer 1 first
-(14 invariants), then Layer 2 (6 invariants). Within each
+(15 invariants), then Layer 2 (9 invariants). Within each
 layer, the order matches the order the invariants appear in
 `ledger_truth_model.md`.
 

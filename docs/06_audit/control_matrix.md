@@ -1,6 +1,6 @@
 # Control Matrix
 
-Audit-side evidence for the 20 Phase 0-1.1 + Arc A invariants.
+Audit-side evidence for the 24 invariants.
 Maps each INV-ID to its spec definition, its test coverage, and
 the specific mechanism by which it is enforced in code.
 
@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 20 invariants — audit evidence
+## The 24 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -47,14 +47,14 @@ scheduled), the specific enforcement mechanism, and the
 non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
-leaf's Summary section: Layer 1 first (14 invariants), then
-Layer 2 (6 invariants).
+leaf's Summary section: Layer 1 first (15 invariants), then
+Layer 2 (9 invariants).
 
-### Layer 1a — Physical Truth, commit-time (14 invariants)
+### Layer 1a — Physical Truth, commit-time (15 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
-and 1b (scheduled audit detection). All 14 Phase 0-1.1 + Arc A
-invariants below are Layer 1a. The control-foundations set has
+and 1b (scheduled audit detection). All 15 invariants below are
+Layer 1a. The control-foundations set has
 zero Layer 1b members; Phase 2 stubs are recorded in
 `docs/02_specs/ledger_truth_model.md` under "Phase 2 Reserved
 Invariants."
@@ -166,7 +166,7 @@ Invariants."
 - **Code enforcement:** RLS on `rule_evaluation_log` in `supabase/migrations/20240164000000_rule_evaluation_log.sql` — `rule_evaluation_log_no_update` (`FOR UPDATE USING (false)`), `rule_evaluation_log_no_delete` (`FOR DELETE USING (false)`), and no INSERT policy (RLS-enabled default-deny for the user path; `service_role` bypasses). `ruleEvaluationService` (Ring 2A-authoring) is the sole writer and inserts only (ADR-0024 Decision 6).
 - **Non-bypassable from application layer — user path only.** RLS blocks the `authenticated` (user-scoped) path absolutely. It does **not** bind `service_role` (which bypasses RLS); ADR-0024 specified RLS-only (no triggers / `REVOKE`s), so service-path append-only is single-writer discipline, not DB enforcement — materially weaker than INV-AUDIT-002's trigger-authoritative all-path append-only. See the INV-RULE-001 leaf "Scope" + "Threat model" subsections. The view inherits this RLS via `security_invoker = true`.
 
-### Layer 2 — Operational Truth (6 invariants)
+### Layer 2 — Operational Truth (9 invariants)
 
 #### INV-AUTH-001 — Every mutating service call is authorized
 
@@ -316,13 +316,13 @@ verified during Waypoint F (commit `65bcfe0`):
 grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u
 
 # Reverse: every annotated INV-ID in code has a corresponding leaf
-grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u
+grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u
 
 # Symmetric difference (must be empty)
 diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u) \
-     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
+     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
-Expected: 20 distinct INV-IDs in both directions, empty symmetric
+Expected: 24 distinct INV-IDs in both directions, empty symmetric
 diff. This is the single command an auditor can run at any future
 point to confirm the doc-to-code reachability has not drifted.
