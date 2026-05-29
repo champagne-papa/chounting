@@ -16764,3 +16764,171 @@ only; no service-layer code, no migrations, no schema changes. The
 disciplines (T4, codify-convention, multi-line Edit anchor,
 prediction-grounding via HEAD-pass-against-disk, command-name-bearing-
 prose grep) made the substance possible — not the other way around.
+
+## 2026-05-29 — companion-462ad426 arc closeout: storage diagnostic-message hygiene + class-2 `_tmp_*.ts` gitignore gap closed (NOTE)
+
+The companion arc — the small focused continuation banked at
+umbrella test-isolation arc closeout (`462ad426`) — closed today
+after 2 substantive commits plus this closeout entry. Arc lineage:
+`810f44c4` → `50a8bfa6` → [this closeout commit], all on `staging`,
++3 ahead of `origin/staging` at close. Cumulative diff: 2 files
+(+15/−1 lines tracked, plus 1 working-tree delete of a never-tracked
+file). Test-code + repo-config only; no service code, no migrations.
+
+The arc carried two cleanup carry-forwards from prior closeouts.
+Class-1 (storage diagnostic-message hygiene) was banked at umbrella
+close's move (d) cheap-or-skip evaluation as DEFER. Class-2
+(`_tmp_*.ts` gitignore gap) was banked at T8 close's `_tmp_*` repo-
+hygiene observation and reinforced at umbrella close as carry-
+forward. Both substantively resolved.
+
+**Commit (a) — storage diagnostic-message at `810f44c4`.** The
+`bucket-not-found` describe's defensive-cleanup error path at
+`storageProviderIntegration.test.ts:212–218` previously threw
+`deleteError` bare. Now surfaces three load-bearing signals: bucket
+name (`STORAGE_BUCKET`), underlying Supabase error message, and
+post-cleanup object count via `listAllStorageKeys`. Count-not-
+enumeration is the honest scope call — the count discriminates the
+failure class (zero = Supabase storage layer issue; non-zero =
+`listAllStorageKeys` coverage gap in its `org_*/sources/*/*` walk)
+without unbounded key listing. Defensive diagnostic for a failure
+path that narrow-A's structural enforcement (`pnpm test:full`) has
+structurally retired; still worth having if the failure resurfaces.
+
+**Commit (b) — `.gitignore` pattern + tmp-file delete at
+`50a8bfa6`.** Two co-committed changes:
+
+- Narrow gitignore pattern `apps/web/scripts/_tmp_*.ts` added at
+  end of file. Disk scan confirmed `_tmp_*.ts` surfaces only under
+  that path; narrow matches actual disk surface per empirical-not-
+  nominal discriminator. Broadening to `**/_tmp_*.ts` would walk
+  into the same failure mode the file's `/reports/` precedent
+  guards against (Catch #23+#24 at chunk B5-3-D1: broad `reports/`
+  silently captured application source paths at deeper paths).
+  Comment block names companion-462ad426 as codification anchor per
+  the file's existing convention precedent (the `/reports/` block
+  names chunk B5-3-D1 session #1 checkpoint #1 as scope-refinement
+  provenance).
+- Working-tree `rm` of `apps/web/scripts/_tmp_classify_check.ts`.
+  Last-touched 2026-05-24 (5 days post Phase 8 classifier-fix arc
+  close at `32cba4a`); content arc-specific
+  (`synthetic_no_cited_payment` + `synthetic_born_paid` Tier A
+  recalibration scenarios); never tracked in git. All three
+  independent staleness signals point delete. Working-tree
+  operation (not `git rm`) per untracked → rm shape; deletion
+  absent from commit diff but verified via post-commit
+  `git status` showing the file absent.
+
+Structural enforcement over warning-shaped guidance per umbrella
+arc's banked observation: gitignore catches future accumulation if
+cleanup is missed at arc close. The arc-close cleanup practice
+remains canonical; gitignore is defense-in-depth.
+
+**Projection-from-model count update — N=3 disk-landed, entering
+typology codification arc unchanged.** Pre-execution recursive
+refinement: the prior framing of "N=4 entering this arc" was
+advisor-context drift on what counts as a cross-arc instance —
+companion-arc prompt drafting is conversation substrate, not disk-
+landed manifestation. Catch-prevents-manifestation precision
+applies recursively to its own count: draft-time catches don't
+increment the manifestation count. **Arc execution surfaced zero
+new disk-landed instances** of the projection-from-model pattern.
+Cross-arc count entering typology codification arc remains **N=3
+disk-landed** (hygiene close + T8 close + umbrella close). A clean
+arc execution is the discipline-working baseline against which
+manifestation counts get calibrated.
+
+**Banked sub-observations (substrate for typology codification
+arc).**
+
+- **Catch-at-draft-review-before-fresh-session-opens as cheapest
+  layer — discipline-working evidence at sub-arc grain.** Five
+  distinct catch-at-cheaper-layer moves across this arc, none
+  crossed into disk-landed manifestation: (1) operator's N=4-vs-
+  N=3 framing catch in companion-arc prompt drafting; (2) recursive
+  refinement on the catch-prevents-manifestation count itself; (3)
+  `_tmp_classify_check.ts` disposition adjudicated pre-`rm` via
+  three independent staleness signals; (4) `.gitignore` pattern
+  shape adjudicated pre-commit via empirical-not-nominal disk scan;
+  (5) T8 example name verified against friction-journal substrate
+  before commit (b) prose landed. Cost-gradient discipline working
+  at sub-arc grain — each catch fired at the cheapest available
+  layer, each prevented a downstream manifestation. Discipline-
+  working evidence; not a sub-pattern instance count — the catches
+  prevented manifestations of various patterns rather than
+  instantiating any single pattern. Substrate for the future
+  typology codification arc evaluating whether catch-at-cheaper-
+  layer discipline itself warrants codification beyond its current
+  banked status.
+- **Advisor-context-vs-disk drift on execution-state assumptions
+  (sub-instance of projection-from-model at advisor grain; N=1
+  banked).** Mid-arc, the advisor seat treated the drafted-but-not-
+  executed companion prompt as durable arc lineage when proposing
+  the typology codification directive — referenced "the companion
+  arc has closed clean on origin/staging" before the companion arc
+  had actually opened. Executor HEAD-pass-against-disk surfaced the
+  4th-scenario truth (companion arc never opened; `origin/staging`
+  HEAD unchanged at `462ad426`). Sibling-class to the projection-
+  from-model pattern at advisor grain rather than reviewer grain —
+  advisor's tracker-context-from-conversation drifted from disk-
+  truth across the arc-handoff boundary the directive prompt was
+  supposed to bridge. Grain distinction matters for the future
+  typology codification arc's scope adjudication (resolution β
+  specifically): whether advisor-side and reviewer-side instances
+  count toward the same pattern's N or as sibling-grain patterns.
+  Banked as substrate for future-arc grep; not at codification
+  threshold (N=1).
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full` end-to-end: **1547 passed | 10 skipped
+| 0 failed | 243 test files passed | 4 test files skipped (247
+total)** at 3m20.9s wall-clock. Turbo cache invalidated by commit
+(a)'s touch to `storageProviderIntegration.test.ts` (test source
+change); fresh execution confirmed via `0 cached / 1 total turbo
+tasks`. Previous baseline at umbrella close HEAVY was 1547/0/10/247
+(commit `fc85c411` evidence); fresh result matches baseline exactly,
+confirming commits (a) and (b) introduced no regressions.
+
+**Condition 2: met.** No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; `types.ts` regeneration
+not needed; no ADRs / obligations / migrations affected. Cross-doc
+references this arc touched (`.gitignore` comment block names
+companion-462ad426 + T8 closeout's tmp file naming convention) are
+internally consistent.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; two banked sub-
+observations recorded for future typology codification arc
+consumption. Arc-overview + commit-substance + Condition 1/2/3
+evaluation per active rolling venue precedent.
+
+### Arc character
+
+The arc executed cleanly per its small focused scope — 2
+substantive commits, 2 carry-forwards closed, no scope expansion,
+no orthogonal failures surfaced. The pre-execution review cycle
+(operator's draft-time catches + recursive refinements + per-call
+adjudication) produced an execution path that landed exactly as
+adjudicated; no surprises at disk.
+
+The arc-character framing converges with the prior three arcs
+(hygiene `9f320ded`, T8 `183935ee`, umbrella `462ad426`):
+disciplines compound across arcs in the expected direction;
+carry-forwards externalize at each closeout; cost-gradient
+discipline operates at multiple grains (cross-arc + sub-arc +
+intra-conversation). The small-scope hygiene arc shape is the
+right vehicle for closing carry-forwards before they decay — the
+discipline of arc-closes-fresh-carry-forward extended to a 4th
+instance.
+
+Next sequel: typology codification arc per pre-drafted resumption
+prompt + directive. Cross-arc projection-from-model count enters
+typology codification arc at N=3 disk-landed (advisor-grain
+instance from this arc is sibling-class, N=1 at its own grain).
+Open question to verify at that arc's HEAD-pass: what does
+`docs/04_engineering/conventions/README.md` actually say about the
+codification threshold? Framework-vs-sub-pattern conflation
+surfaced in advisor draft-review; HEAD-pass disambiguates
+resolution (α/β/γ).
