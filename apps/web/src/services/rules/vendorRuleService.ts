@@ -14,6 +14,8 @@ import { adminClient } from '@/db/adminClient';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { recordMutation } from '@/services/audit/recordMutation';
+import { loggerWith } from '@/shared/logger/pino';
 import type { Database } from '@/db/types';
 
 type VendorRuleRow = Database['public']['Tables']['vendor_rules']['Row'];
@@ -78,5 +80,76 @@ export const vendorRuleService = {
       (r) => (r.legal_entity_id ?? r.org_id) === effectiveLegalEntity,
     );
     return match ?? null;
+  }),
+
+  /**
+   * Approve a 'proposed' vendor rule — the vendor-template approval ceremony
+   * (ADR-0026 Decision 5). A two-table atomic transition via the
+   * approve_vendor_rule_atomic RPC (20240168): sets vendor_rules.approved_at/
+   * approved_by (provenance) + rule_registry.lifecycle_state='active' (the
+   * functional gate ruleEvaluationService.evaluate filters candidates on).
+   *
+   * NOT a co-creation bypass: this UPDATEs an already-co-created row (the
+   * read-only constraint on this service guards standalone INSERT, which would
+   * bypass create_vendor_rule_atomic's parent+track-record co-creation; an
+   * approval UPDATE on existing rows does not). createVendorRule remains the
+   * sole creator (untouched per T4).
+   *
+   * Idempotent: an already-approved rule is a no-op return (no RPC, no audit) —
+   * the wrapper's read-before fast-path; the RPC carries its own
+   * approved_at IS NULL guard for the race. Audit (rule.approved) emits
+   * TS-side after the RPC, mirroring promote + the create-orchestrator's
+   * audit-after-write window.
+   */
+  approve: withInvariants(async (
+    input: { org_id: string; rule_id: string },
+    ctx: ServiceContext,
+  ): Promise<VendorRuleRow> => {
+    const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+    const db = adminClient();
+
+    // Read-before: org-scoped existence + approved_at, for the idempotency
+    // fast-path and the before_state audit capture.
+    const { data: beforeData, error: readErr } = await db
+      .from('vendor_rules')
+      .select('*')
+      .eq('rule_id', input.rule_id)
+      .eq('org_id', input.org_id)
+      .maybeSingle();
+    if (readErr) throw new ServiceError('READ_FAILED', readErr.message);
+    if (!beforeData) {
+      throw new ServiceError('RULE_NOT_FOUND', `vendor rule not found (id=${input.rule_id})`);
+    }
+    const before = beforeData as VendorRuleRow;
+    if (before.approved_at !== null) {
+      log.info({ rule_id: input.rule_id }, 'Vendor rule already approved; approve skipped');
+      return before;
+    }
+
+    const { data, error } = await db.rpc('approve_vendor_rule_atomic', {
+      p_rule_id: input.rule_id,
+      p_org_id: input.org_id,
+      p_approved_by: ctx.caller.user_id,
+    });
+    if (error || !data) {
+      throw new ServiceError('POST_FAILED', error?.message ?? 'approve_vendor_rule_atomic returned no id');
+    }
+
+    await recordMutation(db, ctx, {
+      org_id: input.org_id,
+      action: 'rule.approved',
+      entity_type: 'rule_registry',
+      entity_id: input.rule_id,
+      before_state: before as unknown as Record<string, unknown>,
+    });
+
+    const { data: after } = await db
+      .from('vendor_rules')
+      .select('*')
+      .eq('rule_id', input.rule_id)
+      .eq('org_id', input.org_id)
+      .single();
+    log.info({ rule_id: input.rule_id }, 'Vendor rule approved');
+    return (after ?? before) as VendorRuleRow;
   }),
 };
