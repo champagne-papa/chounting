@@ -16536,3 +16536,231 @@ at the fix sites. Two commits, single file, service-layer-only,
 that preceded it: the arc shipped substantively without expanding scope,
 and the disciplines made the substance possible — not the other way
 around.
+
+## 2026-05-28 — umbrella test-isolation discipline arc closeout: substrate-deletability split codified at §3.3; narrow-A wiring solves storage uniformly (NOTE)
+
+The umbrella test-isolation discipline arc — the carry-forward from the
+T8 dispatchTrigger investigation arc closeout (`183935ee`) — closed
+today after 3 substantive commits plus this closeout entry. Arc lineage:
+`d50a6382` → `fc85c411` → `fec457db` → [this closeout commit], all on
+`staging`, +4 ahead of `origin/staging` at close. Cumulative diff: 4
+files (one skill file, one root `package.json`, two convention docs),
++285 insertions / −4 deletions. Docs-only and config-only; no service
+code touched; no migrations; no schema changes; HEAVY-verified at
+1547/0/10 at the narrow-A wiring commit.
+
+The T8 closeout banked class-1a (`document_relationship_candidates`
+accumulation) and class-1b (storage bucket accumulation) as same-class-
+different-substrate carry-forwards for an umbrella test-isolation arc.
+The HEAD-pass audit refined the class-1 split on the substrate-
+deletability axis (class-1a append-only via RLS no_delete + REVOKE
+DELETE / triggers; class-1b mutable with afterAll-permitted cleanup)
+and then the storage-bucket diagnostic surfaced a load-bearing
+simplification: the two classes collapse on the failure-mode axis
+("tests assume empty starting state at session start; accumulation
+violates this") even though they remain distinct on substrate-
+deletability. That simplification reduced Option D's three concrete
+moves to two: §3.3 codification at SKILL.md covering both substrate
+classes' authoring-grain discipline, plus narrow-A's `pnpm test:full`
+wiring providing structural enforcement of empty-state-at-session-
+start for both classes uniformly. The storage-bucket code-level fix
+that Option D originally included dropped out — narrow-A's reset
+prefix handles it for free.
+
+**Diagnostic narrative — path-shape coverage falsified, simplification
+surfaced.** The storage-bucket diagnostic's initial hypothesis (the
+test's `listAllStorageKeys` helper misses some path shape) was
+falsified by disk: all 79 accumulated objects matched the helper's
+expected `org_*/sources/*/*` walk pattern exactly. The refined
+hypothesis (other test files write to storage via service-layer
+indirection that grep-based audit misses) explained the accumulation
+but did NOT need a code-level fix — the structural enforcement at the
+workflow layer (narrow-A's reset prefix) resolves the failure mode
+without any test-code or helper-code modification. The diagnostic
+earned the simplification.
+
+**§3.3 codification at SKILL.md (commit a, `d50a6382`).** Mechanism-
+extension within §3's existing discipline class — same trigger surface
+(work in `tests/integration/`), same venue
+(`.claude/skills/integration-test-rules/SKILL.md`), sibling subsection
+to §3.1 (per-run COA isolation) and §3.2 (JE/JL accumulation-
+acceptance). Covers `document_relationship_candidates` (append-only
+per RLS no_delete + REVOKE DELETE; migration
+`20240149000000:209-220`) and `source_documents` (append-only per RLS
+no_delete + `trg_source_documents_no_delete`; migration
+`20240135000000:344, 421`). N=2 substrate-grain mechanism-extension,
+not N=3 threshold-graduation; same evidence shape as §3.2's Catch #18
+substrate-finding codification. v2.2 Origin footer + Evaluation basis
+per codify-convention skill spec; transitional format seam with pre-
+v2.2 §3.1/§3.2 inline Precedent paragraphs banked as carry-forward.
+
+**Narrow-A wiring + doc-sync (commit b, `fc85c411`).** New
+`pnpm test:full` script in root `package.json`
+(`pnpm db:reset:clean && pnpm test`) as canonical push-readiness
+Condition-1 invocation. CLAUDE.md "What done means" §1 prose clarified
+to distinguish bare `pnpm test` (dev iteration) from `pnpm test:full`
+(push-readiness sweeps). CLAUDE.md push-readiness three-condition gate
+§1 + pre-push sanity sequence substituted to the new command.
+`docs/03_architecture/branching-and-feature-flag-strategy.md` parallel
+codification of push-readiness gate updated coherently. HEAVY-verified
+at commit time: `pnpm test:full` end-to-end = 1547 passed / 10 skipped
+/ 0 failed / 243 test files / ~3.5min wall-clock.
+
+**Operational discipline at testing.md (commit c, `fec457db`).** Names
+the substrate-deletability split (workflow-operator-facing summary;
+full discipline at SKILL.md §3) and the full-suite-vs-dev-iteration
+command pattern. Different consumer from SKILL.md (workflow operator
+vs test author) per S1 venue separation per operator adjudication.
+Cross-references resolve all back-pointers (SKILL.md §3, CLAUDE.md
+"What done means" §1, push-readiness gate, branching-and-feature-flag-
+strategy.md parallel codification).
+
+**Meta-observation #1 — Convention-existence checks span multiple
+venues.** The resumption prompt's Open Question 1 named
+`docs/04_engineering/conventions/testing.md` as the venue to check for
+existing test-isolation convention. The HEAD-pass audit found the
+existing discipline at `.claude/skills/integration-test-rules/SKILL.md`
+§3 — a different venue. Convention codifications live across both
+`docs/04_engineering/conventions/` AND `.claude/skills/`; convention-
+existence checks at HEAD-pass should grep across both as sibling
+discipline-codification homes. Below codification threshold (N=1
+banked); operationally important for future arcs whose resumption
+prompts encode convention-existence assumptions.
+
+**Meta-observation #2 — Substrate-deletability vs failure-mode-axis
+distinction (empirical-not-nominal discriminator sub-class
+refinement).** The class-1 / class-2 split at T8 closeout was on the
+substrate-mechanism-pattern axis (class-1 fires test failures; class-2
+fires working-tree clutter). The umbrella arc's HEAD-pass refined
+class-1 on substrate-deletability (class-1a append-only; class-1b
+mutable) and then the storage diagnostic refined further: class-1a
+and class-1b collapse on the failure-mode axis (empty-state-assumption
+violation) while remaining distinct on substrate-deletability. The
+empirical-not-nominal discriminator (banked at T8 closeout) operates
+at sub-class grain too: same root-cause-class can be split or unified
+depending on which axis the operator examines. Future audits
+encountering similar class-1a/1b-shaped distinctions should examine
+both axes (substrate-mechanism + failure-mode) before locking the
+fix-shape. Below codification threshold (N=1 banked); operationally
+important sub-class refinement of the discriminator.
+
+**Banked observations (rolled into this closeout; below codification
+threshold).**
+
+- **Command-name-bearing-prose grep discipline (T6 analog).** When
+  introducing a new canonical command that downstream documentation
+  references, grep CLAUDE.md and related canonical-discipline docs
+  (`conventions/`, ADRs, `architecture/`) for all references to the
+  old command before authoring substitutions. T6 analog applied to
+  commands rather than counts. Applied here at pre-(b) HEAD-pass;
+  found 4 touch-points across 3 files (CLAUDE.md ×3 + branching-and-
+  feature-flag-strategy.md ×1) plus 3 sites correctly NOT touched
+  (historical narrative, count drift, non-full-suite references).
+  N=1 banked.
+- **Format-consistency-within-file transitional seam.** Introducing a
+  v2.2-format codification (§3.3) in a file with pre-v2.2 sibling
+  codifications (§3.1/§3.2 inline Precedent paragraphs) produces a
+  stylistic seam. Acceptable as transitional state pending future
+  codification-hygiene retrofit covering all pre-v2.2 inline-Precedent
+  codifications across `.claude/skills/`. Banked for the eventual
+  codification-hygiene umbrella arc.
+- **Forward-pointer-in-Origin-footer discipline.** Origin footers
+  should anchor in backward-references (existing SHAs, existing
+  entries) rather than forward-references to not-yet-existing
+  artifacts. Caught at codify-convention skill output review;
+  tightened in §3.3's Cross-references line from "(arc-closeout
+  friction-journal entry pending)" to dropping the parenthetical.
+  Within-arc forward-pointers to commit (b)/(c) destinations remained
+  — they resolve at arc completion, acceptable as transitional state.
+- **HEAVY-verification-at-canonical-command-introduction discipline.**
+  When introducing a new canonical command that downstream
+  documentation references, verify end-to-end at introduction-commit
+  time so the canonical-command's first invocation is intentional and
+  load-bearing. Applied at commit (b): `pnpm test:full` first
+  invocation produced the 1547/0/10 evidence that validates both the
+  command's shape and the diagnostic-driven simplification's claim
+  about storage. Without HEAVY at introduction, the first invocation
+  would have been the operator's first push-readiness gate fire,
+  surfacing any script-chaining or setup issue at the worst possible
+  moment. N=1 banked.
+
+**T4 multi-arc-handoff evidence (N=2 positive instance).** The
+hygiene-arc T4 codification's worked-instance #4 + the T8 closeout's
+class-1/class-2 carry-forward + this arc's named-scope-held
+disposition constitutes N=2 positive instance of T4's value across the
+multi-arc-handoff direction. The umbrella arc inherited class-1/
+class-2 named carry-forwards from T8 closeout; the named scope held
+(class-1 in scope; class-2 carry-forward confirmed); the storage
+diagnostic-message hygiene (d) was cheap-or-skip-evaluated and
+DEFERRED with explicit reasoning. T8 arc demonstrated T4 in the
+deferral-direction (closeout deferred work correctly); this arc
+demonstrated T4 in the acceptance-direction (carry-forwards accepted
+as scope without expanding). Both are instances of the discipline
+producing correct outcomes at arc-handoff points. Below codification
+threshold (N=2; T4's own codification basis was N=4); valuable
+substrate for future arcs revisiting T4's effects across arc
+boundaries — one more multi-arc-handoff instance lands this as a
+codification candidate.
+
+**Class-2 disposition confirmed.** The `_tmp_*.ts` repo-hygiene
+gitignore gap (banked at T8 closeout as adjacent-not-same-class)
+remains carry-forward. The HEAD-pass audit's mechanism analysis
+confirmed the T8 closeout's framing: class-2 is untracked-file
+accumulation gradient (clutter shape), class-1 is substrate-limit-
+threshold-firing (failure shape). No shared root cause surfaced. This
+arc itself did NOT create new `_tmp_*.ts` files during HEAD-pass —
+DB-query diagnostics were satisfied via direct `psql` invocations
+through the Bash tool, avoiding the recursive-irony the prompt
+flagged. The pre-existing `_tmp_classify_check.ts` carry-forward
+remains untouched per the explicit-file-add discipline.
+
+**Move (d) disposition — DEFER per cheap-or-skip.** Optional storage-
+bucket diagnostic-message improvement at
+`storageProviderIntegration.test.ts:212-215` evaluated and deferred.
+~3-4 net lines (above the operator's strict 1-2 line trivial
+threshold); marginal value (defensive diagnostic for a structurally-
+retired failure mode); touches currently-passing test code. Banked
+alongside class-2 as carry-forward queue for the natural sequel
+"storage + repo-hygiene companion arc" framing.
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** HEAVY verification at
+commit (b) `fc85c411`: 1547 passed | 10 skipped | 0 failed | 243 test
+files passed | 4 test files skipped (247 total) | ~3.5 min wall-clock
+via the new `pnpm test:full` canonical command. The T8 closeout's
+storage-test Condition-1 deviation is **resolved** by narrow-A's
+structural enforcement (no documented-deviation needed; bare-green
+achieved).
+
+**Condition 2: met.** Cross-doc references this arc touched are
+internally consistent: SKILL.md §3.3 ↔ CLAUDE.md "What done means" §1
+↔ CLAUDE.md push-readiness gate §1 ↔ pre-push sanity sequence ↔
+testing.md operational section ↔ branching-and-feature-flag-strategy.md
+push-readiness gate. No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; `types.ts` regeneration not
+needed; no ADRs / obligations / migrations affected.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; conventions earned by
+mechanism-extension codified at §3.3 (commit a) and at testing.md
+operational section (commit c). Six observations banked per the
+meta-observations + carry-forward decomposition above.
+
+### Arc character
+
+The arc earned its scope through diagnostic discipline — the same
+arc-character framing as the hygiene-arc closeout (`9f320ded`) and T8
+closeout (`183935ee`) that preceded it. The original Option D's three
+concrete moves were earned through audit + mechanism analysis; the
+diagnostic-driven simplification then collapsed Option D's storage-
+code fix onto narrow-A's structural enforcement, producing a tighter
+arc than the original framing anticipated. HEAVY-verification at the
+canonical-command-introduction commit validated the simplification's
+load-bearing claim empirically.
+
+Three substantive commits, four files, +285/−4 lines. Docs and config
+only; no service-layer code, no migrations, no schema changes. The
+disciplines (T4, codify-convention, multi-line Edit anchor,
+prediction-grounding via HEAD-pass-against-disk, command-name-bearing-
+prose grep) made the substance possible — not the other way around.
