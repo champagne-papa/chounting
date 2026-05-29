@@ -271,6 +271,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0023](./0023-rule-type-core-substrate.md) | Rule Type Core Substrate and ADR-0017 Reconciliation | Ratified | 2026-05-26 |
 | [ADR-0024](./0024-ring2a-core.md) | Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate | Ratified | 2026-05-26 |
 | [ADR-0025](./0025-ring2a-core-implementation-seams.md) | Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas | Ratified | 2026-05-26 |
+| [ADR-0026](./0026-ring2a-authoring.md) | Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring | Ratified | 2026-05-29 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -287,6 +288,11 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+
+### app-components
+
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
 
 ### core
 
@@ -298,6 +304,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
 
 ### infra
 
@@ -335,6 +342,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
 <!-- END:generated-by-phase -->
 
 ## Related files
