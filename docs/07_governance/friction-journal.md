@@ -17173,3 +17173,218 @@ grounding via HEAD-pass-against-disk, observation-vs-application-
 grain N count distinction, substrate-tagging at banking with
 mechanism-tagging at graduation-time discriminator) made the
 substance possible — not the other way around.
+
+## 2026-05-29 — Ring 2A-authoring design-authoring arc closeout: (δ.1) confirmed, gating call (V1) HOLDS at medium scope, ship-v1-now; ADR-0026 design spec shipped (NOTE)
+
+The Ring 2A-authoring arc — opened against typology-codification
+closeout (`b5a2ced4`) per the next-sequel framing, and the
+substantive-feature sibling of Ring 2A-core per ADR-0024's H-split
+— paused today at its **design-authoring segment** after 3
+substantive commits plus this closeout. Arc lineage: `46fe7dcf`
+(brainstorm) → `61945a01` (pre-ADR verification) → `c85eb7c6`
+(ADR-0026 design spec) → [this closeout commit], all on `staging`,
++4 ahead of `origin/staging` at close. Cumulative diff: +358 lines
+tracked across three `docs/09_briefs/post-mvp/` artifacts plus this
+friction-journal append. Docs-only; no service-layer code, no
+migrations, no schema changes — the implementation phase (landing
+Decisions 1–8) opens as a fresh later arc per the operator's
+pause-at-design-spec disposition (canonical ADR-0024 pause-point;
+CTO ratification is a separate decision-act; implementation is an
+8-decision multi-commit body of work warranting its own arc shape).
+
+**Opening structural adjudication — (δ.1).** ADR-0024 OQ4 deferred
+to this arc *how* INV-AGENT-002 (Logic Receipt write path) lands
+relative to Ring 2A-authoring. The HEAD-pass disk-grounded a
+reframing beyond the prompt's α/β/γ menu: INV-AGENT-002 is scoped
+to autonomous-agent ledger auto-posts (`agent_autonomy_model.md`
+§10), **not** to rule creation (a governance action); the Four
+Questions render from `ProposedMutation` content fields, not the
+Logic Receipt write path. So INV-AGENT-002 is **not** a v1
+prerequisite of Ring 2A-authoring — it defers to rung activation.
+The operator confirmed (δ.1): Ring 2A-authoring v1 = rule-creation
+only, against ratified substrate. A category-B check resolved that
+ADR-0024's *actual text* faithfully named the prerequisite (no
+cite-vs-actual drift); the imprecision lived in ADR-0024:127's
+compression (the ADR-compression-vs-deeper-canon sub-shape, below).
+
+**Commit (a) — brainstorm at `46fe7dcf`.** Mapped the v1 decision
+space (Decisions A–F) against ratified substrate. Three flag-and-
+propose divergences corrected at the four-category typology HEAD-
+pass: (A, Cat-A) `proposalBuilder` is a Tier-2 document-pipeline
+Stage-7 function, not a chat-drafting API — the real precedent is
+the `postJournalEntry(dry_run)` → `respondToUser(canvas_directive)`
+flow; (B, Cat-A + spec-vs-code) the Four Questions already render
+in `ProposedEntryCard.tsx:188–219` from `policy_outcome` templating,
+not `ProposalJustificationSchema.justification.*` (no v1 producer);
+(E, Cat-A + Cat-B) closed-grammar predicates are reserved for Ring 2
+(`rule-type-core.md:262`) with no v1 storage, so v1 Decision E =
+NL → `(vendor, bundle_type, default_account)` extraction, not
+predicate-grammar mapping. Net: arc scope shrank materially at
+brainstorm.
+
+**Commit (b) — pre-ADR verification at `61945a01`.** Six
+verifications; the gating call (V1) HOLDS — v1 vendor rules are
+branchless (`rule-type-core.md:406/408`; predicate JSON schema
+reserved Ring 2; no condition storage; `createVendorRule` takes
+only `(vendor_id, bundle_type, default_account_id)`), so Decision E
+holds and the arc does not reopen. Three corrections (V2 three-
+framing render-path; V4 `card_resolution` is `ai_actions`-derived,
+not reusable; V6 creation-time Q3 needs a new template, not the
+match-time `track_record.no_rule`), two sharpenings (V3 persona
+prompt-scaffolding is the design work; V5 `createVendorRule`
+requires non-null `vendor_id` — stricter than the document
+pipeline), one operator flag (v1-inertness: a branchless v1 rule
+produces `almost_match` → default approval, accrues no winning
+track record until Ring 2B).
+
+**Commit (c) — ADR-0026 design spec at `c85eb7c6`.** Eight
+decision-bearing decisions. The design-spec's targeted HEAD-pass
+caught a load-bearing correction the brainstorm + verification
+both missed: `rule_lifecycle_state = {proposed, active, demoted,
+retired}` (no `rejected` state, `20240163:92–97`); `proposed →
+active` derives from `vendor_rules.approved_at` (the approval
+ceremony, `20240163:271/306`), **not** `promote()` (rung ascension,
+inert at v1); and no shipped service writes `approved_at` — so this
+arc must author the approval-ceremony writer (new service work
+beyond pure wiring; `createVendorRule` untouched per T4). Corrected
+Decision 5: draft is ephemeral → approve = create (`proposed`) +
+approval-ceremony write (`approved_at` → `active`) → reject is
+ephemeral (no `rejected` state). No migration (wires existing
+substrate + authors a writer against shipped columns).
+
+**Sequencing-call disposition — ship-v1-now.** Given v1-inertness,
+the operator adjudicated whether to ship rule-creation now vs fold
+into Ring 2B. Ship-v1-now, on substrate-only-v1 precedent + T4
+(ADR-0024 names this arc's scope) + Ring-2B-is-already-large. The
+load-bearing refinement: unlike Ring 2A-core's promotion-modal/gate
+inert surfaces (zero v1 user contact), this arc's drafting +
+approval UX **is exercised at v1** — substrate-validated-through-
+use, not scaffold-and-wait. The v1 value is the conversational-
+drafting/approval UX + intent-recording + registry-population.
+
+**Banked sub-observations (substrate for future arcs; all
+banked-not-codified, N<3 per item — no codification fired this
+arc).**
+
+- **Three-framing render-path precision (V2).** Sharpens the
+  spec-vs-code divergence sub-shape from two-way to three-way:
+  `intent_model.md justification.*` / shipped `policy_outcome` /
+  `rule-type-core.md §6.4 MatchResult.four_questions_population`.
+  The creation-time `ProposedRuleCard` population is a fourth,
+  distinct surface (no MatchResult, no policy_outcome at creation).
+  Bank for the Logic Receipt write path arc's reconciliation.
+
+- **v1-inertness honesty pattern + substrate-validation-through-
+  user-contact refinement.** Substrate-only-v1 deliverables carry
+  an honest cost-shape worth naming at arc-character closeout
+  (precedent: Ring 2A-core promotion-modal-inert disclosure). The
+  refinement distinguishes surfaces that get v1 user contact
+  (this arc) from those that purely wait (Ring 2A-core gate). N=1
+  refinement; bank for future substrate-only-v1 arcs.
+
+- **Vendor-resolution strictness gradient (V5).** The document
+  pipeline tolerates a null vendor (posts the bill unset for later
+  manual entry); rule creation requires a non-null `vendor_id`
+  (dedup + FK key). Sibling consumers diverge on null-tolerance
+  per consumer-strictness. Bank for future arcs encountering the
+  same gradient.
+
+- **Advisor-grain catch-at-cheaper-layer (N=2 sub-arc).** The
+  advisor revisited its own prior framing with new precision twice
+  within the arc (the substrate-validation refinement at the
+  sequencing call; the withdrawal of the "framing-carry-forward
+  drift" sub-observation when disk showed the carry-forward was
+  faithful). Sibling-class to the projection-from-model advisor-
+  grain instances; catch-from-outside-the-affirmation-loop
+  operating at advisor-grain. Substrate-density-improvement, not
+  a codified sub-pattern instance.
+
+- **Late-emerging-substrate-requirement caught at design-spec
+  HEAD-pass (new at this arc).** The approval-ceremony writer was
+  missed by the brainstorm + verification because their decision
+  frames focused on consumer surfaces (drafting/card/approval/
+  create); the design-spec's targeted HEAD-pass on the
+  `rule_lifecycle_state` enum + `approved_at`-derived activation
+  surfaced the missing writer. Discipline-working evidence: each
+  layer's targeted HEAD-pass catches what prior layers' broader
+  HEAD-passes missed. Cost-gradient discipline at the design-spec
+  layer (catch-at-design-spec < catch-at-implementation).
+
+**Drift-grain taxonomy substrate (banked-not-codified; N=1 per
+grain beyond the codified prompt-grain).** This arc's catches
+populate a three-grain taxonomy beyond the four-category prompt-
+drift typology (which operates on prompts): prompt-grain (the
+codified typology, `b5a2ced4`); ratified-doc-grain (ADR-compression-
+vs-deeper-canon — ADR-0024:127 compressed "auto-post needs the
+Logic Receipt write path" into "Ring 2A-authoring needs it"; N=1);
+code-grain (spec-vs-code divergence at the render path; N=1,
+sharpened to three-framing by V2). Each grain operates at a
+different substrate layer (prompts / ratified docs / shipped code)
+with different discriminators and catch-layers. Below codification
+threshold individually; the taxonomy itself is accumulating
+substrate for future framework-extension consideration.
+
+**Recursive-shape evidence.** The framework codified at `b5a2ced4`
+caught drifts at every prompt-layer of this arc — the resumption
+prompt (control_matrix path Cat-A; Q30 content-shape projection-
+from-model), each authoring sub-prompt (Decisions A/B/E; Decision 5),
+and the executor's own grep-truncation (caught from outside via a
+fuller grep). The disciplines being codified continue to discipline
+the acts that practice them.
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full`: **1547 passed | 10 skipped | 0 failed
+| 243 test files passed | 4 test files skipped (247 total)** —
+identical to the HEAD-pass baseline at `b5a2ced4`. The three arc
+commits are docs-only (all under `docs/`), so the code/test state
+is byte-identical to the baseline; turbo cache reflects this. No
+Condition-1 deviation.
+
+**Condition 2: met.** No canonical substrate touched — no
+`invariants.md` / `control_matrix.md` / `ledger_truth_model.md` /
+`types.ts` changes; no ADR ratified (ADR-0026 is the pre-
+ratification design spec, not yet the ratified ADR file). The
+three artifacts are `docs/09_briefs/post-mvp/` design-authoring
+documents. Doc-sync is trivially reconciled (nothing to reconcile).
+
+**Condition 3: met by this entry.** Closeout written
+(this friction-journal NOTE); arc-scope sub-observations banked
+(five, above); no conventions earned codification this arc (all
+banked items N<3) — the codify-convention forcing function was
+evaluated and correctly did not fire.
+
+### Arc character
+
+The design-authoring segment closed cleanly at the canonical
+ADR-0024 pause-point. The arc's defining feature is the
+layer-by-layer scope sharpening: the brainstorm shrank scope (three
+flag-and-propose divergences), the verification held the gating call
+while correcting three leans, and the design-spec's targeted HEAD-
+pass caught the one late-emerging substrate requirement (the
+approval-ceremony writer) that the consumer-surface-focused prior
+layers missed. Each layer's narrower HEAD-pass caught what the prior
+layer's broader pass could not — the cost-gradient discipline
+operating across the brainstorm → verification → design-spec
+sequence exactly as the framework predicts.
+
+The opening adjudication (δ.1) is the arc's structural anchor: the
+disk-grounded reframing of INV-AGENT-002's scope (auto-post, not
+rule-creation) converted a presumed Tier-1-prerequisite blocker
+into a clean deferral, keeping the arc at medium scope. The arc-
+character framing converges with the five-arc lineage (hygiene
+`9f320ded` → T8 `183935ee` → umbrella `462ad426` → companion
+`a4cc0f02` → typology codification `b5a2ced4`): disciplines compound
+across arcs; carry-forwards externalize at each closeout; the
+substantive-feature arc shape (brainstorm → verification → design-
+spec, with implementation deferred to a fresh arc) matches the
+ADR-0023 → ADR-0024 → ADR-0025 precedent it modeled on.
+
+Three substantive commits (+358 lines), one design spec reserving
+ADR-0026, plus this closeout. Docs only; no code, no migrations, no
+schema changes. The implementation phase opens as a fresh arc
+anchored to this push's SHA, carrying six design-spec open questions
+(persona scaffolding; `default_account` v1 role; approval-ceremony
+writer home; vendor disambiguation UX; card placement; multi-rule
+drafting) and the five banked sub-observations as substrate.
