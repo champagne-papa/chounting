@@ -16932,3 +16932,244 @@ Open question to verify at that arc's HEAD-pass: what does
 codification threshold? Framework-vs-sub-pattern conflation
 surfaced in advisor draft-review; HEAD-pass disambiguates
 resolution (α/β/γ).
+
+## 2026-05-29 — typology codification arc closeout: four-category prompt-drift typology (framework) + projection-from-model sub-pattern (single-pattern-multi-grain) co-shipped under resolution (γ) (NOTE)
+
+The typology codification arc — opened against companion-arc
+closeout (`a4cc0f02`) per the next-sequel framing — closed today
+after 2 substantive codification commits plus this closeout entry.
+Arc lineage: `6fb86c86` → `39b35727` → [this closeout commit], all
+on `staging`, +3 ahead of `origin/staging` at close. Cumulative
+diff: 2 new convention files (+538 lines tracked) plus this
+closeout entry's friction-journal append. Docs-only; no code, no
+migrations, no schema changes.
+
+The arc carried two codification candidates banked at companion-
+arc closeout: the four-category prompt-drift typology framework
+(object #1) and the projection-from-model-without-disk-check sub-
+pattern (object #2). HEAD-pass adjudication call 2 resolved (γ):
+two codifications, separate artifacts, both shipped at this arc.
+Both objects cleared their respective README §codification-
+thresholds requirements — framework at process-meta-pattern N=2-
+with-shape-match + N=3-confirms via mechanism-tagging-at-
+graduation-review (loose interpretation per README §family-tag
+assignment); sub-pattern at friction-journal-pattern N=3
+codification threshold (reviewer-grain N=3 + advisor-grain N=3
+disk-landed; single-pattern-multi-grain framing per call 3).
+
+**Commit (a) — framework codification at `6fb86c86`.** Codified
+the four-category prompt-drift typology at
+`docs/04_engineering/conventions/prompt-drift-typology.md` (220
+lines). Framework operates as a HEAD-pass checklist: (A) prompt-
+vs-disk, (B) prompt-vs-ratified-contract, (C) prompt-vs-running-
+environment, (D) gap-fill at consumer. Each category has its
+discriminator; HEAD-pass runs the checklist before authoring
+substantive work. Worked instances span five distinct timing
+surfaces (codification-decision at hygiene close + multi-arc-
+handoff at T8 close + substrate-collapse-disambiguation at
+umbrella close + small-scope-carry-forward-closure at companion
+close + codification-arc-self-application at this arc's HEAD-pass
+loop-closing meta-instance). Format precedent:
+`ratified-contract-scope.md` framework-shape; v2.2 Origin footer +
+Evaluation basis per `codify-convention` skill spec.
+
+Three-criteria evaluation per framework codification:
+
+- **Load-bearing (prescriptive)** — generates concrete operator
+  action at every prompt's HEAD pass (run the four-category
+  checklist).
+- **Generalizable** — substrate-class-agnostic; N=5 distinct
+  arc-shapes demonstrated.
+- **Stable** — categories stable across hygiene → T8 → umbrella
+  → companion → typology codification arcs (~3 days, N=5 timing
+  surfaces; no category added/removed; no sub-shape
+  destabilization).
+
+**Commit (b) — sub-pattern codification at `39b35727`.** Codified
+the projection-from-model-without-disk-check sub-pattern at
+`docs/04_engineering/conventions/projection-from-model.md` (318
+lines). Sub-pattern operates at the moment projected state is
+encoded or affirmed without disk-verification. Three observed
+sub-shapes documented:
+
+1. **Reviewer-grain** — catches at executor HEAD-pass.
+2. **Advisor-grain** — catches at next-session disk-touch or
+   operator disk-truth verification, with `#### Bilateral
+   sub-shape` nested (catch-from-outside-the-affirmation-loop
+   discipline).
+3. **Manifestation-vs-discovery divergence** — substrate-routing
+   sub-shape (N=1 banked exploratory).
+
+Single-pattern-multi-grain framing per HEAD-pass adjudication
+call 3: grains are sub-shapes within one pattern, not sibling
+patterns. Format precedent: `prediction-grounding.md` +
+`regex-permissive-matching.md` (sub-shape enumeration with `###`
+sub-headings).
+
+Three-criteria evaluation per sub-pattern codification:
+
+- **Load-bearing (prescriptive)** — generates concrete operator
+  action when pattern fires (stop, surface, verify against disk).
+- **Generalizable** — multiple grains × multiple sub-shapes ×
+  multiple substrate types; surface diversity is the empirical
+  evidence.
+- **Stable (exploratory framing)** — pattern substance consistent
+  since hygiene close (2026-05-27); name formalized at companion
+  close (2026-05-29 — two days ago); two new sub-shapes surfaced
+  at this arc's HEAD-pass (bilateral-grain + manifestation-vs-
+  discovery). Recency + active sub-shape emergence makes
+  exploratory framing the honest call.
+
+**Grain-distinction disposition (adjudication call 3).** Single-
+pattern-multi-grain. Reviewer-grain and advisor-grain are sub-
+shapes within one pattern (same substance — treating projected
+state as disk-truth — different consumer-sides and catch-layers),
+not sibling patterns. Sub-shape distinction belongs at the sub-
+pattern artifact (`### 1` + `### 2` enumeration) rather than at
+the codification-target distinction level. The combined-N
+argument (advisor + reviewer = N=6) is structurally available but
+not load-bearing — even at sibling-grain framing, each grain
+independently clears N=3.
+
+**Banked sub-observations (substrate for future arcs).**
+
+- **Catch-at-draft-review discipline-working evidence at sub-arc
+  grain — extension from companion close's banking with this
+  arc's additional manifestations.** This arc's HEAD-pass +
+  draft-review surfaces fired multiple catches before disk-
+  landing manifestation: (1) lineage-anchor drift caught at
+  HEAD-pass step 2; (2) framework worked-instance T8/umbrella
+  attribution refined from declarative to descriptive at commit
+  (a) draft review; (3) framework loop-closing meta-instance
+  trimmed to cross-reference at commit (a) draft review; (4)
+  bilateral sub-shape cross-listing precision (terse + cross-ref)
+  at commit (b) draft review; (5) Promoted-from dual-naming-site
+  refinement at commit (b) draft review (hygiene close first
+  reviewer-grain naming; companion close first advisor-grain
+  naming); (6) Evidence basis strict-vs-loose distinction per
+  banking-site at commit (b) draft review. Six distinct catch-at-
+  cheaper-layer moves across this arc, none of which crossed
+  into disk-landed manifestation per catch-prevents-manifestation
+  precision. Discipline-working evidence at sub-arc grain (not a
+  sub-pattern instance count). Cost-gradient discipline operating
+  cleanly: catch-fresh < catch-at-HEAD-pass < catch-post-commit
+  < catch-post-push.
+
+- **Advisor-grain bilateral sub-shape evolution — N=1 disk-landed
+  at this arc's HEAD-pass; codified at exploratory framing.** The
+  lineage-anchor catch at HEAD-pass step 2 manifested the
+  bilateral sub-shape — advisor + operator + executor three-layer
+  affirmation feedback loop bypassed single-side review surfaces;
+  catch required catch-from-outside-the-affirmation-loop (next
+  session's disk-touch in this case). Sibling-class to the
+  unilateral advisor-grain sub-shape (companion-close mid-arc +
+  sequencing-discussion instances). Codified at
+  `projection-from-model.md` §Bilateral sub-shape of advisor-
+  grain with exploratory framing per Stable criterion.
+
+- **Manifestation-vs-discovery substrate-routing sub-shape — N=1
+  disk-landed; resolution practice codified at exploratory
+  framing.** The lineage-anchor catch had divergent manifestation-
+  site (companion arc's close-sequence, where the push didn't
+  land + bilateral affirmation of durability fired) and discovery-
+  site (typology codification arc's HEAD-pass step 2, where the
+  executor caught the drift). README §family-tag-assignment
+  convention's substrate-tagging-at-banking-time default doesn't
+  directly address this divergence. Resolution practice codified:
+  record catch at discovery-site with explicit framing about
+  manifestation-site; avoid retroactive amendment unless
+  discovery materially changes manifestation-site arc's
+  evaluation. Codified at `projection-from-model.md` §3
+  Manifestation-vs-discovery divergence with exploratory framing.
+
+- **Recursive disk-landing shape — codification artifact serves
+  as disk-landing site for instances surfaced during the
+  codification arc itself.** Sibling-class to the loop-closing
+  meta-instance precedent banked at T4 codification
+  (`ratified-contract-scope.md` Worked instances: "this
+  codification's own bounded read of the T8 dispatchTrigger
+  deviation held to characterization, not investigation —
+  codifying a discipline that the codification act itself
+  practices"). For this arc: the sequencing-discussion-at-
+  typology-draft instance (operator-caught at draft-review) and
+  the lineage-anchor-catch-at-typology-HEAD-pass instance
+  (executor-caught at HEAD-pass) are both recorded in
+  `projection-from-model.md`'s Evidence basis. The codification
+  artifact is itself the disk-landing site for those two
+  instances. Structurally honest: the codification arc consumes
+  its own manifestation history as substrate for the codification.
+  Same loop-closing meta-shape as T4's "earned the right to
+  codify T4 by practicing it well."
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full`: **1547 passed | 10 skipped | 0 failed
+| 243 test files passed | 4 test files skipped (247 total)** via
+turbo cache hit at 98ms (1 cached / 1 total tasks); `pnpm
+db:reset:clean` ran ahead of turbo's cached check. Commits (a)
+and (b) are doc-only files at `docs/04_engineering/conventions/`
+(not turbo inputs for the test task); cache chain holds from
+`a4cc0f02` companion-close baseline. Source-state parity yields
+operational-equivalent baseline confirmation; the codification
+commits introduced zero regressions to the test substrate.
+
+**Condition 2: met.** No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; no ADRs / migrations /
+obligations affected; `types.ts` regeneration not needed. Cross-
+doc references between the two codification artifacts (framework
+↔ sub-pattern bidirectional) + README sibling-conventions
+citations + `prediction-grounding.md` sibling-pairing cross-
+reference + 5 friction-journal banking-site citations per
+artifact all internally consistent.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; four banked sub-
+observations recorded for future arc consumption.
+
+### Arc character
+
+The arc executed with active adjudication of structural decisions
+at multiple stages — resolution α/β/γ (call 2: γ); grain
+distinction (call 3: single-pattern-multi-grain); filename(s)
+(call 5: `prompt-drift-typology.md` + `projection-from-model.md`);
+commit shape (call 6: 3 commits framework + sub-pattern +
+closeout); cross-listing precision (Decision 4: terse + cross-
+ref); dual-naming framing (Decision 5: both hygiene-grain and
+companion-grain explicit naming sites); strict/loose distinction
+(refinement 3: per-instance interpretation-status). The pre-
+execution review cycle (operator's draft-time catches + executor
+HEAD-pass + per-commit review iterations) produced an execution
+path that landed exactly as adjudicated; no surprises at disk for
+the codification commits themselves.
+
+The HEAD-pass lineage-anchor catch loop-closing meta-instance is
+itself substrate the codification artifacts consume — codifying
+disciplines the codification act itself practices. The arc earned
+its dual codification by practicing both disciplines (the four-
+category framework caught the lineage-anchor drift via category-
+A; the projection-from-model sub-pattern was instantiated at
+advisor grain through the bilateral affirmation feedback loop)
+and routing the substrate honestly (manifestation-vs-discovery
+resolution practice + recursive disk-landing shape both pre-
+positioned at exploratory framing).
+
+The arc-character framing converges with the prior four arcs
+(hygiene `9f320ded`, T8 `183935ee`, umbrella `462ad426`, companion
+`a4cc0f02`): disciplines compound across arcs in the expected
+direction; carry-forwards externalize at each closeout; the dual-
+codification arc shape ships when both candidates clear threshold
+from the same evidence base; cost-gradient discipline operates at
+multiple grains (cross-arc + sub-arc + intra-conversation +
+draft-review).
+
+Three substantive commits, two new convention files, +538 lines
+plus this closeout. Docs only; no service-layer code, no
+migrations, no schema changes. The disciplines (T4 ratified-
+contract-scope, four-category prompt-drift typology being
+codified here, projection-from-model sub-pattern being codified
+here, codify-convention skill, multi-line Edit anchor, prediction-
+grounding via HEAD-pass-against-disk, observation-vs-application-
+grain N count distinction, substrate-tagging at banking with
+mechanism-tagging at graduation-time discriminator) made the
+substance possible — not the other way around.
