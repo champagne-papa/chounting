@@ -22,7 +22,41 @@ Ratified 2026-05-29 by phil per the Ring 2A-authoring design spec
 V0.1 at `c85eb7c6`) and the CTO chat-ratification of that design spec on
 2026-05-29.
 
-This ADR is **consumer wiring plus one net-new service writer** against
+**Amended 2026-05-29** (Ring 2A-authoring implementation arc, commit-(b)
+HEAD-pass) — two ratification-time substrate errors, caught at the implementation
+layer's HEAD-pass and corrected below (the original ratified claims are preserved
+in this note for provenance):
+
+1. **Decision 5 mechanics.** The ratified text framed approval as "a narrow UPDATE
+   … deriving `lifecycle_state='active'` (migration `20240163:271`)." That is
+   wrong: migration `:271`'s `CASE WHEN approved_at IS NOT NULL` is a **backfill-time**
+   initial-value computation (step d), not a runtime derivation; `rule_registry.
+   lifecycle_state` is a plain stored `NOT NULL` column set explicitly by writers
+   (cf. `ruleRegistryService.promote`), with no generated column or sync trigger.
+   Because `ruleEvaluationService.evaluate` filters candidates on
+   `lifecycle_state='active'`, approval must **explicitly set
+   `rule_registry.lifecycle_state='active'`** (functional activation) in addition
+   to `vendor_rules.approved_at`/`approved_by` (provenance). Approve is therefore a
+   **two-table atomic write** via a new `approve_vendor_rule_atomic` RPC — the
+   transition-sibling of the shipped `create_vendor_rule_atomic` (which creates the
+   rows in `'proposed'` state). Decision 5 and the Context bullet are corrected.
+
+2. **Migration outline.** "No migration" is wrong. **Two** function/seed-only
+   migrations are required (neither changes a table shape → no `types.ts` regen):
+   `20240167` seeds the `rule.create` permission (the create/approve POST authorizes
+   via `withInvariants({ action: 'rule.create' })`, absent from `ACTION_NAMES`/
+   permissions; CA-27 set-equality parity enforced; controller-only grant mirroring
+   `20240166`), and `20240168_approve_vendor_rule_atomic_rpc` (function-only;
+   mirrors `create_vendor_rule_atomic`'s `SECURITY DEFINER` + `service_role` grant,
+   and inherits its DEFINER-vs-INVOKER hygiene forward-flag).
+
+Both errors share the late-emerging-substrate shape: the design-spec + ratification
+frames focused on the consumer/writer surfaces; the substrate one layer below
+(route-authz permission catalog; `lifecycle_state` storage mechanics + two-table
+consistency) was invisible until the implementation HEAD-pass reached it. Per the
+ADR-before-code discipline, this amendment lands before the code that depends on it.
+
+This ADR is **consumer wiring plus net-new service writers** against
 already-ratified substrate. It does **not** amend or supersede any prior ADR:
 Ring 2A-core's substrate (ADR-0024) and implementation seams (ADR-0025), and the
 Rule Type Core substrate (ADR-0023), are ratified canon and are consumed here,
@@ -79,11 +113,16 @@ design arc's verification + design-spec HEAD-pass shape the decisions:
 
 - **Late-emerging substrate requirement — the approval-ceremony writer.** The
   design-spec HEAD-pass surfaced that `rule_lifecycle_state = {proposed, active,
-  demoted, retired}` (no `rejected` state), and `proposed → active` derives from
-  `vendor_rules.approved_at` (the approval ceremony, migration `20240163:271/306`)
-  — **not** `promote()` (rung ascension, inert at v1). No shipped service writes
-  `approved_at` (`vendorRuleService` is read-only for inserts). This arc authors
-  that writer (`createVendorRule` untouched per T4).
+  demoted, retired}` (no `rejected` state), and that `proposed → active` is **not**
+  `promote()` (rung ascension, inert at v1) — it is the approval ceremony.
+  *(Corrected per the 2026-05-29 amendment: `lifecycle_state` is a stored column
+  set explicitly, not derived from `approved_at` — migration `:271` is a
+  backfill-time one-shot. So the approval ceremony is a **two-table atomic write** —
+  `vendor_rules.approved_at`/`approved_by` (provenance) **+** `rule_registry.
+  lifecycle_state='active'` (the functional gate `evaluate` filters on) — via a new
+  `approve_vendor_rule_atomic` RPC, the transition-sibling of `create_vendor_rule_atomic`.)*
+  No shipped service writes `approved_at`; this arc authors the RPC + its wrapper
+  (`createVendorRule` untouched per T4).
 
 **v1-inertness, honestly named.** A created v1 vendor rule is near-inert at
 runtime: branchless, it produces `almost_match` → default approval, and accrues no
@@ -176,16 +215,20 @@ The `ProposedRuleCard` carries Approve / Reject / Edit actions (the shipped
 - **Draft is ephemeral.** `draftVendorRule` emits the card without persisting a rule;
   nothing in `rule_registry` exists until approval.
 - **Approve = create + approval ceremony.** On approve, the route handler (Decision 7)
-  orchestrates `ruleCreationOrchestrator.createVendorRule` (persisting a `'proposed'`
-  rule), then **a new approval-ceremony write sets `vendor_rules.approved_at`/
-  `approved_by`**, deriving `lifecycle_state='active'` (migration `20240163:271`) —
-  the disk-faithful two-step the orchestrator's own comment describes. The writer
-  does not exist on disk; this arc authors it as `vendorRuleService.approve`, a
-  narrow UPDATE **idempotent on the `approved_at IS NULL` precondition**, owned by
-  `vendorRuleService` per the single-writer convention (it is the canonical writer
-  of `vendor_rules`). The service's read-only status guarded *insert* — bypassing
-  the co-creation invariant — not an UPDATE to an already-co-created row, so the
-  approve write is consistent with it. `createVendorRule` is **not** modified (T4).
+  orchestrates `ruleCreationOrchestrator.createVendorRule` (persisting the rows in
+  `'proposed'` state), then **the approval ceremony atomically sets
+  `vendor_rules.approved_at`/`approved_by` (provenance) and
+  `rule_registry.lifecycle_state='active'` (the functional activation gate
+  `ruleEvaluationService.evaluate` filters candidates on)**. Both writes are one
+  transaction — an orphaned half-approve (provenance set but `lifecycle_state` still
+  `'proposed'`, or vice versa) is an inconsistent state — so this arc authors a new
+  **`approve_vendor_rule_atomic` RPC** (the transition-sibling of the shipped
+  `create_vendor_rule_atomic`, which writes the same two tables at creation in
+  `'proposed'` state), with `vendorRuleService.approve` as a thin wrapper over it
+  (mirroring how `createVendorRule` wraps its RPC), idempotent on the
+  `approved_at IS NULL` precondition. `lifecycle_state` is **not** derived from
+  `approved_at` (it is a stored column; migration `:271` is backfill-time only —
+  see the 2026-05-29 amendment). `createVendorRule` is **not** modified (T4).
 - **Reject is ephemeral.** There is no `rejected` lifecycle state, and (because draft
   is ephemeral) no persisted rule to mark. Reject resolution is chat-turn-local.
 - **Edit = re-draft → new card.** Edit produces a new card cycle (the shipped
@@ -231,9 +274,26 @@ shipped) so the controller sees the now-created rule, mirroring the shipped
 
 ## Migration outline
 
-**No migration.** This arc wires existing substrate and authors the
-approval-ceremony writer against the already-shipped `vendor_rules.approved_at` /
-`approved_by` columns (migration `20240163`). No schema change.
+**Two migrations** (both function/seed-only — neither changes a table shape, so no
+`types.ts` regen; corrected from the ratified "No migration" per the 2026-05-29
+amendment):
+
+- **`20240167` — `rule.create` permission seed.** The create/approve POST (Decision 7)
+  authorizes via `withInvariants({ action: 'rule.create' })`; `rule.create` is absent
+  from `ACTION_NAMES` + the permissions catalog (the four seeded `rule.*` permissions
+  are promote/demote/rename/retire, migration `20240166`). Seeds the permission
+  (`'Rules'` category) + a controller-only `role_permissions` grant (rule governance
+  is controller authority, ADR-0025 Decision 9), and adds `'rule.create'` to
+  `ACTION_NAMES` in the same atomic commit (CA-27 set-equality parity; mirrors
+  `20240166`'s inline-seed pattern). `rule.approve` is **not** seeded — the POST
+  authorizes as a single `rule.create` action; the approval ceremony is internal to
+  it (a separate `rule.approve` permission is carry-forward if an independent
+  approve-existing-proposed-rule surface ever materializes — not v1, draft is ephemeral).
+- **`20240168` — `approve_vendor_rule_atomic` RPC** (Decision 5). Function-only; the
+  `vendor_rules.approved_at`/`approved_by` + `rule_registry.lifecycle_state` columns
+  already exist (migration `20240163`). Atomically updates both tables; mirrors
+  `create_vendor_rule_atomic`'s `SECURITY DEFINER` + `GRANT EXECUTE … TO service_role`
+  shape, and inherits its DEFINER-vs-INVOKER hygiene forward-flag.
 
 ## Non-decisions
 
