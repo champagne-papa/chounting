@@ -124,3 +124,12 @@ __pycache__/
 # orgs/[orgId]/reports/` API routes tree). Catch #23 + #24 logged for
 # D1 closeout friction-journal forward-pointer.
 /reports/
+
+# Ad-hoc diagnostic scripts from arc work (e.g., _tmp_t8_count_check.ts
+# from T8 investigation; _tmp_classify_check.ts from Phase 8 classifier
+# fix). Created during HEAD-pass diagnostics, deleted at arc close per
+# the practice the T8 arc demonstrated; gitignore defense-in-depth
+# prevents accumulation if cleanup is missed. Codified at
+# companion-462ad426 closeout per the class-2 carry-forward closed in
+# this arc.
+apps/web/scripts/_tmp_*.ts
