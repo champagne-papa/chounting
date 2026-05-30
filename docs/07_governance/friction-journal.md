@@ -17388,3 +17388,307 @@ anchored to this push's SHA, carrying six design-spec open questions
 (persona scaffolding; `default_account` v1 role; approval-ceremony
 writer home; vendor disambiguation UX; card placement; multi-rule
 drafting) and the five banked sub-observations as substrate.
+
+## 2026-05-30 — Ring 2A-authoring implementation arc closeout: 8-decision body landed backend-up→agent→UI; codification gate on late-emerging-substrate DEFERRED (α/β split, observation-grain N=1-arc); v1 rule-creation live on staging (SHIPPED)
+
+The Ring 2A-authoring **implementation** arc — opened against the
+design-authoring closeout (`246248ce`) as its fresh-arc successor,
+landing ADR-0026 Decisions 1–8 — closed today. Arc lineage:
+`8fb8b714` (ratify ADR-0026 + 2 CTO amendments) → `7221067f`
+(reconcile 2 ratification-time substrate errors, pre-code) →
+`abb79c83` (commit b — approve RPC + wrapper) → `4654a12c` (commit
+c — create route + permission + orchestration) → `0543e75c` (commit
+d — drafting agent surface) → `67e44bb1` (commit e — UI render +
+registry wiring) → [this closeout commit], all on `staging`, +6
+ahead of `origin/staging` at the design-authoring anchor. The arc
+sequenced **backend-up → agent → UI** (RPC → route → tool → card),
+each layer landing against the one below it already on disk. HEAVY
+at commit e: **1573 passed / 0 failed / 10 skipped (253 files)**.
+Substrate touched: 2 migrations (`20240167` rule.create permission;
+`20240168` approve_vendor_rule_atomic RPC), `ACTION_NAMES +=
+rule.create`, the `canvasDirective` schema/type (+`rule_registry`,
++`proposed_rule_card` payload), and ADR-0026 (ratified in-arc +
+amended). The implementation practiced **ADR-before-code twice**
+(both reconciliations landed before their deviating code).
+
+### Lead substrate-observation — codification gate on late-emerging-substrate-requirement: DEFER
+
+The arc's defining pattern fired **N=6** (design-spec N=1 from the
+prior closeout, plus implementation N=2–6 this arc). At closeout the
+`codify-convention` forcing function ran the three-criteria gate
+against the α/β two-sub-shape framing. **Outcome: DEFER** — neither
+a new convention nor codify-now. The reasoning, disk-grounded:
+
+- **Captured-elsewhere (dismisses a *new* convention).** The core
+  phenomenon — substrate at a lower layer silently decomposing into
+  bugs at a layer boundary — is already codified as **"Material Gaps
+  Surface at Layer-Transition Boundaries"**
+  (`docs/04_engineering/conventions/session/scope-lock.md`; Phase
+  1.2, N=5: P11b/P14/P16/P19/P21). All six instances this arc are
+  that shape: a ratified decision cited substrate at one layer
+  (account-selector; RuleRegistryView nav; approval-ceremony writer;
+  route-authz permission; `validTemplateIdsSection` renderer) that
+  wasn't verified against the other side. A new standalone
+  convention would duplicate; the existing convention's amendment is
+  the cleaner path.
+
+- **The distinguishing α/β content is complementary-downstream, not
+  a refinement.** The existing convention's remediation is
+  *prophylactic verification* (state the cross-layer dependency
+  explicitly + verify both sides at scope-lock/brief-authoring, so
+  the gap never reaches implementation). The α/β split is a
+  *resolution* discipline that fires *after* a layer-gap reaches
+  implementation despite prevention: **α** (the late substrate
+  reveals a ratified-contract-vs-disk *error*) → ADR-before-code
+  reconciliation; **β** (substrate *assumed-but-absent/incomplete*)
+  → scope-decision (build-now / complete / defer). Different
+  operational moment (impl-HEAD-pass resolution vs scope-lock
+  prevention) → genuinely new material when it graduates, not a
+  duplicate.
+
+- **Stable fails for the α/β split → DEFER (not codify-now).** The
+  N=6 is **application-grain-inflated within a single arc**; per the
+  observation-grain-vs-application-grain convention, six applications
+  of the insight within one arc is **observation-grain N=1** for the
+  α/β split. The split has fired in exactly one arc (Ring
+  2A-authoring). The split is the freshly-articulated contribution;
+  it needs a second observation-grain context before it settles.
+  *High N did not force codification — the N reflects this arc
+  exercising the split repeatedly, not the split settling.*
+
+**Graduation shape when it fires:** an **amendment** to "Material
+Gaps Surface at Layer-Transition Boundaries"
+(`docs/04_engineering/conventions/session/scope-lock.md`) adding
+(a) the **prior-invisibility framing** — the gap is invisible at the
+upper layer's frame until a deeper HEAD-pass reaches the substrate
+— and (b) the **α/β resolution-split subsection**. **Re-evaluation
+trigger:** the next arc (Logic Receipt write-path, or Ring 2B) where
+a layer-transition gap surfaces at implementation **and the α/β
+resolution decision fires** — i.e., observation-grain N=2 for the
+split. At that point it graduates as the amendment.
+
+**The N=6 instance inventory (the deferral's evidence record).**
+Two resolve via α (ratified-contract error → amendment), three via
+β (substrate gap → scope-decision); N=1 was design-spec-time:
+
+- **N=1** — approval-ceremony writer absent (design-spec HEAD-pass,
+  pre-ratification; ADR ended correct). *(Prior closeout's bank.)*
+- **N=2** (α) — route-authz `rule.create` permission missing from
+  the catalog (commit-b HEAD-pass, post-ratification; ADR error →
+  amendment `7221067f`).
+- **N=3** (α) — Decision-5 two-table atomic-write mechanics +
+  `lifecycle_state`-not-derived (commit-b authoring-prep,
+  post-ratification; ADR error → amendment `7221067f`).
+- **N=4** (β) — account selector doesn't exist (commit-e HEAD-pass;
+  Ring-2A-core substrate gap → scope-decision: OQ-2 account
+  display-only, Ring-2B-defer).
+- **N=5** (β) — `RuleRegistryView` shipped-but-unwired to navigation
+  (commit-e HEAD-pass; Ring-2A-core substrate gap → scope-decision:
+  wire it, T4-clean).
+- **N=6** (β) — `validTemplateIdsSection()`'s curated two-group
+  renderer below the `AGENT_EMITTABLE` map edit (commit-e HEAD-pass,
+  this session; the prior session's *own* incomplete-mirror gap →
+  scope-decision: complete the mirror, Shape A). Caught by the
+  `agentTemplateIdSetClosure` line-112 closure test, not by reading
+  — a structural gate reaching substrate a layer below the edit.
+
+### Per-commit substance
+
+- **Ratification `8fb8b714`** — ADR-0026 ratified + 2 CTO amendments
+  (modules-taxonomy forward-flag note; Decision 5 enriched to name
+  `vendorRuleService.approve` as the approval-ceremony writer).
+
+- **Reconciliation `7221067f`** — two ratification-time substrate
+  errors corrected *before* the deviating code (ADR-before-code):
+  Decision 5's two-table-atomic-write mechanics, and the Migration
+  outline ("No migration" → two function/seed-only migrations).
+  The α-resolution path for N=2/N=3.
+
+- **Commit (b) `abb79c83`** — `approve_vendor_rule_atomic` RPC
+  (`20240168`; SECURITY DEFINER + service_role grant, the
+  forward-flag inherited from `create_vendor_rule_atomic`) +
+  `vendorRuleService.approve` thin wrapper; idempotent on
+  `approved_at IS NULL`. 7 integration tests (3 RPC + 4 wrapper). A
+  reviewer-grain test-layer catch fired: per-call vendor-uniqueness
+  discipline applied to the wrapper test but not the sibling RPC
+  test; caught by the test:full summary gate, fixed test-only.
+
+- **Commit (c) `4654a12c`** — `POST /api/orgs/[orgId]/rules` +
+  `20240167` (`rule.create` permission, controller-only; `ACTION_NAMES
+  += rule.create`; CA-27/28/37 parity) + `createAndApproveVendorRule`
+  two-step orchestration in a **new composition-layer file
+  `ruleAuthoringService.ts`**. The composition-layer extraction
+  resolved a three-way constraint (Decision-7 "handler orchestrates"
+  literal × testability needing a callable fn × T4
+  "don't-modify-`ruleCreationOrchestrator`") — a new sub-shape:
+  ratified-decision-literal-vs-implementation-constraints →
+  composition-layer extraction (N=1, banked).
+
+- **Commit (d) `0543e75c`** — `draftVendorRule` tool (controller
+  persona, `gatedByDispatcherSet`) + `resolveDraftVendorRule`
+  (`vendorService.matchVendor` → rule_draft / vendor_ambiguous /
+  vendor_not_found; non-null `vendor_id` gates the draft, V5 blocking
+  pre-condition) + `proposed_rule_card` directive contract
+  (placeholder-rendered at d) + persona scaffolding (Decision 2). 
+  Structural gates: `ORG_SCOPED_TOOLS` auto-derive (5→6) +
+  `agentPersonaWhitelist` CA-44 (10→11, controller-only).
+
+- **Commit (e) `67e44bb1`** — `ProposedRuleCard` creation-time
+  Four-Questions render (V2 population; ephemeral reject/edit per
+  Decision 5; Approve → POST `/rules` → navigate) + `rule_registry`
+  directive wiring Ring-2A-core's shipped `RuleRegistryView`
+  (Decision 8; T4 — renders, doesn't modify) + `proposed_rule.*`
+  templates ×3 locales, Zod-validated in `AGENT_EMITTABLE` and
+  rendered in `validTemplateIdsSection` (§3 mirror + §4 Zod-validated).
+  This session resolved the commit-e red→green (jsdom directive;
+  closure-test namespace filter; Shape-A renderer group; schema
+  doc-sync fold) — see the count forensics below.
+
+### Running tally — banked sub-observations (all banked-not-codified beyond the DEFER above)
+
+- **Reviewer/advisor-grain projection-from-model — cumulative
+  N≈7+ across two consecutive arcs.** This arc's instances all
+  caught at the cheapest layer (executor HEAD-pass / draft-review
+  against disk): modules tokens (adr:lint), Decision-5 abstractness,
+  `createVendorRule` return shape, signature shape, `matchVendor`
+  signature, `ORG_SCOPED_TOOLS` auto-derive. The framework I
+  co-author catching my projections at every surface —
+  drafter-not-exempt fully operational. *(References
+  `docs/04_engineering/conventions/projection-from-model.md`.)*
+
+- **Verify-against-the-authoritative-source — three surfaces this
+  session.** The same shape recurred at three verification surfaces:
+  (1) **test-summary-line, not tail** — the first `test:full`
+  reported exit-0 (a `tail` pipe artifact) while the summary line
+  showed 6 failed; the summary is the gate. (2) **the collector, not
+  the authored plan** — the +8 count (1565→1573) exceeded the +4
+  authored-test projection; held the "reconciled above" hand-wave
+  and required vitest's own collector, which named it: 4
+  `ProposedRuleCard` static cases + 4 *dynamically-generated*
+  `agentTemplateParamsClosure` cases (a describe-scope `for`-loop over
+  `MERGED_TEMPLATE_ID_PARAMS` emits one `it()` per template; the 4
+  new `proposed_rule.*` keys → +4). (3) **disk, not the subagent
+  map** — the Explore map cited the convention at `scope-lock.md`
+  (dropping the `session/` path segment); the disk read corrected it
+  to `session/scope-lock.md`. All three are
+  `docs/04_engineering/conventions/projection-from-model.md`'s
+  shape (verify against collector/summary/remote, don't project from
+  plan/narration/map); **strengthening-N for the existing
+  convention, not a new one.** Sibling to the bilateral
+  push-output discipline (canonical-line-not-narration) and the
+  test-summary-line gate.
+
+- **Shape-A-via-ratified-contract.** The `proposed_rule.*`
+  classification (`AGENT_EMITTABLE` + prompt-rendered, Shape A) was
+  not resolved by "mirror the prior session" but by the ratified
+  contract: ADR-0026 §4's "Zod-validated in `validTemplateIds.ts`"
+  forces a Zod-bearing map (only `AGENT_EMITTABLE`/`SERVER_EMITTED`
+  carry schemas; `UI_ONLY_AGENT_KEYS` is a flat array), and the
+  `proposed_entry.*` precedent confirms card-templates live in
+  `AGENT_EMITTABLE` + render in the prompt. Bank:
+  **ratified-contract-as-tiebreaker for implementation-classification
+  questions.**
+
+- **proposed_* template taxonomy carry-forward (T4).** Whether
+  card-internal Four-Questions templates should be advertised to the
+  agent as `respondToUser`-selectable at all — applies equally to
+  the shipped `proposed_entry.*` and the new `proposed_rule.*`. A
+  pre-existing taxonomy question, not a commit-(e) regression;
+  reclassifying both into a card-only Zod-bearing map is a
+  carry-forward to the advisor/closeout, **not an in-arc absorption**
+  (would need an ADR-0026 amendment). Sibling-class to the
+  modules-taxonomy gap (both taxonomy-classification questions
+  deferred to dedicated passes).
+
+- **Modules-taxonomy gap (N=2 lineage).** ADR-0025 forward-flag +
+  ADR-0026 adr:lint catch; `services/rules/` + route-handler/api lack
+  module tokens. Separate-arc-opener candidate
+  (taxonomy-vocabulary-hygiene pass), not this arc's fix.
+
+- **Structural-enforcement gates made drift correct-by-construction
+  -or-red.** `adr:lint`/`adr:index` (ratification); CA-27/28/37
+  permission-parity (commit c); `ORG_SCOPED_TOOLS` drift +
+  `agentPersonaWhitelist` CA-44 (commit d); exhaustive-switch compile
+  (commits d/e: `describeDirective`/`tabTitleForDirective`);
+  locale-parity + template-closure (commit e). Each made a class of
+  drift inevitable-to-catch rather than discretionary — the line-112
+  closure test reaching the N=6 substrate gap is the canonical
+  example.
+
+- **v1-inertness is functional, not metadata (OQ-2 refinement).**
+  `ruleEvaluationService.evaluate` filters candidates on
+  `lifecycle_state='active'`, so approval-ceremony activation is a
+  *functional* gate: a created v1 rule is evaluated + logged
+  (`almost_match`) but not winning (branchless until Ring 2B). The
+  drafting + approval UX **is exercised at v1** —
+  substrate-validated-through-use, unlike Ring 2A-core's purely-inert
+  surfaces.
+
+- **OQ resolutions:** OQ-1 (persona scaffolding) → `RULE_DRAFTING_HINTS`
+  in `controller.ts`; OQ-2 (account v1 role) → display-only,
+  Ring-2B-defer; OQ-3 (approval-ceremony writer home) →
+  `vendorRuleService.approve` (single-writer); OQ-4 (vendor
+  disambiguation) → `resolveDraftVendorRule` discriminated result;
+  OQ-5 (card placement) → canvas-path render (inline deferred).
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met.** HEAVY at commit e (`67e44bb1`): **1573 passed
+/ 0 failed / 10 skipped (253 files)** — full run (db:reset:clean),
+not a docs-only cache hit, since the arc touched code + migrations.
+The +8 vs the commit-d baseline (1565) is fully accounted by vitest's
+collector: +4 `ProposedRuleCard` static + 4 auto-generated
+`agentTemplateParamsClosure` cases. This closeout commit is docs-only
+(friction-journal append), so the code/test state is byte-identical
+to `67e44bb1`; the 1573 baseline holds.
+
+**Condition 2: met — the substantive condition this arc.** Verified
+against disk: ADR-0026 `status: ratified`, indexed in
+`adr/README.md:274` (Ratified, 2026-05-29); migrations `20240167` +
+`20240168` present and applied; `ACTION_NAMES += rule.create` (CA-27
+set-equality parity); the `canvasDirective` schema ↔ type ↔
+exhaustive-switch consumers consistent; no `invariants.md` /
+`control_matrix.md` / `ledger_truth_model.md` / `types.ts` drift
+(the two migrations are function/seed-only — no table-shape change,
+no regen). The DEFER means **no conventions-canon edit this commit**
+(scope-lock.md untouched); doc-sync is reconciled.
+
+**Condition 3: met by this entry.** Closeout written; arc-scope
+sub-observations banked (the running tally above); the
+`codify-convention` forcing function ran the three-criteria gate on
+late-emerging-substrate and **correctly DEFERRED** (Captured-elsewhere
++ Stable-fails-at-observation-grain-N=1) — high N refused as an
+application-grain inflation, with a named graduation hook + re-eval
+trigger for the next arc.
+
+### Arc character
+
+The arc's defining feature is **backend-up layering with a
+structural gate at each seam**: RPC → route → tool → card, each
+landing against disk-resident substrate below it, each seam guarded
+by a structural enforcement (adr:lint, CA-parity, exhaustive-switch,
+closure tests) that converted drift from discretionary-to-catch into
+inevitable-to-catch. The late-emerging-substrate pattern fired six
+times precisely *because* each layer's frame focused on its own
+salient surfaces — and was caught six times *because* a deeper
+HEAD-pass or a structural gate reached the substrate a layer below.
+The N=6-but-DEFER landing is the arc's clearest discipline moment:
+the forcing function ran, the gate held against N-inflation pressure,
+and the genuinely-new α/β content was named complementary (not
+duplicate) and parked with a precise graduation hook.
+
+The recursive theme persists across the two-arc Ring-2A-authoring
+lineage: the framework I co-author caught my projections at every
+prompt-, code-, and map-layer of this arc — the count forensics
+(collector-not-plan), the summary-line gate (summary-not-tail), the
+subagent-map path correction (disk-not-map), and the six
+late-emerging-substrate catches. Drafter-not-exempt, reviewer-not-
+exempt, fully operational. Six commits (ratification + reconciliation
++ b/c/d/e) plus this closeout; v1 conversational rule-drafting +
+approval + registry-population is live on `staging`, substrate-
+validated-through-use. The next sequel is the Logic Receipt
+write-path arc (INV-AGENT-002, rung activation — where the
+three-framing render-path divergence reconciles) or Ring 2B (where
+v1 vendor rules start winning + `default_account_id` resolution
+lands), either of which is the candidate re-eval context for the
+deferred α/β split.
