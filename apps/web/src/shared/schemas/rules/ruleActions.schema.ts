@@ -31,7 +31,22 @@ export const RetireRuleInputSchema = z
   .object({ org_id: uuid, rule_id: uuid })
   .strict();
 
+// Ring 2A-authoring (ADR-0026 §7). Input for the POST /api/orgs/[orgId]/rules
+// create route. org_id injected from the path; the rest from the body. bundle_type
+// is the closed v1+reserved enum (migration 20240163); default_account_id /
+// legal_entity_id are optional (createVendorRule defaults them to null).
+export const CreateVendorRuleInputSchema = z
+  .object({
+    org_id: uuid,
+    vendor_id: uuid,
+    bundle_type: z.enum(['born_paid_bill', 'final_invoice_with_applied_deposit', 'vendor_credit_applied_to_bill']),
+    default_account_id: uuid.optional(),
+    legal_entity_id: uuid.optional(),
+  })
+  .strict();
+
 export type PromoteRuleInput = z.infer<typeof PromoteRuleInputSchema>;
 export type DemoteRuleInput = z.infer<typeof DemoteRuleInputSchema>;
 export type RenameRuleInput = z.infer<typeof RenameRuleInputSchema>;
 export type RetireRuleInput = z.infer<typeof RetireRuleInputSchema>;
+export type CreateVendorRuleInput = z.infer<typeof CreateVendorRuleInputSchema>;

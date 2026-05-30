@@ -58,6 +58,8 @@ export const ACTION_NAMES = [
   'rule.demote',
   'rule.rename',
   'rule.retire',
+  // Rule creation (Ring 2A-authoring Commit (c); controller-only per ADR-0026 §7)
+  'rule.create',
 ] as const;
 
 export type ActionName = typeof ACTION_NAMES[number];

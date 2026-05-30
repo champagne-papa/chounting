@@ -15,15 +15,15 @@ describe('CA-28: permission catalog seed integrity', () => {
     expect(keys).toEqual(['ap_specialist', 'controller', 'executive']);
   });
 
-  it('34 permissions exist', async () => {
+  it('35 permissions exist', async () => {
     const { data } = await db.from('permissions').select('permission_key');
-    expect(data).toHaveLength(34);
+    expect(data).toHaveLength(35);
   });
 
-  it('controller has all 34 permissions', async () => {
+  it('controller has all 35 permissions', async () => {
     const { data: role } = await db.from('roles').select('role_id').eq('role_key', 'controller').single();
     const { data: perms } = await db.from('role_permissions').select('permission_key').eq('role_id', role!.role_id);
-    expect(perms).toHaveLength(34);
+    expect(perms).toHaveLength(35);
   });
 
   it('ap_specialist has exactly 7 permissions', async () => {

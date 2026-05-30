@@ -8,7 +8,11 @@
 // service. Query params: ?lifecycle= ?rung= ?sort= (?health= deferred to Commit 5).
 
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { ruleRegistryService } from '@/services/rules/ruleRegistryService';
+import { createAndApproveVendorRule } from '@/services/rules/ruleAuthoringService';
+import { CreateVendorRuleInputSchema } from '@/shared/schemas/rules/ruleActions.schema';
+import { withInvariants } from '@/services/middleware/withInvariants';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
@@ -49,6 +53,49 @@ export async function GET(
     logger.error(
       { trace_id: traceId, org_id: orgId, err: { message: err instanceof Error ? err.message : String(err) } },
       'rules GET 500 (unknown)',
+    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// POST — create a vendor rule (the conversational-drafting approval → create path,
+// ADR-0026 §5/§7). Authorizes via withInvariants({ action: 'rule.create' })
+// (controller-only); orchestrates the create→approve two-step via
+// createAndApproveVendorRule. org_id is injected from the path; the drafted rule
+// fields come from the body. 201 Created (POST-create convention, per bill.post /
+// journal_entry.post).
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ orgId: string }> },
+) {
+  let orgId: string | undefined;
+  let traceId: string | undefined;
+  try {
+    ({ orgId } = await params);
+    const json = await req.json().catch(() => ({}));
+    const parsed = CreateVendorRuleInputSchema.parse({ ...json, org_id: orgId });
+    const ctx = await buildServiceContext(req);
+    traceId = ctx.trace_id;
+
+    const result = await withInvariants(createAndApproveVendorRule, { action: 'rule.create' })(parsed, ctx);
+    return NextResponse.json(result, { status: 201 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid request', details: err.issues }, { status: 400 });
+    }
+    if (err instanceof ServiceError) {
+      const status = serviceErrorToStatus(err.code);
+      if (status >= 500) {
+        logger.error(
+          { trace_id: traceId, org_id: orgId, err_code: err.code, err_message: err.message },
+          'rules POST 500 (ServiceError)',
+        );
+      }
+      return NextResponse.json({ error: err.code, message: err.message }, { status });
+    }
+    logger.error(
+      { trace_id: traceId, org_id: orgId, err: { message: err instanceof Error ? err.message : String(err) } },
+      'rules POST 500 (unknown)',
     );
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
