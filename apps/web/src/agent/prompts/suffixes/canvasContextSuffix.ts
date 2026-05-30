@@ -52,6 +52,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'a proposed entry awaiting approval';
     case 'proposed_attachment_card':
       return 'a proposed document attachment awaiting approval';
+    case 'proposed_rule_card':
+      return 'a proposed vendor-coding rule awaiting approval';
     case 'ai_action_review_queue':
       return 'the AI action review queue';
     case 'report_pl':

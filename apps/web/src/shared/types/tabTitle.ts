@@ -30,6 +30,8 @@ export function tabTitleForDirective(directive: CanvasDirective): string {
       return 'Proposed Entry';
     case 'proposed_attachment_card':
       return 'Proposed Attachment';
+    case 'proposed_rule_card':
+      return 'Proposed Rule';
     case 'ai_action_review_queue':
       return 'AI Action Review';
     case 'report_pl':

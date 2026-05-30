@@ -3,6 +3,7 @@
 
 import type { ProposedEntryCard } from './proposedEntryCard';
 import type { ProposedAttachmentCard } from '@/shared/schemas/document-platform/proposedAttachmentCard.schema';
+import type { ProposedRuleDraft } from '@/shared/schemas/rules/proposedRuleCard.schema';
 
 export type CanvasDirective =
   // Phase 1.1 — built fully:
@@ -15,6 +16,9 @@ export type CanvasDirective =
   // 5-surface extension. Sibling to proposed_entry_card; rendered via
   // ContextualCanvas → ProposedAttachmentCard.
   | { type: 'proposed_attachment_card'; card: ProposedAttachmentCard }
+  // Ring 2A-authoring (ADR-0026 §3) — rule-draft card; placeholder-rendered at
+  // commit (d), real renderer at commit (e).
+  | { type: 'proposed_rule_card'; card: ProposedRuleDraft }
   | { type: 'ai_action_review_queue'; orgId: string }
   | { type: 'report_pl'; orgId: string; periodId?: string }
   | { type: 'report_trial_balance'; orgId: string; periodId?: string }

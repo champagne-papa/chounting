@@ -18,6 +18,7 @@ import {
   postJournalEntryTool,
   reverseJournalEntryTool,
   respondToUserTool,
+  draftVendorRuleTool,
 } from '@/agent/tools';
 
 export type Persona = UserRole;
@@ -32,7 +33,8 @@ type ToolDef =
   | typeof listJournalEntriesTool
   | typeof postJournalEntryTool
   | typeof reverseJournalEntryTool
-  | typeof respondToUserTool;
+  | typeof respondToUserTool
+  | typeof draftVendorRuleTool;
 
 export function toolsForPersona(persona: Persona): readonly ToolDef[] {
   switch (persona) {
@@ -49,6 +51,8 @@ export function toolsForPersona(persona: Persona): readonly ToolDef[] {
         postJournalEntryTool,
         reverseJournalEntryTool,
         respondToUserTool,
+        // Ring 2A-authoring (ADR-0026 §1) — controller-only rule drafting.
+        draftVendorRuleTool,
       ];
     case 'ap_specialist':
       // Excludes createOrganization + updateOrgProfile (not an org admin).

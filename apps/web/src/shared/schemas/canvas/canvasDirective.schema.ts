@@ -16,6 +16,7 @@ import { z } from 'zod';
 // client-side consumers).
 import { ProposedEntryCardInputSchema } from '@/shared/schemas/accounting/proposedEntryCard.schema';
 import { ProposedAttachmentCardInputSchema } from '@/shared/schemas/document-platform/proposedAttachmentCard.schema';
+import { ProposedRuleDraftSchema } from '@/shared/schemas/rules/proposedRuleCard.schema';
 
 const uuid = z.string().uuid();
 
@@ -45,6 +46,14 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('proposed_attachment_card'),
     card: ProposedAttachmentCardInputSchema,
+  }).strict(),
+  // Ring 2A-authoring (ADR-0026 §3). Sibling to proposed_entry_card; carries the
+  // rule-draft. No orchestrator-owned UUIDs → no post-fill (org_id from the route
+  // path at approval). draftVendorRule emits it; commit (e)'s ProposedRuleCard
+  // renders it.
+  z.object({
+    type: z.literal('proposed_rule_card'),
+    card: ProposedRuleDraftSchema,
   }).strict(),
   z.object({ type: z.literal('ai_action_review_queue'), orgId: uuid }).strict(),
   z.object({

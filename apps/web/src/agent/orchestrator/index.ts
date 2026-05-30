@@ -69,12 +69,14 @@ import { orgService } from '@/services/org/orgService';
 import { chartOfAccountsService } from '@/services/accounting/chartOfAccountsService';
 import { periodService } from '@/services/accounting/periodService';
 import { journalEntryService } from '@/services/accounting/journalEntryService';
+import { resolveDraftVendorRule } from '@/agent/tools/draftVendorRule';
 import type { UpdateUserProfilePatch } from '@/shared/schemas/user/profile.schema';
 import type {
   CreateOrgProfileInput,
   UpdateOrgProfilePatch,
 } from '@/shared/schemas/organization/profile.schema';
 import type { CheckPeriodInput } from '@/agent/tools/schemas/checkPeriod.schema';
+import type { DraftVendorRuleInput } from '@/agent/tools/schemas/draftVendorRule.schema';
 
 const Q13_MAX_VALIDATION_RETRIES = 2;
 const STRUCTURAL_MAX_RETRIES = 1;
@@ -1262,6 +1264,19 @@ async function executeTool(
 
     if (toolName === 'listJournalEntries') {
       return await journalEntryService.list({ org_id: orgId }, ctx);
+    }
+
+    // Ring 2A-authoring (ADR-0026 §1/§6). Resolve the vendor, then return a
+    // discriminated result: rule_draft (confident match → the model emits a
+    // proposed_rule_card the controller approves) / vendor_ambiguous (surface
+    // candidates) / vendor_not_found (ask the controller to clarify or create the
+    // vendor). No mutation here — the create→approve two-step fires when the
+    // controller approves the card (POST /api/orgs/[orgId]/rules). vendor_name is
+    // the controller's phrase at v1 (matchVendor returns no canonical name on a
+    // confident match); the canonical-name refinement is a future polish.
+    if (toolName === 'draftVendorRule') {
+      const input = validatedInput as DraftVendorRuleInput;
+      return await resolveDraftVendorRule(input, orgId, ctx);
     }
 
     // Unknown tool — shouldn't reach here (buildSystemPrompt + the

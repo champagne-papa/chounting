@@ -241,6 +241,9 @@ function renderDirective(
     case 'bank_reconciliation':
     case 'ar_aging':
     case 'consolidated_dashboard':
+    // Ring 2A-authoring commit (d) — the proposed_rule_card directive contract
+    // lands here; commit (e) swaps this placeholder for the real ProposedRuleCard.
+    case 'proposed_rule_card':
       return <ComingSoonPlaceholder directiveType={d.type} />;
   }
 }
