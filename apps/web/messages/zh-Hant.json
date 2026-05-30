@@ -101,5 +101,19 @@
     "policy": {
       "approve_required": "Requires your approval."
     }
+  },
+  "proposed_rule": {
+    "what_changed": {
+      "vendor_rule": "Create a rule: code {vendor} ({bundle_type}) to {account}. Initial autonomy: Always Confirm."
+    },
+    "why": {
+      "from_utterance": "You asked to set this up: {utterance}."
+    },
+    "track_record": {
+      "new_rule": "New rule — no track record yet."
+    },
+    "if_rejected": {
+      "standard": "The rule will not be created. You can edit and resubmit, or discard."
+    }
   }
 }

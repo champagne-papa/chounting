@@ -122,5 +122,7 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the AR aging report';
     case 'consolidated_dashboard':
       return 'the consolidated dashboard';
+    case 'rule_registry':
+      return 'the vendor rules registry';
   }
 }

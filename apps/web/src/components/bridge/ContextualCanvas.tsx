@@ -28,6 +28,8 @@ import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
 import { ProposedEntryCard } from '@/components/ProposedEntryCard';
+import { ProposedRuleCard } from '@/components/ProposedRuleCard';
+import { RuleRegistryView } from '@/components/canvas/RuleRegistryView';
 import { ProposedAttachmentCard } from '@/components/canvas/ProposedAttachmentCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
@@ -234,6 +236,13 @@ function renderDirective(
     case 'welcome':
       return <WelcomeNavigator />;
 
+    // Ring 2A-authoring (ADR-0026 §3/§8) — the rule-draft card + the registry
+    // canvas (RuleRegistryView shipped at Ring 2A-core, wired to nav here).
+    case 'proposed_rule_card':
+      return <ProposedRuleCard card={d.card} onNavigate={onNavigate} />;
+    case 'rule_registry':
+      return <RuleRegistryView orgId={d.orgId} />;
+
     // Phase 2+ directive types — render placeholder
     case 'ai_action_review_queue':
     case 'ap_queue':
@@ -241,9 +250,6 @@ function renderDirective(
     case 'bank_reconciliation':
     case 'ar_aging':
     case 'consolidated_dashboard':
-    // Ring 2A-authoring commit (d) — the proposed_rule_card directive contract
-    // lands here; commit (e) swaps this placeholder for the real ProposedRuleCard.
-    case 'proposed_rule_card':
       return <ComingSoonPlaceholder directiveType={d.type} />;
   }
 }

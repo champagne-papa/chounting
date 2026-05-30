@@ -75,7 +75,10 @@ export type CanvasDirective =
   | { type: 'vendor_detail'; vendorId: string; orgId: string }
   | { type: 'bank_reconciliation'; accountId: string }
   | { type: 'ar_aging'; orgId: string }
-  | { type: 'consolidated_dashboard' };
+  | { type: 'consolidated_dashboard' }
+  // Ring 2A-authoring (ADR-0026 §8) — vendor-rules registry canvas (RuleRegistryView,
+  // wired to nav here; the post-approval target of ProposedRuleCard).
+  | { type: 'rule_registry'; orgId: string };
 
 /** Callback type for canvas directive navigation. Used by components
  *  that need to trigger directive changes (e.g., list → detail,

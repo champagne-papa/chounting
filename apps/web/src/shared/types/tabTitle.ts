@@ -100,5 +100,7 @@ export function tabTitleForDirective(directive: CanvasDirective): string {
       return 'AR Aging';
     case 'consolidated_dashboard':
       return 'Dashboard';
+    case 'rule_registry':
+      return 'Vendor Rules';
   }
 }

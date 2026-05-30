@@ -56,7 +56,10 @@ describe('agentTemplateIdSetClosure: template maps match messages/en.json', () =
   const en = JSON.parse(readFileSync(enPath, 'utf-8')) as Record<string, unknown>;
   const allKeys = flattenKeys(en);
   const namespacedKeys = allKeys.filter(
-    (k) => k.startsWith('agent.') || k.startsWith('proposed_entry.'),
+    (k) =>
+      k.startsWith('agent.') ||
+      k.startsWith('proposed_entry.') ||
+      k.startsWith('proposed_rule.'),
   );
   const namespacedSet = new Set(namespacedKeys);
 

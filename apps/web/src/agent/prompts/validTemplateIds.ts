@@ -68,6 +68,13 @@ export const AGENT_EMITTABLE_TEMPLATE_IDS = {
   'proposed_entry.if_rejected.journal_entry': z.object({}).strict(),
   'proposed_entry.if_rejected.reversal': z.object({}).strict(),
   'proposed_entry.policy.approve_required': z.object({}).strict(),
+  // Ring 2A-authoring (ADR-0026 §4) — ProposedRuleCard creation-time templates.
+  'proposed_rule.what_changed.vendor_rule': z
+    .object({ vendor: z.string(), bundle_type: z.string(), account: z.string() })
+    .strict(),
+  'proposed_rule.why.from_utterance': z.object({ utterance: z.string() }).strict(),
+  'proposed_rule.track_record.new_rule': z.object({}).strict(),
+  'proposed_rule.if_rejected.standard': z.object({}).strict(),
 } as const satisfies Record<string, z.ZodTypeAny>;
 
 /**
@@ -218,6 +225,9 @@ export function validTemplateIdsSection(): string {
   const proposedEntryEntries = entries.filter(([k]) =>
     k.startsWith('proposed_entry.'),
   );
+  const proposedRuleEntries = entries.filter(([k]) =>
+    k.startsWith('proposed_rule.'),
+  );
 
   const renderEntry = ([k, schema]: [string, z.ZodTypeAny]): string =>
     `- \`${k}\` — params: \`${renderParamsShape(schema)}\``;
@@ -237,5 +247,9 @@ ${renderList(agentEntries)}
 
 ### proposed_entry.* (journal-entry approval flow)
 
-${renderList(proposedEntryEntries)}`;
+${renderList(proposedEntryEntries)}
+
+### proposed_rule.* (rule-authoring approval flow)
+
+${renderList(proposedRuleEntries)}`;
 }

@@ -127,6 +127,10 @@ export const canvasDirectiveSchema = z.discriminatedUnion('type', [
   }).strict(),
   z.object({ type: z.literal('ar_aging'), orgId: uuid }).strict(),
   z.object({ type: z.literal('consolidated_dashboard') }).strict(),
+  // Ring 2A-authoring (ADR-0026 §8) — the vendor-rules registry canvas (Ring
+  // 2A-core's RuleRegistryView, wired to navigation here). Navigation directive
+  // (emitted by ProposedRuleCard's post-approval onNavigate); carries orgId.
+  z.object({ type: z.literal('rule_registry'), orgId: uuid }).strict(),
 ]);
 
 export type CanvasDirectiveParsed = z.infer<typeof canvasDirectiveSchema>;
