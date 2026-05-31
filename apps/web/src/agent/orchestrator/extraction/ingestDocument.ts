@@ -49,6 +49,7 @@ import { runOCR } from './stages/runOCR';
 import { classifyDocumentType } from './classifier';
 import { extractFields } from './extractFields';
 import { buildProposal } from './stages/proposalBuilder';
+import { shadowEvaluateRules } from './stages/shadowRuleEvaluation';
 import { withFailureClassification } from './failureClassification';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { vendorService } from '@/services/spend/vendorService';
@@ -436,6 +437,21 @@ export async function ingestDocument(
     model: null,
     timestamp: new Date().toISOString(),
   });
+
+  // Ring 2B Seam-1 (ADR-0027 Decision 5/6): shadow rule evaluation. Diagnostic
+  // only — gated (default off), fail-safe (never throws), transaction-isolated,
+  // and BEFORE the live auto-commit below so it cannot influence it (A1a — no
+  // auto-post). Card-only: bundles + attachment cards are skipped inside.
+  await shadowEvaluateRules(
+    {
+      proposalKind: proposal.kind,
+      vendorId: vendorMatch.vendor_id,
+      org_id: input.org_id,
+      source_document_id: input.source_document_id,
+      trace_id: input.trace_id,
+    },
+    ctx,
+  );
 
   // Stage 7 commit composite per chunk 7.3b Task 7.3b.5 + Step 18.
   //

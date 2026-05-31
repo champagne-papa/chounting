@@ -26,7 +26,7 @@ import { ruleTrackRecordService } from '@/services/rules/ruleTrackRecordService'
 import { ruleRegistryService } from '@/services/rules/ruleRegistryService';
 import { dispositionForAction, type Disposition } from '@/shared/rules/disposition';
 import type { ActionType, MatchResult, RuleRegistryRow } from '@/shared/rules/types';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type { ServiceContext, SystemActorServiceContext } from '@/services/middleware/serviceContext';
 import type { ProposedMutation } from '@/shared/schemas/accounting/proposedMutation.schema';
 
 export type EvaluationDispatchResult =
@@ -51,7 +51,10 @@ export type EvaluationDispatchResult =
  */
 export async function evaluateAndDispatch(
   input: { proposal: ProposedMutation; org_id: string; branchSource?: BranchSource },
-  ctx: ServiceContext,
+  // Ring 2B Seam-1: widened to admit the ingest pipeline's SystemActorServiceContext
+  // (the auto-commit arc's system-actor flow). ctx is threaded to union-accepting
+  // withInvariants services + read only for trace_id; no VerifiedCaller field is used.
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<EvaluationDispatchResult> {
   // 1. Evaluate (the ceiling/reversal guard lives inside evaluate → EvaluationSkipped).
   const result = await ruleEvaluationService.evaluate(
