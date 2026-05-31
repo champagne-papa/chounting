@@ -17692,3 +17692,132 @@ three-framing render-path divergence reconciles) or Ring 2B (where
 v1 vendor rules start winning + `default_account_id` resolution
 lands), either of which is the candidate re-eval context for the
 deferred α/β split.
+
+## 2026-05-30 — Ring 2B substrate design-authoring arc closeout: ADR-0027 ratified (branch/condition substrate, A1a + two-arc); modules-taxonomy gap retired; implementation deferred to fresh arc (SHIPPED)
+
+The **Ring 2B substrate design-authoring arc** (ninth arc) — opened against the
+Ring 2A-authoring implementation closeout (`8680e323`) — closed today with
+ADR-0027 ratified. Arc lineage: `04e9807e` (scope-lock) → `ee8b3a82` (ADR-0027
+design spec) → `d6175f4d` (ratification: ADR + taxonomy row + regenerated README +
+INDEX line) → [this closeout], all on `staging`, +3 ahead of `origin/staging` at
+close. Docs-only (no service code, no migration — the migration `20240169` + the
+production `branchSource` + the Seam-1 shadow call open as the **fresh second
+implementation arc** per the A1a + two-arc RI-7 ratification). The design spec
+preserves the full decision record; the ADR is the post-ratification authority.
+
+**What ADR-0027 ratified.** Ring 2B (A1a, substrate-only) lands the branch/condition
+substrate that makes pattern (vendor) rules match end-to-end in production *shadow*,
+feeding the shipped-but-inert evaluator (`noBranchSource` no-op → branchless →
+`almost_match`; `evaluateAndDispatch` zero production callers). Seven decisions:
+normalized `rule_branches` + `rule_conditions` (registry-keyed via the
+`rule_track_records` pattern — no `org_id`, simple cascade FK; JSONB only for the
+polymorphic `condition_value`); §5.1 logic-freeze via column-immutability trigger
+(OQ-2B-1 → trigger; INV-RULE-004 reserved-not-registered); RLS mirrors
+`rule_track_records` (through-parent SELECT/INSERT, UPDATE/DELETE `USING(false)`);
+production `branchSource`; thin Seam-1 shadow call to the shipped `evaluateAndDispatch`;
+`default_account_id` + vendor-name resolution; single-writer `ruleBranchService` inside
+the extended SECURITY-DEFINER creation RPC (A3). Plus the §5.10
+structure/action-type/action-parameter reconciliation.
+
+### The arc's defining feature — verify-against-the-shipped-artifact at every layer
+
+This arc was a sustained demonstration of the lineage's core discipline: **the frame
+is a hint; the shipped artifact is truth.** Catches, by layer (cheapest-first), all
+caught before they propagated:
+
+- **Reconnaissance (handoff-prompt grain).** The dispatched Ring-1/Ring-2 framings
+  carried three spec-§10-vs-shipped-code drifts — Ring 1 phantom (shipped at ADR-0023/
+  `20240163`), Ring 2A evaluator already shipped, `evaluateAndDispatch` shipped-but-
+  unconsumed — all caught by reading migrations/code instead of §10. These retired the
+  phantom "Ring 1 arc" and tightened Ring 2B's scope to the genuine gap.
+- **Pre-ADR verification (contract grain).** The hybrid storage shape was disk-derived
+  from `core/rules/types.ts` (`condition_value: unknown` → JSONB only there), not chosen;
+  the FK/RLS shape from the `rule_track_records` registry-child pattern.
+- **Per-commit review (ADR grain).** Two disk-grounding errors caught at advisor review
+  before commit: (a) `evaluation_trigger`/`source_trigger` Postgres enums don't exist
+  (the §5.4 split is TS-layer; columns are `trigger_type[]`; `branch_type` needs a new
+  enum); (b) `INV-RULE-002` was taken (determinism) — the freeze is `INV-RULE-004`, and
+  registers at implementation per the spec-without-enforcement rule, not at ratification.
+- **Index grain.** `related: [0011]` was a wrong-title inclusion (0011 is Document
+  Platform; branch storage is rule-scoped, no multi-entity relation) → dropped; the 0010
+  descriptor was reframed to "Reserved Enum States" (not "three-layer defense"); the
+  regenerated `adr/README.md` + the manual `INDEX.md` line completed the package
+  (`adr:index --check` "no changes" is the generator's idempotency proof, stronger than
+  eyeballing).
+
+Several catches were **drafter-grain on the executor's own reasoning** (the composite-FK
+over-generalization, the RLS-mutability overstatement, the immutability-concern
+conflation, the "three-layer defense" imprecision), caught at advisor review against
+disk. Drafter-not-exempt, reviewer-not-exempt — operational at every layer of the arc.
+
+### Banked observations
+
+- **modules-taxonomy gap RETIRED (was the recurring adr:lint bite).** The gap flagged
+  across the Ring 2A lineage (ADR-0025 flag, ADR-0026 catch) hit ADR-0027 head-on (a
+  pure `services/rules/` ADR with no `rules` Modules token). Resolved by the
+  first-consumer **fold**: a `rules` row added to `taxonomy.md` in the ratification
+  commit. The recurring N=2→3 gap closes here, not as a deferred hygiene pass.
+- **α/β codification hook — refined, still DEFERRED.** The reconnaissance's three
+  "assumed-absent-but-present" catches (Ring 1 phantom / Ring 2 evaluator / Ring 2
+  orchestrator) are the **mirror of the drafted β** (assumed-present-but-absent), an arm
+  the drafted α/β binary lacks. But all three share **one root cause** (Ring 2A-core
+  front-ran the staged §10 plan) within **one reconnaissance context** → **obs-grain
+  N=1** for the new sub-shape, not N=3. Disposition unchanged: do NOT graduate the
+  amendment to "Material Gaps Surface at Layer-Transition Boundaries"
+  (`docs/04_engineering/conventions/session/scope-lock.md`); the real axis is
+  direction-of-divergence × artifact-authority; the phantom-arc arm waits for a
+  cross-context N=2. Graduate nothing.
+- **Registry-child-detail-table pattern (substrate).** Two registry-child shapes exist on
+  disk: org_id-carrying-materialization (`vendor_rules` — composite scoped FK, org-scoped
+  business key) vs org_id-less registry-child-detail (`rule_track_records` — simple cascade
+  FK, through-parent RLS). `rule_branches`/`rule_conditions` are the second class; "composite
+  scoped FK is project-canon" is canon only for the first. Bank for future registry-child tables.
+- **Tool-over-eyeball for generated-doc staleness.** `adr:index --check` returning
+  "no changes" is the generator's own idempotency proof that the committed README matches
+  regeneration — the load-bearing check, not visual inspection. (The arc initially reported
+  `adr:lint` green while the README was stale; `adr:check`/the pre-commit `adr:index --check`
+  is what catches it.)
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met.** Docs-only arc — every commit under `docs/`; code/test state
+byte-identical to `8680e323` (HEAVY 1573/0/10), no re-run needed. The closeout commit is
+likewise docs-only.
+
+**Condition 2: met — doc-sync reconciled.** ADR-0027 ratified + indexed (`adr/README.md`
+regenerated, `INDEX.md` line added, `adr:check` green: lint 0/0 + `index --check`
+no-changes); `taxonomy.md` `rules` row added (first-consumer); **no canonical-substrate
+drift** — `invariants.md`/`control_matrix.md`/`ledger_truth_model.md`/`types.ts` untouched
+(INV-RULE-004 correctly *reserved-not-registered* — it lands with the enforcing code at
+implementation; no migration, no types regen this arc).
+
+**Condition 3: met by this entry.** Closeout written; observations banked; the
+`codify-convention` forcing function evaluated and **correctly did not fire** (modules-
+taxonomy was a taxonomy *value* fold, not a convention graduation; α/β stays deferred at
+obs-grain N=1). Carry-forwards flagged below.
+
+### Carry-forwards (T4 — adjacent, not absorbed)
+
+- **`adr/0026-ring2a-authoring.md` INDEX.md line** — a prior-arc step-6 omission surfaced
+  while editing the INDEX ADR list; left for a separate one-line hygiene fix, not folded
+  into this arc (obs-grain N=1 process-observation: the Ring 2A-authoring ratification
+  missed step-6).
+- **§5.10 intro touch-up + §3/§11.1 spec-staleness** — footnote-grade; the ADR carries the
+  authoritative §5.10 reconciliation (ADRs win the tiebreaker), so the spec edits batch at
+  implementation.
+- **OQ-2B-2** (extend `create_vendor_rule_atomic` vs dedicated branch-authoring RPC) +
+  **INV-RULE-004 registration** — implementation-arc decisions.
+
+### Arc character
+
+A clean design-authoring arc that did its load-bearing work *before* a line of substrate
+code: it retired a phantom arc (Ring 1), tightened scope to the genuine gap, derived the
+storage shape from the shipped contract rather than the spec's prose, reconciled a real
+spec-internal inconsistency (§5.10), and retired the recurring modules-taxonomy adr:lint
+gap. The discipline thread — verify against the shipped artifact, at the cheapest layer,
+drafter-and-reviewer alike — held from the handoff reconnaissance through the ADR's
+per-commit review. ADR-0027 ratified; implementation opens as the fresh second arc against
+it (migration `20240169` + production `branchSource` + Seam-1 shadow call +
+`default_account_id`/vendor-name resolution; INV-RULE-004 registers there; Path-C
+internally if RI-7 trips). The deferred α/β hook carries forward to whichever next arc
+fires the resolution decision a second time across contexts.
