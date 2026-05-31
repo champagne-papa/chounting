@@ -2428,6 +2428,85 @@ export type Database = {
           },
         ]
       }
+      rule_branches: {
+        Row: {
+          applies_to_evaluation_triggers: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order: number
+          branch_type: Database["public"]["Enums"]["branch_type"]
+          id: string
+          max_outcome_action: Database["public"]["Enums"]["action_type"]
+          rule_id: string
+        }
+        Insert: {
+          applies_to_evaluation_triggers: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers?:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order: number
+          branch_type: Database["public"]["Enums"]["branch_type"]
+          id?: string
+          max_outcome_action: Database["public"]["Enums"]["action_type"]
+          rule_id: string
+        }
+        Update: {
+          applies_to_evaluation_triggers?: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers?:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order?: number
+          branch_type?: Database["public"]["Enums"]["branch_type"]
+          id?: string
+          max_outcome_action?: Database["public"]["Enums"]["action_type"]
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_branches_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_conditions: {
+        Row: {
+          branch_id: string
+          condition_order: number
+          condition_type: Database["public"]["Enums"]["condition_type"]
+          condition_value: Json
+          id: string
+          target_field: string
+        }
+        Insert: {
+          branch_id: string
+          condition_order: number
+          condition_type: Database["public"]["Enums"]["condition_type"]
+          condition_value: Json
+          id?: string
+          target_field: string
+        }
+        Update: {
+          branch_id?: string
+          condition_order?: number
+          condition_type?: Database["public"]["Enums"]["condition_type"]
+          condition_value?: Json
+          id?: string
+          target_field?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_conditions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "rule_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rule_evaluation_log: {
         Row: {
           created_at: string
@@ -3371,6 +3450,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_vendor_rule_atomic: {
+        Args: { p_approved_by: string; p_org_id: string; p_rule_id: string }
+        Returns: string
+      }
       attach_document_case_source_with_audit: {
         Args: { p_audit: Json; p_link: Json }
         Returns: string
@@ -3417,6 +3500,15 @@ export type Database = {
       }
       create_source_document_with_audit: {
         Args: { p_audit: Json; p_source_document: Json }
+        Returns: string
+      }
+      create_vendor_rule_atomic: {
+        Args: {
+          p_branches?: Json
+          p_registry: Json
+          p_track_record: Json
+          p_vendor_rule: Json
+        }
         Returns: string
       }
       enqueue_exception_with_audit: {
@@ -3570,6 +3662,7 @@ export type Database = {
         | "fully_paid"
         | "voided"
         | "cancelled"
+      branch_type: "primary" | "otherwise_if"
       bundle_type:
         | "born_paid_bill"
         | "final_invoice_with_applied_deposit"
@@ -3996,6 +4089,7 @@ export const Constants = {
         "voided",
         "cancelled",
       ],
+      branch_type: ["primary", "otherwise_if"],
       bundle_type: [
         "born_paid_bill",
         "final_invoice_with_applied_deposit",
