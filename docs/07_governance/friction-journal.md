@@ -17821,3 +17821,69 @@ it (migration `20240169` + production `branchSource` + Seam-1 shadow call +
 `default_account_id`/vendor-name resolution; INV-RULE-004 registers there; Path-C
 internally if RI-7 trips). The deferred α/β hook carries forward to whichever next arc
 fires the resolution decision a second time across contexts.
+
+---
+
+## Ring 2B implementation arc (tenth arc) — 2026-05-30
+
+The fresh second arc against ratified ADR-0027. Anchor `90bf2c38`. A1a substrate-only
+(shadow, no live auto-post). Six commits; full writeup at
+`docs/07_governance/retrospectives/ring-2b-implementation-retrospective.md`.
+
+### The CA-65 cascade trap, caught at design time
+
+The §5.1 logic-freeze (INV-RULE-004) is HYBRID by necessity, not preference. The advisor's
+opening phrasing was "a BEFORE UPDATE/DELETE trigger fires even for service_role." Grounding
+against disk flipped the DELETE half: `rule_registry` is delete-able (RLS `user_is_controller`
+FOR ALL) and every child cascades (`ON DELETE CASCADE`), and the two existing rule integration
+tests clean up via `rule_registry.delete()`. An all-path BEFORE DELETE on `rule_branches`/
+`rule_conditions` would make that cascade RAISE — the exact CA-65 trap (Session 8 C6: append-only
+DELETE triggers silently rejecting cascades). The journal precedent achieves full append-only by
+delete-blocking the *parent* too; that doesn't transfer to a mutable-parent child. Resolution:
+UPDATE+TRUNCATE all-path (trigger); DELETE user-path (RLS) + `ruleBranchService` single-writer
+discipline; the service-path-direct-DELETE residual named in the leaf, not hidden. Validated by
+both an 8-probe rolled-back migration check AND a real cleanup-cascade in the
+`ruleBranchService` test. The advisor withdrew the over-broad phrasing ("drafter-not-exempt cuts
+both ways"); the executor surfaced the disk evidence. Bidirectional verification working.
+
+### The p_branches DEFAULT '[]' that erased a red window
+
+`create_vendor_rule_atomic` 3-arg→4-arg is a DROP+CREATE, not CREATE OR REPLACE (overload). The
+naive sequencing breaks `ruleCreationOrchestrator.ts:70` until the caller updates. `p_branches
+JSONB DEFAULT '[]'` makes the 4-arg backward-compatible — the existing 3-named-arg call resolves
+unchanged and creates a branchless rule (today's inert behavior). No caller edit, no red window,
+and it decoupled the storage-WRITE capability (migration `20240170`) from branch DERIVATION (the
+`ruleBranchService` commit) — A1a's substrate-then-consumer split applied one level down.
+
+### Branch derivation: spec gives examples, not an algorithm
+
+Forward-flag F (where `Branch[]` derives from vendor-rule params) was genuinely underspecified —
+§11.1/§11.2 are worked examples, §7 INV-10/13 are recommendations. The sole writer populates only
+`vendor_id` + outcome params, so `field_equals(vendor_id)` is the maximal data-grounded condition;
+richer derivation needs learned data absent on disk. Surfaced as a fork (minimal-now vs defer-all);
+the ADR's "real branches in production shadow" enablement settled it toward minimal-now.
+
+### card-only is enforced at the caller, not the trigger filter
+
+`proposalToContext` hardcodes `evaluation_trigger='proposed_mutation_generated'` for every
+`ProposedMutation`, so the v1 derived branch always matches whatever `evaluate()` is fed —
+card-only CANNOT come from the branch's `applies_to_evaluation_triggers`. It is enforced in the
+Seam-1 caller by feeding ONLY `proposed_entry_card`; bundles are skipped whole (NOT decomposed
+into children fed individually, which would evaluate them as `proposed_mutation_generated` and
+silently violate the §6.5 card-only deferral). The advisor flagged this; it became commit 4's spine.
+
+### Ceiling provenance: widget-tap the read-only seat can't see
+
+`max_outcome_action=auto_post_at_rung_2` is a fiduciary-autonomy call. Escalated to the operator
+via AskUserQuestion; the operator tapped it explicitly. The advisor (read-only MCP seat) couldn't
+see the widget result and flagged the provenance as unconfirmed — twice, correctly refusing to let
+a fiduciary stance pass silently. Resolution: record the provenance plainly in code + commit (the
+tap is the explicit ratification; the advisor's seat just lacks widget visibility). A coordination-
+shape note: operator-gate selections are invisible to the advisor seat and must be transcribed.
+
+### Carry-forwards
+
+DEFINER hygiene flag (re-surfaced, not resolved, T4); faithful `proposal_type` derivation;
+richer branch derivation + §6.5 bundles (workflow arc); the two condition_value validators
+(temporal range, source-trigger closed-set); branchless-rule backfill. α/β codification stays
+DEFERRED (N=1; the derivation-underspecification is a distinct shape, no forced N=2).

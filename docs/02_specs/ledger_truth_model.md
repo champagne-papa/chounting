@@ -2254,6 +2254,94 @@ split.
 
 ---
 
+### INV-RULE-004 — rule_branches / rule_conditions are logic-frozen (Layer 1a)
+
+**Invariant.** A rule's branch/condition logic is write-once and immutable
+once stored: `rule_branches` and `rule_conditions` admit no `UPDATE` and no
+`TRUNCATE` under **any** caller (including `service_role`), and no user-path
+`DELETE`. Branches/conditions are created once — co-created with the rule in
+the `create_vendor_rule_atomic` transaction (`proposed` state) — and never
+edited in place; amendment is retire-and-create-new (§5.1, no
+`rule_version_id`). The fourth member of the **`INV-RULE-*` domain family**.
+This is the §5.1 logic-freeze: the branch logic is the substrate the
+audit-reproducibility guarantee rests on, so a stored evaluation can always be
+re-derived from the exact branches that produced it. Reserved at ADR-0027
+ratification; registered here at the implementation arc, when the enforcing
+trigger + RLS landed in `20240169` (the spec-without-enforcement rule).
+
+**Scope — HYBRID (read this before relying on it).** INV-RULE-004 is **not**
+uniform across mutation verbs — its scope differs by operation, and this is
+deliberate:
+
+- **UPDATE + TRUNCATE — all-path, trigger-authoritative.** The
+  `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` BEFORE
+  triggers fire for **every** role including `service_role`, plus
+  `REVOKE TRUNCATE`. This is **stronger** than INV-RULE-001's RLS-only
+  user-path append-only — the same all-path shape as INV-AUDIT-002 — and is
+  the belt-and-suspenders the fiduciary-logic stakes justify (the logic *is*
+  the reproducibility substrate).
+- **DELETE — user-path only.** RLS `USING(false)` blocks the user path; there
+  is **no** DELETE trigger. A `service_role` direct DELETE is **not**
+  DB-blocked. This is the **same discipline-not-DB model as INV-RULE-001's
+  service path** (NOT stronger). DELETE is deliberately not trigger-blocked:
+  a DELETE here only legitimately arrives via the `rule_registry`
+  `ON DELETE CASCADE` (whole-rule removal / retire-and-create-new cleanup),
+  and an all-path BEFORE DELETE on a cascade-child of a *deletable* parent
+  would silently reject that cascade — the CA-65 trap (Session 8 C6:
+  append-only DELETE triggers breaking the parent-delete cleanup path). The
+  log cascades away with the rule, so a removed rule leaves no dangling
+  Logic Receipt.
+
+**Residual (named, not hidden).** A service-path **direct** DELETE of a
+single branch/condition row on a *live* (non-`proposed`) rule — not via the
+parent cascade — would remove logic from an active rule and break
+reproducibility, and is **not** DB-blocked. The guarantee on that surface is
+the `ruleBranchService` single-writer contract: never partial-delete branch/
+condition rows on a non-`proposed` rule; whole-rule removal only via the
+`rule_registry` cascade. This is the same discipline-not-DB gap INV-RULE-001
+already carries on its service path (precedented), made explicit here.
+
+**Unconditional (write-once-from-creation).** The trigger does **not** read
+`parent.lifecycle_state` — it blocks UPDATE/TRUNCATE always, not only once the
+rule is past `proposed`. This is sound because branches are INSERT-only via the
+create RPC; approval flips `rule_registry.lifecycle_state`, not branch rows;
+and amendment is retire-and-create-new, never in-place edit — so there is no
+`proposed`-state branch-UPDATE path to preserve. (ADR-0027 Decision 2's
+"once past proposed" wording is a minor inconsistency with Decision 1's
+"write-once at creation"; the trigger realizes Decision 1.)
+
+**Threat model.** Protects §5.1 audit-reproducibility: a rule that has
+evaluated proposals must keep the exact branch logic that produced those
+evaluations, so the `rule_evaluation_log` traces stay re-derivable. The
+all-path UPDATE+TRUNCATE block is the DB-enforced floor; the DELETE
+discipline + the residual contract cover the cascade-removal lifecycle.
+
+**Enforcement.** Column-immutability triggers + RLS + `REVOKE TRUNCATE`,
+defined in
+`supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION reject_rule_branches_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'rule_branches is logic-frozen (INV-RULE-004) — UPDATE and TRUNCATE are forbidden'
+    USING ERRCODE = 'feature_not_supported';
+END; $$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_rule_branches_no_update   BEFORE UPDATE   ON rule_branches   FOR EACH ROW       EXECUTE FUNCTION reject_rule_branches_mutation();
+CREATE TRIGGER trg_rule_branches_no_truncate BEFORE TRUNCATE ON rule_branches   FOR EACH STATEMENT EXECUTE FUNCTION reject_rule_branches_mutation();
+-- (rule_conditions mirrors; both tables also carry RLS UPDATE/DELETE USING(false)
+--  + REVOKE TRUNCATE; no DELETE trigger — see Scope.)
+```
+
+**Annotation site.**
+`supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`
+(`-- INV-RULE-004` / `INV-RULE-004` in the trigger RAISE) +
+`apps/web/src/services/rules/ruleBranchService.ts` (the single-writer contract
+carrying the DELETE residual), establishing bidirectional reachability with
+this leaf.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the

@@ -768,6 +768,18 @@ Rule tables (`vendor_rules`, future `recurring_schedule_rules`, future
 Condition / Action details. Each domain-specific table has a `rule_id` column
 that is **both its PK and a 1:1 FK to `rule_registry.id`**.
 
+> **Reconciliation (ADR-0027).** "Branch / Condition / Action details" conflates
+> two things the Ring 2B substrate separates: branch/condition **structure** is
+> uniform across rule types (`core/rules/types.ts` — no `rule_type`-specific
+> fields) and therefore lives in registry-keyed child tables (`rule_branches` /
+> `rule_conditions`, keyed by `rule_id`, no `org_id`, mirroring
+> `rule_track_records`); action **type** (`max_outcome_action`) is uniform and
+> sits on the branch; only action **domain parameters** (`default_account_id`,
+> vendor-name) are domain-specific and stay on `vendor_rules`. So the
+> domain-specific tables hold domain *parameters*, not branch *structure* — the
+> structure is registry-child. (The §5.1 logic-freeze on those child tables is
+> INV-RULE-004, registered at the Ring 2B implementation arc.)
+
 The recommendation rests on three load-bearing facts:
 
 1. **The live `vendor_rules` PK is already `rule_id`.** From the initial-schema

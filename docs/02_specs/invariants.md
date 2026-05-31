@@ -1,6 +1,6 @@
 # Invariants Index
 
-The canonical index for the 24 invariants.
+The canonical index for the 25 invariants.
 The single place to look up "what are all the rules, where are
 they documented, and where are they enforced in code?"
 
@@ -76,6 +76,24 @@ sole-writer service pattern + code-review discipline; no test asserts "only this
 function writes," no DB constraint binds it). Future Layer-2 INVs should name which
 sub-type they fall under; see its leaf "Scope" + "Enforcement" subsections.
 
+ADR-0027 (2026-05-30) added INV-RULE-004 (Layer 1a; `rule_branches` /
+`rule_conditions` are logic-frozen — the §5.1 write-once branch/condition substrate)
+at the Ring 2B implementation arc, when the column-immutability trigger + RLS landed
+in `20240169`. Layer-1a count updates from 15 → 16; total distinct INV-IDs from
+24 → 25. INV-RULE-004 is the **first hybrid-scope INV**: UPDATE + TRUNCATE are
+*all-path* (the trigger fires for `service_role` too — stronger than INV-RULE-001's
+RLS-only user-path, the INV-AUDIT-002 shape), while DELETE is *user-path only* (RLS
+`USING(false)` + `ruleBranchService` single-writer discipline — the same model as
+INV-RULE-001, deliberately not trigger-blocked so the `rule_registry`
+`ON DELETE CASCADE` cleanup path works; the service-path-direct-DELETE residual is
+named in its leaf "Residual"). Future INVs whose scope differs by mutation verb
+should state the per-verb scope, as INV-RULE-004's leaf does.
+
+The Ring 2B implementation-arc close (2026-05-30) reconciled the frozen-count
+snapshots to the live 25 in the same pass as the per-addition note above (the arc's
+Condition-2 doc-sync): the heading below (`## The 24 invariants` → `## The 25
+invariants`) and the `control_matrix.md` section-heading counts (24/15/9 → 25/16/9).
+
 The `hygiene-post-ring2a-core` doc-sync pass (2026-05-27) reconciled the frozen-count
 snapshots to the live 24: the heading below (`## The 20 invariants` → `## The 24
 invariants`) and the `control_matrix.md` section-heading counts (20/14/6 → 24/15/9). It
@@ -94,10 +112,10 @@ diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort
 
 Expected output: empty (no diff).
 
-## The 24 invariants
+## The 25 invariants
 
 The order matches the leaf's Summary section: Layer 1 first
-(15 invariants), then Layer 2 (9 invariants). Within each
+(16 invariants), then Layer 2 (9 invariants). Within each
 layer, the order matches the order the invariants appear in
 `ledger_truth_model.md`.
 
@@ -127,6 +145,7 @@ layer, the order matches the order the invariants appear in
 | 22 | INV-RULE-001 | 1a | `rule_evaluation_log` is append-only (user-path) | RLS policy (user-path; UPDATE/DELETE `USING(false)`, no user INSERT) | [leaf](ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a) | `supabase/migrations/20240164000000_rule_evaluation_log.sql` (policies `rule_evaluation_log_no_update` / `rule_evaluation_log_no_delete`) |
 | 23 | INV-RULE-002 | 2 | The pure-core rule evaluator is deterministic | Pure-function property (test-verified) | [leaf](ledger_truth_model.md#inv-rule-002--the-pure-core-rule-evaluator-is-deterministic-layer-2) | `apps/web/src/core/rules/evaluator.ts` (`evaluate`); verified by `apps/web/tests/unit/ruleEvaluator.test.ts` |
 | 24 | INV-RULE-003 | 2 | `rule_evaluation_log` has a single writer | Runtime/structural (sole-writer service pattern + code-review discipline) | [leaf](ledger_truth_model.md#inv-rule-003--rule_evaluation_log-has-a-single-writer-layer-2) | `apps/web/src/services/rules/ruleEvaluationService.ts` (`recordEvaluation`, the sole append site; `// INV-RULE-003`) |
+| 25 | INV-RULE-004 | 1a | `rule_branches` / `rule_conditions` are logic-frozen (write-once) | Column-immutability triggers (UPDATE+TRUNCATE, all-path) + RLS `USING(false)` (DELETE user-path) + REVOKE TRUNCATE | [leaf](ledger_truth_model.md#inv-rule-004--rule_branches--rule_conditions-are-logic-frozen-layer-1a) | `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql` (functions `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` + triggers); `apps/web/src/services/rules/ruleBranchService.ts` (single-writer contract) |
 
 ## Cross-layer pairings
 

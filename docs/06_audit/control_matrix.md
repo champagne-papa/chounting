@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 24 invariants — audit evidence
+## The 25 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -47,10 +47,10 @@ scheduled), the specific enforcement mechanism, and the
 non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
-leaf's Summary section: Layer 1 first (15 invariants), then
+leaf's Summary section: Layer 1 first (16 invariants), then
 Layer 2 (9 invariants).
 
-### Layer 1a — Physical Truth, commit-time (15 invariants)
+### Layer 1a — Physical Truth, commit-time (16 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
 and 1b (scheduled audit detection). All 15 invariants below are
@@ -165,6 +165,13 @@ Invariants."
 - **Test coverage:** **None at HEAD** — `rule_evaluation_log` has no consumers yet (the services + evaluator are the Ring 2A-authoring arc). The test-update arc (next after this migration) adds an RLS isolation test (cross-org SELECT denied; user-path UPDATE/DELETE denied; no user-path INSERT) and the `security_invoker` behavior test (a non-controller operator querying `rule_evaluation_30d_view` directly gets RLS-filtered rows, not the owner-bypass leak `document_cards_view` carries). Recorded in `docs/09_briefs/post-mvp/2026-05-26-adr-0024-migration-test-staleness.md`.
 - **Code enforcement:** RLS on `rule_evaluation_log` in `supabase/migrations/20240164000000_rule_evaluation_log.sql` — `rule_evaluation_log_no_update` (`FOR UPDATE USING (false)`), `rule_evaluation_log_no_delete` (`FOR DELETE USING (false)`), and no INSERT policy (RLS-enabled default-deny for the user path; `service_role` bypasses). `ruleEvaluationService` (Ring 2A-authoring) is the sole writer and inserts only (ADR-0024 Decision 6).
 - **Non-bypassable from application layer — user path only.** RLS blocks the `authenticated` (user-scoped) path absolutely. It does **not** bind `service_role` (which bypasses RLS); ADR-0024 specified RLS-only (no triggers / `REVOKE`s), so service-path append-only is single-writer discipline, not DB enforcement — materially weaker than INV-AUDIT-002's trigger-authoritative all-path append-only. See the INV-RULE-001 leaf "Scope" + "Threat model" subsections. The view inherits this RLS via `security_invoker = true`.
+
+#### INV-RULE-004 — rule_branches / rule_conditions are logic-frozen (Layer 1a)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-004`](../02_specs/ledger_truth_model.md#inv-rule-004--rule_branches--rule_conditions-are-logic-frozen-layer-1a)
+- **Test coverage:** `apps/web/tests/integration/ruleBranchService.integration.test.ts` — the validation-boundary test hand-inserts a branch + malformed `condition_value` and asserts `buildBranchSource` throws `RULE_BRANCH_ASSEMBLY_FAILED`; the end-to-end test's cleanup exercises the DELETE-cascade path (a `rule_registry` delete cascades through `rule_branches`/`rule_conditions` — the UPDATE+TRUNCATE trigger does not block DELETE). The all-path UPDATE block + the eval-subset/non-empty CHECKs + the cascade behavior were verified at migration-apply time (8 in-transaction probes against local PG, `20240169`).
+- **Code enforcement:** Column-immutability triggers + RLS + `REVOKE TRUNCATE` on `rule_branches`/`rule_conditions` in `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`: `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` fire `BEFORE UPDATE` (FOR EACH ROW) + `BEFORE TRUNCATE` (FOR EACH STATEMENT) for every role including `service_role`; RLS `USING(false)` on UPDATE/DELETE (user path); `REVOKE TRUNCATE` from PUBLIC/authenticated/anon. There is **no** DELETE trigger (see Non-bypassable). `ruleBranchService` is the single-writer owner (`apps/web/src/services/rules/ruleBranchService.ts`); the physical write is the SECURITY-DEFINER `create_vendor_rule_atomic` RPC.
+- **Non-bypassable from application layer — HYBRID.** UPDATE + TRUNCATE are **all-path** (the trigger fires for `service_role` too — stronger than INV-RULE-001; the INV-AUDIT-002 shape). DELETE is **user-path only** (RLS `USING(false)`); a `service_role` direct DELETE is not DB-blocked — deliberately, so the `rule_registry` `ON DELETE CASCADE` cleanup path works (an all-path BEFORE DELETE on a cascade-child of a deletable parent is the CA-65 trap). The residual — a service-path direct single-row branch/condition DELETE on a *live* rule — is covered by the `ruleBranchService` single-writer contract, not the DB (the same discipline-not-DB gap INV-RULE-001 carries on its service path). See the INV-RULE-004 leaf "Scope" + "Residual".
 
 ### Layer 2 — Operational Truth (9 invariants)
 

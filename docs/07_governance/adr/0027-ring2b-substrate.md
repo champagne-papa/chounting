@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0010", "0017", "0020", "0023", "0024", "0025"]
-invariants: []
+invariants: ["INV-RULE-004"]
 ---
 
 # ADR-0027: Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring
