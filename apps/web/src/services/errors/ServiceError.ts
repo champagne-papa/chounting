@@ -125,7 +125,8 @@ export type ServiceErrorCode =
   // rule-domain semantic codes.
   | 'RULE_NOT_FOUND'          // rule_registry / vendor_rules lookup miss
   | 'RULE_LIFECYCLE_INVALID'  // illegal lifecycle transition (e.g. promote/demote/retire a retired rule)
-  | 'RULE_CREATE_FAILED';     // create_vendor_rule_atomic RPC failure
+  | 'RULE_CREATE_FAILED'      // create_vendor_rule_atomic RPC failure
+  | 'RULE_BRANCH_ASSEMBLY_FAILED'; // stored condition_value fails its condition_type validator (ruleBranchService boundary)
 
 export class ServiceError extends Error {
   constructor(

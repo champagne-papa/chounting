@@ -16,7 +16,8 @@ import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
 import { vendorRuleService } from '@/services/rules/vendorRuleService';
-import type { Database } from '@/db/types';
+import { deriveVendorRuleBranches } from '@/services/rules/ruleBranchService';
+import type { Database, Json } from '@/db/types';
 
 type BundleType = Database['public']['Enums']['bundle_type'];
 type RuleType = Database['public']['Enums']['rule_type'];
@@ -83,6 +84,11 @@ export const ruleCreationOrchestrator = {
         legal_entity_id: input.legal_entity_id ?? null,
         bundle_type: input.bundle_type,
       },
+      // Ring 2B (ADR-0027 Decision 7): co-create the v1 derived primary branch
+      // (field_equals(vendor_id), auto_post_at_rung_2 ceiling, card-only eval
+      // trigger) atomically with the rule. Branchless creation is no longer the
+      // default — vendor rules now feed the evaluator (shadow).
+      p_branches: deriveVendorRuleBranches({ vendor_id: input.vendor_id }) as unknown as Json,
     });
     if (error || !data) {
       throw new ServiceError('RULE_CREATE_FAILED', error?.message ?? 'create_vendor_rule_atomic returned no id');
