@@ -18,6 +18,16 @@ Bundled with ADR-0011 §13 amendment per Stage 4 cross-enum-
 consistency governance triage path (a) election. See sense-
 disambiguation lead-in within §Tier 2 below.
 
+Amended 2026-05-30 (V1 final-system-proposal reconciliation arc) — §Tier 2 Q78
+V1-re-scoping block added. The system-actor auto-commit **authorization model**
+resolved by Q78 (Option A, 2026-05-24) is correct and is preserved verbatim. V1
+gates the **exercise** of auto-commit behind four prerequisites the auto-commit arc
+shipped without — Agent Ladder rung + confidence-to-policy mapping + evaluation
+harness + real coding. Until those land, the A-now hotfix routes matched proposals
+to `document_cases.needs_review`; auto-commit returns per-rule thereafter. Additive
+per ADR-0022; Q78's auth-model resolution unchanged. See the §Tier 2 "V1 re-scoping
+of the Q78 auto-commit exercise" block.
+
 ## Date
 
 2026-05-03
@@ -326,6 +336,86 @@ open, the document pipeline auto-commits ledger mutations for matched
 candidates; `service-layer.md` Candidate #11 (commit-shim discipline) is
 retired as structurally unnecessary post-widening.
 
+**V1 re-scoping of the Q78 auto-commit exercise (ratified 2026-05-31 by CTO).**
+
+Q78 (Option A, ratified 2026-05-24, immediately above) resolved the
+**authorization model** — a trusted `SystemActorServiceContext` bypasses the
+identity-coupled invariants at `withInvariants` and is attributed to a seeded
+service-account identity (Path X). That resolution is correct and is **preserved
+unchanged.** What Q78 did *not* establish — and what the auto-commit arc
+(edb260f6, 8a6c9bc3) shipped without — is the **governance of the auto-commit
+exercise**: which matched candidates *should* post without a human, under what
+autonomy rung, at what confidence, coded to which account.
+
+**Live posture at HEAD 11633dc6.** `ingestDocument` runs the Ring 2B shadow
+rule/autonomy evaluation (`shadowEvaluateRules`, `ingestDocument.ts:445`), which is
+gated (`RING2B_SHADOW_EVAL`, default off), fail-safe, and explicitly ordered
+*before* the commit so it cannot influence it (A1a). The commit composite
+(`switch (proposal.kind)`, `ingestDocument.ts:482`) then auto-posts every matched
+`proposed_entry_card` / `proposed_mutation_bundle` via
+`withInvariants(billService.post)` / `withInvariants(paymentService.record)`
+(inside `commitProposedEntryCard`, `ingestDocument.ts:551`/`:560`). The de-facto
+gate is therefore *"can a structurally valid bill be assembled?"* — matched vendor
++ amount + date + org defaults — **not** an autonomy decision. Coding is a single
+hardcoded `default_expense_account_id` (`CAD`, `tax=0`); unmatched-vendor invoices
+return `null` and are silently dropped (no review-queue entry).
+
+**Why this re-scopes Q78 without contradicting it (auth model vs. exercise).** Q78
+answered a question in **one dimension** — *may a trusted system actor cross the
+`withInvariants` authorization boundary?* It did **not** answer the question in the
+orthogonal dimension — *should an ungoverned matched candidate auto-post, and under
+what autonomy controls?* Q78 resolved the authorization model; it
+never reached the autonomy-governance question, so it could not have decided it.
+V1 fills that second dimension — rung + confidence + evaluation + real coding — which
+Q78's auth-model resolution neither provided nor displaced.
+
+*(Preempting the supersession reading.)* The deliberate Q78 decision (2026-05-24)
+postdates ADR-0007's calibration deferral. A reader might ask whether Q78 therefore
+*overtook* that deferral. It did not: Q78 is silent on autonomy governance — opening
+the authorization boundary is not a decision that ungoverned candidates should post.
+So there is nothing for Q78 to have overridden in the calibration dimension.
+
+*(Corroboration, referent-independent.)* Independently, ADR-0007 deferred auto-post
+calibration ("to v1.5 or later" in the project's earlier phase-lifecycle numbering —
+Phase 1 / 1.5 / 2 — a different referent from this proposal's "V1" system release;
+the two are not equated here). The auto-commit arc shipped auto-commit **ahead of any such
+calibration milestone under either numbering.** This is corroboration, not the
+load-bearing argument — being pre-Q78, it is consistent with the re-scoping rather
+than dispositive of it; the load-bearing argument is the auth-model/exercise
+separation above. V1 therefore does not introduce a new constraint so much as
+supply the autonomy governance the auto-commit *exercise* always required.
+
+**V1 re-scoping — the four return-prerequisites.** The system-actor auto-commit
+capability returns **per rule** only once all four hold:
+
+1. **Rung.** The matched rule's `rule_autonomy_rung` permits auto-commit, decided
+   by the Autonomy Gate **on the live commit path** (not in shadow).
+2. **Confidence.** A confidence-to-policy mapping routes low-confidence proposals
+   to review (ADR-0002; confidence is a policy input, never surfaced raw).
+3. **Evaluation.** The V1 evaluation harness establishes a published
+   match/extraction precision threshold on a golden set.
+4. **Real coding.** The account is derived from the matched rule's
+   `vendor_rules.default_account_id`, not a hardcoded default.
+
+**Enacting change — the A-now hotfix.** Until the four prerequisites land, the
+`ingestDocument` commit composite does **not** call the post sites for matched
+candidates. It transitions the case to `document_cases.needs_review` (via
+`update_document_case_state_with_audit`), where a human approves and the post fires
+under the human's `ServiceContext` — not the system actor. Unmatched-vendor
+invoices route to the review / exception queue rather than returning `null`. This
+restores human-in-the-loop AP for V1 (the review-and-post posture).
+
+**What this block does NOT change (additive per ADR-0022).** Q78's
+authorization-model resolution — Option A invariant bypass + Path X
+service-account attribution + the `synthCtxForCommit` retirement — is unchanged.
+When auto-commit returns per-rule post-V1, it uses **exactly** the Q78 mechanism:
+the system-actor `withInvariants` bypass and the seeded service-account
+attribution. This block re-scopes *when the capability is exercised*, not *how the
+auth model works*. No invariant is added, removed, or renumbered.
+
+Cross-ref: V1 Final System Proposal (v2); this amendment is ordered as the first
+Wave -1 change, ahead of the A-now hotfix it authorizes.
+
 **Q31 — LLM-planned orchestration prohibition.** Verbatim rule:
 
 > Orchestration between Tier 2 stages MUST be deterministic
@@ -630,6 +720,17 @@ flowing through existing handlers. New routing surface: zero.
   audit attribution with no `audit_log` schema change. Retires the `synthCtxForCommit`
   de-facto gate; closes the Phase 8 chunk 10 PARTIAL open question. See the
   §Tier 2 auth-model resolution block.
+- **Q78 (V1 re-scoping, ratified 2026-05-31 by CTO).** The Option A authorization-model
+  resolution above is **unchanged**. Q78 resolved *whether* a system actor may
+  commit; it did not resolve *whether* an ungoverned candidate should auto-post —
+  an orthogonal dimension it never reached. V1 supplies that governance: it gates
+  the *exercise* of system-actor auto-commit behind four prerequisites (rung +
+  confidence + evaluation + real coding); the A-now hotfix routes matched proposals
+  to `document_cases.needs_review` until they land; auto-commit returns per-rule
+  thereafter, using the unchanged Q78 mechanism. ADR-0007 independently deferred
+  auto-post calibration ("v1.5 or later" in the project's earlier phase numbering,
+  Phase 1 / 1.5 / 2 — not the proposal's "V1" referent); the auto-commit arc shipped
+  ahead of any such milestone. See the §Tier 2 "V1 re-scoping of the Q78 auto-commit exercise" block.
 
 ## Amendment — Document Platform reframe (2026-05-03)
 
