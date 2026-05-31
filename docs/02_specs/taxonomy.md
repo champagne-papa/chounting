@@ -58,6 +58,7 @@ ledger / journal-entry / period domain; a doc tagged with module
 | middleware | `apps/web/src/services/middleware/` | Service middleware: `withInvariants`, error handling, request context |
 | org | `apps/web/src/services/org/` | Organizations, org profile, MFA settings, org-level configuration |
 | reporting | `apps/web/src/services/reporting/` | Reports: trial balance, P&L, balance sheet, period reports |
+| rules | `apps/web/src/services/rules/` | Rule type core: rule registry, evaluation, track-records, vendor rules, authoring, branch/condition substrate; the Agent Ladder rule coordinator in `agent/policies/agent-ladder/` is tagged `agent` |
 | shared | `apps/web/src/shared/` | Cross-layer primitives importable by every layer (core / services / agent / app): branded types, Zod schemas, shared evaluation/predicate types, money + logger helpers. |
 | storage | `apps/web/src/services/storage/` | Storage abstraction layer per ADR-0013 (Supabase storage primary, multi-backend reserved) |
 | tokens | `packages/tokens/` | Design tokens for the UI system |

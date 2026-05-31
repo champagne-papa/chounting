@@ -272,6 +272,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0024](./0024-ring2a-core.md) | Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate | Ratified | 2026-05-26 |
 | [ADR-0025](./0025-ring2a-core-implementation-seams.md) | Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas | Ratified | 2026-05-26 |
 | [ADR-0026](./0026-ring2a-authoring.md) | Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring | Ratified | 2026-05-29 |
+| [ADR-0027](./0027-ring2b-substrate.md) | Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring | Ratified | 2026-05-30 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -289,6 +290,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 - [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 
 ### app-components
 
@@ -305,11 +307,16 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 - [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 
 ### infra
 
 - [ADR-0021](./0021-adr-frontmatter-and-tooling.md) — ADR Frontmatter and Tooling (Ratified; 2026-05-08)
 - [ADR-0022](./0022-adr-lifecycle-workflows.md) — ADR Lifecycle Workflows — Amendment vs Supersession (Ratified; 2026-05-08)
+
+### rules
+
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 <!-- END:generated-by-module -->
 
 ## By invariant
@@ -343,6 +350,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 - [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 <!-- END:generated-by-phase -->
 
 ## Related files
