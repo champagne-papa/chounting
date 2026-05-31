@@ -43,12 +43,14 @@ describe.skipIf(!RUN_E2E)(
   'Phase 8 chunk 6 — vendor_invoice end-to-end (deployed Modal sidecar)',
   () => {
     it(
-      'vendor_invoice (unseeded, no prior match): full Stage 0-7 traversal → committed, no ledger mutation (proposal_id=null)',
+      'vendor_invoice (unseeded, no prior match): full Stage 0-7 traversal → parked_unposted, no ledger mutation (proposal_id=null)',
       async () => {
         const { output } = await runIngestPipeline('vendor_invoice.pdf');
 
-        // Pipeline completed without a failure.
-        expect(output.status).toBe('committed');
+        // Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 Q78 V1-re-scoping): the
+        // vendor_invoice builds a proposed_entry_card but the pipeline no longer
+        // auto-posts — it parks. Status is parked_unposted (was committed).
+        expect(output.status).toBe('parked_unposted');
         expect(output.failure_class).toBeNull();
 
         const stages = output.pipeline_trace.map((s) => s.stage_name);
@@ -63,9 +65,9 @@ describe.skipIf(!RUN_E2E)(
         expect(stages[stages.length - 1]).toBe('build_proposal');
         expect(stages.length).toBeGreaterThanOrEqual(9);
 
-        // Unseeded v1 path: no matching vendor → Subsystem 1 skips bill
-        // creation → committed with no ledger mutation. A populated
-        // proposal_id requires a seeded ledger-commit route (deferred).
+        // Wave -1: the auto-post is disabled, so there is no ledger mutation
+        // regardless of vendor match — the proposed_entry_card is parked
+        // (proposal_id=null). Governed auto-commit returns per-rule post-V1.
         expect(output.proposal_id).toBeNull();
       },
       MODAL_TIMEOUT_MS,

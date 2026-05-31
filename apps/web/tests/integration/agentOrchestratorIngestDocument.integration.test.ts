@@ -206,7 +206,11 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 Q78 V1-re-scoping): a matched
+    // vendor_invoice builds a proposed_entry_card but no longer auto-posts — the
+    // pipeline parks it (no ledger write). Status flips committed → parked_unposted;
+    // all stages still run, so the trace assertions below are unchanged.
+    expect(result.status).toBe('parked_unposted');
     expect(result.failure_class).toBeNull();
     expect(result.pipeline_trace).toHaveLength(9);
 
@@ -293,7 +297,8 @@ describe('Phase 7 chunk 7.1a/b — ingestDocument orchestrator (Stage 2 active p
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Wave -1 A-now bleed-stop: matched vendor_invoice parks, not auto-posts.
+    expect(result.status).toBe('parked_unposted');
     // Sequential timestamps (each subsequent record's timestamp is
     // >= prior record's timestamp).
     for (let i = 1; i < result.pipeline_trace.length; i++) {
@@ -361,7 +366,8 @@ describe('Phase 8 chunk 4 Task 3 — router_match_against_state pipeline_trace r
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Wave -1 A-now bleed-stop: matched vendor_invoice parks, not auto-posts.
+    expect(result.status).toBe('parked_unposted');
     const record = result.pipeline_trace.find(
       (r) => r.stage_name === 'router_match_against_state',
     );

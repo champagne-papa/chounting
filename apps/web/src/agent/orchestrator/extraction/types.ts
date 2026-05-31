@@ -64,6 +64,15 @@ export interface IngestDocumentOutput {
     | 'committed'
     | 'dedup_short_circuit'
     | 'pipeline_failed'
+    /** Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 "V1 re-scoping of the Q78
+     *  auto-commit exercise", ratified 2026-05-31). A matched
+     *  proposed_entry_card / proposed_mutation_bundle was built but deliberately
+     *  NOT posted — the ungoverned auto-commit is disabled. No ledger write;
+     *  proposal_id is null; the document_case stays state='received' (parked).
+     *  Governed auto-commit returns per-rule post-V1 (rung + confidence + eval +
+     *  real coding), re-wiring the commit composite to the preserved commit*
+     *  functions. See docs/09_briefs/v1/2026-05-31-a-now-hotfix-change-spec.md. */
+    | 'parked_unposted'
     /** @deprecated chunk 7.3b activation made this status defined-but-not-emitted
      *  per ADR-0022 additive discipline; future cleanup post-Phase-7. */
     | 'deferred_chunk_7_3b_pending_activation';

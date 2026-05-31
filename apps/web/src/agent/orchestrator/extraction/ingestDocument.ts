@@ -12,7 +12,7 @@
 //   Stage 4 (extract_fields)          → active at chunk 7.3a (per-document-type extractors)
 //   Stage 5 (match_vendor)            → active at chunk 7.3a (vendorService.matchVendor)
 //   Stage 6 (match_against_existing_state)  → active at chunk 7.3a (documentRouterService.completeCandidate per Phase 4 chunk 1 substrate)
-//   Stage 7 (build_proposal)          → substrate + commit composite active at chunk 7.3b (proposalBuilder.ts produces 3-value ProposalResult union; this orchestrator commits per kind via withInvariants(billService.post/paymentService.record))
+//   Stage 7 (build_proposal)          → substrate + commit composite active at chunk 7.3b (proposalBuilder.ts produces 3-value ProposalResult union). Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 Q78 V1-re-scoping): the orchestrator PARKS matched proposals (status='parked_unposted'); the withInvariants(billService.post/paymentService.record) auto-post is DISABLED (Q78 auth mechanism intact; preserved commit* fns re-wire per-rule post-V1)
 //
 // Per Iteration 2 Option γ ACTIVATED at chunk 7.3b: 5-route matrix active.
 // ProposalResult.kind = 'proposed_entry_card' | 'proposed_attachment_card'
@@ -460,8 +460,11 @@ export async function ingestDocument(
   // passed directly to the commit-path withInvariants sites below;
   // withInvariants bypasses the identity invariants for the system actor and
   // adapts to the seeded service account (SYSTEM_ACTOR_USER_ID) so created_by
-  // + audit resolve to a real auth.users identity. The pipeline now
-  // auto-commits matched ledger mutations. See ADR-0007 §Tier 2 (Q78
+  // + audit resolve to a real auth.users identity. That Q78 mechanism is
+  // intact, but its EXERCISE is disabled by the Wave -1 A-now bleed-stop: the
+  // kind branches below do NOT call the commit* sites — matched proposals PARK
+  // (status='parked_unposted'), no ledger write. Auto-commit returns per-rule
+  // post-V1 (ADR-0007 §Tier 2 Q78 V1-re-scoping). See ADR-0007 §Tier 2 (Q78
   // resolution) + service-layer.md Candidate #11 (RETIRED).
 
   // Branch on ProposalResult.kind (post-chunk-7.3b activation 3-value
@@ -480,15 +483,20 @@ export async function ingestDocument(
   //     sub-grain N=5 banking).
 
   if (proposal.kind === 'proposed_entry_card') {
-    const proposal_id = await commitProposedEntryCard(
-      proposal.card,
-      input,
-      ctx,
-    );
+    // Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 "V1 re-scoping of the Q78
+    // auto-commit exercise"): the ungoverned auto-post is DISABLED.
+    // commitProposedEntryCard (preserved below) is intentionally NOT called —
+    // no withInvariants(billService.post / paymentService.record), no ledger
+    // write. The matched card is built and parked; the document_case stays
+    // state='received'. Interim: parked cases are state-indistinguishable from
+    // freshly-arrived ones until the Wave 6 review surface + matrix-advancement
+    // + backlog sweep land (see the change-spec). Governed auto-commit returns
+    // per-rule post-V1 (rung + confidence + eval + real coding), which re-wires
+    // this branch back to commitProposedEntryCard.
     return {
-      status: 'committed',
+      status: 'parked_unposted',
       pipeline_trace,
-      proposal_id,
+      proposal_id: null,
       failure_class: null,
     };
   }
@@ -511,15 +519,14 @@ export async function ingestDocument(
   }
 
   // proposal.kind === 'proposed_mutation_bundle'
-  const bundleResult = await commitProposedMutationBundle(
-    proposal.bundle,
-    input,
-    ctx,
-  );
+  // Wave -1 A-now bleed-stop (see the proposed_entry_card branch above):
+  // commitProposedMutationBundle (preserved below) is intentionally NOT called —
+  // no ledger write; the born-paid bundle is parked. Re-wired post-V1 with
+  // governed auto-commit.
   return {
-    status: 'committed',
+    status: 'parked_unposted',
     pipeline_trace,
-    proposal_id: bundleResult.first_child_id,
+    proposal_id: null,
     failure_class: null,
   };
 }
@@ -534,7 +541,14 @@ export async function ingestDocument(
  * input.source_document_id is passed verbatim to billService.post so
  * the bill commit satisfies the evidence-completeness gate at
  * billService.ts:285+.
+ *
+ * PRESERVED FOR POST-V1 GOVERNED AUTO-COMMIT (ADR-0007 §Tier 2 "V1 re-scoping of
+ * the Q78 auto-commit exercise", ratified 2026-05-31). Intentionally unreferenced
+ * during the Wave -1 bleed-stop — the commit composite no longer calls it; re-wired
+ * behind the gate when governed auto-commit returns (rung + confidence + eval +
+ * real coding). Do not delete (refinement 2 of the change-spec).
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- preserved for post-V1 re-wire; see JSDoc above
 async function commitProposedEntryCard(
   card: unknown,
   input: IngestDocumentInput,
@@ -591,7 +605,13 @@ async function commitProposedEntryCard(
  * reconciliation_context audit metadata (per Iteration 2 Note 2 default
  * disposition; reserved value 'bundle_partial_commit_reconciliation_
  * pending' absent from ExceptionReasonSchema per Phase A verification).
+ *
+ * PRESERVED FOR POST-V1 GOVERNED AUTO-COMMIT (ADR-0007 §Tier 2 "V1 re-scoping of
+ * the Q78 auto-commit exercise", ratified 2026-05-31). Intentionally unreferenced
+ * during the Wave -1 bleed-stop — the commit composite no longer calls it; re-wired
+ * behind the gate when governed auto-commit returns. Do not delete (refinement 2).
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- preserved for post-V1 re-wire; see JSDoc above
 async function commitProposedMutationBundle(
   bundle: unknown,
   input: IngestDocumentInput,
