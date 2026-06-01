@@ -273,6 +273,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0025](./0025-ring2a-core-implementation-seams.md) | Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas | Ratified | 2026-05-26 |
 | [ADR-0026](./0026-ring2a-authoring.md) | Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring | Ratified | 2026-05-29 |
 | [ADR-0027](./0027-ring2b-substrate.md) | Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring | Ratified | 2026-05-30 |
+| [ADR-0028](./0028-workflow-core-substrate.md) | Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 | Ratified | 2026-06-01 |
 | [ADR-0029](./0029-autonomy-ladder-generalization.md) | Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass | Ratified | 2026-05-31 |
 | [ADR-0030](./0030-decision-module-composition.md) | Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy | Ratified | 2026-05-31 |
 <!-- END:generated-current-adrs -->
@@ -312,6 +313,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 - [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
 - [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+- [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
 
@@ -361,6 +363,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
 - [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
 - [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+- [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
 <!-- END:generated-by-phase -->
