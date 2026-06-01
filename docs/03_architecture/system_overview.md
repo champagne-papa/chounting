@@ -10,6 +10,34 @@ below was added 2026-04-21 following the external CTO
 architecture review (see
 `docs/07_governance/friction-journal.md` entry for that date).
 
+> **⚠️ Pre-V1-arc — reconcile pending Wave-0 close (flagged 2026-05-31).**
+> The body below narrates the system at **Phase 1.1 closeout** ("Phase 1.1
+> ships the core; Phase 2+ adds the modules"). That mental model is now
+> structurally stale: Phases 2–8 and Ring 1 / Ring 2A-core / Ring 2B have
+> since shipped, and the **V1 governance arc is in progress** (Wave 0
+> underway — ADR-0029 ratified; ADR-0030 / ADR-0036 parked on open
+> decisions; later waves ahead). The current architecture adds, at
+> minimum: **Workflow Core** (process engine, Layer 2.5 — net-new); the
+> **decision modules** composition (Rules / Authorization / Autonomy /
+> Workflow Routing / Receipt Assembly); the **Autonomy Ladder** on a single
+> `rule_autonomy_rung` (ADR-0029, ratified); and the **AP review-and-post
+> posture** (the document pipeline's ungoverned auto-commit was disabled —
+> matched proposals park in `received`; governed auto-commit is post-V1).
+> See `docs/02_specs/glossary.md` "V1 workflow-native vocabulary" for these
+> terms and `docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md` for
+> the arc.
+>
+> A full reconcile is **deferred to Wave-0 close** because parts of the
+> current architecture are **decision-gated and not yet ratified**:
+> decision-module composition + the disposition contract close with
+> **ADR-0030 (Decision 11, OPEN)**, and the compliance/jurisdiction posture
+> closes with **ADR-0036 (Decision 10, OPEN)**. Narrating those as settled
+> here now would pre-state unratified decisions — so this doc flags the
+> staleness and schedules the rewrite rather than backfilling
+> decision-pending architecture as fact. New engineers: treat the body
+> below as the Phase-1.1 foundation (still accurate as the *core*), and the
+> glossary + V1 governance plan as the current shape on top of it.
+
 ---
 
 ## Model Context — Ledger Infrastructure vs. ERP
@@ -59,8 +87,10 @@ modules and reporting layer.
 
 chounting is **Model B core, on a Hybrid trajectory.** Phase
 1.1 delivered the invariant-enforced core (see
-`docs/02_specs/ledger_truth_model.md` for the 18 invariants that
-make up the core). Every Phase 2+ brief under `docs/09_briefs/`
+`docs/02_specs/ledger_truth_model.md` for the invariants that
+make up the core — 18 at Phase 1.1; **25 as of 2026-05-30**
+after the INV-RULE family landed through Ring 2B). Every
+Phase 2+ brief under `docs/09_briefs/`
 adds either a domain module, a reporting-layer component, or a
 Model-B primitive chounting has not yet needed.
 
