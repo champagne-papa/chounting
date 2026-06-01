@@ -6,9 +6,12 @@ briefs, plans).
 
 ## The rule
 
-When encoding a prediction about future behavior or a parameter
-value that asserts a constraint on data shape, ground the
-prediction against empirical evidence at write time. When grounding
+When encoding a prediction about future behavior, a parameter
+value that asserts a constraint on data shape, or an unobservable
+current-state fact you have not read from its source (a commit
+hash, a verification count, an attribution of who-said-what, a
+cross-reference, a diff shape), ground it against the empirical
+source — disk, git, the record — at write time. When grounding
 isn't feasible at write time (the data doesn't exist yet, the audit
 cost exceeds the prediction's stakes, or the prediction is genuinely
 speculative), explicitly mark the prediction as ungrounded and
@@ -21,8 +24,12 @@ on every prediction satisfies the letter while defeating the spirit.
 
 The failure mode this prevents: confident-sounding predictions
 encoded without grounding are revealed as partially or fully off
-when verification runs against disk. Three observed sub-shapes
-(one per artifact class):
+when verification runs against disk. The sub-shapes span two
+independent axes — the *artifact class* where a claim is encoded,
+and the *claim type* being grounded.
+
+**By artifact class** (where the prediction/claim is encoded) —
+three observed:
 
 - **Spec caveats** that predict resolution behavior without
   verifying it (e.g., "shadowed lines will land in T1.5"
@@ -34,6 +41,35 @@ when verification runs against disk. Three observed sub-shapes
 - **Session-handoff prompts** that encode count expectations for
   the next session based on the prompt-writer's snapshot, when
   disk state has evolved between writing and execution.
+
+**By claim type** (what unobservable is grounded by reading the
+source at write time) — five observed (V1 Wave-0 governance arc).
+Four cite a discrete caught slip; numstat's basis is the standing
+include-numstat-in-commit-reports convention plus grounding-family
+membership, not a caught mis-recall:
+
+- **Commit hashes (SHA-corollary).** Never author a commit SHA you
+  haven't read from git. Slip: `9caf9c30` predicted into a
+  verification echo, self-corrected to the real hash.
+- **Verification counts (grep-count guard).** An unexpected
+  grep/check count is a question, not a verdict — read the bytes,
+  in either direction. Slips: an ADR-0029 regex-escaped `demote`
+  grep read as 0; a C1 harness "exit 0" that was `meta.txt
+  EXIT_CODE=1`.
+- **Attributions (attribution guard).** Ground a claim about
+  who-said-what against the record before escalating a conflict.
+  Slip: a quoted-then-rejected paraphrase read as a live
+  instruction.
+- **Cross-references (related-field grounding).** Resolve each
+  reference to its actual target before transcribing. Slip: an
+  ADR's frontmatter `related` listing unauthored ADRs that would
+  fail `adr:lint`.
+- **Diff shape (numstat).** Read a commit's file-shape from
+  `git show --numstat`, don't recall it. Basis: the standing
+  reporting convention + grounding-family membership, not a caught
+  slip; dual-nature — also a commit-time reporting-coordination
+  convention, which if it earns its own fires graduates separately
+  (likely to `session/iterative-catching.md`).
 
 ## How to apply
 
@@ -81,6 +117,13 @@ shape in mind.
   surfaces (spec-caveat-writing, parameter-setting,
   prompt-authoring). Friction-journal lines 13430 (commit
   `39c8a3c`), 13489 (commit `bcbcacc`), 13671 (commit `0368d7f`).
+- Evidence basis (extension): +5 claim-type sub-shapes from the
+  V1 Wave-0 governance arc (2026-06-01), additive per this
+  convention's "extend via sub-shapes" clause; promoted from the
+  `friction-journal.md` "V1 Wave-0 governance arc" entry (Six
+  grounding guards). Four cite caught slips (SHA-corollary,
+  grep-count, attribution, related-field); numstat is
+  convention-based, not a caught slip.
 - Promoted from: friction-journal family
   `caveat-prediction-vs-empirical-resolution` (3 instances banked
   2026-05-19; family name reflects the originating instance, this
@@ -114,12 +157,16 @@ application.
   re-deriving the rule. The "stop, surface, explain" operational
   guidance specifically benefits from being named once and
   referenced everywhere.
-- **Generalizable.** Surface diversity across the three instances
-  is the empirical evidence. The instances span three distinct
-  artifact classes (spec caveats, regex parameters,
-  session-handoff prompts) — not three instances of the same
-  narrow shape. The generalization is grounded by surface
-  diversity, not by abstract argument.
+- **Generalizable.** The convention generalizes across two
+  independent axes. (1) *Artifact class*: the original three
+  instances span spec caveats, regex parameters, and
+  session-handoff prompts — surface diversity, not three instances
+  of the same narrow shape. (2) *Claim type*: the V1 Wave-0
+  governance arc added five sub-shapes spanning distinct
+  unobservables grounded by reading the source (commit hash,
+  verification count, attribution, cross-reference, diff shape).
+  Two-axis coverage is a stronger generalization than the original
+  single-axis surface diversity.
 - **Stable.** Three instances within ~2 weeks but each in a
   substantively distinct surface; the through-line is consistent
   across instances; the rule has settled enough to name without

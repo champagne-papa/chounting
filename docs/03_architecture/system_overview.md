@@ -10,13 +10,15 @@ below was added 2026-04-21 following the external CTO
 architecture review (see
 `docs/07_governance/friction-journal.md` entry for that date).
 
-> **⚠️ Pre-V1-arc — reconcile pending Wave-0 close (flagged 2026-05-31).**
+> **⚠️ Pre-V1-arc body — full rewrite deferred to a post-V1 doc refresh (Wave-0-close note, 2026-06-01).**
 > The body below narrates the system at **Phase 1.1 closeout** ("Phase 1.1
 > ships the core; Phase 2+ adds the modules"). That mental model is now
 > structurally stale: Phases 2–8 and Ring 1 / Ring 2A-core / Ring 2B have
-> since shipped, and the **V1 governance arc is in progress** (Wave 0
-> underway — ADR-0029 ratified; ADR-0030 ratified (Decision 11);
-> ADR-0036 parked on Decision 10; later waves ahead). The current
+> since shipped, and the **V1 governance arc's Wave 0 is complete** —
+> ADR-0029 and ADR-0030 ratified; **Decision 10 (first-class
+> jurisdictions) deferred by design** (internal-use-only, no market
+> scope until the product is complete; ADR-0036 parked, unparks when
+> market strategy is set); later waves (1–6) ahead. The current
 > architecture adds, at
 > minimum: **Workflow Core** (process engine, Layer 2.5 — net-new); the
 > **decision modules** composition (Rules / Authorization / Autonomy /
@@ -28,14 +30,12 @@ architecture review (see
 > terms and `docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md` for
 > the arc.
 >
-> A full reconcile is **deferred to Wave-0 close** because parts of the
-> current architecture are **decision-gated and not yet ratified**:
-> decision-module composition + the disposition contract closed with
-> **ADR-0030 (Decision 11, ratified)**, and the compliance/jurisdiction posture
-> closes with **ADR-0036 (Decision 10, OPEN)**. Narrating the *latter* as
-> settled here now would pre-state an unratified decision — so this doc flags the
-> staleness and schedules the rewrite rather than backfilling
-> decision-pending architecture as fact. New engineers: treat the body
+> The **full-body rewrite remains deferred** — not by decision-gating
+> (both Wave-0 decisions are now resolved: Decision 11 ratified, Decision
+> 10 deferred-by-design) but because rewriting a deeply-Phase-1.1 body is
+> a scoped post-V1 doc undertaking, carried forward (paired with the
+> `CURRENT_STATE.md` full refresh) per the V1 Wave-0 retrospective §5.
+> New engineers: treat the body
 > below as the Phase-1.1 foundation (still accurate as the *core*), and the
 > glossary + V1 governance plan as the current shape on top of it.
 

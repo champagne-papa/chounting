@@ -1,4 +1,37 @@
-# Where I am as of 2026-05-01 (v0.1.0-mvp + S33 + Q34 promoted to main; chounting.chou.ca serving real app from `9f0ebb3`; production-environment-config gap surfaced post-merge and resolved; Phase 1.2 closed 2026-04-26 via C12, Phase 2 named workstreams open; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; clean-baseline full-suite 598/598 under `pnpm db:reset:clean`, shared-DB pollution surface expanded with new 5-test cluster sibling to Arc A item 27)
+# Where I am as of 2026-06-01 (V1 Wave 0 CLOSED — AP review-and-post wedge defined, ungoverned auto-commit disabled, Decisions 1–9 + 11 ratified / 10 deferred-by-design; see the latest dated section below. Full state-narrative refresh of this doc's body — which lags at 2026-05-01 / Phase-1.1–8 state — is a deferred post-V1 doc arc per the V1 Wave-0 retrospective §5.)
+
+## V1 Wave 0 governance arc — CLOSED 2026-06-01
+
+The V1 Final System Proposal reconciliation + Wave 0. "V1" = the AP
+review-and-post wedge on the controlled stack (build waves 1–6 ahead).
+Eight feature commits banked-local on `staging` (`11633dc6..031ce5ca`),
+plus this Wave-0 closeout commit; push pending a separate terminal go.
+Full retrospective:
+`docs/07_governance/retrospectives/v1-wave-0-retrospective.md`.
+
+- **Wave -1 safety:** ADR-0007 Q78 V1-rescoping amendment (`7cb68895`) +
+  A-now bleed-stop (`de607fdb`) — the document pipeline's ungoverned
+  auto-commit was disabled; matched proposals park in `received` (no
+  ledger write); commit machinery preserved for the post-V1 governed
+  re-wire. (Severity: the vendor_invoice→bill path was already
+  structurally unreachable via a matcher gap, so the live exposure was
+  narrower than first stated.)
+- **Wave 0:** Decisions 1–9 ratified (`31ba9796`); ADR-0029 (single
+  `rule_autonomy_rung`, `6af5d776`) + ADR-0030 (decision-module
+  composition + Decision 11 = i′, `dcb6ab6c`) ratified; **Decision 10
+  (first-class jurisdictions) deferred by design** (internal-use-only;
+  unparks at market strategy; ADR-0036 parked); glossary +
+  system_overview reconciled.
+- **Push-readiness gate:** C1 (test-suite) green after a test-only
+  remediation (`031ce5ca`, classifier assertions committed→parked_unposted);
+  C2 (doc-sync) clean w.r.t. the arc (surfaced only pre-existing
+  reachability drift, carried forward); C3 (governance closeout) = this
+  retrospective + codifications (extend prediction-grounding; new
+  decision-hole + gate-precedence; ADR-lifecycle DISMISS) + this reconcile.
+- **Next:** V1 build waves 1–6 per the charter
+  (`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`); Decision 10
+  unparks at market strategy; a full state-narrative refresh (this doc +
+  system_overview body) is a deferred post-V1 doc arc (retrospective §5).
 
 ## Architecture substrate ratified — 2026-05-05
 

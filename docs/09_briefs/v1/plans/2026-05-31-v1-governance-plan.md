@@ -1,6 +1,6 @@
 # V1 Governance Plan — ratification record + Wave 0 opening
 
-**Status:** Ratified 2026-05-31 by CTO (Decisions 1–9, per the V1 Final System Proposal v2); Decisions 10–11 OPEN.
+**Status:** Ratified 2026-05-31 by CTO (Decisions 1–9, per the V1 Final System Proposal v2); Decision 11 ratified 2026-06-01 (option i′, ADR-0030); Decision 10 deferred-by-design 2026-06-01 (jurisdictions — internal-use-only; ADR-0036 parked).
 **Anchored at:** HEAD `de607fdb` (branch `staging`). Banked-local, unpushed.
 **Form:** governance charter (lock + reserve + open), mirroring
 `docs/09_briefs/phase-0/plans/2026-05-03-phase-0-governance-plan.md` Decision 7. Lean
@@ -81,13 +81,15 @@ enforce, Accounting Core records truth — **and the system runs without the AI.
 | 7 | Decision modules, not a "Decision Core" | **Ratified 2026-05-31 by CTO** (per the V1 Final System Proposal v2) |
 | 8 | Canonical evidence object model (extends INV-DOC-001) before AP ships | **Ratified 2026-05-31 by CTO** (per the V1 Final System Proposal v2) |
 | 9 | Minimal eval harness folded into Ring 2B + AP wedge | **Ratified 2026-05-31 by CTO** (per the V1 Final System Proposal v2) |
-| 10 | **First-class jurisdictions** (compliance-assumptions) | **OPEN** — closes in Wave 0 via **ADR-0036**. NOT ratified. |
-| 11 | **Disposition reconciliation** — 4-value shipped `Disposition` (`auto_posted`/`blocked`/`routed`/`pending`) vs proposed 5-value gate disposition (`allow`/`deny`/`require_approval`/`require_more_evidence`/`queue_manual_review`); gate *command* vs outcome *label* | **OPEN** — closes in Wave 0 via **ADR-0030**. NOT ratified. |
+| 10 | **First-class jurisdictions** (compliance-assumptions) | **DEFERRED BY DESIGN 2026-06-01** — internal-use-only; no market scope until the product is complete + tested; unparks when market strategy is set. **ADR-0036 parked, NOT ratified.** |
+| 11 | **Disposition reconciliation** — 4-value shipped `Disposition` (`auto_posted`/`blocked`/`routed`/`pending`) vs proposed 5-value gate disposition (`allow`/`deny`/`require_approval`/`require_more_evidence`/`queue_manual_review`); gate *command* vs outcome *label* | **Ratified 2026-06-01 (option i′) at ADR-0030** — `ActionType` is the one typed decision contract (reconciled to `Disposition` via `dispositionForAction`); the proposed 5-value vocab is a semantic gloss, not a competing enum; `require_more_evidence` deferred as a future ActionType addition. |
 
-Decisions 10 and 11 are deliberately carried OPEN — no CTO determination was supplied
-for either; they close when their named ADRs are authored. 10 is a business call
-(compliance hardening, a gated parallel track — does not block the AP wedge); 11 must be
-reconciled before V2 extends the enum (don't fork).
+Decision 11 was ratified 2026-06-01 at ADR-0030 (option i′). Decision 10 was
+deferred-by-design 2026-06-01: the strategic input does not exist yet (CHOUnting is
+internal-use-only, no market scope until the product is complete), so ADR-0036 stays
+parked and unparks when market strategy is set. 10 remains a business call (compliance
+hardening, a gated parallel track — does not block the AP wedge); 11 is now settled
+before V2 extends the enum (don't fork).
 
 ---
 
@@ -106,7 +108,7 @@ Per the Phase 0 Decision-7 precedent (reserve the block, hold the numbers). Thes
 | **0033** | Canonical Evidence Object Model (extends INV-DOC-001) | Wave 2 (R3) |
 | **0034** | Replayability Two-Part Definition | V2 |
 | **0035** | Logic Receipt first-class (today: partial via `ProposalJustificationSchema` + `evaluation_trace`) | V2 |
-| **0036** | Compliance Assumptions / first-class jurisdictions (Decision 10) | Wave 0 |
+| **0036** | Compliance Assumptions / first-class jurisdictions (Decision 10) | **DEFERRED** — Decision 10 deferred-by-design; parked, not Wave-0-closing |
 
 If a separate (non-V1) ADR drafts during this cycle and would otherwise consume a number
 in 0028–0036, hold those numbers for V1 and assign the new ADR a higher number (Phase 0
@@ -134,9 +136,10 @@ Wave -1  PRE-ARC SAFETY — SHIPPED (banked local on staging; push at retro clos
 Wave A   Finish Ring 2B (in flight) + fold in eval items 1–3 (golden set, shadow
          scoring, Disposition reconciliation) → rules match in SHADOW.
 
-Wave 0   Vocabulary + decisions + THIS ratification. ADR-0029 (Autonomy Ladder rename),
-         ADR-0030 (Decision 11), ADR-0036 (Decision 10); glossary; system_overview.
-         [OPENED by this charter.]
+Wave 0   Vocabulary + decisions + THIS ratification. ADR-0029 (Autonomy Ladder rename)
+         + ADR-0030 (Decision 11 = i′) RATIFIED; ADR-0036 (Decision 10)
+         DEFERRED-BY-DESIGN (parked, not delivered this wave); glossary; system_overview.
+         [OPENED by this charter; Wave-0 decisions closed 2026-06-01.]
 
 Wave 1   Workflow Core substrate — ADR-0028; workflow_model.md; instance/event tables +
          audit join; inert seams. (R4)
@@ -164,7 +167,8 @@ V1 must lay these seams so V2 is a config change, not a rebuild:
   from the pre-commit shadow eval, which cannot influence the commit), so
   recording → deciding is a config flip — V2 Track 1.1 governed auto-commit.
 - **R2 → Decision 11.** Settle the 4-value `Disposition` vs the 5-value gate disposition
-  before V2 extends the enum.
+  before V2 extends the enum. *(Settled 2026-06-01 at ADR-0030, option i′ — `ActionType`
+  canonical; the 5-value vocab is a gloss.)*
 - **R3 → Wave 2.** General, NOT-AP-only evidence object carrying what V2 Track 4
   (workflow learning) + Track 7.4 (first-class Logic Receipts) will need.
 - **R4 → Wave 1.** Workflow Core substrate (child-workflow data model present;
@@ -175,6 +179,8 @@ V1 must lay these seams so V2 is a config change, not a rebuild:
   `PREDICATES` map; the four deferred predicates are reserved keys).
 - **R7 → Wave 4.** No-AI-only-paths registry shaped to accept new producers without rework.
 - **R8 → Decision 10.** Jurisdiction decision gates the V2 governance-hardening track.
+  *(Decision 10 deferred-by-design 2026-06-01; the gate is pending until the jurisdiction
+  decision unparks.)*
 
 ---
 
@@ -228,5 +234,6 @@ This charter reserves and sequences; it does not perform any per-ADR ratificatio
 - Banked local on `staging`, UNPUSHED (push at retrospective close):
   `7cb68895` (ADR-0007 Q78 amendment) + `de607fdb` (A-now bleed-stop). This charter is
   the third banked commit.
-- Sequenced next (sub-steps, not this charter): author the Wave 0 ADRs (0029, 0030,
-  0036) via the lifecycle in §8; finish Ring 2B (Wave A, in flight).
+- Wave 0 ADRs (sub-steps, not this charter), via the lifecycle in §8: ADR-0029 + ADR-0030
+  RATIFIED 2026-06-01; ADR-0036 (Decision 10) DEFERRED-BY-DESIGN, parked. Ring 2B (Wave A)
+  shipped (the `11633dc6` anchor).

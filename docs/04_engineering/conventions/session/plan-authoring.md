@@ -3,7 +3,8 @@
 Drafting-time discipline that fires when a session is writing a plan,
 brief, scope-lock input, or handoff prompt. These rules catch
 "narratively correct, contractually wrong" drift between drafter
-prose and shipped reality.
+prose and shipped reality — and decision-shaped holes a drafter
+cannot fill.
 
 See [`README.md`](./README.md) for the sub-folder routing rule and
 the broader [`../README.md`](../README.md) for the topical routing
@@ -1089,3 +1090,57 @@ close report.
 - Promoted from: Phase 7 retrospective §3 Candidate #9
 - Cross-references: Phase 7 chunks 7.2 + 7.3a commits; Phase 7
   retrospective §3 Candidate #9
+
+## Don't author past a decision-shaped hole
+
+When drafting reaches a decision that isn't yours to make — a
+business/strategic call, a ratification, an owner's choice — do
+**not** manufacture forward progress around it. Surface the
+dependency and stop; don't draft the resolved content N ways, guess
+the pick, or fabricate the missing input. Authoring past the hole
+produces motion that looks like progress but commits the project to
+a decision no one made.
+
+Worked examples (V1 Wave-0 governance arc): the ADR-0030
+ratification package halted at Part 2 — Decision 11 was the CTO's,
+not the drafter's, so the package could not carry a resolved body
+until the direction landed; the ADR-0036 design spec offered **no
+lean** on Decision 10 because jurisdictions are a market call with
+no disk basis (a recommendation would fabricate the strategic
+input); and "go with your recommendation" was declined for
+Decision 10 because there was no recommendation to go with — the
+hole stayed surfaced rather than being filled with a convenient
+pick.
+
+Failure mode this prevents: drafting convenient forward motion
+around a call that isn't the drafter's, so the artifact silently
+encodes an unmade decision. The discipline: name the hole, surface
+it, wait.
+
+---
+**Origin:**
+- First codified: V1 Wave-0 governance arc, 2026-06-01 (arc closeout 3c).
+- Evidence basis: process meta-pattern, observation-grain N≥3 across
+  distinct decision surfaces (ADR-0030 Part 2 ratification; Decision-10
+  no-lean spec framing; Decision-10 defer / "go-with-your-recommendation"
+  non-referent stop).
+- Promoted from: `docs/07_governance/friction-journal.md` "V1 Wave-0
+  governance arc" entry (Six grounding guards).
+- Cross-references: `prediction-grounding.md` (shares the root "don't
+  manufacture what you can't ground", but decision-hole is a *distinct*
+  guard applying that root to decisions — NOT a prediction-grounding
+  sub-shape); `iterative-catching.md` gate-precedence (sibling distinct
+  guard from the same arc).
+
+**Evaluation basis:**
+- **Load-bearing (prescriptive).** Generates operator action at every
+  decision-shaped hole in drafting: name it, surface it, wait — rather
+  than drafting around it. Future plans/specs/packages cite it when a
+  ratification or owner's call gates the work.
+- **Generalizable.** Applies at any drafter↔decision-owner boundary —
+  ADR ratifications, business/market calls, owner choices — not coupled
+  to the V1 arc. The three fires span a ratification (ADR-0030), a
+  strategic call (Decision 10), and a relayed-recommendation ambiguity.
+- **Stable.** The discipline's frame ("don't fabricate forward progress
+  around a call that isn't yours") held identically across all three
+  fires within the arc; no name-revision or sub-shape churn.

@@ -620,3 +620,63 @@ Session 2F closeout (Observation 3 path α). Full Z1 catalog at
   `docs/09_briefs/phase-2/2026-05-04-session-2f-closeout.md` §4
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+## Gate-precedence: don't collapse a reviewer's read-back into your own self-check
+
+When the reviewer sets a verification as the **precondition** for an
+action — "show me X from disk, *then* commit" — do not substitute
+your own self-verification and advance in one motion, even when your
+self-check looks clean. The reviewer's read-back and your self-check
+are separate by design; collapsing them is the exact substitution
+the gate exists to prevent (a wrong correction lands committed
+instead of caught). Surface X and wait for the GO. **Binds both
+sides:** the drafter doesn't collapse the gate even on a
+loosely-worded "show me… and it's GO"; the reviewer states the
+precondition crisply (put X in the message, wait for the GO) rather
+than folding "show me" into a self-fulfillable condition.
+
+Two datapoints (V1 Wave-0 governance arc), two sub-modes:
+(a) **drafter collapse** — glossary commit `feb5baaa` committed in
+the same motion as self-verifying "all four applied," when the
+reviewer had set the disk read-back as the commit precondition
+(verified clean post-hoc — luck, not discipline; a clean outcome
+does not retroactively make the skipped gate fine);
+(b) **reviewer's loose conditional invites the collapse** —
+system_overview reword `d9628a9e`, where "show me the line… and
+it's GO" let the commit fire before the reviewer saw the line. The
+bilateral instance enriches the rule (bind both sides) rather than
+weakening it.
+
+Pairs with "Re-verify Environmental Claims at Each Gate" and
+"Mutual Hallucination-Flag-and-Retract Discipline" (above) — sibling
+commit-time, two-sided gates.
+
+---
+**Origin:**
+- First codified: V1 Wave-0 governance arc, 2026-06-01 (arc closeout 3c).
+- Evidence basis: process meta-pattern, N=2 with shape match across
+  distinct commit-time gates (`feb5baaa` drafter-collapse; `d9628a9e`
+  reviewer-loose-conditional); N=3 confirms. Codified **provisional
+  until a third clean fire** confirms, per the `plan-authoring.md`
+  "Plan-substrate-vs-canonical-reality drift meta-pattern"
+  sub-curve-(b) N=2-exploratory precedent.
+- Promoted from: `docs/07_governance/friction-journal.md` "V1 Wave-0
+  governance arc" entry (Six grounding guards).
+- Cross-references: Re-verify Environmental Claims at Each Gate
+  (above); Mutual Hallucination-Flag-and-Retract Discipline (above);
+  `plan-authoring.md` "Don't author past a decision-shaped hole"
+  (sibling distinct guard from the same arc).
+
+**Evaluation basis:**
+- **Load-bearing (prescriptive).** Generates operator action at every
+  reviewer-gated commit: surface the named verification, wait for the
+  GO; both sides have a step (drafter doesn't collapse; reviewer states
+  the precondition crisply). Future commit gates cite it.
+- **Generalizable.** Applies at any reviewer-gated action where a
+  verification is the named precondition — commit, approval, publish.
+  Not coupled to the V1 arc's specific commits.
+- **Stable (exploratory framing).** N=2 with shape match; codified
+  provisionally with explicit provisional-until-N=3 framing (a third
+  clean fire from an operationally distinct gate confirms). The
+  bilateral second instance surfaced the two-sub-mode structure
+  rather than destabilizing the rule.

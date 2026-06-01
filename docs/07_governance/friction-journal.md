@@ -17887,3 +17887,102 @@ DEFINER hygiene flag (re-surfaced, not resolved, T4); faithful `proposal_type` d
 richer branch derivation + §6.5 bundles (workflow arc); the two condition_value validators
 (temporal range, source-trigger closed-set); branchless-rule backfill. α/β codification stays
 DEFERRED (N=1; the derivation-underspecification is a distinct shape, no forced N=2).
+
+## V1 Wave-0 governance arc — 2026-05-31 / 2026-06-01
+
+The V1 Final System Proposal reconciliation + Wave 0. "V1" = the AP review-and-post wedge
+on the controlled stack. Anchor `11633dc6` (Ring 2B close). Eight commits banked-local on
+`staging`, UNPUSHED (push at this retrospective's close). Full writeup at
+`docs/07_governance/retrospectives/v1-wave-0-retrospective.md`. (Arc ordinal omitted — Ring
+2B was the tenth; this is the next, pending a confirmed count rather than an assumed one.)
+
+**The keystone finding: ungoverned auto-commit at HEAD.** At `11633dc6` the document-ingest pipeline auto-posted bills/payments ungoverned —
+`ingestDocument`'s matched-proposal branches → `commitProposedEntryCard` /
+`commitProposedMutationBundle` → `withInvariants(billService.post / paymentService.record)`
+as the system actor (ADR-0007 Q78). The Ring 2B rule/autonomy gate ran in SHADOW only. The
+v1-proposal's "100% Always-Confirm today" claim was false (it conflated the conversational
+agent's `dry_run` refusal with the ingest path). Decision: **Option A** — disable the live
+auto-commit; AP routes to human review-and-post; governed auto-commit returns per-rule
+post-V1, gated on the eval harness. Wave -1 bleed-stop `de607fdb` parks matched proposals
+(`status='parked_unposted'`, no ledger write); commit machinery preserved + annotated for
+the post-V1 governed re-wire.
+
+**Severity correction: the path was already structurally unreachable.** "Actively auto-posting wrong bills NOW" was overstated. The Stage-4
+`VendorInvoiceExtractionSchema` emits no vendor-name; neither Tier A nor Tier C supplies one
+⇒ `matchVendor` returns `vendor_id=null` ⇒ `buildPostBillInput` null-gates ⇒ no post, even
+with the bleed-stop reverted (subagent-confirmed). So the live exposure was narrower than
+claimed — but the ungoverned Q78 capability was wired beneath an accidental null-gating bug,
+not a control, so the bleed-stop (deliberate capability removal + explicit parking) remains
+correct. The vendor-identity matcher gap is a Wave-6 MUST-FIX (it blocks even the intended
+human review-and-post coding suggestions).
+
+**ADR-before-code, full lifecycle, twice.** Wave -1 ratified the ADR-0007 Q78 V1-rescoping amendment (`7cb68895`) before the bleed-stop
+code — additive (preserves Q78 Option A verbatim; re-scopes WHEN the capability is
+exercised, not the auth model). Wave 0 ran the full per-ADR lifecycle (design spec →
+ratification package → ratified body in `adr/`) for ADR-0029 (`6af5d776`; Autonomy Ladder
+generalization, single `rule_autonomy_rung`, five-ADR reconciliation, INV-AGENT editorial
+precision pass) and ADR-0030 (`dcb6ab6c`; decision-module composition + Decision 11). The
+lifecycle's load-bearing rule — an ADR body enters `adr/` ONLY at ratification — caught a
+stage-jump at ADR-0029 (body authored before the package; `adr:lint` rejected
+`status:proposed`; body removed, NOT force-accepted, which would have defeated the check).
+
+**Two CTO decisions: 11 ratified (i′), 10 deferred-by-design.** Decision 11 (Disposition reconciliation) = option **i′**: the shipped `ActionType` (the
+gate's output; the `action_type` enum) is the one typed decision contract, already reconciled
+to `Disposition` via `dispositionForAction`; the proposed 5-value vocabulary is a semantic
+gloss, not a competing enum; `require_more_evidence` is deferred as a future `ActionType`
+addition (post-V1, INV-EVIDENCE). Ratified at ADR-0030 (`dcb6ab6c`). Decision 10 (first-class
+jurisdictions) = **deferred by design**: CHOUnting is internal-use-only with no market
+strategy until the product is complete + tested, so the strategic input does not exist yet —
+picking an option would bank a forward V2 commitment from current usage rather than a formed
+strategy. ADR-0036 stays parked (unparks when market strategy is set). No lean was offered on
+Decision 10 — a jurisdictions recommendation would have fabricated the strategic input.
+
+**Six grounding guards, one root.** The arc codified six disciplines, all rooted in "don't manufacture what you can't ground":
+SHA-corollary (never author a commit hash you haven't read from git — caught this arc when
+`9caf9c30` was predicted into a verification echo, then self-corrected to the real hash read
+from git); grep-count guard (an unexpected count is a question, read the bytes — fired at the
+ADR-0029 apply, and again on the C1 harness exit-code below); ADR-lifecycle guard (above);
+decision-hole guard (don't author past a decision that isn't yours — held at ADR-0030's
+Part 2 and at both Decision-10 framings); attribution guard (verify who said what before
+escalating a conflict — caught at the glossary commit, reading a quoted-then-rejected
+paraphrase as a live instruction); gate-precedence guard (don't collapse the reviewer's
+gated read-back into your own self-check — caught at glossary `feb5baaa`). Three of the six
+extend the existing `prediction-grounding` convention as sub-shapes (ground an unobservable
+against disk/record at write-time): SHA-corollary, grep-count, attribution. Three are distinct
+new-pattern candidates: ADR-lifecycle (stage discipline), decision-hole (decision ownership),
+gate-precedence (gate ordering). Formal N-count + codification routing is this retrospective's
+§3 (the 3c pass), not asserted here. Codified at 3c: the three grounding sub-shapes extend
+`docs/04_engineering/conventions/prediction-grounding.md` (new claim-type axis); decision-hole →
+`docs/04_engineering/conventions/session/plan-authoring.md`; gate-precedence →
+`docs/04_engineering/conventions/session/iterative-catching.md` (provisional, N=2-until-N=3);
+ADR-lifecycle DISMISSED as already-codified (ADR README §Pre-ratification + `adr:lint`'s status-enum check rejecting any pre-ratification status).
+
+**Condition-1 deviation: arc-caused stale assertions, caught only by the full sweep.** The bleed-stop changed `ingestDocument`'s matched-proposal return committed→parked_unposted
+and migrated two affected test files, but missed `classifier.integration.test.ts` (three
+assertions). The arc had run only "affected integration 9/9"; the push-readiness full-suite
+sweep surfaced it (1 file / 3 tests failed). Fixed test-only at `031ce5ca`
+(committed→parked_unposted; set→toBe collapse where the committing arm — `attachment_card`,
+a matched-relationship route — is unreachable for those fixtures). A verify-the-artifact
+catch: the harness task-notification reported "exit 0" (its trailing `echo`), but the
+authoritative `meta.txt EXIT_CODE=1` showed the suite had failed — a green that wasn't.
+
+**Condition-2: the gate surfaced only pre-existing drift.** The canonical reachability command (documented in `invariants.md`) surfaced four INV-id
+discrepancies — two by-design reserved (`INV-CHECKPOINT-001` Phase-2; `INV-AGENT-002` per
+ADR-0029), one Phase-5 registration gap (`INV-AP-001/002`, `billService.ts` comments only),
+plus a stale `control_matrix.md:3` count — all PRE-EXISTING (the arc changed no INV-id
+mention; `ledger_truth_model.md` byte-identical to `origin/staging`). `types.ts` regen was
+clean (no migration in the arc); `adr:check` green; ADR-0030 prose cross-refs all resolve.
+The arc is doc-sync-clean; the pre-existing drift is documented as carry-forward and fixed
+none (out-of-footprint; ratified-contract-scope) — the gate doing its job.
+
+**Carry-forwards.** The four C2 exceptions (`control_matrix.md:3` 24→25; `INV-AP-001/002` severity question —
+enforced-but-unregistered vs cosmetic; the two known-reserved INVs); the `clean_approval_count`
+drift-ledger item (ADR-0007 Notes / ADR-0017 cross-ref; untouched this arc); a paired
+**state-narrative-docs refresh arc** (`system_overview` full-body rewrite + `CURRENT_STATE.md`
+full refresh — both deeply Phase-1.1-stale, deferred to a scoped post-V1 doc undertaking);
+the Wave-6 matcher-gap MUST-FIX (vendor-identity field on the Stage-4 schema + Tier A/C); a
+**friction-journal lint-debt** item (92 pre-existing `>12`-line bullets + journal-wide `###`
+headings in older committed entries trip `check-friction-journal-line-length` /
+`detect-journal-headings` at exit 1 — pre-existing, not arc-introduced; reformatting them is
+out-of-footprint per ratified-contract-scope; surfaced here for a dedicated journal-lint pass);
+and, per the V1 charter, the remaining build waves (1–6).
