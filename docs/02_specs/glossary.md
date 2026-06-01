@@ -703,8 +703,7 @@ the integration unit between sessions and staging.
   Receipt Assembly. "Decision modules, not a Decision
   Core": services compose them; there is no god-object
   decision folder. The composition principle is the Part-1
-  decision of ADR-0030 (spec stage; ratifies with ADR-0030,
-  which is parked on Decision 11 — not yet ratified).
+  decision of **ADR-0030 (ratified)**.
 - **Autonomy Ladder.** The graduated-authority concept —
   how independently a rule may act on the commit path.
   Three rungs (`always_confirm` → `notify_and_auto_post` →
@@ -762,14 +761,15 @@ subsection, applied to the V1 arc's open items):
   container-side proposal, not to a ratified ADR or code artifact;
   promotes to a defined term if/when a V1 ADR adopts it. The
   Autonomy Ladder lives on the spine; it is not the entire spine.
-- **proposed 5-value gate disposition.** *(Decision 11 — OPEN,
-  see ADR-0030.)* A proposed vocabulary
+- **proposed 5-value gate disposition.** *(Decision 11 —
+  RESOLVED at ADR-0030, option i′.)* A proposed vocabulary
   (`allow` / `deny` / `require_approval` / `require_more_evidence`
   / `queue_manual_review`) glossing the shipped **ActionType**
-  ([A](#a)); `require_more_evidence` is the one value with no
-  ActionType home (evidence-gating, post-V1). Reconciliation
-  (which vocabulary is canonical) is OPEN — not defined as an
-  outcome until ADR-0030 ratifies.
+  ([A](#a)). ADR-0030 ratifies **ActionType** as the one typed
+  decision contract; this vocabulary is a semantic gloss over it,
+  **not** a competing enum. `require_more_evidence` is the one
+  value with no ActionType home — a future ActionType addition
+  when evidence-gating lands (post-V1, INV-EVIDENCE territory).
 
 ## Governance Vocabulary
 

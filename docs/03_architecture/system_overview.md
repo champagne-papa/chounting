@@ -15,8 +15,9 @@ architecture review (see
 > ships the core; Phase 2+ adds the modules"). That mental model is now
 > structurally stale: Phases 2–8 and Ring 1 / Ring 2A-core / Ring 2B have
 > since shipped, and the **V1 governance arc is in progress** (Wave 0
-> underway — ADR-0029 ratified; ADR-0030 / ADR-0036 parked on open
-> decisions; later waves ahead). The current architecture adds, at
+> underway — ADR-0029 ratified; ADR-0030 ratified (Decision 11);
+> ADR-0036 parked on Decision 10; later waves ahead). The current
+> architecture adds, at
 > minimum: **Workflow Core** (process engine, Layer 2.5 — net-new); the
 > **decision modules** composition (Rules / Authorization / Autonomy /
 > Workflow Routing / Receipt Assembly); the **Autonomy Ladder** on a single
@@ -29,10 +30,10 @@ architecture review (see
 >
 > A full reconcile is **deferred to Wave-0 close** because parts of the
 > current architecture are **decision-gated and not yet ratified**:
-> decision-module composition + the disposition contract close with
-> **ADR-0030 (Decision 11, OPEN)**, and the compliance/jurisdiction posture
-> closes with **ADR-0036 (Decision 10, OPEN)**. Narrating those as settled
-> here now would pre-state unratified decisions — so this doc flags the
+> decision-module composition + the disposition contract closed with
+> **ADR-0030 (Decision 11, ratified)**, and the compliance/jurisdiction posture
+> closes with **ADR-0036 (Decision 10, OPEN)**. Narrating the *latter* as
+> settled here now would pre-state an unratified decision — so this doc flags the
 > staleness and schedules the rewrite rather than backfilling
 > decision-pending architecture as fact. New engineers: treat the body
 > below as the Phase-1.1 foundation (still accurate as the *core*), and the
