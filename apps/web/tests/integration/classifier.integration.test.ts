@@ -210,7 +210,12 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Bleed-stop (ADR-0007 §Tier 2 Q78 / de607fdb): a matched vendor_invoice
+    // with no prior relationship match routes to proposed_entry_card, which
+    // now parks (parked_unposted) instead of auto-posting; only
+    // proposed_attachment_card (a matched-relationship route, not exercised
+    // here) still commits.
+    expect(result.status).toBe('parked_unposted');
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     expect(stageNames).toContain('classify_document_type');
     // Tier A path: NO child sub-stage emitted.
@@ -252,15 +257,16 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    // Status 'committed' or 'deferred_chunk_7_3b_pending_activation'
-    // both acceptable: chunk 7.2 verified Stage 3 emits parent + child
-    // trace_records; chunk 7.3a Stage 7 proposalBuilder defers receipt
-    // routes per Iteration 2 Option γ (ProposedAttachment substrate at
-    // chunk 7.3b). Both statuses indicate Stage 3 completed cleanly.
-    expect([
-      'committed',
-      'deferred_chunk_7_3b_pending_activation',
-    ]).toContain(result.status);
+    // Status is 'parked_unposted': this Tier-C receipt has no prior
+    // relationship match, so Stage 7 routes it to a parked branch
+    // (proposed_entry_card / proposed_mutation_bundle), which the Wave-1
+    // bleed-stop (ADR-0007 §Tier 2 Q78 / de607fdb) parks rather than
+    // auto-posting. (Only proposed_attachment_card — a matched-relationship
+    // route, not exercised here — still commits.) Deterministic for these
+    // fixtures; the test's focus is the parent + child stage emission below.
+    // ('deferred_chunk_7_3b_pending_activation' is a defined-but-not-emitted
+    // status post-7.3b activation; not produced.)
+    expect(result.status).toBe('parked_unposted');
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     // Tier C path: parent + child sub-stage emitted per ADR-0014 §8 + §13.
     expect(stageNames).toContain('classify_document_type');
@@ -402,12 +408,11 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    // Status acceptable as committed OR deferred (per chunk 7.3a Option γ
-    // receipt route defers to chunk 7.3b).
-    expect([
-      'committed',
-      'deferred_chunk_7_3b_pending_activation',
-    ]).toContain(result.status);
+    // Status is 'parked_unposted': the adversarial doc classifies as receipt
+    // via Tier C, has no prior relationship match, and routes to a parked
+    // branch — which the Wave-1 bleed-stop (ADR-0007 §Tier 2 Q78 / de607fdb)
+    // parks rather than auto-posting. Deterministic for these fixtures.
+    expect(result.status).toBe('parked_unposted');
     const stageNames = result.pipeline_trace.map((r) => r.stage_name);
     // Verify Tier A was bypassed: AI fallback child sub-stage emitted.
     expect(stageNames).toContain('ai_fallback_classify');
