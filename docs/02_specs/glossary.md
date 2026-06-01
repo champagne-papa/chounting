@@ -18,11 +18,24 @@ For the rules these terms participate in, see
 
 ## Index
 
-[A](#a) · [B](#b) · [C](#c) · [D](#d) · [F](#f) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w) · [Workflow Vocabulary](#workflow-vocabulary)
+[A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [N](#n) · [P](#p) · [Q](#q) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w) · [Workflow Vocabulary](#workflow-vocabulary)
 
 ---
 
 ## A
+
+**ActionType.** The gate's typed decision output — the `action_type`
+DB enum, 5 values: `auto_post_at_rung_2`, `auto_post_at_rung_3`,
+`block_with_reason`, `route_to_exception_queue_with_reason`,
+`suggest_with_required_approval`. This is the **one typed decision
+contract** ("what the gate directs"), produced by the Autonomy Gate
+(`gate(): ActionType`) — the pure-core evaluator deliberately does
+*not* produce it (no `effective_action` on `MatchResult`). Reconciled
+to **Disposition** ([D](#d)) — the outcome label — via
+`dispositionForAction()`. Distinct layers: ActionType = command,
+Disposition = outcome. (The proposed 5-value gate-disposition
+vocabulary is a Decision-11-OPEN gloss over ActionType, not a separate
+contract — see deferred entry below.)
 
 **ADR (Architecture Decision Record).** A document capturing a
 single architectural decision with its alternatives, the chosen
@@ -113,11 +126,36 @@ exist in Phase 1.1: the `unique_entry_number_per_org_period`
 UNIQUE constraint and the `journal_entry_attachments` RLS
 policy. See `invariants.md` for the non-promotion rationale.
 
+**Disposition.** The shipped outcome label of a rule evaluation —
+4 values: `auto_posted`, `blocked`, `routed`, `pending` — written to
+`rule_evaluation_log.disposition` (CHECK-constrained). Derived from
+**ActionType** ([A](#a)) via `dispositionForAction()` (the two
+auto-post arms collapse to `auto_posted`; at V1 the only emitted
+value is `pending`, since `current_rung` is always `always_confirm`).
+"What happened," as distinct from ActionType's "what the gate
+directs." Charter INV-4 names the typed contract as *reconciled with*
+Disposition — the contract is ActionType; Disposition is its
+reconciled outcome.
+
 **dry_run.** A boolean parameter on every mutating agent tool.
 The confirmation flow always calls dry-run first; only the
 second call (after the user's Approve click) writes to
 `journal_entries`. Phase 1.1 rejects `dry_run: true` at the Zod
 schema (the agent path lands in Phase 1.2).
+
+## E
+
+**Evidence object.** The canonical artifact a committed AP
+posting hangs its evidence off — source document, extraction,
+decision, approver, receipt — replacing today's fragmentation
+across `proposedAttachment`, `document_cases`,
+`source_document_links`, audit rows, and the partial Logic
+Receipt. Net-new for V1 (reserved ADR-0033); shaped general
+(not AP-only) so V2 workflow-learning and first-class Logic
+Receipts can read it. Extends the existing `billService.post`
+evidence-completeness gate (INV-DOC-001) rather than duplicating
+it. The `core/evidence/` + `services/evidence/` homes are empty
+reserved directories at V1.
 
 ## F
 
@@ -223,6 +261,18 @@ anti-hallucination rules. 0 invariants by design — agents are
 allowed to be wrong because lower layers catch mistakes before
 they touch the ledger.
 
+**Logic Receipt.** The structured justification a committing
+agent produces for an autonomous posting — a justification tuple
+with no raw LLM reasoning (INV-AGENT-002, reserved). Partially
+codified today as `ProposalJustificationSchema`
+(`shared/schemas/accounting/proposalJustification.schema.ts`) +
+the `rule_evaluation_log.evaluation_trace` column; the producer
+side is deferred (proposalBuilder omits `justification` at V1),
+so the schema is a forward contract, not yet a populated artifact.
+First-class substrate (table/API/query surface) is a V2 item
+(reserved ADR-0035). Distinct from **QueryTrace** ([Q](#q)) — the
+read-path artifact is lightweight and is *not* a Logic Receipt.
+
 **Lower-wins rule.** When two layers would disagree, the lower
 layer wins. A service function calling the database with an
 unbalanced journal entry will have its transaction rolled back
@@ -245,6 +295,17 @@ decimal digits, matching Postgres `numeric(20,4)`). Defined in
 crosses the service boundary as a JavaScript Number
 ([INV-MONEY-001](ledger_truth_model.md#inv-money-001--money-at-the-service-boundary-is-string-typed-never-javascript-number)).
 
+## N
+
+**needs_review.** A `document_case_state` value — the holding
+state an AP proposal lands in for human approval (NOT
+"waiting_for_approval," which does not exist). At V1 the Wave -1
+bleed-stop parks matched proposals in `received` rather than
+`needs_review` (the `received → needs_review` transition is
+illegal in the ADR-0011 §3 matrix, and no review UI exists yet);
+routing to `needs_review` + the approve→post surface is Wave 6.
+See **parked_unposted** ([P](#p)).
+
 ## P
 
 **Paired invariants.** Two INV-IDs that participate in each
@@ -257,6 +318,17 @@ established in Waypoint E.1 means these are the only INV-IDs
 that legitimately appear annotated in code at sites belonging
 to a different layer than their primary.
 
+**parked_unposted.** An `IngestDocumentOutput.status` value
+added by the Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 Q78
+V1-rescoping, commit `de607fdb`): a matched
+`proposed_entry_card` / `proposed_mutation_bundle` was built but
+deliberately NOT posted — the ungoverned auto-commit is disabled.
+No ledger write; `proposal_id` is null; the `document_case` stays
+`state='received'` (parked). Distinct from **needs_review**
+([N](#n)) — parking is the Wave -1 stop; routing to needs_review
+for human approve→post is Wave 6 (`received → needs_review` is
+not yet a legal transition).
+
 **Phase 1.1 / 1.2 / 1.3.** The three sub-phases of Phase 1.
 1.1 is the foundation (database, auth, RLS, manual journal
 entries) — currently complete. 1.2 introduces the agent stack.
@@ -268,6 +340,16 @@ Approve. Shows entity, vendor, amount, debit/credit lines,
 intercompany flag, matched rule from institutional memory,
 plain-English explanation. The artifact of the
 [confirmation-first model](#c).
+
+## Q
+
+**QueryTrace.** The lightweight read-path artifact — a record of
+how a grounded answer / report / drill-down was produced on the
+read path. Deliberately NOT a full **Logic Receipt** ([L](#l)):
+reads emit a QueryTrace so the read path stays separated from the
+write path and does not bloat the audit corpus. Read/write
+separation is a V1 control invariant; QueryTrace substrate is
+V1-planned.
 
 ## R
 
@@ -324,6 +406,18 @@ structure produces zero structural drift across five
 consecutive invocations. Brief-writing quality is the
 bottleneck, not subagent execution. Candidate for ADR-002
 formalization (see `open_questions.md`).
+
+**system actor.** A non-human service identity that the
+document pipeline runs as (`SystemActorServiceContext`:
+`caller.user_id = null`, `caller.system_actor` set, e.g.
+`'pipeline_orchestrator'`). Per ADR-0007 Q78 (Option A),
+`withInvariants` admits a system actor and bypasses the
+identity-coupled invariants, attributing the write to a seeded
+service-account `auth.users` identity (`SYSTEM_ACTOR_USER_ID`,
+Path X). The trust boundary is the route/job-queue/orchestrator
+that constructs the context. (The Q78 auth *mechanism* is live;
+its *exercise* for auto-commit is gated to post-V1 by the Q78
+V1-rescoping amendment — see **parked_unposted** ([P](#p)).)
 
 ## T
 
@@ -593,6 +687,89 @@ the integration unit between sessions and staging.
   fix-stack, Class 2 fix-stack). Bigger than an EC,
   smaller than a Phase. Has its own scoping doc and exit
   criteria.
+
+**V1 workflow-native vocabulary (V1 governance arc, 2026-05-31):**
+
+- **Workflow Core.** The process engine (Layer 2.5) —
+  "where is this process, and what happens next?" Advances
+  process state across long-running tasks (instances,
+  timers, signals, retries, compensation); cannot bypass
+  Services or write the ledger. Net-new for V1; substrate
+  authored at ADR-0028. Distinct from Accounting Core (the
+  truth engine — "what is true?").
+- **Decision modules.** The composable evaluation units a
+  service consults — Rules Core (= Rule Type Core),
+  Authorization Core, Autonomy Core, Workflow Routing,
+  Receipt Assembly. "Decision modules, not a Decision
+  Core": services compose them; there is no god-object
+  decision folder. The composition principle is the Part-1
+  decision of ADR-0030 (spec stage; ratifies with ADR-0030,
+  which is parked on Decision 11 — not yet ratified).
+- **Autonomy Ladder.** The graduated-authority concept —
+  how independently a rule may act on the commit path.
+  Three rungs (`always_confirm` → `notify_and_auto_post` →
+  `silent_auto`), materialized as the `rule_autonomy_rung`
+  enum on `rule_registry.current_rung`. Rule-attached, not
+  agent-global (trust attaches per rule). Consolidated at
+  ADR-0029; lives on the Trust Spine, is not the whole
+  spine. See **ActionType** ([A](#a)) for the gate output
+  it caps toward.
+- **Autonomy Gate.** The seam that resolves a matched rule
+  to an action and emits the typed contract **ActionType**
+  ([A](#a)) — capping the rule's branch outcome by its
+  `current_rung` (the capping table,
+  `shared/rules/capping.ts`). The Gate produces the contract;
+  ActionType *is* it. At V1,
+  records a disposition diagnostically; gate-driven
+  auto-commit is post-V1 (see **governed auto-commit**,
+  deferred below).
+- **WorkflowStartRequest.** *(Net-new / reserved — ADR-0028.)*
+  A domain command (UI- or agent-produced) that starts a
+  workflow instance. NOT a fourth Intent (the three-path
+  Intent schema is unchanged); a command consumed by
+  Workflow Core (which does not exist yet — so this is not
+  a live artifact, reserved with Workflow Core ⚫).
+
+**V1 deferred / decision-pending vocabulary.** Definitions are
+held pending — defining them as settled now would lock in
+ambiguity before the underlying concept ratifies (the same
+discipline as the Governance Vocabulary's *Tier 2 — deferred*
+subsection, applied to the V1 arc's open items):
+
+- **governed auto-commit.** *(Post-V1.)* The Autonomy Gate
+  *deciding* on the live commit path (not just recording) so a
+  matched rule at a promoted rung auto-commits without a human.
+  Disabled at V1 (the Wave -1 bleed-stop); returns per-rule
+  post-V1, hard-gated on the evaluation harness establishing
+  match/extraction precision (ADR-0007 Q78 V1-rescoping; seam at
+  reserved ADR-0032). Not defined further until that track opens.
+- **Learning Trichotomy.** *(V2.)* The three artifact classes
+  workflow-learning may propose — TaskPlan, WorkflowDefinition,
+  AutonomyParameter — each with its own ratification ceremony.
+  Named, not defined: zero code, no consumer, no trace data yet;
+  authored when the V2 learning track opens (ADR-0028 / V2
+  learning-substrate territory). Define-by-pointer per
+  Simplification-3.
+- **Trust Spine.** *(Proposal concept — not yet repo substrate.)*
+  The cross-cutting governance framing from the V1 Final System
+  Proposal (v2) §3.3: a vertical band through every layer
+  (Authorization · Autonomy Ladder · Audit · Evidence ·
+  Reversibility · Observability · Eval/Replay · Domain Events ·
+  Outbox), of which only some bands are shipped (Authorization,
+  Audit, Reversibility, Observability) while others are
+  reserved/V2 (Evidence object, Eval/Replay, Domain Events,
+  Outbox). Defined-as-pending because it traces only to the
+  container-side proposal, not to a ratified ADR or code artifact;
+  promotes to a defined term if/when a V1 ADR adopts it. The
+  Autonomy Ladder lives on the spine; it is not the entire spine.
+- **proposed 5-value gate disposition.** *(Decision 11 — OPEN,
+  see ADR-0030.)* A proposed vocabulary
+  (`allow` / `deny` / `require_approval` / `require_more_evidence`
+  / `queue_manual_review`) glossing the shipped **ActionType**
+  ([A](#a)); `require_more_evidence` is the one value with no
+  ActionType home (evidence-gating, post-V1). Reconciliation
+  (which vocabulary is canonical) is OPEN — not defined as an
+  outcome until ADR-0030 ratifies.
 
 ## Governance Vocabulary
 
