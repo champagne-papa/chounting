@@ -154,8 +154,13 @@ Receipt. Net-new for V1 (reserved ADR-0033); shaped general
 (not AP-only) so V2 workflow-learning and first-class Logic
 Receipts can read it. Extends the existing `billService.post`
 evidence-completeness gate (INV-DOC-001) rather than duplicating
-it. The `core/evidence/` + `services/evidence/` homes are empty
-reserved directories at V1.
+it. The `core/evidence/` + `services/evidence/` homes are
+populated at Wave 2 (ADR-0033, migration `20240172000000`) as a
+read/assembly surface: `services/evidence` assembles the object
+on read from live references; `core/evidence` holds the pure
+completeness rule. The `evidence_objects` anchor ships inert (no
+row-producer); enforcement remains INV-DOC-001, generalized at
+Wave 6.
 
 ## F
 

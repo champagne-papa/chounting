@@ -3751,6 +3751,15 @@ typed `ServiceError`).
 'receipt'}` — unless the bill row carries
 `override_evidence_completeness=true`.
 
+**Generalization (ADR-0033).** INV-DOC-001 is the first **bill
+realization** of the reserved, general **INV-EVIDENCE-001**
+(evidence-native: every committed AP posting carries a complete
+evidence bundle on one canonical evidence object). The ADR-0033
+canonical evidence object **reads/assembles** this completeness
+by reference; it does **not** replace this gate. The invariant
+and enforcement stated here are **unchanged**; INV-EVIDENCE-001
+stays reserved-unregistered, gaining teeth at Wave 6.
+
 **Enforcement.** Layer 2 service-layer check at `billService.post()`
 in `src/services/spend/billService.ts`. The service function
 refuses to commit a bill without a `primary_document_id` input

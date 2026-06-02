@@ -1059,6 +1059,50 @@ export type Database = {
           },
         ]
       }
+      evidence_objects: {
+        Row: {
+          created_at: string
+          created_by: string
+          domain_extension: Json | null
+          id: string
+          org_id: string
+          status: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id: string
+          subject_type: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          domain_extension?: Json | null
+          id?: string
+          org_id: string
+          status: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id: string
+          subject_type: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          domain_extension?: Json | null
+          id?: string
+          org_id?: string
+          status?: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id?: string
+          subject_type?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_objects_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       exception_queue_entries: {
         Row: {
           created_at: string
@@ -3853,6 +3897,7 @@ export type Database = {
         | "payroll_document"
         | "asset_purchase_support"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
+      evidence_object_status: "reserved" | "partial" | "complete"
       exception_reason:
         | "manual_route"
         | "low_confidence_classification"
@@ -4302,6 +4347,7 @@ export const Constants = {
         "asset_purchase_support",
       ],
       entry_type: ["regular", "adjusting", "closing", "reversing"],
+      evidence_object_status: ["reserved", "partial", "complete"],
       exception_reason: [
         "manual_route",
         "low_confidence_classification",
