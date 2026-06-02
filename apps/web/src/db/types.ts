@@ -218,6 +218,50 @@ export type Database = {
           },
         ]
       }
+      autonomy_gate_log: {
+        Row: {
+          created_at: string
+          effective_action: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition: string | null
+          id: string
+          org_id: string
+          realized_outcome: string
+          seam_branch: string
+          source_document_id: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition?: string | null
+          id?: string
+          org_id: string
+          realized_outcome: string
+          seam_branch: string
+          source_document_id: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition?: string | null
+          id?: string
+          org_id?: string
+          realized_outcome?: string
+          seam_branch?: string
+          source_document_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autonomy_gate_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_number_last_four: string | null

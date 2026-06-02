@@ -50,6 +50,7 @@ import { classifyDocumentType } from './classifier';
 import { extractFields } from './extractFields';
 import { buildProposal } from './stages/proposalBuilder';
 import { shadowEvaluateRules } from './stages/shadowRuleEvaluation';
+import { recordAutonomyGateAttempt } from './stages/recordAutonomyGate';
 import { withFailureClassification } from './failureClassification';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { vendorService } from '@/services/spend/vendorService';
@@ -493,6 +494,21 @@ export async function ingestDocument(
     // + backlog sweep land (see the change-spec). Governed auto-commit returns
     // per-rule post-V1 (rung + confidence + eval + real coding), which re-wires
     // this branch back to commitProposedEntryCard.
+    //
+    // ADR-0032 R1 (Canonical Autonomy Gate Seam): record the autonomy-gate
+    // disposition for this autonomous attempt, THEN park unconditionally.
+    // recordAutonomyGateAttempt is fail-safe (never throws), so the park return
+    // below is reached on every path — recording does not decide (D-0032.2).
+    await recordAutonomyGateAttempt(
+      {
+        proposalKind: 'proposed_entry_card',
+        vendorId: vendorMatch.vendor_id,
+        org_id: input.org_id,
+        source_document_id: input.source_document_id,
+        trace_id: input.trace_id,
+      },
+      ctx,
+    );
     return {
       status: 'parked_unposted',
       pipeline_trace,
@@ -523,6 +539,20 @@ export async function ingestDocument(
   // commitProposedMutationBundle (preserved below) is intentionally NOT called —
   // no ledger write; the born-paid bundle is parked. Re-wired post-V1 with
   // governed auto-commit.
+  //
+  // ADR-0032 R1 (Canonical Autonomy Gate Seam): record one autonomy-gate attempt
+  // for this autonomous bundle (one row per bundle attempt — OQ-2; null disposition
+  // — card-only deferral), THEN park unconditionally. Fail-safe (D-0032.2).
+  await recordAutonomyGateAttempt(
+    {
+      proposalKind: 'proposed_mutation_bundle',
+      vendorId: vendorMatch.vendor_id,
+      org_id: input.org_id,
+      source_document_id: input.source_document_id,
+      trace_id: input.trace_id,
+    },
+    ctx,
+  );
   return {
     status: 'parked_unposted',
     pipeline_trace,

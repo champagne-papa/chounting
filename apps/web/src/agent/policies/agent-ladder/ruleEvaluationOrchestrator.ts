@@ -39,30 +39,36 @@ export type EvaluationDispatchResult =
       logRowIds: string[];
     };
 
+export type GateEvaluation =
+  | { skipped: true; reason: string }
+  | {
+      skipped: false;
+      matchResult: MatchResult;
+      effective_action: ActionType | null;
+      disposition: Disposition | null;
+    };
+
 /**
- * Run the evaluate → gate → record flow for a single proposal.
+ * Steps 1–2 of the evaluation flow: evaluate → (winner? gate → effective_action),
+ * WITHOUT the rule_evaluation_log append (step 3) or the track-record counter
+ * (step 4). Pure read-path — writes nothing.
  *
- * `branchSource` is the Ring 2B assembly seam (no-op default in production → the
- * evaluator is branchless → almost_match / no candidate triggers → no log rows);
- * tests inject fixture branches to exercise real matching end-to-end.
- *
- * Not withInvariants-wrapped: this is the agent-layer coordinator, not a service;
- * the services it calls are each individually wrapped.
+ * This is the seam ADR-0032's R1 autonomy-gate recorder reuses to obtain a
+ * disposition at the live ingest commit-path branches WITHOUT double-recording
+ * into rule_evaluation_log (D-0032.4 — that write lives only in
+ * evaluateAndDispatch step 3). evaluateAndDispatch = evaluateGateOnly + record +
+ * counter, so its behavior (and the shadow seam that calls it) is unchanged.
  */
-export async function evaluateAndDispatch(
+export async function evaluateGateOnly(
   input: { proposal: ProposedMutation; org_id: string; branchSource?: BranchSource },
-  // Ring 2B Seam-1: widened to admit the ingest pipeline's SystemActorServiceContext
-  // (the auto-commit arc's system-actor flow). ctx is threaded to union-accepting
-  // withInvariants services + read only for trace_id; no VerifiedCaller field is used.
   ctx: ServiceContext | SystemActorServiceContext,
-): Promise<EvaluationDispatchResult> {
+): Promise<GateEvaluation> {
   // 1. Evaluate (the ceiling/reversal guard lives inside evaluate → EvaluationSkipped).
   const result = await ruleEvaluationService.evaluate(
     { proposal: input.proposal, org_id: input.org_id, branchSource: input.branchSource },
     ctx,
   );
   if ('skipped' in result) {
-    // Ceiling/reversal class: no gate, no log, no counter (ADR-0025 §6 / §7).
     return { skipped: true, reason: result.reason };
   }
   const matchResult: MatchResult = result;
@@ -78,7 +84,7 @@ export async function evaluateAndDispatch(
     );
     if (!row) {
       throw new Error(
-        `evaluateAndDispatch: winning rule ${matchResult.winning_rule_id} absent from rule_registry`,
+        `evaluateGateOnly: winning rule ${matchResult.winning_rule_id} absent from rule_registry`,
       );
     }
     const ruleRegistryRow: RuleRegistryRow = { id: row.id, current_rung: row.current_rung };
@@ -86,6 +92,36 @@ export async function evaluateAndDispatch(
     effective_action = gate(matchResult, ruleRegistryRow, limitContext);
     disposition = dispositionForAction(effective_action);
   }
+
+  return { skipped: false, matchResult, effective_action, disposition };
+}
+
+/**
+ * Run the evaluate → gate → record flow for a single proposal.
+ *
+ * `branchSource` is the Ring 2B assembly seam (no-op default in production → the
+ * evaluator is branchless → almost_match / no candidate triggers → no log rows);
+ * tests inject fixture branches to exercise real matching end-to-end.
+ *
+ * Not withInvariants-wrapped: this is the agent-layer coordinator, not a service;
+ * the services it calls are each individually wrapped. evaluateAndDispatch =
+ * evaluateGateOnly (steps 1–2) + recordEvaluation (step 3, the log append AFTER
+ * the gate) + the track-record counter (step 4).
+ */
+export async function evaluateAndDispatch(
+  input: { proposal: ProposedMutation; org_id: string; branchSource?: BranchSource },
+  // Ring 2B Seam-1: widened to admit the ingest pipeline's SystemActorServiceContext
+  // (the auto-commit arc's system-actor flow). ctx is threaded to union-accepting
+  // withInvariants services + read only for trace_id; no VerifiedCaller field is used.
+  ctx: ServiceContext | SystemActorServiceContext,
+): Promise<EvaluationDispatchResult> {
+  // 1–2. Evaluate + gate (read-only; no log, no counter).
+  const evald = await evaluateGateOnly(input, ctx);
+  if (evald.skipped) {
+    // Ceiling/reversal class: no gate, no log, no counter (ADR-0025 §6 / §7).
+    return { skipped: true, reason: evald.reason };
+  }
+  const { matchResult, effective_action, disposition } = evald;
 
   // 3. Append to rule_evaluation_log — AFTER the gate (the row needs effective_action).
   const { ids: logRowIds } = await ruleEvaluationService.recordEvaluation(
