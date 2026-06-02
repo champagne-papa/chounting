@@ -61,20 +61,26 @@ async function assemble(
   }
 
   const activeLinks = (links ?? []).filter((l) => l.link_status !== 'reversed');
-  const sourceDocIds = [...new Set(activeLinks.map((l) => l.source_document_id))];
-  const traceIds = [...new Set(activeLinks.map((l) => l.trace_id))];
+  const candidateDocIds = [...new Set(activeLinks.map((l) => l.source_document_id))];
   const roleByDoc = new Map(activeLinks.map((l) => [l.source_document_id, l.link_role]));
 
+  // CROSS-TENANT GUARD (IDOR). source_document_links carries no org_id (polymorphic)
+  // and subject_id is caller-supplied, so the raw link ids may reference another org's
+  // documents; adminClient bypasses RLS. EVERY downstream facet derives from the
+  // org-verified source_documents below — never the raw link ids — or the extraction
+  // facet (document_artifacts has no org_id column of its own) would leak cross-tenant.
   let documents: EvidenceDocumentRef[] = [];
-  if (sourceDocIds.length > 0) {
+  let orgScopedDocIds: string[] = [];
+  if (candidateDocIds.length > 0) {
     const { data: docs, error } = await db
       .from('source_documents')
       .select('id, original_content_hash, original_filename, storage_status')
-      .in('id', sourceDocIds)
+      .in('id', candidateDocIds)
       .eq('org_id', input.org_id);
     if (error) {
       throw new ServiceError('READ_FAILED', `source_documents read failed: ${error.message}`);
     }
+    orgScopedDocIds = (docs ?? []).map((d) => d.id);
     documents = (docs ?? []).map((d) => ({
       source_document_id: d.id,
       link_role: roleByDoc.get(d.id) ?? 'supporting',
@@ -84,13 +90,25 @@ async function assemble(
     }));
   }
 
-  // --- Extraction facet: document_artifacts for those source documents ---
+  // Trace correlation derives ONLY from links whose document passed the org filter,
+  // so a cross-org subject contributes no trace ids (and thus no decision/approval
+  // facets) even though decisions/approvals are themselves org-filtered below.
+  const orgScopedDocIdSet = new Set(orgScopedDocIds);
+  const traceIds = [
+    ...new Set(
+      activeLinks
+        .filter((l) => orgScopedDocIdSet.has(l.source_document_id))
+        .map((l) => l.trace_id),
+    ),
+  ];
+
+  // --- Extraction facet: document_artifacts for the ORG-SCOPED source documents ---
   let extractions: EvidenceExtractionRef[] = [];
-  if (sourceDocIds.length > 0) {
+  if (orgScopedDocIds.length > 0) {
     const { data: arts, error } = await db
       .from('document_artifacts')
       .select('id, source_document_id, engine, confidence')
-      .in('source_document_id', sourceDocIds);
+      .in('source_document_id', orgScopedDocIds);
     if (error) {
       throw new ServiceError('READ_FAILED', `document_artifacts read failed: ${error.message}`);
     }

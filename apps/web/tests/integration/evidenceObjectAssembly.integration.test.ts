@@ -122,4 +122,68 @@ describe('evidenceObjectService.assemble — ADR-0033 Wave 2 (assemble-on-read)'
     expect(obj.completeness.status).toBe('partial');
     expect(obj.trace_ids).toContain(TRACE);
   });
+
+  it('CROSS-TENANT GUARD: an org-A caller gets no facets for an org-B subject', async () => {
+    const crossTrace = crypto.randomUUID();
+    const billId = crypto.randomUUID();
+
+    // Seed an ORG_REAL_ESTATE (org B) document + a bill link.
+    const batch = await db
+      .from('ingest_batches')
+      .insert({
+        org_id: SEED.ORG_REAL_ESTATE,
+        ingest_channel: 'direct_upload',
+        received_at: new Date().toISOString(),
+        channel_metadata: {},
+        trace_id: crossTrace,
+        created_by: 'integration-test',
+      })
+      .select()
+      .single();
+    expect(batch.error).toBeNull();
+    createdBatchIds.push(batch.data!.id);
+
+    const doc = await db
+      .from('source_documents')
+      .insert({
+        org_id: SEED.ORG_REAL_ESTATE,
+        ingest_batch_id: batch.data!.id,
+        storage_provider: 'supabase_storage',
+        original_storage_key: `test/evidence-crosstenant-${crossTrace}`,
+        original_content_hash: 'sha256:org-b-secret',
+        original_byte_size: 2048,
+        original_filename: 'org-b-invoice.pdf',
+        mime_type: 'application/pdf',
+        ingest_channel: 'direct_upload',
+        received_at: new Date().toISOString(),
+        created_by: 'integration-test',
+      })
+      .select()
+      .single();
+    expect(doc.error).toBeNull();
+    createdDocIds.push(doc.data!.id);
+
+    await db.from('source_document_links').insert({
+      source_document_id: doc.data!.id,
+      linked_entity_type: 'bill',
+      linked_entity_id: billId,
+      link_role: 'primary_invoice',
+      trace_id: crossTrace,
+      created_by: 'integration-test',
+    });
+
+    // An ORG_HOLDING (org A) caller probes the org-B bill subject.
+    const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const obj = await evidenceObjectService.assemble(
+      { subject_type: 'bill', subject_id: billId, org_id: SEED.ORG_HOLDING },
+      ctx,
+    );
+
+    // No cross-org facet data leaks: the org-B document/extraction/trace are absent
+    // (the extraction facet derives from the org-verified document ids, not raw links).
+    expect(obj.documents).toEqual([]);
+    expect(obj.extractions).toEqual([]);
+    expect(obj.trace_ids).toEqual([]);
+    expect(obj.completeness.status).toBe('empty');
+  });
 });
