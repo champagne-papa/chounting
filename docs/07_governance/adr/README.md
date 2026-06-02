@@ -276,6 +276,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0028](./0028-workflow-core-substrate.md) | Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 | Ratified | 2026-06-01 |
 | [ADR-0029](./0029-autonomy-ladder-generalization.md) | Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass | Ratified | 2026-05-31 |
 | [ADR-0030](./0030-decision-module-composition.md) | Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy | Ratified | 2026-05-31 |
+| [ADR-0033](./0033-canonical-evidence-object-model.md) | Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 | Ratified | 2026-06-01 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -316,6 +317,11 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
+
+### evidence
+
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
 
 ### infra
 
@@ -366,6 +372,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
 <!-- END:generated-by-phase -->
 
 ## Related files
