@@ -276,6 +276,7 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0028](./0028-workflow-core-substrate.md) | Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 | Ratified | 2026-06-01 |
 | [ADR-0029](./0029-autonomy-ladder-generalization.md) | Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass | Ratified | 2026-05-31 |
 | [ADR-0030](./0030-decision-module-composition.md) | Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy | Ratified | 2026-05-31 |
+| [ADR-0031](./0031-no-ai-only-paths.md) | No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 | Ratified | 2026-06-02 |
 | [ADR-0032](./0032-canonical-autonomy-gate-seam.md) | Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 | Ratified | 2026-06-02 |
 | [ADR-0033](./0033-canonical-evidence-object-model.md) | Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 | Ratified | 2026-06-01 |
 <!-- END:generated-current-adrs -->
@@ -298,6 +299,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
 - [ADR-0032](./0032-canonical-autonomy-gate-seam.md) — Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 (Ratified; 2026-06-02)
 
 ### app-components
@@ -330,6 +332,7 @@ and the Status-line clause-accumulation pattern.
 
 - [ADR-0021](./0021-adr-frontmatter-and-tooling.md) — ADR Frontmatter and Tooling (Ratified; 2026-05-08)
 - [ADR-0022](./0022-adr-lifecycle-workflows.md) — ADR Lifecycle Workflows — Amendment vs Supersession (Ratified; 2026-05-08)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
 
 ### rules
 
@@ -375,6 +378,7 @@ and the Status-line clause-accumulation pattern.
 - [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
 - [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
 - [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
 - [ADR-0032](./0032-canonical-autonomy-gate-seam.md) — Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 (Ratified; 2026-06-02)
 - [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
 <!-- END:generated-by-phase -->
