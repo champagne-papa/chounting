@@ -3393,6 +3393,120 @@ export type Database = {
           },
         ]
       }
+      workflow_events: {
+        Row: {
+          activity_key: string | null
+          ai_output: Json | null
+          event_type: Database["public"]["Enums"]["workflow_event_type"]
+          id: string
+          org_id: string
+          payload: Json
+          recorded_at: string
+          sequence_number: number
+          trace_id: string
+          workflow_instance_id: string
+        }
+        Insert: {
+          activity_key?: string | null
+          ai_output?: Json | null
+          event_type: Database["public"]["Enums"]["workflow_event_type"]
+          id?: string
+          org_id: string
+          payload: Json
+          recorded_at?: string
+          sequence_number?: number
+          trace_id: string
+          workflow_instance_id: string
+        }
+        Update: {
+          activity_key?: string | null
+          ai_output?: Json | null
+          event_type?: Database["public"]["Enums"]["workflow_event_type"]
+          id?: string
+          org_id?: string
+          payload?: Json
+          recorded_at?: string
+          sequence_number?: number
+          trace_id?: string
+          workflow_instance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "workflow_events_workflow_instance_id_fkey"
+            columns: ["workflow_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          definition_key: string
+          definition_version: string
+          id: string
+          learning_metadata: Json | null
+          org_id: string
+          parent_instance_id: string | null
+          started_at: string | null
+          state: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          definition_key: string
+          definition_version: string
+          id?: string
+          learning_metadata?: Json | null
+          org_id: string
+          parent_instance_id?: string | null
+          started_at?: string | null
+          state: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          definition_key?: string
+          definition_version?: string
+          id?: string
+          learning_metadata?: Json | null
+          org_id?: string
+          parent_instance_id?: string | null
+          started_at?: string | null
+          state?: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_instances_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       document_cards_view: {
@@ -3930,6 +4044,20 @@ export type Database = {
         | "prepaid_service"
         | "inventory_deposit"
         | "fixed_asset_deposit"
+      workflow_event_type:
+        | "activity_started"
+        | "activity_completed"
+        | "activity_failed"
+        | "compensation_started"
+        | "compensation_completed"
+        | "ai_step_recorded"
+      workflow_instance_state:
+        | "pending"
+        | "running"
+        | "completed"
+        | "compensating"
+        | "compensated"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4382,6 +4510,22 @@ export const Constants = {
         "prepaid_service",
         "inventory_deposit",
         "fixed_asset_deposit",
+      ],
+      workflow_event_type: [
+        "activity_started",
+        "activity_completed",
+        "activity_failed",
+        "compensation_started",
+        "compensation_completed",
+        "ai_step_recorded",
+      ],
+      workflow_instance_state: [
+        "pending",
+        "running",
+        "completed",
+        "compensating",
+        "compensated",
+        "failed",
       ],
     },
   },

@@ -20,7 +20,9 @@ architecture review (see
 > scope until the product is complete; ADR-0036 parked, unparks when
 > market strategy is set); later waves (1–6) ahead. The current
 > architecture adds, at
-> minimum: **Workflow Core** (process engine, Layer 2.5 — net-new); the
+> minimum: **Workflow Core** (process engine, Layer 2.5 — substrate ratified
+> ADR-0028, inert at Wave 1: net-new `workflow_instances` + `workflow_events`,
+> no live writer until a consumer wave); the
 > **decision modules** composition (Rules / Authorization / Autonomy /
 > Workflow Routing / Receipt Assembly); the **Autonomy Ladder** on a single
 > `rule_autonomy_rung` (ADR-0029, ratified); and the **AP review-and-post
