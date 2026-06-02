@@ -17986,3 +17986,30 @@ headings in older committed entries trip `check-friction-journal-line-length` /
 `detect-journal-headings` at exit 1 — pre-existing, not arc-introduced; reformatting them is
 out-of-footprint per ratified-contract-scope; surfaced here for a dedicated journal-lint pass);
 and, per the V1 charter, the remaining build waves (1–6).
+
+## V1 Wave 3 — ADR-0032 Autonomy Gate Seam (spec) — 2026-06-01 / 2026-06-02
+
+ADR-0032 spec-first arc (charter R1; the Canonical Autonomy Gate Seam,
+recording at V1). Grounded → forks surfaced → CTO direction → spec drafted →
+read-back cleared → committed `af1682da` (banked-local on `staging`, unpushed;
+push at a separate terminal go). Substrate + OQ direction live in the spec's
+§8.1, not restated here.
+
+**CLUNKY 2026-06-02 — a stale session-lock survived a closed arc and blocked
+the next session's commit.** The `wave2-adr0033` lock (closed Wave-2 / ADR-0033
+arc, work banked on `origin` at `a2a0b2dc`) was never released at its arc close.
+It sat on disk indistinguishable from a live session's lock and blocked the
+Wave-3 spec commit at the pre-commit hook, forcing the foreign-lock detour
+(verify-stale → operator-authorized `session-end.sh` → re-init own
+`wave3-adr0032` lock) before `af1682da` could land. Root: the closeout checklist
+(retrospective + push gate) had no lock-release step, so the existing rule
+(Session Lock File Convention, `session/iterative-catching.md`: release at
+session end) was forgotten at arc close.
+
+**NOTE — disposition.** Observation-grain N=1 for stale-lock-survives-arc-close
+(an earlier N=2 was an ungrounded assertion, corrected against this journal at
+write-time). Below the N=3 mint threshold and the Stable criterion fails, so it
+lands as a lean closeout-checklist projection in
+`docs/04_engineering/conventions/session/session-close.md` pointing at the
+canonical Session Lock File Convention — not a minted convention. Graduates into
+that convention's footer if a distinct stale-survival instance reaches N=3.

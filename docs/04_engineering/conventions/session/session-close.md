@@ -148,3 +148,26 @@ adjudication.
   closeout retrospective entry (2026-05-10) Adjudication 4
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+---
+
+## Release the session lock at arc close (closeout-checklist projection)
+
+At arc/phase close — alongside the retrospective and the push-readiness
+gate — confirm `.coordination/session-lock.json` is released
+(`scripts/session-end.sh`), so the lock does not outlive its arc. A lock
+that survives its closed arc is indistinguishable on disk from a live
+session's and blocks the next session sharing the working copy at the
+pre-commit hook, forcing the foreign-lock detour (verify-stale →
+operator-authorized `session-end.sh` → re-init own lock) before any commit
+can land.
+
+This is a **projection**, not a new convention: the substantive rule and
+its mechanism live in the **Session Lock File Convention** (canonical home
+`session/iterative-catching.md`, which already prescribes
+`session-end.sh` at session end). The only thing added here is the
+close-time firing — putting lock-release on the closeout checklist so the
+existing rule isn't forgotten at arc boundaries. Raw datapoint:
+`docs/07_governance/friction-journal.md` 2026-06-02 (V1 Wave 3 / ADR-0032;
+the `wave2-adr0033` leftover). Observation-grain N=1 — below the N=3 mint
+threshold, so it lands as a pointer here, not a minted convention.
