@@ -32,7 +32,8 @@
     "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all",
     "adr:index": "tsx scripts/adr/generate-index.ts",
     "adr:lint": "tsx scripts/adr/lint.ts",
-    "adr:check": "pnpm adr:lint && pnpm adr:index --check"
+    "adr:check": "pnpm adr:lint && pnpm adr:index --check",
+    "intent-producers:check": "tsx scripts/check-intent-producers.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",
