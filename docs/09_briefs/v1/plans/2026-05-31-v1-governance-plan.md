@@ -208,6 +208,13 @@ V1 must lay these seams so V2 is a config change, not a rebuild:
   bundle + payment_confirmation reported-same-mechanism, not independently confirmed.)
 - **Pre-existing `adminClient` / ADR-0020 layer-boundary lint ticket** at
   `ingestDocument.ts:57` — NOT introduced by Part A; its own separate ticket.
+- **Evidence-object subject↔trace scoping (Wave 6, ADR-0033).** The Wave-2
+  assemble-on-read service (`services/evidence/evidenceObjectService`) scopes the
+  document/extraction facets by subject (`source_document_links.linked_entity_id`,
+  robust) but the decision/approval facets by the `trace_id`s on the subject's links —
+  request-scoped, so a multi-subject request could over/under-collect. When the Wave-6
+  producer persists evidence objects, tighten subject↔trace correlation. Also tracked
+  in the `evidenceObjectService` header + ADR-0033 D-0033.7.
 
 Full detail for the §5.1 / severity / matcher-gap items lives in the committed hotfix
 change-spec: `docs/09_briefs/v1/2026-05-31-a-now-hotfix-change-spec.md` (commit
