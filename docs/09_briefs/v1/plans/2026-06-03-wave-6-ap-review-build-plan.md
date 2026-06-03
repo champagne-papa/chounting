@@ -1,7 +1,9 @@
 # Wave 6 — AP Review (V1 ships) — build plan
 
-**Status:** D1 **LOCKED** (advisor-cleared); D2–D8 **scoped** (each
-surfaces its own chunk detail + read-back before build). Plan only; no
+**Status:** D1 **CLOSED** (T1–T5 shipped `98fe5be0..a776ab2a`; Condition-1
+full-suite sweep 1651/0/10 green, +19 = D1 T4 exactly); D2.1 **LOCKED**
+(advisor-cleared — see §5); D2.3 (sweep) + D3–D8 **scoped** (each surfaces
+its own chunk detail + read-back before build). Plan only; no
 implementation, commit, or push is authorized by this document beyond
 what a per-chunk read-back has cleared.
 **Anchored at:** HEAD `e571ceb5` (= `origin/staging`, branch `staging`).
@@ -185,6 +187,130 @@ matching a seeded `vendors.name` (same org) → `matchVendor` returns
 **IDOR scope (honest):** D1 adds **no new `adminClient` read facet** —
 `matchVendor` already org-scopes (`.eq('org_id', org_id)` throughout) and
 the bridge is pure. The Wave-2 IDOR discipline binds at **D3/D5**, not D1.
+
+---
+
+## 5. D2.1 — Live routing + no-silent-drop wiring (LOCKED)
+
+**Objective:** every case the pipeline processes reaches a terminal
+disposition. Wire `ingestDocument` to advance case state and route both
+decision outcomes to `needs_review`; register `INV-WORKFLOW-002` atomically
+with the enforcement. (The v1-plan's "D2.2 registration" is absorbed into
+T3 — the atomic registration commit; D2.3 = the parked-backlog sweep, its
+own brief, after D2.1.)
+
+**Grounded closures:**
+- **(A)** No automation emitter exists for the gap transitions: the state
+  RPC's sole caller is `transition()` (`documentCaseService.ts:195`), and
+  the RPC validates row-existence + the Layer-1 CHECK only — matrix
+  legality is app-side-only (`20240144:40-95`). Subsystem 2
+  (`resolveCandidates`, `documentRouterService.ts:1428`) already owns
+  `classified→matched` (branch (a): `set_case_head_pointer_with_audit`,
+  state transition + rich decision-record audit, `20240150:164-172`) and
+  `classified→needs_review` (branches (b)/(c): `record_router_decision` +
+  cross-service `enqueueException`). **New:**
+  `documentCaseService.advanceCaseAutomation` — the system-actor sibling of
+  `transition()`; allowed set EXACTLY `{received→extracting,
+  extracting→classified, matched→needs_review}`; **REFUSES `classified→*`**
+  (single-ownership by construction — Subsystem 2 owns that segment);
+  enforces `LEGAL_TRANSITIONS` app-side; calls the same audit-paired RPC;
+  state-aware chain-advance, idempotent under re-runs. Human `transition()`
+  + its Zod (approved|rejected discriminated union) stay byte-untouched.
+- **(B)** Live CHECK = `document_cases_state_chunk_7_active` (trail
+  1→2→6→7, `20240150:96-108`) — `extracting` not admitted. T1 carries the
+  Layer-1 broaden → `document_cases_state_chunk_8_active` (+`extracting`).
+  PG enum unchanged (all 10 states already); human `TransitionInputSchema`
+  needs no broaden; the automation entry point's input schema is born
+  aligned. Constraint name continues the linear chunk suffix per the
+  item-7 codification (T1 — this is the named *second cross-phase
+  CHECK-broaden event* per `20240150`'s own header, the deferred
+  codification trigger). Empirical pin: 3 test sites across 2 files assert
+  `/document_cases_state_chunk_\d+_active/` — `chunk_8` passes the pins;
+  `wave_6` would break them.
+- **(C)** Matched→`needs_review` = **direct automation transition** (lean
+  (ii), ratified): `matched->needs_review` is already in
+  `AUTOMATION_ONLY_TRANSITIONS`; a clean match is V1's NORMAL path (INV-5),
+  not an exception; branch (a) is reachable at v1 via N=1, so the hand-off
+  is required, not dead code. Audit shape: a plain state-transition row via
+  the generic RPC — NOT a second decision record (the router decision was
+  already recorded by the head-pointer RPC). Live `exception_reason`
+  (`chunk_8_active`, 8 values) untouched. Unmatched stays exception-true:
+  wire `resolveCandidates` after `completeCandidate` (the file's own v1
+  contract, `documentRouterService.ts:76-80`) → branch (c)
+  `enqueueException('unmatched_router_candidate')`.
+
+**Wiring order (mandatory, not stylistic):** advance
+`received→extracting→classified` (post-hoc, at decision) → call
+`resolveCandidates` (the branch-(a) RPC guard is `WHERE state='classified'`)
+→ for branch-(a) outcomes: the `matched→needs_review` hand-off via
+`advanceCaseAutomation`. Post-classified failures → `enqueueException`
+(`ai_fallback_validation_failed` fits the Tier-C case; others enumerated at
+impl). **Flag for D3:** matched cases reach the inbox with persisted
+candidates but NO persisted proposal (`parked_unposted` returns
+`proposal_id:null`); D3 rebuilds at review time or persists proposals.
+
+**Design decisions (ratified at the plan read-back):**
+1. **Post-hoc at-decision advancement.** The chain is 3–5 separate RPC
+   transactions ⇒ the orphan class is EVERY non-terminal state
+   (`received`/`extracting`/`classified`/`matched` strandings), named in
+   the leaf Residual and covered by the D2.3 sweep. (A single atomic
+   `received→classified` RPC is the noted shrink-the-window option; not
+   taken at V1.)
+2. **Attachment-card path out of scope** (ADR-0011 §11) — named residual:
+   committed+linked with case-state lagging at `received` by design;
+   persists until its carry-forward closes; the D2.3 sweep distinguishes
+   committed+linked-state-lagged from true orphans. Carry-forward, not
+   absorbed (ratified-contract-scope discipline).
+3. **Prospective property-scoping (registration honest on day one):**
+   `INV-WORKFLOW-002` registers as a prospective process guarantee with
+   three named residual classes — (i) attachment-card, (ii) pre-D2.1
+   parked backlog (transitional; retired by D2.3), (iii) mid-chain
+   strandings (reported + sweep-recoverable). Leaf framing: "reaches a
+   terminal disposition, with the sweep as the eventual-consistency
+   backstop" — NOT "never observed non-terminal" (a Subsystem-3 re-eval
+   can transiently leave `matched` with no hand-off; sweep-backstopped).
+   [Advisor refinement #1 — pinned at the T3 leaf read-back.]
+
+**Registration (atomic at T3, per the sharpened Finding 1):** leaf +
+`// INV-WORKFLOW-002` annotation in the SAME commit as the enforcing code
+(the leaf↔annotation reachability diff is CI-hard); `invariants.md` #26
+row + `control_matrix.md` entry in that same commit (procedure steps 3–4,
+tests cited, no placeholder). D8 = counts 25→26 + reachability narrative +
+final diff re-run. Layer 2, runtime/structural sub-type pinned at the leaf
+read-back.
+
+**ctx-widening (advisor refinement #2 — T2/T3 impl scope):**
+`resolveCandidates` widens `ctx: ServiceContext` →
+`ServiceContext | SystemActorServiceContext`, mirroring the
+`completeCandidate` precedent (direct invocation, NOT through
+`withInvariants`; no role-based authz on the system-actor path per
+ADR-0007 §Tier 2) with the same documented rationale;
+`advanceCaseAutomation` is born with the widened union + the same
+rationale, explicitly covering the state-mutating transitions.
+
+**Tasks (each: implement → artifact read-back → commit under the lock):**
+- **T1** — Layer-1 migration (`chunk_7→chunk_8`, +`extracting`) +
+  `types.ts` regen (expect zero diff — enum unchanged; the no-diff IS the
+  verification) + local apply-verification + the item-7 naming-discipline
+  codification (via `codify-convention`) + the `documentCase.schema.ts`
+  docstring CHECK-history touch.
+- **T2** — `advanceCaseAutomation` (gap-scoped; refuses `classified→*`) +
+  unit tests incl. the human-boundary regression and the single-ownership
+  refusal; ctx union per refinement #2.
+- **T3** — `ingestDocument` wiring + the ATOMIC REGISTRATION commit
+  (annotation + leaf w/ the ratified scoping + `invariants.md` #26 +
+  `control_matrix` entry); `resolveCandidates` ctx-widening.
+- **T4** — integration (matched→`needs_review` w/ plain-transition audit;
+  unmatched→`needs_review` w/ exception row; legal persisted
+  intermediates; stranding residual behavior) + Phase-8 pipeline e2e
+  harness + full-suite Condition-1 sweep at D2.1 close.
+
+**IDOR:** org derives from the parent case row throughout (verified shape);
+no raw-id read facets.
+
+**Q1 (INV-2 input home):** remains the CTO's one-word formalization;
+working assumption Option 1 (post-V1 track; D9 omitted; flip condition =
+governed auto-commit returning to the roadmap). Does not gate D2.1.
 
 ---
 
