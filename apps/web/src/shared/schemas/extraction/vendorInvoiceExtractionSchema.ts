@@ -13,11 +13,16 @@ import { z } from 'zod';
 // Per Step 17 naming-distinct convention: classification at *.schema.ts;
 // extraction at *ExtractionSchema.ts (no .schema.ts suffix per brief verbatim).
 //
-// 11-field matrix per agent_architecture_policy.md §2.1.1 vendor_invoice
-// row + brief §4 value pick #1 (bank-detail Tier 2.5-only fields EXCLUDED
-// per Q29 ESLint boundary):
-//   amount + currency + vendor_id (matcher output) + vendor_invoice_number
-//   + accounting_date + account_code + tax_code_id + due_date + line_items
+// 11-field extraction object. Fields derive from agent_architecture_policy.md
+// §2.1.1 vendor_invoice row (commit-grain) + brief §4 value pick #1, with
+// bank-detail Tier 2.5-only fields EXCLUDED (Q29 ESLint boundary) and
+// line_items / tax_amount as schema-specific decompositions. vendor_name
+// (matcher input) added Wave 6 D1 (matcher-gap fix) — an extraction-grain
+// field NOT in §2.1.1's commit-grain matrix; §2.1.1 reconciliation (add a
+// vendor_name row OR document the grain split) is D1 T5:
+//   amount + currency + vendor_name (matcher input) + vendor_id (matcher
+//   output) + vendor_invoice_number + accounting_date + account_code
+//   + tax_code_id + due_date + line_items
 //   (per-line {description, amount, account_code, tax_code_id}) + tax_amount
 //
 // Per Step 17 sub-clarification docstring discipline: fields marked
@@ -36,6 +41,10 @@ const VendorInvoiceLineItemSchema = z.object({
 export const VendorInvoiceExtractionSchema = z.object({
   amount: z.number().optional(),
   currency: z.string().optional(),
+  // vendor_name — matcher INPUT (vs vendor_id, the matcher output). Read by
+  // extractVendorFields → matchVendor (exact_name / fuzzy_name strategies).
+  // Added Wave 6 D1 (matcher-gap fix); extraction target, absence valid.
+  vendor_name: z.string().optional(),
   vendor_id: z.string().uuid().nullable().optional(),
   vendor_invoice_number: z.string().optional(),
   accounting_date: z.string().optional(),
