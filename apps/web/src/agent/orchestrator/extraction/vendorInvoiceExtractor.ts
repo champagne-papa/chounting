@@ -49,6 +49,22 @@ const DUE_DATE_PATTERNS = [
 
 const CURRENCY_PATTERN = /\b(USD|CAD|EUR|GBP)\b/;
 
+// vendor_name (matcher INPUT) — Wave 6 D1 (matcher-gap fix). DELIBERATELY
+// precision-biased: a vendor name is positional letterhead/header text, not
+// label-keyed like the fields above. A permissive positional grab hits the
+// dangerous cost-class — capturing the customer-side 'Bill To' block (the org
+// itself) and producing a *confident wrong* match. So Tier A matches ONLY
+// explicit sender-side labels, line-anchored, never the customer block, and
+// never a positional first-line guess. A miss emits nothing → unmatched →
+// needs_review (D2): the safe degradation. Recall is intentionally low here
+// (Tier C carries vendor-name recall when it fires); D1's bar is the structural
+// unblock, not accuracy (the Tier-C accuracy harness is post-V1).
+const VENDOR_NAME_LABEL_PATTERN =
+  /(?:^|\n)[ \t]*(?:Vendor|Supplier|Remit\s+To|Sold\s+By|Bill\s+From)\s*:[ \t]*([^\n]{2,60})/i;
+// Over-match guard: reject a capture that leads with a digit (date / amount) or
+// is *exactly* a document-type word (anchored, so 'Bill's Plumbing' passes).
+const VENDOR_NAME_REJECT = /^(?:\d|(?:invoice|receipt|bill|statement)$)/i;
+
 function tryExtractTierA(ocrText: string): Partial<VendorInvoiceExtraction> {
   const fields: Partial<VendorInvoiceExtraction> = {};
 
@@ -90,6 +106,18 @@ function tryExtractTierA(ocrText: string): Partial<VendorInvoiceExtraction> {
   const currencyMatch = ocrText.match(CURRENCY_PATTERN);
   if (currencyMatch) {
     fields.currency = currencyMatch[1];
+  }
+
+  // vendor_name (matcher input) — sender-label-only, precision-biased (see
+  // VENDOR_NAME_LABEL_PATTERN). Trim + collapse whitespace; guard rejects
+  // date/numeric/doc-type captures. A miss leaves vendor_name absent — the
+  // safe degradation (unmatched → needs_review via D2), never a wrong grab.
+  const vendorNameMatch = ocrText.match(VENDOR_NAME_LABEL_PATTERN);
+  if (vendorNameMatch && vendorNameMatch[1]) {
+    const candidate = vendorNameMatch[1].trim().replace(/\s{2,}/g, ' ');
+    if (candidate.length >= 2 && !VENDOR_NAME_REJECT.test(candidate)) {
+      fields.vendor_name = candidate;
+    }
   }
 
   return fields;
