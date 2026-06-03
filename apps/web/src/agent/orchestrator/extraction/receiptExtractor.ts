@@ -174,3 +174,13 @@ export async function extractReceiptFields(
     trace_records,
   };
 }
+
+// No-AI Tier-A extraction entrypoint — exposes the deterministic regex path
+// for fixture-offline eval (Wave 5 D1), mirroring the classifier's exported
+// evaluateTierA. Behavior-preserving wrapper over the private tryExtractTierA;
+// no AI, no I/O.
+export function extractReceiptFieldsTierA(
+  ocrText: string,
+): Partial<ReceiptExtraction> {
+  return tryExtractTierA(ocrText);
+}
