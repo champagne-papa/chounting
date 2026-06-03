@@ -18013,3 +18013,65 @@ lands as a lean closeout-checklist projection in
 `docs/04_engineering/conventions/session/session-close.md` pointing at the
 canonical Session Lock File Convention — not a minted convention. Graduates into
 that convention's footer if a distinct stale-survival instance reaches N=3.
+
+---
+
+### V1 Wave-5 (AP eval harness) — 2026-06-02 / 2026-06-03
+
+**WRONG 2026-06-02 — the pickup handoff asserted ADR-0029/0030 "remain
+reserved"; disk says ratified.** The handoff's reserved-ADR parenthetical was
+false against disk: `0029-autonomy-ladder-generalization.md` and
+`0030-decision-module-composition.md` are ratified ADR files with full
+spec + ratification-package lineage, and the charter §9 records both RATIFIED
+2026-06-01. Caught at pickup-grounding before any drafting. Bilateral: the
+handoff (advisor-authored summary) drifted; the write-side disk-catch corrected
+it, and the same handoff had itself flagged "do not assume a mapping; verify it"
+— the references-are-claims discipline the seat exists for, applied to the
+handoff itself.
+
+**NOTE 2026-06-02 — the "relayed count/citation is a claim" pattern fired N
+times this arc.** Three instances, one pattern: 35-vs-37 ACTION_NAMES (carried
+from the Wave-4 build commit), Q71→Q65 ADR-0014 threshold provenance (D2), and a
+3-vs-4 `CONFIDENCE_THRESHOLDS` map (the `unknown:1.0` always-exception sentinel,
+D2). Each was a count or citation relayed from memory/summary and corrected by
+reading the cited artifact. Not three isolated entries — one recurring class
+(relayed counts and citations are claims), and reading-the-artifact paid for
+itself each time.
+
+**NOTE 2026-06-02 — the advisor seat's content-grep limit is a structural
+verification boundary.** The read-only (advisor) filesystem view is path-glob
+only — no content search — so this arc's enumeration / absence claims (the three
+`callClaude` sites; "no input-sanitization anywhere in agent/ or services/") were
+taken on the write-side grep and demoted on the advisor side. Recording so the
+verification envelope is explicit: absence/exhaustiveness claims here are
+write-side-grounded, advisor-corroborated only for named instances.
+
+**WRONG 2026-06-02/03 — view rendering is not disk-authoritative; two false
+corruption flags.** `approve→post` (Wave-5 plan) and a §6a em-dash were each
+flagged as replacement-character corruption in the advisor's Windows-UNC view;
+hex-from-disk showed clean UTF-8 both times (`e2 86 92` U+2192, `e2 80 94`
+U+2014). Resolution adopted advisor-side: hex-check before asserting disk
+corruption from a rendered glyph; the rendered view is not authoritative for
+byte content. Docs stay Unicode.
+
+**NOTE 2026-06-03 — D4 content-injection assertions were vacuous until the
+read-back caught them.** The content-injectability diagnostics asserted only
+`expect(injected).toBeDefined()` — unconditionally true (both functions always
+return an object), so the documented finding lived only in `console.log` and CI
+asserted nothing. Caught at the D4 read-back; strengthened to
+`expect(injected).not.toEqual(base)` — a qualitative one-time-fire (it fails once,
+at INV-2-sanitization gap-closure). Lesson: a "characterization" test must assert
+the qualitative property it claims to characterize, or it tests nothing.
+
+**NOTE — codification disposition.** The **fixture-offline eval-suite teeth**
+pattern (mock `callClaude` + `adminClient` to throw; sync-return assertion; pure
+import graph ⇒ no-live-AI / no-persisted-read provable) reached observation-grain
+N=4 across D1–D4 and is MINTED to
+`docs/04_engineering/conventions/testing.md` "Fixture-offline eval-suite teeth
+(N=4)". The **additive-named-export-for-eval** pattern (`…TierA`,
+`CONFIDENCE_THRESHOLDS` mirroring the shipped `evaluateTierA`) is N=2 — below
+threshold, banked as a candidate for the next fire. The **ratchet vs
+one-time-fire vs pure-characterization** posture is a judgment heuristic (not a
+mechanical convention), recorded as a three-way in the Wave-5 retrospective §3,
+crystallized by the D1 (numeric ratchet, directional metric) vs D4 (qualitative
+one-time-fire, no-direction property) contrast.

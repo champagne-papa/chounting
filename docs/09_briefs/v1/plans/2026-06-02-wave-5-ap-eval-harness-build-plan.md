@@ -94,7 +94,10 @@ verify-from-disk-at-impl-onset discipline).
 Every sub-deliverable runs **golden/adversarial fixtures → component in-process →
 compare to expected**, with **no `adminClient`, no DB, no persisted reads**. This
 keeps the entire harness off the RLS-bypassing read surface, so the Wave-2 IDOR
-class cannot recur here. The one real exception is named and gated in §5.
+class cannot recur here. The one real exception is named and gated in §5. The
+mechanical teeth that make this posture a *tested* property (not an intent) were
+codified at the Wave-5 close — see `docs/04_engineering/conventions/testing.md`
+"Fixture-offline eval-suite teeth (N=4)".
 
 ### Three-way field taxonomy (impl-onset refinement — supersedes the earlier two-way)
 

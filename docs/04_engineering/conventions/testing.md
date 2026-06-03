@@ -262,3 +262,65 @@ change.
   exploratory — HEAVY verification at commit `fc85c411` empirically
   validates the structural enforcement holds at canonical-command
   introduction time.
+
+---
+
+## Fixture-offline eval-suite teeth (N=4)
+
+An eval or validation suite that exercises code reachable from a live-AI
+call or an RLS-bypassing persisted read must PROVE by construction that it
+reaches neither — not merely avoid them by intent. Three mechanical teeth,
+applied together, make a suite pass the proof:
+
+- **Mock the AI + admin clients to throw.** `vi.mock` the live-AI entrypoint
+  (`callClaude`) and the RLS-bypassing client (`@/db/adminClient`) so any call
+  throws. They are typically already in the import graph (the extractor /
+  classifier modules import them at top level), so a suite that passes with
+  both mocked-to-throw has demonstrably called neither.
+- **Assert sync-return on the function under test.** A live-AI path is
+  `async`; the no-AI path is synchronous. `expect((r as unknown) instanceof
+  Promise).toBe(false)` structurally proves the deterministic path was taken.
+- **Keep the import graph pure where it can be.** Import only the pure function
+  / schema under test, not the orchestrator / AI module — then the no-AI /
+  no-persisted-read property holds by the graph itself, with the mocks as
+  belt-guards against a future edit wiring the heavy module in.
+
+Together these convert "the suite is fixture-offline" from an assertion about
+intent into a tested property: the suite cannot silently regress to firing live
+AI (paid, non-deterministic) or an RLS-bypassing read (the Wave-2 IDOR class)
+without a test failing. This is the test-side enforcement of the
+cautionary-tale read-scoping discipline.
+
+---
+**Origin:**
+- First codified: V1 Wave 5 (AP eval harness), 2026-06-03
+- Evidence basis: N=4 (observation-grain across the four Wave-5 eval
+  deliverables), commits `c431aa24` (D1 extraction accuracy), `849439c4`
+  (D2 confidence-to-policy), `041ac343` (D3 unsafe-output), `7535901b`
+  (D4 input-contamination).
+- Promoted from: Wave-5 D1–D4 eval-suite construction (see
+  `docs/07_governance/retrospectives/v1-wave-5-retrospective.md` §3).
+- Cross-references: the Wave-2 cautionary-tale read-scoping discipline (IDOR);
+  the Wave-5 build plan §3 (I/O posture) + §5 (IDOR posture) at
+  `docs/09_briefs/v1/plans/2026-06-02-wave-5-ap-eval-harness-build-plan.md`.
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** The convention prescribes a concrete
+  three-tooth construction at eval-suite authoring time and grounds the
+  read-back claim "no live-AI / no persisted-read reachable" in a tested
+  property rather than reviewer inspection. Across D1–D4 the teeth were exactly
+  what the artifact read-back verified for the no-AI / no-IDOR property each
+  time — the mechanism, not the intent, cleared the gate.
+
+- **Generalizable.** Fired across four structurally-distinct eval surfaces
+  (extraction accuracy, confidence→policy, output-validation, input-
+  contamination) — different code under test, the same teeth. The general shape
+  (prove-absence-by-mock-to-throw + a sync/async discriminant) applies to any
+  test that must demonstrate it did not traverse an expensive or unsafe
+  dependency, not only AI / `adminClient`.
+
+- **Stable.** The construction settled at D1 and applied unchanged through D4
+  (the `as unknown` cast for non-object returns was the only mechanical
+  wrinkle); no re-litigation across the four fires. Not exploratory — the full
+  `test:full` sweep (1632/0/10) at the Wave-5 close validates the suites hold.
