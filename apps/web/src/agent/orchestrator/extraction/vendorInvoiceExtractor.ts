@@ -123,7 +123,10 @@ function tryExtractTierA(ocrText: string): Partial<VendorInvoiceExtraction> {
   return fields;
 }
 
-const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a vendor invoice.
+// Exported additively (behavior-preserving) so the Tier-C prompt can be pinned
+// fixture-offline (Wave 6 D1 T4) — mirrors the Wave-5 evaluateTierA /
+// CONFIDENCE_THRESHOLDS additive-named-export-for-eval pattern.
+export const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a vendor invoice.
 
 Return a single JSON object matching this schema (all fields OPTIONAL — omit fields you cannot extract with confidence; do NOT invent values):
 
