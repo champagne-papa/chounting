@@ -18,13 +18,19 @@ export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 // chunk-2-Phase-4 adds 'matched' for the classified → matched
 // transition emitted by Subsystem 2 branch (a) per ADR-0018 §item 3
 // (document_cases_state_chunk_7_active CHECK; first cross-phase
-// substrate modification at chunks-1-6 per F-J-θ). The Zod boundary
-// mirrors the Layer 1 CHECK admission set verbatim.
+// substrate modification at chunks-1-6 per F-J-θ); Wave-6-D2.1 adds
+// 'extracting' for pipeline matrix-advancement
+// (document_cases_state_chunk_8_active CHECK; second cross-phase
+// broaden — versioned-CHECK naming discipline codified at
+// docs/04_engineering/conventions/migrations.md §"Versioned-CHECK
+// constraint naming"). The Zod boundary mirrors the Layer 1 CHECK
+// admission set verbatim.
 //
 // Still reserved at Layer 1 + Layer 2 (CHECK-rejected; Zod-rejected):
-// extracting / committed / archived. Future chunks broaden.
+// committed / archived. Future chunks broaden.
 export const DocumentCaseStateSchema = z.enum([
   'received',
+  'extracting',
   'classified',
   'needs_review',
   'matched',

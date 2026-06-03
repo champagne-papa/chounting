@@ -28,6 +28,12 @@ When editing SQL migration files under `supabase/migrations/`:
   tests at substrate-mod commit time. See
   `docs/04_engineering/conventions/migrations.md`
   "Substrate-mod-event test-staleness review".
+- **Versioned-CHECK constraint naming.** Broadening a versioned
+  `_chunk_N_active` CHECK continues the linear chunk-number suffix
+  (`chunk_{N+1}_active`), never the landing arc's vocabulary
+  (`wave_N`/`phase_N`) — dependent tests pin `/chunk_\d+_active/`.
+  See `docs/04_engineering/conventions/migrations.md`
+  "Versioned-CHECK constraint naming (linear chunk suffix)".
 
 This is an operational projection of canonical conventions; for
 edge cases or full discipline, read the topical files above.

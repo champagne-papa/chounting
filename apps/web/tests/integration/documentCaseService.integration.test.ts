@@ -93,7 +93,9 @@ describe('document_cases substrate + documentCaseService (chunk 1)', () => {
       id: crypto.randomUUID(),
       org_id: SEED.ORG_HOLDING,
       document_type: 'vendor_invoice',
-      state: 'extracting',
+      // 'committed' is still-reserved at Layer 1 post-chunk-8 ('extracting'
+      // was admitted at Wave 6 D2.1 — substrate-mod staleness re-pick).
+      state: 'committed',
       trace_id: ctx.trace_id,
       created_by: ctx.caller.user_id,
     });
@@ -318,7 +320,7 @@ describe('documentCaseService.transition (chunk 2)', () => {
 
     const { error } = await db.rpc('update_document_case_state_with_audit', {
       p_case_id: caseId,
-      p_target_state: 'extracting', // reserved at chunk 2; CHECK rejects
+      p_target_state: 'committed', // still-reserved post-chunk-8 ('extracting' admitted at Wave 6 D2.1); CHECK rejects
       p_audit: {
         org_id: SEED.ORG_HOLDING,
         user_id: ctx.caller.user_id,

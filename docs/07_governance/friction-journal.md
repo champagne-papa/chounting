@@ -18075,3 +18075,18 @@ one-time-fire vs pure-characterization** posture is a judgment heuristic (not a
 mechanical convention), recorded as a three-way in the Wave-5 retrospective §3,
 crystallized by the D1 (numeric ratchet, directional metric) vs D4 (qualitative
 one-time-fire, no-direction property) contrast.
+
+**NOTE 2026-06-03 — versioned-CHECK naming discipline CODIFIED at its
+pre-named trigger.** The phase-4 chunk-2 brief (R2.3) provisionally adopted the
+linear chunk-number suffix for `document_cases_state` CHECK renames and deferred
+ratification to "the second cross-phase CHECK-broaden event." Wave 6 D2.1 T1
+(migration `20240174`, chunk_7→chunk_8, +`extracting`) is that event. Codified
+via `codify-convention` to `docs/04_engineering/conventions/migrations.md`
+§"Versioned-CHECK constraint naming (linear chunk suffix)" (+ the
+`.claude/rules/migrations.md` operational projection). Empirical basis: 3 test
+sites across 2 files pin `/document_cases_state_chunk_\d+_active/` — the linear
+suffix passes; a vocabulary switch (`wave_N`) would break all three.
+Advisor-steered, CTO-approved at the D2.1 plan read-back. The `20240150`
+header's deferral text cannot itself be cross-referenced (applied migrations
+are immutable); closure is recorded in `20240174`'s header + this entry + the
+phase-4 chunk-2 brief's closure line.
