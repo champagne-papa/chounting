@@ -66,7 +66,12 @@ import type { SystemActorServiceContext } from '@/services/middleware/serviceCon
 // Per-document-type confidence thresholds per ADR-0014 §7 Q65
 // v1-provisional values. unknown is always exception so the threshold
 // is effectively unbounded (1.0 sentinel).
-const CONFIDENCE_THRESHOLDS: Record<DocumentType, number> = {
+//
+// Exported (additive; zero logic change) for the Wave 5 D2 confidence-to-policy
+// eval — the governed ADR-0019 calibration values are asserted fixture-offline
+// against this single source. Re-freeze the D2 snapshot only via ADR-0019
+// calibration governance (ADR-0014 §7 Q65 provenance).
+export const CONFIDENCE_THRESHOLDS: Record<DocumentType, number> = {
   vendor_invoice: 0.85,
   receipt: 0.8,
   payment_confirmation: 0.85,
