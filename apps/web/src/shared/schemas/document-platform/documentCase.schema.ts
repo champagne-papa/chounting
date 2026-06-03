@@ -56,6 +56,24 @@ export const TransitionInputSchema = z.discriminatedUnion('target_state', [
 export type TransitionInputRaw = z.input<typeof TransitionInputSchema>;
 export type TransitionInput = z.infer<typeof TransitionInputSchema>;
 
+// advanceCaseAutomation() input (Wave 6 D2.1 T2 — the automation-side
+// sibling of transition()). Targets are EXACTLY the automation-owned gap
+// edges' destinations: received→extracting→classified + matched→needs_review.
+// 'matched' is structurally absent as a target — classified→matched is
+// Subsystem 2's (resolveCandidates); single ownership by construction.
+export const AdvanceCaseAutomationInputSchema = z
+  .object({
+    document_case_id: z.string().uuid(),
+    target_state: z.enum(['extracting', 'classified', 'needs_review']),
+  })
+  .strict();
+export type AdvanceCaseAutomationInputRaw = z.input<
+  typeof AdvanceCaseAutomationInputSchema
+>;
+export type AdvanceCaseAutomationInput = z.infer<
+  typeof AdvanceCaseAutomationInputSchema
+>;
+
 // Input to createDocumentCase. org_id lives on the input (Pattern B
 // canonical — see Phase 1 documentPlatformService.createSourceDocument).
 // The route-handler's withInvariants wrap validates org_id against
