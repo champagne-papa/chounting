@@ -207,10 +207,21 @@ sees, never a live AI call.
    enum via `Constants`) maps exhaustively to a `Disposition` (ADR-0030), no
    fallthrough.
 
-**D3 — Unsafe-output suite**
-5. Adversarial extractor-output fixtures (malformed / out-of-contract / hostile)
-   → assert the INV-2 output-side boundary (Zod validation + proposal-only)
-   rejects/quarantines, never posts.
+**D3 — Unsafe-output suite** (boundary deterministic ⇒ 1+2 hard-asserted; 3 characterized)
+5. The INV-2 output boundary is `schema.safeParse` over the SAME exported schema
+   symbols the extractor/classifier pass it (`runAiExtractFallback:217` extraction
+   schemas; `runAiFallback:328` `ClassificationOutputSchema`) — so schema-direct
+   tests ARE boundary tests, fixture-offline (no `src` export; schemas already
+   exported). `callClaude` + `adminClient` mocked to throw.
+   (1) **Rejects structural violations** — wrong types (`amount:"abc"`,
+   `line_items:{}`), invalid discriminant (`document_type:"evil"`), out-of-range
+   (`confidence:1.5`), missing required → `safeParse` fails.
+   (2) **Strips unknown/injected keys** — `posted`/`auto_commit`/`__proto__`
+   absent from parsed output (no `.passthrough()` leak, no prototype pollution);
+   a genuine safety lock.
+   (3) **Characterized limit** — a valid-but-malicious *string* in a valid field
+   PASSES (structure/type/enum only, not semantic content); semantic safety rests
+   on the proposal-only + human-review backstop (INV-5), the same chain as D4.
 
 **D4 — Input-contamination suite**
 6. Adversarial OCR-text fixtures (injection-style content embedded in document
@@ -278,6 +289,33 @@ persisted-read facet.
   forward named against **ADR-0019 §13** so this governed confidence surface
   does not silently drop. Home: a confidence-margin eval pass when the Router is
   next touched.
+- **`.strict()` output-boundary hardening → named carry-forward (Wave 6 / post-V1).**
+  D3 confirmed the extraction/classifier output schemas STRIP unknown keys (Zod
+  default) — safe for downstream (keys dropped) but **silent**: an off-contract
+  key from the AI (a possible injection tripwire) is dropped with no audit event,
+  whereas `.strict()` would surface it as `zod_validation_failed`. That
+  observability gain trades against noisier failures on benign AI extras — a
+  control-design trade-off. Changing the schema to `.strict()` is modifying a
+  runtime control (non-goal 1: eval, not fix), so D3 **characterizes** the strip
+  and **names** the `.strict()`-hardening candidate here, tied to the same INV-5
+  backstop reasoning as D4's Fork-2(b). NOT built in Wave 5.
+- **Double Entry Agent AI-output boundary → named carry-forward (post-V1 / next
+  agent touch).** D3's unsafe-output suite is scoped (ruling (a)) to the AP
+  document pipeline, whose AI-output boundary set is exactly {classification,
+  extraction} — both covered; Stages 5 (`vendorService` matcher) and 7
+  (`proposalBuilder`) invoke no AI. The **third** `callClaude` site is a distinct
+  subsystem: the conversational **Double Entry Agent** (`handleUserMessage`,
+  `src/agent/orchestrator/index.ts`). Its AI-output boundary is
+  **shape-different** from the pipeline's — per-tool `zodSchema.safeParse`
+  (tool-call validation, main-loop step 7, ~`:457`) + `ProposedEntryCardSchema`
+  **`.parse`** (~`:886`, which *throws* on invalid rather than the pipeline's
+  `safeParse`→graceful-degrade). A dedicated agent-safety eval would assert the
+  throw is caught and handled safely (no crash, no leak, no post) — a different
+  assertion than the AP boundary, which is why it's a separate surface, not a
+  trivial fold. **Deferral defensible at V1:** the ProposedEntryCard is
+  ledger-bound but sits behind the same INV-5 proposal-only + human-review
+  backstop (a human approves before it posts) as D3 validator-3 and D4
+  Fork-2(b). NOT built in Wave 5; named so it does not silently drop.
 
 ---
 
