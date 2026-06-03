@@ -19,15 +19,15 @@ ADR lifecycle.
 
 Opens Wave 5 by scoping and sequencing the **AP eval harness** — the validation
 layer over the already-shipped AP extraction / classification / rule-evaluation
-substrate. It builds **test/validation artifacts and fixtures**, plus — the one
-`src` touch — **three additive, behavior-preserving named no-AI Tier-A export
-entrypoints** (one per extractor) so the no-AI extraction path is testable
-fixture-offline, mirroring the shipped `evaluateTierA` precedent (§D1
-discovery). It builds **no new runtime control**. It extends shipped substrate
-rather than re-specifying it (§2). **Phil FYI:** the three Tier-A exports are not
-controls and do not change the §5 charter scope — a harness needs its
-code-under-test reachable without firing live AI; flagged for acknowledgment, not
-gated.
+substrate. It builds **test/validation artifacts and fixtures**, plus a small
+set of **additive, behavior-preserving exports** (the only `src` touches) so the
+governed logic is testable fixture-offline without firing live AI: three named
+no-AI Tier-A extraction entrypoints (D1, one per extractor, mirroring the shipped
+`evaluateTierA`) and the `CONFIDENCE_THRESHOLDS` map (D2). It builds **no new
+runtime control**. It extends shipped substrate rather than re-specifying it
+(§2). **Phil FYI:** these exports are not controls and do not change the §5
+charter scope — a harness needs its code-under-test reachable without firing live
+AI; flagged for acknowledgment, not gated.
 
 Charter provenance: Decision 9 ("minimal eval harness folded into Ring 2B + AP
 wedge", ratified 2026-05-31) seeds the eval track; Wave A folded in eval items
@@ -190,9 +190,22 @@ sees, never a live AI call.
    (coverage split from correctness; absence is valid, not an error) + runner
    asserting per-type **coverage and correctness** thresholds separately.
 
-**D2 — Confidence-to-policy validation**
-4. Table-driven validators over `dispositionForAction` + tier confidence
-   thresholds; assert confidence → policy/disposition mapping. Fixture-offline.
+**D2 — Confidence-to-policy validation** (deterministic ⇒ hard-asserted)
+4. Additive map-only export `CONFIDENCE_THRESHOLDS` from `aiFallback.ts`
+   (`const` → `export const`; zero logic change — the comparison is a one-line
+   `>=`, so no refactor of the live-AI function). Three validators, fixture-
+   offline (`callClaude` + `adminClient` mocked to throw):
+   (a) **threshold snapshot** — the 4 governed values
+   `{vendor_invoice:0.85, receipt:0.80, payment_confirmation:0.85, unknown:1.0}`
+   match exactly, incl. the `unknown:1.0` always-exception sentinel; ratchet
+   re-frozen only via ADR-0019 calibration governance (ADR-0014 §7 Q65
+   provenance);
+   (b) **boundary** — `confidence == threshold` accepts (`>=`), just-below routes
+   to Tier D `'unknown'`; the `unknown` sentinel never accepts (its path forces
+   `confidence:0`);
+   (c) **disposition totality** — every live `action_type` arm (the 5-arm DB
+   enum via `Constants`) maps exhaustively to a `Disposition` (ADR-0030), no
+   fallthrough.
 
 **D3 — Unsafe-output suite**
 5. Adversarial extractor-output fixtures (malformed / out-of-contract / hostile)
@@ -256,6 +269,15 @@ persisted-read facet.
   `vendor_id` (§7) are resolved by downstream services, never extracted by either
   tier — so they are **not extraction-accuracy targets at all** and carry no
   Tier-C work; noted here only to record the disposition.
+- **Router Subsystem-2 ambiguity-margin → named carry-forward (ADR-0019 §13).**
+  D2 scopes to the classifier confidence thresholds + the disposition mapping.
+  ADR-0019 names a *second* confidence surface — the document-relationship
+  Router's ambiguity-margin (`margin_threshold` V1_PROVISIONAL, in
+  `shared/schemas/document-platform/documentRelationshipCandidate.schema.ts`,
+  a distinct subsystem). NOT folded (separate substrate, not cheap); carried
+  forward named against **ADR-0019 §13** so this governed confidence surface
+  does not silently drop. Home: a confidence-margin eval pass when the Router is
+  next touched.
 
 ---
 
