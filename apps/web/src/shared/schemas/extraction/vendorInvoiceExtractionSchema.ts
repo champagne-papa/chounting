@@ -18,8 +18,8 @@ import { z } from 'zod';
 // bank-detail Tier 2.5-only fields EXCLUDED (Q29 ESLint boundary) and
 // line_items / tax_amount as schema-specific decompositions. vendor_name
 // (matcher input) added Wave 6 D1 (matcher-gap fix) — an extraction-grain
-// field NOT in §2.1.1's commit-grain matrix; §2.1.1 reconciliation (add a
-// vendor_name row OR document the grain split) is D1 T5:
+// field NOT in §2.1.1's commit-grain matrix by design (see the §2.1.1
+// "Vendor identity — commit-grain vs extraction-grain" note; D1 T5):
 //   amount + currency + vendor_name (matcher input) + vendor_id (matcher
 //   output) + vendor_invoice_number + accounting_date + account_code
 //   + tax_code_id + due_date + line_items

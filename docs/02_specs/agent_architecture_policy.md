@@ -170,6 +170,18 @@ System-ceiling rule for vendor bank-detail changes (INV-AGENT-006
 boundary; uniqueness guard from ADR-0015 (forthcoming, AP/Spend
 Subdomain).
 
+**Vendor identity — commit-grain vs extraction-grain (Wave 6 D1).** This matrix
+is the `ProposedMutation` (commit-grain) shape; its vendor identity field is
+`vendor_id` — the matcher's resolved *output*, re-verified at Tier 1 (the
+`vendor_id` row above). The matcher's *input*, the extracted `vendor_name` (plus
+the `tax_id` / `email` fast-follow), is **extraction-grain**: it lives on
+`VendorInvoiceExtractionSchema`, is read by `matchVendor` to resolve `vendor_id`,
+and is intentionally **not** a row here — it is consumed to resolve the identity,
+not committed or Tier-1-re-verified. A vendor_invoice with no resolvable
+`vendor_id` will route to `needs_review` (Wave 6 `INV-WORKFLOW-002`, registered
+at D2; today such a case parks in `received` per the Wave -1 bleed-stop), so the
+commit-grain contract — `vendor_id` required to post — is unchanged.
+
 ##### `receipt`
 
 | Field | Source | Re-verification at Tier 1 | Failure mode | Layer |
