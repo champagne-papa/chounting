@@ -130,6 +130,7 @@ Return a single JSON object matching this schema (all fields OPTIONAL — omit f
 {
   "amount": <total invoice amount as number>,
   "currency": "<ISO 4217 3-letter code>",
+  "vendor_name": "<the vendor/supplier (sender/'from') name as printed — NOT the bill-to/ship-to customer>",
   "vendor_invoice_number": "<vendor's invoice number string>",
   "accounting_date": "<ISO 8601 YYYY-MM-DD>",
   "due_date": "<ISO 8601 YYYY-MM-DD>",
