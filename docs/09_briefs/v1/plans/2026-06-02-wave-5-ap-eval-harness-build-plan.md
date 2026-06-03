@@ -223,11 +223,23 @@ sees, never a live AI call.
    PASSES (structure/type/enum only, not semantic content); semantic safety rests
    on the proposal-only + human-review backstop (INV-5), the same chain as D4.
 
-**D4 — Input-contamination suite**
-6. Adversarial OCR-text fixtures (injection-style content embedded in document
-   text) → feed through extractor/classifier in-process → **characterize**
-   current behavior (this is the unfulfilled INV-2 input-side obligation; the
-   control is deferred, not built — §6).
+**D4 — Input-contamination suite** (instruction-inert hard-asserted; content-injectable characterized)
+6. Fixture-offline over the no-AI Tier-A path (D1 `…TierA` exports +
+   `evaluateTierA`; `callClaude`/`adminClient` mocked to throw). The threat on
+   the no-AI path is **content-injection, NOT prompt-injection** (no LLM to
+   instruct). Two properties, tested separately:
+   (1) **HARD-ASSERT instruction-following immunity** (permanent invariant) — a
+   trigger-free instruction string (proven trigger-free: abstains + extracts
+   `{}`) appended to a baseline changes NEITHER classification NOR extraction.
+   Tier-A responds to pattern presence, not instruction semantics; a regression
+   is a real bug, asserted forever.
+   (2) **CHARACTERIZE content-injectability** (diagnostic, NO ratchet) — injected
+   trigger keyword / value flows through (no input sanitization). The
+   unfulfilled INV-2 input-side obligation (deferred, Fork-2(b), §6/§8). No
+   ratchet: no "more is better" direction; Wave-6 sanitization is meant to
+   change it.
+   Backstop: INV-2 output (D3) + INV-5 (proposal-only + human review) ⇒
+   contaminated input cannot auto-post bad truth at V1.
 
 ---
 
@@ -346,6 +358,31 @@ carries automated quality. This **reinforces Wave 6** (the human review /
 approve→post UI is exactly where poor extraction gets corrected) and **feeds the
 §7 matcher-gap** (vendor identity). The 30% vendor correctness is a Wave-6
 hardening target, surfaced here as a measured input, not an alarm.
+
+## 6b. Recorded eval finding — content-injectability (D4)
+
+Measured on the no-AI Tier-A path and **asserted as a qualitative property**
+(`injected ≠ baseline`) — not a numeric ratchet: it fires exactly ONCE, at
+gap-closure (when INV-2 input-side sanitization lands and the injection stops
+flowing), which is precisely the event worth surfacing:
+
+- **Instruction-inert (hard invariant, holds):** a trigger-free instruction
+  string appended to a vendor_invoice baseline changes neither the classification
+  nor the extraction. Tier-A keys on pattern presence, not instruction meaning —
+  this is NOT prompt-injection.
+- **Content-injectable (the finding):** an injected `Total: $1.00` line flows
+  into extraction (`{vendor_invoice_number:"Invoice"}` → `{…, amount:1}`); an
+  injected receipt-signature line **disrupts** the confident classification
+  (`vendor_invoice` → **abstain**, which would route to Tier-C, the AI-injectable
+  surface). The no-AI path has no input sanitization, so attacker-controlled OCR
+  can inject field values and knock the classifier off its verdict.
+
+**Reading:** this is the unfulfilled **INV-2 input-side obligation** made
+concrete — the named deferred control (Fork-2(b), §6/§8). It does not breach V1
+safety: the **INV-2 output (D3) + INV-5 (proposal-only + human review)** backstop
+means contaminated input cannot auto-post bad truth. The sanitization control is
+owed before governed auto-commit returns (post-V1); recorded here as a measured
+input to that work, not an alarm.
 
 ---
 
