@@ -258,6 +258,9 @@ async function record(
       entry_date: parsed.entry_date,
       description: `Payment for bill ${parsed.bill_id}`,
       source: 'manual',
+      // Wave 6 D3 — optional dedup pass-through (idx_je_source_external);
+      // set by the approve→post route (document_case_id), absent otherwise.
+      source_external_id: parsed.source_external_id,
       lines: [drLine, crLine],
     },
     ctx,

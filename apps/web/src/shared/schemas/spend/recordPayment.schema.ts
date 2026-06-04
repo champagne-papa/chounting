@@ -33,6 +33,11 @@ export const RecordPaymentInputSchema = z.object({
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   ap_control_account_id: z.string().uuid(), // Dr account in payment JE
   cash_account_id: z.string().uuid(), // Cr account in payment JE
+  // Wave 6 D3 — optional dedup key threaded to journalEntryService.post
+  // (idx_je_source_external partial unique). The approve→post route sets
+  // document_case_id here; absent for every other caller (NULL skips
+  // the partial index).
+  source_external_id: z.string().min(1).optional(),
 });
 export type RecordPaymentInput = z.infer<typeof RecordPaymentInputSchema>;
 export type RecordPaymentInputRaw = z.input<typeof RecordPaymentInputSchema>;

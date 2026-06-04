@@ -109,6 +109,12 @@ const JournalEntryBaseSchema = z.object({
   description: z.string().min(1),
   reference: z.string().optional(),
   source: z.enum(['manual', 'agent', 'import']),
+  // Wave 6 D3 — optional dedup key for the idx_je_source_external
+  // partial unique (org_id, source_system, source_external_id). The
+  // human approve→post sets document_case_id here (one post per case);
+  // min(1) keeps '' out at Layer 2 (the RPC also NULLIFs '' as
+  // defense-in-depth — an empty string must never bind the triple).
+  source_external_id: z.string().min(1).optional(),
   idempotency_key: z.string().uuid().optional(),
   dry_run: z.boolean().optional().default(false),
   lines: z.array(JournalLineSchema).min(2),

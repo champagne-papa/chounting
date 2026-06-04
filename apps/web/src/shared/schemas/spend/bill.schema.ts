@@ -93,6 +93,11 @@ export const PostBillInputSchema = z.object({
   // DEFAULT false at migration 20240138000000:172.
   primary_document_id: z.string().uuid().optional(),
   override_evidence_completeness: z.boolean().optional().default(false),
+  // Wave 6 D3 — optional dedup key threaded to journalEntryService.post
+  // (idx_je_source_external partial unique). The approve→post route sets
+  // document_case_id here; absent for every other caller (NULL skips
+  // the partial index).
+  source_external_id: z.string().min(1).optional(),
 });
 export type PostBillInput = z.infer<typeof PostBillInputSchema>;
 export type PostBillInputRaw = z.input<typeof PostBillInputSchema>;

@@ -15,6 +15,12 @@ export type ServiceErrorCode =
   | 'PERIOD_LOCKED'
   | 'PERIOD_DATE_OUT_OF_RANGE'
   | 'POST_FAILED'
+  // Wave 6 D3 — double-post guard: 23505 naming idx_je_source_external
+  // (the (org_id, source_system, source_external_id) partial unique,
+  // migration 20240111). Keyed on the CONSTRAINT NAME so the other
+  // journal_entries 23505 source (unique_entry_number_per_org_period)
+  // stays a POST_FAILED, never mis-recovered as already-posted.
+  | 'DUPLICATE_SOURCE_EXTERNAL_ID'
   // Period lifecycle (Phase 1.x)
   | 'PERIOD_ALREADY_LOCKED'
   | 'PERIOD_NOT_LOCKED'

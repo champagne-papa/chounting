@@ -23,11 +23,15 @@ export type DocumentType = z.infer<typeof DocumentTypeSchema>;
 // (document_cases_state_chunk_8_active CHECK; second cross-phase
 // broaden — versioned-CHECK naming discipline codified at
 // docs/04_engineering/conventions/migrations.md §"Versioned-CHECK
-// constraint naming"). The Zod boundary mirrors the Layer 1 CHECK
-// admission set verbatim.
+// constraint naming"); Wave-6-D3-T1 adds 'committed' for the human
+// approve→post terminal marking (document_cases_state_chunk_9_active
+// CHECK — the Layer-1-CHECK-broaden ⇒ Zod-broaden lockstep:
+// readDocumentCase safeParses read-backs against this schema, so a
+// committed case would fail read-back parsing without it). The Zod
+// boundary mirrors the Layer 1 CHECK admission set verbatim.
 //
 // Still reserved at Layer 1 + Layer 2 (CHECK-rejected; Zod-rejected):
-// committed / archived. Future chunks broaden.
+// archived. Future chunks broaden.
 export const DocumentCaseStateSchema = z.enum([
   'received',
   'extracting',
@@ -37,6 +41,7 @@ export const DocumentCaseStateSchema = z.enum([
   'proposed',
   'approved',
   'rejected',
+  'committed',
 ]);
 export type DocumentCaseState = z.infer<typeof DocumentCaseStateSchema>;
 
@@ -52,19 +57,31 @@ export const TransitionInputSchema = z.discriminatedUnion('target_state', [
     target_state: z.literal('rejected'),
     reason: z.string().min(1, 'reason is required when target_state is rejected'),
   }),
+  // Wave 6 D3 — the human needs_review→proposed hop (matrix-legal at
+  // LEGAL_TRANSITIONS.needs_review, previously inexpressible through
+  // this union). D2.1 §5(A)'s byte-untouched posture superseded with
+  // provenance at the D3 brief D-1.1 (transition() had zero callers
+  // when §5(A) was ratified; D3 is the first exposer).
+  z.object({
+    target_state: z.literal('proposed'),
+    reason: z.string().optional(),
+  }),
 ]);
 export type TransitionInputRaw = z.input<typeof TransitionInputSchema>;
 export type TransitionInput = z.infer<typeof TransitionInputSchema>;
 
 // advanceCaseAutomation() input (Wave 6 D2.1 T2 — the automation-side
 // sibling of transition()). Targets are EXACTLY the automation-owned gap
-// edges' destinations: received→extracting→classified + matched→needs_review.
+// edges' destinations: received→extracting→classified +
+// matched→needs_review + approved→committed (Wave 6 D3 T4 — the
+// post-success terminal marking driven by the approve→post route;
+// ADR-0011 §3: "automation (ledger commit succeeds)").
 // 'matched' is structurally absent as a target — classified→matched is
 // Subsystem 2's (resolveCandidates); single ownership by construction.
 export const AdvanceCaseAutomationInputSchema = z
   .object({
     document_case_id: z.string().uuid(),
-    target_state: z.enum(['extracting', 'classified', 'needs_review']),
+    target_state: z.enum(['extracting', 'classified', 'needs_review', 'committed']),
   })
   .strict();
 export type AdvanceCaseAutomationInputRaw = z.input<

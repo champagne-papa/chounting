@@ -185,6 +185,9 @@ async function post(
       reference: parsed.reference ?? null,
       source: parsed.source,
       source_system: parsed.source,
+      // Wave 6 D3 — dedup key for idx_je_source_external (null for
+      // every caller that doesn't set it; the partial index skips NULL).
+      source_external_id: parsed.source_external_id ?? null,
       idempotency_key: parsed.idempotency_key ?? null,
       reverses_journal_entry_id,
       reversal_reason,
@@ -214,6 +217,19 @@ async function post(
   });
 
   if (error || !data?.[0]) {
+    // Wave 6 D3 — typed already-posted discriminant, keyed on the
+    // CONSTRAINT NAME (not bare 23505): journal_entries has a second
+    // 23505 source (unique_entry_number_per_org_period, concurrent
+    // entry-number collision) that must stay POST_FAILED — keying on
+    // the name keeps an entry-number collision from being
+    // mis-recovered as already-posted by the approve→post route.
+    if (error?.message?.includes('idx_je_source_external')) {
+      log.error({ error }, 'Journal entry duplicate source_external_id');
+      throw new ServiceError(
+        'DUPLICATE_SOURCE_EXTERNAL_ID',
+        `journal entry already posted for this source_external_id: ${error.message}`,
+      );
+    }
     log.error({ error }, 'Journal entry RPC failed');
     throw new ServiceError('POST_FAILED', error?.message ?? 'RPC failed');
   }
