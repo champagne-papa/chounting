@@ -28,7 +28,6 @@ import { sweepStrandedCases } from '@/agent/orchestrator/maintenance/sweepStrand
 import { SYSTEM_ACTOR_USER_ID } from '@/services/middleware/serviceContext';
 // Task 3 consumes:
 // import type { ServiceContext } from '@/services/middleware/serviceContext';
-void SYSTEM_ACTOR_USER_ID; // used by later tasks
 
 const db = adminClient();
 
@@ -226,5 +225,58 @@ describe('sweepStrandedCases — eligibility + dry-run', () => {
     const d = report.cases.find((c) => c.document_case_id === dup.caseId);
     expect(d).toMatchObject({ bucket: 'B3-D', outcome: 'bucketed_dry_run' });
     expect(await caseState(dup.caseId)).toBe('received');
+  });
+});
+
+// =====================================================================
+// Describe 2 — B1: matched-stranding hand-off (execute)
+// =====================================================================
+
+describe('sweepStrandedCases — B1 matched hand-off', () => {
+  it('advances a stranded matched case to needs_review with sweep-actor attribution', async () => {
+    const trace_id = crypto.randomUUID();
+    const { caseId } = await seedStrandedCase(trace_id, { state: 'matched' });
+
+    const report = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+
+    const c = report.cases.find((x) => x.document_case_id === caseId);
+    expect(c).toMatchObject({ bucket: 'B1', outcome: 'handed_off' });
+    expect(await caseState(caseId)).toBe('needs_review');
+
+    // Audit attribution: the sweep's per-case trace + Path-X service
+    // account (ADR-0007 Q78 — system actors write the joinable id).
+    const { data: audit } = await db
+      .from('audit_log')
+      .select('user_id, action')
+      .eq('trace_id', c!.trace_id)
+      .eq('entity_id', caseId)
+      .eq('action', 'document_case_transitioned');
+    expect(audit).toHaveLength(1);
+    expect(audit![0]!.user_id).toBe(SYSTEM_ACTOR_USER_ID);
+  });
+
+  it('is idempotent: a second sweep of the same case is a no-op (case past eligibility)', async () => {
+    const trace_id = crypto.randomUUID();
+    const { caseId } = await seedStrandedCase(trace_id, { state: 'matched' });
+
+    await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+    const second = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+
+    // needs_review is not an eligible state — the case simply no longer
+    // appears. No double hand-off possible.
+    expect(second.cases.find((x) => x.document_case_id === caseId)).toBeUndefined();
+    expect(await caseState(caseId)).toBe('needs_review');
   });
 });
