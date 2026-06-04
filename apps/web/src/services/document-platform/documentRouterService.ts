@@ -167,7 +167,11 @@ import { enqueueException } from '@/services/document-platform/documentException
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
-import type { ServiceContext, SystemActorServiceContext } from '@/services/middleware/serviceContext';
+import {
+  actingUserId,
+  type ServiceContext,
+  type SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 
 type Db = ReturnType<typeof adminClient>;
 
@@ -1427,9 +1431,16 @@ export async function completeCandidate(
 // ---------------------------------------------------------------------
 export async function resolveCandidates(
   input: ResolveCandidatesInputRaw,
-  ctx: ServiceContext,
+  // Wave 6 D2.1 T3: widened to admit the orchestrator's
+  // SystemActorServiceContext directly, mirroring completeCandidate above
+  // (pure type widening; direct invocation, NOT through withInvariants, so
+  // no role-based authorization (Invariant 4) on this path; reads only
+  // union-common fields). Attribution sites below use actingUserId(ctx)
+  // (ADR-0007 Q78 Path X — system actors write the joinable
+  // service-account id, not null). See ADR-0007 §Tier 2.
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<RouterDecision> {
-  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id ?? undefined });
 
   // Layer 2 boundary: Zod parse at service entry.
   let parsed: ResolveCandidatesInput;
@@ -1534,7 +1545,7 @@ export async function resolveCandidates(
       },
       p_audit_decision: {
         org_id,
-        user_id: ctx.caller.user_id,
+        user_id: actingUserId(ctx),
         trace_id: parsed.trace_id,
         action: 'router_decision_recorded',
         entity_type: 'document_case',
@@ -1545,7 +1556,7 @@ export async function resolveCandidates(
       },
       p_audit_mutation: {
         org_id,
-        user_id: ctx.caller.user_id,
+        user_id: actingUserId(ctx),
         trace_id: parsed.trace_id,
         action: 'document_case_transitioned',
         entity_type: 'document_case',
@@ -1609,7 +1620,7 @@ export async function resolveCandidates(
     },
     p_audit: {
       org_id,
-      user_id: ctx.caller.user_id,
+      user_id: actingUserId(ctx),
       trace_id: parsed.trace_id,
       action: 'router_decision_recorded',
       entity_type: 'document_case',

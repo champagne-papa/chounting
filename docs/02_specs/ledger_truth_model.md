@@ -2342,6 +2342,83 @@ this leaf.
 
 ---
 
+### INV-WORKFLOW-002 — terminal-disposition completeness / no silent drops (Layer 2)
+
+**Invariant.** Every ingested document case the pipeline processes
+advances to a pipeline-terminal disposition: `needs_review` — the
+pipeline's terminal hand-off to the human, NOT a final case state — or a
+terminal case state (`rejected` / `committed`). The pipeline never
+returns null-and-drops a decided case. One property, multiple
+enforcement sites (the INV-1 precedent): the orchestrator's Stage-6.5
+routing block + the park-exit hand-offs (`ingestDocument.ts`), the
+automation chain-advance (`documentCaseService.advanceCaseAutomation`),
+and Subsystem 2's routing (`documentRouterService.resolveCandidates` —
+branch (a) → `matched`; branches (b)/(c) → `needs_review` via
+`enqueueException`). Reserved in the V1 governance plan §4 (the
+`INV-WORKFLOW` reserved block, 001..005 — cited de-tokenized so the
+reachability diff keeps its D6 visibility for the 001 registration);
+registered here at Wave 6 D2.1 T3, when
+the enforcing routing landed (the spec-without-enforcement rule). The
+routing also realizes INV-5's human-review destination (no autonomous
+commit at V1) — INV-5 is cross-referenced, not re-registered; each
+invariant owns one property even when one code change serves two.
+
+**Scope — a prospective process guarantee, not a database-state
+assertion.** The guarantee covers pipeline runs from D2.1 onward: every
+run that reaches the Stage-6.5 decision routes its case to a terminal
+disposition, with the D2.3 sweep as the eventual-consistency backstop.
+It is NOT "no case is ever observed in a non-terminal state": a
+Subsystem-3 re-evaluation (`dispatchTrigger` → `resolveCandidates`
+branch (a)) can transiently leave a case at `matched` with no hand-off —
+sweep-backstopped, not a violation.
+
+**Residual (named, not hidden).** Three classes:
+
+1. **Attachment-card class (ADR-0011 §11).** The non-ledger attachment
+   auto-commit path leaves its case at `received` by design — the
+   attachment outcome is committed+linked; only the case state lags.
+   Persists until its carry-forward closes; the D2.3 sweep distinguishes
+   committed+linked-state-lagged cases from true orphans.
+2. **Pre-D2.1 parked backlog (transitional).** Cases parked at
+   `received` by the Wave -1 bleed-stop before this routing landed;
+   retired by the D2.3 sweep.
+3. **Strandings.** Pre-decision pipeline failures leave the case at
+   `received` (reported via `status='pipeline_failed'` + failure_class;
+   recoverable by re-run); the post-hoc chain is 3–5 separate RPC
+   transactions, so a mid-chain crash can strand a case at ANY
+   non-terminal state (`received` / `extracting` / `classified` /
+   `matched`) — the orphan domain the D2.3 sweep queries. All reported
+   or queryable; none silent.
+
+**Threat model.** A silent drop — a case the pipeline decided on but
+never routed — is invisible to the human review surface, so the V1
+review-and-post contract fails silently: the document appears
+freshly-arrived forever (the pre-D2.1 state this invariant closes; the
+unmatched-vendor null-and-drop was the charter §2 Inv-7 finding).
+
+**Enforcement.** Layer 2, **runtime/structural sub-type** (the
+INV-RULE-003 shape: code-path pattern + review discipline, with
+test-verified support). The Stage-6.5 routing block + the park-exit
+hand-offs in
+`apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`
+(annotated `INV-WORKFLOW-002`); `advanceCaseAutomation`
+(`documentCaseService.ts`) enforces the automation-owned matrix slice
+app-side and REFUSES `classified→*` (single ownership — Subsystem 2's
+segment); the `enqueue_exception_with_audit` RPC guard (`state IN
+('classified','matched')`) is the substrate-layer enforcer for the
+`needs_review` entry. Test-verified by
+`apps/web/tests/integration/advanceCaseAutomation.integration.test.ts`
+(9 tests: chain-advance, idempotency, hand-off, single-ownership
+refusal, system-actor attribution) + the D2.1 T4 end-to-end routing
+suite (matched→`needs_review`; unmatched→`needs_review` with exception
+row).
+
+**Annotation site.** `INV-WORKFLOW-002` at the Stage-6.5 routing block
+in `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`,
+establishing bidirectional reachability with this leaf.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the

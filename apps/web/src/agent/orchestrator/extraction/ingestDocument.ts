@@ -54,7 +54,11 @@ import { recordAutonomyGateAttempt } from './stages/recordAutonomyGate';
 import { withFailureClassification } from './failureClassification';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { vendorService } from '@/services/spend/vendorService';
-import { completeCandidate } from '@/services/document-platform/documentRouterService';
+import {
+  completeCandidate,
+  resolveCandidates,
+} from '@/services/document-platform/documentRouterService';
+import { advanceCaseAutomation } from '@/services/document-platform/documentCaseService';
 import { adminClient } from '@/db/adminClient';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { billService } from '@/services/spend/billService';
@@ -396,6 +400,46 @@ export async function ingestDocument(
     timestamp: new Date().toISOString(),
   });
 
+  // Stage 6.5 — route_to_review (Wave 6 D2.1 T3).
+  //
+  // INV-WORKFLOW-002 (terminal-disposition completeness / no silent
+  // drops) — the enforcing routing block; leaf at ledger_truth_model.md.
+  // Post-hoc at-decision advancement: the case advances
+  // received→extracting→classified (advanceCaseAutomation, the
+  // automation-owned chain), then Subsystem 2 (resolveCandidates) routes
+  // classified→matched (branch a, clean match — head pointer + rich
+  // decision-record audit) or classified→needs_review (branches b/c —
+  // ambiguous/unmatched, via record_router_decision + the cross-service
+  // enqueueException). Branch-(a) cases take the matched→needs_review
+  // hand-off at the park exits below. Every decision outcome therefore
+  // reaches needs_review — the pipeline's terminal hand-off to the human
+  // (this realizes INV-5's human-review destination; INV-5 is
+  // cross-referenced, not re-registered). A failure here returns
+  // pipeline_failed and strands the case at its last persisted state —
+  // the named sweep-recoverable residual (leaf Residual (iii)). No new
+  // pipeline_trace record: pipeline_trace carries the ADR-0014 §1
+  // extraction-stage canon; the routing is audited via audit_log + the
+  // Subsystem-2 decision records.
+  if (documentCaseId) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'classified' },
+        ctx,
+      );
+      await resolveCandidates(
+        { document_case_id: documentCaseId, trace_id: input.trace_id },
+        ctx,
+      );
+    } catch (err) {
+      return {
+        status: 'pipeline_failed',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: classifyFailure(err),
+      };
+    }
+  }
+
   // Stage 7 — build_proposal per ADR-0014 §1 canonical (brief Task
   // 7.3a.6 brief-named "Stage 6 proposal builder"; ADR canonical Stage 7).
   // Chunk 7.3a ships ProposedEntryCard-only routes; born-paid bundle +
@@ -509,6 +553,29 @@ export async function ingestDocument(
       },
       ctx,
     );
+    // Wave 6 D2.1 T3 — the matched→needs_review hand-off
+    // (INV-WORKFLOW-002). Reached only after a successful Stage-6.5
+    // resolveCandidates, so the case is at matched (branch a → one hop)
+    // or needs_review (branches b/c → idempotent no-op); never
+    // classified (a Stage-6.5 failure returned pipeline_failed above),
+    // so the single-ownership refusal cannot fire here. Plain
+    // state-transition audit — the router decision-record was already
+    // written by Subsystem 2.
+    if (documentCaseId) {
+      try {
+        await advanceCaseAutomation(
+          { document_case_id: documentCaseId, target_state: 'needs_review' },
+          ctx,
+        );
+      } catch (err) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
     return {
       status: 'parked_unposted',
       pipeline_trace,
@@ -553,6 +620,25 @@ export async function ingestDocument(
     },
     ctx,
   );
+  // Wave 6 D2.1 T3 — matched→needs_review hand-off (INV-WORKFLOW-002);
+  // see the proposed_entry_card hand-off above for the precondition
+  // (post-resolveCandidates: matched → hop, needs_review → no-op,
+  // classified unreachable).
+  if (documentCaseId) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'needs_review' },
+        ctx,
+      );
+    } catch (err) {
+      return {
+        status: 'pipeline_failed',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: classifyFailure(err),
+      };
+    }
+  }
   return {
     status: 'parked_unposted',
     pipeline_trace,
