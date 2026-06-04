@@ -101,16 +101,20 @@ on the routing — no "covering the routing half of INV-5" phrasing.
 Inv 5:57 — "Gate-driven auto-commit (`INV-AUTONOMY-GATE-001`) is post-V1");
 Wave 6 does not touch it.
 
-**Q1 — INV-2 input-side sanitization home (CTO OPEN; working assumption
-Option 1).** The home of the INV-2 input-side (extraction-input)
-sanitization control — Wave 6 (D9) vs a named post-V1 track — is a CTO
-call. It is backstopped by INV-5 (proposal-only + human review) + the
-INV-2 **output** boundary, so it is defense-in-depth, not safety-load-
-bearing. **Working assumption: Option 1 (post-V1 track; D9 omitted)**,
-cleanly additive if Phil flips. (Source of the open-item: the **Wave-5
-build plan §8** "Open items for Phil" — *not* governance-plan §8, which is
-the ratification lifecycle; the retrospective §5 item 1 mis-cites "plan
-§8".)
+**Q1 — INV-2 input-side sanitization home (RESOLVED 2026-06-03: Option 1
+— CTO formalization).** The home of the INV-2 input-side
+(extraction-input) sanitization control — Wave 6 (D9) vs a named post-V1
+track — was a CTO call. It is backstopped by INV-5 (proposal-only +
+human review) + the INV-2 **output** boundary, so it is defense-in-depth,
+not safety-load-bearing. **RESOLVED: Option 1 — post-V1 track; D9 is
+omitted from Wave 6.** Flip condition: revisit the moment governed
+auto-commit returns to the roadmap; build the control alongside that
+governance. Named residual (recorded, not oversold): a contaminated
+extraction misleading the human reviewer — kept low by source-document
+visibility + the output-side bound; itself a post-V1 hardening
+candidate. (Source of the open-item: the **Wave-5 build plan §8** "Open
+items for Phil" — *not* governance-plan §8, which is the ratification
+lifecycle; the retrospective §5 item 1 mis-cites "plan §8".)
 
 ---
 
@@ -126,7 +130,7 @@ the ratification lifecycle; the retrospective §5 item 1 mis-cites "plan
 | **D6** | `INV-WORKFLOW-001` teeth-flip — Query-gap scope-out (§2) → `exit(gaps>0?1:0)` → **wire `check-intent-producers.ts` into CI** (`.github/workflows/ci.yml`; it is wired into no CI today) | `INV-WORKFLOW-001` register; ADR-0031 D-0031.3 amend | — |
 | **D7** | §5.1 direct ledger-row-delta test — the **positive** human-approve→post row-delta (non-vacuous post-D1); **not** the §3.3(b) auto-commit-zero negative | — | — |
 | **D8** | Governance doc-sync (first-class) — register the invariants in `invariants.md` ↔ `control_matrix.md` ↔ `ledger_truth_model.md` leaves; amend ADR-0031 + ADR-0033; reconcile glossary "empty reserved directories at V1" | the above | — |
-| D9? | INV-2 input-side sanitization control — **only if** Q1 → Wave 6 | possibly a new INV-ID | — |
+| D9 | INV-2 input-side sanitization control — **OMITTED** (Q1 RESOLVED 2026-06-03, Option 1: post-V1 track; see §2) | — | — |
 
 **Sequencing:** D1 first (unblocks the post path → D3/D4/D7); D2 before D3
 (the review surface needs routed cases); D5/D6 parallelizable; D7 after
@@ -308,15 +312,18 @@ rationale, explicitly covering the state-mutating transitions.
 **IDOR:** org derives from the parent case row throughout (verified shape);
 no raw-id read facets.
 
-**Q1 (INV-2 input home):** remains the CTO's one-word formalization;
-working assumption Option 1 (post-V1 track; D9 omitted; flip condition =
-governed auto-commit returning to the roadmap). Does not gate D2.1.
+**Q1 (INV-2 input home):** RESOLVED 2026-06-03, Option 1 — see §2 (post-V1
+track; D9 omitted; flip condition = governed auto-commit returning to the
+roadmap; named residual recorded). Did not gate D2.1.
 
 ---
 
 ## Cadence
 
-D1 plan-of-record cleared by advisor green-light; per-task read-backs under
-`wave-6-ap-review`; commit on each task's read-back clear; push waits for
-the CTO's explicit terminal go. Q1 (INV-2 input home) is formally Phil's to
-confirm — it gates only D9, so D1 is not blocked. T1 surfaces first.
+Per-task read-backs under `wave-6-ap-review`; commit on each task's
+read-back clear; push waits for the CTO's explicit terminal go. This
+footer carries the **standing cadence only** — living arc status (chunks
+locked/closed, decision resolutions) lives in this doc's **Status:**
+header and the dated section bodies (§2/§5), not here. (Q1 resolved
+2026-06-03, Option 1 — see §2; the footer's earlier present-tense Q1/T1
+lines were a staleness class, retired at the Q1-amendment read-back.)
