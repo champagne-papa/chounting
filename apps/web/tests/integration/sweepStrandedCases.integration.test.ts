@@ -16,18 +16,15 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
 import { adminClient, SEED } from '../setup/testDb';
-// Task 3 consumes:
-// import { makeTestContext } from '../setup/makeTestContext';
+import { makeTestContext } from '../setup/makeTestContext';
 import { sweepStrandedCases } from '@/agent/orchestrator/maintenance/sweepStrandedCases';
-// Task 3 consumes:
-// import { createDocumentCase } from '@/services/document-platform/documentCaseService';
-// import { completeCandidate } from '@/services/document-platform/documentRouterService';
-// import { documentPlatformService } from '@/services/document-platform/documentPlatformService';
-// import { attachDocumentCaseSource } from '@/services/document-platform/documentCaseSourceService';
-// import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
+import { createDocumentCase } from '@/services/document-platform/documentCaseService';
+import { completeCandidate } from '@/services/document-platform/documentRouterService';
+import { documentPlatformService } from '@/services/document-platform/documentPlatformService';
+import { attachDocumentCaseSource } from '@/services/document-platform/documentCaseSourceService';
+import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import { SYSTEM_ACTOR_USER_ID } from '@/services/middleware/serviceContext';
-// Task 3 consumes:
-// import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type { ServiceContext } from '@/services/middleware/serviceContext';
 
 const db = adminClient();
 
@@ -278,5 +275,229 @@ describe('sweepStrandedCases — B1 matched hand-off', () => {
     // appears. No double hand-off possible.
     expect(second.cases.find((x) => x.document_case_id === caseId)).toBeUndefined();
     expect(await caseState(caseId)).toBe('needs_review');
+  });
+});
+
+// --- Pattern B seeding: candidate-bearing stranding (pre-D2.1 backlog shape) ---
+
+interface CandidateBearingCase {
+  caseId: string;
+  sourceDocId: string;
+  vendorId: string;
+  billIds: string[];
+}
+
+async function seedCandidateBearingStranding(
+  ctx: ServiceContext,
+  nBills: number,
+): Promise<CandidateBearingCase> {
+  const orgId = SEED.ORG_HOLDING;
+
+  // Vendor (direct INSERT — Phase 5 decoupling per chunk-1 precedent).
+  const vendorId = crypto.randomUUID();
+  const { error: vendorErr } = await db.from('vendors').insert({
+    vendor_id: vendorId,
+    org_id: orgId,
+    name: `TEST d2-3 sweep vendor ${vendorId.slice(0, 8)}`,
+  });
+  if (vendorErr) throw new Error(`vendor fixture failed: ${vendorErr.message}`);
+
+  // Bills with IDENTICAL amount_cad — N≥2 must produce identical
+  // aggregate confidence scores → margin 0 → branch (b). (Chunk-3
+  // multi-feature scoring discipline; see resolveCandidates test
+  // seedNOpenBillsForVendor rationale.)
+  const billIds: string[] = [];
+  for (let i = 0; i < nBills; i++) {
+    const billId = crypto.randomUUID();
+    const { error } = await db.from('bills').insert({
+      bill_id: billId,
+      org_id: orgId,
+      vendor_id: vendorId,
+      issue_date: '2026-06-04',
+      lifecycle_state: 'approved_for_payment',
+      amount_cad: 1000,
+    });
+    if (error) throw new Error(`bill fixture failed: ${error.message}`);
+    billIds.push(billId);
+  }
+
+  // Source document + case + attach (service-layer, chunk-5/chunk-1/chunk-3 precedents).
+  const { ingest_batch_id } = await createIngestBatchForTest(orgId);
+  const sourceResult = await documentPlatformService.createSourceDocument(
+    {
+      bytes: new Uint8Array([1, 2, 3, 4]),
+      mime_type: 'application/pdf',
+      original_filename: `d2-3-sweep-${crypto.randomUUID().slice(0, 8)}.pdf`,
+      ingest_channel: 'direct_upload',
+      ingest_batch_id,
+      received_at: new Date().toISOString(),
+      org_id: orgId,
+      created_by: ctx.caller.user_id,
+    },
+    ctx,
+  );
+  const caseResult = await createDocumentCase(
+    { org_id: orgId, document_type: 'vendor_invoice' },
+    ctx,
+  );
+  await attachDocumentCaseSource(
+    {
+      document_case_id: caseResult.id,
+      source_document_id: sourceResult.id,
+      role: 'primary',
+    },
+    ctx,
+  );
+
+  // document_jobs row — the sweep's reverse join needs it.
+  // ingest_batch_id is NOT NULL on document_jobs; pass the batch created above.
+  const { error: djErr } = await db.from('document_jobs').insert({
+    id: crypto.randomUUID(),
+    org_id: orgId,
+    source_document_id: sourceResult.id,
+    document_case_id: caseResult.id,
+    ingest_batch_id,
+    state: 'queued',
+    trace_id: ctx.trace_id,
+    created_by: SEED.USER_CONTROLLER,
+  });
+  if (djErr) throw new Error(`document_jobs fixture failed: ${djErr.message}`);
+
+  // Candidate emission via the REAL path (completeCandidate works at
+  // 'received' — same as the resolveCandidates test helper, which calls
+  // it before the classified transition). Then STOP: no resolveCandidates,
+  // no state advance — the pre-D2.1 backlog stranding shape.
+  await completeCandidate(
+    {
+      document_case_id: caseResult.id,
+      source_document_id: sourceResult.id,
+      document_type: 'vendor_invoice',
+      classification_confidence: 0.95,
+      extracted_fields: { invoice_amount: 1000 },
+      vendor_match: {
+        vendor_id: vendorId,
+        confidence: 0.95,
+        match_type: 'exact_name',
+        candidate_alternatives: [],
+      },
+      trace_id: ctx.trace_id,
+    },
+    ctx,
+  );
+
+  return {
+    caseId: caseResult.id,
+    sourceDocId: sourceResult.id,
+    vendorId,
+    billIds,
+  };
+}
+
+// =====================================================================
+// Describe 3 — B2: candidate-bearing re-resolve (execute)
+// =====================================================================
+
+describe('sweepStrandedCases — B2 candidate-bearing recovery', () => {
+  it('N=1: advances received→classified, resolves branch (a), hands off to needs_review', async () => {
+    const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const { caseId } = await seedCandidateBearingStranding(ctx, 1);
+    expect(await caseState(caseId)).toBe('received'); // stranding shape
+
+    const report = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+
+    const c = report.cases.find((x) => x.document_case_id === caseId);
+    expect(c).toMatchObject({
+      bucket: 'B2',
+      outcome: 'resolved_matched_handed_off',
+    });
+    expect(await caseState(caseId)).toBe('needs_review');
+
+    // The decision is REAL: head pointer set by branch (a).
+    const { data: caseRow } = await db
+      .from('document_cases')
+      .select('current_relationship_candidate_id')
+      .eq('id', caseId)
+      .single();
+    expect(caseRow!.current_relationship_candidate_id).not.toBeNull();
+  });
+
+  it('N=2 identical: resolves branch (b) — real multi_candidate_ambiguity exception, needs_review', async () => {
+    const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    const { caseId } = await seedCandidateBearingStranding(ctx, 2);
+
+    const report = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+
+    const c = report.cases.find((x) => x.document_case_id === caseId);
+    expect(c).toMatchObject({
+      bucket: 'B2',
+      outcome: 'resolved_exception',
+      exception_reason: 'multi_candidate_ambiguity',
+    });
+    expect(await caseState(caseId)).toBe('needs_review');
+
+    const { data: exRows } = await db
+      .from('exception_queue_entries')
+      .select('exception_reason, exception_status')
+      .eq('document_case_id', caseId);
+    expect(exRows).toHaveLength(1);
+    expect(exRows![0]).toMatchObject({
+      exception_reason: 'multi_candidate_ambiguity',
+      exception_status: 'open',
+    });
+  });
+
+  it('EXCEPTION_ALREADY_OPEN + state still classified → anomaly bucket, no mutation, no loop', async () => {
+    const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+    // N=2 → branch (b) → enqueueException — which will hit the
+    // pre-inserted open exception's partial-UNIQUE and throw 23505 →
+    // EXCEPTION_ALREADY_OPEN.
+    const { caseId } = await seedCandidateBearingStranding(ctx, 2);
+
+    // Construct the atomicity-violating shape directly (it cannot arise
+    // through the RPC — that is the point of the test).
+    const { error: exErr } = await db.from('exception_queue_entries').insert({
+      org_id: SEED.ORG_HOLDING,
+      document_case_id: caseId,
+      exception_reason: 'multi_candidate_ambiguity',
+      trace_id: crypto.randomUUID(),
+      created_by: SEED.USER_CONTROLLER,
+    });
+    if (exErr) throw new Error(`exception fixture failed: ${exErr.message}`);
+
+    const report = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+
+    const c = report.cases.find((x) => x.document_case_id === caseId);
+    expect(c).toMatchObject({
+      bucket: 'anomaly',
+      outcome: 'anomaly_open_exception_non_terminal',
+    });
+    // NOT auto-repaired: state advanced to classified by the honest B2
+    // advance (the work demonstrably happened), but NOT to needs_review.
+    expect(await caseState(caseId)).toBe('classified');
+
+    // Loop-safety: a second sweep re-buckets B2 → same anomaly outcome,
+    // not an error cascade and not a re-run.
+    const second = await sweepStrandedCases({
+      document_case_ids: [caseId],
+      staleness_minutes: 0,
+      execute: true,
+    });
+    const c2 = second.cases.find((x) => x.document_case_id === caseId);
+    expect(c2).toMatchObject({
+      bucket: 'anomaly',
+      outcome: 'anomaly_open_exception_non_terminal',
+    });
   });
 });
