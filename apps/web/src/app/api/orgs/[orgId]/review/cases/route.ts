@@ -68,20 +68,26 @@ export async function GET(
       );
     }
 
-    // Post-status probe for approved cases — one batched query on the
-    // dedup triple (org, 'manual', case_id). An approved case with a
-    // JE is the step-5/6 crash window awaiting its committed marking.
+    // Post-status probe for approved cases — one batched exact-match
+    // query on the PER-CHILD dedup triples (T6 ruling: uniform
+    // suffixing `${caseId}:bill` / `${caseId}:payment`; multi-JE-aware
+    // so `posted` means "any child JE exists"). An approved case with
+    // a JE is the step-5/6 crash window awaiting its committed marking.
     const approvedIds = (rows ?? [])
       .filter((r) => r.state === 'approved')
       .map((r) => r.id as string);
     const postedSet = new Set<string>();
     if (approvedIds.length > 0) {
+      const childKeys = approvedIds.flatMap((id) => [
+        `${id}:bill`,
+        `${id}:payment`,
+      ]);
       const { data: jeRows, error: jeErr } = await db
         .from('journal_entries')
         .select('source_external_id')
         .eq('org_id', orgId)
         .eq('source_system', 'manual')
-        .in('source_external_id', approvedIds);
+        .in('source_external_id', childKeys);
       if (jeErr) {
         throw new ServiceError(
           'READ_FAILED',
@@ -89,7 +95,8 @@ export async function GET(
         );
       }
       for (const je of jeRows ?? []) {
-        if (je.source_external_id) postedSet.add(je.source_external_id as string);
+        const key = je.source_external_id as string | null;
+        if (key) postedSet.add(key.split(':')[0]!);
       }
     }
 

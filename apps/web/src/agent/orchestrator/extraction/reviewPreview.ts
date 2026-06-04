@@ -95,15 +95,19 @@ export interface ReviewPreview {
     | 'no_artifacts'
     | 'unknown_document_type'
     | 'attachment_kind_no_ledger_post'
+    | 'bundle_requires_manual_entry'
     | 'no_proposal'
     | 'missing_required_fields'
     | null;
-  /** The (org,'manual',case_id) probe — post-status visibility for the
-   *  approved-stranding window + T6's recovery lookup shape. */
-  posted_journal_entry: {
+  /** The per-child dedup-triple probe (T6 ruling: uniform suffixing —
+   *  `${caseId}:bill` / `${caseId}:payment`). Multi-JE-aware: a
+   *  born-paid bundle would carry two children; the probe returns ALL
+   *  child JEs so the recovery lookup is never single-row-blinded. */
+  posted_journal_entries: Array<{
     journal_entry_id: string;
     entry_number: number;
-  } | null;
+    source_external_id: string;
+  }>;
 }
 
 function tierAFieldsFor(
@@ -138,6 +142,17 @@ function postability(
     // review actions for this kind are the resolve/reject routes.
     return { postable: false, reason: 'attachment_kind_no_ledger_post' };
   }
+  if (proposal.kind === 'proposed_mutation_bundle') {
+    // Grounded at T6 onset: born-paid bundles are STRUCTURALLY
+    // UNREACHABLE under the Tier-A-only rebuild (the dual-evidence
+    // field set — vendor_invoice_number+amount AND payment evidence —
+    // only ever came from Tier-C extractions, and D-2 keeps AI off the
+    // review path). Defensive: if one ever materializes, it routes to
+    // manual entry rather than a partially-supported two-child post.
+    // Carry-forward: bundle-at-review posting returns with Tier-C-at-
+    // review or persisted proposals (post-V1).
+    return { postable: false, reason: 'bundle_requires_manual_entry' };
+  }
   const amount = typeof extracted.amount === 'string' ? extracted.amount : null;
   const date =
     typeof extracted.accounting_date === 'string'
@@ -148,10 +163,10 @@ function postability(
   if (!amount || !date) {
     return { postable: false, reason: 'missing_required_fields' };
   }
-  if (proposal.kind === 'proposed_entry_card' || proposal.kind === 'proposed_mutation_bundle') {
-    if (!vendorMatch?.vendor_id) {
-      return { postable: false, reason: 'missing_required_fields' };
-    }
+  // Only proposed_entry_card reaches here (attachment + bundle kinds
+  // early-return above). post_bill requires a matched vendor.
+  if (!vendorMatch?.vendor_id) {
+    return { postable: false, reason: 'missing_required_fields' };
   }
   return { postable: true, reason: null };
 }
@@ -284,14 +299,16 @@ export async function buildReviewPreview(
     artifact = (art as DocumentArtifactRow) ?? null;
   }
 
-  // Posted-JE probe by the dedup triple (T6's recovery lookup shape).
-  const { data: jeRow, error: jeErr } = await db
+  // Posted-JE probe by the PER-CHILD dedup triples (T6 ruling: uniform
+  // suffixing). Exact-match .in() on the known child keys — multi-JE-
+  // aware so a two-child bundle's recovery lookup sees both rows.
+  const childKeys = [`${caseRow.id}:bill`, `${caseRow.id}:payment`];
+  const { data: jeRows, error: jeErr } = await db
     .from('journal_entries')
-    .select('journal_entry_id, entry_number')
+    .select('journal_entry_id, entry_number, source_external_id')
     .eq('org_id', caseRow.org_id)
     .eq('source_system', 'manual')
-    .eq('source_external_id', caseRow.id)
-    .maybeSingle();
+    .in('source_external_id', childKeys);
   if (jeErr) {
     throw new ServiceError(
       'READ_FAILED',
@@ -321,12 +338,11 @@ export async function buildReviewPreview(
           created_at: exRow.created_at as string,
         }
       : null,
-    posted_journal_entry: jeRow
-      ? {
-          journal_entry_id: jeRow.journal_entry_id as string,
-          entry_number: jeRow.entry_number as number,
-        }
-      : null,
+    posted_journal_entries: (jeRows ?? []).map((je) => ({
+      journal_entry_id: je.journal_entry_id as string,
+      entry_number: je.entry_number as number,
+      source_external_id: je.source_external_id as string,
+    })),
   };
 
   // Degraded previews (honest, named): no artifacts → no rebuild;

@@ -319,7 +319,8 @@ describe('Wave 6 D3 T5: review inbox list', () => {
         reference: null,
         source: 'manual',
         source_system: 'manual',
-        source_external_id: approvedPosted.caseId,
+        // T6 uniform per-child suffixing: the bill child key.
+        source_external_id: `${approvedPosted.caseId}:bill`,
         entry_type: 'regular',
         created_by: SEED.USER_CONTROLLER,
       },
@@ -401,7 +402,7 @@ describe('Wave 6 D3 T5: preview rebuild (detail endpoint)', () => {
     expect(preview.vendor_match?.match_type).toBe('exact_name');
     expect(preview.postable).toBe(true);
     expect(preview.not_postable_reason).toBeNull();
-    expect(preview.posted_journal_entry).toBeNull();
+    expect(preview.posted_journal_entries).toEqual([]);
     expect(preview.candidates).toEqual([]);
   });
 

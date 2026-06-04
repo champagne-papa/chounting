@@ -859,7 +859,10 @@ async function commitProposedMutationBundle(
  * billService.post's evidence-completeness gate at billService.ts:285+
  * requires this OR override_evidence_completeness=true.
  */
-async function buildPostBillInput(
+// Wave 6 D3 T6: exported (additive named export, the extractVendorFields
+// precedent) — the approve→post route reuses the SAME input builder the
+// pipeline's preserved commit path uses; a copy would drift.
+export async function buildPostBillInput(
   card: Record<string, unknown>,
   input: IngestDocumentInput,
 ): Promise<PostBillInputRaw | null> {
@@ -979,7 +982,8 @@ async function buildPostBillInputFromChildMutation(
   };
 }
 
-async function buildRecordPaymentInput(
+// Wave 6 D3 T6: exported — same rationale as buildPostBillInput above.
+export async function buildRecordPaymentInput(
   card: Record<string, unknown>,
   input: IngestDocumentInput,
 ): Promise<RecordPaymentInputRaw | null> {
