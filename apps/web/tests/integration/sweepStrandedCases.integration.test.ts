@@ -25,6 +25,7 @@ import { attachDocumentCaseSource } from '@/services/document-platform/documentC
 import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
 import { SYSTEM_ACTOR_USER_ID } from '@/services/middleware/serviceContext';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
+import type { IngestDocumentOutput } from '@/agent/orchestrator/extraction/types';
 
 const db = adminClient();
 
@@ -502,5 +503,100 @@ describe('sweepStrandedCases — B2 candidate-bearing recovery', () => {
       bucket: 'anomaly',
       outcome: 'anomaly_open_exception_non_terminal',
     });
+  });
+});
+
+// =====================================================================
+// Describe 4 — B3/B4 via DI seam + B3-D execute
+// =====================================================================
+
+describe('sweepStrandedCases — B3 re-run dispatch, B4 failure, B3-D carve-out', () => {
+  it('B3: dispatches the injected runner with org/doc/fresh-trace and reports rerun_recovered', async () => {
+    const trace_id = crypto.randomUUID();
+    const { caseId, sourceDocId } = await seedStrandedCase(trace_id); // received, candidate-less, unique hash
+
+    const calls: Array<{ org_id: string; source_document_id: string; trace_id: string }> = [];
+    const report = await sweepStrandedCases(
+      { document_case_ids: [caseId], staleness_minutes: 0, execute: true },
+      {
+        runIngest: async (input): Promise<IngestDocumentOutput> => {
+          calls.push(input);
+          return {
+            status: 'parked_unposted',
+            pipeline_trace: [],
+            proposal_id: null,
+            failure_class: null,
+          };
+        },
+      },
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+    });
+    const c = report.cases.find((x) => x.document_case_id === caseId);
+    expect(c).toMatchObject({ bucket: 'B3', outcome: 'rerun_recovered' });
+    // The stub's trace must be the case's fresh per-case trace from the report.
+    expect(calls[0]!.trace_id).toBe(c!.trace_id);
+  });
+
+  it('B4: pipeline_failed is reported with failure_class and the case stays re-eligible', async () => {
+    const trace_id = crypto.randomUUID();
+    const { caseId } = await seedStrandedCase(trace_id);
+
+    const failingRunner = async (): Promise<IngestDocumentOutput> => ({
+      status: 'pipeline_failed' as const,
+      pipeline_trace: [],
+      proposal_id: null,
+      failure_class: 'transient_exhausted' as const,
+    });
+
+    const first = await sweepStrandedCases(
+      { document_case_ids: [caseId], staleness_minutes: 0, execute: true },
+      { runIngest: failingRunner },
+    );
+    const c1 = first.cases.find((x) => x.document_case_id === caseId);
+    expect(c1).toMatchObject({
+      bucket: 'B4',
+      outcome: 'pipeline_failed',
+      failure_class: 'transient_exhausted',
+    });
+    expect(await caseState(caseId)).toBe('received');
+
+    // Re-eligible: the next sweep buckets it B3 again.
+    const second = await sweepStrandedCases(
+      { document_case_ids: [caseId], staleness_minutes: 0 },
+    );
+    const c2 = second.cases.find((x) => x.document_case_id === caseId);
+    expect(c2).toMatchObject({ bucket: 'B3', outcome: 'bucketed_dry_run' });
+  });
+
+  it('B3-D execute: content-dup reports dedup_carveout, zero writes, runner NEVER invoked (no loop)', async () => {
+    const hash = randomHash();
+    await seedStrandedCase(crypto.randomUUID(), { content_hash: hash }); // the original
+    const dup = await seedStrandedCase(crypto.randomUUID(), { content_hash: hash });
+
+    let runnerInvoked = false;
+    const report = await sweepStrandedCases(
+      { document_case_ids: [dup.caseId], staleness_minutes: 0, execute: true },
+      {
+        runIngest: async (): Promise<IngestDocumentOutput> => {
+          runnerInvoked = true;
+          return {
+            status: 'dedup_short_circuit',
+            pipeline_trace: [],
+            proposal_id: null,
+            failure_class: null,
+          };
+        },
+      },
+    );
+
+    expect(runnerInvoked).toBe(false); // the pre-check catches it BEFORE the re-run
+    const c = report.cases.find((x) => x.document_case_id === dup.caseId);
+    expect(c).toMatchObject({ bucket: 'B3-D', outcome: 'dedup_carveout' });
+    expect(await caseState(dup.caseId)).toBe('received');
   });
 });
