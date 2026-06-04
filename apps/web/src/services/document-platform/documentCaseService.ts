@@ -259,8 +259,12 @@ export async function transition(
 // transition()).
 // ---------------------------------------------------------------------
 
-// The automation-owned slice of the ADR-0011 §3 matrix — EXACTLY the gap
-// transitions D2.1 fills (Wave 6 build plan §5, closure (A)).
+// The automation-owned slice of the ADR-0011 §3 matrix — the gap
+// transitions D2.1 fills (Wave 6 build plan §5, closure (A)) plus the
+// Wave 6 D3 T4 approved→committed terminal marking (ADR-0011 §3:
+// "automation (ledger commit succeeds)" — driven by the approve→post
+// route AFTER journalEntryService.post succeeds; the route is the sole
+// driver, single ownership preserved).
 // classified→{matched, needs_review} are deliberately ABSENT: Subsystem 2
 // (documentRouterService.resolveCandidates) owns that segment with its
 // rich decision-record audit (set_case_head_pointer_with_audit /
@@ -271,6 +275,7 @@ const AUTOMATION_ADVANCE_EDGES: ReadonlyMap<AllCaseStates, AllCaseStates> =
     ['received', 'extracting'],
     ['extracting', 'classified'],
     ['matched', 'needs_review'],
+    ['approved', 'committed'],
   ]);
 
 // Pipeline-forward order for idempotent re-run tolerance: a case at or
@@ -301,15 +306,27 @@ const PIPELINE_ORDER: Record<AllCaseStates, number> = {
  * directly, mirroring completeCandidate (documentRouterService.ts) —
  * invoked directly (NOT through withInvariants), so no role-based
  * authorization (Invariant 4) on this path; reads only union-common
- * fields (trace_id, caller.user_id). The system-actor authz story for
- * these STATE-MUTATING transitions: every edge this function can execute
- * is AUTOMATION_ONLY (the human boundary refuses them at transition()
- * Layer 3b), so the pipeline orchestrator running as a system actor is
- * the designed caller class; audit attribution uses actingUserId(ctx)
- * (ADR-0007 Q78 Path X — system actors write the joinable
- * service-account id, not null); org-scoping derives from the parent
- * document_cases row (audit org_id = the case's own org_id; the RPC
- * locks the row FOR UPDATE). See ADR-0007 §Tier 2.
+ * fields (trace_id, caller.user_id). The authz story for these
+ * STATE-MUTATING transitions: every edge this function can execute is
+ * AUTOMATION_ONLY (the human boundary refuses them at transition()
+ * Layer 3b). TWO designed caller classes (Wave 6 D3 T4 update — the
+ * original "system actor is the designed caller class" framing went
+ * stale when D3 added the second):
+ *   1. The pipeline orchestrator / sweep as a system actor
+ *      (received→extracting→classified, matched→needs_review) —
+ *      attribution via actingUserId(ctx) = the Path-X service-account
+ *      id (ADR-0007 Q78), not null.
+ *   2. The D3 approve→post route under the HUMAN reviewer's
+ *      ServiceContext (approved→committed, after
+ *      journalEntryService.post succeeds) — attribution =
+ *      the reviewer's user_id: honest causality, the reviewer's
+ *      approval caused the commit; the marking itself is mechanical
+ *      ("automation (ledger commit succeeds)", ADR-0011 §3), which is
+ *      why the edge stays AUTOMATION_ONLY at the transition() boundary
+ *      while the mechanism admits the human ctx.
+ * Org-scoping derives from the parent document_cases row (audit org_id
+ * = the case's own org_id; the RPC locks the row FOR UPDATE). See
+ * ADR-0007 §Tier 2 and the D3 brief D-3.3.
  */
 export async function advanceCaseAutomation(
   input: AdvanceCaseAutomationInputRaw,
@@ -370,7 +387,8 @@ export async function advanceCaseAutomation(
             `single ownership by construction`
           : `advanceCaseAutomation: no automation-owned path from ` +
             `${current.state} to ${target} (owned edges: ` +
-            `received→extracting→classified, matched→needs_review)`,
+            `received→extracting→classified, matched→needs_review, ` +
+            `approved→committed)`,
       );
     }
     // Defense in depth: every owned edge must also be matrix-legal.

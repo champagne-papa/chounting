@@ -239,3 +239,116 @@ describe('Wave 6 D2.1 T2 — advanceCaseAutomation (automation-side advance)', (
     ).rejects.toMatchObject({ code: 'READ_FAILED' });
   });
 });
+
+// =====================================================================
+// Wave 6 D3 T4 — the approved→committed edge (the post-success terminal
+// marking; ADR-0011 §3 "automation (ledger commit succeeds)"). Driven
+// by the D3 approve→post route under the HUMAN reviewer's ctx — the
+// second designed caller class (see the function docstring). Edge
+// added to AUTOMATION_ADVANCE_EDGES; schema target landed at T2.
+// =====================================================================
+
+describe('Wave 6 D3 T4 — approved→committed automation edge', () => {
+  async function hopDirect(
+    caseId: string,
+    target: string,
+    ctx: ServiceContext,
+  ): Promise<void> {
+    const { error } = await db.rpc('update_document_case_state_with_audit', {
+      p_case_id: caseId,
+      p_target_state: target,
+      p_audit: {
+        org_id: SEED.ORG_HOLDING,
+        user_id: ctx.caller.user_id,
+        trace_id: ctx.trace_id,
+        action: 'document_case_transitioned',
+        entity_type: 'document_case',
+        tool_name: null,
+        reason: null,
+      },
+    });
+    if (error) throw new Error(`hopDirect failed: ${error.message}`);
+  }
+
+  it('advances approved→committed under the HUMAN reviewer ctx with human-attributed audit', async () => {
+    const seedTrace = crypto.randomUUID();
+    const seedCtx = makeCtx(seedTrace);
+    const caseId = await seedCase(seedCtx);
+    await hopDirect(caseId, 'approved', seedCtx);
+
+    // The D3 caller shape: the approve→post route passes the human
+    // reviewer's ServiceContext (honest causality — the reviewer's
+    // approval caused the commit).
+    const trace_id = crypto.randomUUID();
+    const humanCtx = makeCtx(trace_id);
+    const result = await advanceCaseAutomation(
+      { document_case_id: caseId, target_state: 'committed' },
+      humanCtx,
+    );
+    expect(result.state).toBe('committed');
+
+    const rows = await auditRows(trace_id, caseId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.user_id).toBe(SEED.USER_CONTROLLER);
+  });
+
+  it('is an idempotent no-op at/past committed (re-entry tolerance)', async () => {
+    const seedTrace = crypto.randomUUID();
+    const seedCtx = makeCtx(seedTrace);
+    const caseId = await seedCase(seedCtx);
+    await hopDirect(caseId, 'approved', seedCtx);
+
+    const trace_id = crypto.randomUUID();
+    const humanCtx = makeCtx(trace_id);
+    await advanceCaseAutomation(
+      { document_case_id: caseId, target_state: 'committed' },
+      humanCtx,
+    );
+    const second = await advanceCaseAutomation(
+      { document_case_id: caseId, target_state: 'committed' },
+      humanCtx,
+    );
+    expect(second.state).toBe('committed');
+
+    // No second hop audited under this trace.
+    const rows = await auditRows(trace_id, caseId);
+    expect(rows).toHaveLength(1);
+  });
+
+  it('human transition() still cannot reach committed (Zod gates before the matrix)', async () => {
+    const seedTrace = crypto.randomUUID();
+    const seedCtx = makeCtx(seedTrace);
+    const caseId = await seedCase(seedCtx);
+    await hopDirect(caseId, 'approved', seedCtx);
+
+    // 'committed' is not a TransitionInputSchema variant — the human
+    // boundary rejects at Layer 2 (defense layering: Zod first; the
+    // AUTOMATION_ONLY matrix check is the next line behind it).
+    await expect(
+      transition(caseId, { target_state: 'committed' } as never, makeCtx(crypto.randomUUID())),
+    ).rejects.toMatchObject({ code: 'READ_FAILED' });
+    // State untouched.
+    const { data } = await db
+      .from('document_cases')
+      .select('state')
+      .eq('id', caseId)
+      .single();
+    expect(data!.state).toBe('approved');
+  });
+
+  it('no automation path from needs_review/proposed to committed (dead-end refusal names the owned edges)', async () => {
+    const seedTrace = crypto.randomUUID();
+    const seedCtx = makeCtx(seedTrace);
+    const caseId = await seedCase(seedCtx);
+    await hopDirect(caseId, 'needs_review', seedCtx);
+
+    // needs_review → committed has no automation-owned walk: the human
+    // hops (→proposed→approved) are transition()'s, by construction.
+    await expect(
+      advanceCaseAutomation(
+        { document_case_id: caseId, target_state: 'committed' },
+        makeSysCtx(crypto.randomUUID()),
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_TRANSITION' });
+  });
+});
