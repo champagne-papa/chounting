@@ -60,10 +60,21 @@ async function main(): Promise<void> {
   );
 
   const stalenessArg = arg('staleness-minutes');
+  const stalenessMinutes =
+    stalenessArg !== undefined ? Number(stalenessArg) : undefined;
+  if (stalenessMinutes !== undefined && !Number.isFinite(stalenessMinutes)) {
+    // Guard: Number('abc') → NaN would reach the module's cutoff
+    // arithmetic (NaN defeats the ?? default) and crash with an opaque
+    // RangeError. Fail with a usage message instead.
+    // eslint-disable-next-line no-console -- operator runner failure surface
+    console.error(
+      `invalid --staleness-minutes value: ${stalenessArg} (expected a number)`,
+    );
+    process.exit(1);
+  }
   const report = await sweepStrandedCases({
     org_id: arg('org-id'),
-    staleness_minutes:
-      stalenessArg !== undefined ? Number(stalenessArg) : undefined,
+    staleness_minutes: stalenessMinutes,
     execute: flag('execute'),
   });
 
