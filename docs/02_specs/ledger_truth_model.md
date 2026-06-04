@@ -2366,7 +2366,9 @@ invariant owns one property even when one code change serves two.
 **Scope — a prospective process guarantee, not a database-state
 assertion.** The guarantee covers pipeline runs from D2.1 onward: every
 run that reaches the Stage-6.5 decision routes its case to a terminal
-disposition, with the D2.3 sweep as the eventual-consistency backstop.
+disposition, with the D2.3 sweep (`sweepStrandedCases`,
+`apps/web/src/agent/orchestrator/maintenance/sweepStrandedCases.ts`,
+SHIPPED) as the eventual-consistency backstop.
 It is NOT "no case is ever observed in a non-terminal state": a
 Subsystem-3 re-evaluation (`dispatchTrigger` → `resolveCandidates`
 branch (a)) can transiently leave a case at `matched` with no hand-off —
@@ -2375,7 +2377,9 @@ a named carve-out: a duplicate document never reaches a content
 decision; its case remains `received`, distinguishable by the
 `dedup_short_circuit` status/trace and the hash match (the original
 case carries the workflow) — the D2.3 sweep classifies these, it does
-not route them.
+not route them (realized: the sweep's B3-D bucket reports
+`dedup_carveout` via the Stage-0 `dedupByHash` pre-check and never
+re-runs them).
 
 **Residual (named, not hidden).** Two classes (a third — the
 attachment-card class — was ELIMINATED at D2.1 T4: grounding showed the
@@ -2389,7 +2393,13 @@ total):
 1. **Pre-enforcement parked backlog (transitional).** Cases stranded
    before the routing landed — `received`-parked by the Wave -1
    bleed-stop, plus any pre-T4 attachment/unknown strandings (e.g. at
-   `matched`); retired by the D2.3 sweep.
+   `matched`); retirement mechanism SHIPPED at D2.3
+   (`sweepStrandedCases` + operator runner, dry-run default);
+   retirement completes at the one-time backlog-clearing run — the
+   flat "retired" wording lands in the follow-up doc-sync citing
+   that run's report. NOT flat-retired at the code commit: the sweep
+   is operator-run, and the backlog stays stranded on disk until it
+   executes.
 2. **Strandings.** Pre-decision pipeline failures leave the case at
    `received` (reported via `status='pipeline_failed'` + failure_class;
    recoverable by re-run); the post-hoc chain is 3–5 separate RPC
@@ -2419,7 +2429,10 @@ segment); the `enqueue_exception_with_audit` RPC guard (`state IN
 (9 tests: chain-advance, idempotency, hand-off, single-ownership
 refusal, system-actor attribution) + the D2.1 T4 end-to-end routing
 suite (matched→`needs_review`; unmatched→`needs_review` with exception
-row).
+row) +
+`apps/web/tests/integration/sweepStrandedCases.integration.test.ts`
+(the D2.3 backstop: bucketing, per-bucket recovery through the
+machinery, EXCEPTION_ALREADY_OPEN anomaly split, dry-run zero-writes).
 
 **Annotation site.** `INV-WORKFLOW-002` at the Stage-6.5 routing block
 in `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`,
