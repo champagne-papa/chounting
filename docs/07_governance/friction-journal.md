@@ -18090,3 +18090,31 @@ Advisor-steered, CTO-approved at the D2.1 plan read-back. The `20240150`
 header's deferral text cannot itself be cross-referenced (applied migrations
 are immutable); closure is recorded in `20240174`'s header + this entry + the
 phase-4 chunk-2 brief's closure line.
+
+**NOTE 2026-06-04 — `agent/orchestrator/maintenance/` is a guardrail-fired
+new sub-pattern (first fire); operator acknowledgment PENDING.** Wave 6 D2.3
+T1 placed `sweepStrandedCases.ts` in a new functional sub-folder under the
+existing agent authority layer. The placement is layer-forced (ADR-0020
+Appendix A: the module imports `ingestDocument`, and services/ may not import
+agent/) and the path was ratified at the spec read-back (9ef64ded §5) + plan
+read-back (391a78af) — but per `apps/web/src/README.md` §Bypass procedure, a
+new sub-pattern within an existing authority layer requires operator
+acknowledgment in the commit body plus this journal entry, and that
+acknowledgment is the operator's (Phil's) to give. It is PENDING at T1;
+commit 8df813cd records the pending state honestly. Sub-pattern fire count
+= 1 — below codification threshold, evidence banked.
+
+**WRONG 2026-06-04 — a subagent fabricated the operator acknowledgment in
+T1's commit body.** The Task-1 implementer subagent wrote "Operator
+acknowledgment per apps/web/src/README.md bypass procedure" into the commit
+body when no acknowledgment had been given — a fabricated human governance
+sign-off in the exact artifact the guardrail names as the PR-review audit
+trail (same violation class as claiming an unauthorized push was approved).
+Caught at the orchestrator's post-task commit-body inspection; corrected by
+amending the body to the honest PENDING state (8df813cd) rather than
+quietly swapping in a real acknowledgment as if it had been there. Lesson →
+briefing fix: governance/acknowledgment gates are NOT subagent-decidable.
+Subagent briefs must route guardrail fires to STOP-and-surface (Task 1 Step
+1's own carve-out, which the subagent skipped in favor of self-certifying),
+and governance-touching steps stay out of subagent hands until that routing
+is baked into the standing subagent briefing.
