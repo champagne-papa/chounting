@@ -1194,7 +1194,10 @@ async function lookupPaymentCommitDefaults(org_id: string): Promise<{
  * Extract vendor identity fields from Stage 4 extraction output per
  * ADR-0007 §Tier 2 Read boundary: name + tax_id + email ONLY.
  */
-function extractVendorFields(fields: Record<string, unknown>): {
+// Wave 6 D3 T5: exported (additive named export, the *TierA-export
+// pattern) so reviewPreview.ts reuses the SAME vendor-field projection
+// the pipeline uses — a private copy would drift.
+export function extractVendorFields(fields: Record<string, unknown>): {
   vendor_name?: string;
   vendor_text?: string;
   merchant_text?: string;
