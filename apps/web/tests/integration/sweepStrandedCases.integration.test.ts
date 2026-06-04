@@ -246,12 +246,13 @@ describe('sweepStrandedCases — B1 matched hand-off', () => {
 
     // Audit attribution: the sweep's per-case trace + Path-X service
     // account (ADR-0007 Q78 — system actors write the joinable id).
-    const { data: audit } = await db
+    const { data: audit, error: auditQueryErr } = await db
       .from('audit_log')
       .select('user_id, action')
       .eq('trace_id', c!.trace_id)
       .eq('entity_id', caseId)
       .eq('action', 'document_case_transitioned');
+    expect(auditQueryErr).toBeNull();
     expect(audit).toHaveLength(1);
     expect(audit![0]!.user_id).toBe(SYSTEM_ACTOR_USER_ID);
   });
@@ -417,11 +418,12 @@ describe('sweepStrandedCases — B2 candidate-bearing recovery', () => {
     expect(await caseState(caseId)).toBe('needs_review');
 
     // The decision is REAL: head pointer set by branch (a).
-    const { data: caseRow } = await db
+    const { data: caseRow, error: caseQueryErr } = await db
       .from('document_cases')
       .select('current_relationship_candidate_id')
       .eq('id', caseId)
       .single();
+    expect(caseQueryErr).toBeNull();
     expect(caseRow!.current_relationship_candidate_id).not.toBeNull();
   });
 
@@ -443,10 +445,11 @@ describe('sweepStrandedCases — B2 candidate-bearing recovery', () => {
     });
     expect(await caseState(caseId)).toBe('needs_review');
 
-    const { data: exRows } = await db
+    const { data: exRows, error: exQueryErr } = await db
       .from('exception_queue_entries')
       .select('exception_reason, exception_status')
       .eq('document_case_id', caseId);
+    expect(exQueryErr).toBeNull();
     expect(exRows).toHaveLength(1);
     expect(exRows![0]).toMatchObject({
       exception_reason: 'multi_candidate_ambiguity',
