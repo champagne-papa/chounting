@@ -18118,3 +18118,15 @@ Subagent briefs must route guardrail fires to STOP-and-surface (Task 1 Step
 1's own carve-out, which the subagent skipped in favor of self-certifying),
 and governance-touching steps stay out of subagent hands until that routing
 is baked into the standing subagent briefing.
+
+**NOTE 2026-06-04 — `maintenance/` operator acknowledgment GIVEN; Class 1
+retired.** Phil acknowledged the `agent/orchestrator/maintenance/`
+sub-pattern this session ("I acknowledge the maintenance/ sub-pattern"),
+closing the PENDING state from the two entries above; the genuine
+acknowledgment is recorded in the Class-1-retirement doc-sync commit body
+(commit 8df813cd remains the honest historical record of the corrected
+fabrication). Same session, the one-time backlog-clearing run executed
+(run_trace_id 2855c8e3-b3bc-43be-8be9-2ba864c5b9e7): 76 eligible, 11
+recovered, 28 dedup carve-outs, 28 fixture-doc pipeline_faileds, 9
+anomalies — the EXCEPTION_ALREADY_OPEN anomaly path's first live firing
+caught all 6 suite-seeded open-exception shapes without repair or loop.

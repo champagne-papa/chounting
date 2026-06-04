@@ -2390,16 +2390,25 @@ unknown-type exit routes via `enqueueException('unknown_document_type')`,
 realizing the ADR-0014 §7 contract; every mainline decision route is
 total):
 
-1. **Pre-enforcement parked backlog (transitional).** Cases stranded
-   before the routing landed — `received`-parked by the Wave -1
-   bleed-stop, plus any pre-T4 attachment/unknown strandings (e.g. at
-   `matched`); retirement mechanism SHIPPED at D2.3
-   (`sweepStrandedCases` + operator runner, dry-run default);
-   retirement completes at the one-time backlog-clearing run — the
-   flat "retired" wording lands in the follow-up doc-sync citing
-   that run's report. NOT flat-retired at the code commit: the sweep
-   is operator-run, and the backlog stays stranded on disk until it
-   executes.
+1. **Pre-enforcement parked backlog (transitional) — RETIRED
+   2026-06-04.** Cases stranded before the routing landed —
+   `received`-parked by the Wave -1 bleed-stop, plus any pre-T4
+   attachment/unknown strandings (e.g. at `matched`). Retirement
+   mechanism shipped at D2.3 (`sweepStrandedCases` + operator
+   runner); the one-time backlog-clearing run executed 2026-06-04
+   against the operative (local) environment, operator-acknowledged
+   (run_trace_id `2855c8e3-b3bc-43be-8be9-2ba864c5b9e7`): 76
+   eligible swept to honest dispositions — 11 matched-strandings
+   recovered via the hand-off (durable: post-run dry-run shows B1=0),
+   28 classified as dedup carve-outs (remain `received` by design),
+   28 reported `pipeline_failed`/`transient_exhausted` (local
+   test-fixture docs with no stored bytes; re-eligible and
+   re-reported each run), 9 anomalies reported (3 `no_job_row`
+   early fixtures, 6 suite-seeded open-exception shapes — the
+   EXCEPTION_ALREADY_OPEN anomaly path's first live firing). No
+   pre-enforcement case remains unswept; every remaining
+   non-terminal case sits in a named, reported class. Per-action
+   audit rows are queryable by the run report's per-case trace_ids.
 2. **Strandings.** Pre-decision pipeline failures leave the case at
    `received` (reported via `status='pipeline_failed'` + failure_class;
    recoverable by re-run); the post-hoc chain is 3–5 separate RPC
