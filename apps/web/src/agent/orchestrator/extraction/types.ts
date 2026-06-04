@@ -61,17 +61,26 @@ export interface IngestDocumentInput {
  */
 export interface IngestDocumentOutput {
   status:
+    /** V1-UNREACHABLE since Wave 6 D2.1 T4: the attachment and unknown
+     *  exits (the last V1 emitters) reconciled to 'parked_unposted'.
+     *  'committed' is reserved for the post-V1 governed auto-commit
+     *  re-wire — its appearance at V1 is a bleed-stop-regression signal
+     *  (the hotfix-spec §5 flipped-assertion logic, now total). */
     | 'committed'
     | 'dedup_short_circuit'
     | 'pipeline_failed'
     /** Wave -1 A-now bleed-stop (ADR-0007 §Tier 2 "V1 re-scoping of the Q78
-     *  auto-commit exercise", ratified 2026-05-31). A matched
-     *  proposed_entry_card / proposed_mutation_bundle was built but deliberately
-     *  NOT posted — the ungoverned auto-commit is disabled. No ledger write;
-     *  proposal_id is null; the document_case stays state='received' (parked).
-     *  Governed auto-commit returns per-rule post-V1 (rung + confidence + eval +
-     *  real coding), re-wiring the commit composite to the preserved commit*
-     *  functions. See docs/09_briefs/v1/2026-05-31-a-now-hotfix-change-spec.md. */
+     *  auto-commit exercise", ratified 2026-05-31). A proposal was built but
+     *  deliberately NOT posted — the ungoverned auto-commit is disabled. No
+     *  ledger write; proposal_id is null. Since Wave 6 D2.1 the document_case
+     *  no longer stays at received: it routes to needs_review (the terminal
+     *  hand-off — INV-WORKFLOW-002) via the Stage-6.5 advancement + the
+     *  matched→needs_review hand-offs; the unknown-type park routes via
+     *  enqueueException('unknown_document_type'). Emitted by the entry-card,
+     *  bundle, attachment, and unknown exits. Governed auto-commit returns
+     *  per-rule post-V1 (rung + confidence + eval + real coding), re-wiring
+     *  the commit composite to the preserved commit* functions. See
+     *  docs/09_briefs/v1/2026-05-31-a-now-hotfix-change-spec.md. */
     | 'parked_unposted'
     /** @deprecated chunk 7.3b activation made this status defined-but-not-emitted
      *  per ADR-0022 additive discipline; future cleanup post-Phase-7. */

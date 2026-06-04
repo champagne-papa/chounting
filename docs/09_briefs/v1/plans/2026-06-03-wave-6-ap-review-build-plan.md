@@ -1,11 +1,14 @@
 # Wave 6 — AP Review (V1 ships) — build plan
 
 **Status:** D1 **CLOSED** (T1–T5 shipped `98fe5be0..a776ab2a`; Condition-1
-full-suite sweep 1651/0/10 green, +19 = D1 T4 exactly); D2.1 **LOCKED**
-(advisor-cleared — see §5); D2.3 (sweep) + D3–D8 **scoped** (each surfaces
-its own chunk detail + read-back before build). Plan only; no
-implementation, commit, or push is authorized by this document beyond
-what a per-chunk read-back has cleared.
+full-suite sweep 1651/0/10 green, +19 = D1 T4 exactly); D2.1 **CLOSED**
+(T1 `f5621cc2` · T2 `91583a39` · T3 `49179fba` · T4 = the commit carrying
+this flip; Condition-1 sweep **1665/0/10** green ×2, delta = T2's 9 + T4's
+5 exactly; INV-WORKFLOW-002 registered; attachment + unknown exits routed
+at T4 — `'committed'` is V1-unreachable, reserved post-V1); D2.3 (sweep) +
+D3–D8 **scoped** (each surfaces its own chunk detail + read-back before
+build). Plan only; no implementation, commit, or push is authorized by
+this document beyond what a per-chunk read-back has cleared.
 **Anchored at:** HEAD `e571ceb5` (= `origin/staging`, branch `staging`).
 **Wave:** 6 of the V1 wave plan
 (`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md` §5).
@@ -265,6 +268,14 @@ candidates but NO persisted proposal (`parked_unposted` returns
    persists until its carry-forward closes; the D2.3 sweep distinguishes
    committed+linked-state-lagged from true orphans. Carry-forward, not
    absorbed (ratified-contract-scope discipline).
+   **[SUPERSEDED at the T4 read-back:** grounding showed the premise false
+   — the attach card is built-and-discarded at V1 (not committed+linked),
+   and branch-(a) mainline cases were stranding at `matched` through the
+   attachment exit. Ratified: the attachment exit takes the hand-off, the
+   unknown exit routes via `enqueueException('unknown_document_type')`
+   (the ADR-0014 §7 contract realized), and both statuses reconcile to
+   `parked_unposted` ('committed' = post-V1 reserved). Leaf residual (i)
+   eliminated; dedup short-circuit named as a scope carve-out.**]**
 3. **Prospective property-scoping (registration honest on day one):**
    `INV-WORKFLOW-002` registers as a prospective process guarantee with
    three named residual classes — (i) attachment-card, (ii) pre-D2.1

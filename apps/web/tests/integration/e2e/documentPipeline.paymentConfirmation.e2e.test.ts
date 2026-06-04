@@ -41,11 +41,11 @@ describe.skipIf(!RUN_E2E)(
   'Phase 8 chunk 6 — payment_confirmation end-to-end (deployed Modal sidecar)',
   () => {
     it(
-      'payment_confirmation (unseeded, no cited bill): full Stage 0-7 traversal → committed, no ledger mutation (proposal_id=null)',
+      'payment_confirmation (unseeded, no cited bill): full Stage 0-7 traversal → parked for review, no ledger mutation (proposal_id=null)',
       async () => {
         const { output } = await runIngestPipeline('payment_confirmation.pdf');
 
-        expect(output.status).toBe('committed');
+        expect(output.status).toBe('parked_unposted'); // Wave 6 D2.1 T4 status reconciliation ('committed' reserved post-V1)
         expect(output.failure_class).toBeNull();
 
         const stages = output.pipeline_trace.map((s) => s.stage_name);
@@ -57,7 +57,7 @@ describe.skipIf(!RUN_E2E)(
         expect(stages[stages.length - 1]).toBe('build_proposal');
         expect(stages.length).toBeGreaterThanOrEqual(9);
 
-        // No cited bill / matched candidate → no payment recorded → committed
+        // No cited bill / matched candidate → no payment recorded → parked for review
         // with no ledger mutation.
         expect(output.proposal_id).toBeNull();
       },
@@ -90,7 +90,7 @@ describe.skipIf(!RUN_E2E)(
         });
         try {
           const { output } = await runIngestPipeline('payment_confirmation.pdf');
-          expect(output.status).toBe('committed');
+          expect(output.status).toBe('parked_unposted'); // Wave 6 D2.1 T4 status reconciliation ('committed' reserved post-V1)
           expect(output.failure_class).toBeNull();
           // Auto-commit: a real payment is recorded → proposal_id = payment_id,
           // attributed to the pipeline service account (ADR-0007 Q78 Path X).
@@ -128,7 +128,7 @@ describe.skipIf(!RUN_E2E)(
         await seedPayment({ vendor_id: vendorId });
         try {
           const { output } = await runIngestPipeline('payment_no_cited_bill.pdf');
-          expect(output.status).toBe('committed');
+          expect(output.status).toBe('parked_unposted'); // Wave 6 D2.1 T4 status reconciliation ('committed' reserved post-V1)
           expect(output.failure_class).toBeNull();
           expect(output.proposal_id).toBeNull();
         } finally {
@@ -154,7 +154,7 @@ describe.skipIf(!RUN_E2E)(
         const vendorId = await seedVendor();
         try {
           const { output } = await runIngestPipeline('born_paid_invoice.pdf');
-          expect(output.status).toBe('committed');
+          expect(output.status).toBe('parked_unposted'); // Wave 6 D2.1 T4 status reconciliation ('committed' reserved post-V1)
           expect(output.failure_class).toBeNull();
           expect(output.proposal_id).not.toBeNull();
           const bills = await getBillsByVendor(vendorId);

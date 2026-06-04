@@ -128,9 +128,10 @@ describe.skipIf(!SHOULD_RUN_E2E)(
         trace_id,
       });
 
-      // Real Modal sidecar should produce a 'committed' status with
-      // engine='paddleocr' artifact + pipeline_trace populated.
-      expect(result.status).toBe('committed');
+      // Real Modal sidecar run completes the pipeline; since Wave 6 D2.1
+      // T4 every non-failure exit parks-for-review ('committed' is
+      // V1-unreachable — reserved for the post-V1 governed re-wire).
+      expect(result.status).toBe('parked_unposted');
       expect(result.pipeline_trace.length).toBeGreaterThanOrEqual(8);
 
       // Verify document_artifacts row persisted with paddleocr engine.

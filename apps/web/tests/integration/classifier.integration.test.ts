@@ -298,7 +298,9 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Wave 6 D2.1 T4: the unknown route now parks-for-review (the ADR-0014
+    // §7 exception-queue contract realized; status reconciled).
+    expect(result.status).toBe('parked_unposted');
     // Tier D fallthrough: classification.documentType should be 'unknown'.
     // The orchestrator's result.proposal_id is null at chunk 7.2; we
     // verify the audit events landed.
@@ -350,7 +352,9 @@ describe('Phase 7 chunk 7.2 Task 7.2.13 — classifier integration (Stage 3 end-
       trace_id,
     });
 
-    expect(result.status).toBe('committed');
+    // Wave 6 D2.1 T4: below-threshold classification falls to unknown →
+    // parks-for-review (status reconciled).
+    expect(result.status).toBe('parked_unposted');
 
     // Verify extraction_failed with failure_reason=confidence_below_threshold.
     const { data: auditRows, error } = await db

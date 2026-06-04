@@ -36,11 +36,13 @@ describe.skipIf(!RUN_E2E)(
   'Phase 8 chunk 6 — receipt end-to-end (deployed Modal sidecar)',
   () => {
     it(
-      'receipt (unseeded, no matched candidate): full Stage 0-7 traversal → committed, no ledger mutation (proposal_id=null)',
+      'receipt (unseeded, no matched candidate): full Stage 0-7 traversal → parked for review, no ledger mutation (proposal_id=null)',
       async () => {
         const { output } = await runIngestPipeline('receipt.pdf');
 
-        expect(output.status).toBe('committed');
+        // Wave 6 D2.1 T4 status reconciliation: every non-failure V1 exit
+        // parks-for-review; 'committed' is reserved post-V1.
+        expect(output.status).toBe('parked_unposted');
         expect(output.failure_class).toBeNull();
 
         const stages = output.pipeline_trace.map((s) => s.stage_name);

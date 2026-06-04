@@ -2370,19 +2370,27 @@ disposition, with the D2.3 sweep as the eventual-consistency backstop.
 It is NOT "no case is ever observed in a non-terminal state": a
 Subsystem-3 re-evaluation (`dispatchTrigger` → `resolveCandidates`
 branch (a)) can transiently leave a case at `matched` with no hand-off —
-sweep-backstopped, not a violation.
+sweep-backstopped, not a violation. Dedup short-circuits (Stage 0) are
+a named carve-out: a duplicate document never reaches a content
+decision; its case remains `received`, distinguishable by the
+`dedup_short_circuit` status/trace and the hash match (the original
+case carries the workflow) — the D2.3 sweep classifies these, it does
+not route them.
 
-**Residual (named, not hidden).** Three classes:
+**Residual (named, not hidden).** Two classes (a third — the
+attachment-card class — was ELIMINATED at D2.1 T4: grounding showed the
+attach proposal is built-and-discarded at V1, neither persisted nor
+surfaced, i.e. a pending proposal — so the attachment exit takes the
+same `matched→needs_review` hand-off as the park exits, and the
+unknown-type exit routes via `enqueueException('unknown_document_type')`,
+realizing the ADR-0014 §7 contract; every mainline decision route is
+total):
 
-1. **Attachment-card class (ADR-0011 §11).** The non-ledger attachment
-   auto-commit path leaves its case at `received` by design — the
-   attachment outcome is committed+linked; only the case state lags.
-   Persists until its carry-forward closes; the D2.3 sweep distinguishes
-   committed+linked-state-lagged cases from true orphans.
-2. **Pre-D2.1 parked backlog (transitional).** Cases parked at
-   `received` by the Wave -1 bleed-stop before this routing landed;
-   retired by the D2.3 sweep.
-3. **Strandings.** Pre-decision pipeline failures leave the case at
+1. **Pre-enforcement parked backlog (transitional).** Cases stranded
+   before the routing landed — `received`-parked by the Wave -1
+   bleed-stop, plus any pre-T4 attachment/unknown strandings (e.g. at
+   `matched`); retired by the D2.3 sweep.
+2. **Strandings.** Pre-decision pipeline failures leave the case at
    `received` (reported via `status='pipeline_failed'` + failure_class;
    recoverable by re-run); the post-hoc chain is 3–5 separate RPC
    transactions, so a mid-chain crash can strand a case at ANY

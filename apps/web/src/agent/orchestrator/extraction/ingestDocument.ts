@@ -59,6 +59,7 @@ import {
   resolveCandidates,
 } from '@/services/document-platform/documentRouterService';
 import { advanceCaseAutomation } from '@/services/document-platform/documentCaseService';
+import { enqueueException } from '@/services/document-platform/documentExceptionService';
 import { adminClient } from '@/db/adminClient';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { billService } from '@/services/spend/billService';
@@ -204,13 +205,44 @@ export async function ingestDocument(
 
   // Short-circuit on documentType='unknown' per ADR-0014 §7 ("unknown
   // always exception queue"). Stage 3 classifier already emitted
-  // extraction_failed audit events via aiFallback.ts; routing to
-  // exception queue is the v1 contract. No value in Stages 4-7 for
-  // unknown documents — return 'committed' (pipeline completed; result
-  // discriminator is the absent proposal_id + ai_fallback_invoked).
+  // extraction_failed audit events via aiFallback.ts. Wave 6 D2.1 T4:
+  // the §7 contract is now REALIZED — the case advances and routes to
+  // needs_review via enqueueException('unknown_document_type', the
+  // ratified v1 consumer), closing the unknown-route silent drop
+  // (INV-WORKFLOW-002; pre-T4 this returned 'committed' with the case
+  // stranded at received while the comment asserted the contract).
+  // EXCEPTION_ALREADY_OPEN is re-run tolerance (one open exception per
+  // case; the case is already routed). No value in Stages 4-7 for
+  // unknown documents.
   if (classification.result.documentType === 'unknown') {
+    const unknownCaseId = await lookupDocumentCaseId(input.source_document_id);
+    if (unknownCaseId) {
+      try {
+        await advanceCaseAutomation(
+          { document_case_id: unknownCaseId, target_state: 'classified' },
+          ctx,
+        );
+        await enqueueException(
+          {
+            document_case_id: unknownCaseId,
+            trace_id: input.trace_id,
+            exception_reason: 'unknown_document_type',
+          },
+          ctx,
+        );
+      } catch (err) {
+        if (!(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')) {
+          return {
+            status: 'pipeline_failed',
+            pipeline_trace,
+            proposal_id: null,
+            failure_class: classifyFailure(err),
+          };
+        }
+      }
+    }
     return {
-      status: 'committed',
+      status: 'parked_unposted',
       pipeline_trace,
       proposal_id: null,
       failure_class: null,
@@ -585,16 +617,34 @@ export async function ingestDocument(
   }
 
   if (proposal.kind === 'proposed_attachment_card') {
-    // Non-ledger commit per ADR-0011 §11: ProposedAttachment is emitted
-    // via canvasDirective at the consumer boundary (orchestrator →
-    // respondToUser tool boundary; not a withInvariants() invocation).
-    // Chunk 7.3b orchestrator returns committed with proposal_id=null;
-    // the proposal payload is structurally available in the
-    // ProposalResult shape but is not yet surfaced via
-    // IngestDocumentOutput (consumer-side surfacing is outside chunk
-    // 7.3b scope).
+    // Non-ledger attach proposal per ADR-0011 §11. At V1 the card is
+    // built but neither persisted nor surfaced (payload "structurally
+    // available… not yet surfaced via IngestDocumentOutput"), so nothing
+    // commits here — it is a pending attach-proposal. Wave 6 D2.1 T4:
+    // the case takes the same matched→needs_review hand-off as the park
+    // branches (INV-5: everything reviews at V1; the attach proposal is
+    // confirmed at the D3 review surface — pre-T4 this exit had NO
+    // hand-off and stranded branch-(a) cases at matched), and the status
+    // is reconciled to 'parked_unposted'. 'committed' is reserved for
+    // the post-V1 governed auto-commit re-wire; its appearance at V1 is
+    // a bleed-stop-regression signal.
+    if (documentCaseId) {
+      try {
+        await advanceCaseAutomation(
+          { document_case_id: documentCaseId, target_state: 'needs_review' },
+          ctx,
+        );
+      } catch (err) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
     return {
-      status: 'committed',
+      status: 'parked_unposted',
       pipeline_trace,
       proposal_id: null,
       failure_class: null,
