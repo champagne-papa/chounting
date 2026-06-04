@@ -179,6 +179,23 @@ export async function transition(
   // Read current state.
   const current = await readDocumentCase(caseId, ctx);
 
+  // Wave 6 D3 T3 — in-service org verification (IDOR; brief D-1.1).
+  // Derives org from the READ ROW — never a caller-supplied org_id (no
+  // input field to forge; withInvariants Invariant 3 cannot cover this
+  // boundary because TransitionInput carries no org_id). Lands after
+  // the read, BEFORE any state change. Supersedes D2.1 §5(A)'s
+  // "transition() stays byte-untouched" with provenance: §5(A) was
+  // ratified when transition() had zero callers (the org-blind read
+  // was unexposed); D3's review routes are the first exposer.
+  // System actors never call transition() (they use
+  // advanceCaseAutomation), so this binds exactly the human boundary.
+  if (!ctx.caller.org_ids?.includes(current.org_id)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `Caller does not have access to org_id=${current.org_id}`,
+    );
+  }
+
   // Layer 3a: matrix legality check.
   const legalTargets = LEGAL_TRANSITIONS[current.state] ?? [];
   if (!legalTargets.includes(parsed.target_state)) {

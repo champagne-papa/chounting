@@ -143,6 +143,38 @@ export async function resolveException(
 
   const db = adminClient();
 
+  // Wave 6 D3 T3 — in-service org verification (IDOR; brief D-1.1a).
+  // resolveException previously fired the MUTATING RPC directly with
+  // the caller-supplied entry id (org-blind — the same class as
+  // transition(), but with the write before any read). The org check
+  // requires a pre-RPC read: fetch the entry's org_id and verify it
+  // against ctx.caller.org_ids — org derived from the read row, never
+  // from caller input. Same-org callers proceed; the RPC remains the
+  // atomicity boundary.
+  const { data: orgProbe, error: orgProbeErr } = await db
+    .from('exception_queue_entries')
+    .select('org_id')
+    .eq('exception_queue_entry_id', parsed.exception_queue_entry_id)
+    .maybeSingle();
+  if (orgProbeErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `resolveException org probe failed: ${orgProbeErr.message}`,
+    );
+  }
+  if (!orgProbe) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `resolveException: exception_queue_entry ${parsed.exception_queue_entry_id} not found`,
+    );
+  }
+  if (!ctx.caller.org_ids?.includes(orgProbe.org_id as string)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `Caller does not have access to org_id=${orgProbe.org_id}`,
+    );
+  }
+
   // RPC call: atomic UPDATE queue entry + UPDATE document_case
   // (terminal state per 9-action mapping) + INSERT audit_log.
   const { error } = await db.rpc('resolve_exception_with_audit', {
