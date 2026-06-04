@@ -579,14 +579,22 @@ describe('exception_queue_entries direct-org_id RLS + RPC atomicity + chunk-6 CH
       .eq('id', created.id);
     expect(extractingErr).toBeNull();
 
-    // Still-reserved-at-Layer-1 states (committed, archived) remain
-    // CHECK-rejected post-chunk-8. Pick a still-reserved state for the
-    // rejection assertion to keep the test forward-compat across future
-    // broadening events (this test's original discipline — re-picked at
-    // Wave 6 D2.1 exactly as prescribed).
-    const { error: reservedErr } = await db
+    // 'committed' was admitted by the Wave-6-D3-T1 chunk-9 broaden
+    // (human approve→post terminal marking). Assert the positive side:
+    const { error: committedErr } = await db
       .from('document_cases')
       .update({ state: 'committed' })
+      .eq('id', created.id);
+    expect(committedErr).toBeNull();
+
+    // The sole still-reserved-at-Layer-1 state (archived) remains
+    // CHECK-rejected post-chunk-9. Pick a still-reserved state for the
+    // rejection assertion to keep the test forward-compat across future
+    // broadening events (this test's original discipline — re-picked at
+    // Wave 6 D2.1 and again at Wave 6 D3 T1 exactly as prescribed).
+    const { error: reservedErr } = await db
+      .from('document_cases')
+      .update({ state: 'archived' })
       .eq('id', created.id);
     expect(reservedErr).not.toBeNull();
     expect(reservedErr!.message).toMatch(/document_cases_state_chunk_\d+_active/);
