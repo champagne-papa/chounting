@@ -66,7 +66,6 @@ async function main(): Promise<void> {
     // Guard: Number('abc') → NaN would reach the module's cutoff
     // arithmetic (NaN defeats the ?? default) and crash with an opaque
     // RangeError. Fail with a usage message instead.
-    // eslint-disable-next-line no-console -- operator runner failure surface
     console.error(
       `invalid --staleness-minutes value: ${stalenessArg} (expected a number)`,
     );
@@ -78,10 +77,8 @@ async function main(): Promise<void> {
     execute: flag('execute'),
   });
 
-  // eslint-disable-next-line no-console -- operator runner output surface
   console.log(JSON.stringify(report, null, 2));
   if (report.dry_run) {
-    // eslint-disable-next-line no-console -- operator runner output surface
     console.log(
       `\nDRY RUN — no writes performed. B3 count (${report.counts.B3}) is the re-run OCR/Claude spend. Re-invoke with --execute to act.`,
     );
@@ -89,7 +86,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console -- operator runner failure surface
   console.error('sweep-stranded-cases failed:', err);
   process.exit(1);
 });
