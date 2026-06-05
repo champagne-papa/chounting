@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0011", "0013", "0016", "0020", "0024", "0028"]
-invariants: []
+invariants: ["INV-EVIDENCE-001"]
 ---
 
 # ADR-0033: Canonical Evidence Object Model
@@ -26,6 +26,14 @@ ratification package:
 Substrate-reserve ADR. Reserves a net-new, general, by-reference canonical evidence object and the
 `core/evidence` + `services/evidence` homes. Ships no migration in the ratification act (the Wave-2
 build follows). Registers no invariant; touches no live gate.
+
+**Amended 2026-06-05** (Wave 6 D5) to add INV-EVIDENCE-001 to the frontmatter `invariants:` field,
+following its registration in `invariants.md` (row 27) when the D5 producer landed the enforcement
+(persist-before-marking seam + the `evidence_objects_subject_unique` Layer-1 constraint, migration
+`20240177`). INV-EVIDENCE-001 was named-reserved at D-0033.4/.8; the frontmatter was `[]` at
+ratification (register-on-enforcement, ADR-0021 — the enforcement did not yet exist in code) and now
+reflects the registered invariant. See the `## Amendment 2026-06-05` block for the D-0033.7
+realization record.
 
 ## Date
 
@@ -146,6 +154,66 @@ enforcement). INV-DOC-001 remains the live, registered bill-evidence invariant �
   adjacent gate for an unfinalized generalization; enforcement belongs at Wave 6.
 - **Register INV-EVIDENCE-001 now.** Rejected — register-on-enforcement (ADR-0021); read/assemble
   enforces nothing at Wave 2.
+
+## Amendment 2026-06-05 — Wave 6 D5: persistence + subject↔trace final shape (D-0033.7 realized)
+
+### Triggered by
+
+Wave 6 D5 (the build plan §3 row: "Evidence-object persistence + subject↔trace tightening
+(`evidenceObjectService`)"; brief `eeb9a9ed`; implementation `d5041449` (T1 substrate) +
+`077be5cb` (T2 producer); registration `9510173d` (T3)). D-0033.7 deferred "Enforcement
+(`INV-EVIDENCE-001` with teeth; persistence; the row-producer; the object *required* for commit)"
+to Wave 6 — this amendment records the realized shape.
+
+### Scope
+
+Records the final persistence, subject↔trace, and enforcement shape D-0033.7 deferred. Everything
+else stays preserved: D-0033.1–.8 are untouched as ratified; the live INV-DOC-001 gate stays
+exactly as-is (D-0033.3 — `billService.post` untouched per design-spec OQ-2's binding "never
+`billService.post`"); the Logic-Receipt facet stays by-reference (D-0033.5/ADR-0035); the
+`glossary.md` "empty reserved directories" reconciliation sentence inside D-0033.7 is **not**
+touched here (D8's, per the Wave-6 build plan). This amendment does NOT add completeness
+enforcement (descriptive at V1 — OQ-6 disposed), does NOT backfill pre-D5 commits (the D-0033.3
+dodge holds), and does NOT allocate `INV-EVIDENCE-002` (stays reserved).
+
+### Decision items (numbered, forward-only)
+
+1. **The row-producer is the review route's persist-before-marking seam, not a service-buried
+   write.** `evidenceObjectService.persist` (org-scoped subject-ownership guard — foreign ≡
+   missing — then assemble, then idempotent upsert) runs in the approve→post route after the
+   ledger write and before `advanceCaseAutomation('committed')`. A persist failure fails the
+   request; the case holds at `approved` (operator-visible, resumable); the ledger write is never
+   rolled back.
+2. **Subject↔trace final shape.** One canonical object per subject: `UNIQUE (org_id, subject_type,
+   subject_id)` (`evidence_objects_subject_unique`, migration `20240177`; the redundant non-unique
+   subject index dropped). The row's `trace_id` anchors to the **successful-commit request's**
+   trace (a crash-resume re-persist refreshes it; the original attempt stays recoverable from
+   `audit_log`; ingest-era traces stay reachable through the assembled facets). `created_by` is
+   INSERT-only. Status maps transient completeness `'complete'`→`complete`, else `partial` (the
+   transient `'empty'` collapses at the row grain). The status CHECK broadened additively
+   (`evidence_objects_status_v1_active` → `evidence_objects_status_wave_6_active`).
+3. **Enforcement realization.** `INV-EVIDENCE-001` registered at Wave 6 D5 T3 (`invariants.md`
+   row 27 + `control_matrix.md` + the `ledger_truth_model.md` leaf), claiming only what is
+   enforced: the Layer-1 uniqueness half + the runtime/structural persist-before-marking half
+   (sole-commit-path enumeration recorded at registration; residuals named). "The object
+   *required* for commit" is realized as commit-marking-requires-persist; "complete evidence
+   bundle" narrows to structural production + uniqueness, with completeness enforcement a named
+   post-V1 evolution.
+4. **Crash-class-X disposition.** A recovered JE whose posting entity never landed
+   (`billService.post`'s non-atomic JE→bill window; unrepairable by retry) refuses with the typed,
+   non-retryable `POSTING_RECOVERY_UNREPAIRABLE` (409) and holds at `approved` — a manual-repair
+   class, never a committed state. This closes the JE/subledger gap the D3 23505-recovery
+   ratification silently admitted; the JE→bill non-atomicity root cause (make the bill commit one
+   transaction) is carried as the post-V1 fix.
+
+### Cross-references
+
+- `docs/02_specs/invariants.md` row 27; `docs/02_specs/ledger_truth_model.md`
+  §INV-EVIDENCE-001 (the leaf — scope, residuals, enumeration);
+  `docs/06_audit/control_matrix.md` §INV-EVIDENCE-001.
+- `supabase/migrations/20240177000000_wave_6_d5_evidence_objects_persistence_substrate.sql`.
+- `docs/09_briefs/v1/plans/2026-06-05-wave-6-d5-evidence-persistence-brief.md` (D-1…D-8) +
+  `2026-06-05-wave-6-d5-task-decomposition.md`.
 
 ## Cross-references
 

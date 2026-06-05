@@ -345,6 +345,10 @@ and the Status-line clause-accumulation pattern.
 > without frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-invariant -->
+### INV-EVIDENCE-001
+
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
+
 ### INV-RULE-001
 
 - [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
