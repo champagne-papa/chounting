@@ -9,7 +9,10 @@ import { describe, it, expect } from 'vitest';
 import {
   INTENT_PRODUCERS,
   intentsLackingNonAiProducer,
+  V1_TEETH_SCOPE_OUT,
+  runCheck,
   type IntentKey,
+  type IntentProducer,
 } from '@/core/intent/producers';
 
 describe('ADR-0031 intent producer registry', () => {
@@ -68,5 +71,63 @@ describe('ADR-0031 intent producer registry', () => {
       ],
     };
     expect(intentsLackingNonAiProducer(synthetic)).toEqual(['mutation:test.aiOnly']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Wave 6 D6 T1 — INV-WORKFLOW-001 teeth + the Q2 query scope-out (brief
+// D-1/D-2/D-3; decomposition T1). The pure check core (runCheck) lives in
+// producers.ts beside intentsLackingNonAiProducer — the in-file precedent —
+// so no cross-root import and no script import-side-effect exists (the
+// decomposition ask-(b) gotcha dissolved by placement; the script keeps its
+// unconditional main()).
+
+describe('Wave 6 D6 T1: INV-WORKFLOW-001 teeth + Q2 scope-out', () => {
+  it('FLIP-SAFETY PROOF (executable): live gap set exactly [query]; the carve-out covers it; exit 0', () => {
+    expect(intentsLackingNonAiProducer()).toEqual(['query']);
+    expect([...V1_TEETH_SCOPE_OUT]).toEqual(['query']);
+
+    const result = runCheck();
+    expect(result.gaps).toEqual(['query']);
+    expect(result.scopedOut).toEqual(['query']);
+    expect(result.effectiveGaps).toEqual([]);
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('THE TEETH BITE: a synthetic unscoped no-non-AI intent → exit 1; the same gap scoped out → 0, carve-out visible', () => {
+    const synth: Record<string, readonly IntentProducer[]> = {
+      covered: [{ name: 'manual form', kind: 'non-ai', site: 'synthetic' }],
+      naked: [{ name: 'agent only', kind: 'ai', site: 'synthetic' }],
+    };
+
+    const bites = runCheck(synth, []);
+    expect(bites.gaps).toEqual(['naked']);
+    expect(bites.scopedOut).toEqual([]);
+    expect(bites.effectiveGaps).toEqual(['naked']);
+    expect(bites.exitCode).toBe(1);
+
+    const scoped = runCheck(synth, ['naked']);
+    expect(scoped.gaps).toEqual(['naked']);
+    expect(scoped.scopedOut).toEqual(['naked']); // visible at the data grain
+    expect(scoped.effectiveGaps).toEqual([]);
+    expect(scoped.exitCode).toBe(0);
+  });
+
+  it('scopedOut reports only carve-outs doing work (the intersection, not the raw list)', () => {
+    const synth: Record<string, readonly IntentProducer[]> = {
+      covered: [{ name: 'manual form', kind: 'non-ai', site: 'synthetic' }],
+    };
+    // Scoping out a covered intent is inert — the visibility lines must
+    // not claim an exemption that exempts nothing.
+    const result = runCheck(synth, ['covered']);
+    expect(result.gaps).toEqual([]);
+    expect(result.scopedOut).toEqual([]);
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('CARVE-OUT INTEGRITY: query keeps its AI producer recorded (don\'t-erase); still no non-AI (the gap premise pinned)', () => {
+    const query = INTENT_PRODUCERS.query;
+    expect(query.some((p) => p.kind === 'ai')).toBe(true);
+    expect(query.some((p) => p.kind === 'non-ai')).toBe(false);
   });
 });

@@ -10,9 +10,19 @@
 // side effects.
 //
 // Every Intent declares its producers, each tagged 'ai' | 'non-ai'. The invariant
-// (charter §2 Inv 3): every Intent has ≥1 non-AI producer. The warn-only check
-// reports any intent lacking one; teeth + INV-WORKFLOW-001 registration are Wave 6
-// (register-on-enforcement — `docs/02_specs/README.md:36-37`).
+// (charter §2 Inv 3): every Intent has ≥1 non-AI producer. Warn-only at Wave 4;
+// TEETH LANDED at Wave 6 D6 (register-on-enforcement — `docs/02_specs/README.md:36-37`):
+// `runCheck` below returns exit-code 1 on any unscoped gap, consumed by
+// `scripts/check-intent-producers.ts` (gate wiring lands at D6 T2), with `query`
+// carved out at V1 per the ratified Q2 scope-out (`V1_TEETH_SCOPE_OUT` below —
+// re-include trigger named there).
+//
+// INV-WORKFLOW-001 ANNOTATION SITE (Layer 2, build-time structural). This file is
+// the grep-visible reachability anchor (the symmetric diff covers apps/web/src/ +
+// supabase/migrations/ — not scripts/ or .github/): the enforcing MECHANISM is
+// scripts/check-intent-producers.ts plus its gate wiring (D6 T2), grep-invisible
+// by location; this annotation establishes bidirectional reachability with the
+// ledger_truth_model.md leaf.
 //
 // Keyed on intent TYPE (R7 — a new producer registers as a data entry against an
 // existing intent key, no rework):
@@ -112,8 +122,8 @@ export const INTENT_PRODUCERS: Readonly<Record<IntentKey, readonly IntentProduce
 /**
  * The No-AI-Only-Paths coverage check (pure): the registry keys whose producers
  * include no `non-ai` entry. An empty result means every Intent has ≥1 non-AI
- * producer (the invariant holds). At Wave 4 the CI wrapper reports these as warnings
- * (non-blocking); at Wave 6 they become build-failing.
+ * producer (the invariant holds). Warn-only at Wave 4; build-failing at Wave 6 D6
+ * via `runCheck` below (the teeth), with the V1_TEETH_SCOPE_OUT carve-out.
  */
 export function intentsLackingNonAiProducer(
   registry: Readonly<Record<string, readonly IntentProducer[]>> = INTENT_PRODUCERS,
@@ -121,4 +131,61 @@ export function intentsLackingNonAiProducer(
   return Object.entries(registry)
     .filter(([, producers]) => !producers.some((p) => p.kind === 'non-ai'))
     .map(([intentKey]) => intentKey);
+}
+
+/**
+ * Wave 6 D6 — the ratified Q2 V1-teeth carve-out (build plan §2, RATIFIED:
+ * scope-out). `query` is formally scoped out of the INV-WORKFLOW-001 teeth at V1:
+ *
+ * RATIONALE (Phase-2, documented per Q2 "visibly, not silent"): `QuerySpec` is a
+ * reserved Phase-2 shape (`intent_model.md:208-213` — "QuerySpec is reserved as a
+ * Phase 2 shape to be defined when query intents are built"); at V1, transient
+ * views are produced via the NAVIGATION path (Mainframe / palette / drill-down —
+ * which has non-AI producers) or the agent, so there is no AI-only path for
+ * queries at V1. Building a non-AI Query producer now was rejected as premature
+ * Phase-2 work (Q2).
+ *
+ * RE-INCLUDE TRIGGER (named, binding): when `QuerySpec` lands in Phase 2 and
+ * `query` separates from `navigation` (the intent_model.md:211-213 extraction),
+ * `query` REJOINS the teeth and needs its own non-AI producer — remove it from
+ * this list at that moment, and the check goes red until the producer exists.
+ *
+ * The `query` registry entry above is intentionally unchanged: its AI producer
+ * stays recorded (the navigation-block `rule.create` precedent — never scope out
+ * by erasing a known AI producer).
+ */
+export const V1_TEETH_SCOPE_OUT: readonly IntentKey[] = ['query'];
+
+export type ProducerCoverageResult = {
+  /** All registry keys lacking a non-AI producer (the raw gap set). */
+  gaps: string[];
+  /** The gaps covered by the V1 carve-out — only carve-outs doing work
+   *  (the intersection), so the check's visibility lines never claim an
+   *  exemption that exempts nothing. */
+  scopedOut: string[];
+  /** gaps ∖ scopedOut — what the teeth bite on. */
+  effectiveGaps: string[];
+  /** The Wave-6 teeth: 1 on any unscoped gap, else 0. */
+  exitCode: 0 | 1;
+};
+
+/**
+ * Wave 6 D6 — the teeth (pure; the script + CI job consume this). Kept here
+ * beside the gap-finder (the in-file precedent) so the unit tests import it
+ * with no cross-root reach and the script keeps its unconditional `main()`
+ * with zero import side effects (decomposition ask (b)).
+ */
+export function runCheck(
+  registry: Readonly<Record<string, readonly IntentProducer[]>> = INTENT_PRODUCERS,
+  scopeOut: readonly string[] = V1_TEETH_SCOPE_OUT,
+): ProducerCoverageResult {
+  const gaps = intentsLackingNonAiProducer(registry);
+  const scopedOut = gaps.filter((g) => scopeOut.includes(g));
+  const effectiveGaps = gaps.filter((g) => !scopeOut.includes(g));
+  return {
+    gaps,
+    scopedOut,
+    effectiveGaps,
+    exitCode: effectiveGaps.length > 0 ? 1 : 0,
+  };
 }
