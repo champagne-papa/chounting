@@ -80,6 +80,8 @@ export function tabTitleForDirective(directive: CanvasDirective): string {
       return 'New tab';
     case 'pending_documents':
       return 'Pending Documents';
+    case 'review_inbox':
+      return 'Review Inbox';
     case 'user_profile':
       return 'My Profile';
     case 'org_profile':

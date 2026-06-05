@@ -69,6 +69,14 @@ export type CanvasDirective =
   //       recent N cards across all batches.
   | { type: 'pending_documents'; orgId: string; ingestBatchId?: string }
 
+  // Wave 6 D3 T7 — the review inbox (review-track cases: needs_review /
+  // proposed / approved; approve→post + reject + resolve-exception
+  // surfaces). ONE directive at v1: the case detail renders in-view
+  // via ReviewInboxView's selectedCaseId swap; a separate
+  // review_case_detail directive is deferred until cross-tab
+  // deep-linking earns its keep.
+  | { type: 'review_inbox'; orgId: string }
+
   // Phase 2+ stubs — directive type defined now, canvas component is a
   // "Coming Soon" placeholder until the phase that builds it:
   | { type: 'ap_queue'; orgId: string }

@@ -58,6 +58,7 @@ import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
 import { PendingDocumentsView } from '@/components/canvas/PendingDocumentsView';
+import { ReviewInboxView } from '@/components/canvas/ReviewInboxView';
 
 interface Props {
   directive: CanvasDirective;
@@ -223,6 +224,10 @@ function renderDirective(
     // Phase 6.5 chunk 3 — pending documents queue surface.
     case 'pending_documents':
       return <PendingDocumentsView orgId={d.orgId} ingestBatchId={d.ingestBatchId} />;
+
+    // Wave 6 D3 T7 — review inbox (approve→post / reject / resolve).
+    case 'review_inbox':
+      return <ReviewInboxView orgId={d.orgId} />;
 
     // Phase 1.2 Session 6 — form-escape surfaces.
     case 'user_profile':

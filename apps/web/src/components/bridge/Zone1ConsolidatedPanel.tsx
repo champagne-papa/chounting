@@ -83,6 +83,10 @@ const BILLING_NAV_ITEMS: ReadonlyArray<NavItem> = [
   // memory pointer project_phase_6_5_chunk_1_billing_nav_ordering —
   // workflow-frequency reading "incoming intake → outstanding bills".
   { id: 'pending_documents', label: 'Pending Documents', icon: '\u{1F4E5}' },
+  // Wave 6 D3 T7: "Review Inbox" after Pending Documents — the
+  // review-track queue (needs_review/proposed/approved) where the
+  // human approve→post fires.
+  { id: 'review_inbox', label: 'Review Inbox', icon: '\u{1F4CB}' },
   { id: 'open_bills', label: 'Open Bills', icon: '\u{1F4DD}' },
   { id: 'ap_aging', label: 'AP Aging', icon: '\u{1F4B0}' },
   { id: 'vendor_balance', label: 'Vendor Balance', icon: '\u{1F4B5}' },
@@ -111,6 +115,8 @@ function navItemToDirective(itemId: string, orgId: string): CanvasDirective | nu
       return { type: 'bill_form', orgId };
     case 'pending_documents':
       return { type: 'pending_documents', orgId };
+    case 'review_inbox':
+      return { type: 'review_inbox', orgId };
     case 'open_bills':
       return { type: 'report_open_bills', orgId };
     case 'ap_aging':

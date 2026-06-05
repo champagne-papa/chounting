@@ -102,6 +102,8 @@ function describeDirective(directive: CanvasDirective): string {
       return 'no canvas view';
     case 'pending_documents':
       return 'the pending documents queue';
+    case 'review_inbox':
+      return 'the document review inbox (approve/reject/resolve)';
     case 'user_profile':
       return 'the user profile editor';
     case 'org_profile':
