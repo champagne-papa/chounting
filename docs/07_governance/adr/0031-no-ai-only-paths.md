@@ -10,7 +10,7 @@ phase: "post-mvp"
 supersedes: []
 superseded_by: []
 related: ["0005", "0010", "0020", "0021", "0028", "0032", "0033"]
-invariants: []
+invariants: ["INV-WORKFLOW-001"]
 ---
 
 # ADR-0031: No-AI-Only-Paths
@@ -26,6 +26,13 @@ Reserved by the V1 Governance Plan (`docs/09_briefs/v1/plans/2026-05-31-v1-gover
 Registry + CI ADR. Reserves a code-defined producer registry and a warn-only CI producer-coverage
 check. Ships no migration (code-defined) and no code in the ratification act (the Wave-4 build
 follows). Registers no invariant; the CI check gains no teeth at Wave 4.
+
+**Amended 2026-06-05** (Wave 6 D6) to add INV-WORKFLOW-001 to the frontmatter `invariants:` field,
+following its registration in `invariants.md` (row 28) when the D6 teeth landed (the exit-code flip
++ the blocking ci.yml job + the harness wiring). INV-WORKFLOW-001 was named-reserved at
+D-0031.3/.7; the frontmatter was `[]` at ratification (register-on-enforcement — warn-only enforced
+nothing) and now reflects the registered invariant. See the `## Amendment 2026-06-05` block for the
+realization record, including the D-0031.2 drift owned there.
 
 ## Date
 
@@ -132,6 +139,66 @@ Wave-4 substrate.
 - **Teeth at Wave 4.** Rejected — charter §2/§5 defer teeth to Wave 6; warn-only at Wave 4.
 - **Register `INV-WORKFLOW-001` now.** Rejected — register-on-enforcement (`README.md:36-37`); warn-only
   enforces nothing.
+
+## Amendment 2026-06-05 — Wave 6 D6: teeth realized + Q2 scope-out + D-0031.2 drift owned
+
+### Triggered by
+
+Wave 6 D6 (the build plan §3 row: "INV-WORKFLOW-001 teeth-flip — Query-gap scope-out (§2) →
+`exit(gaps>0?1:0)` → wire `check-intent-producers.ts` into CI"; brief `85249e62`; implementation
+`c4df9f6f` (T1 teeth + scope-out) + `216832ad` (T2 CI job + harness); registration `aa85390c` (T3)).
+D-0031.3/.6 deferred the teeth + registration to Wave 6 — this amendment records the realized shape.
+
+### Scope
+
+Records the teeth realization, the ratified Q2 disposition of the Query gap, the gate wiring, and
+one drift owned. Everything else stays preserved: D-0031.1–.7 are untouched as ratified; the
+registry stays code-defined and pure (D-0031.5's no-IDOR premise intact — `runCheck` is pure,
+returning the exit code as data); R7's data-entry extensibility is unchanged. This amendment does
+NOT build a non-AI Query producer (Q2: rejected as premature Phase-2 work), does NOT allocate any
+further `INV-WORKFLOW-*` id, and does NOT touch `INV-AUTONOMY-GATE-001` (stays reserved, post-V1).
+
+### Decision items (numbered, forward-only)
+
+1. **The teeth are the forecast one-line flip, realized via a pure core.** The check now exits
+   `gaps > 0 ? 1 : 0` over the UNSCOPED gap set; the logic moved to a pure `runCheck` in
+   `producers.ts` (beside the gap-finder) so the unit tests import it with no script side effects,
+   and the script is a thin print-and-exit wrapper. The flip landed green because the gap set was
+   dispositioned first (item 2) — the precondition the Wave-4 header carried.
+2. **The Query gap is dispositioned by the ratified Q2 scope-out, visibly, with the re-include
+   trigger binding.** `V1_TEETH_SCOPE_OUT = ['query']` (`producers.ts`; typed `IntentKey[]`) carries
+   the Phase-2 rationale (`intent_model.md:208-213` — `QuerySpec` is a reserved Phase-2 shape; V1
+   transient views ride Navigation, which has non-AI producers) and the named trigger: when
+   `QuerySpec` lands and `query` separates from `navigation`, `query` rejoins the teeth and needs
+   its own non-AI producer. The check prints scoped-out keys visibly (never silent); `query`'s AI
+   producer stays recorded (the don't-erase precedent).
+3. **Gate wiring: the blocking ci.yml `intent-producers` job + the root `agent:validate` harness
+   (Variant A).** The CI job is adr-check-isomorphic, consumes no `github.event.*` context, and is
+   blocking by job-failure semantics; merge-blocking remains a branch-protection (operator-grain)
+   property, and the job's first dynamic execution occurs at the wave-close push (the wave's
+   no-push invariant) — both hedges are headline-grade in the registered leaf. The harness wiring
+   is the teeth's live home during the wave.
+4. **The D-0031.2 drift, owned.** D-0031.2 described the Wave-4 warn-only check as "wired into the
+   validation harness" — it never was (the check existed only as the root npm task; no CI, no
+   harness, no hook invoked it). The harness wiring is realized **late, at D6** (item 3), not at
+   Wave 4 as the ratified text implied. The original text stands unedited; this item is the
+   provenance-honest correction.
+5. **INV-WORKFLOW-001 registered** (`invariants.md` row 28 + `control_matrix.md` +
+   `ledger_truth_model.md` leaf), claiming only what is enforced: build-time structural (a new
+   Layer-2 sub-type) with the self-declared-registry, branch-protection, and execution-deferral
+   residuals named. `producers.ts` is the grep-visible annotation anchor (the reachability grep
+   excludes `scripts/` and `.github/`); the registration closed the reverse-only reachability
+   window open since Wave 4.
+
+### Cross-references
+
+- `docs/02_specs/invariants.md` row 28; `docs/02_specs/ledger_truth_model.md` §INV-WORKFLOW-001;
+  `docs/06_audit/control_matrix.md` §INV-WORKFLOW-001.
+- `apps/web/src/core/intent/producers.ts` (`runCheck`, `V1_TEETH_SCOPE_OUT`, the annotation);
+  `scripts/check-intent-producers.ts`; `.github/workflows/ci.yml` (`intent-producers` job); root
+  `package.json` (`agent:validate`).
+- `docs/09_briefs/v1/plans/2026-06-05-wave-6-d6-teeth-flip-brief.md` (D-1…D-7) +
+  `2026-06-05-wave-6-d6-task-decomposition.md`.
 
 ## Cross-references
 

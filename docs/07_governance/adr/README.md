@@ -364,6 +364,10 @@ and the Status-line clause-accumulation pattern.
 ### INV-RULE-004
 
 - [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+
+### INV-WORKFLOW-001
+
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
 <!-- END:generated-by-invariant -->
 
 ## By phase
