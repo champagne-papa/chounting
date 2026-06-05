@@ -18,7 +18,7 @@
     "test:e2e:ui": "pnpm --filter @chounting/web test:e2e:ui",
     "test:e2e:install": "pnpm --filter @chounting/web test:e2e:install",
     "agent:floor": "pnpm --filter @chounting/web agent:floor",
-    "agent:validate": "pnpm --filter @chounting/web agent:validate",
+    "agent:validate": "pnpm --filter @chounting/web agent:validate && pnpm intent-producers:check",
     "test:no-hardcoded-urls": "pnpm --filter @chounting/web test:no-hardcoded-urls",
     "verify-audit-coverage": "pnpm --filter @chounting/web verify-audit-coverage",
     "db:start": "supabase start",
