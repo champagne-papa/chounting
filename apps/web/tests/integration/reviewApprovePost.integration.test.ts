@@ -345,6 +345,32 @@ describe('Wave 6 D3 T6: approve→post — the ledger write', () => {
       seededJe as Array<{ journal_entry_id: string }>
     )[0]!.journal_entry_id;
 
+    // Wave 6 D5 T2 fixture amendment (Option A condition 2, advisor-
+    // authorized at the crash-class-X read-back): the faithful step-5/6
+    // crash shape carries the BILL too — billService.post writes JE then
+    // bill in sequence, so "posted but the committed marking never
+    // landed" leaves both rows. The original JE-only shape is
+    // crash-class-X (JE written, bill insert crashed), now a NON-
+    // RECOVERABLE manual-repair class asserted in the D5 persistence
+    // suite. Every original assertion below is unchanged: recovery of
+    // the existing JE, no second ledger write, count unchanged,
+    // status 'recovered', case committed.
+    const crashVendorId = crypto.randomUUID();
+    const { error: cvErr } = await db.from('vendors').insert({
+      vendor_id: crashVendorId,
+      org_id: SEED.ORG_HOLDING,
+      name: `d3-t6 crash-shape vendor ${crypto.randomUUID().slice(0, 8)}`,
+    });
+    if (cvErr) throw new Error(`crash-shape vendor fixture failed: ${cvErr.message}`);
+    const { error: cbErr } = await db.from('bills').insert({
+      bill_id: crypto.randomUUID(),
+      org_id: SEED.ORG_HOLDING,
+      vendor_id: crashVendorId,
+      issue_date: '2026-06-04',
+      posted_journal_entry_id: seededJeId,
+    });
+    if (cbErr) throw new Error(`crash-shape bill fixture failed: ${cbErr.message}`);
+
     const before = await jeCount();
     const res = await approvePost(
       ...caseReq(SEED.ORG_HOLDING, caseId, 'approve-post'),

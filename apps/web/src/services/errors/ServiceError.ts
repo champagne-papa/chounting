@@ -132,7 +132,14 @@ export type ServiceErrorCode =
   | 'RULE_NOT_FOUND'          // rule_registry / vendor_rules lookup miss
   | 'RULE_LIFECYCLE_INVALID'  // illegal lifecycle transition (e.g. promote/demote/retire a retired rule)
   | 'RULE_CREATE_FAILED'      // create_vendor_rule_atomic RPC failure
-  | 'RULE_BRANCH_ASSEMBLY_FAILED'; // stored condition_value fails its condition_type validator (ruleBranchService boundary)
+  | 'RULE_BRANCH_ASSEMBLY_FAILED' // stored condition_value fails its condition_type validator (ruleBranchService boundary)
+  // Wave 6 D5 (T2 read-back, Option A condition 4): crash-class-X — a
+  // recovered JE whose posting entity (bill/payment) never landed
+  // (billService.post's JE→bill non-atomicity window). NON-RETRYABLE:
+  // every retry hits the JE dedup before the entity insert, so the state
+  // is unrepairable by re-approve; routes to manual repair. Maps 409
+  // (state conflict), NOT 500 — a 500 invites the retry loop.
+  | 'POSTING_RECOVERY_UNREPAIRABLE';
 
 export class ServiceError extends Error {
   constructor(

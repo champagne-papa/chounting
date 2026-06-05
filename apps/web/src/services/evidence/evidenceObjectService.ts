@@ -20,6 +20,10 @@ import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import type { ServiceContext } from '@/services/middleware/serviceContext';
+import { withInvariants } from '@/services/middleware/withInvariants';
+import { recordMutation } from '@/services/audit/recordMutation';
+import { LINKED_ENTITY_TABLE_MAP } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import type { Database } from '@/db/types';
 import { assessCompleteness } from '@/core/evidence/completeness';
 import {
   CanonicalEvidenceObjectSchema,
@@ -193,4 +197,165 @@ async function assemble(
   return CanonicalEvidenceObjectSchema.parse(assembled);
 }
 
-export const evidenceObjectService = { assemble };
+// ---------------------------------------------------------------------------
+// Wave 6 D5 T2 — the write half (ADR-0033 D-0033.7: "persistence; the
+// row-producer ... lands at Wave 6"). persist = subject-ownership guard →
+// assemble → upsert. Unlike read-only assemble (inline authz, not wrapped),
+// persist is a MUTATION: withInvariants-wrapped, audited via recordMutation —
+// the INV-SERVICE-001 asymmetry now exercised in both directions in this one
+// service. Write rides service-role adminClient: the 20240172 migration's
+// pinned write-posture (RLS-enabled-no-write-policy denies the user path).
+
+type EvidenceObjectRow = Database['public']['Tables']['evidence_objects']['Row'];
+
+export interface PersistEvidenceInput {
+  subject_type: string;
+  subject_id: string;
+  org_id: string;
+}
+
+const persist = withInvariants(async (
+  input: PersistEvidenceInput,
+  ctx: ServiceContext,
+): Promise<EvidenceObjectRow> => {
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const db = adminClient();
+
+  // D-3 step 1 — SUBJECT-OWNERSHIP GUARD (the D5 IDOR centerpiece).
+  // subject_id is a bare polymorphic uuid (no FK, not org-composite) and RLS
+  // gives zero write-side protection here (service-role bypass, no write
+  // policy) — so the subject is resolved IN ITS OWN TABLE, ORG-SCOPED, before
+  // any write. Foreign ≡ missing: one code, one message shape, no existence
+  // leak. Without this, a foreign subject would flow through assemble's
+  // empty-facets→'partial' mapping into a spurious (verified-org,
+  // foreign-subject) row that the UNIQUE constraint cannot catch.
+  // LINKED_ENTITY_NOT_FOUND reused (decomposition ask (d): the established
+  // code for a LINKED_ENTITY_TABLE_MAP resolution miss; documentLinkService's
+  // verifyLinkedEntityExists is NOT reused — it checks bare existence, no org
+  // scope, which is exactly the shape this guard exists to avoid).
+  const mapEntry =
+    LINKED_ENTITY_TABLE_MAP[input.subject_type as keyof typeof LINKED_ENTITY_TABLE_MAP];
+  if (!mapEntry) {
+    throw new ServiceError(
+      'LINKED_ENTITY_NOT_FOUND',
+      `subject ${input.subject_type}/${input.subject_id} not found`,
+    );
+  }
+  const { data: subject, error: subjErr } = await db
+    .from(mapEntry.table)
+    .select(mapEntry.pkColumn)
+    .eq(mapEntry.pkColumn, input.subject_id)
+    .eq('org_id', input.org_id)
+    .maybeSingle();
+  if (subjErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `subject-ownership guard read against ${mapEntry.table} failed: ${subjErr.message}`,
+    );
+  }
+  if (!subject) {
+    // Same message shape as the unknown-type branch: foreign ≡ missing.
+    throw new ServiceError(
+      'LINKED_ENTITY_NOT_FOUND',
+      `subject ${input.subject_type}/${input.subject_id} not found`,
+    );
+  }
+
+  // D-3 step 2 — assemble (org-verified facets; the Wave-2 cross-tenant
+  // guard) and map transient completeness to the row grain: 'complete' →
+  // 'complete', else 'partial' (transient 'empty' collapses — brief D-5).
+  const assembled = await assemble(input, ctx);
+  const status: 'partial' | 'complete' =
+    assembled.completeness.status === 'complete' ? 'complete' : 'partial';
+
+  // D-3 step 3 — upsert on the unique triple, insert-first with the
+  // constraint-name-keyed 23505 fallback (the D3 dup-catch pattern).
+  // created_by is INSERT-ONLY; the conflict path refreshes status + trace_id
+  // only (a crash-resume re-persist must never rewrite the creator).
+  const { data: before, error: beforeErr } = await db
+    .from('evidence_objects')
+    .select('*')
+    .eq('org_id', input.org_id)
+    .eq('subject_type', input.subject_type)
+    .eq('subject_id', input.subject_id)
+    .maybeSingle();
+  if (beforeErr) {
+    throw new ServiceError('READ_FAILED', `evidence_objects read-before failed: ${beforeErr.message}`);
+  }
+
+  let row: EvidenceObjectRow;
+  if (!before) {
+    const { data: inserted, error: insErr } = await db
+      .from('evidence_objects')
+      .insert({
+        org_id: input.org_id,
+        subject_type: input.subject_type,
+        subject_id: input.subject_id,
+        trace_id: ctx.trace_id,
+        status,
+        domain_extension: null,
+        created_by: ctx.caller.user_id,
+      })
+      .select('*')
+      .single();
+    if (insErr) {
+      if (insErr.code === '23505' && insErr.message.includes('evidence_objects_subject_unique')) {
+        // Insert raced a concurrent persist — fall through to the update
+        // path against the now-existing row.
+        row = await refreshExisting(db, input, status, ctx.trace_id);
+      } else {
+        throw new ServiceError('POST_FAILED', `evidence_objects insert failed: ${insErr.message}`);
+      }
+    } else {
+      row = inserted as EvidenceObjectRow;
+    }
+  } else {
+    row = await refreshExisting(db, input, status, ctx.trace_id);
+  }
+
+  await recordMutation(db, ctx, {
+    org_id: input.org_id,
+    action: 'evidence_object.persisted',
+    entity_type: 'evidence_object',
+    entity_id: row.id,
+    before_state: (before as Record<string, unknown> | null) ?? undefined,
+  });
+
+  log.info(
+    {
+      fn: 'evidenceObjectService.persist',
+      subject_type: input.subject_type,
+      subject_id: input.subject_id,
+      evidence_object_id: row.id,
+      status,
+      resumed: Boolean(before),
+    },
+    'canonical evidence object persisted',
+  );
+  return row;
+});
+
+/** The conflict/resume path: refresh status + trace_id ONLY (created_by is
+ *  INSERT-only; the anchor becomes the successful-commit request's trace —
+ *  brief D-4.2). */
+async function refreshExisting(
+  db: ReturnType<typeof adminClient>,
+  input: PersistEvidenceInput,
+  status: 'partial' | 'complete',
+  trace_id: string,
+): Promise<EvidenceObjectRow> {
+  const { data, error } = await db
+    .from('evidence_objects')
+    .update({ status, trace_id })
+    .eq('org_id', input.org_id)
+    .eq('subject_type', input.subject_type)
+    .eq('subject_id', input.subject_id)
+    .select('*')
+    .single();
+  if (error || !data) {
+    throw new ServiceError('POST_FAILED', `evidence_objects refresh failed: ${error?.message ?? 'no row'}`);
+  }
+  return data as EvidenceObjectRow;
+}
+
+export const evidenceObjectService = { assemble, persist };

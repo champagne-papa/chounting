@@ -50,6 +50,7 @@ import {
   transition,
   advanceCaseAutomation,
 } from '@/services/document-platform/documentCaseService';
+import { evidenceObjectService } from '@/services/evidence/evidenceObjectService';
 // Agent-entry surface (the api/agent/message/route.ts:16 precedent):
 // the approve→post route drives the orchestrator-layer rebuild +
 // builders, the designated entry-point shape, exempted explicitly.
@@ -144,6 +145,11 @@ export async function POST(
 
     let journalEntryId: string | null = null;
     let recovered = false;
+    // Evidence-subject captures (D5): the posted entity ids from the
+    // happy-path post results; null on the recovery branches (resolved
+    // by lookup at the persist seam below).
+    let billIdFromPost: string | null = null;
+    let paymentIdFromRecord: string | null = null;
     const db = adminClient();
 
     if (proposedAction === 'post_bill') {
@@ -164,6 +170,7 @@ export async function POST(
           action: 'bill.post',
         })({ ...billInput, source_external_id: childKey }, ctx);
         journalEntryId = result.journal_entry_id;
+        billIdFromPost = result.bill_id;
       } catch (err) {
         if (
           err instanceof ServiceError &&
@@ -210,6 +217,7 @@ export async function POST(
           action: 'payment.record',
         })({ ...paymentInput, source_external_id: childKey }, ctx);
         journalEntryId = result.journal_entry_id;
+        paymentIdFromRecord = result.payment_id;
       } catch (err) {
         if (
           err instanceof ServiceError &&
@@ -245,6 +253,76 @@ export async function POST(
         },
         { status: 409 },
       );
+    }
+
+    // ---- Evidence-object persistence (Wave 6 D5; ADR-0033 D-0033.7) ----
+    // INV-EVIDENCE-001 (Layer 2): PERSIST-BEFORE-MARKING — every AP posting
+    // committed through this path produces its canonical evidence_objects
+    // row BEFORE the case reaches 'committed'. A persist failure fails the
+    // request: the case holds at 'approved' (operator-visible, resumable —
+    // the re-approve resumes via the dup-catch above and this idempotent
+    // upsert). The ledger write above is NEVER rolled back. Runtime/
+    // structural enforcement: nothing at the DB forces this sequencing;
+    // this seam + the crash-resume test are the invariant's teeth (the
+    // uniqueness half is Layer-1, evidence_objects_subject_unique).
+    if (proposedAction === 'post_bill') {
+      // Subject: the posted bill — from the post result on the happy path,
+      // or the org-scoped posted_journal_entry_id lookup on recovery.
+      let subjectBillId = billIdFromPost;
+      if (!subjectBillId) {
+        const { data: billRow, error: billErr } = await db
+          .from('bills')
+          .select('bill_id')
+          .eq('org_id', orgId)
+          .eq('posted_journal_entry_id', journalEntryId!)
+          .single();
+        if (billErr || !billRow) {
+          // Crash-class-X (Option A ruling, T2 read-back): the recovered
+          // JE's bill insert never landed (billService.post's non-atomic
+          // JE→bill window) and CANNOT land by retry — the JE dedup fires
+          // first. NON-RETRYABLE; manual repair. The committed marking
+          // never runs: the case stays approved, operator-visible.
+          throw new ServiceError(
+            'POSTING_RECOVERY_UNREPAIRABLE',
+            `recovered JE ${journalEntryId} has no bill row (crash-class-X: ` +
+              `the bill insert never landed and retry cannot create it — ` +
+              `the JE dedup fires first). Manual repair required; ` +
+              `re-approving will not resolve this.${billErr ? ` (${billErr.message})` : ''}`,
+          );
+        }
+        subjectBillId = billRow.bill_id as string;
+      }
+      await evidenceObjectService.persist(
+        { subject_type: 'bill', subject_id: subjectBillId, org_id: orgId },
+        ctx,
+      );
+    } else {
+      // record_bill_payment — STRUCTURALLY UNREACHABLE at V1 (D5 T2
+      // grounding, the D3 bundle precedent): Tier A never emits
+      // cited_bill_id (only the Tier-C prompt names it), the Tier-A-only
+      // rebuild therefore cannot satisfy buildRecordPaymentInput's bill_id
+      // source, and matched bill-candidates route to attachment cards. The
+      // happy-path persist below is wired for the post-V1 re-entry
+      // (payment_id from the record result); the recovery sub-branch has NO
+      // JE→payment column path (payments carries no posted_journal_entry_id
+      // analog) and fails loudly rather than mark committed without
+      // evidence — preserving INV-EVIDENCE-001 if this branch is ever
+      // reached.
+      if (paymentIdFromRecord) {
+        await evidenceObjectService.persist(
+          { subject_type: 'payment', subject_id: paymentIdFromRecord, org_id: orgId },
+          ctx,
+        );
+      } else {
+        // Same crash-class-X shape at the payment grain (doubly guarded:
+        // the branch itself is structurally unreachable at V1).
+        throw new ServiceError(
+          'POSTING_RECOVERY_UNREPAIRABLE',
+          'recovered payment JE has no resolvable payment row (no ' +
+            'JE→payment column path exists). Manual repair required; ' +
+            're-approving will not resolve this.',
+        );
+      }
     }
 
     // ---- The committed marking (T4 edge; human ctx — honest

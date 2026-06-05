@@ -57,6 +57,10 @@ export function serviceErrorToStatus(code: ServiceErrorCode): number {
     // Rule lifecycle transition rejected (e.g. promote/demote/retire a retired
     // rule) — state-conflict, mirroring the period-lifecycle cases above.
     case 'RULE_LIFECYCLE_INVALID':
+    // Crash-class-X (Wave 6 D5): recovered JE without its posting entity —
+    // non-retryable manual-repair state; 409 so it reads as state-conflict,
+    // never as a transient 500 inviting the retry loop.
+    case 'POSTING_RECOVERY_UNREPAIRABLE':
       return 409;
 
     // Business rule rejections (request is valid but can't be processed)
