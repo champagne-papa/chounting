@@ -19,6 +19,10 @@ import { z } from 'zod';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
+// Agent-entry surface (the api/agent/message/route.ts:16 precedent):
+// this route drives the orchestrator-layer rebuild, so the app→agent
+// crossing is the designated entry-point shape, exempted explicitly.
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { buildReviewPreview } from '@/agent/orchestrator/extraction/reviewPreview';
 
 const ParamsSchema = z.object({

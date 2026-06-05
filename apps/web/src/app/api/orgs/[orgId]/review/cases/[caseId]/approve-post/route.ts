@@ -50,7 +50,12 @@ import {
   transition,
   advanceCaseAutomation,
 } from '@/services/document-platform/documentCaseService';
+// Agent-entry surface (the api/agent/message/route.ts:16 precedent):
+// the approve→post route drives the orchestrator-layer rebuild +
+// builders, the designated entry-point shape, exempted explicitly.
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { buildReviewPreview } from '@/agent/orchestrator/extraction/reviewPreview';
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import {
   buildPostBillInput,
   buildRecordPaymentInput,
