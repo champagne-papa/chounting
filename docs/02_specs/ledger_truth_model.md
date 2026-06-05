@@ -2449,6 +2449,123 @@ establishing bidirectional reachability with this leaf.
 
 ---
 
+### INV-EVIDENCE-001 — canonical evidence object required at commit (Layer 2)
+
+**Invariant.** Every AP posting committed through the review path
+produces exactly one canonical `evidence_objects` row per subject
+(org-scoped; Layer-1 `UNIQUE (org_id, subject_type, subject_id)`,
+constraint `evidence_objects_subject_unique`), carrying the
+successful-commit request's `trace_id` and a descriptive completeness
+status, BEFORE the case reaches `committed`. Named at ADR-0033 D-0033.4
+("every committed AP posting carries a complete evidence bundle on one
+canonical evidence object"), reserved-unregistered at Wave 2 per the
+register-on-enforcement rule (ADR-0021; D-0033.8); registered here at
+Wave 6 D5 T3, when the enforcing producer landed (the
+spec-without-enforcement rule). The registered statement deliberately
+claims only what is enforced: the D-0033.4 "complete evidence bundle"
+aspiration narrows to structural production + uniqueness; completeness
+itself stays **descriptive** at V1 (the design-spec OQ-6 disposition —
+the completeness-enforcement upgrade is a named post-V1 evolution).
+
+**Scope.** The guarantee covers the review path — the sole live commit
+surface at V1 (the approve→post route; the preserved auto-commit
+composite is intentionally unreferenced, eslint-disabled "PRESERVED FOR
+POST-V1"). Particulars, all deliberate:
+
+- **Status mapping:** the transient assembled object's completeness
+  `'complete'` maps to row status `'complete'`; `'partial'` AND
+  `'empty'` collapse to row-grain `'partial'` (the row enum carries no
+  'empty' by design).
+- **Trace anchor:** the row's `trace_id` is the **successful-commit
+  request's** trace (the approval moment). The unique key excludes
+  `trace_id`, so a crash-resume re-persist refreshes it to the resuming
+  request's trace — the original attempt's trace stays recoverable from
+  `audit_log`; the ingest-era traces stay reachable through the
+  assembled facets. `created_by` is INSERT-only (a resume never
+  rewrites the creator).
+- **No backfill:** postings committed before D5 carry no row (the
+  ADR-0033 D-0033.3 historical-bill dodge holds; absence of a row for a
+  pre-D5 commit is expected, not a violation).
+- **Subject vocabulary:** `linked_entity_type` values — `'bill'` (live)
+  and `'payment'` (wired; the record_bill_payment review branch is
+  structurally unreachable at V1 — Tier A never emits `cited_bill_id`).
+
+**Residual (named, not hidden).**
+
+1. **The sequencing half is runtime/structural** (the INV-WORKFLOW-002 /
+   INV-RULE-003 sub-type): nothing at the DB forces
+   persist-before-marking — a future edit that marks `committed`
+   without persisting compiles cleanly and is caught by review + the
+   crash-resume test, not by a DB sentinel. Only the
+   one-object-per-subject half has DB teeth (the Layer-1 UNIQUE).
+2. **Crash-class-X is an operator-visible HOLD, not a committed
+   state.** A recovered JE whose posting entity never landed
+   (`billService.post` writes the JE and the bill in separate,
+   non-atomic statements; on retry the JE dedup fires before the bill
+   insert, so the bill can never be created by re-approving) refuses
+   with the typed, non-retryable `POSTING_RECOVERY_UNREPAIRABLE` (409)
+   and the case holds at `approved` — manual repair. **This closes a
+   gap D3's 23505-recovery ratification silently admitted:** pre-D5,
+   that shape completed to `committed` with a ledger JE and no AP
+   subledger bill. The JE→bill non-atomicity root cause is carried as
+   the post-V1 fix (make the bill commit one transaction).
+3. **DB-grain bypass (the standard partial):** `service_role` writes
+   outside the service path (raw SQL) are not barred; the user path is
+   RLS-denied (no write policy).
+
+**Threat model.** A committed AP posting whose evidence cannot be
+anchored breaks the audit trail at the highest-stakes record — the
+committed ledger write: the reviewer's approval, the source document,
+and the extraction lose their stable, addressable join point, and the
+V2 learning tracks (Track 4 workflow learning; Track 7.4 first-class
+Logic Receipts) read fragments instead of the canonical object the
+glossary promises.
+
+**Enforcement.** Layer 1 + Layer 2 split:
+
+- **Layer 1 (DB teeth):** `evidence_objects_subject_unique` UNIQUE
+  `(org_id, subject_type, subject_id)` (migration `20240177`) — at most
+  one canonical object per subject; the producer upserts on it
+  (idempotent crash-resume).
+- **Layer 2 (runtime/structural):** the persist-before-marking seam in
+  the approve→post route (annotated `INV-EVIDENCE-001`):
+  `evidenceObjectService.persist` (org-scoped subject-ownership guard —
+  foreign ≡ missing, `LINKED_ENTITY_NOT_FOUND` — then assemble, then
+  upsert) runs after the ledger write and before
+  `advanceCaseAutomation('committed')`; a persist failure fails the
+  request with the case held at `approved` (operator-visible,
+  resumable); the ledger write is never rolled back.
+- **Sole-commit-path enumeration (verified at registration HEAD):**
+  `transition()` cannot reach `committed` — `approved→committed` is an
+  automation-only edge (`AUTOMATION_ONLY_TRANSITIONS`; the Layer-3b
+  guard in `documentCaseService.transition` throws `INVALID_TRANSITION`
+  on any automation-only edge at the human boundary), with
+  `TransitionInputSchema` (approved/rejected/proposed only) as
+  belt-and-suspenders; all nine
+  `advanceCaseAutomation` call sites enumerate to
+  classified/needs_review targets except the approve→post route's
+  single `target_state: 'committed'` — which sits downstream of the
+  persist seam; the `update_document_case_state_with_audit` RPC has no
+  callers outside `documentCaseService`; the preserved commit composite
+  is unreferenced.
+- **Test-verified support:**
+  `apps/web/tests/integration/evidenceObjectPersistence.integration.test.ts`
+  (8 tests: producer happy path; the teeth test — injected persist
+  failure → approved-hold + zero rows → resume → one row + committed +
+  one JE total; crash-class-X — 409, approved-hold, JE survival,
+  identical refusal on re-approve; persist-grain cross-org +
+  foreign≡missing negatives; two-user idempotence with INSERT-only
+  `created_by`) +
+  `apps/web/tests/integration/evidenceObjectsConstraints.integration.test.ts`
+  (5 tests: the UNIQUE + the status CHECK).
+
+**Annotation site.** `INV-EVIDENCE-001` at the persist-before-marking
+block in
+`apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts`,
+establishing bidirectional reachability with this leaf.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the
