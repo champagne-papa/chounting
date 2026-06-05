@@ -2566,6 +2566,88 @@ establishing bidirectional reachability with this leaf.
 
 ---
 
+### INV-WORKFLOW-001 — no AI-only paths / producer coverage (Layer 2)
+
+**Invariant.** Every Intent in the code-defined producer registry
+(`apps/web/src/core/intent/producers.ts`) carries at least one non-AI
+producer — no intent type is reachable only through an autonomous
+producer (charter §2 Invariant 3; ADR-0031). At V1, `query` is
+**carved out** by the ratified Q2 scope-out (`V1_TEETH_SCOPE_OUT`),
+visibly and with the re-include trigger named: `QuerySpec` is a
+reserved Phase-2 shape (`intent_model.md:208-213`); at V1 transient
+views ride the Navigation path, which has non-AI producers, so no
+AI-only query path exists; when `QuerySpec` lands and `query`
+separates from `navigation`, it rejoins the teeth and needs its own
+non-AI producer. Named at ADR-0031 D-0031.7, reserved-unregistered at
+Wave 4 (warn-only enforces nothing; register-on-enforcement,
+ADR-0021/D-0031.3); registered here at Wave 6 D6 T3, when the teeth
+landed.
+
+**Enforcement (the headline carries its own hedges — claim only what
+is enforced).** Layer 2, **build-time structural** — a new sub-type in
+this registry (neither runtime nor DB): the producer-coverage check
+(`runCheck` in `producers.ts`; consumed by
+`scripts/check-intent-producers.ts`) exits non-zero on any unscoped
+gap, wired as a blocking job in `.github/workflows/ci.yml` and into
+the root `agent:validate` harness (the Variant-A wiring — the teeth's
+live home under the wave's no-push posture). **Hedges, headline-grade:**
+a red CI run fails the workflow but blocks a merge only where branch
+protection requires the check (operator-grain, not disk-verifiable);
+and the CI job's **first dynamic execution occurs at the wave-close
+push** (CI fires on push/PR; the wave's no-push invariant means the
+job is statically verified until then — the harness wiring is what
+bites during the wave). Test-verified support:
+`apps/web/tests/unit/intentProducers.test.ts` (the executable
+flip-safety proof — live gap set exactly `['query']`, carve-out
+covers it, exit 0; the teeth-bite synthetic — an unscoped gap exits 1;
+the intersection-only carve-out visibility; carve-out integrity —
+`query`'s AI producer stays recorded).
+
+**Scope.** The guarantee is a property of the **declared registry**:
+every registry key has a declared non-AI producer (or a named V1
+carve-out). It is prospective and build-time — enforced on every CI
+run and harness run from D6 onward.
+
+**Residual (named, not hidden).**
+
+1. **The registry is self-declared.** The check verifies that declared
+   producers cover every intent; it does not verify the declarations
+   themselves — a stale or wrong `site:`, or a producer that no longer
+   exists in the product, compiles and passes. Registry honesty is
+   code-review discipline (the INV-RULE-003 residual shape, at build
+   grain).
+2. **CI-blocking ⇔ branch protection.** Merge-blocking depends on the
+   repository's branch-protection settings — operator-owned, not
+   verifiable from the repo tree. Direct pushes to `staging` run CI
+   but are not blocked by a red run.
+3. **The dynamic-execution deferral.** The ci.yml job's first real
+   execution is the wave-close terminal push (the no-push invariant);
+   until then the harness wiring is the live enforcement and the CI
+   job is statically verified. The wave-close checklist carries
+   "confirm the intent-producers job ran green on the push."
+4. **The Q2 carve-out** — `query` is exempt at V1, visibly, with the
+   binding re-include trigger; part of the invariant's honest
+   statement, not a hole in it.
+
+**Threat model.** An AI-only path to an intent — an autonomous
+producer (agent / pipeline) reaching a capability, ultimately the
+ledger, with no human-initiable alternative — is the structural
+complement of ungoverned autonomy: the human cannot do manually what
+the AI can do, so review and fallback both fail structurally
+(ADR-0031's hazard; the ADR-0032 recording-only-autonomy analog).
+
+**Annotation site.** `INV-WORKFLOW-001` in
+`apps/web/src/core/intent/producers.ts` (the file header block) — the
+**grep-visible reachability anchor**: the symmetric diff covers
+`apps/web/src/` + `supabase/migrations/`, so the enforcing mechanism
+(`scripts/check-intent-producers.ts`; the ci.yml job) is
+grep-invisible by location and is cited from the anchor rather than
+grep-counted. The reverse window had been open code-side since Wave 4
+(the registry and the check carried the token, warn-only); this leaf
+closes it.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the
