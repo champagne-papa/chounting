@@ -178,3 +178,67 @@ Pattern 8 for mechanism details.
   Pattern 8
 - v2.2 reorg: 2026-05-17 (relocated from repo-root CLAUDE.md at
   Commit D per `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §4.1)
+
+## Commit-shell hygiene under a session lock (N≥3, attested+evidenced)
+
+When committing under a session lock (`.coordination/session-lock.json`
+present), three shell preconditions hold per commit, verified in the
+committing shell — not assumed from earlier in the session:
+
+- **cwd = repo root.** Any `cd` earlier in the session persists in the
+  shell; a drifted cwd silently re-roots relative pathspecs (the observed
+  failure shape: `apps/web/scripts/…` resolving as
+  `apps/web/apps/web/scripts/…`, exit 128). `cd` to the repo root
+  explicitly before the commit command, or verify with
+  `git rev-parse --show-toplevel`.
+- **Pathspecs root-relative.** Stage by full root-relative path; never
+  rely on cwd-relative paths surviving a compound command.
+- **`COORD_SESSION` exported in the same shell** as the commit, matching
+  the lock's session name — the lock gate keys off the env var at
+  commit time, not at session start.
+
+The failure mode is benign-looking but repeats: git's own pathspec error
+is the catch when it fires pre-commit, but the same drift can stage the
+wrong tree state when paths happen to resolve. The intended mechanical
+fix is a **pre-commit guard** asserting repo-root cwd + `COORD_SESSION`
+set whenever the lock file exists — a named post-wave follow-up from the
+Wave-6 retrospective; this convention is the discipline until the guard
+ships, and the guard's documentation once it does.
+
+---
+**Origin:**
+- First codified: V1 Wave 6, 2026-06-06 (Wave 6 retrospective close)
+- Evidence basis: **evidenced floor N=2** — Wave-6 D8 T4 2026-06-06
+  (exit-128 doubled pathspec, caught by git's own failure, no bad
+  commit) + one pre-wave orchestrator-grain instance (friction-journal
+  ~line 239). **Plus four wave-internal fires attested at the Wave-6
+  kickoff** (operator testimony; granularity unresolvable from
+  artifacts — failed commit attempts leave no trace), **ratified as
+  spanning distinct deliverables by the operator at the Wave-6
+  retrospective read-back (F-1(i), 2026-06-06)** ⇒ observation-grain
+  N≥3 on ratified testimony, not disk verification. The split is
+  deliberate and this footer is its honest record.
+- Promoted from: friction-journal V1 Wave 6 wave-close block (the
+  cwd-drift pair of entries, 2026-06-06); D8 brief must-confirm #3
+  ("the four-failures-this-wave hazard") as the attestation's
+  written provenance
+- Cross-references: `docs/04_engineering/worktree-rules.md` +
+  `conventions.md` §Session Lock File (the lock mechanism this
+  discipline serves); `v1-wave-6-retrospective.md` §3.2 + §5 (the
+  pre-commit guard follow-up)
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** Generates a concrete per-commit
+  check; five wave-internal fires (four attested + one evidenced) each
+  cost a broken commit attempt and a recovery, and the D8 brief had
+  already escalated the hazard to reflex-level must-confirm grain.
+- **Generalizable.** Independent of this wave's content: any
+  session-locked, multi-package repo with a persistent shell carries
+  the same drift mechanism (compound commands, `cd`-for-tooling,
+  pathspec re-rooting).
+- **Stable.** The failure shape recurred identically across the wave
+  (same mechanism, same recovery); the convention text adds nothing
+  speculative — it names what every recovery already did. The
+  mechanical guard is the settled next step, not an open design
+  question.

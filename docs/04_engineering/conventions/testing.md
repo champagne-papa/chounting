@@ -324,3 +324,54 @@ cautionary-tale read-scoping discipline.
   (the `as unknown` cast for non-object returns was the only mechanical
   wrinkle); no re-litigation across the four fires. Not exploratory — the full
   `test:full` sweep (1632/0/10) at the Wave-5 close validates the suites hold.
+
+## Additive-named-export-for-eval (N=3)
+
+When an eval suite needs to exercise shipped pure logic — a Tier-A
+heuristic, a governed constant map, a preview/rebuild composer — expose
+that logic as an **additive, behaviour-preserving named export whose name
+mirrors the shipped entry point**, rather than refactoring the shipped
+call graph or duplicating the logic into the test tree. The export is
+re-export / map-only grain: zero behaviour change at the shipped call
+sites, provable by the import graph (the shipped entry point's body is
+untouched; the new name points at the same object or a pure extraction
+of it). The eval suite imports the named export directly and runs it
+fixture-offline under the teeth pattern above (§Fixture-offline
+eval-suite teeth — the consuming sibling: the export is *what* the suite
+imports; the teeth are *how* the suite proves the import stayed pure).
+
+Why not the alternatives: refactoring the shipped call graph for
+testability churns reviewed code for zero product benefit and invalidates
+read-back claims about untouched call sites; duplicating logic into the
+test tree forks the source of truth and silently diverges. The additive
+named export is the smallest move that gives the eval suite a stable,
+greppable handle on exactly the shipped logic.
+
+---
+**Origin:**
+- First codified: V1 Wave 6, 2026-06-06 (Wave 6 retrospective close)
+- Evidence basis: observation-grain N=3 — Wave-5 D1 `c431aa24`
+  (`…TierA` extractor exports mirroring `evaluateTierA`), Wave-5 D2
+  `849439c4` (`CONFIDENCE_THRESHOLDS` map-only export), Wave-6 D3 T5
+  `7117cf6f` (`buildReviewPreview` for the review-rebuild eval suite)
+- Promoted from: friction-journal Wave-5 N=2 bank (2026-06-03) + Wave-6
+  D3 close report §5 carry-forward #4 (the third fire); count trail
+  reconciled at Wave-6 retrospective §3 (the journal's N=2 predates D3's
+  third fire — no contradiction)
+- Cross-references: §Fixture-offline eval-suite teeth (the consuming
+  pattern); `v1-wave-5-retrospective.md` §3; Wave-6 D3 close report §5
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** Generates a concrete authoring move at
+  every eval-suite onset: re-expose additively, don't refactor and don't
+  fork. Across the three fires it is what let each suite land with the
+  shipped call graph byte-untouched — the property the per-task read-backs
+  verified each time.
+- **Generalizable.** Three structurally-distinct logic classes across two
+  waves — a heuristic function, a governed constant, a rebuild composer —
+  same move each time. The shape applies to any shipped pure logic an
+  offline suite needs a handle on, independent of the AP domain.
+- **Stable.** The pattern applied unchanged across all three fires; the
+  third (D3 T5) was a routine application with no variation or
+  re-litigation. Not exploratory.

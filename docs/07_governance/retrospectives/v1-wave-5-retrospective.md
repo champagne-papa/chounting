@@ -76,7 +76,9 @@ touched). Per-deliverable artifact read-backs cleared each commit.
   governed constant additively (behaviour-preserving) so an eval suite can test
   it fixture-offline, mirroring `evaluateTierA`. Fired at D1 (`…TierA`) and D2
   (`CONFIDENCE_THRESHOLDS`). Below the N=3 mint threshold; banked for the next
-  fire.
+  fire. *(Graduated 2026-06-06 — third fire at Wave-6 D3 T5 `7117cf6f` →
+  `docs/04_engineering/conventions/testing.md` §Additive-named-export-for-eval;
+  see `v1-wave-6-retrospective.md` §3.)*
 - **Assertion-posture three-way — NOTE (judgment heuristic, not a mechanical
   convention).** For a measured property, choose: **numeric ratchet** when the
   metric is directional and regression-meaningful (D1 accuracy — freeze the

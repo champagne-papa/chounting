@@ -18070,7 +18070,9 @@ N=4 across D1–D4 and is MINTED to
 `docs/04_engineering/conventions/testing.md` "Fixture-offline eval-suite teeth
 (N=4)". The **additive-named-export-for-eval** pattern (`…TierA`,
 `CONFIDENCE_THRESHOLDS` mirroring the shipped `evaluateTierA`) is N=2 — below
-threshold, banked as a candidate for the next fire. The **ratchet vs
+threshold, banked as a candidate for the next fire (graduated 2026-06-06 at
+the third fire, Wave-6 D3 T5 `7117cf6f` →
+`docs/04_engineering/conventions/testing.md` §Additive-named-export-for-eval). The **ratchet vs
 one-time-fire vs pure-characterization** posture is a judgment heuristic (not a
 mechanical convention), recorded as a three-way in the Wave-5 retrospective §3,
 crystallized by the D1 (numeric ratchet, directional metric) vs D4 (qualitative
@@ -18130,3 +18132,62 @@ fabrication). Same session, the one-time backlog-clearing run executed
 recovered, 28 dedup carve-outs, 28 fixture-doc pipeline_faileds, 9
 anomalies — the EXCEPTION_ALREADY_OPEN anomaly path's first live firing
 caught all 6 suite-seeded open-exception shapes without repair or loop.
+
+## V1 Wave 6 — AP Review (D1–D8) — wave close — 2026-06-06
+
+**NOTE 2026-06-06 — cwd-drift commit-failure: four in-session fires
+attested, a fifth evidenced at D8 T4; mechanism candidate.** The D8
+brief's must-confirm #3 encodes "the four-failures-this-wave hazard"
+(commit attempts broken by drifted cwd / non-root-relative pathspecs);
+none of the four was journaled at fire time — the hazard went
+brief-checklist-first, journal-never, which is itself the miss this
+entry repairs. The fifth fire is fully evidenced: at D8 T4 a
+`cd apps/web` for a standalone compile left the persistent shell
+drifted; the commit attempt exited 128 (pathspec resolving as
+`apps/web/apps/web/…`), caught by git's own failure — no bad commit;
+recovered by explicit `cd` to repo root.
+
+**NOTE 2026-06-06 — cwd-drift observation grain + the guard mechanism.**
+The four attested fires' per-deliverable granularity is unresolvable
+from artifacts (operator kickoff testimony is the only record); one
+pre-wave instance is journaled at orchestrator grain (this journal,
+~line 239). Graduation disposition is ratified at the Wave-6
+retrospective §3, not asserted here. Mechanism candidate
+(advisor-flagged at D8 T5 scoping): a pre-commit guard asserting
+repo-root cwd + `COORD_SESSION` exported whenever
+`.coordination/session-lock.json` exists — implementation is a named
+post-wave follow-up (a source edit, outside D8's doc-only fences).
+
+**NOTE 2026-06-06 — completeness sweeps must include bare-phrasing
+shapes (N=1).** The D8 T1 completeness sweep keyed on canonical token
+shapes (`distinct INV`, `symmetric diff`, `N/N with empty`) missed two
+live instances phrased barely: "Expected output: empty"
+(`invariants.md` how-to step 5) and the in-command-block comment
+"# Symmetric difference (must be empty)" (`control_matrix.md:349`).
+Both were caught only when the advisor's line-by-line pass and the
+broadened bare-phrasing grep converged — neither alone sufficed.
+Candidate: completeness sweeps include bare-phrasing variants
+(expected output / no diff / bare "empty" in diff context) alongside
+canonical tokens. Observation-grain N=1 (one sweep event); banked.
+
+**NOTE 2026-06-06 — ground a capture view against its query before
+specifying the shot (N=1).** The D8 UI-gate capture spec named "Open
+Bills" as the operator-visible home of a freshly-posted bill; the
+actual filter (`apReportService.openBills` →
+`['approved_for_payment','partially_paid']`) made the correct view
+Pending Approvals, since `billService.post` lands bills in
+`pending_approval` (ratified D3 two-step). Caught at STOP-and-surface
+when the view came up empty; the founder then traced the full
+lifecycle live (approve-for-payment drained Pending Approvals and
+populated Open Bills). Zero product changes — the gate corrected its
+own spec. Candidate: read the view's query filter before writing a
+shot spec. Observation-grain N=1; banked.
+
+**Codification 2026-06-06 — additive-named-export-for-eval GRADUATED
+at N=3** → `docs/04_engineering/conventions/testing.md`
+§Additive-named-export-for-eval. Count trail reconciled: the Wave-5
+journal bank (N=2, 2026-06-03) predates D3 T5's third fire
+(`7117cf6f`, `buildReviewPreview`) — no contradiction. Fires: Wave-5
+D1 `c431aa24`, Wave-5 D2 `849439c4`, Wave-6 D3 T5 `7117cf6f`. Routed
+via `codify-convention` at the Wave-6 retrospective (§3); destination
+per the routing tree (activity trigger, test-pattern surface).
