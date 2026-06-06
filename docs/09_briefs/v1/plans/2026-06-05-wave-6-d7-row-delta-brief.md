@@ -119,6 +119,44 @@ gates green + this doc's §6 filled." If the advisor prefers the full
 five-surface ceremony, it splits without rework. No push; terminal
 push is Phil's at wave close.
 
-## 6. Close note (filled at T1 close — placeholder until then)
+## 6. Close note (T1 close — the light-arc close record)
 
-*Pending implementation.*
+**Shipped:** `apps/web/tests/integration/reviewApprovePostRowDelta.integration.test.ts`
+— two tests: THE DELTA MATRIX (org-scoped count deltas
+`{+1 journal_entries, +1 bills, +0 payments, +0 bill_payment_allocations,
++1 evidence_objects}` + the new-row-grain content assertions: exactly
+2 balanced journal_lines at $180 (1 DR on an org-scoped expense
+account, 1 CR on the org-scoped AP-control liability), human
+attribution + dedup key, bill→JE back-reference, exactly 1 bill_line,
+the evidence subject) and THE ALL-ZERO IDEMPOTENCE DELTA (re-approve
+of a committed case → `already_complete` + zero deltas across all
+five counted tables).
+
+**Grounding discharged (the read-back condition — every literal
+traced):** +2 JL ← `billService.post` `lines: [...drLines, crLine]`
+(`billService.ts:308-315` — one DR per bill_line + ONE aggregated CR
+ap_control; the builder emits one bill_line); +0 payments/+0
+allocations ← `post()` returns at `:461`, the payment/allocation
+writes live in `recordPayment` (`:679+`); +1 evidence ← the D5
+persist-before-marking seam; the DR/CR account types ← the builder's
+D-3/D-4 lookups (D4 owns WHICH expense account — asserted at type
+grain only).
+
+**Counting deviation (grounded, surfaced):** `journal_lines` and
+`bill_lines` carry no `org_id`; asserted at NEW-ROW grain (exactly 2
+on the new JE / exactly 1 on the new bill — the only writer on this
+path) instead of org-scoped count deltas. The five org_id-bearing
+tables use the org-scoped before/after delta (the D3 `jeCount`
+precedent, race-shape shared with the standing suites).
+
+**Close checks:** D7 suite 2/2; D3 (10) + D4 (8) + D5 (8) suites
+26/26 green with `git diff` **empty** (byte-unchanged); typecheck
+clean; `agent:validate` green end-to-end (the floor 26/26 + the D6
+teeth: "1 gap(s); 1 scoped out; 0 ERROR(s)"). The test-only
+STOP-and-surface fence was never tripped — every grounded expectation
+held on first run (no source file touched; the diff is one new test
+file + this close note).
+
+**Carry-forward:** none new. D7 confirms the D3/D4/D5 composite
+write-set as specified; the §3.3(b) auto-commit-zero negative stays
+post-V1 (charter-excluded).
