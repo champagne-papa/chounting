@@ -1,6 +1,6 @@
 # Invariants Index
 
-The canonical index for the 25 invariants.
+The canonical index for the 28 invariants.
 The single place to look up "what are all the rules, where are
 they documented, and where are they enforced in code?"
 
@@ -24,20 +24,28 @@ briefs under `docs/09_briefs/phase-2/`. See
 ## Bidirectional reachability statement
 
 As of commit `65bcfe0` (Waypoint F verification, completed
-during the Phase 1.1 closeout docs restructure) and confirmed
+during the Phase 1.1 closeout docs restructure), confirmed
 again at the Arc A Step 11 doc-sync (Arc A added INV-AUDIT-002
 at Step 1, INV-ADJUSTMENT-001 at Step 9a, and INV-RECURRING-001
 at Step 10a; Step 11 of Arc A formalizes all three in this
-index):
+index), and re-verified at the Wave 6 D8 doc-sync (live run at
+`c42a402f`; D8's doc-only edits are outside both grep scopes):
 
-- **22 distinct INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md` (**15 Layer 1a**, **7 Layer 2**,
+- **28 registered INV-IDs** documented in
+  `docs/02_specs/ledger_truth_model.md` (**16 Layer 1a**, **12 Layer 2**,
   0 Layer 1b)
-- **22 distinct INV-IDs** annotated in code (`src/` +
-  `supabase/migrations/`) (15 Layer 1a, 7 Layer 2, 0 Layer 1b)
-- **Symmetric difference: empty.** Every documented invariant
-  has at least one annotation site in code; every annotated
-  INV-ID has a corresponding leaf in the doc.
+- **28 registered INV-IDs** annotated in code (`apps/web/src/` +
+  `supabase/migrations/`) (16 Layer 1a, 12 Layer 2, 0 Layer 1b)
+- **Symmetric difference at the registered-set grain: empty.**
+  Every registered invariant has at least one annotation site in
+  code; every registered INV-ID annotated in code has a
+  corresponding leaf in the doc. The raw command output carries
+  exactly four named exceptions outside the registered set —
+  `INV-CHECKPOINT-001` (doc-side; Phase-2 Layer-1b reserved stub,
+  ADR-0008), `INV-AGENT-002` (code-side; ADR-0029 reserved,
+  comment-grain citations), and `INV-AP-001` / `INV-AP-002`
+  (code-side; Phase-5 registration gap, enforced-but-unregistered
+  — carry-forward) — and nothing else.
 
 Phase 5.1 chunk 5.1a (2026-05-19) added INV-DOC-001 (Layer 2;
 evidence completeness for committed bills) per ADR-0011 §15
@@ -89,6 +97,36 @@ INV-RULE-001, deliberately not trigger-blocked so the `rule_registry`
 named in its leaf "Residual"). Future INVs whose scope differs by mutation verb
 should state the per-verb scope, as INV-RULE-004's leaf does.
 
+Wave 6 D2.1 (2026-06-03, `49179fba`) added INV-WORKFLOW-002 (Layer 2; every
+pipeline-processed document case reaches a terminal disposition — no silent
+drops; `needs_review` = the terminal hand-off to the human, not a final state)
+at the live-routing arc, registered atomically with the routing wiring.
+Layer 2 count updates from 9 → 10; total distinct INV-IDs from 25 → 26.
+INV-WORKFLOW-002 is *runtime/structural* (Layer-2 sub-type (b)) with
+test-verified support; its eventual-consistency backstop is the D2.3
+stranded-case sweep (`sweepStrandedCases`), whose one-time backlog-clearing
+run retired the transitional Class-1 residual on 2026-06-04.
+
+Wave 6 D5 (2026-06-05, `9510173d`) added INV-EVIDENCE-001 (Layer 2; every AP
+posting committed through the review path produces exactly one canonical
+evidence object per subject — org-scoped — before the case reaches
+`committed`; completeness descriptive at V1) per ADR-0033 D-0033.7's
+realization (Amendment 2026-06-05). Layer 2 count updates from 10 → 11; total
+distinct INV-IDs from 26 → 27. The enforcement is two-half: Layer-1 UNIQUE
+(`evidence_objects_subject_unique`, migration `20240177`) plus
+runtime/structural persist-before-marking at the sole committed-marking site.
+
+Wave 6 D6 (2026-06-05, `aa85390c`) added INV-WORKFLOW-001 (Layer 2; every
+Intent in the producer registry has ≥1 non-AI producer; `query` carved out at
+V1 by the ratified Q2 scope-out, with its binding re-include trigger) per
+ADR-0031's teeth-flip. Layer 2 count updates from 11 → 12; total distinct
+INV-IDs from 27 → 28. INV-WORKFLOW-001 establishes the **third Layer-2
+enforcement sub-type**: *build-time structural* — the producer-coverage check
+exits non-zero on any unscoped gap, wired as a blocking ci.yml job + the root
+validation harness; merge-blocking is operator-grain (branch protection). Its
+registration closed a reverse-only reachability window open since Wave 4 (the
+registry had carried the token warn-only).
+
 The Ring 2B implementation-arc close (2026-05-30) reconciled the frozen-count
 snapshots to the live 25 in the same pass as the per-addition note above (the arc's
 Condition-2 doc-sync): the heading below (`## The 24 invariants` → `## The 25
@@ -103,6 +141,20 @@ the convention above: the per-addition notes in this narrative are the live coun
 heading + `control_matrix.md` counts reconcile in dedicated doc-sync passes, not
 per-addition.
 
+The Wave 6 D8 doc-sync pass (2026-06-05) reconciled the frozen-count
+snapshots to the live 28: the heading below (`## The 25 invariants` → `## The
+28 invariants`), the layer sub-counts (16/9 → 16/12), and the
+`control_matrix.md` counts — including the intro-line straggler ("the 24
+invariants") carried forward from the hygiene pass. It also replaced the
+literal "empty" expectation on the verification command — here and in the
+`control_matrix.md` twin — with the named-exception framing in the statement
+above: the raw output has carried the four exceptions since at least the
+Ring 2B close (verified by re-run at `11633dc6`); the registered set is what
+both directions must reach. The remaining live pointer surfaces
+(`glossary.md` Bidirectional-reachability + Evidence-object tail,
+`CLAUDE.md` navigation, `authority-gradient.md`) reconcile in the same D8
+pass.
+
 The verification command, reproducible at any future point:
 
 ```bash
@@ -110,12 +162,14 @@ diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort
      <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
-Expected output: empty (no diff).
+Expected raw output: exactly the four named exceptions (`<`
+INV-CHECKPOINT-001; `>` INV-AGENT-002; `>` INV-AP-001; `>` INV-AP-002) and
+nothing else — symmetric difference empty at the registered-set grain.
 
-## The 25 invariants
+## The 28 invariants
 
 The order matches the leaf's Summary section: Layer 1 first
-(16 invariants), then Layer 2 (9 invariants). Within each
+(16 invariants), then Layer 2 (12 invariants). Within each
 layer, the order matches the order the invariants appear in
 `ledger_truth_model.md`.
 
@@ -219,7 +273,9 @@ order to keep bidirectional reachability intact:
    enforcement-mechanism specifics.
 5. **Verify bidirectional reachability.** Run the diff command
    from the "Bidirectional reachability statement" section
-   above. Expected output: empty.
+   above. Expected output: the four named exceptions and nothing
+   else — a correctly-added invariant appears on neither side of
+   the diff (see that statement for the exception list).
 
 **Sub-layer classification.** Layer 1 invariants carry a
 `(Layer 1a)` or `(Layer 1b)` tag in their leaf header, their

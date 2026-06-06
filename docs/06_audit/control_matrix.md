@@ -1,6 +1,6 @@
 # Control Matrix
 
-Audit-side evidence for the 24 invariants.
+Audit-side evidence for the 28 invariants.
 Maps each INV-ID to its spec definition, its test coverage, and
 the specific mechanism by which it is enforced in code.
 
@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 25 invariants — audit evidence
+## The 28 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -48,12 +48,12 @@ non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
 leaf's Summary section: Layer 1 first (16 invariants), then
-Layer 2 (9 invariants).
+Layer 2 (12 invariants).
 
 ### Layer 1a — Physical Truth, commit-time (16 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
-and 1b (scheduled audit detection). All 15 invariants below are
+and 1b (scheduled audit detection). All 16 invariants below are
 Layer 1a. The control-foundations set has
 zero Layer 1b members; Phase 2 stubs are recorded in
 `docs/02_specs/ledger_truth_model.md` under "Phase 2 Reserved
@@ -173,7 +173,7 @@ Invariants."
 - **Code enforcement:** Column-immutability triggers + RLS + `REVOKE TRUNCATE` on `rule_branches`/`rule_conditions` in `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`: `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` fire `BEFORE UPDATE` (FOR EACH ROW) + `BEFORE TRUNCATE` (FOR EACH STATEMENT) for every role including `service_role`; RLS `USING(false)` on UPDATE/DELETE (user path); `REVOKE TRUNCATE` from PUBLIC/authenticated/anon. There is **no** DELETE trigger (see Non-bypassable). `ruleBranchService` is the single-writer owner (`apps/web/src/services/rules/ruleBranchService.ts`); the physical write is the SECURITY-DEFINER `create_vendor_rule_atomic` RPC.
 - **Non-bypassable from application layer — HYBRID.** UPDATE + TRUNCATE are **all-path** (the trigger fires for `service_role` too — stronger than INV-RULE-001; the INV-AUDIT-002 shape). DELETE is **user-path only** (RLS `USING(false)`); a `service_role` direct DELETE is not DB-blocked — deliberately, so the `rule_registry` `ON DELETE CASCADE` cleanup path works (an all-path BEFORE DELETE on a cascade-child of a deletable parent is the CA-65 trap). The residual — a service-path direct single-row branch/condition DELETE on a *live* rule — is covered by the `ruleBranchService` single-writer contract, not the DB (the same discipline-not-DB gap INV-RULE-001 carries on its service path). See the INV-RULE-004 leaf "Scope" + "Residual".
 
-### Layer 2 — Operational Truth (9 invariants)
+### Layer 2 — Operational Truth (12 invariants)
 
 #### INV-AUTH-001 — Every mutating service call is authorized
 
@@ -346,11 +346,16 @@ grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u
 # Reverse: every annotated INV-ID in code has a corresponding leaf
 grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u
 
-# Symmetric difference (must be empty)
+# Symmetric difference (expected: the four named exceptions below, nothing else)
 diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u) \
      <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
-Expected: 24 distinct INV-IDs in both directions, empty symmetric
-diff. This is the single command an auditor can run at any future
-point to confirm the doc-to-code reachability has not drifted.
+Expected: 28 registered INV-IDs reached in both directions; the raw
+output carries exactly four named exceptions outside the registered
+set — INV-CHECKPOINT-001 (doc-side; Phase-2 Layer-1b reserved,
+ADR-0008), INV-AGENT-002 (code-side; ADR-0029 reserved), INV-AP-001 /
+INV-AP-002 (code-side; Phase-5 registration gap, carry-forward) — and
+nothing else: symmetric difference empty at the registered-set grain.
+This is the single command an auditor can run at any future point to
+confirm the doc-to-code reachability has not drifted.
