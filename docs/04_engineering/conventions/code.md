@@ -199,11 +199,19 @@ committing shell — not assumed from earlier in the session:
 
 The failure mode is benign-looking but repeats: git's own pathspec error
 is the catch when it fires pre-commit, but the same drift can stage the
-wrong tree state when paths happen to resolve. The intended mechanical
-fix is a **pre-commit guard** asserting repo-root cwd + `COORD_SESSION`
-set whenever the lock file exists — a named post-wave follow-up from the
-Wave-6 retrospective; this convention is the discipline until the guard
-ships, and the guard's documentation once it does.
+wrong tree state when paths happen to resolve. The mechanical guard
+shipped 2026-06-06 (cwd-guard arc, commit 66cb8c9b): the installed
+pre-commit hook hard-blocks any commit invoked from a non-root cwd
+(`GIT_PREFIX` non-empty) while the lock file exists, at severity parity
+with the `COORD_SESSION` checks; `--no-verify` is the deliberate,
+visible exception path. **Grain anchor:** the guard enforces
+*commit-time repo-root-under-lock only* — mid-session drift at
+non-commit verbs (`git status`, `git add` from a drifted shell) remains
+covered by this convention's first two bullets, not by the guard. The
+guard's empirical grounding (10 git-internal commit paths, including
+sentinel-presence observations for clean revert and cherry-pick) is
+recorded at `docs/09_briefs/v1/plans/2026-06-06-cwd-guard-empirical-matrix-results.md`.
+This convention is now the guard's documentation.
 
 ---
 **Origin:**
@@ -226,6 +234,9 @@ ships, and the guard's documentation once it does.
   `conventions.md` §Session Lock File (the lock mechanism this
   discipline serves); `v1-wave-6-retrospective.md` §3.2 + §5 (the
   pre-commit guard follow-up)
+- Guard shipped: 2026-06-06, cwd-guard arc — `scripts/install-hooks.sh`
+  template, commit 66cb8c9b; design spec
+  `docs/09_briefs/v1/specs/2026-06-06-cwd-drift-pre-commit-guard-design.md`.
 
 **Evaluation basis:**
 

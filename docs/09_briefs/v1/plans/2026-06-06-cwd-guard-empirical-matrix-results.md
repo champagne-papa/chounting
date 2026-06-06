@@ -62,10 +62,10 @@ probes below).
 | 3 | `git -C apps/web commit` | yes | `[apps/web/]` | none | correct detection (not a leak) |
 | 4 | `git commit --amend` from root | yes | `[<unset>]` | none | clean — root amend, no prefix |
 | 5 | `git rebase --continue` (merge backend, post-conflict) | **NO** (see contradiction §C5) | n/a (operation did not fire pre-commit) | n/a | clean — cannot trip guard |
-| 6 | clean `git cherry-pick` | yes | `[<unset>]` | **none — CHERRY_PICK_HEAD absent at hook time** (see §C6) | clean — no prefix |
+| 6 | clean `git cherry-pick` | yes | `[<unset>]` | **none — CHERRY_PICK_HEAD absent at hook time** (see (b)) | clean — no prefix |
 | 7a | clean `git merge --no-ff` | **NO** (only pre-merge-commit fired) | n/a (pre-commit not invoked) | n/a | clean — fires pre-merge-commit, not pre-commit |
 | 7b | conflicted merge resolved by `git commit` | yes | `[<unset>]` | **MERGE_HEAD: PRESENT** | clean — no prefix |
-| 8a | clean `git revert` from root | yes | `[<unset>]` | **none — REVERT_HEAD absent at hook time** (see §C8) | clean — no prefix |
+| 8a | clean `git revert` from root | yes | `[<unset>]` | **none — REVERT_HEAD absent at hook time** (see (b)) | clean — no prefix |
 | 8b | clean `git revert` from `apps/web` | yes | `[<unset>]` | **none — REVERT_HEAD absent** | **clean — see (d): subdir revert did NOT surface apps/web** |
 | 9a | `git rebase -i` reword | yes | `[<unset>]` | **rebase-merge: PRESENT** | clean — no prefix |
 | 9b | `git rebase -i` squash | **NO** (operation did not fire pre-commit; see §C9) | n/a | n/a | clean — cannot trip guard |

@@ -18286,3 +18286,19 @@ entry's own named trigger; ruled CODIFY-NOW at the split-trigger
 threshold (sub-type of an existing convention) and routed via
 codify-convention → `docs/04_engineering/conventions/
 prediction-grounding.md` §By claim type (the grain-anchor guard).
+
+## cwd-guard arc — guard shipped — 2026-06-06
+
+The Wave-6 §3.2 carry-forward closed: lock-gated GIT_PREFIX hard
+block in the pre-commit hook (commit 66cb8c9b), sequenced ahead of
+cleanup Arc 2 so Arc 2's commits run behind a written check. Gate
+verdict from the 10-row empirical matrix: CLEAN — shipped bare
+(Variant A); row-6/row-8 sentinel-presence observations recorded in
+the companion note (CHERRY_PICK_HEAD and REVERT_HEAD invisible at
+hook time — any future carve-out keyed on them would not cover
+those shapes). Grain held: the guard discharges the commit-time
+charter, not the whole drift class — candidate B (PreToolUse layer)
+stays banked with its evidence-gated trigger (any post-guard fire
+at a non-commit verb). Arc-2 session open must re-run
+`bash scripts/install-hooks.sh` in its checkout before first commit
+(worktrees don't inherit hooks).
