@@ -118,9 +118,9 @@ matrix with recorded results:
 | 3 | `git -C apps/web commit` | prefix set → block | must block |
 | 4 | `git commit --amend` from root | pass | must pass |
 | 5 | `git rebase --continue` (merge backend, post-conflict, from root) | no misfire | **gate** |
-| 6 | `git cherry-pick` (verify whether pre-commit even fires) | no misfire | **gate** |
+| 6 | `git cherry-pick` (verify whether pre-commit even fires) | no misfire; record `CHERRY_PICK_HEAD` presence at hook time | **gate** |
 | 7 | `git merge` — clean auto-commit fires `pre-merge-commit`, not `pre-commit`, so the guard never runs there (verify); the conflicted-merge-resolved-by-`git commit` case is what hits `pre-commit` | guard doesn't fire on clean merge; no misfire on conflicted-resolve from root | **gate** |
-| 8 | `git revert <sha>` from root, and `cd apps/web && git revert <sha>` | no false block from root; subdirectory invocation is a *legitimate-revert-wrongly-blocked* risk — the most likely false-block path | **gate** |
+| 8 | `git revert <sha>` from root, and `cd apps/web && git revert <sha>` | no false block from root; subdirectory invocation is a *legitimate-revert-wrongly-blocked* risk — the most likely false-block path; record `REVERT_HEAD` presence at hook time | **gate** |
 | 9 | `git rebase -i` reword / squash (commit machinery re-invoked mid-sequence) | no misfire | **gate** |
 | 10 | `git stash` | no misfire | **gate** |
 
@@ -137,13 +137,20 @@ guard gains an in-progress-operation carve-out — skip when
 of: `rebase-merge`, `rebase-apply`, `MERGE_HEAD`,
 `CHERRY_PICK_HEAD`, **`REVERT_HEAD`** — and this spec is amended
 to record which path forced it. A clean matrix ships the guard
-bare. Note the carve-out, if shipped, covers rows 5/6/7/9 by
-sentinel; row 8 needs its own verification: git documents
-`REVERT_HEAD` as set on *conflict*, and its presence at
-`pre-commit` time during a **clean** revert is unverified — so
-whether the carve-out would actually cover a subdirectory-invoked
-clean revert is itself an empirical question the matrix must
-settle, not assume from the sentinel list.
+bare. Carve-out coverage, if shipped, splits by **operation
+shape**, not by ref: rows 5/7/9 are persistent multi-step
+in-progress states whose sentinels (`rebase-merge`/`rebase-apply`,
+`MERGE_HEAD`) are reliably live when `pre-commit` fires. Rows 6
+and 8 are single-commit, near-instantaneous shapes: git documents
+`CHERRY_PICK_HEAD` and `REVERT_HEAD` around *conflict* resolution,
+and their presence at `pre-commit` time during a **clean** pick or
+revert is unverified — so whether the carve-out would actually
+cover a subdirectory-invoked clean cherry-pick or revert is itself
+an empirical question. For rows 6 and 8 the matrix therefore
+records **sentinel-presence at hook time as a distinct
+observation** (not just misfire/no-misfire): that presence decides
+whether the carve-out is even the right fix should `GIT_PREFIX`
+leak on those paths.
 
 ## 6. Rollout
 
@@ -176,10 +183,15 @@ arc-close entry.
 ## 8. Testing
 
 The §5 empirical matrix doubles as the behavioral test. Plus one
-live-fire verification in the real repo under a scratch session
-lock: rows 1–3 reproduced, then lock released. No vitest surface —
-git hooks aren't reachable from the suite, and faking that would
-test the mock.
+live-fire verification in the real repo: rows 1–3 reproduced
+against the installed hook. **Lock hazard:** the real repo holds
+the live `cwd-guard` session lock for this arc — a scratch lock
+written-then-released there would clobber or drop the working
+session's lock. The live-fire must either run under the *active*
+lock (no scratch lock written) or fold into §5's scratch repo;
+**the implementation plan names which.** No vitest surface — git
+hooks aren't reachable from the suite, and faking that would test
+the mock.
 
 ## 9. Out of scope / named future candidate
 
