@@ -20,7 +20,8 @@ before Phil's terminal ceremony. *(Commits at T6 as the 62nd; HEAD
 | `e2dd801b` | T2 — glossary ×2 + `CLAUDE.md:14` + `authority-gradient.md:17` | cleared 2026-06-05 |
 | `186e6769` | T4 — screenshot staging script (dev-only; (B)-conditions cleared; committed per the condition-4 ruling) | cleared 2026-06-06 |
 | `bc5c3bd8` | T5 — wave retrospective + journal close block + TWO codifications (`*TierA` N=3; commit-shell hygiene N≥3 on ratified testimony, F-1(i)) + F-2 cross-refs | cleared 2026-06-06 (§2 ledger held once, reconciled to 60 by hand-assignment) |
-| *(this file)* | T3 close-report open + diff capture + T4/T6 evidence | committed at T6 pre-push per Q-4(a) — the last content commit |
+| `a420cca4` | T6 — this close report (Q-4(a)) | cleared 2026-06-06 |
+| *(63rd)* | T6 — Condition-1 deviation fix: D4 test T-namespace conformance (one line) + journal entry + this §1/§6 update | the last content commit; fork (A) ruled with conditions, fix locus pre-cleared |
 
 ## 2. Bidirectional reachability — the D8 capture (T3)
 
@@ -231,6 +232,25 @@ from disk at T6 onset).
 - **Condition 1 (test-suite health): evidence runs at final HEAD** —
   immediately after this commit; results surfaced live at the ceremony
   and confirmed by the advisor from disk before the push.
+
+**Condition-1 deviation → fix → green (dated addendum, 2026-06-06).**
+The first `test:full` from clean reset at `a420cca4` returned
+`EXIT_CODE=1`: 1 failed | 1757 passed | 10 skipped —
+`reportTrialBalance.test.ts:150` saw 18 accounts where the seed CoA has
+16. Diagnosis (disk-verified end to end, advisor-corroborated): the
+Wave-6 D4 test created two undeletable journal-referenced accounts
+coded `D4-${RUN_SUFFIX}-${seq}`, violating the Item-20 `T${8hex}_*`
+test-account namespace the trial-balance filter excludes. Test-only;
+zero product impact; `reportService.trialBalance` correct. **The gate
+working, not the process failing** — Condition 1 held the push on the
+first arc-caused regression visible only at the full sweep (family
+N=2; journal entry this commit). Fix per the (A) ruling: one line at
+the source (`T${RUN_SUFFIX}_d4_${seq}`, conforms to
+`^T[a-f0-9]{8}_`), NOT a consumer-filter broadening; D4 file 8/8 in
+isolation post-fix. Condition-1 evidence re-runs at the post-fix HEAD;
+the green `EXIT_CODE=0` run is what the advisor confirms at the gate.
+The 62nd's "last content commit" claim moves to the 63rd by this
+addendum — recorded, not silently false.
 
 **Post-push addendum slot (Q-1(i)):** `intent-producers` run result +
 `gh run` evidence land here after Phil's terminal push.

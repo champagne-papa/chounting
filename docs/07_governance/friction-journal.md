@@ -18191,3 +18191,21 @@ journal bank (N=2, 2026-06-03) predates D3 T5's third fire
 D1 `c431aa24`, Wave-5 D2 `849439c4`, Wave-6 D3 T5 `7117cf6f`. Routed
 via `codify-convention` at the Wave-6 retrospective (§3); destination
 per the routing tree (activity trigger, test-pattern surface).
+
+**NOTE 2026-06-06 — Condition-1 full-sweep catch #2: wave-introduced
+T-namespace violation (test-only).** The first `test:full` from clean
+reset since D4 landed failed `reportTrialBalance` (18 ≠ 16 after the
+canonical filter): the D4 test (`reviewApprovePostDefaultAccount
+.integration.test.ts:254`) created undeletable, journal-referenced
+accounts coded `D4-${RUN_SUFFIX}-${seq}` — violating the Item-20
+`T${8hex}_*` namespace the consumer filter (and the documented
+accumulation discipline) expects. Fixed at source, one line
+(`T${RUN_SUFFIX}_d4_${seq}`), NOT at the consumer — broadening the
+trial-balance filter would have papered over the violation for every
+other T-namespace consumer. Second instance of the
+arc-caused-deviation-caught-only-by-the-full-sweep family (hygiene
+arc `031ce5ca` = first; N=2, banked). Post-wave signal: a write-time
+test-authoring check (created `account_code` conforms to
+`^T[a-f0-9]{8}_`) would move the catch from sweep-time to write-time —
+the same discipline-wants-a-mechanical-guard shape as commit-shell
+hygiene (`docs/04_engineering/conventions/code.md`).

@@ -251,7 +251,7 @@ async function seedAccount(opts: {
   const { error } = await db.from('chart_of_accounts').insert({
     account_id: accountId,
     org_id: opts.org_id,
-    account_code: `D4-${RUN_SUFFIX}-${accountSeq}`,
+    account_code: `T${RUN_SUFFIX}_d4_${accountSeq}`,
     account_name: `D4 test account ${RUN_SUFFIX}-${accountSeq}`,
     account_type: opts.account_type,
     is_active: opts.is_active,
