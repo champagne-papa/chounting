@@ -1,4 +1,47 @@
-# Where I am as of 2026-06-01 (V1 Wave 0 CLOSED — AP review-and-post wedge defined, ungoverned auto-commit disabled, Decisions 1–9 + 11 ratified / 10 deferred-by-design; see the latest dated section below. Full state-narrative refresh of this doc's body — which lags at 2026-05-01 / Phase-1.1–8 state — is a deferred post-V1 doc arc per the V1 Wave-0 retrospective §5.)
+# Where I am as of 2026-06-06 (V1 Wave 6 CLOSED — AP Review shipped; build waves 1–6 complete per the charter; 64 commits pushed, origin/staging = `459b172d`; see the latest dated section below. Full state-narrative refresh of this doc's body — which lags at 2026-05-01 / Phase-1.1–8 state — is a deferred post-V1 doc arc per the V1 Wave-0 retrospective §5.)
+
+## V1 Wave 6 — AP Review — CLOSED 2026-06-06
+
+The final build wave (waves 1–6 ran 2026-06-01 → 2026-06-06 atop Wave 0;
+Wave 5 closed at `e571ceb5`). Nine deliverables (D1, D2.1, D2.3, D3, D4,
+D5, D6, D7, D8) banked-local under the `wave-6-ap-review` session lock and
+pushed as one coherent wave at the D8 terminal ceremony:
+`e571ceb5..83339a7c` (63 commits, Phil's hand) + coda `459b172d`. Lock
+released via `session-end.sh` as the ceremony's last act. Full
+retrospective: `docs/07_governance/retrospectives/v1-wave-6-retrospective.md`;
+D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
+
+- **The wedge is live end-to-end:** review inbox + human approve→post
+  (D3) with real coding (D4), evidence-object persistence (D5), live
+  routing + no-silent-drops (D2.1/D2.3), and the row-delta proof (D7) —
+  founder-screenshot-gated (D8 §4, GATE PASSED with a live lifecycle
+  trace).
+- **Governance reconciled:** invariants 25→28 (16 L1a + 12 L2) across
+  all six live snapshot sites with the named-exception reachability
+  framing (the raw diff carries exactly four documented exceptions —
+  none silent); three Wave-6 INV registrations (INV-WORKFLOW-002,
+  INV-EVIDENCE-001, INV-WORKFLOW-001) compounded at D8.
+- **CI teeth live:** the `intent-producers` job (INV-WORKFLOW-001) green
+  on its **first dynamic execution** at the terminal push. Pre-existing
+  `lint`/`build` reds verified not-wave-introduced and named for the
+  queue (agent→`adminClient` import-boundary cleanup). Branch protection
+  currently requires no checks (`main`; `staging` unprotected) — teeth
+  advisory; disposition is Phil's.
+- **Two codifications:** `*TierA` additive-named-export (N=3 →
+  `conventions/testing.md`) and commit-shell hygiene under a session
+  lock (N≥3 on operator-ratified testimony, split recorded →
+  `conventions/code.md`).
+- **Push-readiness gate earned its keep:** caught its own diff-empty
+  prediction (→ named-exception reconcile), its own shot-5 view spec
+  (→ Pending Approvals), and a real test-only regression (D4
+  T-namespace violation, fixed at source) — none forced to look right.
+- **Next:** the queued carry-forwards (retro §5 + close report §6 coda):
+  agent→`adminClient` cleanup; push-readiness escape-clause
+  generalization; cwd-drift pre-commit guard; test-account-namespace
+  write-time check; branch-protection disposition; INV-AP-001/002
+  severity; Q2 `query` re-include trigger. Decision 10 still unparks at
+  market strategy; the post-V1 doc-refresh arc (this doc's body +
+  `system_overview`) remains deferred.
 
 ## V1 Wave 0 governance arc — CLOSED 2026-06-01
 
