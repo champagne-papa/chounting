@@ -295,3 +295,13 @@ pre-existing (locked at commit grain — imports entered
 2026-05-20/05-30); three are sanctioned disables (verified at
 `e571ceb5`). Arc charter:
 `2026-06-06-agent-adminclient-arc1-brief.md`.
+
+*Anchor note (2026-06-06, second pass): "the nine" above =
+`eslint src/agent` grain. The full CI lint pass carries 14 boundary
+errors in three classes — agent→db ×7 (the Q33 class); app→db
+read-route pattern ×5, of which the D3 review-route pair is
+wave-introduced AND was documented at D3 close §2 at the time
+(cards-precedent baseline debt — never silent); services→agent ×2,
+pre-wave. Full enumeration with dating: the friction-journal Arc-1
+record note. "Bare" was true of reviewPreview's code; "undocumented"
+was not true of the record — D3 §2 had named it the Q33 9th member.*

@@ -43,10 +43,12 @@ three observed:
   disk state has evolved between writing and execution.
 
 **By claim type** (what unobservable is grounded by reading the
-source at write time) — five observed (V1 Wave-0 governance arc).
-Four cite a discrete caught slip; numstat's basis is the standing
-include-numstat-in-commit-reports convention plus grounding-family
-membership, not a caught mis-recall:
+source at write time) — six observed (five from the V1 Wave-0
+governance arc; the sixth from the agent→adminClient Arc 1,
+2026-06-06). Of the Wave-0 five, four cite a discrete caught slip;
+numstat's basis is the standing include-numstat-in-commit-reports
+convention plus grounding-family membership, not a caught
+mis-recall:
 
 - **Commit hashes (SHA-corollary).** Never author a commit SHA you
   haven't read from git. Slip: `9caf9c30` predicted into a
@@ -70,6 +72,20 @@ membership, not a caught mis-recall:
   slip; dual-nature — also a commit-time reporting-coordination
   convention, which if it earns its own fires graduates separately
   (likely to `session/iterative-catching.md`).
+- **Claim grain (grain-anchor guard).** A claim verified at one
+  grain does not transfer to a broader or finer grain without
+  verification at that grain; anchor every scoped claim to its
+  verified grain explicitly ("the nine" reads as everything unless
+  it says `src/agent`). Slips (N=2, identical shape, same narrow
+  domain — claims about CI/lint state — both caught only
+  downstream): the Wave-6 D8 coda's "pre-existing, not
+  wave-introduced" — true at CI-job grain, false at violation grain
+  (two wave-introduced sites); the Arc-1 close prose's "red purely
+  Class B's seven" — true at `eslint src/agent` grain, false at
+  codebase-CI grain (14 errors, three classes). The second fire was
+  the advisor's, in the act of warning against the shape — the
+  recurrence-through-the-disciplined is the case for codifying
+  rather than resolving-to-discipline.
 
 ## How to apply
 
@@ -124,6 +140,17 @@ shape in mind.
   grounding guards). Four cite caught slips (SHA-corollary,
   grep-count, attribution, related-field); numstat is
   convention-based, not a caught slip.
+- Evidence basis (extension): +1 claim-grain sub-shape
+  (grain-anchor guard) from the agent→adminClient Arc 1
+  (2026-06-06), graduated at the N=2 split-trigger for sub-types of
+  an existing convention; promoted from the friction-journal Arc-1
+  entries (the WRONG coda-grain catch, N=1 banked with the
+  next-fire trigger named; the WRONG second fire in the advisor's
+  close prose — the trigger firing as written). Routed via
+  `codify-convention` at the Arc-1 record-and-codify pass;
+  advisor-ruled CODIFY-NOW with the explicit reasoning that
+  recurrence through the discipline's own keeper is the argument
+  for codification over discipline.
 - Promoted from: friction-journal family
   `caveat-prediction-vs-empirical-resolution` (3 instances banked
   2026-05-19; family name reflects the originating instance, this
@@ -164,7 +191,8 @@ application.
   of the same narrow shape. (2) *Claim type*: the V1 Wave-0
   governance arc added five sub-shapes spanning distinct
   unobservables grounded by reading the source (commit hash,
-  verification count, attribution, cross-reference, diff shape).
+  verification count, attribution, cross-reference, diff shape);
+  Arc-1 (2026-06-06) a sixth (claim grain) — six current total.
   Two-axis coverage is a stronger generalization than the original
   single-axis surface diversity.
 - **Stable.** Three instances within ~2 weeks but each in a

@@ -18237,6 +18237,9 @@ subject-grep false positives (counting at the wrong grain vs claiming
 across grains). Adjudicated at this entry against the journal:
 observation-grain **N=1** for the claim-grain sub-shape as such —
 banked, not codified; next fire routes through `codify-convention`.
+(Second fire 2026-06-06 SAME ARC — the advisor's close prose; graduated
+at the N=2 split-trigger → `prediction-grounding.md` §By claim type,
+the grain-anchor guard. The named trigger fired and routed as written.)
 
 **NOTE 2026-06-06 — cwd-drift fired mid-Arc-1; caught pre-commit by the
 convention's own check (the guard follow-up's live N+1).** During T2 a
@@ -18250,3 +18253,36 @@ recurrence datum showing discipline alone won't end the class. Routes
 to the named pre-commit guard follow-up (repo-root cwd +
 `COORD_SESSION` when the lock file exists); the guard, not more
 discipline, remains the fix.
+
+**NOTE 2026-06-06 — the CI red enumerated at codebase grain (the
+"red for the predicted reasons" glance); three classes, 14 errors;
+two relay corrections folded.** Observation at run 27072368962
+(`3e51389a`): 14 `agent-first-import-boundaries` errors — (1)
+agent→db ×7, the Q33 class (pre-wave, locked at commit grain); (2)
+app→db read-route pattern ×5: cards ×2 (6.2b) + postmark (6.3a)
+pre-wave, review/cases (`7117cf6f` D3 T5) + approve-post
+(`bea17821` D3 T6) wave-introduced — DOCUMENTED at D3 close §2 at
+the time (cards-precedent baseline debt, copied with the pattern;
+never silent); (3) services→agent ×2, pre-wave:
+`ingestionService.ts:142` a STATIC top-level value import of
+`ingestDocument` (relay said "lazy-bound" — corrected from disk; a
+real runtime coupling that knots with Arc 2's spine) and
+`vendorService.ts:44` type-only (file Phase-5-born per its header;
+the agent import entered Phase 7 chunk 7.3a `84991894` — both
+grains recorded). Q33 grounding lands in Arc 2's charter — the
+citation gap that let reviewPreview read as undocumented at the
+Arc-1 kickoff; D3 §2 had named it the Q33 9th member.
+
+**WRONG 2026-06-06 — the claim-grain shape fired a SECOND time, in
+the advisor's own close prose.** "Red purely Class B's seven" —
+true at `eslint src/agent` grain, projected unanchored to
+codebase-CI grain (14). Caught at the observation the advisor's
+own "red for the predicted reasons" glance prescribed; owned
+without softening. The committed Arc-1 wording was scoped ("two of
+the nine"; "src/agent 9→7") but under-anchored for a reader —
+anchor notes appended this commit (close report §6,
+CURRENT_STATE). N=2 on the claim-grain sub-shape — the banked N=1
+entry's own named trigger; ruled CODIFY-NOW at the split-trigger
+threshold (sub-type of an existing convention) and routed via
+codify-convention → `docs/04_engineering/conventions/
+prediction-grounding.md` §By claim type (the grain-anchor guard).

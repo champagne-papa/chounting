@@ -29,7 +29,10 @@ D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
   grain two of the nine errors ARE wave-introduced —
   `reviewPreview.ts` D3 + `sweepStrandedCases.ts` D2.3, a shipped
   regression, now Arc-1 scope — see the D8 close report §6
-  correction.)* Branch protection
+  correction. Anchor, second pass: "the nine" = `src/agent` grain;
+  the full CI red is 14 in three classes, the D3 route pair
+  documented at D3 close §2 — Arc-1 friction-journal record note.)*
+  Branch protection
   currently requires no checks (`main`; `staging` unprotected) — teeth
   advisory; disposition is Phil's.
 - **Two codifications:** `*TierA` additive-named-export (N=3 →
