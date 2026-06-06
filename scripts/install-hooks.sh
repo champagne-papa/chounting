@@ -5,8 +5,12 @@
 # per clone / worktree; git doesn't track hooks themselves.
 #
 # The installed hook enforces:
-#   1. Session Lock File Convention (see
-#      docs/04_engineering/conventions/session/iterative-catching.md).
+#   1. Session Lock File Convention — identity (COORD_SESSION match)
+#      + location (repo-root cwd via GIT_PREFIX) when the lock file
+#      exists (see
+#      docs/04_engineering/conventions/session/iterative-catching.md
+#      and docs/04_engineering/conventions/code.md §Commit-shell
+#      hygiene under a session lock).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
 #   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
@@ -24,8 +28,12 @@ trap 'rm -f "$TMP_HOOK"' EXIT
 cat > "$TMP_HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
 # Installed by scripts/install-hooks.sh. Enforces:
-#   1. Session Lock File Convention (see
-#      docs/04_engineering/conventions/session/iterative-catching.md).
+#   1. Session Lock File Convention — identity (COORD_SESSION match)
+#      + location (repo-root cwd via GIT_PREFIX) when the lock file
+#      exists (see
+#      docs/04_engineering/conventions/session/iterative-catching.md
+#      and docs/04_engineering/conventions/code.md §Commit-shell
+#      hygiene under a session lock).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
 #   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
@@ -59,6 +67,19 @@ else
     echo "'$LOCK_LABEL' but your shell's COORD_SESSION is" >&2
     echo "'$COORD_SESSION'. This looks like a foreign-session commit." >&2
     echo "Stop and resolve before retrying. Commit blocked." >&2
+    exit 1
+  fi
+
+  # ---- cwd guard (commit-shell hygiene; Wave-6 retro §3.2) ----
+  if [[ -n "${GIT_PREFIX:-}" ]]; then
+    echo "[coordination] error: commit invoked from subdirectory" >&2
+    echo "'${GIT_PREFIX}', not the repo root, while session lock" >&2
+    echo "'$LOCK_LABEL' is active. Commit-shell hygiene" >&2
+    echo "(conventions/code.md) requires repo-root commits under a" >&2
+    echo "lock. Run:" >&2
+    echo "  cd \"\$(git rev-parse --show-toplevel)\"" >&2
+    echo "and retry. Commit blocked. (--no-verify is the deliberate" >&2
+    echo "exception path; record why in the commit body if used.)" >&2
     exit 1
   fi
 fi
@@ -115,7 +136,8 @@ echo "Pre-commit hook installed at $HOOK_PATH."
 echo ""
 echo "The hook enforces:"
 echo "  1. Session Lock File Convention (.coordination/session-lock.json"
-echo "     vs COORD_SESSION env var)."
+echo "     vs COORD_SESSION env var; repo-root cwd via GIT_PREFIX when"
+echo "     the lock exists)."
 echo "  2. ADR linting and index regeneration when ADR-related files"
 echo "     are staged (docs/07_governance/adr/, docs/02_specs/taxonomy.md,"
 echo "     docs/02_specs/invariants.md, scripts/adr/)."
