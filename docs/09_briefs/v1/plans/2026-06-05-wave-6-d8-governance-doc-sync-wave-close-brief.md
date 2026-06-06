@@ -401,3 +401,194 @@ it. Same fix inside site #4's entry.
 cleared per §6 (D-2(a), D-3(a), D-4 as-recorded) with two scope additions;
 completeness sweep per §7. Decomposition follows as §8 — surfaced separately
 and HELD for its own read-back before any edit lands.*
+
+---
+
+## 8. Decomposition (surfaced for advisor read-back — HOLD)
+
+Both §6 scope additions are incorporated: the glossary
+Bidirectional-reachability entry is T2 edit (b); the completeness sweep ran
+pre-T1/T2 (§7) and its full site table drives the T1/T2 edit sets.
+
+Registration anchors, read from git (SHA-corollary discharged):
+`49179fba` 2026-06-03 (D2.1 T3, INV-WORKFLOW-002 atomic registration);
+`9510173d` 2026-06-05 (D5 T3, INV-EVIDENCE-001); `aa85390c` 2026-06-05
+(D6 T3, INV-WORKFLOW-001).
+
+### T1 — The 25→28 reconcile (`invariants.md` + `control_matrix.md`, one governance commit)
+
+`invariants.md` edits, in file order:
+
+1. `:3` — "the 25 invariants" → "the 28 invariants".
+2. `:26-40` snapshot block — bullets become **28 distinct INV-IDs** both
+   directions (**16 Layer 1a, 12 Layer 2, 0 Layer 1b**); the code-side
+   bullet's pre-monorepo `src/` → `apps/web/src/` (§7 side-finding); the
+   "Symmetric difference: empty" bullet becomes the D-2(a) framing —
+   *at the registered-set grain, empty both directions; the raw output
+   carries exactly four named exceptions* (CHECKPOINT-001 doc-side Phase-2
+   reserved ADR-0008; AGENT-002 code-side ADR-0029 reserved; AP-001/002
+   code-side Phase-5 registration gap, carry-forward). Provenance clause
+   extends (65bcfe0 + Arc A retained) with "re-verified at the Wave 6 D8
+   doc-sync — live run at `c42a402f`; D8's doc-only edits are outside both
+   grep scopes."
+3. After the INV-RULE-004 note (`:90`) — three per-addition notes, house
+   pattern (each names what's novel): **→26** INV-WORKFLOW-002 (Wave 6 D2.1,
+   `49179fba`; runtime/structural; Layer 2 9→10; D2.3 sweep backstop,
+   Class-1 retired 2026-06-04); **→27** INV-EVIDENCE-001 (Wave 6 D5,
+   `9510173d`; Layer-1 UNIQUE + runtime/structural persist-before-marking;
+   Layer 2 10→11; ADR-0033 Amendment 2026-06-05); **→28** INV-WORKFLOW-001
+   (Wave 6 D6, `aa85390c`; **build-time structural — the third Layer-2
+   enforcement sub-type**; Q2 `query` carve-out with its binding re-include
+   trigger; closes the reverse-only window open since Wave 4; Layer 2
+   11→12).
+4. After the hygiene-pass note (`:104`) — one D8 reconcile-pass note
+   (25→28 across both files + the named-exception framing + the T2 pointer
+   sites), the Ring 2B / hygiene precedent shape.
+5. `:113` — "Expected output: empty (no diff)." → expected raw output = the
+   four named exceptions and nothing else; registered-set grain empty.
+6. `:115` — `## The 25 invariants` → `## The 28 invariants`.
+7. `:118` — "(16 invariants), then Layer 2 (9 invariants)" → "(16
+   invariants), then Layer 2 (12 invariants)".
+
+`control_matrix.md` edits, in file order:
+
+8. `:3` — "the 24 invariants" → "the 28 invariants" (retires the
+   hygiene-arc carry-forward; commit body says so).
+9. `:42` — `## The 25 invariants — audit evidence` → 28.
+10. `:50-51` — "(16 invariants), then Layer 2 (9 invariants)" → 12.
+11. `:56` — "All 15 invariants below" → "All 16 invariants below".
+12. `:176` — "Layer 2 — Operational Truth (9 invariants)" → 12.
+13. `:354-356` — "Expected: 24 distinct INV-IDs in both directions, empty
+    symmetric diff" → 28 at the registered-set grain + the same
+    named-exception sentence as edit 5 (the twin stays a twin).
+
+Discipline: Read-before-Edit on every multi-line anchor (Z1 #11.a); exact
+note text drafted at T1 and surfaced line-by-line with the full diff +
+gate runs (`pnpm agent:validate`, `pnpm typecheck`, diff re-run — expected
+byte-identical to §1.3) before commit.
+
+### T2 — Remaining live snapshot surfaces (one governance commit)
+
+(a) `glossary.md:161-163` Evidence-object tail (D-3(a)) — replace the
+"ships inert (no row-producer); enforcement remains INV-DOC-001,
+generalized at Wave 6" tail: the row-producer shipped at Wave 6 D5 (the
+approve→post persist-before-marking seam); enforcement is now registered
+**INV-EVIDENCE-001** (Layer-1 UNIQUE + persist-before-marking); INV-DOC-001
+stays the live bill-evidence gate. No re-edit of the realized D-0033.7
+wording above it; commit body records the swap found realized at `0bb6c696`.
+
+(b) `glossary.md:77-82` Bidirectional-reachability entry (§6 ruled-in) —
+`src/` → `apps/web/src/`; "As of commit `65bcfe0`: 17/17 with empty
+symmetric diff." → as of the Wave 6 D8 doc-sync: **28 registered INV-IDs
+both directions**; raw output carries the four named exceptions (pointer to
+`invariants.md` for the list + command).
+
+(c) `CLAUDE.md:14` — "the 24 invariants" → "the 28 invariants"
+(**pending this read-back's fold-in ruling**, §7 site 5).
+
+(d) `authority-gradient.md:17` — "the 20 invariants" → "the 28 invariants"
+(**pending this read-back's fold-in ruling**, §7 site 6).
+
+### T3 — Symmetric-diff capture + close-report draft
+
+Re-run the command at post-T2 HEAD; capture output + the verifying SHA.
+Expected: byte-identical four-exception output (T1/T2 touch no grep-scope
+file) — any delta is a STOP-SURFACE. Opens the close report
+(`docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`, house
+D3–D6 pattern) carrying: the capture, the D-4 branch-protection record
+(D6 §6.2 slot), and stubs for T4/T6 evidence. Drafted + surfaced at T3;
+**committed at T6 pre-push** after read-back.
+
+### T4 — UI-screenshot closeout (Phil's hands)
+
+Per the skill's four-step procedure: orchestrator drafts the capture
+sequence at T4 onset **from the D3 close report's shipped-surface
+enumeration** (proposal grain: 3–5 shots — review inbox with post-status
+badges; case detail at review; approve→post outcome state; the posted
+result on the Billing surface — exact list + per-shot verifications drafted
+at T4, not fabricated here); Phil captures against fresh
+`pnpm db:reset:clean && pnpm db:seed:all`; orchestrator spot-checks; gate
+blocks wave close. Evidence pointer lands in the close report (artifact
+location per Arc A precedent — confirmed at T4 onset).
+
+### T5 — Wave retrospective + codification (rides the three-condition gate)
+
+Onset: dispatch the `friction-pattern-detector` agent over the Wave-6
+window + invoke the `phase-retrospective` skill (house tooling for exactly
+this surface). Content from §1.6: the two mid-wave N=4 codifications
+recorded; **`*TierA` N=3 routes through `codify-convention`** (first
+reconciling the journal's N=2-vs-D3's-N=3 count trail); below-threshold
+banks recorded; per-deliverable carry-forwards enumerated (incl. the
+INV-AP-001/002 severity question, the branch-protection residual, and the
+§7 historical-sites table). Friction-journal arc-scope entries. Retro doc at
+`docs/07_governance/retrospectives/` (wave-6 naming per house pattern).
+Commit shape: **proposed single governance commit** (retro + journal +
+codification edits) — see Q-2.
+
+### T6 — Close ceremony (strict order)
+
+1. Close-report final draft committed (post read-back) — the last content
+   commit.
+2. Push-readiness evidence at final HEAD: `git log --oneline
+   origin/staging..HEAD | wc -l`; `git status --short` clean (modulo the
+   five untracked paths — not D8's); `pnpm agent:validate` 26/26;
+   `pnpm test:full` from clean reset (Condition 1, run AFTER the last
+   content commit so it's green *at HEAD*); `pnpm typecheck`;
+   `verify-audit-coverage` env note honored. All runs surfaced together.
+3. **Advisor confirms the three-condition gate green from disk** (the
+   advisor seat's last pre-push act, per §6).
+4. **Phil's terminal push** (explicit act; nothing automated).
+5. Post-push: confirm the `intent-producers` ci.yml job ran green on the
+   push — its **first dynamic execution** (D6 §6.1; `gh run list`/`gh run
+   view` evidence). Recording per Q-1.
+6. **Lock release LAST** (release mechanism verified from
+   `scripts/session-init.sh` / conventions at T6 onset — not assumed).
+
+### Open questions for this read-back
+
+- **Q-1** — where the post-push CI confirmation is *recorded*: (i) a tiny
+  close-report addendum commit + a coda push (Phil's, same ceremony) so the
+  record lives in-repo — **recommended**; or (ii) an uncommitted session
+  record only, with the retro noting "confirmed live, recorded next arc."
+- **Q-2** — T5 commit shape: single governance commit (recommended; D8's
+  retro is wave-grain, not the phase-cycle three-commit A/B/C ceremony) vs
+  the A/B/C split.
+- **Q-3** — fold-in ruling on §7 sites 5 (`CLAUDE.md:14`) and 6
+  (`authority-gradient.md:17`) into T2 — recommended fold-in (same class as
+  the ruled-in glossary entry; CLAUDE.md loads every session).
+- **Q-4** — close report as a separate doc (recommended, house D3–D6
+  pattern) vs a close-note section in this brief (D7 light-arc pattern).
+
+*Decomposition drafted 2026-06-05 at `b9023591`. HOLD — no edit, no commit,
+until this read-back clears with Q-1..Q-4 ruled.*
+
+## 9. Decomposition read-back ruling (2026-06-05, relayed)
+
+**Decomposition CLEARED; Q-1…Q-4 ruled.** Sites 5/6 independently
+confirmed real and live-class by the advisor (navigation pointers
+describing the current ledger, not scoped-historical). The 13 T1 edits map
+to the advisor's D6-read anchors; SHAs verified (two directly, D2.1's on
+backstop).
+
+- **Q-1 → (i)** addendum + coda push, **with conditions**: the addendum is
+  doc-only (close-report CI-confirmation line + `gh run` evidence),
+  advisor-verified before the coda goes; the coda is a bounded post-wave
+  confirmation, not wave content — its own green CI needs no recursive
+  recording (the regress terminates there); lock release follows the coda
+  as the genuine last act.
+- **Q-2 → (a)** single retro commit, with the ask that the commit body
+  **explicitly names the `*TierA` codification** so its graduation stays
+  discoverable in `git log`.
+- **Q-3 → (a)** fold `CLAUDE.md:14` and `authority-gradient.md:17` into
+  T2 — leaving them would have the standing-rules file and the architecture
+  rollup contradict the freshly-synced canonical docs.
+- **Q-4 → (a)** separate close report (D8 is the wave's heaviest close).
+- **Free addition:** while T2 has `glossary.md` open, glance at the
+  push-readiness entry (`:807-813`) to confirm the "definitional, no-edit"
+  classification holds. Other historical-no-edit classifications taken on
+  the sweep's reasoning; ledger Summary independently confirmed scoped;
+  ADR provenance append-only by rule.
+
+Next surface: **T1**, with the actual note prose surfaced line-by-line
+alongside the full diff and the gate runs, and the diff re-run coming back
+byte-identical to the four-exception output.
