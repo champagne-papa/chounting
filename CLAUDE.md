@@ -11,7 +11,7 @@ flag it in `docs/02_specs/open_questions.md` — do not guess.
 
 ## Navigation — tier-1 always-relevant
 
-- **`docs/02_specs/ledger_truth_model.md`** — the 24 invariants.
+- **`docs/02_specs/ledger_truth_model.md`** — the 28 invariants.
   Full leaves, Phase 2 evolution notes, interactions. Tiebreaker
   for ledger legality.
 - **`docs/02_specs/agent_autonomy_model.md`** — the agent

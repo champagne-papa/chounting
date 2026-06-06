@@ -76,10 +76,12 @@ Gradient section in `ledger_truth_model.md`.
 
 **Bidirectional reachability.** The verification that every
 INV-ID documented in `ledger_truth_model.md` has at least one
-annotation site in code (`src/` + `supabase/migrations/`), and
-every INV-ID annotated in code has a corresponding leaf in the
-doc. As of commit `65bcfe0`: 17/17 with empty symmetric diff.
-See `invariants.md` for the verification command.
+annotation site in code (`apps/web/src/` +
+`supabase/migrations/`), and every INV-ID annotated in code has
+a corresponding leaf in the doc. As of the Wave 6 D8 doc-sync:
+28 registered INV-IDs reached in both directions; the raw
+output carries four named exceptions. See `invariants.md` for
+the exception list and the verification command.
 
 **Bridge UI pattern.** The persistent split-screen layout: AI
 agent chat on the left, a live [ContextualCanvas](#c) on the
@@ -158,9 +160,12 @@ it. The `core/evidence/` + `services/evidence/` homes are
 populated at Wave 2 (ADR-0033, migration `20240172000000`) as a
 read/assembly surface: `services/evidence` assembles the object
 on read from live references; `core/evidence` holds the pure
-completeness rule. The `evidence_objects` anchor ships inert (no
-row-producer); enforcement remains INV-DOC-001, generalized at
-Wave 6.
+completeness rule. The `evidence_objects` anchor gained its
+row-producer at Wave 6 D5 — the approve→post route's
+persist-before-marking seam (`evidenceObjectService.persist`) —
+and enforcement is now the registered INV-EVIDENCE-001 (Layer-1
+UNIQUE per subject + persist-before-marking; ADR-0033 Amendment
+2026-06-05). INV-DOC-001 stays the live bill-evidence gate.
 
 ## F
 
