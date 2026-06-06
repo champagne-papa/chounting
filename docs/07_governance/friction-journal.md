@@ -18237,3 +18237,16 @@ subject-grep false positives (counting at the wrong grain vs claiming
 across grains). Adjudicated at this entry against the journal:
 observation-grain **N=1** for the claim-grain sub-shape as such —
 banked, not codified; next fire routes through `codify-convention`.
+
+**NOTE 2026-06-06 — cwd-drift fired mid-Arc-1; caught pre-commit by the
+convention's own check (the guard follow-up's live N+1).** During T2 a
+compound gate-run (`cd apps/web && …`) left the persistent shell
+drifted; the next `git status` ran from `apps/web` and betrayed itself
+by relative paths; re-rooted before anything staged. First fire SINCE
+`conventions/code.md` §Commit-shell hygiene codified — caught at the
+discipline's verify-in-the-committing-shell step rather than by a git
+pathspec failure: the convention working, and simultaneously the
+recurrence datum showing discipline alone won't end the class. Routes
+to the named pre-commit guard follow-up (repo-root cwd +
+`COORD_SESSION` when the lock file exists); the guard, not more
+discipline, remains the fix.

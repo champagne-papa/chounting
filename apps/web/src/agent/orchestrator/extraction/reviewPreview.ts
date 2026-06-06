@@ -27,10 +27,9 @@
 // new folder, no guardrail fire.
 
 import crypto from 'crypto';
-import { adminClient } from '@/db/adminClient';
-import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import { vendorService } from '@/services/spend/vendorService';
+import { loadReviewPreviewRows } from '@/services/document-platform/reviewPreviewReadService';
 import type {
   ServiceContext,
   SystemActorServiceContext,
@@ -179,62 +178,18 @@ export async function buildReviewPreview(
     trace_id: ctx.trace_id,
     user_id: ctx.caller.user_id ?? undefined,
   });
-  const db = adminClient();
+  // All persisted-state reads live in the services layer (Arc 1 T2 —
+  // ADR-0020 Law 1). The org-verified IDOR-root sequencing is preserved
+  // INSIDE loadReviewPreviewRows: the case row is fetched WITH the org
+  // filter (foreign caseId misses identically to a nonexistent one) and
+  // every downstream read derives from that verified row's ids.
+  const rows = await loadReviewPreviewRows({
+    org_id: input.org_id,
+    document_case_id: input.document_case_id,
+  });
+  const { caseRow, sourceDocumentId, exRow, jeRows } = rows;
 
-  // The org-verified root row: fetched WITH the org filter — a foreign
-  // org's caseId misses identically to a nonexistent one (no existence
-  // leak; brief D-1.2). Every downstream read derives from this row.
-  const { data: caseRow, error: caseErr } = await db
-    .from('document_cases')
-    .select(
-      'id, org_id, state, document_type, classification_confidence, created_at, trace_id',
-    )
-    .eq('id', input.document_case_id)
-    .eq('org_id', input.org_id)
-    .maybeSingle();
-  if (caseErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] case read failed: ${caseErr.message}`,
-    );
-  }
-  if (!caseRow) {
-    throw new ServiceError(
-      'NOT_FOUND',
-      `[reviewPreview] document_case ${input.document_case_id} not found in org`,
-    );
-  }
-
-  // Reverse join: the case's own source document (oldest job wins).
-  const { data: job, error: jobErr } = await db
-    .from('document_jobs')
-    .select('source_document_id')
-    .eq('document_case_id', caseRow.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (jobErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] document_jobs read failed: ${jobErr.message}`,
-    );
-  }
-  const sourceDocumentId = (job?.source_document_id as string) ?? null;
-
-  // Persisted candidates VERBATIM — the recorded routing decision.
-  const { data: candRows, error: candErr } = await db
-    .from('document_relationship_candidates')
-    .select('id, linked_entity_type, linked_entity_id, link_role, confidence_score, source_document_id')
-    .eq('document_case_id', caseRow.id)
-    .eq('org_id', caseRow.org_id)
-    .order('confidence_score', { ascending: false });
-  if (candErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] candidates read failed: ${candErr.message}`,
-    );
-  }
-  const candidates = (candRows ?? []).map((c) => ({
+  const candidates = (rows.candRows ?? []).map((c) => ({
     id: c.id as string,
     linked_entity_type: c.linked_entity_type as string,
     linked_entity_id: (c.linked_entity_id as string) ?? null,
@@ -242,79 +197,19 @@ export async function buildReviewPreview(
     confidence_score: Number(c.confidence_score),
   }));
 
-  // Open exception (if any) — derived from the verified case id.
-  const { data: exRow, error: exErr } = await db
-    .from('exception_queue_entries')
-    .select('exception_queue_entry_id, exception_reason, created_at')
-    .eq('document_case_id', caseRow.id)
-    .eq('exception_status', 'open')
-    .maybeSingle();
-  if (exErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] exception read failed: ${exErr.message}`,
-    );
-  }
-
-  // Source-doc metadata + the persisted OCR artifact (latest), both
-  // derived from the verified row's source_document_id.
-  let sourceDocument: ReviewPreview['source_document'] = null;
-  let artifact: DocumentArtifactRow | null = null;
-  if (sourceDocumentId) {
-    const { data: sd, error: sdErr } = await db
-      .from('source_documents')
-      .select('id, original_filename, mime_type, original_byte_size, received_at')
-      .eq('id', sourceDocumentId)
-      .eq('org_id', caseRow.org_id)
-      .maybeSingle();
-    if (sdErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `[reviewPreview] source_document read failed: ${sdErr.message}`,
-      );
-    }
-    sourceDocument = sd
-      ? {
-          id: sd.id as string,
-          original_filename: sd.original_filename as string,
-          mime_type: sd.mime_type as string,
-          original_byte_size: sd.original_byte_size as number,
-          received_at: sd.received_at as string,
-        }
-      : null;
-
-    const { data: art, error: artErr } = await db
-      .from('document_artifacts')
-      .select('*')
-      .eq('source_document_id', sourceDocumentId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (artErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `[reviewPreview] artifact read failed: ${artErr.message}`,
-      );
-    }
-    artifact = (art as DocumentArtifactRow) ?? null;
-  }
-
-  // Posted-JE probe by the PER-CHILD dedup triples (T6 ruling: uniform
-  // suffixing). Exact-match .in() on the known child keys — multi-JE-
-  // aware so a two-child bundle's recovery lookup sees both rows.
-  const childKeys = [`${caseRow.id}:bill`, `${caseRow.id}:payment`];
-  const { data: jeRows, error: jeErr } = await db
-    .from('journal_entries')
-    .select('journal_entry_id, entry_number, source_external_id')
-    .eq('org_id', caseRow.org_id)
-    .eq('source_system', 'manual')
-    .in('source_external_id', childKeys);
-  if (jeErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] journal_entries probe failed: ${jeErr.message}`,
-    );
-  }
+  // Source-doc metadata + artifact (mapped from the hoisted reads; the
+  // narrowing casts stay agent-side — services return loose rows).
+  const sd = rows.sourceDocRow;
+  const sourceDocument: ReviewPreview['source_document'] = sd
+    ? {
+        id: sd.id as string,
+        original_filename: sd.original_filename as string,
+        mime_type: sd.mime_type as string,
+        original_byte_size: sd.original_byte_size as number,
+        received_at: sd.received_at as string,
+      }
+    : null;
+  const artifact = (rows.artifactRow as DocumentArtifactRow | null) ?? null;
 
   const base = {
     document_case: {

@@ -46,9 +46,14 @@
 // open exceptions). Do not over-trust the threshold.
 
 import crypto from 'crypto';
-import { adminClient } from '@/db/adminClient';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
+import {
+  findEligibleStrandedCases,
+  getOldestJobSourceDocumentId,
+  caseHasRelationshipCandidates,
+  getDocumentCaseState,
+} from '@/services/document-platform/strandedCaseReadService';
 import {
   SYSTEM_ACTOR_USER_ID,
   type SystemActorServiceContext,
@@ -182,32 +187,20 @@ export async function sweepStrandedCases(
   const stalenessMinutes =
     input.staleness_minutes ?? DEFAULT_STALENESS_MINUTES;
   const log = loggerWith({ trace_id: run_trace_id });
-  const db = adminClient();
 
   const cutoff = new Date(
     Date.now() - stalenessMinutes * 60_000,
   ).toISOString();
 
-  let query = db
-    .from('document_cases')
-    .select('id, org_id, state, created_at')
-    .in('state', [...ELIGIBLE_STATES])
-    .lt('created_at', cutoff)
-    .order('created_at', { ascending: true });
-  if (input.org_id) {
-    query = query.eq('org_id', input.org_id);
-  }
-  if (input.document_case_ids && input.document_case_ids.length > 0) {
-    query = query.in('id', input.document_case_ids);
-  }
-
-  const { data: eligible, error } = await query;
-  if (error) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[sweepStrandedCases] eligibility query failed: ${error.message}`,
-    );
-  }
+  // Eligibility scan via the services layer (Arc 1 T2 — ADR-0020
+  // Law 1); filter semantics identical (optional org / explicit-ids
+  // narrowing applied only when provided).
+  const eligible = await findEligibleStrandedCases({
+    states: [...ELIGIBLE_STATES],
+    cutoffIso: cutoff,
+    org_id: input.org_id,
+    document_case_ids: input.document_case_ids,
+  });
 
   const report: SweepReport = {
     run_trace_id,
@@ -219,7 +212,7 @@ export async function sweepStrandedCases(
 
   // Sequential, oldest-first (race-surface minimization; v1 scale).
   for (const row of (eligible ?? []) as EligibleCaseRow[]) {
-    const outcome = await sweepOneCase(db, row, dry_run, runIngest, log);
+    const outcome = await sweepOneCase(row, dry_run, runIngest, log);
     report.counts[outcome.bucket] += 1;
     report.cases.push(outcome);
   }
@@ -236,7 +229,6 @@ export async function sweepStrandedCases(
 }
 
 async function sweepOneCase(
-  db: ReturnType<typeof adminClient>,
   row: EligibleCaseRow,
   dry_run: boolean,
   runIngest: (input: IngestDocumentInput) => Promise<IngestDocumentOutput>,
@@ -254,20 +246,7 @@ async function sweepOneCase(
   try {
     // Reverse join off document_jobs (both FKs NOT NULL on the job row —
     // migration 20240152:348-349). Oldest job wins if several.
-    const { data: job, error: jobErr } = await db
-      .from('document_jobs')
-      .select('source_document_id')
-      .eq('document_case_id', row.id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (jobErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `[sweepStrandedCases] document_jobs read failed for case ${row.id}: ${jobErr.message}`,
-      );
-    }
-    source_document_id = job?.source_document_id ?? null;
+    source_document_id = await getOldestJobSourceDocumentId(row.id);
 
     // ----- B1 (must precede B2 — see module header) -----
     if (row.state === 'matched') {
@@ -282,22 +261,11 @@ async function sweepOneCase(
     }
 
     // ----- B2 — candidate-bearing -----
-    const { data: cands, error: candErr } = await db
-      .from('document_relationship_candidates')
-      .select('id')
-      .eq('document_case_id', row.id)
-      .limit(1);
-    if (candErr) {
-      throw new ServiceError(
-        'READ_FAILED',
-        `[sweepStrandedCases] candidate probe failed for case ${row.id}: ${candErr.message}`,
-      );
-    }
-    if ((cands?.length ?? 0) > 0) {
+    if (await caseHasRelationshipCandidates(row.id)) {
       if (dry_run) {
         return { ...base(), bucket: 'B2', outcome: 'bucketed_dry_run' };
       }
-      return await recoverCandidateBearing(db, row, ctx, base);
+      return await recoverCandidateBearing(row, ctx, base);
     }
 
     // ----- candidate-less: need a source document from here on -----
@@ -365,7 +333,6 @@ async function sweepOneCase(
 }
 
 async function recoverCandidateBearing(
-  db: ReturnType<typeof adminClient>,
   row: EligibleCaseRow,
   ctx: SystemActorServiceContext,
   base: () => Omit<SweepCaseOutcome, 'bucket' | 'outcome'>,
@@ -391,18 +358,8 @@ async function recoverCandidateBearing(
       // Loop-safe by construction: re-read state; NEVER auto-repair,
       // NEVER re-run (spec §6 — the anomaly bucket breaks the re-sweep
       // loop independent of the enqueue RPC's atomicity).
-      const { data: fresh, error: freshErr } = await db
-        .from('document_cases')
-        .select('state')
-        .eq('id', row.id)
-        .single();
-      if (freshErr) {
-        throw new ServiceError(
-          'READ_FAILED',
-          `[sweepStrandedCases] state re-read failed for case ${row.id}: ${freshErr.message}`,
-        );
-      }
-      if (fresh?.state === 'needs_review') {
+      const freshState = await getDocumentCaseState(row.id);
+      if (freshState === 'needs_review') {
         return {
           ...base(),
           bucket: 'B2',
