@@ -21,7 +21,8 @@ before Phil's terminal ceremony. *(Commits at T6 as the 62nd; HEAD
 | `186e6769` | T4 — screenshot staging script (dev-only; (B)-conditions cleared; committed per the condition-4 ruling) | cleared 2026-06-06 |
 | `bc5c3bd8` | T5 — wave retrospective + journal close block + TWO codifications (`*TierA` N=3; commit-shell hygiene N≥3 on ratified testimony, F-1(i)) + F-2 cross-refs | cleared 2026-06-06 (§2 ledger held once, reconciled to 60 by hand-assignment) |
 | `a420cca4` | T6 — this close report (Q-4(a)) | cleared 2026-06-06 |
-| *(63rd)* | T6 — Condition-1 deviation fix: D4 test T-namespace conformance (one line) + journal entry + this §1/§6 update | the last content commit; fork (A) ruled with conditions, fix locus pre-cleared |
+| `83339a7c` | T6 — Condition-1 deviation fix: D4 test T-namespace conformance (one line) + journal entry + §1/§6 update | cleared 2026-06-06; `test:full` green at this HEAD (`EXIT_CODE=0`, 1758/0/10); **the terminal-push HEAD** |
+| *(coda)* | T6 — post-push CI-confirmation addendum (Q-1(i), bounded doc-only; this row position-identified — the regress terminates here per the ruling) | advisor-verified pre-coda |
 
 ## 2. Bidirectional reachability — the D8 capture (T3)
 
@@ -252,5 +253,28 @@ the green `EXIT_CODE=0` run is what the advisor confirms at the gate.
 The 62nd's "last content commit" claim moves to the 63rd by this
 addendum — recorded, not silently false.
 
-**Post-push addendum slot (Q-1(i)):** `intent-producers` run result +
-`gh run` evidence land here after Phil's terminal push.
+**Post-push CI confirmation (Q-1(i) addendum, 2026-06-06).** Phil's
+terminal push landed `e571ceb5..83339a7c` — 63 commits, ahead 0; the
+three-condition gate was three-thirds disk-grounded at the push
+(Condition 1 read by the advisor from the in-repo log copy). CI run
+`27070727153` at `83339a7c`, per-job:
+
+- **`intent-producers (INV-WORKFLOW-001)`: SUCCESS — the first dynamic
+  execution. D6 §6.1 CONFIRMED.** The wave's CI delta is exactly this
+  one job, and it is green.
+- `typecheck`, `adr (lint + index drift)`: success.
+- `lint (all workspaces)`, `build (all workspaces)`: failure —
+  **pre-existing, not wave-introduced**: the pre-wave run at `e571ceb5`
+  (`26869802668`) shows the identical split. Root cause, same in both
+  jobs: `architecture/agent-first-import-boundaries` ESLint errors
+  (agent code importing `@/db/adminClient` directly) at pre-wave Tier-C
+  extraction files (`failureClassification.ts`, `aiFallback.ts`,
+  `aiFallbackExtractorBase.ts` + sibling sites); the Next build runs
+  the same lint pass, hence the paired red. Branch protection requires
+  no checks (§3), so the red blocks nothing mechanically. Named
+  follow-up for the post-wave queue: the agent→adminClient import
+  cleanup (pre-existing CI debt).
+
+The run's overall `failure` conclusion rests solely on those two
+pre-existing jobs — recorded as the honest split, not blended into the
+wave's record.
