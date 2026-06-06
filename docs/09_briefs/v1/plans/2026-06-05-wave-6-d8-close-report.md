@@ -278,3 +278,20 @@ three-condition gate was three-thirds disk-grounded at the push
 The run's overall `failure` conclusion rests solely on those two
 pre-existing jobs — recorded as the honest split, not blended into the
 wave's record.
+
+**Correction 2026-06-06 — the named follow-up firing (recorded at the
+agent→adminClient cleanup-arc kickoff, before any fix work, per the
+correction-first precondition).** The block above claims the lint/build
+reds are "pre-existing, not wave-introduced." First-hand re-baselining
+splits that claim by grain: at **job grain it is TRUE** (identical
+per-job split at the pre-wave `e571ceb5` run). At **violation grain it
+is FALSE**: two of the nine live import-boundary errors entered WITH
+the wave — `extraction/reviewPreview.ts:30` (D3 T5) and
+`orchestrator/maintenance/sweepStrandedCases.ts:49` (D2.3) — net-new
+wave modules carrying bare violations: a **shipped regression**,
+reclassified from carry-forward per the advisor's kickoff condition
+("start from confirmed, not inherited"). Seven sites remain
+pre-existing (locked at commit grain — imports entered
+2026-05-20/05-30); three are sanctioned disables (verified at
+`e571ceb5`). Arc charter:
+`2026-06-06-agent-adminclient-arc1-brief.md`.

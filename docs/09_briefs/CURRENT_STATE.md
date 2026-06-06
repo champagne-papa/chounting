@@ -24,7 +24,12 @@ D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
 - **CI teeth live:** the `intent-producers` job (INV-WORKFLOW-001) green
   on its **first dynamic execution** at the terminal push. Pre-existing
   `lint`/`build` reds verified not-wave-introduced and named for the
-  queue (agent→`adminClient` import-boundary cleanup). Branch protection
+  queue (agent→`adminClient` import-boundary cleanup). *(Correction
+  2026-06-06, cleanup-arc kickoff: true at job grain; at violation
+  grain two of the nine errors ARE wave-introduced —
+  `reviewPreview.ts` D3 + `sweepStrandedCases.ts` D2.3, a shipped
+  regression, now Arc-1 scope — see the D8 close report §6
+  correction.)* Branch protection
   currently requires no checks (`main`; `staging` unprotected) — teeth
   advisory; disposition is Phil's.
 - **Two codifications:** `*TierA` additive-named-export (N=3 →

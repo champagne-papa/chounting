@@ -18209,3 +18209,31 @@ test-authoring check (created `account_code` conforms to
 `^T[a-f0-9]{8}_`) would move the catch from sweep-time to write-time —
 the same discipline-wants-a-mechanical-guard shape as commit-shell
 hygiene (`docs/04_engineering/conventions/code.md`).
+
+## Agent→adminClient cleanup — Arc 1 — 2026-06-06
+
+**WRONG 2026-06-06 — coda claim authored one grain too broad; caught by
+its own named follow-up.** The Wave-6 D8 coda recorded the CI lint/build
+reds as "pre-existing, not wave-introduced." The comparison behind it
+was job-grain (identical per-job split at the pre-wave run) — true —
+but the claim was authored at violation grain, unverified. First-hand
+re-baselining at the cleanup-arc kickoff (the exact follow-up the coda
+named, sharpened by the advisor to "start from confirmed, not
+inherited") found two of nine live violations wave-introduced:
+`reviewPreview.ts:30` (D3 T5) + `sweepStrandedCases.ts:49` (D2.3) —
+both net-new wave modules, bare errors. Reclassified carry-forward →
+shipped regression; record corrected additively (close report §6 +
+CURRENT_STATE) before any fix work, per the correction-first ruling.
+
+**NOTE 2026-06-06 — claim-grain sub-shape: proposed linkage + N
+adjudication.** Discipline note first: the system worked end to end —
+the implementer owns the overbroad authorship, the advisor owned
+clearing it on an explicitly named backstop, and the named follow-up
+caught it. PROPOSED family linkage: a claim-grain sub-shape of
+`docs/04_engineering/conventions/prediction-grounding.md` — a claim
+verified at one grain transferred to a finer grain without
+verification; kin to (but distinct from) the Wave-6 retro's §2-ledger
+subject-grep false positives (counting at the wrong grain vs claiming
+across grains). Adjudicated at this entry against the journal:
+observation-grain **N=1** for the claim-grain sub-shape as such —
+banked, not codified; next fire routes through `codify-convention`.
