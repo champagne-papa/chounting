@@ -1,4 +1,67 @@
-# Where I am as of 2026-06-06 (V1 Wave 6 CLOSED — AP Review shipped; build waves 1–6 complete per the charter; 64 commits pushed, origin/staging = `459b172d`; see the latest dated section below. Full state-narrative refresh of this doc's body — which lags at 2026-05-01 / Phase-1.1–8 state — is a deferred post-V1 doc arc per the V1 Wave-0 retrospective §5.)
+# Where I am — see the latest dated section below
+
+> **How to read this doc** (header refreshed 2026-06-07, post-V1
+> doc-refresh arc). Dated sections, newest first; the top section is
+> current, everything below is historical record — correct
+> as-of-its-date and preserved per the additive-correction discipline
+> (date-stamped supersession notes, never silent rewrites). Branch
+> and origin refs in any section are point-in-time snapshots:
+> cross-reference `git log` at read time rather than trusting a SHA
+> here as live (this doc's own 2026-04-22 push-decision rule,
+> generalized).
+
+## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
+
+After the Wave-6 terminal push (`459b172d`), 25 commits landed
+through `5ed6a3f1` across four push events (`542fc58f` Wave-6-close
+doc update; `3e51389a` mid-Arc-1; `b8ddb087` Arc-1 close;
+`5ed6a3f1` three-arc terminal stack — per the local origin-reflog
+record). The chapter closed the import-boundary debt the Wave-6
+close report named and hardened the session tooling:
+
+- **Arc 1 — agent→`adminClient` record correction + Class A fix**
+  (`9a6398b7..b8ddb087`): the Wave-6 coda's CI-red claim split by
+  grain (job-grain TRUE / violation-grain FALSE — the in-place
+  correction in the Wave-6 section below); `reviewPreview` +
+  `sweepStrandedCases` reads hoisted to services; claim-grain guard
+  codified at N=2 split-trigger.
+- **cwd-drift pre-commit guard** (design `9017a736` → implementation
+  `66cb8c9b` → codified `dee3b5ce`): lock-gated `GIT_PREFIX` hard
+  block; commit from repo root with root-relative pathspecs.
+- **Arc 2 — Class B hoists** (`e9c3d03d..de395614`): src/agent-grain
+  adminClient reads/writes hoisted 7→0; ADR-0036 Decision-10 parked
+  draft tracked at `9b16a08a`; `.auth/` gitignore anchoring.
+- **Class D** (`b4ae622d..f6f4d93e`): required `IngestInvoker` param
+  spine inversion (services→agent 1→0 — CLASS D CLEAR at
+  `90f64a38`); two Arc-2-ledgered org-scope read gaps closed with
+  bidirectional tests (`89da445e`). Test baseline at `f6f4d93e`:
+  **1760 passed / 0 failed / 10 skipped** (`pnpm test:full`);
+  commits since are docs-only, so the baseline carries.
+- **gitignore-anchoring class banked at N=3** with written
+  graduation trigger (`5ed6a3f1`): next fire or first escape routes
+  through codify-convention, CI-lint form.
+- **Post-V1 doc-refresh arc (this arc):** T1 two-doc disposition
+  (`ed1a5790` — Phase 6.5 retrospective drafting plan tracked with
+  executed-plan note; Session-14 substrate discarded per its
+  self-declared disposability); this CURRENT_STATE refresh;
+  `system_overview.md` full-body rewrite; cross-reference sweep.
+  Chartered at V1 Wave-0 retrospective §5, re-named at Wave-6 close.
+
+**Live posture (grounded from code at this refresh):** the V1 wedge
+is live end-to-end — document pipeline parks matched proposals at
+`status='parked_unposted'` and advances the case to `needs_review`
+(the Wave-6 D2.1 T3 matched→needs_review hand-off); humans
+approve→post from the review inbox; ungoverned auto-commit stays
+disabled (ADR-0007 §Tier 2 Q78 V1 re-scoping, amended 2026-05-30);
+governed per-rule re-wire is post-V1. Invariants: **28 (16 L1a +
+12 L2)** per `docs/02_specs/invariants.md`.
+
+**Still queued** (named, not absorbed, per the Wave-6 retro §5 /
+close-report §6 queue): push-readiness escape-clause
+generalization; test-account-namespace write-time check;
+branch-protection disposition; INV-AP-001/002 severity; Q2 `query`
+re-include trigger. Decision 10 unparks at market strategy;
+ADR-0036 stays parked (draft tracked).
 
 ## V1 Wave 6 — AP Review — CLOSED 2026-06-06
 
@@ -49,7 +112,12 @@ D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
   write-time check; branch-protection disposition; INV-AP-001/002
   severity; Q2 `query` re-include trigger. Decision 10 still unparks at
   market strategy; the post-V1 doc-refresh arc (this doc's body +
-  `system_overview`) remains deferred.
+  `system_overview`) remains deferred. *(Supersession note
+  2026-06-07, doc-refresh arc: of this queue, agent→`adminClient`
+  cleanup and the cwd-drift pre-commit guard shipped in the
+  post-Wave-6 boundary-cleanup chapter — see the top section — and
+  the doc-refresh arc is no longer deferred; it is the arc that
+  wrote this note. The other five items remain queued.)*
 
 ## V1 Wave 0 governance arc — CLOSED 2026-06-01
 
@@ -83,6 +151,37 @@ Full retrospective:
   (`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`); Decision 10
   unparks at market strategy; a full state-narrative refresh (this doc +
   system_overview body) is a deferred post-V1 doc arc (retrospective §5).
+
+## The May run — compressed bridge, 2026-05-05 → 2026-06-01 (added 2026-06-07)
+
+> Added at the post-V1 doc-refresh arc to close this doc's narrative
+> gap: nothing was recorded here between the 2026-05-05 substrate
+> ratification (below) and V1 Wave 0 (above). The canonical detail
+> lives in the named retrospectives/ADRs; this table is the map, not
+> the history. Close dates grounded from the artifacts' own headers
+> and `git log` at write time.
+
+| Arc | Closed | Canonical record |
+|---|---|---|
+| Phase 5 — Spend Initiative (manual AP foundation, 9 chunks) | 2026-05-12 | `retrospectives/phase-5-retrospective.md` |
+| Phase 2 — Document Platform substrate spine (6 chunks) | 2026-05-13 | `retrospectives/phase-2-retrospective.md` |
+| Phase 4 — Document Relationship Router (3 subsystems) | 2026-05-14 | `retrospectives/phase-4-retrospective.md` |
+| Phase 3 — scope absorbed by Phase 2 chunk 5 (`source_document_links`); closeout-verify only, no separate arc | 2026-05-15 | friction-journal 2026-05-15 entry |
+| Phase 6 — Ingestion (batches/jobs substrate, drag-drop + channels, cards UI) | 2026-05-16 | `retrospectives/phase-6-retrospective.md` |
+| Phase 6.5 — Bridge shell consolidation (three-zone shell, multi-tab canvas, chat drag-drop) | 2026-05-17 | `retrospectives/phase-6-5-retrospective.md` |
+| v2.2 docs reorg — CLAUDE.md slimmed to the pointer layer; skills + path-scoped-rules pilot | 2026-05-17 | final commit `62649449` |
+| Phase 6.5 codification arc sequence (eight-arc recursion) | 2026-05-18 | `retrospectives/phase-6-5-codification-arc-sequence-retrospective.md` |
+| Phase 5.1 — paymentService + INV-DOC-001 + vendor_credits β (3 chunks) | 2026-05-19 | `retrospectives/phase-5-1-retrospective.md` |
+| Phase 7 — Tier 2 document pipeline orchestrator (Stages 0–7) | 2026-05-20 | `retrospectives/phase-7-retrospective.md` |
+| Phase 8 — per-feature scoring + reconciliation orchestrator (10 chunks + dedicated classifier-fix chunk) | 2026-05-24 | `retrospectives/phase-8-retrospective.md` |
+| Auto-commit arc — ADR-0007 Q78 Option A (governed auto-commit; disabled again at Wave -1 — see the Wave 0 section above) | 2026-05-24 | ADR-0007 §Tier 2 |
+| Ring 1 + Ring 2A-core — rule-type core substrate; evaluator / agent-ladder gate / evaluation log | 2026-05-26 | ADR-0023 + ADR-0024 |
+| Hygiene-post-ring2a-core arc (ratified-contract-scope codified) | 2026-05-27 | `conventions/ratified-contract-scope.md` |
+| Ring 2B — shadow rule evaluation, A1a substrate-only | 2026-05-30 | `retrospectives/ring-2b-implementation-retrospective.md` |
+
+The run hands off to the V1 charter
+(`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`,
+2026-05-31) and Wave 0 — the next dated section above.
 
 ## Architecture substrate ratified — 2026-05-05
 
@@ -1129,6 +1228,13 @@ camelCase API boundary with snake_case DB mapping; null
 behavior changes, user/invite system, UI work,
 `organizations.industry` legacy enum column drop, NAICS code
 population, onboarding state machine.
+
+> **[As-of marker: Phase 1.1 vintage — historical record (marker
+> added 2026-06-07)]** — the four sections below ("Phase 1.1 is
+> functionally complete" through "Remaining sessions") narrate the
+> Phase-1.1 close in present-tense voice. Preserved as written; the
+> two "remaining sessions" they name happened long ago. For current
+> state, see the top dated section.
 
 ## Phase 1.1 is functionally complete.
 
