@@ -18302,3 +18302,66 @@ stays banked with its evidence-gated trigger (any post-guard fire
 at a non-commit verb). Arc-2 session open must re-run
 `bash scripts/install-hooks.sh` in its checkout before first commit
 (worktrees don't inherit hooks).
+
+## Agent→adminClient cleanup — Arc 2 (Class B) — 2026-06-06
+
+Charter discharged: the 7 Class B agent→adminClient boundary
+violations (post-Q33 pipeline accretions, all under
+`orchestrator/extraction/`) cleared to 0 at `src/agent` eslint grain
+across T2–T5 (`055c40fd`, `39e5062e`, `3b8cca4c`, `62715681`);
+brief + clearance at `e9c3d03d` + `7351b3f1`. Codebase grain now
+7 = 5 Class C (app→db routes, incl. the postmark-inbound fifth
+member the Arc-1 framing missed) + 2 Class D (services→agent:
+`ingestionService.ts:142` runtime — the spine-knot, untouched;
+`vendorService.ts:48` type-only) — both classes queued for their own
+arcs. Q33 received the correction-naming status append (containment
+mechanism + line numbers superseded; accretion-and-clearance history
+recorded; the 3 deferred agent-runtime sites stay open on Q33's own
+timing).
+
+Two as-found read gaps relocated into services, severity-
+differentiated — and exactly two, not three (the T5 write tables
+carry no org_id column by design; a table-design difference, not a
+gap). The arc did not create them: it relocated two pre-existing
+agent-layer gaps into the layer where org-scoping every read is the
+convention, making them visible and anomalous instead of buried.
+
+- `ruleOutcomeReadService.resolveRuleOutcomeParams`: `vendor_rules`
+  read by `rule_id` alone (no org filter). Feeds the Ring 2B shadow
+  path — `RING2B_SHADOW_EVAL` default-off, fail-safe, log-only.
+  Lowest consequence; defense-in-depth only.
+- `extractionReadService.lookupDocumentCaseId`: `document_jobs` read
+  by `source_document_id` alone. Feeds case-state writes downstream,
+  but `source_document_id` is a UUID PK — cross-org collision
+  impossible; the gap is reliance on UUID-uniqueness + caller-side
+  scoping rather than service-enforced org-scope.
+
+Both should eventually follow `resolveRuleDefaultAccount` (same file
+as the first, one function above it): the fully org-scoped in-file
+model whose own JSDoc names the `rule_id`-only shape as the
+deviation it avoids.
+
+Also observed at T5: the pre-hoist runOCR insert implicitly coerced
+sidecar Zod types (`engine` z.string() → Postgres enum;
+`pages`/`lines`/`words` z.unknown() → Json) through supabase's loose
+insert generics; the declared service boundary surfaced it, and the
+coercion is now explicit as documented zero-runtime-effect casts in
+`extractionArtifactWriteService`. Always-present behavior, now named
+in one place.
+
+Six pre-existing LT-01b errors in untouched document-platform files
+(`scoreComposition` ×3, `postV1ReconciliationOrchestrator`,
+`ingestionService` ×2) observed at the T4 wider-scope lint and named
+so they don't later read as arc-introduced. Carry-forward lint noise
+(3 unused no-console disables + `proposalBuilder` unused var)
+untouched per ratified scope.
+
+Entry disposals (brief §6 + Addendum A ratifications): `.auth/`
+credential-state gitignore landed correctly anchored
+(`apps/web/tests/e2e/.auth/` — the root-anchored `tests/e2e/.auth/`
+line misses it; same anchoring class as the `/reports/` and
+`.claude/*` near-misses) plus a `*:Zone.Identifier` pattern, and the
+loose metadata file deleted; ADR-0036 Decision-10 draft
+commit-tracked (`9b16a08a`), removing the sweep-in hazard; the two
+2026-05-17 phase-6.5 docs explicitly re-deferred to the post-V1
+doc-refresh arc.
