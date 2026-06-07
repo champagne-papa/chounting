@@ -191,3 +191,42 @@ noise (§2), and any `withInvariants` posture change beyond the T5
 read-back decision. Push: operator-gated at the eventual terminal
 close (Condition 1 `test:full` gates it; this arc prepares, never
 pushes).
+
+---
+
+## Addendum A — advisor read-back outcomes (2026-06-06, cleared)
+
+Charter **cleared to proceed, T2 first**. Three ratifications
+refine the brief's forms; originals above stay byte-intact.
+
+1. **Q33 append form (T6) upgraded from additive-only to
+   correction-naming.** Q33's "Current containment" wording is now
+   false on disk: the config block disables only
+   `no-restricted-imports`, globbed over ALL of `src/agent/**` (not
+   three files), and the boundary rule's silence at the 3 deferred
+   sites comes from per-line `eslint-disable-next-line` markers.
+   The T6 append must name what it supersedes — both the mechanism
+   description and the line numbers (current :20/:42/:13 supersede
+   Q33's :17/:39/:10) — not merely append clearance history.
+2. **`.auth/` disposal ratified with anchoring correction.** Root
+   `.gitignore` already carries `tests/e2e/.auth/` — but mid-path
+   separators anchor it to repo root, so it misses
+   `apps/web/tests/e2e/.auth/`. The fix must be correctly anchored
+   (`apps/web/tests/e2e/.auth/` from root, or generalize to an
+   unanchored `.auth/` pattern) — same anchoring class as the
+   prior `/reports/` and `.claude/*` near-misses.
+3. **runOCR (T5) ratified as plain hoist in the LT-01b annotation
+   form.** Behavior-preserving (no `withInvariants` — pipeline-
+   internal best-effort system writes; the un-wrapped posture
+   matches existing system writes like the `executeTool` ai_actions
+   insert). But `services/withInvariants-wrap-or-annotate` (LT-01b)
+   is live at error for `src/services/**`: the new write surface
+   carries the canonical skip-org-check annotation with a reason
+   naming it a pipeline-internal best-effort system write (org_id
+   supplied by pipeline context, not caller) — not a bare
+   un-wrapped export.
+
+Advisor's named backstops (verified per-commit as T2–T5 land, not
+front-loaded): eslint counts at both grains, proposalBuilder's
+warning-only severity, per-file adminClient-use lines, untracked
+enumeration, per-file hoist substance.
