@@ -28,6 +28,15 @@ vi.mock('@/services/storage/resolver', () => ({
 const { ingestionService } = await import(
   '@/services/document-platform/ingestionService'
 );
+// Class D T4: handleDragDropUpload's IngestInvoker param is required;
+// these direct-service tests wire the REAL ingestDocument — exactly
+// what the service invoked internally pre-inversion, so the exercised
+// surface is unchanged (pipeline failures on synthetic docs are
+// swallowed by the Pattern-B catch, as before). Dynamic import after
+// vi.mock, matching the file's mock-hoisting pattern.
+const { ingestDocument } = await import(
+  '@/agent/orchestrator/extraction/ingestDocument'
+);
 const { getStorageProvider } = await import(
   '@/services/storage/resolver'
 );
@@ -94,6 +103,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         files: [makeFile('test-n1.pdf')],
       },
       ctx,
+      ingestDocument,
     );
 
     expect(result.document_count).toBe(1);
@@ -158,6 +168,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         ],
       },
       ctx,
+      ingestDocument,
     );
 
     expect(result.document_count).toBe(3);
@@ -226,6 +237,7 @@ describe('ingestionService.handleDragDropUpload', () => {
           ],
         },
         ctx,
+        ingestDocument,
       );
     } catch (err) {
       thrown = err;
@@ -268,6 +280,7 @@ describe('ingestionService.handleDragDropUpload', () => {
           files: [makeFile('test-zod.pdf')],
         },
         ctx,
+        ingestDocument,
       );
     } catch (err) {
       thrown = err;
@@ -299,6 +312,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         ],
       },
       ctx,
+      ingestDocument,
     );
 
     const { data: batchRow } = await db

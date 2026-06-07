@@ -227,3 +227,18 @@ export type ForwardedMailboxUploadResult =
       status: 'rejected';
       reason: 'not_allowlisted';
     };
+
+/**
+ * Per-document pipeline invoker, injected by the entry surface
+ * (Class D inversion, T4 2026-06-06; ADR-0020 App. A). The concrete
+ * value is agent-layer ingestDocument, wired at the drag-drop route
+ * behind the sanctioned entry-surface disable — service code holds
+ * only this structural type, never an @/agent import. Return value
+ * is ignored by the invocation loop (pre-inversion behavior: awaited
+ * and discarded).
+ */
+export type IngestInvoker = (args: {
+  org_id: string;
+  source_document_id: string;
+  trace_id: string;
+}) => Promise<unknown>;

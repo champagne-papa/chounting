@@ -39,9 +39,22 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { ingestionService } from '@/services/document-platform/ingestionService';
-import { buildServiceContext } from '@/services/middleware/serviceContext';
+import type {
+  DragDropUploadInput,
+} from '@/services/document-platform/types';
+import {
+  buildServiceContext,
+  type ServiceContext,
+} from '@/services/middleware/serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
+// Agent-entry surface (the api/agent/message/route.ts:16 precedent):
+// the drag-drop route is the composition point that wires the
+// concrete pipeline invoker into ingestionService's required
+// IngestInvoker parameter (Class D T4 inversion, ADR-0020 App. A) —
+// the designated entry-point shape, exempted explicitly.
+// eslint-disable-next-line architecture/agent-first-import-boundaries
+import { ingestDocument } from '@/agent/orchestrator/extraction/ingestDocument';
 
 export async function POST(
   req: Request,
@@ -106,7 +119,11 @@ export async function POST(
     // 1-3 enforce context shape + caller verified + org_id consistency
     // (claimedOrgId derived from input.org_id below).
     const result = await withInvariants(
-      ingestionService.handleDragDropUpload,
+      // Adapter closure: withInvariants wraps (input, ctx) functions;
+      // the third (required) IngestInvoker param is bound here, at
+      // the entry surface — the Class D T4 composition point.
+      (input: DragDropUploadInput, c: ServiceContext) =>
+        ingestionService.handleDragDropUpload(input, c, ingestDocument),
     )(
       {
         org_id: orgId,
