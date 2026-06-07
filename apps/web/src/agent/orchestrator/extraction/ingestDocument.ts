@@ -221,7 +221,7 @@ export async function ingestDocument(
   // case; the case is already routed). No value in Stages 4-7 for
   // unknown documents.
   if (classification.result.documentType === 'unknown') {
-    const unknownCaseId = await lookupDocumentCaseId(input.source_document_id);
+    const unknownCaseId = await lookupDocumentCaseId(input.org_id, input.source_document_id);
     if (unknownCaseId) {
       try {
         await advanceCaseAutomation(
@@ -333,7 +333,7 @@ export async function ingestDocument(
   // Look up document_case_id from document_jobs for Stage 6 invocation.
   // documentRouterService.completeCandidate consumer interface per Phase 4
   // chunk 1 substrate (Subsystem 1 Ledger-State Candidate Completion).
-  const documentCaseId = await lookupDocumentCaseId(input.source_document_id);
+  const documentCaseId = await lookupDocumentCaseId(input.org_id, input.source_document_id);
 
   // Stage 6 — match_against_existing_state per ADR-0014 §1 canonical
   // (brief Task 7.3a.5 brief-named "Stage 5 relationship-candidate";

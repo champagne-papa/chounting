@@ -84,23 +84,27 @@ export async function findPriorSourceDocumentByHash(
 }
 
 /**
- * Look up document_case_id from document_jobs table via source_document_id.
- * Returns null if no matching job exists (defensive; Stage 6 skips when
- * documentCaseId is null).
+ * Look up document_case_id from document_jobs table via org_id +
+ * source_document_id. Returns null if no matching job exists
+ * (defensive; Stage 6 skips when documentCaseId is null).
  *
- * Arc 2 T4 — hoisted VERBATIM from ingestDocument.ts. AS-FOUND: no
- * org filter (document_jobs by source_document_id alone) — caller-side
- * org-scoping, same defense-in-depth class as the shadow vendor_rules
- * read; named in the Arc 2 close ledger, deliberately NOT "fixed"
- * mid-hoist.
+ * Arc 2 T4 — hoisted VERBATIM from ingestDocument.ts, as-found with
+ * no org filter (the Arc 2 ledgered defense-in-depth gap). Class D
+ * arc T5 (2026-06-06) closed it: org_id is now a required first
+ * parameter and the read enforces org-scope. Narrows match
+ * semantics — a foreign org's source_document_id (UUID-PK-unique,
+ * so previously safe by uniqueness alone) now misses by
+ * construction.
  */
 export async function lookupDocumentCaseId(
+  org_id: string,
   source_document_id: string,
 ): Promise<string | null> {
   const db = adminClient();
   const { data, error } = await db
     .from('document_jobs')
     .select('document_case_id')
+    .eq('org_id', org_id)
     .eq('source_document_id', source_document_id)
     .limit(1)
     .maybeSingle();

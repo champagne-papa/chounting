@@ -10,9 +10,12 @@
 // Deliberately error-TOLERANT, matching the pre-hoist semantics
 // exactly: query errors are ignored and coalesce to null (the
 // shadow path is fail-safe by design — A1a isolation property 2; a
-// read failure must never fail the ingest). The vendors read is
-// org-filtered; the vendor_rules read is by rule_id alone, exactly
-// as pre-hoist.
+// read failure must never fail the ingest). Both reads are
+// org-filtered. (T5 correction, Class D arc 2026-06-06: the
+// vendor_rules read was hoisted as-found by rule_id alone — the
+// Arc 2 ledgered defense-in-depth gap — and now enforces org-scope
+// like its in-file model resolveRuleDefaultAccount below. Narrows
+// match semantics: a foreign org's rule_id no longer resolves.)
 //
 // Returns primitives only — services may not import agent-layer
 // types (ADR-0020, both directions of the boundary).
@@ -35,6 +38,7 @@ export async function resolveRuleOutcomeParams(
     .from('vendor_rules')
     .select('default_account_id')
     .eq('rule_id', ruleId)
+    .eq('org_id', orgId)
     .maybeSingle();
   const { data: vendor } = await db
     .from('vendors')
