@@ -18420,3 +18420,18 @@ pre-existing LT-01b errors in document-platform files (named at
 Arc 2, unchanged). The agent↔services↔db boundary story is
 otherwise closed: agent→db 0 (Arcs 1–2), services→agent 0 (this
 arc), with entry edges annotated at sanctioned surfaces only.
+
+### Addendum (2026-06-07, pre-push) — gitignore anchoring class: banked at N=3 with graduation trigger
+
+Operator call at terminal-close read-back: BANK, not codify. The
+three instances (/reports/ unanchored-at-depth; .claude/*
+directory-vs-contents re-inclusion; .auth/ missing-anchor-on-
+mid-path-separator) rhyme at the surface ("gitignore anchoring went
+wrong") but are three different gitignore mechanics, not one
+mechanism firing thrice — and all three were caught pre-escape, so
+the cost of not codifying is low. **Graduation trigger, written in
+per the split-trigger discipline: the next fire of this class (N=4,
+or the first instance that escapes to a commit) routes through
+codify-convention — likely as a CI lint over .gitignore anchoring
+rather than a prose convention, since the failure class is
+mechanical.**
