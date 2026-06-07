@@ -11,10 +11,12 @@
 // stored at `source_documents.original_content_hash` (immutable
 // evidence anchor per ADR-0011 §2). Stage 0 does NOT re-compute the
 // hash — it reads the existing column value and queries for matches.
+// Both reads hoisted to extractionReadService (Arc 2 T3, ADR-0020
+// App. A); error semantics byte-identical (PIPELINE_TRANSIENT_
+// EXHAUSTED / NOT_FOUND with [dedupByHash] tags).
 
-import { adminClient } from '@/db/adminClient';
+import { findPriorSourceDocumentByHash } from '@/services/document-platform/extractionReadService';
 import type { DedupResult, PipelineStageRecord } from '../types';
-import { ServiceError } from '@/services/errors/ServiceError';
 
 export interface DedupByHashInput {
   org_id: string;
@@ -30,57 +32,22 @@ export interface DedupByHashOutput {
 export async function dedupByHash(
   input: DedupByHashInput,
 ): Promise<DedupByHashOutput> {
-  const db = adminClient();
   const timestamp = new Date().toISOString();
 
-  // Read this source_document's hash.
-  const { data: thisDoc, error: readError } = await db
-    .from('source_documents')
-    .select('original_content_hash')
-    .eq('id', input.source_document_id)
-    .eq('org_id', input.org_id)
-    .maybeSingle();
+  const { hash, prior_source_document_id } =
+    await findPriorSourceDocumentByHash({
+      org_id: input.org_id,
+      source_document_id: input.source_document_id,
+    });
 
-  if (readError) {
-    throw new ServiceError(
-      'PIPELINE_TRANSIENT_EXHAUSTED',
-      `[dedupByHash] source_documents read failed: ${readError.message}`,
-    );
-  }
-
-  if (!thisDoc) {
-    throw new ServiceError(
-      'NOT_FOUND',
-      `[dedupByHash] source_document_id=${input.source_document_id} not found in org_id=${input.org_id}`,
-    );
-  }
-
-  const hash = thisDoc.original_content_hash;
-
-  // Query for prior matches (same org_id + same hash + NOT self).
-  const { data: priorMatches, error: matchError } = await db
-    .from('source_documents')
-    .select('id')
-    .eq('org_id', input.org_id)
-    .eq('original_content_hash', hash)
-    .neq('id', input.source_document_id)
-    .order('created_at', { ascending: true })
-    .limit(1);
-
-  if (matchError) {
-    throw new ServiceError(
-      'PIPELINE_TRANSIENT_EXHAUSTED',
-      `[dedupByHash] dedup query failed: ${matchError.message}`,
-    );
-  }
-
-  const matched = priorMatches && priorMatches.length > 0;
-  const result: DedupResult = matched
-    ? {
-        shortCircuited: true,
-        existing_source_document_id: priorMatches[0].id,
-      }
-    : { shortCircuited: false };
+  const matched = prior_source_document_id !== null;
+  const result: DedupResult =
+    prior_source_document_id !== null
+      ? {
+          shortCircuited: true,
+          existing_source_document_id: prior_source_document_id,
+        }
+      : { shortCircuited: false };
 
   const trace_record: PipelineStageRecord = {
     stage_name: matched ? 'dedup_short_circuit' : 'dedup_no_match',

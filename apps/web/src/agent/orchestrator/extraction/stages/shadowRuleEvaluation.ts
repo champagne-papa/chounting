@@ -27,8 +27,8 @@
 // them as proposed_mutation_generated and silently violate the §6.5 card-only
 // deferral. Attachment cards (non-ledger) are skipped too.
 
-import { adminClient } from '@/db/adminClient';
 import type { ServiceContext, SystemActorServiceContext } from '@/services/middleware/serviceContext';
+import { resolveRuleOutcomeParams } from '@/services/rules/ruleOutcomeReadService';
 
 import { loggerWith } from '@/shared/logger/pino';
 import { evaluateAndDispatch } from '@/agent/policies/agent-ladder/ruleEvaluationOrchestrator';
@@ -116,7 +116,10 @@ export async function runShadowEvaluation(args: ShadowEvaluateArgs, ctx: ShadowC
   // Decision 6: resolve the winner's outcome domain-parameters + vendor name,
   // recorded in the trace at shadow scope; posting consumption defers to the
   // workflow arc.
-  const resolved = await resolveOutcomeParams(result.matchResult.winning_rule_id, args.vendorId!, args.org_id);
+  // resolveOutcomeParams hoisted to ruleOutcomeReadService (Arc 2 T3,
+  // ADR-0020 App. A); error-tolerant null-coalescing semantics
+  // preserved verbatim (A1a fail-safe isolation).
+  const resolved = await resolveRuleOutcomeParams(result.matchResult.winning_rule_id, args.vendorId!, args.org_id);
   log.info(
     {
       trace_id: args.trace_id,
@@ -129,27 +132,4 @@ export async function runShadowEvaluation(args: ShadowEvaluateArgs, ctx: ShadowC
     },
     'Ring 2B shadow: rule match (recorded, not auto-posted)',
   );
-}
-
-async function resolveOutcomeParams(
-  ruleId: string,
-  vendorId: string,
-  orgId: string,
-): Promise<{ default_account_id: string | null; vendor_name: string | null }> {
-  const db = adminClient();
-  const { data: vr } = await db
-    .from('vendor_rules')
-    .select('default_account_id')
-    .eq('rule_id', ruleId)
-    .maybeSingle();
-  const { data: vendor } = await db
-    .from('vendors')
-    .select('name')
-    .eq('vendor_id', vendorId)
-    .eq('org_id', orgId)
-    .maybeSingle();
-  return {
-    default_account_id: vr?.default_account_id ?? null,
-    vendor_name: vendor?.name ?? null,
-  };
 }
