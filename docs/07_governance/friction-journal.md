@@ -18365,3 +18365,58 @@ loose metadata file deleted; ADR-0036 Decision-10 draft
 commit-tracked (`9b16a08a`), removing the sweep-in hazard; the two
 2026-05-17 phase-6.5 docs explicitly re-deferred to the post-V1
 doc-refresh arc.
+
+## Services→agent cleanup — Class D arc — 2026-06-06
+
+Charter discharged, design-first: the 2 Class D services→agent
+boundary violations (the zero-precedent reverse direction, ADR-0020
+App. A) cleared to 0 across T3+T4 (`115a4159`, `90f64a38`); charter
+`b4ae622d`, design spec `ceaf3ce1` (advisor-cleared before fix
+work), T5 gap closures `89da445e`. Codebase boundary errors now
+**5 = Class C only** (app→db routes, accepted baseline debt).
+
+The spine-knot resolved by **Option B, required-parameter
+injection** — picked on a disk fact (`DragDropUploadResult` carries
+no per-document ids, so inverting the loop to the route would have
+touched the API contract): `ingestionService` is fully agent-free
+(service-owned `IngestInvoker` structural type; required param so
+the compiler owns call-site completeness), and the concrete
+`ingestDocument` binds at the drag-drop route behind the sanctioned
+entry-surface disable (the api/agent/message:16 precedent) via an
+adapter closure inside `withInvariants`. The unsanctioned reverse
+edge became one annotated entry edge — relocated to where the
+architecture says entry edges live. Sub-Q2's sync-v1 invocation
+lock honored throughout (the queue option was a governance change,
+not a refactor — set aside). Type half: the four vendor-match
+interfaces live at `shared/schemas/spend/vendorMatch.types.ts` with
+agent-side re-export; deliberately NOT unified with the divergent
+`VendorMatchResultSchema` (7-value 'alias' enum + loose candidates
+vs the impl's 6 + typed) — that pre-existing spec-vs-impl
+divergence is RESIDUE, recorded here, unify-on-its-own-decision.
+
+Arc 2's two ledgered read gaps CLOSED at T5 with bidirectional
+tests (in-org still resolves + cross-org misses — the positive
+path guards against an over-aggressive filter):
+`resolveRuleOutcomeParams` vendor_rules read org-scoped (now
+matches its in-file model `resolveRuleDefaultAccount`);
+`lookupDocumentCaseId` takes a required org_id first param
+(document_jobs.org_id verified present before editing — the
+ocr_runs no-column lesson applied). Both ingestDocument call sites
+updated, argument order verified at read-back (the transposition
+tsc could not catch).
+
+Doc-staleness items refreshed in-arc rather than carried (both
+invalidated by this arc's own changes): the ingestDocument hoist
+pointer comment (case-id lookup no longer as-found) and the
+ingestionService header wrap example (showed an { action } option
+the actionless route never shipped, plus the pre-inversion 2-arg
+shape).
+
+Residue after this arc, all tracked: Class C ×5 (app→db routes —
+accepted baseline debt, no arc scheduled); Q33 ×3 deferred
+agent-runtime sites (Double-Entry-Agent timing, not cleanup);
+the vendor-match spec/impl shape divergence (above); the 6
+pre-existing LT-01b errors in document-platform files (named at
+Arc 2, unchanged). The agent↔services↔db boundary story is
+otherwise closed: agent→db 0 (Arcs 1–2), services→agent 0 (this
+arc), with entry edges annotated at sanctioned surfaces only.

@@ -1116,9 +1116,10 @@ function normalizePaymentMethod(
 // lookupPaymentCommitDefaults / lookupDocumentCaseId hoisted to
 // services (Arc 2 T4, ADR-0020 App. A): commitDefaultsReadService,
 // ruleOutcomeReadService (D4 resolver, org-scoped, with its full
-// D-1..D-4 commentary), extractionReadService (case-id lookup,
-// as-found no-org-filter noted there). Verbatim bodies; call sites
-// unchanged.
+// D-1..D-4 commentary), extractionReadService (case-id lookup).
+// First three: verbatim bodies, call sites unchanged. The case-id
+// lookup was org-scoped at Class D T5 (2026-06-06) — required
+// org_id first param; both call sites below pass input.org_id.
 
 /**
  * Extract vendor identity fields from Stage 4 extraction output per

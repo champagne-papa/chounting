@@ -3,9 +3,14 @@
 // INV-SERVICE-001 wrap-site discipline:
 //   - handleDragDropUpload: Pattern B external-wrap per Phase 5 spend
 //     brief precedent. The service body has NO `withInvariants`
-//     reference; route handlers wrap at the call site via:
-//       withInvariants(ingestionService.handleDragDropUpload,
-//         { action: 'ingest.drag_drop' })(input, ctx)
+//     reference; the drag-drop route wraps at the call site via an
+//     adapter closure that also binds the required IngestInvoker
+//     (Class D T4 inversion; the route is actionless per the
+//     chunk-6.2b action-seeding deferral — the prior example here
+//     showed an { action } option the route never shipped):
+//       withInvariants((input, c) =>
+//         ingestionService.handleDragDropUpload(input, c, ingestDocument),
+//       )(input, ctx)
 //   - handleForwardedMailbox (chunk 6.3a): system-actor invocation
 //     pattern. Webhook route handler bypasses withInvariants entirely
 //     and constructs SystemActorServiceContext directly per Sub-Q6
