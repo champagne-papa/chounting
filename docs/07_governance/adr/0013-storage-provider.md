@@ -1394,3 +1394,97 @@ later cross-pattern. Phase 4 retrospective post-close additions
 reliability investment for Modes 1-2; SharePoint activation brief
 activation-trigger for Mode 3; per-provider settings table
 refactor surface).
+
+## 2026-06-07 Amendment — universal SharePoint provider posture (opt-in → universal default; Charter B gate)
+
+**Trigger.** AP-ingest-deepening Charter B scoping (the "file once,
+land in both places" product goal — a forwarded/dragged invoice
+should land in the org's SharePoint without a second manual filing).
+Ratified by CTO 2026-06-07. This amendment is the ADR-before-code gate
+named in the post-V1 revisit notes: no Charter B code lands before it.
+
+**What this amends — and, precisely, what it does NOT.** This block
+supersedes exactly two posture clauses and nothing else:
+
+1. §13's bold-lead claim "**SharePoint is opt-in per org**" (one of
+   three claims in that sentence).
+2. **§2's post-v1 per-org default *resolution*.** §2 already makes the
+   provider per-org configurable post-v1 with `supabase_storage` as the
+   column-level NOT NULL DEFAULT; this amendment changes only what that
+   default *resolves to* post-v1 — `sharepoint_drive` for M365 orgs,
+   `supabase_storage` as fallback. §2's v1 "system-fixed
+   `supabase_storage` for all orgs" is untouched (see preserved list).
+
+It leaves verbatim and fully load-bearing: §13's "**not the only
+provider**" and "**not the accounting source of truth**"; the
+"**SharePoint holds bytes; CHOUnting holds meaning. The split is exact
+and non-negotiable**" invariant; §2's per-document override mechanism;
+§13's `missing_file` / audit-and-version-survival guarantees; and
+**v1's system-fixed `supabase_storage`** (this amendment is post-v1 —
+it changes nothing a v1 org runs).
+
+**The decision (Option A — universal default, `supabase_storage`
+fallback).** Post-v1, SharePoint (`sharepoint_drive`) is the product's
+**default/standard** storage provider for M365-equipped orgs;
+`supabase_storage` is the fallback for non-M365 orgs and remains v1's
+system-fixed provider. SharePoint is no longer framed as an opt-in
+add-on; it is the expected path. The multi-provider architecture is
+**preserved** — §14's four-provider skeleton and the live
+`resolver.ts` are untouched, and Alternative 2's per-document
+discriminator is exactly the mechanism that keeps "not the only
+provider" true while making SharePoint the default.
+
+**Rejected — Option B (mandatory SharePoint, no provider choice).** B
+would also overturn §13's "not the only provider" (the same bold-lead
+sentence) and orphan the `supabase_storage` reference path for any
+non-M365 org. The deciding asymmetry: **A is reversible into B (a
+second amendment tightens default → mandatory if the customer base
+proves uniformly M365); B is not reversible into A** (recovering a
+non-M365 customer means re-introducing the provider B removed). Under
+any uncertainty about M365 prevalence, A dominates while capturing
+essentially all of B's product intent.
+
+**Substrate reservation (ADR-text grain only — not on disk).**
+`org_settings.default_storage_provider` is reserved at §2 / Q73 text
+grain. §2's text predicts a v1-add (column with `supabase_storage`
+NOT NULL DEFAULT); the `org_settings` substrate that actually shipped
+(migration `20240158`) did **not** include it — so the reservation
+lives at text grain only, exactly as the 2026-05-15 amendment framed
+`sharepoint_durability_mode`. Under this amendment the column lands as
+an **additive column in Charter B's `org_settings` slice**, with the
+post-v1 default value resolving to `sharepoint_drive` for M365 orgs
+and `supabase_storage` as the fallback/override. The §2-text-vs-disk
+divergence (predicted-v1-add that the deferred `org_settings` sub-arc
+did not ship) is **named here and reconciled in the Charter B slice**,
+not edited into §2 by this block (ratified-contract scope).
+
+**Durability orthogonality.** This amendment changes provider
+*selection* only. The 2026-05-15 `sharepoint_durability_mode`
+reservation is unchanged: `none` remains the default rung (bytes go to
+SharePoint; no folder-reorganization, no metadata projection until a
+customer exercises a reserved rung). Provider = where bytes live;
+durability = whether CHOUnting writes status back. The two stay
+orthogonal.
+
+**Named-not-done (Charter B code, gated on this ratifying; ADR-before-
+code).** None of these land before this amendment is ratified:
+- Widen the `source_documents` and `source_document_versions`
+  v1-active `storage_provider` CHECK to admit `sharepoint_drive` (two
+  Layer-1 CHECK broadens; the Layer-2 Zod admit-set broadens to match).
+- Implement `sharepointDriveProvider` per §14's reserved skeleton
+  (Graph API + OAuth refresh discipline + put-with-hash-verify /
+  native-etag integrity per item 9).
+- The `org_settings` slice (incl. `default_storage_provider` +
+  `sharepoint_durability_mode`), per the deferred org-settings sub-arc.
+- The SharePoint folder-watcher **channel-specification brief** (the
+  per-document-override channel per §2 / §14) — its own brief, not
+  this amendment; (b) composes (a).
+
+**Cross-references.** §13 (framing), §2 (selection mechanism), §14
+(reserved provider skeletons), Alternative 2 (per-document
+discriminator preserves multi-provider — the architecture-preservation
+basis for A over B), the 2026-05-15 Amendment (text-grain reservation
+precedent + durability orthogonality), ADR-0022 §2 (append-only
+amendment discipline this block follows),
+`docs/09_briefs/post-v1-revisit-notes.md` (Charter B entry +
+provider-vs-channel a/b fork).
