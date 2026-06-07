@@ -193,9 +193,15 @@ is a map; the pointed-at docs are the truth.
   ADR-0030). → those four ADRs +
   `docs/02_specs/agent_autonomy_model.md`.
 - **Workflow Core (Layer 2.5).** `workflow_instances` +
-  `workflow_events` substrate (ADR-0028) — inert at ratification,
-  **live writers since Wave 6** (the D2.1 routing hand-off;
-  INV-WORKFLOW-001 enforced by the `intent-producers` CI job).
+  `workflow_events` substrate (ADR-0028, migration `20240171`) —
+  **still inert**: no runtime writer exists (the only `src/`
+  reference is generated `db/types.ts`); a consumer wave activates
+  it. Not to be conflated with the **live document-case workflow**:
+  the Wave-6 D2.1 routing hand-off writes `document_cases`, and the
+  Wave-6 workflow invariants govern that machine and the
+  intent-producer registry — INV-WORKFLOW-002 on the case state
+  machine, INV-WORKFLOW-001 on `core/intent/producers.ts` via the
+  `intent-producers` CI job — not the ADR-0028 tables.
   → ADR-0028, the Wave-6 retrospective.
 - **Agent layer.** Orchestrator, tools, persona prompts, session
   persistence, canvas-context injection; the conversational
