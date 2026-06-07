@@ -14,6 +14,17 @@
 // between Tier 2 stages is deterministic TypeScript; types here are
 // plain type aliases, not dynamic-dispatch contracts.
 
+// Stage-5 vendor-matcher types live at the shared home since the
+// Class D arc (T3, 2026-06-06; ADR-0020 App. A) — imported here both
+// for local references (ProposalBuilderInput et al.) and for the
+// re-export below that keeps agent-side consumers unchanged.
+import type {
+  VendorMatchInput,
+  VendorIdentityFields,
+  VendorMatchResult,
+  VendorCandidate,
+} from '@/shared/schemas/spend/vendorMatch.types';
+
 /**
  * Per-stage trace record emitted by every Tier 2 stage per ADR-0014
  * §8 + ADR-0007 Q30. Records accumulate during orchestrator run; at
@@ -248,55 +259,18 @@ export interface ExtractionResult {
   trace_records: PipelineStageRecord[];
 }
 
-/**
- * Stage 5 vendor matcher input. Reads vendor identity-and-matching
- * fields from extraction result per ADR-0011 §11 Reading B boundary.
- */
-export interface VendorMatchInput {
-  org_id: string;
-  vendorField: VendorIdentityFields;
-  trace_id: string;
-}
-
-/**
- * Vendor identity-and-matching fields per ADR-0007 §Tier 2 Read boundary
- * + ADR-0014 §9. Stage 5 matcher reads name + tax_id + email + domain
- * extracted from Stage 4 output.
- */
-export interface VendorIdentityFields {
-  vendor_name?: string;
-  vendor_text?: string;
-  merchant_text?: string;
-  tax_id?: string;
-  email?: string;
-}
-
-/**
- * Stage 5 vendor matcher result per ADR-0014 §9. 6-strategy cascade
- * (exact_name + tax_id + email + domain + fuzzy_name + no_match) at
- * chunk 7.3a per Step 15 Phase A finding (vendors.aliases column
- * absent; alias strategy dropped from 7-strategy original cascade;
- * banked at chunk 7.3a close report).
- */
-export interface VendorMatchResult {
-  vendor_id: string | null;
-  confidence: number;
-  match_type:
-    | 'exact_name'
-    | 'tax_id'
-    | 'email'
-    | 'domain'
-    | 'fuzzy_name'
-    | 'no_match';
-  candidate_alternatives: VendorCandidate[];
-}
-
-export interface VendorCandidate {
-  vendor_id: string;
-  vendor_name: string;
-  match_type: VendorMatchResult['match_type'];
-  confidence: number;
-}
+// Stage-5 vendor-matcher types relocated to shared (Class D arc T3,
+// 2026-06-06, ADR-0020 App. A — the matcher implementation lives in
+// services/spend/vendorService; agent-owned types were the reverse
+// edge). Re-exported here so agent-side consumers are unchanged;
+// definitions + JSDoc now live at the shared home (imported at file
+// top for the local references below).
+export type {
+  VendorMatchInput,
+  VendorIdentityFields,
+  VendorMatchResult,
+  VendorCandidate,
+};
 
 /**
  * Stage 7 proposal builder input. Phase 7 chunk 7.3a active wiring.

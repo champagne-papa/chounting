@@ -45,7 +45,7 @@ import type {
   VendorMatchInput,
   VendorMatchResult,
   VendorCandidate,
-} from '@/agent/orchestrator/extraction/types';
+} from '@/shared/schemas/spend/vendorMatch.types';
 
 // Per ADR-0014 §9 vendor-matcher confidence threshold (v1-fixed 0.80;
 // NOT a reserved org_settings column at v1 per chunk 7.3a brief §4
