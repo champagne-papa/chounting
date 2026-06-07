@@ -29,7 +29,8 @@
 //
 // Failure paths emit audit events per ADR-0014 §8 + §12.3:
 //   - ai_fallback_validation_failed (Zod-validation failure) emits via
-//     recordMutation per ADR-0011 §1.
+//     pipelineAuditService.emitPipelineAuditEvent (recordMutation
+//     transport, hoisted Arc 2 T2) per ADR-0011 §1.
 //   - extraction_failed with failure_reason='ai_fallback_validation_failed'
 //     (same Zod-validation path; routes to exception queue).
 //   - extraction_failed with failure_reason='confidence_below_threshold'
@@ -51,8 +52,7 @@ import {
   AI_FALLBACK_MAX_CALLS_PER_DOCUMENT,
   __resetCountersForTests as __resetBudgetCountersForTests,
 } from '../aiFallbackBudget';
-import { recordMutation } from '@/services/audit/recordMutation';
-import { adminClient } from '@/db/adminClient';
+import { emitPipelineAuditEvent } from '@/services/document-platform/pipelineAuditService';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type {
@@ -136,7 +136,7 @@ async function emitAuditEvent(
   // Best-effort audit emission per Pattern B F-J-4 external-wrap
   // discipline: audit failure must not mask AI-fallback failure.
   try {
-    await recordMutation(adminClient(), ctx, {
+    await emitPipelineAuditEvent(ctx, {
       org_id: ctx.org_id,
       action,
       entity_type: 'source_document',

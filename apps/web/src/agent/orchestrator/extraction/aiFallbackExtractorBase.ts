@@ -21,8 +21,7 @@ import type { z } from 'zod';
 import type Anthropic from '@anthropic-ai/sdk';
 import { callClaude } from '../callClaude';
 import { tryConsumeCall, AI_FALLBACK_MAX_CALLS_PER_DOCUMENT } from './aiFallbackBudget';
-import { recordMutation } from '@/services/audit/recordMutation';
-import { adminClient } from '@/db/adminClient';
+import { emitPipelineAuditEvent } from '@/services/document-platform/pipelineAuditService';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type { PipelineStageRecord } from './types';
@@ -62,7 +61,7 @@ async function emitAuditEvent(
   details: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await recordMutation(adminClient(), ctx, {
+    await emitPipelineAuditEvent(ctx, {
       org_id: ctx.org_id,
       action,
       entity_type: 'source_document',

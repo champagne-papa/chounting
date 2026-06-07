@@ -11,13 +11,13 @@
 //   - permanent_malformed: no retry; immediate route to exception
 //     queue with extraction_failed audit event.
 //
-// Audit event emission via canonical recordMutation per ADR-0011 §1.
+// Audit event emission via pipelineAuditService.emitPipelineAuditEvent
+// (canonical recordMutation transport, hoisted Arc 2 T2) per ADR-0011 §1.
 // Naming per ADR-0014 §12.4: underscored (pipeline_transient_retry,
 // pipeline_transient_exhausted, pipeline_unavailable, extraction_failed).
 
 import { ServiceError } from '@/services/errors/ServiceError';
-import { recordMutation } from '@/services/audit/recordMutation';
-import { adminClient } from '@/db/adminClient';
+import { emitPipelineAuditEvent } from '@/services/document-platform/pipelineAuditService';
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
 import type { PipelineFailureClass } from './types';
 
@@ -155,7 +155,7 @@ async function emitAuditEvent(
   details: Record<string, unknown>,
 ): Promise<void> {
   try {
-    await recordMutation(adminClient(), ctx, {
+    await emitPipelineAuditEvent(ctx, {
       org_id: ctx.org_id,
       action,
       entity_type: 'source_document',
