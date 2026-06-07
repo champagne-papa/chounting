@@ -18435,3 +18435,56 @@ or the first instance that escapes to a commit) routes through
 codify-convention — likely as a CI lint over .gitignore anchoring
 rather than a prose convention, since the failure class is
 mechanical.**
+
+## 2026-06-07 — Post-V1 doc-refresh arc close (T1–T4)
+
+The housekeeping chapter's last piece, chartered at the V1 Wave-0
+retrospective §5 and re-named at Wave-6 close. Two-seat cadence
+(implementer + read-only verification advisor, Phil relaying);
+charter with first-hand-derived staleness inventory cleared at
+advisor read-back before any rewrite. Commits: T1 `ed1a5790`
+(two-doc disposition — Phase 6.5 retrospective drafting plan
+tracked with executed-plan note; Session-14 substrate discarded per
+its self-declared post-Session-14 disposability; atomic so the
+routing rule was never simultaneously untracked-and-deleted), T2
+`3223d648` (CURRENT_STATE refresh, additive-correction shape:
+SHA-free header, boundary-cleanup chapter section, 15-row May
+bridge, dated supersessions), T3 `24a8594c` (system_overview
+full-body rewrite — the one chartered rewrite; tree retired to a
+`folder-structure.md` pointer) + T3-fix `68ecb2e3`, T4 (this
+commit: two cross-reference fixes — INDEX.md:42, monorepo.md
+"future pass" promise fulfilled — plus this entry).
+
+**Corrections named, both seats.** (a) Push-count chain: the
+kickoff said "~84 commits stale," the implementer's charter derived
+25 but characterized it as one push event, the advisor's read-back
+corrected to two — and the origin reflog ground truth is FOUR
+(`542fc58f` / `3e51389a` / `b8ddb087` / `5ed6a3f1`). Lesson, the
+advisor's own framing: a count correction must come from ground
+truth, not from fixing one inherited number with another. (b) T3
+shipped a real over-claim — Workflow Core "live writers since Wave
+6" — conflating ADR-0028's still-inert tables, the live Wave-6
+workflow invariants, and the live document-case machine. Caught at
+advisor read-back; burden discharged by grep (only `src/` reference
+is generated `db/types.ts`); fixed as a named record-correction
+commit per Arc-1 precedent. (c) A subagent date extraction
+(Phase 5.1 close 05-24) corrected to 2026-05-19 (`4aea7e28`) by
+direct `git log` before the bridge table used it.
+
+**Untracked-discipline note (Decision 3, one-liner as ruled).** The
+Session-14 pair sat untracked three weeks while every phase-6.5
+sibling was tracked — an untracked-discipline gap, adjudicated NOT
+a gitignore-anchoring-class fire (no gitignore pattern excluded
+them); single event, caught and resolved by this arc, below any
+threshold. Recorded here; no bank, no codification.
+
+**Residue, all tracked.** `folder-structure.md` refresh (lists a
+`lib/` that never materialized; places `tests/` at repo top level —
+both named in the new system_overview body where the pointer
+lands); `monorepo.md` body is 2026-04-30 vintage (its
+system_overview cross-ref fixed this arc; the rest is its own
+pass); the five queued governance one-offs unchanged
+(push-readiness escape-clause generalization, test-account-namespace
+write-time check, branch-protection disposition, INV-AP-001/002
+severity, Q2 `query` re-include trigger); Decision 10 / ADR-0036
+postures unchanged.

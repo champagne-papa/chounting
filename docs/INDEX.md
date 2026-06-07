@@ -39,7 +39,7 @@ deletion criterion.
 
 ## 03_architecture — how the pieces fit
 
-- `system_overview.md` — major components and folder tree. Day-one document for a new engineer.
+- `system_overview.md` — what the system is, major components, and how the source is organized (the folder tree is canonical at `folder-structure.md`). Day-one document for a new engineer. Body refreshed 2026-06-07.
 - `monorepo.md` — Pattern 3 monorepo layout (apps/web + apps/demo + packages/tokens + packages/ui), the demo → ui → web component migration path, and the new-component decision tree. Also flags the 7 pre-existing `@/db/adminClient` lint violations excluded from CI gating.
 - `phase_plan.md` — scope boundaries, exit criteria, and governing principles for each phase.
 - `phase_simplifications.md` — the eight places Phase 1 deliberately diverges from the long-term target and exactly how Phase 2 corrects each one. The single most important architecture doc.
