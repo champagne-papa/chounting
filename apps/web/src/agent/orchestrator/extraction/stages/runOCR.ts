@@ -21,8 +21,7 @@
 // see ADR-0014 §12.1). Composes with 10s per-request timeout in
 // invokeSidecar + up to 3 retries with exponential backoff.
 
-import { adminClient } from '@/db/adminClient';
-import { ServiceError } from '@/services/errors/ServiceError';
+import { insertOcrArtifactChain } from '@/services/document-platform/extractionArtifactWriteService';
 import { invokeSidecar } from '../sidecar/client';
 import type {
   DocumentArtifactRow,
@@ -79,52 +78,14 @@ export async function runOCR(input: RunOCRInput): Promise<RunOCROutput> {
   const accumulated_trace = [...input.prior_trace, trace_record];
 
   // Sequential best-effort FK satisfaction chain per chunk 7.1b §1.2
-  // (γ) orphan-tolerance pattern. Each INSERT is atomic; the composite
-  // chain is not transactional. Partial-write orphans tolerated until
-  // GC per ADR-0011 §9 immutability discipline.
-  const db = adminClient();
-
-  // (1) ocr_runs row.
-  const { data: ocrRunRow, error: ocrRunErr } = await db
-    .from('ocr_runs')
-    .insert({
-      source_document_id: input.source_document_id,
-      created_by: SYSTEM_ACTOR_CREATED_BY,
-    })
-    .select('id')
-    .single();
-
-  if (ocrRunErr || !ocrRunRow) {
-    throw new ServiceError(
-      'PIPELINE_TRANSIENT_EXHAUSTED',
-      `[runOCR] ocr_runs insert failed: ${ocrRunErr?.message ?? 'no row returned'}`,
-    );
-  }
-
-  // (2) extraction_runs row referencing ocr_runs.id.
-  const { data: extractionRunRow, error: extractionRunErr } = await db
-    .from('extraction_runs')
-    .insert({
-      source_document_id: input.source_document_id,
-      ocr_run_id: ocrRunRow.id,
-      extraction_version: response.extraction_run.extraction_version,
-      created_by: SYSTEM_ACTOR_CREATED_BY,
-    })
-    .select('id')
-    .single();
-
-  if (extractionRunErr || !extractionRunRow) {
-    throw new ServiceError(
-      'PIPELINE_TRANSIENT_EXHAUSTED',
-      `[runOCR] extraction_runs insert failed: ${extractionRunErr?.message ?? 'no row returned'}`,
-    );
-  }
-
-  // (3) document_artifacts row with pipeline_trace JSONB populated.
-  const { error: artifactErr } = await db.from('document_artifacts').insert({
+  // (γ) orphan-tolerance pattern — hoisted VERBATIM to
+  // extractionArtifactWriteService (Arc 2 T5, ADR-0020 App. A).
+  // Error codes/messages byte-identical ([runOCR]-tagged
+  // PIPELINE_TRANSIENT_EXHAUSTED on any failed link).
+  await insertOcrArtifactChain({
     source_document_id: input.source_document_id,
-    ocr_run_id: ocrRunRow.id,
-    extraction_run_id: extractionRunRow.id,
+    created_by: SYSTEM_ACTOR_CREATED_BY,
+    extraction_version: response.extraction_run.extraction_version,
     engine: response.artifact.engine,
     engine_version: response.artifact.engine_version,
     pages: response.artifact.pages,
@@ -134,13 +95,6 @@ export async function runOCR(input: RunOCRInput): Promise<RunOCROutput> {
     pipeline_trace: accumulated_trace,
     confidence: response.artifact.confidence,
   });
-
-  if (artifactErr) {
-    throw new ServiceError(
-      'PIPELINE_TRANSIENT_EXHAUSTED',
-      `[runOCR] document_artifacts insert failed: ${artifactErr.message}`,
-    );
-  }
 
   const artifact: DocumentArtifactRow = {
     engine: response.artifact.engine,
