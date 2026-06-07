@@ -82,3 +82,28 @@ export async function findPriorSourceDocumentByHash(
       priorMatches && priorMatches.length > 0 ? priorMatches[0].id : null,
   };
 }
+
+/**
+ * Look up document_case_id from document_jobs table via source_document_id.
+ * Returns null if no matching job exists (defensive; Stage 6 skips when
+ * documentCaseId is null).
+ *
+ * Arc 2 T4 — hoisted VERBATIM from ingestDocument.ts. AS-FOUND: no
+ * org filter (document_jobs by source_document_id alone) — caller-side
+ * org-scoping, same defense-in-depth class as the shadow vendor_rules
+ * read; named in the Arc 2 close ledger, deliberately NOT "fixed"
+ * mid-hoist.
+ */
+export async function lookupDocumentCaseId(
+  source_document_id: string,
+): Promise<string | null> {
+  const db = adminClient();
+  const { data, error } = await db
+    .from('document_jobs')
+    .select('document_case_id')
+    .eq('source_document_id', source_document_id)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data as { document_case_id: string }).document_case_id;
+}
