@@ -18488,3 +18488,59 @@ pass); the five queued governance one-offs unchanged
 write-time check, branch-protection disposition, INV-AP-001/002
 severity, Q2 `query` re-include trigger); Decision 10 / ADR-0036
 postures unchanged.
+
+## 2026-06-07 — mailbox-finish arc (AP-ingest deepening, Charter A)
+
+Forwarded-mailbox documents now process synchronously on webhook
+arrival (T1 `1609b47e`) instead of waiting for a manual sweep run —
+the "save to the system" half of the email double-filing round-trip.
+Two-seat cadence; charter cleared at advisor read-back; D-A2 (invoke
+grain) and D-A3 (allowlist surface) settled before code.
+
+**The load-bearing design catch (D-A2).** "Mirror the drag-drop
+invoker" was the obvious move and was wrong. Drag-drop is 1:1
+case:document, so its per-`source_document` loop invokes the pipeline
+once per case by coincidence. A forwarded-mailbox batch is N+1
+documents (1 email_body + N attachments) under ONE case; the pipeline
+is single-source and a successful run advances the case out of the
+sweep's `ELIGIBLE_STATES` (classified→needs_review). So a faithful
+mirror would have fired N+1 racing runs against one case AND classified
+the `.eml` body instead of the invoice. Resolution: a shared
+`resolvePrimaryIngestSource` (prefer the non-`email_body` job) used by
+BOTH the sync invoker and the sweep's single pick — sync ≡ backstop.
+Lesson: a pattern that's correct only because of an incidental
+cardinality (1:1) is a trap when reused at a different cardinality
+(1+N); grounding the case/document/job shape before copying the loop
+is what surfaced it.
+
+**BANKED — multi-attachment picking gap (PRIORITIZED follow-up, not
+benign-latent).** `resolvePrimaryIngestSource` is deterministic for
+the dominant one-attachment case but, for email + MULTIPLE attachments,
+picks one attachment arbitrarily — all N+1 jobs share a
+single-transaction `created_at` with no tiebreak. No regression: the
+superseded `getOldestJobSourceDocumentId` could strand the invoice
+entirely by picking the `.eml`; this at least always picks an
+attachment. The real question it defers — "which document represents a
+multi-source case, and should the pipeline process one or all?" — is
+pipeline-semantics, larger than mailbox wiring, and must not be solved
+inside a wiring arc. Prioritized because the multi-attachment shape is
+plausible in real AP mail (invoice + remittance + W-9), and today only
+one of them is ever classified.
+
+**Noted trade-off (advisor read-back observation), not a defect.** The
+sync invoker re-queries `resolvePrimaryIngestSource(case_id)` after the
+RPC — a second round-trip re-reading jobs it just wrote, when it holds
+`p_jobs` + the email_body in memory. Deliberate: keeps the resolver the
+single source of selection truth so the sync path and the sweep backstop
+can never diverge on which document gets picked. The redundancy is the
+price of sync ≡ backstop; recorded so a future reader doesn't "optimize"
+it into a divergence.
+
+**Ops tail (D-A3 honored — Phase-2.5+ deferral kept, no allowlist UI
+this arc).** Mailbox activation still needs: a Postmark account; the
+`inbound+<org_id_uuid>@…` address scheme; per-env
+`POSTMARK_INBOUND_WEBHOOK_SECRET`; and post-deploy `UPDATE`s on
+`internal_sender_allowlist` (operator-`UPDATE`-only by design,
+migration 20240155; UI surface is Phase-2.5+ per spend_initiative.md
+§8.6). UUID-shaped inbound addresses are operator-hostile (slug
+forward-pointer at `resolveOrgFromMailboxHash.ts`) — also Phase-2.5+.

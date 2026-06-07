@@ -294,6 +294,48 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(callArg.source_document_id).not.toBe(emailBody!.id);
   });
 
+  it('Test #1c — sync invoke failure is isolated: webhook still accepted, case stays received (sweep backstop)', async () => {
+    // Best-effort isolation: a pipeline throw must NOT fail the webhook.
+    // The documents are safely ingested, the case stays 'received' (the
+    // sweep's eligible state), and sweepStrandedCases recovers it on its
+    // next run — that received→recovery half is covered by
+    // sweepStrandedCases.integration.test.ts (B3); here we prove the
+    // precondition: a thrown invoke is swallowed and leaves the case
+    // sweep-eligible rather than failing the request or stranding it.
+    (ingestDocument as Mock).mockRejectedValueOnce(
+      new Error('simulated pipeline failure'),
+    );
+    const payload = makePayload({
+      from: 'placeholder-founder@chounting.com',
+      to: 'inbound+holding@inbound.chounting.com',
+      subject: 'Invoice, pipeline will throw',
+      attachments: [makeAttachment('invoice.pdf', 'pdf-bytes')],
+    });
+    const res = await POST(signedRequest({ bodyObj: payload }));
+
+    // Webhook still returns accepted despite the pipeline throw.
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; batch_id: string };
+    expect(body.status).toBe('accepted');
+    createdBatchIds.push(body.batch_id);
+
+    // The invoker was attempted exactly once (and threw — swallowed).
+    expect(ingestDocument as Mock).toHaveBeenCalledTimes(1);
+
+    // The case remains 'received' — sweep-eligible, so the backstop recovers it.
+    const { data: batchRow } = await db
+      .from('ingest_batches')
+      .select('trace_id')
+      .eq('id', body.batch_id)
+      .single();
+    const { data: cases } = await db
+      .from('document_cases')
+      .select('state')
+      .eq('trace_id', batchRow!.trace_id);
+    expect(cases).toHaveLength(1);
+    expect(cases![0].state).toBe('received');
+  });
+
   it('Test #2 — HMAC signature failure → 401 + signature_invalid audit; zero ingest rows', async () => {
     const payload = makePayload({});
     const res = await POST(
