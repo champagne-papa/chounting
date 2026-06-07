@@ -127,6 +127,7 @@
 
 import { adminClient } from '@/db/adminClient';
 import { recordMutation } from '@/services/audit/recordMutation';
+import { resolvePrimaryIngestSource } from './strandedCaseReadService';
 import { getStorageProvider } from '@/services/storage/resolver';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
@@ -487,6 +488,13 @@ const SYSTEM_CREATED_BY = 'ingestionService.handleForwardedMailbox';
 async function handleForwardedMailboxImpl(
   input: ForwardedMailboxUploadInput,
   ctx: SystemActorServiceContext,
+  // REQUIRED (mailbox-finish 2026-06-07): the webhook entry surface supplies
+  // the pipeline invoker, mirroring handleDragDropUpload's Class D T4
+  // inversion. No default — an optional no-op would silently skip the
+  // pipeline (the pre-mailbox-finish behavior this arc removes: mailbox docs
+  // sat 'received' until a manual sweep), and a service-side @/agent default
+  // would re-create the services→agent edge the inversion removed.
+  invokeIngest: IngestInvoker,
 ): Promise<ForwardedMailboxUploadResult> {
   const log = loggerWith({
     trace_id: ctx.trace_id,
@@ -801,6 +809,41 @@ async function handleForwardedMailboxImpl(
     },
     'ingestionService.handleForwardedMailbox: complete',
   );
+
+  // mailbox-finish (2026-06-07): synchronous pipeline invocation, ONCE per
+  // case, on the primary ingest source (an attachment, not the .eml body —
+  // resolvePrimaryIngestSource). NOT a per-source_document loop like
+  // drag-drop: drag-drop is 1:1 case:document, but a mailbox batch is N+1
+  // documents under ONE case, and the pipeline is single-source +
+  // advances the case out of sweep eligibility on success — so invoking
+  // per-document would race N+1 runs against one case and (worse) classify
+  // the .eml body. Best-effort isolation (Pattern B, drag-drop precedent):
+  // pipeline failure is logged, never propagated — the HTTP response stays
+  // the successful result and the sweep remains the backstop (case stays
+  // 'received', sweep-eligible, recovered via the shared resolver).
+  try {
+    const primarySourceId = await resolvePrimaryIngestSource(case_id);
+    if (primarySourceId) {
+      await invokeIngest({
+        org_id: input.org_id,
+        source_document_id: primarySourceId,
+        trace_id: ctx.trace_id,
+      });
+    } else {
+      // Should be unreachable — the RPC just wrote N+1 jobs for this case.
+      // Logged (not thrown) so the successful ingest still returns; the
+      // sweep backstop will retry.
+      log.error(
+        { ingest_batch_id, document_case_id: case_id, trace_id: ctx.trace_id },
+        'ingestionService.handleForwardedMailbox: no primary ingest source resolved post-RPC; pipeline not invoked (sweep backstop will retry)',
+      );
+    }
+  } catch (orchErr) {
+    log.error(
+      { err: orchErr, document_case_id: case_id, trace_id: ctx.trace_id },
+      'ingestionService.handleForwardedMailbox: orchestrator invocation failed (best-effort; not propagating; sweep backstop will retry)',
+    );
+  }
 
   return {
     status: 'accepted',

@@ -35,6 +35,13 @@ import { adminClient } from '@/db/adminClient';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { ingestionService } from '@/services/document-platform/ingestionService';
 import { resolveOrgFromMailboxHash } from '@/services/document-platform/resolveOrgFromMailboxHash';
+// Agent-entry surface (the drag-drop route precedent, route.ts:56-57): the
+// webhook is the composition point that wires the concrete pipeline invoker
+// into handleForwardedMailbox's required IngestInvoker parameter (Class D T4
+// inversion, ADR-0020 App. A) — the designated entry-point shape, exempted
+// explicitly. mailbox-finish 2026-06-07.
+// eslint-disable-next-line architecture/agent-first-import-boundaries
+import { ingestDocument } from '@/agent/orchestrator/extraction/ingestDocument';
 import { PostmarkInboundWebhookSchema } from '@/shared/schemas/document-platform/postmarkWebhook.schema';
 import { loggerWith } from '@/shared/logger/pino';
 import type {
@@ -316,6 +323,11 @@ export async function POST(req: Request): Promise<Response> {
         attachments,
       },
       ctx,
+      // Class D T4 inversion: the concrete agent-layer pipeline invoker,
+      // bound at this entry surface (the service holds only the structural
+      // IngestInvoker type, never an @/agent import). Synchronous mailbox
+      // processing — the mailbox-finish change.
+      ingestDocument,
     );
 
     if (result.status === 'rejected') {

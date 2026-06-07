@@ -50,7 +50,7 @@ import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import {
   findEligibleStrandedCases,
-  getOldestJobSourceDocumentId,
+  resolvePrimaryIngestSource,
   caseHasRelationshipCandidates,
   getDocumentCaseState,
 } from '@/services/document-platform/strandedCaseReadService';
@@ -245,8 +245,14 @@ async function sweepOneCase(
 
   try {
     // Reverse join off document_jobs (both FKs NOT NULL on the job row —
-    // migration 20240152:348-349). Oldest job wins if several.
-    source_document_id = await getOldestJobSourceDocumentId(row.id);
+    // migration 20240152:348-349). One pick per case, feeding every bucket
+    // below (B3-D dedup pre-check, B3 re-run, reported source_document_id,
+    // no_job_row anomaly). resolvePrimaryIngestSource prefers an attachment
+    // over the .eml email_body for multi-job (forwarded-mailbox) cases so
+    // the dedup pre-check and re-run both target the invoice; identical
+    // null-on-no-jobs contract so the anomaly bucket still fires. Shared
+    // with the sync mailbox invoker (sync ≡ backstop).
+    source_document_id = await resolvePrimaryIngestSource(row.id);
 
     // ----- B1 (must precede B2 — see module header) -----
     if (row.state === 'matched') {

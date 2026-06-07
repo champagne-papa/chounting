@@ -20,8 +20,22 @@ vi.mock('@/services/storage/resolver', () => ({
   getStorageProvider: vi.fn(),
 }));
 
+// mailbox-finish (2026-06-07): the webhook now fires ingestDocument
+// synchronously (the Class D T4 invoker wired at the route). Mock it so
+// these integration tests assert ingest-substrate shape without running the
+// real pipeline (Modal OCR + Claude) — and so the happy-path 'received' /
+// 'queued' assertions still hold (the real pipeline would advance the case
+// out of those states). Test #1b below asserts the invoker receives the
+// attachment's source_document_id, not the .eml email_body.
+vi.mock('@/agent/orchestrator/extraction/ingestDocument', () => ({
+  ingestDocument: vi.fn(async () => ({ status: 'committed' })),
+}));
+
 const { POST } = await import('@/app/api/webhooks/postmark-inbound/route');
 const { getStorageProvider } = await import('@/services/storage/resolver');
+const { ingestDocument } = await import(
+  '@/agent/orchestrator/extraction/ingestDocument'
+);
 
 const db = adminClient();
 
@@ -123,6 +137,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
 
   beforeEach(() => {
     bindMockPut();
+    (ingestDocument as Mock).mockClear();
     createdBatchIds = [];
     preExistingMessageIds = [];
   });
@@ -240,6 +255,43 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(auditRow!.entity_type).toBe('ingest_batch');
     expect(auditRow!.entity_id).toBe(body.batch_id);
     expect(auditRow!.user_id).toBeNull();
+  });
+
+  it('Test #1b — sync pipeline invocation targets the attachment, not the .eml email_body', async () => {
+    // The core mailbox-finish correctness property: a forwarded email with
+    // one invoice attachment must classify the INVOICE, not the .eml body.
+    // resolvePrimaryIngestSource prefers the attachment; the invoker fires
+    // once per case on it.
+    const payload = makePayload({
+      from: 'placeholder-founder@chounting.com',
+      to: 'inbound+holding@inbound.chounting.com',
+      subject: 'Single invoice',
+      attachments: [makeAttachment('the-invoice.pdf', 'pdf-bytes')],
+    });
+    const res = await POST(signedRequest({ bodyObj: payload }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; batch_id: string };
+    expect(body.status).toBe('accepted');
+    createdBatchIds.push(body.batch_id);
+
+    // Identify email_body (text/plain) vs the attachment source_document.
+    const { data: docs } = await db
+      .from('source_documents')
+      .select('id, mime_type')
+      .eq('ingest_batch_id', body.batch_id);
+    expect(docs).toHaveLength(2);
+    const emailBody = docs!.find((d) => d.mime_type === 'text/plain');
+    const attachment = docs!.find((d) => d.mime_type !== 'text/plain');
+    expect(emailBody).toBeTruthy();
+    expect(attachment).toBeTruthy();
+
+    // Invoked exactly once, on the ATTACHMENT — never the .eml body.
+    expect(ingestDocument as Mock).toHaveBeenCalledTimes(1);
+    const callArg = (ingestDocument as Mock).mock.calls[0][0] as {
+      source_document_id: string;
+    };
+    expect(callArg.source_document_id).toBe(attachment!.id);
+    expect(callArg.source_document_id).not.toBe(emailBody!.id);
   });
 
   it('Test #2 — HMAC signature failure → 401 + signature_invalid audit; zero ingest rows', async () => {
