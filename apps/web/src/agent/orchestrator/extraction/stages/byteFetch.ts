@@ -7,6 +7,7 @@
 // is FetchBytesResult per ADR-0013 §1 FetchResult shape.
 
 import { getStorageProvider } from '@/services/storage/resolver';
+import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type { FetchBytesResult, PipelineStageRecord } from '../types';
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
@@ -22,14 +23,32 @@ export interface ByteFetchOutput {
   trace_record: PipelineStageRecord;
 }
 
-const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
-
 export async function byteFetch(
   input: ByteFetchInput,
 ): Promise<ByteFetchOutput> {
   const timestamp = new Date().toISOString();
 
-  const provider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // FORWARD-MARKER (Charter B real-flow D-3 §3.2): EVERY storage read site
+  // must dispatch getStorageProvider on the ROW's storage_provider — never a
+  // constant or the org default. byteFetch is the only live fetch-dispatch
+  // today; previewUrl/verifyIntegrity/fetchVersion/delete have zero callers,
+  // so when their consumers land each inherits THIS rule. Do NOT reintroduce
+  // a hardcoded provider constant at a read site (the bug this arc fixed),
+  // and do NOT use resolveStorageProvider here — that is ingest-only (it
+  // returns the org default; a document is read from the provider it was
+  // WRITTEN under, i.e. the row's storage_provider).
+  const { data: row, error: rowErr } = await adminClient()
+    .from('source_documents')
+    .select('storage_provider')
+    .eq('id', input.source_document_id)
+    .single();
+  if (rowErr || !row) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `[byteFetch] source_document ${input.source_document_id} not found`,
+    );
+  }
+  const provider = getStorageProvider(row.storage_provider);
 
   let fetchResult;
   try {
