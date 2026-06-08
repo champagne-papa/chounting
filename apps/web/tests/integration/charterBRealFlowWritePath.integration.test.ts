@@ -6,13 +6,15 @@
 // is the D-6 gated tail); the org-default resolution (resolveStorageProvider,
 // real DB read) and the create_source_document_with_audit RPC INSERT are real.
 //
-// In its own file because vi.mock('@/services/storage/resolver') is
-// file-global — keeping it out of charterBRealFlow.integration.test.ts so the
-// slice/helper integration tests there run against the real resolver.
-import { describe, it, expect, afterAll, vi } from 'vitest';
+// Uses a DEDICATED test org (CHARTER_B_ORG_WRITE) — never SEED.ORG_HOLDING and
+// distinct from the sibling charter-B file's org — so flipping its default to
+// sharepoint_drive can't pollute parallel ingest tests. In its own file because
+// vi.mock('@/services/storage/resolver') is file-global.
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
 import { createIngestBatchForTest } from '../helpers/createIngestBatchForTest';
+import { ensureCharterBOrg, CHARTER_B_ORG_WRITE } from '../helpers/charterBOrg';
 
 const { getStorageProviderSpy, mockPut } = vi.hoisted(() => {
   const mockPut = vi.fn();
@@ -34,13 +36,17 @@ import { documentPlatformService } from '@/services/document-platform/documentPl
 
 describe('Charter B real-flow — write-path proof (D-2)', () => {
   const db = adminClient();
-  const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  const ctx = makeTestContext({ org_ids: [CHARTER_B_ORG_WRITE] });
+
+  beforeAll(async () => {
+    await ensureCharterBOrg(CHARTER_B_ORG_WRITE);
+  });
 
   afterAll(async () => {
     await db
       .from('org_settings')
       .update({ default_storage_provider: 'supabase_storage' })
-      .eq('org_id', SEED.ORG_HOLDING);
+      .eq('org_id', CHARTER_B_ORG_WRITE);
     await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
@@ -48,13 +54,13 @@ describe('Charter B real-flow — write-path proof (D-2)', () => {
     await db
       .from('org_settings')
       .update({ default_storage_provider: 'sharepoint_drive' })
-      .eq('org_id', SEED.ORG_HOLDING);
+      .eq('org_id', CHARTER_B_ORG_WRITE);
 
-    const { ingest_batch_id } = await createIngestBatchForTest(SEED.ORG_HOLDING);
+    const { ingest_batch_id } = await createIngestBatchForTest(CHARTER_B_ORG_WRITE);
     const filename = 'charter-b-write-path.pdf';
     const bytes = new TextEncoder().encode('charter-b write-path proof');
     mockPut.mockResolvedValue({
-      storage_key: `org_${SEED.ORG_HOLDING}/sources/pending/${filename}`,
+      storage_key: `org_${CHARTER_B_ORG_WRITE}/sources/pending/${filename}`,
       content_hash: 'a'.repeat(64),
       byte_size: bytes.byteLength,
       provider: 'sharepoint_drive',
@@ -64,7 +70,7 @@ describe('Charter B real-flow — write-path proof (D-2)', () => {
       {
         bytes,
         mime_type: 'application/pdf',
-        org_id: SEED.ORG_HOLDING,
+        org_id: CHARTER_B_ORG_WRITE,
         original_filename: filename,
         ingest_channel: 'direct_upload',
         ingest_batch_id,
