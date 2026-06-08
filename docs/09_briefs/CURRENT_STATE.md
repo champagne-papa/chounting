@@ -42,20 +42,38 @@ Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
   record + commit ledger: friction-journal 2026-06-07 Charter B (a)
   closeout; design/plan at `docs/09_briefs/post-mvp/`.
   - **"Charter B (a) ✓" must carry "implemented + admitted, not yet
-    reachable"** — it is not live.
+    reachable"** — it was not live at (a) close. (The real-flow arc
+    below has since made it reachable — unit-proven, live transfer
+    gated.)
 
-- **Next — the real-flow arc** (when reachability becomes the goal):
-  lands the three entangled carries together, all gated on the same
-  reachability change (provider becoming reachable via selection
-  plumbing + Graph config): (1) the Layer-2 Zod admit-set; (2)
-  `provider_unavailable` routing + its substrate (a new
-  `exception_reason` value + the enqueue-path state-coupling design
-  decision); (3) Task-8 ops (Azure app-reg `Sites.Selected`-only +
-  client cert + per-site grant + real-M365 e2e). Plus the still-queued
-  carries: the mailbox multi-attachment picking gap; the five V1
-  governance one-offs (push-readiness escape-clause, test-account-
-  namespace check, branch-protection, INV-AP-001/002 severity, Q2
-  re-include); `folder-structure.md` / `monorepo.md` refreshes.
+- **Charter B real-flow — CLOSED (UNIT-PROVEN, live transfer gated).**
+  The reachability arc: the selection seam is now dynamic end-to-end —
+  ingest resolves the org's `default_storage_provider`
+  (`resolveStorageProvider`) and stamps it; fetch dispatches on the
+  row's provider (`byteFetch`). `sharepoint_drive` is REACHABLE in
+  production in principle — but no live SharePoint Graph transfer has
+  occurred; the gated harness (`RUN_SHAREPOINT_E2E`) throws until
+  implemented against a real tenant, so nothing false-greens as
+  proven-live. Carries: (a) Layer-2 Zod admit-set DISCHARGED; (b)
+  `provider_unavailable` — honest classification (the D-5 two-layer wire
+  contract) + reserved `exception_reason` value landed, but the
+  exception-queue ROUTING surface deferred-with-consumer to Phase-7
+  (decision #2 = option 1; the v1 surface is near-vestigial); (c)
+  Task-8 ops — runbook + gated harness landed, Azure registration +
+  live run gated. 16 commits `1dc71bc9..aed41979` (local on `staging`;
+  push pending the three-condition gate). Full record: friction-journal
+  2026-06-08 Charter B real-flow closeout + retrospective at
+  `docs/07_governance/retrospectives/charter-b-real-flow-retrospective.md`.
+  - **"Charter B real-flow ✓" must carry "reachable, unit-proven, live
+    transfer gated"** — it is not yet live.
+
+- **Still-queued carries** (not part of the real-flow arc): the mailbox
+  multi-attachment picking gap; the five V1 governance one-offs
+  (push-readiness escape-clause, test-account-namespace check,
+  branch-protection, INV-AP-001/002 severity, Q2 re-include);
+  `folder-structure.md` / `monorepo.md` refreshes. New from this arc:
+  the live SharePoint e2e (the PROVEN-LIVE discharge); the Phase-7
+  `provider_unavailable` routing surface + enqueue coupling-wall design.
 
 ## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
 

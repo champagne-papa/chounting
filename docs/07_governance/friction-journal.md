@@ -18617,3 +18617,96 @@ reading the constraint definition on disk, not trusting the name's
 presence in code. The discipline: at any "build against this
 enum/action/column" moment, the grounding is the migration, not the
 comment/ADR that names it.
+
+## ENTRY: "Charter B real-flow CLOSED: sharepoint_drive REACHABLE, UNIT-PROVEN, live transfer gated"
+
+2026-06-08. Commit range `1dc71bc9..aed41979` (16 commits, local on
+`staging`). Full retrospective:
+`docs/07_governance/retrospectives/charter-b-real-flow-retrospective.md`.
+
+**The load-bearing close qualifier: REACHABLE in principle,
+UNIT-PROVEN, live transfer GATED.** One notch past (a)'s "implemented +
+admitted, not yet reachable": the selection seam is now dynamic
+end-to-end (ingest resolves the org default and stamps it; fetch
+dispatches on the row's provider) and the provider is reachable — but
+no live SharePoint Graph transfer occurred. The gated harness throws
+until implemented against a real tenant, so nothing false-greens as
+proven-live. A future reader must carry the gate: "Charter B real-flow
+✓" means wired + unit/integration-proven against mocked Graph, NOT
+live.
+
+**The three (a)-carries, accounted.** (a) Layer-2 Zod admit-set —
+DISCHARGED (landed with the dynamic value, D-4). (b)
+provider_unavailable routing + substrate — PARTIALLY discharged by
+design: the classification is now honest (the D-5 two-layer wire
+contract `STORAGE_PROVIDER_UNAVAILABLE`→`PIPELINE_UNAVAILABLE`→
+classifyError-unchanged) and the exception_reason value is RESERVED
+(migration 20240180, not in the active CHECK), but the exception-queue
+ROUTING surface + the enqueue coupling-wall design are
+deferred-with-consumer to Phase-7 (decision #2 = option 1). The reason:
+the only live read site (byteFetch at ingest) runs moments after `put`
+already re-read the same bytes (§9), so v1 provider_unavailable is
+near-vestigial — active routing now would be inert-substrate-ahead-of-
+consumer. (c) Task-8 ops — local parts landed (runbook,
+already-present env wiring, gated harness); Azure registration + live
+run gated.
+
+**The selection-seam reframe (charter finding #1) was the design-grain
+catch.** Provider selection is TWO independent points — put-at-ingest
+and fetch-at-read, both hardcoded. Write-dynamic-without-fetch-dynamic
+would have been reachable-but-broken (bytes written to SharePoint,
+fetched from supabase — silent cross-provider divergence). The
+corrected spine (pick-once at ingest via resolveStorageProvider;
+dispatch-on-row at fetch in byteFetch) is a correctness fix. Disk also
+falsified the naive "resolve at the canonical writer" shortcut: there
+are TWO source_documents writers (single-doc RPC + the ingestion batch
+RPC), so the helper centralizes selection without a chokepoint that
+doesn't exist.
+
+**The process lesson — `test:full` caught what per-task read-backs
+structurally could not.** Two findings surfaced only at the full-suite
+gate, both fixed (not waived): (1) parallel test-isolation pollution —
+the charter-B tests flipped the SHARED SEED.ORG_HOLDING's
+default_storage_provider, breaking parallel ingest tests that read the
+same seed org; fixed with dedicated per-file test orgs (`634ac050`).
+(2) a unit-suite-membership miss — Task 3 gave createSourceDocument a
+new resolveStorageProvider dependency; I ran the integration suites but
+not the documentPlatformService UNIT test, which mocks deps and broke
+on the uninjected call (`aed41979`). The two-seat per-task read-back
+verified each task's SOURCE correctness first-hand but was never
+positioned to catch cross-test interaction (needs parallel readers) or
+a suite-membership miss (needs the full unit suite). This is the
+precise boundary between UNIT-PROVEN-per-task and PROVEN, and the
+reason the full-suite gate exists before push. Banked as a
+carry-forward codification candidate (N=1, novel): "two-seat read-back
+≠ full-suite gate."
+
+**Existing conventions HELD — as catch, not prevent.** header-lags-the-
+edit doc-sync (codified, code.md:135-180, prior N=4) fired twice this
+arc (Task 3 preamble, Task 5 disposition matrix) and was caught at
+read-back each time; test-isolation (codified, testing.md) fired once
+(the shared-config-row variant) and was caught at the full-suite gate.
+Both conventions worked as safety nets, but ADHERENCE lagged — I
+violated header-lags twice despite it being codified. Carry-forward:
+the convention is a review discipline; an edit-time trigger
+(path-scoped rule at service files, or a closeout checklist line) would
+shift it from catch to prevent.
+
+**Carry-forwards.** (1) provider_unavailable exception-queue routing
+surface → Phase-7 (with the job-runner + the coupling-wall design + the
+later-read consumers). (2) Live SharePoint Graph e2e → the gated
+harness's throws-until-implemented body is the PROVEN-LIVE discharge.
+(3) Codification candidate unit-test-when-a-dependency-is-added (N=1).
+(4) Codification candidate two-seat-read-back-≠-full-suite-gate (N=1).
+(5) Orchestrator failureClassification.ts header residual — its
+"immediate route to exception queue" lines overstate its
+emit-and-throw behavior; pre-existing (chunk 7.1a), the unchanged D-5
+(c) leg, NOT this arc's regression; left as a known minor residual (a
+live pre-existing instance of header-lags); annotate-or-leave is the
+operator's call, non-blocking.
+
+**No conventions graduated this arc.** The two strong candidates
+(header-lags, test-isolation) are already codified; the two novel ones
+(unit-test-when-dependency, two-seat-≠-suite-gate) are N=1.
+codify-convention was not invoked — recording carry-forwards rather
+than improvising a lower threshold is the discipline.
