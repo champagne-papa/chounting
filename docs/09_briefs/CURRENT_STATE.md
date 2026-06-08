@@ -10,6 +10,53 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## Post-V1 AP-ingest deepening — 2026-06-07 (in progress; origin/staging at `66efcc59`)
+
+The post-V1 work after the doc-refresh (below). Direction: deepen AP
+ingest — finish the mailbox channel, then add SharePoint storage.
+Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
+
+- **mailbox-finish — SHIPPED** (Charter A of AP-ingest). Forwarded-
+  mailbox documents now process synchronously on webhook arrival
+  instead of waiting for the operator-CLI sweep (sync `IngestInvoker`
+  wired; sweep kept as backstop). Design catch: a shared
+  attachment-preferring resolver (`resolvePrimaryIngestSource`) so the
+  invoice — not the `.eml` body — gets classified for the 1+N mailbox
+  case. Banked **prioritized** follow-up: multi-attachment picking gap.
+- **ADR-0013 §13 amendment — RATIFIED.** Universal-default SharePoint
+  (Option A): `sharepoint_drive` is the default provider for
+  M365-equipped orgs, `supabase_storage` the fallback; the bytes-vs-
+  meaning "exact and non-negotiable" invariant + "not the only
+  provider" preserved. Append-only per ADR-0022 §2. This is the gate
+  that unblocked Charter B.
+- **Charter B (a) `sharepointDriveProvider` — CLOSED.** The SharePoint
+  storage provider: **implemented and admitted, NOT YET REACHABLE.**
+  Six `StorageProvider` methods (put-then-re-read SHA-256 §9 discharge;
+  reads; verifyIntegrity), app-only `Sites.Selected` cert auth, Graph
+  failure classification, the `storage_provider` CHECK broadened to
+  admit `sharepoint_drive`, resolver activated. Unit-proven (mocked
+  io/resolver/rows + migration apply + activation test), **not** proven
+  live: nothing reaches it in production, held by two still-true gates —
+  the source_documents write value is hardcoded `supabase_storage`
+  (`ingestionService`) and Graph is unconfigured (`GRAPH_*` unset). Full
+  record + commit ledger: friction-journal 2026-06-07 Charter B (a)
+  closeout; design/plan at `docs/09_briefs/post-mvp/`.
+  - **"Charter B (a) ✓" must carry "implemented + admitted, not yet
+    reachable"** — it is not live.
+
+- **Next — the real-flow arc** (when reachability becomes the goal):
+  lands the three entangled carries together, all gated on the same
+  reachability change (provider becoming reachable via selection
+  plumbing + Graph config): (1) the Layer-2 Zod admit-set; (2)
+  `provider_unavailable` routing + its substrate (a new
+  `exception_reason` value + the enqueue-path state-coupling design
+  decision); (3) Task-8 ops (Azure app-reg `Sites.Selected`-only +
+  client cert + per-site grant + real-M365 e2e). Plus the still-queued
+  carries: the mailbox multi-attachment picking gap; the five V1
+  governance one-offs (push-readiness escape-clause, test-account-
+  namespace check, branch-protection, INV-AP-001/002 severity, Q2
+  re-include); `folder-structure.md` / `monorepo.md` refreshes.
+
 ## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
 
 After the Wave-6 terminal push (`459b172d`), 25 commits landed
