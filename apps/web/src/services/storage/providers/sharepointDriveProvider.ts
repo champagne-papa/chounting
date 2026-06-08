@@ -40,6 +40,11 @@ import type {
 } from '../storageProviderService';
 import { loggerWith } from '@/shared/logger/pino';
 import { resolveOrgDrive } from './graph/orgDriveResolver';
+import {
+  resolveCurrentRef,
+  resolveVersionRef,
+  collectAllRefs,
+} from './graph/sharepointRefResolver';
 import { realGraphIo, type GraphIo } from './graph/graphIo';
 
 const PROVIDER: StorageProviderEnum = 'sharepoint_drive';
@@ -47,6 +52,16 @@ const PROVIDER: StorageProviderEnum = 'sharepoint_drive';
 // Graph simple PUT supports ≤ 4 MiB; larger requires an upload session
 // (spec D-B4). MiB, not MB.
 const SIMPLE_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
+
+// Preview URL TTL bounds per ADR-0013 §12 (system-fixed v1), matching
+// supabaseStorageProvider: default 5 min, max 30 min.
+const PREVIEW_TTL_DEFAULT_SECONDS = 300;
+const PREVIEW_TTL_MAX_SECONDS = 1800;
+
+function clampTtl(requested: number | undefined): number {
+  const ttl = requested ?? PREVIEW_TTL_DEFAULT_SECONDS;
+  return Math.min(Math.max(1, ttl), PREVIEW_TTL_MAX_SECONDS);
+}
 
 // Per-org folder convention under the org's drive root. The drive is
 // already org-scoped (resolved from org_settings), so within it the
@@ -134,34 +149,63 @@ export function createSharepointDriveProvider(
       };
     },
 
-    // Tasks 3–4 implement these against the resolved storage_key
-    // (driveItem id) + injected io. Stubbed so the factory satisfies
-    // the StorageProvider interface while only `put` is under test.
+    // Read methods (Task 3): resolve the stored storage_key (driveItem
+    // id) + org from the row, derive driveId from the row's org
+    // (row-authoritative), then call the injected io. content_hash on
+    // fetch is the row's stored hash, NOT recomputed (per types.ts;
+    // verifyIntegrity is the recompute path).
     async fetch(
-      _source_document_id: string,
+      source_document_id: string,
       _ctx: StorageProviderContext,
     ): Promise<FetchResult> {
-      return NOT_YET_IMPLEMENTED('fetch');
+      const ref = await resolveCurrentRef(source_document_id);
+      const { driveId } = await resolveOrgDrive(ref.org_id);
+      const bytes = await io.downloadBytes(driveId, ref.driveItemId);
+      return { bytes, content_hash: ref.content_hash, provider: PROVIDER };
     },
+
     async fetchVersion(
-      _source_document_version_id: string,
+      source_document_version_id: string,
       _ctx: StorageProviderContext,
     ): Promise<FetchResult> {
-      return NOT_YET_IMPLEMENTED('fetchVersion');
+      const ref = await resolveVersionRef(source_document_version_id);
+      const { driveId } = await resolveOrgDrive(ref.org_id);
+      const bytes = await io.downloadBytes(driveId, ref.driveItemId);
+      return { bytes, content_hash: ref.content_hash, provider: PROVIDER };
     },
+
     async previewUrl(
-      _source_document_id: string,
-      _options: PreviewOptions,
+      source_document_id: string,
+      options: PreviewOptions,
       _ctx: StorageProviderContext,
     ): Promise<PreviewResult> {
-      return NOT_YET_IMPLEMENTED('previewUrl');
+      const ref = await resolveCurrentRef(source_document_id);
+      const { driveId } = await resolveOrgDrive(ref.org_id);
+      const url = await io.getDownloadUrl(driveId, ref.driveItemId);
+      // §12 TTL clamp. NOTE: Graph's @microsoft.graph.downloadUrl carries
+      // its own ~1h expiry that we don't control; we report a clamped
+      // (≤30 min) window so callers re-mint well within Graph's validity.
+      // 'mode' (preview/download) is not enforced by downloadUrl (no
+      // Content-Disposition control) — v1 limitation per spec §6.
+      const ttl = clampTtl(options.ttl_seconds);
+      const expires_at = new Date(Date.now() + ttl * 1000).toISOString();
+      return { url, expires_at, provider: PROVIDER };
     },
+
     async delete(
-      _source_document_id: string,
+      source_document_id: string,
       _ctx: StorageProviderContext,
     ): Promise<void> {
-      NOT_YET_IMPLEMENTED('delete');
+      // Bytes-removal step only; the source_documents cascade +
+      // controller authority + audit are the calling layer's (ADR-0011
+      // §4). Enumerate original + every version key.
+      const { org_id, driveItemIds } = await collectAllRefs(source_document_id);
+      const { driveId } = await resolveOrgDrive(org_id);
+      for (const itemId of driveItemIds) {
+        await io.deleteItem(driveId, itemId);
+      }
     },
+
     async verifyIntegrity(
       _source_document_id: string,
       _ctx: StorageProviderContext,

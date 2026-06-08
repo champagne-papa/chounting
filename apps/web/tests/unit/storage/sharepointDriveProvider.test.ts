@@ -12,11 +12,26 @@ import type { GraphIo } from '@/services/storage/providers/graph/graphIo';
 import type { PutInput } from '@/services/storage/types';
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
 import { computeHash } from '@/services/storage/integrity';
+import {
+  resolveCurrentRef,
+  resolveVersionRef,
+  collectAllRefs,
+} from '@/services/storage/providers/graph/sharepointRefResolver';
+import type { SharepointRef } from '@/services/storage/providers/graph/sharepointRefResolver';
 
 // org_settings site/drive resolution → fixed values (the real resolver
 // reads forward-columns landing in plan Task 8).
 vi.mock('@/services/storage/providers/graph/orgDriveResolver', () => ({
   resolveOrgDrive: vi.fn(async () => ({ siteId: 'site-1', driveId: 'drive-1' })),
+}));
+
+// Row-resolution mocked per plan Task 3 ("mocked row resolution"). Real
+// SQL mirrors the integration-tested supabase resolution; real-row
+// integration of the read methods needs the Task-5 CHECK broaden.
+vi.mock('@/services/storage/providers/graph/sharepointRefResolver', () => ({
+  resolveCurrentRef: vi.fn(),
+  resolveVersionRef: vi.fn(),
+  collectAllRefs: vi.fn(),
 }));
 
 const ctx: SystemActorServiceContext = {
@@ -107,5 +122,98 @@ describe('sharepointDriveProvider.put — §9 integrity + size-gate', () => {
     await expect(provider.put(makeInput(bytes), ctx)).rejects.toMatchObject({
       code: 'INTEGRITY_VERIFY_FAILED',
     });
+  });
+});
+
+describe('sharepointDriveProvider read methods — row→io wiring (Task 3)', () => {
+  const REF: SharepointRef = {
+    driveItemId: 'item-1',
+    org_id: 'org-1',
+    content_hash: 'stored-hash-abc',
+    byte_size: 10,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fetch: resolves driveItemId from the row, driveId from the row org, returns row content_hash (not recomputed)', async () => {
+    const returned = new Uint8Array([5, 6, 7]);
+    vi.mocked(resolveCurrentRef).mockResolvedValue(REF);
+    const io = makeMockIo({ downloaded: returned });
+    const provider = createSharepointDriveProvider(io);
+
+    const result = await provider.fetch('sd-1', ctx);
+
+    expect(resolveCurrentRef).toHaveBeenCalledWith('sd-1');
+    // driveId 'drive-1' from the (mocked) resolveOrgDrive(org_id), itemId from the row.
+    expect(io.downloadBytes).toHaveBeenCalledWith('drive-1', 'item-1');
+    expect(result).toEqual({
+      bytes: returned,
+      content_hash: 'stored-hash-abc', // the row's hash, NOT recomputed
+      provider: 'sharepoint_drive',
+    });
+  });
+
+  it('fetchVersion: resolves the version ref, feeds driveItemId to io.downloadBytes', async () => {
+    const returned = new Uint8Array([8, 9]);
+    vi.mocked(resolveVersionRef).mockResolvedValue({ ...REF, driveItemId: 'ver-item-2' });
+    const io = makeMockIo({ downloaded: returned });
+    const provider = createSharepointDriveProvider(io);
+
+    const result = await provider.fetchVersion('ver-2', ctx);
+
+    expect(resolveVersionRef).toHaveBeenCalledWith('ver-2');
+    expect(io.downloadBytes).toHaveBeenCalledWith('drive-1', 'ver-item-2');
+    expect(result.content_hash).toBe('stored-hash-abc');
+    expect(result.provider).toBe('sharepoint_drive');
+  });
+
+  it('previewUrl: returns the io download URL with a §12-clamped expiry (default 300s)', async () => {
+    vi.mocked(resolveCurrentRef).mockResolvedValue(REF);
+    const io = makeMockIo({ downloaded: new Uint8Array() });
+    const provider = createSharepointDriveProvider(io);
+
+    const before = Date.now();
+    const result = await provider.previewUrl('sd-1', {}, ctx);
+    const after = Date.now();
+
+    expect(io.getDownloadUrl).toHaveBeenCalledWith('drive-1', 'item-1');
+    expect(result.url).toBe('https://example/download');
+    expect(result.provider).toBe('sharepoint_drive');
+    const expiresMs = Date.parse(result.expires_at);
+    expect(expiresMs).toBeGreaterThanOrEqual(before + 300 * 1000);
+    expect(expiresMs).toBeLessThanOrEqual(after + 300 * 1000);
+  });
+
+  it('previewUrl: clamps an over-max ttl_seconds to the §12 max (1800s)', async () => {
+    vi.mocked(resolveCurrentRef).mockResolvedValue(REF);
+    const io = makeMockIo({ downloaded: new Uint8Array() });
+    const provider = createSharepointDriveProvider(io);
+
+    const before = Date.now();
+    const result = await provider.previewUrl('sd-1', { ttl_seconds: 99999 }, ctx);
+    const after = Date.now();
+
+    const expiresMs = Date.parse(result.expires_at);
+    expect(expiresMs).toBeGreaterThanOrEqual(before + 1800 * 1000);
+    expect(expiresMs).toBeLessThanOrEqual(after + 1800 * 1000);
+  });
+
+  it('delete: enumerates original + version keys, calls io.deleteItem per key', async () => {
+    vi.mocked(collectAllRefs).mockResolvedValue({
+      org_id: 'org-1',
+      driveItemIds: ['orig-item', 'ver-item-a', 'ver-item-b'],
+    });
+    const io = makeMockIo({ downloaded: new Uint8Array() });
+    const provider = createSharepointDriveProvider(io);
+
+    await provider.delete('sd-1', ctx);
+
+    expect(collectAllRefs).toHaveBeenCalledWith('sd-1');
+    expect(io.deleteItem).toHaveBeenCalledTimes(3);
+    expect(io.deleteItem).toHaveBeenCalledWith('drive-1', 'orig-item');
+    expect(io.deleteItem).toHaveBeenCalledWith('drive-1', 'ver-item-a');
+    expect(io.deleteItem).toHaveBeenCalledWith('drive-1', 'ver-item-b');
   });
 });
