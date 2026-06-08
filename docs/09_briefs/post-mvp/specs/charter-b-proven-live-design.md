@@ -1,6 +1,6 @@
 # Charter B PROVEN-LIVE — design spec (live SharePoint e2e harness body)
 
-**Status:** Design spec. Realizes the ratified charter (`eb9c431e`); lands mismatch #1 as concrete assertions and resolves mismatch #2. For advisor read-back, then writing-plans. Not ratified.
+**Status:** Design spec — **ratified, committed under lock** at `fe20a46b` (read-back caught + folded the §3 required-`system_actor` fix). Realizes the ratified charter (`eb9c431e`); lands mismatch #1 as concrete assertions and resolves mismatch #2.
 **Anchored at:** `staging == origin/staging == 3796de62` + the charter at `eb9c431e` (all code reads `[disk]` first-hand this session).
 **Coordination:** session lock `charter-b-proven-live`.
 **Charter:** `docs/09_briefs/post-mvp/charter-b-proven-live-charter.md`.
