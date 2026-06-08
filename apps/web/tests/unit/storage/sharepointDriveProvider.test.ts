@@ -217,3 +217,46 @@ describe('sharepointDriveProvider read methods — row→io wiring (Task 3)', ()
     expect(io.deleteItem).toHaveBeenCalledWith('drive-1', 'ver-item-b');
   });
 });
+
+describe('sharepointDriveProvider.verifyIntegrity — recompute path (Task 4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('downloaded bytes hash matches the row content_hash → IntegrityResult', async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+    vi.mocked(resolveCurrentRef).mockResolvedValue({
+      driveItemId: 'item-1',
+      org_id: 'org-1',
+      content_hash: computeHash(bytes), // row hash == hash of downloaded bytes
+      byte_size: 5,
+    });
+    const io = makeMockIo({ downloaded: bytes });
+    const provider = createSharepointDriveProvider(io);
+
+    const result = await provider.verifyIntegrity('sd-1', ctx);
+
+    expect(io.downloadBytes).toHaveBeenCalledWith('drive-1', 'item-1');
+    expect(result).toEqual({
+      content_hash: computeHash(bytes),
+      byte_size: 5,
+      provider: 'sharepoint_drive',
+    });
+  });
+
+  it('downloaded bytes hash differs from the row content_hash → throws INTEGRITY_VERIFY_FAILED', async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+    vi.mocked(resolveCurrentRef).mockResolvedValue({
+      driveItemId: 'item-1',
+      org_id: 'org-1',
+      content_hash: 'a-different-stored-hash', // mismatch
+      byte_size: 5,
+    });
+    const io = makeMockIo({ downloaded: bytes });
+    const provider = createSharepointDriveProvider(io);
+
+    await expect(provider.verifyIntegrity('sd-1', ctx)).rejects.toMatchObject({
+      code: 'INTEGRITY_VERIFY_FAILED',
+    });
+  });
+});

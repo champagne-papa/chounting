@@ -82,9 +82,45 @@ export function classifyStorageFailure(
   // since storage SDKs and fetch errors carry varied surface fields.
   const e = err as {
     status?: number;
+    statusCode?: number;
     code?: string;
     name?: string;
   };
+
+  // Microsoft Graph error shape (GraphError): carries `statusCode`
+  // (number) — distinct from the supabase `status` field below, so the
+  // two providers never collide in this context-free classifier. Graph
+  // is the first provider to actually exercise provider_unavailable.
+  // (Charter B (a) Task 4; spec §4.)
+  if (typeof e.statusCode === 'number') {
+    // 5xx (incl. 507 Insufficient Storage) → transient.
+    if (e.statusCode >= 500 && e.statusCode < 600) {
+      return { kind: 'transient' };
+    }
+    // Throttling (429, Retry-After), request timeout (408), and Locked
+    // (423, e.g. file checked out / transient lock) → transient.
+    if (e.statusCode === 429 || e.statusCode === 408 || e.statusCode === 423) {
+      return { kind: 'transient' };
+    }
+    // Auth revoked / consent removed → provider_unavailable.
+    if (e.statusCode === 401 || e.statusCode === 403) {
+      return { kind: 'provider_unavailable' };
+    }
+    // 404 → provider_unavailable (Step 2a decision (a)). The classifier
+    // is context-free: it cannot know whether a 404 is a file deleted
+    // out-of-band (genuine provider_unavailable) vs a malformed/
+    // never-existed key. v1 routes ALL Graph 404 to the exception queue
+    // via provider_unavailable; the exception-queue handler distinguishes
+    // at resolution. (Accepts that malformed-key 404s also route there —
+    // the safe direction for a storage-backed accounting document.)
+    if (e.statusCode === 404) {
+      return { kind: 'provider_unavailable' };
+    }
+    // Other 4xx → permanent_malformed.
+    if (e.statusCode >= 400 && e.statusCode < 500) {
+      return { kind: 'permanent_malformed', code: 'STORAGE_KEY_MALFORMED' };
+    }
+  }
 
   // HTTP status code patterns (StorageApiError, fetch Response errors).
   if (typeof e.status === 'number') {

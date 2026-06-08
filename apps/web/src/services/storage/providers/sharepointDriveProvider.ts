@@ -23,7 +23,6 @@
 // Per ADR-0013 §1: data-access layer; NOT withInvariants-wrapped.
 // Audit (§16) is the document-platform caller's job, not this layer.
 
-import { ServiceError } from '@/services/errors/ServiceError';
 import { computeHash, verifyHash } from '../integrity';
 import type {
   PutInput,
@@ -85,14 +84,6 @@ function sanitizeFilename(name: string): string {
     .replace(/^_+|_+$/g, '');
   return sanitized || 'unnamed';
 }
-
-const NOT_YET_IMPLEMENTED = (method: string): never => {
-  throw new ServiceError(
-    'STORAGE_OPERATION_FAILED',
-    `sharepointDriveProvider.${method} not implemented yet (plan Task 3/4)`,
-    { stage: 'not_implemented', method },
-  );
-};
 
 // io is injected for testability; defaults to the real SDK-backed impl.
 export function createSharepointDriveProvider(
@@ -206,11 +197,26 @@ export function createSharepointDriveProvider(
       }
     },
 
+    // Recompute path (distinct from fetch's stored-hash return):
+    // download the bytes and verifyHash against the row's content_hash.
+    // Throws INTEGRITY_VERIFY_FAILED on mismatch; returns IntegrityResult
+    // on match. This is the drift hook the (out-of-scope) scheduled drift
+    // runner calls — NOTE: verifyIntegrity is throw-on-mismatch, so that
+    // runner needs a non-throwing surface (catch INTEGRITY_VERIFY_FAILED
+    // or a softer method) per spec §3.
     async verifyIntegrity(
-      _source_document_id: string,
+      source_document_id: string,
       _ctx: StorageProviderContext,
     ): Promise<IntegrityResult> {
-      return NOT_YET_IMPLEMENTED('verifyIntegrity');
+      const ref = await resolveCurrentRef(source_document_id);
+      const { driveId } = await resolveOrgDrive(ref.org_id);
+      const bytes = await io.downloadBytes(driveId, ref.driveItemId);
+      verifyHash(bytes, ref.content_hash);
+      return {
+        content_hash: ref.content_hash,
+        byte_size: ref.byte_size ?? bytes.byteLength,
+        provider: PROVIDER,
+      };
     },
   };
 }
