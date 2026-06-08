@@ -6,7 +6,9 @@
 // org_settings row by construction. The .single() reads below rely on that.
 import { describe, it, expect, afterAll } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
+import { makeTestContext } from '../setup/makeTestContext';
 import { resolveStorageProvider } from '@/services/storage/resolveStorageProvider';
+import { createDocumentCase } from '@/services/document-platform/documentCaseService';
 
 describe('Charter B real-flow — org_settings storage slice (D-1)', () => {
   const db = adminClient();
@@ -69,5 +71,33 @@ describe('Charter B real-flow — resolveStorageProvider (integration, D-2)', ()
     await expect(
       resolveStorageProvider('99999999-9999-9999-9999-999999999999'),
     ).resolves.toBe('supabase_storage');
+  });
+});
+
+describe('Charter B real-flow — provider_unavailable exception_reason reserved (D-5)', () => {
+  const db = adminClient();
+  const ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+
+  afterAll(async () => {
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('the enum carries provider_unavailable but the v1-active CHECK rejects it (reserved-not-active)', async () => {
+    const created = await createDocumentCase(
+      { org_id: SEED.ORG_HOLDING, document_type: 'vendor_invoice' },
+      ctx,
+    );
+    const { error } = await db.from('exception_queue_entries').insert({
+      org_id: SEED.ORG_HOLDING,
+      document_case_id: created.id,
+      exception_reason: 'provider_unavailable',
+      trace_id: ctx.trace_id,
+    });
+    // check_violation (23514) proves BOTH: the enum HAS the value (no
+    // invalid_input 22P02) AND the v1-active exception_reason_chunk_6_active
+    // CHECK rejects it — i.e. reserved-not-active. Direct table insert, so
+    // the enqueue RPC's case-state coupling does not apply; only the CHECK does.
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe('23514');
   });
 });

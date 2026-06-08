@@ -3939,6 +3939,7 @@ export type Database = {
         | "drift_detected"
         | "ai_fallback_validation_failed"
         | "bundle_partial_commit_reconciliation_pending"
+        | "provider_unavailable"
       exception_status: "open" | "resolved" | "cancelled"
       ingest_channel:
         | "drag_drop_pdf"
@@ -4389,6 +4390,7 @@ export const Constants = {
         "drift_detected",
         "ai_fallback_validation_failed",
         "bundle_partial_commit_reconciliation_pending",
+        "provider_unavailable",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       ingest_channel: [
