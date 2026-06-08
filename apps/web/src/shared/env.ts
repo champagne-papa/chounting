@@ -65,6 +65,16 @@ export const env = {
   UPSTASH_REDIS_KV_REST_API_URL:   process.env.UPSTASH_REDIS_KV_REST_API_URL!,
   UPSTASH_REDIS_KV_REST_API_TOKEN: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN!,
   POSTMARK_INBOUND_WEBHOOK_SECRET: process.env.POSTMARK_INBOUND_WEBHOOK_SECRET!,
+  // Charter B (a) sharepoint_drive provider — app-only Graph auth
+  // (client certificate). OPTIONAL at boot (no `!`, not in
+  // REQUIRED_SERVER): the provider is inert until the resolver
+  // activates it (plan Task 6) and real auth is gated on the Azure app
+  // registration (plan Task 8). graphClient.ts reads these lazily and
+  // throws a typed ServiceError if absent when the provider is actually
+  // used — so a missing value can't fatal-boot the live app.
+  GRAPH_TENANT_ID:           process.env.GRAPH_TENANT_ID,
+  GRAPH_CLIENT_ID:           process.env.GRAPH_CLIENT_ID,
+  GRAPH_CLIENT_CERT_PATH:    process.env.GRAPH_CLIENT_CERT_PATH,
   LOG_LEVEL:                 process.env.LOG_LEVEL ?? 'info',
   NODE_ENV:                  process.env.NODE_ENV ?? 'development',
 } as const;

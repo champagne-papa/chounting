@@ -21,9 +21,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
+    "@azure/identity": "^4.13.1",
     "@chounting/tokens": "workspace:*",
     "@chounting/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.103.0",
     "@upstash/ratelimit": "^2.0.8",
