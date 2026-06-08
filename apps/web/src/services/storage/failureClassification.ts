@@ -16,10 +16,12 @@
 //                                (Charter B (a) Task 4: Graph 401/403/404
 //                                → provider_unavailable).
 //
-// CALLER-SIDE ROUTING IS DEFERRED to the real-flow arc (the arc that
-// makes the provider reachable — selection plumbing + Graph config),
-// NOT built here. Two substrate gaps make it net-new design, not a
-// drop-in (both verified on disk against migration 20240148):
+// CALLER-SIDE ROUTING (exception-queue enqueue) IS DEFERRED to Phase-7
+// (the job-runner + recovery substrate). The Charter B real-flow arc made
+// the provider reachable and landed honest classification (the D-5 wire
+// contract lives at retry.ts/byteFetch.ts) but deliberately did NOT build
+// the routing surface (decision #2 = option 1). Two substrate gaps make
+// routing net-new design, not a drop-in (verified on disk vs 20240148):
 //   (1) No provider_unavailable-class exception_reason exists (the enum
 //       carries manual_route / low_confidence_classification /
 //       unknown_document_type / unmatched_router_candidate /

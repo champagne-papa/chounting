@@ -722,6 +722,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [ ] `pnpm test:full` green (Condition 1 evidence) — note the gated e2e is SKIPPED, by design.
 - [ ] `pnpm typecheck` green.
 - [ ] Doc-sync: the spec's §4.B-2 header reconciliation landed; `db/types.ts` regenerated against the post-slice + post-reserve schema; the charter §4.A supersession is recorded in the slice migration header.
+- [ ] **Doc-sync sweep of touched-file headers** (named step — header behavioral comments lagged the code edits twice during execution: documentPlatformService preamble at Task 3, retry.ts disposition matrix at Task 5). Re-read the file-header/disposition/preamble comments of every touched source file (documentPlatformService.ts, ingestionService.ts, resolver.ts, retry.ts, byteFetch.ts, failureClassification.ts) and confirm each describes the post-arc behavior — not a pre-arc claim. The code edits have been clean; the lag is in the prose that documents them.
 - [ ] Closeout carries the **UNIT-PROVEN** qualifier: "reachable in principle, dynamic selection + classification proven against mocked Graph; first live Graph transfer gated on D."
 
 Push (origin/staging) + lock-release are the operator's, at arc-close per the push-terminal-close pattern.

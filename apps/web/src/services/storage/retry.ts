@@ -17,24 +17,26 @@
 //                                    code (STORAGE_KEY_MALFORMED or
 //                                    INTEGRITY_VERIFY_FAILED) per §7
 //                                    verbatim.
-//   - provider_unavailable         → throw STORAGE_OPERATION_FAILED
-//                                    catchall (reserved per §7; v1
-//                                    supabase_storage doesn't trigger;
-//                                    post-v1 exception-queue routing
-//                                    is owned by the calling layer,
-//                                    not the retry helper).
+//   - provider_unavailable         → throw STORAGE_PROVIDER_UNAVAILABLE
+//                                    (typed, no retry; Charter B real-flow
+//                                    D-5 edit a — was the
+//                                    STORAGE_OPERATION_FAILED catchall).
+//                                    byteFetch maps it to PIPELINE_UNAVAILABLE
+//                                    (edit b); the exception-queue routing
+//                                    surface stays deferred to Phase-7
+//                                    (decision #2), owned by the calling
+//                                    layer, not the retry helper.
 //   - null (unclassified)          → throw STORAGE_OPERATION_FAILED
 //                                    catchall (preserves originating
 //                                    error in details per §7 framing).
 //
-// Retry params are NOT configurable in chunk 3 (v1 system-fixed per
-// §8). Per-org configurability lives in
-// `org_settings.storage_retry_*` columns reserved at v1 schema time
-// per ADR-0010; activation flips post-v1. The options-parameter slot
-// doesn't need to exist until configurability does
-// (substrate-now-enforcement-later applied at the type level).
-// withRetry signature stays minimal in chunk 3 and gains the options
-// parameter when post-v1 configurability ships.
+// Retry params are NOT configurable (system-fixed per §8). Per-org
+// configurability is reserved for `org_settings.storage_retry_*`, but
+// those columns are NOT yet on disk — Charter B real-flow D-1
+// (add-consumed-only) deferred them as an inert sub-slice (nothing reads
+// per-org retry config in v1). They land with their consumer. The
+// options-parameter slot doesn't need to exist until configurability does;
+// withRetry stays minimal and gains it then.
 
 import { ServiceError } from '@/services/errors/ServiceError';
 import { classifyStorageFailure } from './failureClassification';
