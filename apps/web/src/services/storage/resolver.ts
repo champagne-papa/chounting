@@ -29,6 +29,7 @@
 
 import { ServiceError } from '@/services/errors/ServiceError';
 import { createSupabaseStorageProvider } from './providers/supabaseStorageProvider';
+import { createSharepointDriveProvider } from './providers/sharepointDriveProvider';
 import type { StorageProvider } from './storageProviderService';
 import type { StorageProviderEnum } from './types';
 
@@ -38,7 +39,14 @@ export function getStorageProvider(
   switch (provider) {
     case 'supabase_storage':
       return createSupabaseStorageProvider();
+    // Charter B (a) Task 6: deliberate activation edit — sharepoint_drive
+    // splits out of the reserved throw-case into its factory. Note (spec
+    // §5 dep-2 precision): the exhaustive-`never` guard did NOT force this
+    // — the combined throw-case was valid exhaustive handling and the
+    // build did not break with it. Activation is a conscious edit; the
+    // never guard only guarantees no provider is silently UNHANDLED.
     case 'sharepoint_drive':
+      return createSharepointDriveProvider();
     case 's3_bucket':
     case 'external_url':
       throw new ServiceError(

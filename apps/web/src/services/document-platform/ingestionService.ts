@@ -155,13 +155,22 @@ import type {
 // (migration 20240178), but the Layer-2 Zod admit-set was intentionally
 // deferred — there is no admit-set to add to today and no untrusted input
 // to guard, because this value is a server-stamped CONSTANT, not an input
-// crossing a validation boundary. The Layer-1/Layer-2 gap is safe ONLY
-// while this constant stays hardcoded AND the resolver throws for
-// 'sharepoint_drive'. The moment selection makes storage_provider dynamic
-// (the org_settings.default_storage_provider + resolver-selection arc),
-// the Layer-2 z.enum(['supabase_storage','sharepoint_drive']) admit-set
-// MUST land in that SAME arc — they are a pair that cannot separate once
-// the value is selectable. This constant going dynamic IS the trigger.
+// crossing a validation boundary. The moment selection makes
+// storage_provider dynamic (the org_settings.default_storage_provider +
+// resolver-selection arc), the Layer-2
+// z.enum(['supabase_storage','sharepoint_drive']) admit-set MUST land in
+// that SAME arc — they are a pair that cannot separate once the value is
+// selectable. This constant going dynamic IS the trigger.
+//
+// MARGIN NARROWED at Task 6 (resolver activation): the gap originally
+// held on TWO independent conditions — (a) this constant stays hardcoded
+// supabase_storage, and (b) the resolver throws for 'sharepoint_drive'.
+// As of Task 6 the resolver now RETURNS a provider for 'sharepoint_drive'
+// (no longer throws), so (b) no longer holds; the gap rests SOLELY on (a).
+// Still safe — every write stamps this constant, so nothing passes
+// 'sharepoint_drive' to getStorageProvider in production — but the
+// hardcoded-value condition is now doing all the work until the
+// selection arc lands the Zod.
 const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
 
 async function handleDragDropUploadImpl(
