@@ -85,12 +85,15 @@ export async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
       }
 
       if (classification.kind === 'provider_unavailable') {
-        // Reserved per §7; v1 supabase_storage doesn't trigger this.
-        // The calling layer owns post-v1 exception-queue routing;
-        // here we simply surface the catchall so v1 v1 supabase paths
-        // get a typed error if this category somehow fires.
+        // Charter B real-flow D-5 (wire contract, edit a): propagate the TYPED
+        // provider-unavailable code so the calling layer (byteFetch, edit b)
+        // can map it to PIPELINE_UNAVAILABLE. No retry — a 401/403/404 won't
+        // recover by retrying. The exception-queue ROUTING surface stays
+        // deferred to Phase-7 (decision #2 = option 1); only honest
+        // classification lands here (this was the layer-1 mask: the value used
+        // to flatten into the STORAGE_OPERATION_FAILED catchall).
         throw new ServiceError(
-          'STORAGE_OPERATION_FAILED',
+          'STORAGE_PROVIDER_UNAVAILABLE',
           err instanceof Error ? err.message : String(err),
           err,
         );

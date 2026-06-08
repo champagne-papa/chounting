@@ -55,7 +55,22 @@ export async function byteFetch(
     fetchResult = await provider.fetch(input.source_document_id, input.ctx);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    // Classify as transient (configuration / network) per ADR-0014 §12.1;
+    // Charter B real-flow D-5 (wire contract, edit b): map the TYPED
+    // STORAGE_PROVIDER_UNAVAILABLE (from withRetry, edit a) → PIPELINE_UNAVAILABLE,
+    // which classifyError (UNCHANGED) routes to failure_class 'unavailable' and
+    // emits the distinct pipeline_unavailable audit event. (a)-without-(b)
+    // would relocate the mask — classifyError's default branch flattens any
+    // unrecognized code back to transient_exhausted.
+    if (
+      err instanceof ServiceError &&
+      err.code === 'STORAGE_PROVIDER_UNAVAILABLE'
+    ) {
+      throw new ServiceError(
+        'PIPELINE_UNAVAILABLE',
+        `[byteFetch] provider unavailable: ${message}`,
+      );
+    }
+    // Everything else: transient (configuration / network) per ADR-0014 §12.1;
     // failureClassification.ts wrapper handles retry semantics.
     throw new ServiceError(
       'PIPELINE_TRANSIENT_EXHAUSTED',

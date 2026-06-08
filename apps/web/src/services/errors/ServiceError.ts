@@ -87,6 +87,7 @@ export type ServiceErrorCode =
   | 'STORAGE_KEY_MALFORMED'                // ADR-0013 §7 — malformed key, illegal chars, path-too-long
   | 'INTEGRITY_VERIFY_FAILED'              // ADR-0013 §7 + §9 — hash mismatch on integrity check
   | 'STORAGE_PROVIDER_TRANSIENT_EXHAUSTED' // ADR-0013 §8 — retry budget exhausted on transient failure
+  | 'STORAGE_PROVIDER_UNAVAILABLE'         // ADR-0013 §7 — provider unreachable (401/403/404; no-retry); Charter B real-flow D-5
   | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
   // Document core (Phase 2 chunk 2)
   | 'INVALID_TRANSITION'
