@@ -98,10 +98,13 @@ import type {
   CreateSourceDocumentResult,
 } from './types';
 
-// v1 system-fixed: every write picks supabase_storage per ADR-0013 §2
-// "v1's selection is mechanical: every write picks supabase_storage".
-// Per-org default (post-v1) lands when the org_settings sub-arc ships
-// per chunk 1 Sub-Q4 a-prime adjudication.
+// Storage provider is resolved PER-ORG (Charter B real-flow D-2): the
+// org_settings sub-arc shipped, so this writer resolves the org's
+// default_storage_provider via resolveStorageProvider and uses it for BOTH
+// the put and the row stamp (put/stamp agree). The former "v1 system-fixed:
+// every write picks supabase_storage" mechanical selection no longer holds —
+// supabase_storage is now only the fallback default (ADR-0013 §2 + the
+// 2026-06-07 universal-default amendment).
 async function createSourceDocumentImpl(
   input: CreateSourceDocumentInput,
   ctx: ServiceContext,

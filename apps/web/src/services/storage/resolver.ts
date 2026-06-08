@@ -1,21 +1,20 @@
 // src/services/storage/resolver.ts
 // Provider resolver per ADR-0013 §2.
 //
-// In v1 this is mechanical: every call returns the supabase_storage
-// implementation per §2 verbatim ("v1's selection is mechanical:
-// every write picks supabase_storage"). The resolver shape is the
-// abstraction-selection layer that lets call sites call
-// getStorageProvider(...) without coupling to a specific
-// implementation.
+// getStorageProvider(provider) maps a storage_provider enum value to its
+// implementation. supabase_storage and sharepoint_drive are both ACTIVE
+// (sharepoint_drive activated at Charter B (a) Task 6). The caller chooses
+// the value: resolveStorageProvider picks the org default at INGEST
+// (Charter B real-flow D-2); byteFetch dispatches on the ROW's provider at
+// READ (D-3). The former "v1 mechanical: every call returns supabase_storage"
+// no longer holds — supabase_storage is the fallback default per the
+// 2026-06-07 amendment.
 //
-// Per-org default + per-document override (per §2): both reserved
-// post-v1 per Q73. Per-org default lands when org_settings sub-arc
-// ships (chunk 1 Sub-Q4 a-prime: org_settings.* deferred to its own
-// sub-arc). Per-document override lands when a channel that
-// exercises it ships (post-v1 SharePoint folder-watcher per ADR-0014).
+// Per-document override (per §2) is still reserved post-v1 — no channel
+// exercises it yet (post-v1 SharePoint folder-watcher per ADR-0014).
 //
-// Reserved providers (sharepoint_drive, s3_bucket, external_url)
-// throw ServiceError(STORAGE_OPERATION_FAILED) when requested. The
+// Reserved providers (s3_bucket, external_url) throw
+// ServiceError(STORAGE_OPERATION_FAILED) when requested. The
 // catchall code's purpose per chunk 2 lock is "unexpected storage
 // operation failure not classified by the §7 three-way matrix"; a
 // request for a reserved provider doesn't fit the §7 categories
