@@ -146,8 +146,9 @@ ALTER TABLE org_settings
 
 - [ ] **Step 4: Apply the migration and regenerate types.**
 
-Run: `pnpm db:reset` (applies all migrations to the local DB), then `pnpm db:generate-types`.
-Expected: reset completes; `apps/web/src/db/types.ts` `org_settings.Row` now includes `default_storage_provider`, `sharepoint_site_id`, `sharepoint_drive_id`.
+Run: `pnpm db:reset:clean` (applies all migrations **and** seeds dev data — bare `pnpm db:reset` does NOT seed, so integration tests reading `SEED.*` would fail on missing data), then `pnpm db:generate-types`.
+Expected: reset+seed completes; `apps/web/src/db/types.ts` `org_settings.Row` now includes `default_storage_provider`, `sharepoint_site_id`, `sharepoint_drive_id`.
+> Post-execution note: Task 1 was originally run with bare `pnpm db:reset` + a manual seed tail (`docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all`) to course-correct; this step is corrected forward-looking. Task 1 need not be re-run.
 
 - [ ] **Step 5: Run the test to confirm it passes.**
 
@@ -631,7 +632,7 @@ ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'provider_unavailable';
 
 - [ ] **Step 3: Apply and regenerate types.**
 
-Run: `pnpm db:reset` then `pnpm db:generate-types`.
+Run: `pnpm db:reset:clean` (reset + seed — bare `pnpm db:reset` does NOT seed) then `pnpm db:generate-types`.
 Expected: `exception_reason` enum in `db/types.ts` now includes `'provider_unavailable'`.
 
 - [ ] **Step 4: Run the test to confirm it passes.**
