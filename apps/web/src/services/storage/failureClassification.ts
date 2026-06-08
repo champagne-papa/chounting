@@ -9,14 +9,41 @@
 //                                (STORAGE_KEY_MALFORMED or
 //                                INTEGRITY_VERIFY_FAILED per §7
 //                                verbatim)
-//   - provider_unavailable     — reserved per §7; v1 supabase_storage
-//                                does not trigger this category
-//                                (platform's own RLS-scoped storage).
-//                                Post-v1 reserved-provider activation
-//                                routes here with the
-//                                `resolve_provider_unavailable`
-//                                exception-queue action per ADR-0010
-//                                discipline.
+//   - provider_unavailable     — v1 supabase_storage does not trigger
+//                                this category (platform's own RLS-scoped
+//                                storage). sharepoint_drive IS the first
+//                                provider that classifies into it
+//                                (Charter B (a) Task 4: Graph 401/403/404
+//                                → provider_unavailable).
+//
+// CALLER-SIDE ROUTING IS DEFERRED to the real-flow arc (the arc that
+// makes the provider reachable — selection plumbing + Graph config),
+// NOT built here. Two substrate gaps make it net-new design, not a
+// drop-in (both verified on disk against migration 20240148):
+//   (1) No provider_unavailable-class exception_reason exists (the enum
+//       carries manual_route / low_confidence_classification /
+//       unknown_document_type / unmatched_router_candidate /
+//       multi_candidate_ambiguity / invariant_violation [v1-active] +
+//       wrong_entity_exception / drift_detected [reserved]). Routing
+//       needs a new value (ALTER TYPE ADD VALUE +
+//       exception_reason_chunk_6_active → _chunk_7_active broaden).
+//   (2) The existing enqueue_exception_with_audit RPC atomically
+//       transitions the document_case classified|matched → needs_review
+//       and raises check_violation otherwise — it is purpose-built for
+//       the classification/matching pipeline's needs_review entry. A
+//       storage-read failure (fetch/verifyIntegrity at arbitrary
+//       lifecycle points) will generally NOT satisfy that state
+//       coupling, so routing needs a distinct enqueue path or a
+//       documented state-coupling exemption — a design decision, not
+//       just an enum add.
+// (NOTE: an earlier draft of this comment named a `resolve_provider_
+// unavailable` resolution_action — that value exists nowhere in
+// substrate; it was a text-grain name only, removed to avoid implying
+// an admission that does not exist. resolution_action is the
+// human-resolution side anyway; enqueue keys on exception_reason.)
+// The classifier classifying provider_unavailable (below) is harmless
+// and correct — it is the half that belongs with the provider; only the
+// routing + its substrate defer.
 //
 // Unclassifiable errors return null. Callers (withRetry) treat null
 // as fail-fast with STORAGE_OPERATION_FAILED catchall, preserving the
