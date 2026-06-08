@@ -129,6 +129,7 @@ import { adminClient } from '@/db/adminClient';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { resolvePrimaryIngestSource } from './strandedCaseReadService';
 import { getStorageProvider } from '@/services/storage/resolver';
+import { resolveStorageProvider } from '@/services/storage/resolveStorageProvider';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type {
@@ -147,31 +148,19 @@ import type {
   IngestInvoker,
 } from './types';
 
-// v1 system-fixed per ADR-0013 §2 mechanical selection. Per-org
-// configurability lands when org_settings sub-arc ships post-v1.
+// SELECTION IS DYNAMIC as of Charter B real-flow (D-2/D-4) — this RESOLVES
+// the deferred-Zod carry the former V1_STORAGE_PROVIDER constant carried.
+// Both batch ingest paths below resolve the org's default provider via
+// resolveStorageProvider (the single selection authority, ADR-0013 §2
+// per-org default) and thread the resolved value into BOTH the put and the
+// p_documents stamp (put/stamp agree). The Layer-2 admit-set
+// z.enum(['supabase_storage','sharepoint_drive']) (storageProvider.schema.ts)
+// lands inside the helper — the CHECK-broaden ⇒ Zod-broaden pair. The
+// hardcoded write constant is gone; there is no static write value anymore.
 //
-// SAFETY INVARIANT (Charter B (a) Task 5, migration 20240178 deferred-Zod
-// carry): the storage_provider Layer-1 CHECK now admits 'sharepoint_drive'
-// (migration 20240178), but the Layer-2 Zod admit-set was intentionally
-// deferred — there is no admit-set to add to today and no untrusted input
-// to guard, because this value is a server-stamped CONSTANT, not an input
-// crossing a validation boundary. The moment selection makes
-// storage_provider dynamic (the org_settings.default_storage_provider +
-// resolver-selection arc), the Layer-2
-// z.enum(['supabase_storage','sharepoint_drive']) admit-set MUST land in
-// that SAME arc — they are a pair that cannot separate once the value is
-// selectable. This constant going dynamic IS the trigger.
-//
-// MARGIN NARROWED at Task 6 (resolver activation): the gap originally
-// held on TWO independent conditions — (a) this constant stays hardcoded
-// supabase_storage, and (b) the resolver throws for 'sharepoint_drive'.
-// As of Task 6 the resolver now RETURNS a provider for 'sharepoint_drive'
-// (no longer throws), so (b) no longer holds; the gap rests SOLELY on (a).
-// Still safe — every write stamps this constant, so nothing passes
-// 'sharepoint_drive' to getStorageProvider in production — but the
-// hardcoded-value condition is now doing all the work until the
-// selection arc lands the Zod.
-const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
+// NOTE: this is the INGEST selection (org default). byteFetch dispatches on
+// the ROW's storage_provider (D-3), never the org default —
+// resolveStorageProvider is ingest-only.
 
 async function handleDragDropUploadImpl(
   input: DragDropUploadInput,
@@ -215,7 +204,10 @@ async function handleDragDropUploadImpl(
   // chunk 6.1 RPC. Successful prior puts before a mid-batch failure
   // orphan their bytes; ADR-0014 §10 GC cleans them up at the daily
   // 24-hour-threshold cadence.
-  const storageProvider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // Charter B real-flow D-2: resolve the org default ONCE, thread to both the
+  // put (here) and the p_documents stamp below (resolve-in-TS-then-thread).
+  const storage_provider = await resolveStorageProvider(parsed.org_id);
+  const storageProvider = getStorageProvider(storage_provider);
 
   // Per-file collected metadata: pre-generated UUID + storage put
   // result + the mime_type from the input (tracked here to avoid a
@@ -302,7 +294,7 @@ async function handleDragDropUploadImpl(
     // legal_entity_id defaults to org_id per ADR-0011 §10 v1 1-1
     // mapping (Phase 1 documentPlatformService precedent).
     legal_entity_id: parsed.org_id,
-    storage_provider: V1_STORAGE_PROVIDER,
+    storage_provider,
     original_storage_key: r.storage_key,
     original_content_hash: r.content_hash,
     original_byte_size: r.byte_size,
@@ -619,7 +611,10 @@ async function handleForwardedMailboxImpl(
 
   // Step 4: Sequential storage puts (mirrors handleDragDropUpload).
   // No parallelism at v1 per Sub-Q6 (drag-drop) carry-forward.
-  const storageProvider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // Charter B real-flow D-2: resolve the org default ONCE, thread to both the
+  // put (here) and the p_documents stamp below (resolve-in-TS-then-thread).
+  const storage_provider = await resolveStorageProvider(input.org_id);
+  const storageProvider = getStorageProvider(storage_provider);
   const putRecords: Array<{
     source_document_id: string;
     original_filename: string;
@@ -702,7 +697,7 @@ async function handleForwardedMailboxImpl(
     id: r.source_document_id,
     org_id: input.org_id,
     legal_entity_id: input.org_id,
-    storage_provider: V1_STORAGE_PROVIDER,
+    storage_provider,
     original_storage_key: r.storage_key,
     original_content_hash: r.content_hash,
     original_byte_size: r.byte_size,
