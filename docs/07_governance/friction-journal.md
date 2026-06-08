@@ -18544,3 +18544,76 @@ this arc).** Mailbox activation still needs: a Postmark account; the
 migration 20240155; UI surface is Phase-2.5+ per spend_initiative.md
 §8.6). UUID-shaped inbound addresses are operator-hostile (slug
 forward-pointer at `resolveOrgFromMailboxHash.ts`) — also Phase-2.5+.
+
+## 2026-06-07 — Charter B (a) CLOSED: sharepointDriveProvider implemented + admitted, NOT YET REACHABLE
+
+SharePoint storage provider (Charter B (a) of AP-ingest deepening),
+gated by and unblocked by the ADR-0013 2026-06-07 universal-default
+amendment. Two-seat cadence; ratified design spec
+(`docs/09_briefs/post-mvp/specs/2026-06-07-charter-b-sharepoint-drive-provider-design.md`)
+→ ratified plan
+(`docs/09_briefs/post-mvp/2026-06-07-charter-b-sharepoint-provider-plan.md`)
+→ 7-commit execution, each task advisor-read-back. Pushed
+`df56c5f1..d61ec783` on origin/staging. test:full 1780/0/10 green.
+
+**The load-bearing close qualifier: implemented and admitted, NOT YET
+REACHABLE.** "Charter B (a) ✓" must always carry this — it is NOT live.
+The provider is interface-complete (6 StorageProvider methods),
+unit-proven, resolver-activated, and the storage_provider CHECK admits
+sharepoint_drive — but nothing reaches it in production, held by two
+concrete gates that are STILL TRUE and that a future reader must know:
+(1) the source_documents write value is hardcoded `V1_STORAGE_PROVIDER
+= 'supabase_storage'` in ingestionService (no path produces a
+sharepoint_drive row), and (2) Graph auth is unconfigured (`GRAPH_*`
+unset → graphClient throws "not configured" on any reach).
+
+Commits: T1 `59be85c2` (app-only Graph client scaffold, @azure/identity
+cert credential), T2 `8ad9258e` (put — put-then-re-read SHA-256 §9
+discharge; injected GraphIo seam), T3 `333cc77e`
+(fetch/fetchVersion/previewUrl/delete; row-authoritative org), T4
+`578b601e` (verifyIntegrity + Graph failure classification, statusCode
+branch, 404→provider_unavailable), T5 `e7817a14` (CHECK broaden
+_v1→_v2; Layer-2 Zod deferred (B)), T6 `f84fcd67` (resolver
+activation), T7 `d61ec783` (provider_unavailable routing DEFERRED).
+
+**Honesty boundary — UNIT-PROVEN, not PROVEN.** Verification rests on
+unit tests against mocked io/resolver/rows + the migration apply +
+activation test. Real Graph transfer and real-sharepoint_drive-row
+integration were NEVER exercised (correctly gated). The real-flow arc
+inherits the first live integration as ITS gate; do not read
+"unit-proven" as "proven."
+
+**Three entangled carries to the real-flow arc** (all gated on the
+same reachability change — the provider becoming reachable via
+selection plumbing + Graph config — which is why they belong in ONE
+future arc, not scattered):
+1. **Layer-2 Zod admit-set** — `z.enum(['supabase_storage','sharepoint_drive'])`
+   lands when storage_provider goes dynamic (its first real consumer).
+   Safety invariant recorded at the `V1_STORAGE_PROVIDER` constant.
+2. **provider_unavailable routing + substrate** — needs a new
+   provider_unavailable-class `exception_reason` (ALTER TYPE +
+   `exception_reason_chunk_6_active → _chunk_7_active`) AND a design
+   decision on the enqueue path (`enqueue_exception_with_audit`
+   couples `classified|matched → needs_review`, which a storage-read
+   failure won't generally satisfy → distinct enqueue path or
+   documented state-coupling exemption). Recorded at the classifier
+   comment.
+3. **Task-8 ops** — Azure app registration (Sites.Selected ONLY,
+   additive-permission discipline) + client certificate + per-site
+   grant onboarding + real-M365 e2e (`RUN_*` opt-in gated, like
+   Modal-e2e).
+
+**Banked lesson (earned twice this arc) — disk-vs-text-grain:** a name
+present in a comment or ADR is NOT an admission in substrate; verify
+the constraint/enum on disk before building against it. Fired at (a)
+Task 5: `org_settings` storage columns "reserved at text grain" did
+NOT exist on disk (migration 20240158 shipped none) — orgDriveResolver
+forward-column read + the slice as a named precondition; and (b) Task
+7: `resolve_provider_unavailable` named in the failureClassification
+comment existed NOWHERE in substrate (not in the resolution_action
+enum, and no provider_unavailable exception_reason either) — the
+comment was a live hazard, corrected this arc. Both catches came from
+reading the constraint definition on disk, not trusting the name's
+presence in code. The discipline: at any "build against this
+enum/action/column" moment, the grounding is the migration, not the
+comment/ADR that names it.
