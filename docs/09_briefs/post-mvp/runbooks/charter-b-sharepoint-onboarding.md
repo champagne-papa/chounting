@@ -79,7 +79,7 @@ With the GRAPH_* env set (steps 1-2) and a per-site grant (step 3) + an org
 pointed at SharePoint (step 4):
 
 ```bash
-cd apps/web && RUN_SHAREPOINT_E2E=1 pnpm test:integration \
+cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> pnpm test:integration \
   tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
 ```
 

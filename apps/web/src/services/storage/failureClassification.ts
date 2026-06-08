@@ -138,10 +138,13 @@ export function classifyStorageFailure(
     // 404 → provider_unavailable (Step 2a decision (a)). The classifier
     // is context-free: it cannot know whether a 404 is a file deleted
     // out-of-band (genuine provider_unavailable) vs a malformed/
-    // never-existed key. v1 routes ALL Graph 404 to the exception queue
-    // via provider_unavailable; the exception-queue handler distinguishes
-    // at resolution. (Accepts that malformed-key 404s also route there —
-    // the safe direction for a storage-backed accounting document.)
+    // never-existed key. v1 CLASSIFIES all Graph 404 as provider_unavailable
+    // (the safe direction for a storage-backed accounting document; malformed-
+    // key 404s classify there too). NOTE (Charter B real-flow / decision #2):
+    // the exception-queue ROUTING surface is deferred to Phase-7 — today
+    // provider_unavailable surfaces as PIPELINE_UNAVAILABLE (the D-5 wire
+    // contract), NOT an enqueue. The future exception-queue handler is what
+    // distinguishes file-deleted vs malformed-key at resolution.
     if (e.statusCode === 404) {
       return { kind: 'provider_unavailable' };
     }
