@@ -1960,6 +1960,7 @@ export type Database = {
           default_initial_rung_for_new_rules:
             | Database["public"]["Enums"]["rule_autonomy_rung"]
             | null
+          default_storage_provider: Database["public"]["Enums"]["storage_provider"]
           gc_cadence: string
           gc_threshold_hours: number
           org_id: string
@@ -1967,6 +1968,8 @@ export type Database = {
           rule_type_preference:
             | Database["public"]["Enums"]["rule_type_preference"]
             | null
+          sharepoint_drive_id: string | null
+          sharepoint_site_id: string | null
           updated_at: string
           vendor_match_threshold: number
         }
@@ -1986,6 +1989,7 @@ export type Database = {
           default_initial_rung_for_new_rules?:
             | Database["public"]["Enums"]["rule_autonomy_rung"]
             | null
+          default_storage_provider?: Database["public"]["Enums"]["storage_provider"]
           gc_cadence?: string
           gc_threshold_hours?: number
           org_id: string
@@ -1993,6 +1997,8 @@ export type Database = {
           rule_type_preference?:
             | Database["public"]["Enums"]["rule_type_preference"]
             | null
+          sharepoint_drive_id?: string | null
+          sharepoint_site_id?: string | null
           updated_at?: string
           vendor_match_threshold?: number
         }
@@ -2012,6 +2018,7 @@ export type Database = {
           default_initial_rung_for_new_rules?:
             | Database["public"]["Enums"]["rule_autonomy_rung"]
             | null
+          default_storage_provider?: Database["public"]["Enums"]["storage_provider"]
           gc_cadence?: string
           gc_threshold_hours?: number
           org_id?: string
@@ -2019,6 +2026,8 @@ export type Database = {
           rule_type_preference?:
             | Database["public"]["Enums"]["rule_type_preference"]
             | null
+          sharepoint_drive_id?: string | null
+          sharepoint_site_id?: string | null
           updated_at?: string
           vendor_match_threshold?: number
         }
@@ -3789,29 +3798,6 @@ export type Database = {
           p_audit_decision: Json
           p_audit_mutation: Json
           p_decision: Json
-        }
-        Returns: string
-      }
-      test_post_balanced_entry: {
-        Args: {
-          p_amount: number
-          p_credit_account: string
-          p_debit_account: string
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
-        }
-        Returns: string
-      }
-      test_post_unbalanced_entry: {
-        Args: {
-          p_credit_account: string
-          p_credit_amount: number
-          p_debit_account: string
-          p_debit_amount: number
-          p_entry_date?: string
-          p_org_id: string
-          p_period_id: string
         }
         Returns: string
       }
