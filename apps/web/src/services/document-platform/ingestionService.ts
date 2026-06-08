@@ -149,6 +149,19 @@ import type {
 
 // v1 system-fixed per ADR-0013 §2 mechanical selection. Per-org
 // configurability lands when org_settings sub-arc ships post-v1.
+//
+// SAFETY INVARIANT (Charter B (a) Task 5, migration 20240178 deferred-Zod
+// carry): the storage_provider Layer-1 CHECK now admits 'sharepoint_drive'
+// (migration 20240178), but the Layer-2 Zod admit-set was intentionally
+// deferred — there is no admit-set to add to today and no untrusted input
+// to guard, because this value is a server-stamped CONSTANT, not an input
+// crossing a validation boundary. The Layer-1/Layer-2 gap is safe ONLY
+// while this constant stays hardcoded AND the resolver throws for
+// 'sharepoint_drive'. The moment selection makes storage_provider dynamic
+// (the org_settings.default_storage_provider + resolver-selection arc),
+// the Layer-2 z.enum(['supabase_storage','sharepoint_drive']) admit-set
+// MUST land in that SAME arc — they are a pair that cannot separate once
+// the value is selectable. This constant going dynamic IS the trigger.
 const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
 
 async function handleDragDropUploadImpl(
