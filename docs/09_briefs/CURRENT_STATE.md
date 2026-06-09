@@ -71,9 +71,16 @@ Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
   multi-attachment picking gap; the five V1 governance one-offs
   (push-readiness escape-clause, test-account-namespace check,
   branch-protection, INV-AP-001/002 severity, Q2 re-include);
-  `folder-structure.md` / `monorepo.md` refreshes. New from this arc:
-  the live SharePoint e2e (the PROVEN-LIVE discharge); the Phase-7
-  `provider_unavailable` routing surface + enqueue coupling-wall design.
+  `folder-structure.md` / `monorepo.md` refreshes. From the real-flow
+  arc: the Phase-7 `provider_unavailable` routing surface + enqueue
+  coupling-wall design. **The live SharePoint e2e is now READY, not
+  PROVEN:** the gated harness body landed (Charter B PROVEN-LIVE arc,
+  `77e4b520`) — the live proof is one `RUN_SHAREPOINT_E2E=1` away — but
+  PROVEN-LIVE still requires operator runbook ops (Azure `Sites.Selected`
+  + cert + per-site grant + an org pointed at `sharepoint_drive`) + the
+  live green run, which no agent can perform. `sharepoint_drive` status:
+  **reachable, unit-proven, harness-ready, live transfer gated** —
+  "carry-forward #2 done" is NOT "SharePoint proven live."
 
 ## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
 

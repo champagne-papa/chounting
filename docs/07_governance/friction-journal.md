@@ -18710,3 +18710,39 @@ operator's call, non-blocking.
 (unit-test-when-dependency, two-seat-≠-suite-gate) are N=1.
 codify-convention was not invoked — recording carry-forwards rather
 than improvising a lower threshold is the discipline.
+
+## ENTRY: "Charter B PROVEN-LIVE: harness body landed — READY, not PROVEN-LIVE"
+
+2026-06-08. Commit `77e4b520` (on `staging`). A one-task arc discharging
+the *code-able* half of the real-flow arc's carry-forward #2. The gated
+`sharepoint_drive` live-e2e harness body now implements the real
+ingest→fetch flow — but **READY ≠ PROVEN.** It makes the live proof one
+`RUN_SHAREPOINT_E2E=1` away; it does NOT discharge PROVEN-LIVE. The green
+run against a real M365 tenant (after operator runbook ops no agent can
+perform — Azure Sites.Selected app + cert + per-site grant + an org
+pointed at sharepoint_drive) is the discharge, and is the thing that
+flips the arc's status. The body landing must never read as "proven
+live."
+
+**The honest proof shape (pinned at charter grain, landed verbatim).**
+Exercise the byteFetch SEAM (dispatch-on-row) and RECOMPUTE the fetched
+bytes: `computeHash(fetched.result.bytes) === created.content_hash` —
+NOT `fetched.result.content_hash` (the row's STORED hash, which would
+false-green even on corrupted bytes), and NOT `verifyIntegrity` (a
+different provider path byteFetch never calls; using it would bypass the
+very seam the arc exists to prove live). The asymmetry: `put`
+self-verifies at write so its hash is trustworthy; `fetch` is the
+unproven half, closed only by recomputing the returned bytes. Pinning
+the false-green-vs-honest-proof distinction at charter grain is what
+kept the spec from regressing to a hollow proof.
+
+**Two charter/spec-stage read-back catches landed.** (1) The required
+`SystemActorCaller.system_actor` field — the ctx literal fails typecheck
+without it (read-back caught a transcription that dropped it; folded
+`system_actor: 'pipeline_orchestrator'` per autoCommitGate). (2) The
+spec's stale "Not ratified" Status line on a committed artifact —
+text-not-matching-reality, the same header-lags pattern, corrected at
+`020f537e`. Minor scope-note: cleanup gives `delete` its first test-only
+live exercise (hygiene; failure logged prominently, non-fatal) —
+recorded against charter #3, not absorbed silently. No conventions
+graduated (one-task arc).
