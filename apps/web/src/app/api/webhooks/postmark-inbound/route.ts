@@ -109,7 +109,7 @@ function verifyBasicAuth(args: {
 // =====================================================================
 // Audit emission helper for pre-resolution failures.
 //
-// HMAC fail / malformed payload / invalid recipient happen BEFORE we
+// Auth fail / malformed payload / invalid recipient happen BEFORE we
 // can derive a real org_id. audit_log accepts org_id=null + user_id=null
 // (migrations 113 + 154 + base) for system-level events; here we emit
 // such rows directly via recordMutation by passing a partial-shape ctx
@@ -207,7 +207,7 @@ export async function POST(req: Request): Promise<Response> {
   const trace_id = crypto.randomUUID();
   const log = loggerWith({ trace_id });
 
-  // Step 1: Read raw body (required for HMAC verification).
+  // Step 1: Read raw body (required for JSON parsing in Step 3).
   let rawBody: string;
   try {
     rawBody = await req.text();
