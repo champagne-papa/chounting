@@ -21,7 +21,7 @@ storage post-v1.
   Layer-2 Zod admit-set and the `org_settings` storage columns are live —
   Charter B real-flow (this arc).
 - `graphClient` reads `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` /
-  `GRAPH_CLIENT_CERT_PATH` from `@/shared/env` (optional at boot; the provider
+  `GRAPH_CLIENT_CERT_PEM` from `@/shared/env` (optional at boot; the provider
   throws `"sharepoint_drive provider is not configured: missing …"` until
   they are set).
 
@@ -45,11 +45,14 @@ Register an application in the org's (or CHOUnting's multi-tenant) Azure AD:
 ### 2. Client certificate
 
 - Generate a client certificate; upload the public key to the app registration.
-- Place the private key (PEM) on the deploy host; set the env vars:
+- Set the env vars (Vercel's filesystem is read-only, so the cert is passed
+  **in-memory** — there is no disk path):
   - `GRAPH_TENANT_ID` — the Azure AD tenant id.
   - `GRAPH_CLIENT_ID` — the registered app's client id.
-  - `GRAPH_CLIENT_CERT_PATH` — filesystem path to the certificate the
-    `ClientCertificateCredential` reads.
+  - `GRAPH_CLIENT_CERT_PEM` — the **base64-encoded** PEM contents (public +
+    private key), passed in-memory to `ClientCertificateCredential`'s
+    `{ certificate }` overload. It is a PRIVATE KEY: set it **Sensitive** in
+    Vercel, never log it. Generate with `base64 -w0 graph-client-cert.pem`.
 
 ### 3. Per-site grant
 

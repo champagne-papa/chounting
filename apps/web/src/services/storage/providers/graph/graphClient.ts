@@ -11,7 +11,7 @@
 // single process-level Client and lets the credential manage tokens.
 //
 // Configuration is OPTIONAL at boot: GRAPH_TENANT_ID / GRAPH_CLIENT_ID
-// / GRAPH_CLIENT_CERT_PATH are NOT in env.ts REQUIRED_SERVER, because
+// / GRAPH_CLIENT_CERT_PEM are NOT in env.ts REQUIRED_SERVER, because
 // the sharepoint_drive provider is inert until the resolver activates
 // it (plan Task 6) and real auth is gated on the Azure app
 // registration (plan Task 8). Boot-requiring these would fatally crash
@@ -42,28 +42,54 @@ let cachedClient: Client | null = null;
 
 // Read + validate Graph config at construction time. Throws a typed
 // ServiceError if any of the three vars is absent — only reachable once
-// a caller hits the activated sharepoint_drive provider.
-function readGraphConfig(): {
+// a caller hits the activated sharepoint_drive provider. Exported as the
+// test seam (the missing / valid / malformed cases are unit-tested).
+export function readGraphConfig(): {
   tenantId: string;
   clientId: string;
-  certificatePath: string;
+  certificatePem: string;
 } {
   const tenantId = env.GRAPH_TENANT_ID;
   const clientId = env.GRAPH_CLIENT_ID;
-  const certificatePath = env.GRAPH_CLIENT_CERT_PATH;
+  const certificatePemB64 = env.GRAPH_CLIENT_CERT_PEM;
 
   const missing: string[] = [];
   if (!tenantId) missing.push('GRAPH_TENANT_ID');
   if (!clientId) missing.push('GRAPH_CLIENT_ID');
-  if (!certificatePath) missing.push('GRAPH_CLIENT_CERT_PATH');
+  if (!certificatePemB64) missing.push('GRAPH_CLIENT_CERT_PEM');
 
   if (missing.length > 0) {
     throw new ServiceError(
       'STORAGE_OPERATION_FAILED',
       `sharepoint_drive provider is not configured: missing ${missing.join(', ')}. ` +
-        'Set the GRAPH_* env vars (Azure app registration + client certificate) ' +
-        'per the SharePoint activation ops (plan Task 8).',
+        'Set the GRAPH_* env vars (Azure app registration + base64-encoded client ' +
+        'certificate PEM) per the SharePoint activation ops.',
       { stage: 'graph_config', missing },
+    );
+  }
+
+  // base64-decode the PEM. Buffer.from(.., 'base64') is LENIENT — Node drops
+  // non-base64 characters rather than throwing — so a fat-fingered value would
+  // otherwise surface as a cryptic failure at getToken time. Validate the
+  // decoded value is PEM-shaped and throw a clear typed error instead. This is
+  // a config-sanity check (catches forgot-to-base64 / truncated paste / wrong
+  // var); it does NOT prove the key authenticates — that is the live Graph
+  // discharge.
+  const certificatePem = Buffer.from(
+    certificatePemB64 as string,
+    'base64',
+  ).toString('utf8');
+
+  if (
+    !certificatePem.includes('-----BEGIN') ||
+    !certificatePem.includes('-----END')
+  ) {
+    throw new ServiceError(
+      'STORAGE_OPERATION_FAILED',
+      'GRAPH_CLIENT_CERT_PEM is not a valid base64-encoded PEM certificate ' +
+        '(the decoded value is not PEM-shaped). Provide the base64 of a PEM file ' +
+        'containing both the public and private keys.',
+      { stage: 'graph_config' },
     );
   }
 
@@ -71,25 +97,25 @@ function readGraphConfig(): {
   return {
     tenantId: tenantId as string,
     clientId: clientId as string,
-    certificatePath: certificatePath as string,
+    certificatePem,
   };
 }
 
 // Return the authenticated, process-level app-only Graph client,
-// building it on first use. The ClientCertificateCredential's PEM-path
-// overload reads the certificate from disk at the configured path.
+// building it on first use. Uses @azure/identity's in-memory PEM overload
+// (ClientCertificatePEMCertificate { certificate }) — the certificate
+// contents are passed directly, with no disk read — the serverless-correct
+// pattern for Vercel's read-only filesystem.
 export function getGraphClient(): Client {
   if (cachedClient) {
     return cachedClient;
   }
 
-  const { tenantId, clientId, certificatePath } = readGraphConfig();
+  const { tenantId, clientId, certificatePem } = readGraphConfig();
 
-  const credential = new ClientCertificateCredential(
-    tenantId,
-    clientId,
-    certificatePath,
-  );
+  const credential = new ClientCertificateCredential(tenantId, clientId, {
+    certificate: certificatePem,
+  });
 
   const authProvider = new TokenCredentialAuthenticationProvider(credential, {
     scopes: [GRAPH_DEFAULT_SCOPE],

@@ -38,8 +38,9 @@ Follow **`charter-b-sharepoint-onboarding.md`** steps 1–4 first (that runbook 
 SharePoint-ops source; do not duplicate it here):
 
 1. Azure app registration — `Sites.Selected` **only** (no broader `Files.*`/`Sites.*`).
-2. Client certificate; set `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_CERT_PATH` on the
-   deploy host (production Vercel scope).
+2. Client certificate; set `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_CERT_PEM`
+   (base64-encoded PEM contents, **Sensitive**, passed in-memory — Vercel's FS is read-only) in the
+   production Vercel scope.
 3. Per-site grant on the customer's real SharePoint site.
 4. Org provisioning: set the org's `org_settings.default_storage_provider = 'sharepoint_drive'` +
    `sharepoint_site_id` + `sharepoint_drive_id` (production DB).

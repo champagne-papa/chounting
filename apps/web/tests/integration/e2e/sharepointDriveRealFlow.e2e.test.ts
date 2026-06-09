@@ -35,7 +35,7 @@ import { loggerWith } from '@/shared/logger/pino';
 const RUN_E2E = Boolean(
   process.env.GRAPH_TENANT_ID &&
     process.env.GRAPH_CLIENT_ID &&
-    process.env.GRAPH_CLIENT_CERT_PATH &&
+    process.env.GRAPH_CLIENT_CERT_PEM &&
     process.env.RUN_SHAREPOINT_E2E,
 );
 const E2E_ORG_ID = process.env.SHAREPOINT_E2E_ORG_ID ?? '';

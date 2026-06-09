@@ -74,9 +74,12 @@ export const env = {
   // registration (plan Task 8). graphClient.ts reads these lazily and
   // throws a typed ServiceError if absent when the provider is actually
   // used — so a missing value can't fatal-boot the live app.
+  // GRAPH_CLIENT_CERT_PEM is the base64-encoded PEM contents (NOT a
+  // filesystem path — Vercel's FS is read-only); it is a PRIVATE KEY, so
+  // set it Sensitive in Vercel and never log it.
   GRAPH_TENANT_ID:           process.env.GRAPH_TENANT_ID,
   GRAPH_CLIENT_ID:           process.env.GRAPH_CLIENT_ID,
-  GRAPH_CLIENT_CERT_PATH:    process.env.GRAPH_CLIENT_CERT_PATH,
+  GRAPH_CLIENT_CERT_PEM:     process.env.GRAPH_CLIENT_CERT_PEM,
   LOG_LEVEL:                 process.env.LOG_LEVEL ?? 'info',
   NODE_ENV:                  process.env.NODE_ENV ?? 'development',
 } as const;
