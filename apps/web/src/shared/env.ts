@@ -22,7 +22,7 @@ const REQUIRED_SERVER = [
   // at first webhook hit. Vercel env scope: Production + Preview +
   // staging (mirror Upstash scoping); local .env.local carries a
   // deterministic test value for integration tests.
-  'POSTMARK_INBOUND_WEBHOOK_SECRET',
+  'POSTMARK_INBOUND_BASIC_AUTH_PASSWORD',
 ] as const;
 
 const REQUIRED_PUBLIC = [
@@ -64,7 +64,7 @@ export const env = {
   APP_URL:                   process.env.NEXT_PUBLIC_APP_URL!,
   UPSTASH_REDIS_KV_REST_API_URL:   process.env.UPSTASH_REDIS_KV_REST_API_URL!,
   UPSTASH_REDIS_KV_REST_API_TOKEN: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN!,
-  POSTMARK_INBOUND_WEBHOOK_SECRET: process.env.POSTMARK_INBOUND_WEBHOOK_SECRET!,
+  POSTMARK_INBOUND_BASIC_AUTH_PASSWORD: process.env.POSTMARK_INBOUND_BASIC_AUTH_PASSWORD!,
   // Charter B (a) sharepoint_drive provider — app-only Graph auth
   // (client certificate). OPTIONAL at boot (no `!`, not in
   // REQUIRED_SERVER): the provider is inert until the resolver

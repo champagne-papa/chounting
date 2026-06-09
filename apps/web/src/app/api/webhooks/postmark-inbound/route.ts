@@ -210,7 +210,7 @@ export async function POST(req: Request): Promise<Response> {
   const signatureValid = verifyPostmarkSignature({
     rawBody,
     signatureHeader,
-    secret: env.POSTMARK_INBOUND_WEBHOOK_SECRET,
+    secret: env.POSTMARK_INBOUND_BASIC_AUTH_PASSWORD,
   });
   if (!signatureValid) {
     log.warn(
