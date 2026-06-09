@@ -10,6 +10,36 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## SharePoint-on-Vercel cert-from-env (graphClient) — 2026-06-09 (UNIT-PROVEN, live Graph auth gated; banked local on `staging`)
+
+A small code arc — the gating prerequisite for the mailbox→SharePoint live
+discharge on Vercel — surfaced by a de-risk pass on the mailbox-sharepoint-live
+runbook. `graphClient` used `@azure/identity`'s **disk-path**
+`ClientCertificateCredential` overload (PEM read from `GRAPH_CLIENT_CERT_PATH` on
+disk), which can't work on Vercel's read-only serverless filesystem — so the
+SharePoint `put` AND the pipeline's Stage-1 byte-fetch would have failed at first
+Graph use.
+
+- **Fixed:** the in-memory `{ certificate }` overload (`@azure/identity@4.13.1`
+  `:51`), PEM from a **base64** env var; atomic rename `GRAPH_CLIENT_CERT_PATH` →
+  `GRAPH_CLIENT_CERT_PEM` across `env.ts`, `graphClient.ts`, `.env.example`, **and
+  the e2e `RUN_E2E` gate** (a change-surface site the spec's hand table missed —
+  the repo-wide grep caught it; a stale ref there fails no test, since the e2e is
+  skip-gated). First graphClient test (`readGraphConfig`: missing / valid /
+  malformed-with-typed-error); both SharePoint runbooks doc-synced; the PEM (a
+  private key) marked **Sensitive**. Commit `189b3a2a` (charter `7dbdb046` → spec
+  `749b2f8e` → plan `89c50dfa`).
+- **Status:** `sharepoint_drive` is now **Vercel-deployable** (cert-from-env),
+  still **live-gated** on operator ops (Azure `Sites.Selected` + cert +
+  `GRAPH_CLIENT_CERT_PEM` in Vercel + per-site grant) + the first forwarded email.
+  typecheck · graphClient 3/3 · `test:full` 1799/0/11. UNIT-PROVEN ≠ PROVEN.
+- **Push precondition:** `GRAPH_CLIENT_CERT_PEM` joins the Vercel-var list, but
+  it's **optional-at-boot** → it won't fatal the deploy (SharePoint stays inert
+  until set), unlike the Postmark `REQUIRED_SERVER` var.
+
+Full record: `retrospectives/graphclient-cert-from-env-retrospective.md` +
+friction-journal 2026-06-09. Push (`42fa8277..HEAD`) + lock-release Phil's.
+
 ## Mailbox → SharePoint live (auth-model fix) — 2026-06-09 (UNIT-PROVEN, live transfer gated; banked local on `staging`)
 
 A code arc opened from a grounding finding: the forwarded-mailbox Postmark

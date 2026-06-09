@@ -18792,3 +18792,43 @@ NOTE — status: mailbox→SharePoint is wired + UNIT-PROVEN (typecheck · route
 13/13 · `test:full` 1796/0/11), live transfer GATED on operator ops + the first
 forwarded email (runbook `mailbox-sharepoint-onboarding.md`). UNIT-PROVEN ≠
 PROVEN. No conventions graduated.
+
+## 2026-06-09 — graphclient-cert-from-env arc (SharePoint-on-Vercel cert prerequisite)
+
+NOTE — chain: the mailbox-sharepoint-live arc shipped UNIT-PROVEN; a de-risk pass
+on its runbook found a CODE prerequisite — graphClient used @azure/identity's
+disk-path ClientCertificateCredential overload (PEM read from
+GRAPH_CLIENT_CERT_PATH on disk), which can't work on Vercel's read-only
+serverless FS. So the SharePoint put AND the pipeline's Stage-1 byte-fetch would
+have failed at first Graph use — the de-risk caught it before any operator
+provisioned a real Azure tenant. Fixed: in-memory { certificate } overload (:51),
+PEM from a base64 env var (GRAPH_CLIENT_CERT_PEM); first graphClient test; both
+runbooks doc-synced. Chain 7dbdb046→749b2f8e→89c50dfa→189b3a2a.
+
+WRONG (candidate, banked below N≥3) — a rename's blast radius needs a REPO-WIDE
+GREP, not a hand-enumerated change-surface table. The spec's §3 table missed the
+e2e RUN_E2E gate's GRAPH_CLIENT_CERT_PATH reference; the grep caught it. Teeth: a
+stale ref there fails NO test (the e2e is skip-gated → a stale var silently keeps
+RUN_E2E false), so neither a targeted run nor test:full would surface it — only
+the grep does. Reinforces the disk-vs-text-grain / header-lags-the-edit class with
+a rename-specific, silent-failure sharpening. Sibling datapoint: the mailbox arc's
+token-scoped grep missing prose comments. Graduate via codify-convention if it
+fires again.
+
+NOTE — provenance routing: §1's exact { certificate } overload was
+version-confirmed (@azure/identity ^4.13.1) but its definitive close was routed to
+the execution typecheck (compile-enforced SDK API), not a contested-source
+verification — the right backstop for a stable API, materially unlike the Postmark
+contract (which warranted primary-source verification because it was contested
+across sources).
+
+NOTE — the Buffer.from(x,'base64') lenience: Node drops non-base64 chars rather
+than throwing, so a fat-fingered value would surface as a cryptic getToken crash.
+readGraphConfig validates the decoded value is PEM-shaped and throws a clear typed
+ServiceError at the config choke point (config-sanity, not key-validity — live
+auth is the discharge).
+
+NOTE — status: sharepoint_drive is now Vercel-deployable (cert-from-env), still
+live-gated on operator ops + the first forwarded email. typecheck · graphClient
+3/3 · test:full 1799/0/11. UNIT-PROVEN ≠ PROVEN. No conventions graduated
+(candidate banked).
