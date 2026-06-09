@@ -16,12 +16,14 @@ const REQUIRED_SERVER = [
   // fire fatal-startup-message, not soft-fail at first request.
   'UPSTASH_REDIS_KV_REST_API_URL',
   'UPSTASH_REDIS_KV_REST_API_TOKEN',
-  // Phase 6 chunk 6.3a: Postmark inbound webhook shared secret.
-  // Required at boot per F1 environment-isomorphism finding —
-  // missing-on-deploy must fire fatal-startup-message, not soft-fail
-  // at first webhook hit. Vercel env scope: Production + Preview +
-  // staging (mirror Upstash scoping); local .env.local carries a
-  // deterministic test value for integration tests.
+  // Phase 6 chunk 6.3a: Postmark inbound webhook HTTP Basic Auth
+  // password (Postmark authenticates via Basic Auth credentials in the
+  // webhook URL; it sends no body signature). Required at boot per F1
+  // environment-isomorphism finding — missing-on-deploy must fire
+  // fatal-startup-message, not soft-fail at first webhook hit. Vercel
+  // env scope: Production + Preview + staging (mirror Upstash scoping);
+  // local .env.local carries a deterministic test value for integration
+  // tests.
   'POSTMARK_INBOUND_BASIC_AUTH_PASSWORD',
 ] as const;
 

@@ -13,7 +13,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import { createHmac } from 'node:crypto';
 import { adminClient, SEED } from '../setup/testDb';
 
 vi.mock('@/services/storage/resolver', () => ({
@@ -40,12 +39,15 @@ const { ingestDocument } = await import(
 const db = adminClient();
 
 // =====================================================================
-// Test secret: must match the value in .env.local
-// (POSTMARK_INBOUND_WEBHOOK_SECRET). The route reads this from env at
-// module-load time; we cannot override per-test without re-importing,
-// so tests are authored against the .env.local fixture value.
+// Test Basic Auth credentials: the password must match the value in
+// .env.local (POSTMARK_INBOUND_BASIC_AUTH_PASSWORD). The route reads it
+// from env at module-load time; we cannot override per-test without
+// re-importing, so tests are authored against the .env.local fixture
+// value. The username is the route's fixed constant ('postmark').
 // =====================================================================
-const TEST_SECRET = 'local-dev-postmark-inbound-secret-for-chunk-6-3a-tests';
+const TEST_BASIC_AUTH_USERNAME = 'postmark';
+const TEST_BASIC_AUTH_PASSWORD =
+  'local-dev-postmark-inbound-secret-for-chunk-6-3a-tests';
 
 function bindMockPut(): Mock {
   const m: Mock = vi
@@ -96,23 +98,26 @@ function makePayload(opts: {
   return payload;
 }
 
-function signedRequest(args: {
+function authedRequest(args: {
   bodyObj: Record<string, unknown>;
-  secret?: string;
-  signatureOverride?: string | null;
+  // null = omit the Authorization header; string = use it verbatim;
+  // undefined = build a valid `Basic base64(username:password)` header.
+  authOverride?: string | null;
 }): Request {
   const body = JSON.stringify(args.bodyObj);
-  const secret = args.secret ?? TEST_SECRET;
-  const computed = createHmac('sha256', secret).update(body).digest('hex');
   const headers: Record<string, string> = {
     'content-type': 'application/json',
   };
-  if (args.signatureOverride === null) {
-    // explicitly omit
-  } else if (args.signatureOverride !== undefined) {
-    headers['x-postmark-signature'] = args.signatureOverride;
+  if (args.authOverride === null) {
+    // explicitly omit the Authorization header
+  } else if (args.authOverride !== undefined) {
+    headers['authorization'] = args.authOverride;
   } else {
-    headers['x-postmark-signature'] = computed;
+    const credential = Buffer.from(
+      `${TEST_BASIC_AUTH_USERNAME}:${TEST_BASIC_AUTH_PASSWORD}`,
+      'utf8',
+    ).toString('base64');
+    headers['authorization'] = `Basic ${credential}`;
   }
   return new Request('http://test.local/api/webhooks/postmark-inbound', {
     method: 'POST',
@@ -187,7 +192,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
         makeAttachment('invoice-3.pdf', 'pdf-3'),
       ],
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       status: string;
@@ -268,7 +273,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
       subject: 'Single invoice',
       attachments: [makeAttachment('the-invoice.pdf', 'pdf-bytes')],
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; batch_id: string };
     expect(body.status).toBe('accepted');
@@ -311,7 +316,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
       subject: 'Invoice, pipeline will throw',
       attachments: [makeAttachment('invoice.pdf', 'pdf-bytes')],
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
 
     // Webhook still returns accepted despite the pipeline throw.
     expect(res.status).toBe(200);
@@ -336,32 +341,57 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(cases![0].state).toBe('received');
   });
 
-  it('Test #2 — HMAC signature failure → 401 + signature_invalid audit; zero ingest rows', async () => {
-    const payload = makePayload({});
-    const res = await POST(
-      signedRequest({
-        bodyObj: payload,
-        signatureOverride: 'a'.repeat(64), // wrong hex of correct length
-      }),
-    );
-    expect(res.status).toBe(401);
+  // Basic Auth failures — all map to 401 + a uniform auth_invalid audit,
+  // with zero ingest rows. Covers the failure taxonomy: missing header,
+  // malformed (wrong scheme / no space), wrong password, and wrong
+  // username (the operator-config trap — a different username 401s).
+  const validCredential = Buffer.from(
+    `${TEST_BASIC_AUTH_USERNAME}:${TEST_BASIC_AUTH_PASSWORD}`,
+    'utf8',
+  ).toString('base64');
+  const wrongPasswordCredential = Buffer.from(
+    `${TEST_BASIC_AUTH_USERNAME}:wrong-password`,
+    'utf8',
+  ).toString('base64');
+  const wrongUsernameCredential = Buffer.from(
+    `wronguser:${TEST_BASIC_AUTH_PASSWORD}`,
+    'utf8',
+  ).toString('base64');
 
-    // System-actor audit row with org_id=null + signature_invalid
-    const { data: audits } = await db
-      .from('audit_log')
-      .select('action, org_id')
-      .eq('action', 'forwarded_mailbox.signature_invalid')
-      .is('org_id', null);
-    expect(audits!.length).toBeGreaterThan(0);
+  it.each([
+    { label: 'missing Authorization header', authOverride: null },
+    { label: 'malformed (wrong scheme)', authOverride: `Bearer ${validCredential}` },
+    { label: 'malformed (no space / not Basic)', authOverride: 'garbage-no-scheme' },
+    { label: 'wrong password', authOverride: `Basic ${wrongPasswordCredential}` },
+    { label: 'wrong username', authOverride: `Basic ${wrongUsernameCredential}` },
+  ])(
+    'Test #2 — Basic Auth failure: $label → 401 + auth_invalid audit; zero ingest rows',
+    async ({ authOverride }) => {
+      const payload = makePayload({});
+      const res = await POST(authedRequest({ bodyObj: payload, authOverride }));
+      expect(res.status).toBe(401);
 
-    // Zero new ingest_batches rows (delete-forbidden so we cannot use
-    // exact-count; verify no batch with our message_id exists).
-    const { data: batches } = await db
-      .from('ingest_batches')
-      .select('id')
-      .filter('channel_metadata->>message_id', 'eq', payload.MessageID as string);
-    expect(batches).toHaveLength(0);
-  });
+      // System-actor audit row with org_id=null + auth_invalid
+      const { data: audits } = await db
+        .from('audit_log')
+        .select('action, org_id')
+        .eq('action', 'forwarded_mailbox.auth_invalid')
+        .is('org_id', null);
+      expect(audits!.length).toBeGreaterThan(0);
+
+      // Zero new ingest_batches rows (delete-forbidden so we cannot use
+      // exact-count; verify no batch with our message_id exists).
+      const { data: batches } = await db
+        .from('ingest_batches')
+        .select('id')
+        .filter(
+          'channel_metadata->>message_id',
+          'eq',
+          payload.MessageID as string,
+        );
+      expect(batches).toHaveLength(0);
+    },
+  );
 
   it('Test #3 — malformed Zod payload → 400 + malformed_payload audit', async () => {
     // Missing required From field
@@ -373,7 +403,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
       Attachments: [],
       TextBody: 'body',
     };
-    const res = await POST(signedRequest({ bodyObj: badPayload }));
+    const res = await POST(authedRequest({ bodyObj: badPayload }));
     expect(res.status).toBe(400);
 
     const { data: audits } = await db
@@ -410,7 +440,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     const payload = makePayload({
       from: 'unknown-sender@example.com', // not in allowlist
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       status: string;
@@ -453,7 +483,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     // Use a UUID that doesn't match any organization row
     const phantomOrgId = '99999999-9999-9999-9999-999999999999';
     const payload = makePayload({ mailbox_hash: phantomOrgId });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; reason?: string };
     expect(body.status).toBe('rejected');
@@ -477,7 +507,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     });
 
     // First submission — accepted
-    const res1 = await POST(signedRequest({ bodyObj: payload }));
+    const res1 = await POST(authedRequest({ bodyObj: payload }));
     expect(res1.status).toBe(200);
     const body1 = (await res1.json()) as {
       status: string;
@@ -495,7 +525,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(countBefore).toBe(1);
 
     // Second submission with same message_id — idempotent
-    const res2 = await POST(signedRequest({ bodyObj: payload }));
+    const res2 = await POST(authedRequest({ bodyObj: payload }));
     expect(res2.status).toBe(200);
     const body2 = (await res2.json()) as {
       status: string;
