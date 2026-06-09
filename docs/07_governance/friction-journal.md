@@ -18746,3 +18746,49 @@ text-not-matching-reality, the same header-lags pattern, corrected at
 live exercise (hygiene; failure logged prominently, non-fatal) —
 recorded against charter #3, not absorbed silently. No conventions
 graduated (one-task arc).
+
+## 2026-06-09 — mailbox-sharepoint-live arc (Postmark auth-model fix + combined runbook)
+
+WRONG — `POST /api/webhooks/postmark-inbound` required an `X-Postmark-Signature`
+HMAC that Postmark never sends. Postmark inbound webhook security is HTTP Basic
+Auth (credentials in the webhook URL) + IP allowlist — no body signature
+(verified against Postmark's primary docs). Every real delivery 401'd; the
+mailbox channel had never received live mail. Fixed to HTTP Basic Auth
+(constant-time, length-guarded SHA-256-digest compare; all failure paths → 401 +
+uniform `auth_invalid`). Chain `63729742`→`acd6e451`→`8e4fcbaa`→`8ebfb0cc`→
+`1f461e0d`→`a463c73e`→`4f67edd8`.
+
+NOTE — the bug shipped because the route's only test SELF-MINTED the
+`X-Postmark-Signature` HMAC the handler expected (`createHmac(...).digest('hex')`),
+validating a contract Postmark doesn't implement: a green test against a fiction.
+A prediction-grounding instance at the test boundary — an ungrounded prediction
+about an external system's behavior, baked into code + comment + test, none of
+which checked it against the real contract. The fix's test now constructs the
+documented Basic Auth contract (RFC 7617). Candidate (below N≥3): "a test that
+self-mints the contract it asserts validates nothing."
+
+NOTE — process: the spec's downstream-path soundness check (added at read-back)
+surfaced the never-combined-live enumeration + the IP-allowlist scope-shift
+(`middleware.ts` matcher excludes `/api` → IP allowlist belongs at the Vercel
+Firewall, not code); and resolved a `[to-verify]` into a correction
+(`handleForwardedMailbox` = N+1 `storageProvider.put()` + one batch RPC, not
+`createSourceDocument`). The two-task split (green-isolated env rename | Basic
+Auth swap) kept each commit green + reviewable.
+
+NOTE — disk-vs-text-grain: the token-scoped grep-clean
+(`createHmac`/`x-postmark-signature`/`signature_invalid`) missed two HMAC-*prose*
+comments (Step 1 "required for HMAC verification"; `emitPreResolutionAudit`
+"HMAC fail"); a prose-level grep (`-i hmac`) + read-back caught them (`a463c73e`).
+Reinforces header-lags-the-edit; the grep scope was also widened (env.ts +
+.env.example) at read-back.
+
+NOTE — scope protection (load-bearing): `sidecar/client.ts`'s `createHmac` is the
+Modal OCR sidecar's OWN auth (chounting signs requests to its own endpoint —
+opposite direction, both ends controlled, legitimate). A repo-wide `createHmac`
+sweep would have broken the OCR pipeline; the removal was scoped to `route.ts` +
+test. Same primitive, opposite direction, opposite correctness.
+
+NOTE — status: mailbox→SharePoint is wired + UNIT-PROVEN (typecheck · route test
+13/13 · `test:full` 1796/0/11), live transfer GATED on operator ops + the first
+forwarded email (runbook `mailbox-sharepoint-onboarding.md`). UNIT-PROVEN ≠
+PROVEN. No conventions graduated.

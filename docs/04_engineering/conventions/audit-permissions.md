@@ -118,7 +118,7 @@ distinguishes "created" from "mutated" when reading the audit log.
 Audit action names split between two shapes:
 
 - **Dot-namespaced** (`forwarded_mailbox.rejected_not_allowlisted`,
-  `forwarded_mailbox.signature_invalid`): for new domain-event
+  `forwarded_mailbox.auth_invalid`): for new domain-event
   families with anticipated taxonomy expansion. The namespace prefix
   groups related actions under a single domain umbrella; future
   taxonomy additions land as new sub-actions under the same prefix.

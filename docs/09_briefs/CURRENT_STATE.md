@@ -10,6 +10,42 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## Mailbox → SharePoint live (auth-model fix) — 2026-06-09 (UNIT-PROVEN, live transfer gated; banked local on `staging`)
+
+A code arc opened from a grounding finding: the forwarded-mailbox Postmark
+webhook required an `X-Postmark-Signature` HMAC that **Postmark never sends**
+(its inbound security is HTTP Basic Auth + IP allowlist). Every real delivery
+401'd — the mailbox channel had never received live mail. The bug shipped
+because the route's only test self-minted the HMAC the handler expected,
+validating a fiction.
+
+- **Phase 1 (code) — DONE.** Replaced the HMAC check with HTTP Basic Auth
+  (constant-time, length-guarded; all failure paths → 401 + `auth_invalid`);
+  atomic env rename `POSTMARK_INBOUND_WEBHOOK_SECRET` →
+  `POSTMARK_INBOUND_BASIC_AUTH_PASSWORD`; IP allowlist moved to the Vercel
+  Firewall (not code — `middleware.ts` excludes `/api`); route test rewritten to
+  the documented Basic Auth contract; false HMAC comments corrected. Two green
+  commits (`8ebfb0cc` rename | `1f461e0d` Basic Auth) + comment follow-up
+  `a463c73e`. `sidecar/client.ts` (Modal OCR's own HMAC) untouched.
+- **Phase 2 (runbook) — DONE.** Combined mailbox→SharePoint onboarding runbook
+  (`docs/09_briefs/post-mvp/runbooks/mailbox-sharepoint-onboarding.md`, `4f67edd8`):
+  SharePoint ops + org provisioning (cross-refs the SharePoint runbook) →
+  Postmark account/stream + Basic Auth (username `postmark` exactly; password in
+  Vercel + the webhook URL) → combined live discharge.
+- **Status: wired + UNIT-PROVEN, live transfer GATED.** typecheck · route test
+  13/13 · `test:full` 1796/0/11. The live proof is the **first forwarded email**
+  to a SharePoint-provisioned org (`storage_provider='sharepoint_drive'` + bytes
+  in the customer's SharePoint) — gated on operator ops no agent can perform
+  (Azure `Sites.Selected` + cert + `GRAPH_*` + per-site grant + org provisioning
+  + Postmark Basic Auth). **UNIT-PROVEN ≠ PROVEN.**
+- **Carries:** the multi-attachment picking gap (banked); deploy-ordering (the
+  renamed boot-required var must be in Vercel before/with deploy) +
+  username-exactness, both in the runbook flags.
+
+Full record: `retrospectives/mailbox-sharepoint-live-retrospective.md` +
+friction-journal 2026-06-09. Push (`42fa8277..HEAD`) + lock-release pending
+(Phil's).
+
 ## Post-V1 AP-ingest deepening — 2026-06-07 (in progress; origin/staging at `66efcc59`)
 
 The post-V1 work after the doc-refresh (below). Direction: deepen AP
