@@ -18832,3 +18832,38 @@ NOTE — status: sharepoint_drive is now Vercel-deployable (cert-from-env), stil
 live-gated on operator ops + the first forwarded email. typecheck · graphClient
 3/3 · test:full 1799/0/11. UNIT-PROVEN ≠ PROVEN. No conventions graduated
 (candidate banked).
+
+## 2026-06-09 — adminclient-s29a-build-repair arc (origin/staging build red: 37 ESLint errors → 0)
+
+NOTE — context: origin/staging's Vercel build failed `turbo run build` at the
+ESLint gate — 37 errors in two classes: `@/db/adminClient` outside `services/` (5
+routes + byteFetch agent stage; ADR-0020/UF-006) and S29a wrap-or-annotate on 26
+service exports (mostly pre-existing `pattern-B` skips line-wrapped, breaking the
+single-physical-line regex). Fixed all 37 at source (23 files, f8c077d3 →
+origin/staging): adminClient reads hoisted into services with inline org-gating;
+annotations restored single-line; `persist` made Pattern-A visible; scoreComposition
+moved `services/→core/`; a pre-existing IDOR closed in passing
+(`vendorService.listVendors` lacked a `caller.org_ids` guard). C1: lint 0 · next
+build 0 · test:full 1799/0/11.
+
+WRONG (candidate, banked below N≥3) — push-readiness runs `typecheck + test:full`
+(+ `agent:validate`) but NOT `next build`/ESLint, so the 37 errors passed the gate
+GREEN and reached origin/staging, breaking the deploy (same `turbo run build`). The
+gate's green is a FALSE green for any ESLint-only / build-time failure class.
+Observation-grain N=1 (N=2 if Wave-6's lint/build-CI-reds-while-test-green counts) —
+below N=3. Destination when graduated: CLAUDE.md push-readiness gate (every
+push-readiness event) — add `pnpm --filter @chounting/web build` to the pre-push
+sequence + Condition 1. Graduate via codify-convention at next fire.
+
+WRONG — the advisor built a staging→main promotion EMERGENCY from a SHA (625c7df) +
+a commit-message phrase in a Vercel log, urging "re-promote main now" — without
+checking the commit's DATE. Grounding dissolved it: 625c7df is the 2026-05-16
+Phase-6 merge, unmoved; staging 468 ahead; the Wave-6 routes generating ~half the 37
+errors absent there. Lesson: verify the load-bearing fact — here, *when* —
+first-hand before acting on an observed artifact's framing. Same verify-from-disk
+discipline that caught the Postmark HMAC + cert-on-Vercel, turned on its author; the
+author recording it is the point.
+
+NOTE — status: repair on origin/staging (f8c077d3); staging build-green read +
+lock-release operator-side. main untouched (staging→main stays a separate V1-scale
+arc). No conventions graduated; gate-gap candidate banked with graduation trigger.
