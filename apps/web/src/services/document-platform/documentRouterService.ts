@@ -160,7 +160,7 @@ import {
 import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
 import { LINKED_ENTITY_TABLE_MAP, VALID_PAIRS } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
 import type { CandidateFeatures, ScoredDocumentType } from '@/shared/schemas/document-platform/candidate_features.schema';
-import { composeScore, type RawFeatureSignals } from '@/services/document-platform/scoreComposition';
+import { composeScore, type RawFeatureSignals } from '@/core/document-platform/scoreComposition';
 import type { DocumentType } from '@/shared/schemas/document-platform/documentCase.schema';
 import { adminClient } from '@/db/adminClient';
 import { enqueueException } from '@/services/document-platform/documentExceptionService';

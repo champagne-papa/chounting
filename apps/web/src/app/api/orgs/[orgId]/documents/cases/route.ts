@@ -33,7 +33,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
-import { adminClient } from '@/db/adminClient';
+import { documentCardReadService } from '@/services/document-platform/documentCardReadService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
 
@@ -80,66 +80,23 @@ export async function GET(
     // count_only short-circuit: head-only request returns row count
     // for the org (sentinel filter inherits from document_cards_view).
     if (parsed.count_only) {
-      const db = adminClient();
-      const { count, error: countErr } = await db
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from('document_cards_view' as any)
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', orgId);
-      if (countErr) {
-        throw new ServiceError(
-          'POST_FAILED',
-          `Failed to count document cards: ${countErr.message}`,
-          { underlying: countErr.message },
-        );
-      }
-      return NextResponse.json({ count: count ?? 0 });
-    }
-
-    // Query the document_cards_view (migration 154). The view has
-    // the sentinel filter baked in; we filter by org_id (+ optional
-    // batch_id) here. adminClient bypasses RLS but the explicit WHERE
-    // clause provides org isolation; the explicit ctx.caller.org_ids
-    // check above provides the access-control gate.
-    const db = adminClient();
-    let query = db
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .from('document_cards_view' as any)
-      .select(
-        'case_id, state, source_document_id, original_filename, ingest_batch_id, channel_metadata, received_at, case_created_at',
-      )
-      .eq('org_id', orgId);
-
-    if (parsed.ingest_batch_id !== undefined) {
-      query = query.eq('ingest_batch_id', parsed.ingest_batch_id);
-    }
-
-    const { data, error } = await query
-      .order('case_created_at', { ascending: false })
-      .limit(parsed.limit);
-
-    if (error) {
-      throw new ServiceError(
-        'POST_FAILED',
-        `Failed to read document cards: ${error.message}`,
-        { underlying: error.message },
+      const count = await documentCardReadService.countCards(
+        { org_id: orgId },
+        ctx,
       );
+      return NextResponse.json({ count });
     }
 
-    // Shape view rows to CardListResult per the Zod schema. The view
-    // emits case_created_at; the wire shape uses created_at.
-    const cards = (data ?? []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (row: any) => ({
-        case_id: row.case_id,
-        state: row.state,
-        source_document_id: row.source_document_id,
-        original_filename: row.original_filename,
-        ingest_batch_id: row.ingest_batch_id,
-        channel_metadata: row.channel_metadata,
-        received_at: row.received_at,
-        created_at: row.case_created_at,
-      }),
+    // Card list read hoisted to the service layer (ADR-0020; adminClient
+    // is services-only). The view has the sentinel filter baked in; the
+    // service re-checks org access inline and shapes the rows.
+    const cards = await documentCardReadService.listCards(
+      {
+        org_id: orgId,
+        ingest_batch_id: parsed.ingest_batch_id,
+        limit: parsed.limit,
+      },
+      ctx,
     );
 
     // Response shape: chunk-6.2b drag-drop callers expect

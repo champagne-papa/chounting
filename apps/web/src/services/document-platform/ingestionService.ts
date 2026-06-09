@@ -15,8 +15,9 @@
 //     pattern. Webhook route handler bypasses withInvariants entirely
 //     and constructs SystemActorServiceContext directly per Sub-Q6
 //     Artifact 3. The withInvariants pre-flight (verified caller +
-//     org_id-vs-memberships check) is replaced by HMAC verification
-//     + MailboxHash org-resolve at the route handler boundary.
+//     org_id-vs-memberships check) is replaced by HTTP Basic Auth
+//     verification (Postmark sends no body signature) + MailboxHash
+//     org-resolve at the route handler boundary.
 //
 // INV-SERVICE-002 adminClient discipline: every database access in
 // this file goes through `adminClient()` from `@/db/adminClient`. No
@@ -874,11 +875,8 @@ async function handleForwardedMailboxImpl(
 type ForwardedMailboxFileInputWithSyntheticName = ForwardedMailboxUploadInput['email_body'];
 
 export const ingestionService = {
-  // Pattern B: methods exported as plain async functions; route handler
-  // wraps via withInvariants at the call site. NO withInvariants here.
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped at the drag-drop call site via an adapter closure binding IngestInvoker; actionless per the chunk-6.2b action-seeding deferral — see file header)
   handleDragDropUpload: handleDragDropUploadImpl,
-  // chunk 6.3a: webhook-invoked system-actor method; route handler
-  // constructs SystemActorServiceContext and calls directly (bypasses
-  // withInvariants per Sub-Q6 Artifact 3).
+  // withInvariants: skip-org-check (pattern-S: system-actor; webhook route constructs SystemActorServiceContext + bypasses withInvariants per Sub-Q6 Artifact 3; preflight replaced by HTTP Basic Auth verification (Postmark sends no body signature) + MailboxHash org-resolve at the route boundary)
   handleForwardedMailbox: handleForwardedMailboxImpl,
 };

@@ -583,6 +583,34 @@ async function getEntryNumbersBatch(
   return out;
 }
 
+// Recovery read (Wave 6 D-4 dup-catch): resolve a posted JE by its
+// per-child dedup key when billService.post / paymentService.record
+// reported DUPLICATE_SOURCE_EXTERNAL_ID. Hoisted from the approve-post
+// route (ADR-0020; adminClient is services-only). Error code + message
+// are byte-identical to the pre-hoist route lookup. Wrapped via
+// withInvariants at the export (org access via Invariant 3), matching
+// the read-wrapping convention of list/get below.
+async function lookupBySourceExternalId(
+  input: { org_id: string; source_external_id: string },
+  _ctx: ServiceContext,
+): Promise<string> {
+  const db = adminClient();
+  const { data: existing, error: lookupErr } = await db
+    .from('journal_entries')
+    .select('journal_entry_id')
+    .eq('org_id', input.org_id)
+    .eq('source_system', 'manual')
+    .eq('source_external_id', input.source_external_id)
+    .single();
+  if (lookupErr || !existing) {
+    throw new ServiceError(
+      'POST_FAILED',
+      `already-posted lookup failed for ${input.source_external_id}: ${lookupErr?.message ?? 'no row'}`,
+    );
+  }
+  return existing.journal_entry_id as string;
+}
+
 export const journalEntryService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'journal_entry.post' + 'journal_entry.adjust' variant); also wrapped service-to-service in recurringJournalService.approveRun for defense-in-depth)
   post,
@@ -590,4 +618,5 @@ export const journalEntryService = {
   get: withInvariants(get),
   getEntryNumber: withInvariants(getEntryNumber),
   getEntryNumbersBatch: withInvariants(getEntryNumbersBatch),
+  lookupBySourceExternalId: withInvariants(lookupBySourceExternalId),
 };

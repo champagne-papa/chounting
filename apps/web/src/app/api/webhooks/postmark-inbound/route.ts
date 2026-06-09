@@ -32,8 +32,7 @@ import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { env } from '@/shared/env';
-import { adminClient } from '@/db/adminClient';
-import { recordMutation } from '@/services/audit/recordMutation';
+import { emitPreResolutionAudit } from '@/services/audit/preResolutionAuditService';
 import { ingestionService } from '@/services/document-platform/ingestionService';
 import { resolveOrgFromMailboxHash } from '@/services/document-platform/resolveOrgFromMailboxHash';
 // Agent-entry surface (the drag-drop route precedent, route.ts:56-57): the
@@ -104,53 +103,6 @@ function verifyBasicAuth(args: {
     createHash('sha256').update(credential).digest(),
     createHash('sha256').update(expected).digest(),
   );
-}
-
-// =====================================================================
-// Audit emission helper for pre-resolution failures.
-//
-// Auth fail / malformed payload / invalid recipient happen BEFORE we
-// can derive a real org_id. audit_log accepts org_id=null + user_id=null
-// (migrations 113 + 154 + base) for system-level events; here we emit
-// such rows directly via recordMutation by passing a partial-shape ctx
-// (trace_id + system_actor caller; org_id=null in the entry, not ctx).
-// =====================================================================
-async function emitPreResolutionAudit(args: {
-  trace_id: string;
-  action: string;
-  before_state: Record<string, unknown> | null;
-  log: ReturnType<typeof loggerWith>;
-}): Promise<void> {
-  const db = adminClient();
-  try {
-    // System-actor ctx with org_id placeholder; recordMutation only
-    // reads ctx.caller.user_id + ctx.trace_id, and writes entry.org_id.
-    // org_id here is null (system event without org scope yet).
-    const ctx: SystemActorServiceContext = {
-      trace_id: args.trace_id,
-      caller: { user_id: null, system_actor: SYSTEM_ACTOR },
-      // org_id is required at the type level. Use empty string as the
-      // unresolved sentinel; recordMutation passes entry.org_id (null
-      // below) to the row, not ctx.org_id. This shape preserves type
-      // safety without inventing a third context variant.
-      org_id: '',
-    };
-    await recordMutation(db, ctx, {
-      org_id: null,
-      action: args.action,
-      entity_type: 'forwarded_mailbox',
-      ...(args.before_state ? { before_state: args.before_state } : {}),
-      tool_name: SYSTEM_ACTOR,
-    });
-  } catch (err) {
-    // Audit-write failures here are non-blocking — log and continue
-    // with the response. Webhook idempotency means retries still get
-    // their audit row eventually.
-    args.log.warn(
-      { underlying: err instanceof Error ? err.message : String(err) },
-      'postmark-inbound: pre-resolution audit emit failed',
-    );
-  }
 }
 
 // =====================================================================
@@ -237,11 +189,12 @@ export async function POST(req: Request): Promise<Response> {
     );
     await emitPreResolutionAudit({
       trace_id,
+      system_actor: SYSTEM_ACTOR,
       action: 'forwarded_mailbox.auth_invalid',
+      entity_type: 'forwarded_mailbox',
       before_state: {
         auth_present: authHeader !== null,
       },
-      log,
     });
     return NextResponse.json(
       { error: 'invalid_auth' },
@@ -274,12 +227,13 @@ export async function POST(req: Request): Promise<Response> {
     );
     await emitPreResolutionAudit({
       trace_id,
+      system_actor: SYSTEM_ACTOR,
       action: 'forwarded_mailbox.malformed_payload',
+      entity_type: 'forwarded_mailbox',
       before_state: {
         issue_count: zodResult.error.issues.length,
         first_issue_path: zodResult.error.issues[0]?.path.join('.') ?? null,
       },
-      log,
     });
     return NextResponse.json(
       {
@@ -303,7 +257,9 @@ export async function POST(req: Request): Promise<Response> {
     );
     await emitPreResolutionAudit({
       trace_id,
+      system_actor: SYSTEM_ACTOR,
       action: 'forwarded_mailbox.invalid_recipient',
+      entity_type: 'forwarded_mailbox',
       before_state: {
         to: payload.To,
         // MailboxHash may itself be operator PII (org slug-shape); avoid
@@ -311,7 +267,6 @@ export async function POST(req: Request): Promise<Response> {
         mailbox_hash_length: payload.MailboxHash.length,
         message_id: payload.MessageID,
       },
-      log,
     });
     return NextResponse.json(
       { status: 'rejected', reason: 'invalid_recipient' },

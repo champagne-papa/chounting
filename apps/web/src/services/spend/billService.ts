@@ -973,17 +973,55 @@ async function reverse(
   };
 }
 
+// Recovery read (Wave 6 D-4 dup-catch): resolve the posted bill_id by
+// its posted_journal_entry_id when the bill insert is being recovered
+// after a DUPLICATE_SOURCE_EXTERNAL_ID JE dup-catch. Hoisted from the
+// approve-post route (ADR-0020; adminClient is services-only). Read-only;
+// org access is enforced by an inline ctx.caller.org_ids.includes guard.
+// Error code + message are byte-identical to the pre-hoist route lookup.
+async function getRecoveryBillIdByJournalEntry(
+  input: { org_id: string; posted_journal_entry_id: string },
+  ctx: ServiceContext,
+): Promise<string> {
+  if (!ctx.caller.org_ids.includes(input.org_id)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `caller lacks access to org ${input.org_id}`,
+    );
+  }
+  const db = adminClient();
+  const { data: billRow, error: billErr } = await db
+    .from('bills')
+    .select('bill_id')
+    .eq('org_id', input.org_id)
+    .eq('posted_journal_entry_id', input.posted_journal_entry_id)
+    .single();
+  if (billErr || !billRow) {
+    throw new ServiceError(
+      'POSTING_RECOVERY_UNREPAIRABLE',
+      `recovered JE ${input.posted_journal_entry_id} has no bill row (crash-class-X: ` +
+        `the bill insert never landed and retry cannot create it — ` +
+        `the JE dedup fires first). Manual repair required; ` +
+        `re-approving will not resolve this.${billErr ? ` (${billErr.message})` : ''}`,
+    );
+  }
+  return billRow.bill_id as string;
+}
+
 // ---------------------------------------------------------------------
 // Service object export (Pattern B: route handlers wrap each method
 // via withInvariants(action: 'bill.<verb>') at call site)
 // ---------------------------------------------------------------------
 
 export const billService = {
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'bill.post' | 'bill.approve' |
-  // 'bill.record_payment' | 'bill.reverse'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.post'))
   post,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.approve'))
   approveForPayment,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.record_payment'))
   recordPayment,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.reverse'))
   reverse,
+  // withInvariants: skip-org-check (pattern-G3: read; org access enforced by an inline caller.org_ids.includes(org_id) guard in the getRecoveryBillIdByJournalEntry() body)
+  getRecoveryBillIdByJournalEntry,
 };

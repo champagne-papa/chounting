@@ -40,7 +40,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildServiceContext } from '@/services/middleware/serviceContext';
-import { adminClient } from '@/db/adminClient';
+import { journalEntryService } from '@/services/accounting/journalEntryService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { serviceErrorToStatus } from '@/app/api/_helpers/serviceErrorToStatus';
 import { withInvariants } from '@/services/middleware/withInvariants';
@@ -150,7 +150,6 @@ export async function POST(
     // by lookup at the persist seam below).
     let billIdFromPost: string | null = null;
     let paymentIdFromRecord: string | null = null;
-    const db = adminClient();
 
     if (proposedAction === 'post_bill') {
       const childKey = `${caseId}:bill`;
@@ -180,20 +179,10 @@ export async function POST(
           // so via the constraint-name-keyed 23505 — look up the
           // existing JE by the exact child key and complete the
           // marking. NO second ledger write.
-          const { data: existing, error: lookupErr } = await db
-            .from('journal_entries')
-            .select('journal_entry_id')
-            .eq('org_id', orgId)
-            .eq('source_system', 'manual')
-            .eq('source_external_id', childKey)
-            .single();
-          if (lookupErr || !existing) {
-            throw new ServiceError(
-              'POST_FAILED',
-              `already-posted lookup failed for ${childKey}: ${lookupErr?.message ?? 'no row'}`,
-            );
-          }
-          journalEntryId = existing.journal_entry_id as string;
+          journalEntryId = await journalEntryService.lookupBySourceExternalId(
+            { org_id: orgId, source_external_id: childKey },
+            ctx,
+          );
           recovered = true;
         } else {
           throw err;
@@ -223,20 +212,10 @@ export async function POST(
           err instanceof ServiceError &&
           err.code === 'DUPLICATE_SOURCE_EXTERNAL_ID'
         ) {
-          const { data: existing, error: lookupErr } = await db
-            .from('journal_entries')
-            .select('journal_entry_id')
-            .eq('org_id', orgId)
-            .eq('source_system', 'manual')
-            .eq('source_external_id', childKey)
-            .single();
-          if (lookupErr || !existing) {
-            throw new ServiceError(
-              'POST_FAILED',
-              `already-posted lookup failed for ${childKey}: ${lookupErr?.message ?? 'no row'}`,
-            );
-          }
-          journalEntryId = existing.journal_entry_id as string;
+          journalEntryId = await journalEntryService.lookupBySourceExternalId(
+            { org_id: orgId, source_external_id: childKey },
+            ctx,
+          );
           recovered = true;
         } else {
           throw err;
@@ -270,27 +249,10 @@ export async function POST(
       // or the org-scoped posted_journal_entry_id lookup on recovery.
       let subjectBillId = billIdFromPost;
       if (!subjectBillId) {
-        const { data: billRow, error: billErr } = await db
-          .from('bills')
-          .select('bill_id')
-          .eq('org_id', orgId)
-          .eq('posted_journal_entry_id', journalEntryId!)
-          .single();
-        if (billErr || !billRow) {
-          // Crash-class-X (Option A ruling, T2 read-back): the recovered
-          // JE's bill insert never landed (billService.post's non-atomic
-          // JE→bill window) and CANNOT land by retry — the JE dedup fires
-          // first. NON-RETRYABLE; manual repair. The committed marking
-          // never runs: the case stays approved, operator-visible.
-          throw new ServiceError(
-            'POSTING_RECOVERY_UNREPAIRABLE',
-            `recovered JE ${journalEntryId} has no bill row (crash-class-X: ` +
-              `the bill insert never landed and retry cannot create it — ` +
-              `the JE dedup fires first). Manual repair required; ` +
-              `re-approving will not resolve this.${billErr ? ` (${billErr.message})` : ''}`,
-          );
-        }
-        subjectBillId = billRow.bill_id as string;
+        subjectBillId = await billService.getRecoveryBillIdByJournalEntry(
+          { org_id: orgId, posted_journal_entry_id: journalEntryId! },
+          ctx,
+        );
       }
       await evidenceObjectService.persist(
         { subject_type: 'bill', subject_id: subjectBillId, org_id: orgId },

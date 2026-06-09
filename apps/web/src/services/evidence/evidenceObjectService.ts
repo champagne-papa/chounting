@@ -214,7 +214,7 @@ export interface PersistEvidenceInput {
   org_id: string;
 }
 
-const persist = withInvariants(async (
+const persistImpl = async (
   input: PersistEvidenceInput,
   ctx: ServiceContext,
 ): Promise<EvidenceObjectRow> => {
@@ -333,7 +333,7 @@ const persist = withInvariants(async (
     'canonical evidence object persisted',
   );
   return row;
-});
+};
 
 /** The conflict/resume path: refresh status + trace_id ONLY (created_by is
  *  INSERT-only; the anchor becomes the successful-commit request's trace —
@@ -358,4 +358,8 @@ async function refreshExisting(
   return data as EvidenceObjectRow;
 }
 
-export const evidenceObjectService = { assemble, persist };
+export const evidenceObjectService = {
+  // withInvariants: skip-org-check (pattern-G3: read; org access enforced by an inline caller.org_ids.includes(input.org_id) guard in the assemble() body, evidenceObjectService.ts:51)
+  assemble,
+  persist: withInvariants(persistImpl),
+};

@@ -7,7 +7,7 @@
 // is FetchBytesResult per ADR-0013 §1 FetchResult shape.
 
 import { getStorageProvider } from '@/services/storage/resolver';
-import { adminClient } from '@/db/adminClient';
+import { getStorageProviderForSourceDocument } from '@/services/document-platform/extractionReadService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type { FetchBytesResult, PipelineStageRecord } from '../types';
 import type { SystemActorServiceContext } from '@/services/middleware/serviceContext';
@@ -37,18 +37,9 @@ export async function byteFetch(
   // and do NOT use resolveStorageProvider here — that is ingest-only (it
   // returns the org default; a document is read from the provider it was
   // WRITTEN under, i.e. the row's storage_provider).
-  const { data: row, error: rowErr } = await adminClient()
-    .from('source_documents')
-    .select('storage_provider')
-    .eq('id', input.source_document_id)
-    .single();
-  if (rowErr || !row) {
-    throw new ServiceError(
-      'NOT_FOUND',
-      `[byteFetch] source_document ${input.source_document_id} not found`,
-    );
-  }
-  const provider = getStorageProvider(row.storage_provider);
+  const provider = getStorageProvider(
+    await getStorageProviderForSourceDocument(input.source_document_id),
+  );
 
   let fetchResult;
   try {

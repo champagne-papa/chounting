@@ -74,6 +74,15 @@ async function listVendors(
     user_id: ctx.caller.user_id,
   });
 
+  // Inline read-authz (read functions are not withInvariants-wrapped; INV-SERVICE-001
+  // asymmetry). adminClient bypasses RLS, so the caller's org access is checked here.
+  if (!ctx.caller.org_ids.includes(parsed.org_id)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `caller lacks access to org ${parsed.org_id}`,
+    );
+  }
+
   const db = adminClient();
   const { data, error } = await db
     .from('vendors')
@@ -331,6 +340,8 @@ function computeFuzzyScore(a: string, b: string): number {
 }
 
 export const vendorService = {
+  // withInvariants: skip-org-check (pattern-G3: read; org access enforced by an inline caller.org_ids.includes(parsed.org_id) guard in the listVendors() body)
   listVendors,
+  // withInvariants: skip-org-check (pattern-S: agent/system-internal read; never wired directly to a route. Three callers, each supplying a trusted-upstream org_id: ingestDocument (the org-scoped ingest source_document's org), reviewPreview via buildReviewPreview (the route-gated case's org, from the org+case_id-filtered fetch), and draftVendorRule (session.org_id — membership-verified at orchestrator resolvePersona and orchestrator-overwritten per Finding O2, so never model-supplied). Accepts SystemActorServiceContext)
   matchVendor,
 };

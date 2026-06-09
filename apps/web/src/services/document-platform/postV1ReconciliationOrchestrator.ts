@@ -122,5 +122,6 @@ async function reconcileBornPaidBundle(
 }
 
 export const postV1ReconciliationOrchestrator = {
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(reconcileBornPaidBundle, { action }) at consumer-activation time; deferred — no v1 caller yet (mirrors paymentService.record); see file header L20-28)
   reconcileBornPaidBundle,
 };

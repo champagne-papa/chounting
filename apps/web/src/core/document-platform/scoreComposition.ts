@@ -1,4 +1,4 @@
-// apps/web/src/services/document-platform/scoreComposition.ts
+// apps/web/src/core/document-platform/scoreComposition.ts
 //
 // Phase 8 chunk 3 — per-feature scoring composition formula per ADR-0018 §2
 // lines 450-475 confidence scoring composition framing.

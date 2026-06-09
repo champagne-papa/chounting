@@ -366,5 +366,6 @@ async function record(
 }
 
 export const paymentService = {
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'payment.record'))
   record,
 };

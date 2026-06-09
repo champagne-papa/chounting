@@ -1,7 +1,7 @@
 // tests/unit/scoreComposition.test.ts
 //
 // Phase 8 chunk 3 — pure-function tests of composeScore + V1_PROVISIONAL_WEIGHTS
-// at apps/web/src/services/document-platform/scoreComposition.ts.
+// at apps/web/src/core/document-platform/scoreComposition.ts.
 //
 // Test coverage per chunk 3 brief Task 3:
 //   - Per-document-type weight allocation matches V1_PROVISIONAL_WEIGHTS
@@ -19,7 +19,7 @@ import {
   composeScore,
   V1_PROVISIONAL_WEIGHTS,
   type RawFeatureSignals,
-} from '@/services/document-platform/scoreComposition';
+} from '@/core/document-platform/scoreComposition';
 import { FEATURE_AXES } from '@/shared/schemas/document-platform/candidate_features.schema';
 
 const ALL_NULL_SIGNALS: RawFeatureSignals = {

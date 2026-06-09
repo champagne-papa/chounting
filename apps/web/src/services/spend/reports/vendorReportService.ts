@@ -283,7 +283,6 @@ async function balance(
 // ---------------------------------------------------------------------
 
 export const vendorReportService = {
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'vendor_balance.read'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'vendor_balance.read'))
   balance,
 };

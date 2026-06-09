@@ -17,6 +17,33 @@
 
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
+import type { StorageProviderEnum } from '@/services/storage/types';
+
+/**
+ * Read a source_document's storage_provider for read-time provider
+ * dispatch (ADR-0013 §2). Hoisted from byteFetch (agent stage) per
+ * ADR-0020 Appendix A (agent → services → db; Law 1). Read-only; no
+ * withInvariants (INV-SERVICE-001 read asymmetry). Error code +
+ * message are byte-identical to the pre-hoist byteFetch read
+ * (including the `[byteFetch]` tag, kept for log continuity).
+ */
+export async function getStorageProviderForSourceDocument(
+  sourceDocumentId: string,
+): Promise<StorageProviderEnum> {
+  const db = adminClient();
+  const { data: row, error } = await db
+    .from('source_documents')
+    .select('storage_provider')
+    .eq('id', sourceDocumentId)
+    .single();
+  if (error || !row) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `[byteFetch] source_document ${sourceDocumentId} not found`,
+    );
+  }
+  return row.storage_provider as StorageProviderEnum;
+}
 
 export interface PriorDocumentByHashInput {
   org_id: string;

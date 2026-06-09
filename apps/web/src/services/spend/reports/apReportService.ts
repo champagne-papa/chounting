@@ -906,16 +906,18 @@ async function pendingApprovals(
 // ---------------------------------------------------------------------
 
 export const apReportService = {
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'ap_aging.read' | 'open_bills.read' |
-  // 'payment_approval_queue.read' | 'paid_bills_history.read' |
-  // 'active_payments.read' | 'bill_detail.read' |
-  // 'pending_approvals.read'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'ap_aging.read'))
   aging,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'open_bills.read'))
   openBills,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'payment_approval_queue.read'))
   paymentApprovalQueue,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'paid_bills_history.read'))
   paidBillsHistory,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'active_payments.read'))
   activePayments,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'pending_approvals.read'))
   pendingApprovals,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill_detail.read'))
   billDetail,
 };
