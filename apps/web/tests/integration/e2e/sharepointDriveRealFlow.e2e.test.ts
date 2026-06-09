@@ -1,9 +1,10 @@
 // tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
 //
-// Charter B real-flow D-6 — the gated live-Graph e2e (the honesty gate's
-// discharge). GATED: skips by default (mirrors the RUN_MODAL_E2E pattern).
+// Charter B PROVEN-LIVE — the gated live-Graph e2e (the live gate's discharge).
+// GATED: skips by default. PROVEN-LIVE is a GREEN RUN here against a real
+// tenant — writing this body is NOT PROVEN-LIVE.
 //
-// Requires the onboarding runbook complete (no live run at arc close):
+// Requires the onboarding runbook complete:
 //   docs/09_briefs/post-mvp/runbooks/charter-b-sharepoint-onboarding.md
 //   — Azure Sites.Selected app + client cert (GRAPH_* env) + per-site grant +
 //     an org pointed at sharepoint_drive (default_storage_provider +
@@ -12,13 +13,24 @@
 //   cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> \
 //     pnpm test:integration tests/integration/e2e/sharepointDriveRealFlow.e2e
 //
-// HONESTY GATE: the arc closes UNIT-PROVEN. This harness is authored now, while
-// the selection-seam code is fresh, so the live proof is "one RUN_SHAREPOINT_E2E=1
-// away" once Azure ops land — but the live run is NOT executed at close, and this
-// body intentionally throws (not a trivial pass) until the concrete flow is
-// written against a real tenant, so a gated run can never false-green as
-// "proven live."
-import { describe, it } from 'vitest';
+// Proof shape (charter §4 fix-direction): exercise the byteFetch SEAM and
+// RECOMPUTE the fetched bytes — NOT a verifyIntegrity shortcut (a different
+// provider path byteFetch never calls). put self-verifies at write, so its
+// content_hash is trustworthy; the fetch side is the unproven half, closed
+// only by recomputing the returned bytes.
+import { describe, it, expect } from 'vitest';
+import { adminClient } from '../../setup/testDb';
+import { makeTestContext } from '../../setup/makeTestContext';
+import { createIngestBatchForTest } from '../../helpers/createIngestBatchForTest';
+import { documentPlatformService } from '@/services/document-platform/documentPlatformService';
+import { byteFetch } from '@/agent/orchestrator/extraction/stages/byteFetch';
+import { getStorageProvider } from '@/services/storage/resolver';
+import { computeHash } from '@/services/storage/integrity';
+import {
+  SYSTEM_ACTOR_USER_ID,
+  type SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
+import { loggerWith } from '@/shared/logger/pino';
 
 const RUN_E2E = Boolean(
   process.env.GRAPH_TENANT_ID &&
@@ -26,32 +38,89 @@ const RUN_E2E = Boolean(
     process.env.GRAPH_CLIENT_CERT_PATH &&
     process.env.RUN_SHAREPOINT_E2E,
 );
-
+const E2E_ORG_ID = process.env.SHAREPOINT_E2E_ORG_ID ?? '';
 const GRAPH_TIMEOUT_MS = 120_000;
 
 describe.skipIf(!RUN_E2E)(
   'Charter B real-flow — sharepoint_drive live e2e (gated: RUN_SHAREPOINT_E2E=1 + GRAPH_*)',
   () => {
     it(
-      'ingests a doc to a sharepoint_drive org and fetches it back through the provider (content_hash round-trips)',
+      'ingests to a sharepoint_drive org and fetches back through the seam (byte-faithful round-trip)',
       async () => {
-        // Concrete flow to implement against a real tenant (runbook complete):
-        //   1. ctx = makeTestContext({ org_ids: [SHAREPOINT_E2E_ORG_ID] });
-        //      assert org_settings.default_storage_provider === 'sharepoint_drive'
-        //      and sharepoint_site_id/drive_id are set (the runbook step-4 config).
-        //   2. createSourceDocument(...) to that org → real Graph put; assert the
-        //      persisted source_documents.storage_provider === 'sharepoint_drive'
-        //      (resolveStorageProvider picked the org default; put went to Graph).
-        //   3. byteFetch(source_document_id) → real Graph fetch via dispatch-on-row;
-        //      assert fetched.result.content_hash === the put's content_hash
-        //      (the §9 put-then-re-read integrity discharge round-trips) and
-        //      fetched.result.provider === 'sharepoint_drive'.
-        throw new Error(
-          'sharepoint_drive live e2e not yet implemented — complete the onboarding ' +
-            'runbook then write the flow above. This RED is intentional: the arc ' +
-            'closed UNIT-PROVEN with live transfer gated (D-6). Implementing this ' +
-            'body against a real tenant is the PROVEN-LIVE discharge.',
+        const db = adminClient();
+        const humanCtx = makeTestContext({ org_ids: [E2E_ORG_ID] });
+        const log = loggerWith({ trace_id: humanCtx.trace_id });
+
+        // 1. Config sanity — the runbook step-4 precondition (clear failure if
+        //    the operator hasn't pointed the org at sharepoint_drive).
+        const { data: settings } = await db
+          .from('org_settings')
+          .select('default_storage_provider, sharepoint_site_id, sharepoint_drive_id')
+          .eq('org_id', E2E_ORG_ID)
+          .single();
+        expect(settings?.default_storage_provider).toBe('sharepoint_drive');
+        expect(settings?.sharepoint_site_id).toBeTruthy();
+        expect(settings?.sharepoint_drive_id).toBeTruthy();
+
+        // 2. Ingest — real Graph put. NO vi.mock: getStorageProvider resolves
+        //    the real createSharepointDriveProvider() whose default realGraphIo
+        //    makes live Graph calls.
+        const bytes = new TextEncoder().encode(
+          `charter-b proven-live ${humanCtx.trace_id}`,
         );
+        const { ingest_batch_id } = await createIngestBatchForTest(E2E_ORG_ID);
+        const created = await documentPlatformService.createSourceDocument(
+          {
+            bytes,
+            mime_type: 'application/pdf',
+            org_id: E2E_ORG_ID,
+            original_filename: 'charter-b-proven-live.pdf',
+            ingest_channel: 'direct_upload',
+            ingest_batch_id,
+            received_at: new Date().toISOString(),
+            created_by: SYSTEM_ACTOR_USER_ID,
+          },
+          humanCtx,
+        );
+        expect(created.provider).toBe('sharepoint_drive'); // put dispatched to Graph
+
+        // 3. Fetch via the SEAM — system-actor ctx (real typed literal, no cast;
+        //    SystemActorCaller.system_actor is REQUIRED).
+        const systemCtx: SystemActorServiceContext = {
+          trace_id: humanCtx.trace_id,
+          caller: {
+            user_id: null,
+            system_actor: 'pipeline_orchestrator',
+            system_user_id: SYSTEM_ACTOR_USER_ID,
+          },
+          org_id: E2E_ORG_ID,
+        };
+        const fetched = await byteFetch({
+          source_document_id: created.id,
+          ctx: systemCtx,
+        });
+
+        // 4. PROVEN-LIVE assertions (charter §4 fix-direction):
+        //    (a) the dispatch-on-row seam selected the provider FROM THE ROW;
+        //    (b) the live Graph transfer is BYTE-FAITHFUL — recompute SHA-256
+        //        of the bytes byteFetch returned and compare to the put hash.
+        //        (NOT fetched.result.content_hash, which is the row's STORED
+        //        hash and would pass even on corrupted bytes.)
+        expect(fetched.result.provider).toBe('sharepoint_drive');
+        expect(computeHash(fetched.result.bytes)).toBe(created.content_hash);
+
+        // 5. Best-effort cleanup (deliberate scope-note vs charter #3: delete's
+        //    first test-only live exercise, hygiene only). Non-fatal; a failure
+        //    is logged PROMINENTLY (delete has never run live → real info).
+        try {
+          await getStorageProvider('sharepoint_drive').delete(created.id, systemCtx);
+        } catch (err) {
+          log.error(
+            { err, source_document_id: created.id },
+            'PROVEN-LIVE cleanup: sharepoint delete FAILED (non-fatal; proof already passed)',
+          );
+        }
+        await db.from('audit_log').delete().eq('trace_id', humanCtx.trace_id);
       },
       GRAPH_TIMEOUT_MS,
     );
