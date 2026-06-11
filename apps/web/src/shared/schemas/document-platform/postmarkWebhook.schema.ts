@@ -67,6 +67,20 @@ export const PostmarkInboundWebhookSchema = z
     From: z.string().email(),
     MessageID: z.string().min(1),
     To: z.string(),
+    // Postmark also sends the PARSED recipient list. The route reads
+    // ToFull[0].Email (the bare address) to normalize channel_metadata.to,
+    // since `To` above is the raw display-name header. Optional + lenient
+    // inner shape (third-party payload — don't trade a 500 for a 400); the
+    // route falls back to `To` when ToFull is absent/empty.
+    ToFull: z
+      .array(
+        z.object({
+          Email: z.string(),
+          Name: z.string().optional(),
+          MailboxHash: z.string().optional(),
+        }),
+      )
+      .optional(),
     MailboxHash: z.string(),
     Subject: z.string(),
     TextBody: z.string().optional(),

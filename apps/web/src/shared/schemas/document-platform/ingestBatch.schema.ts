@@ -95,7 +95,13 @@ export type DragDropChannelMetadata = z.infer<
 export const ForwardedMailboxChannelMetadataSchema = z
   .object({
     from: z.string().email(),
-    to: z.string().email(),
+    // `to` is the recipient header, which Postmark delivers raw (e.g.
+    // `"Name" <inbound+<org>@inbound.chou.ca>`) — display/audit metadata,
+    // NOT the allowlist key (`from` stays `.email()`). Validating it as
+    // `.email()` rejected the real header and 500'd the webhook
+    // (2026-06-11). The route normalizes it to the bare address via
+    // ToFull[0].Email before this parse; `.min(1)` still bars empty.
+    to: z.string().min(1),
     subject: z.string(),
     message_id: z.string().min(1),
     attachment_count: z.number().int().min(0),
