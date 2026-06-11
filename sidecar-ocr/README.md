@@ -96,4 +96,4 @@ Per ADR-0014 §12.1 + 2026-05-20 chunk 7.1b amendment: Stage 2 (OCR) uses
 ~30s wall-clock budget accommodating Modal cold-start (5-8s typical) +
 up to 3 retries with exponential backoff. The TS-side client at
 `apps/web/src/agent/orchestrator/extraction/sidecar/client.ts` enforces
-10s per-request timeout via `AbortController`.
+a 60s per-request timeout via `AbortController` (`PER_REQUEST_TIMEOUT_MS = 60_000`).

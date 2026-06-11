@@ -7,8 +7,9 @@
 // ADR-0014 §12 surfaces typed ServiceError for the orchestrator's
 // withFailureClassification wrapper to handle.
 //
-// Per-request timeout: 10s via AbortController per chunk 7.1 brief §4
-// Task 7.1b.5 partial-information value pick.
+// Per-request timeout: 60s via AbortController (PER_REQUEST_TIMEOUT_MS
+// below). Raised from the chunk 7.1 brief §4 / Task 7.1b.5 original 10s to
+// absorb Modal cold-start (5-8s typical; ADR-0014 §12.1, 2026-05-20).
 //
 // HMAC discipline: signature computed over canonical JSON of the content
 // fields ({bytes_b64, content_hash, trace_id} with sorted keys, no
