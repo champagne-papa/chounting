@@ -289,7 +289,11 @@ export async function POST(req: Request): Promise<Response> {
       {
         org_id,
         from: payload.From,
-        to: payload.To,
+        // Normalize to the bare parsed recipient address — Postmark's `To`
+        // is the raw display-name header; ToFull carries the parsed address.
+        // Fall back to `To` if ToFull is absent (channel_metadata.to accepts
+        // either form). See ForwardedMailboxChannelMetadataSchema (2026-06-11).
+        to: payload.ToFull?.[0]?.Email ?? payload.To,
         subject: payload.Subject,
         message_id: payload.MessageID,
         email_body,

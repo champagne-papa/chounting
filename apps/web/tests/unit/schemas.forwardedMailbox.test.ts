@@ -67,6 +67,44 @@ describe('ForwardedMailboxChannelMetadataSchema (Sub-Q6 Artifact 1)', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // Regression (2026-06-11): Postmark's `To` is the raw header — e.g.
+  // `"Phil Chou" <inbound+<org>@inbound.chou.ca>` — NOT a bare email.
+  // Pre-fix `to: z.string().email()` rejected it, and the route turned the
+  // ZodError into a 500 (after storage puts → orphaned blobs). `to` is
+  // display/audit metadata, NOT the allowlist key (`from` stays `.email()`).
+  it('accepts a full-header `to` with display name (raw Postmark To header)', () => {
+    const result = ForwardedMailboxChannelMetadataSchema.safeParse({
+      from: 'sender@example.com',
+      to: '"Phil Chou" <inbound+f0fa6501-1895-4fda-b151-21e7d3415fd3@inbound.chou.ca>',
+      subject: 'Invoice',
+      message_id: '<msg-1@example.com>',
+      attachment_count: 2,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('still rejects empty `to` (.min(1) guards against over-loosening)', () => {
+    const result = ForwardedMailboxChannelMetadataSchema.safeParse({
+      from: 'sender@example.com',
+      to: '',
+      subject: 'Invoice',
+      message_id: '<msg-1@example.com>',
+      attachment_count: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('still enforces `from` as an email (allowlist comparison key stays strict)', () => {
+    const result = ForwardedMailboxChannelMetadataSchema.safeParse({
+      from: '"Phil Chou" <sender@example.com>',
+      to: 'inbound+foo@inbound.chounting.com',
+      subject: 'Invoice',
+      message_id: '<msg-1@example.com>',
+      attachment_count: 0,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('PostmarkInboundWebhookSchema (Sub-Q6 Artifact 2)', () => {
@@ -143,5 +181,30 @@ describe('PostmarkInboundWebhookSchema (Sub-Q6 Artifact 2)', () => {
       makeValidPayload({ MailboxHash: '' }),
     );
     expect(result.success).toBe(true);
+  });
+
+  // The route normalizes channel_metadata.to to the bare parsed address
+  // via ToFull[0].Email — Postmark provides the parsed recipient there,
+  // while `To` carries the raw display-name header. ToFull is typed here
+  // so the route can read it without an `any` cast.
+  it('accepts and types ToFull[].Email (route reads it to normalize `to`)', () => {
+    const result = PostmarkInboundWebhookSchema.safeParse(
+      makeValidPayload({
+        To: '"Phil Chou" <inbound+foo@inbound.chounting.com>',
+        ToFull: [
+          {
+            Email: 'inbound+foo@inbound.chounting.com',
+            Name: 'Phil Chou',
+            MailboxHash: 'foo',
+          },
+        ],
+      }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.ToFull?.[0]?.Email).toBe(
+        'inbound+foo@inbound.chounting.com',
+      );
+    }
   });
 });
