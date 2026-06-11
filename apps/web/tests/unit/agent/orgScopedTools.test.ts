@@ -33,7 +33,7 @@ describe('ORG_SCOPED_TOOLS drift check (LT-04 / QUALITY-006)', () => {
     }
   });
 
-  it('ORG_SCOPED_TOOLS contains the expected 5 tools at S30 closeout', () => {
+  it('ORG_SCOPED_TOOLS contains the expected 6 tools (+ draftVendorRule, Ring 2A-authoring)', () => {
     expect(new Set(ORG_SCOPED_TOOLS)).toEqual(
       new Set([
         'listChartOfAccounts',
@@ -41,6 +41,7 @@ describe('ORG_SCOPED_TOOLS drift check (LT-04 / QUALITY-006)', () => {
         'listJournalEntries',
         'postJournalEntry',
         'reverseJournalEntry',
+        'draftVendorRule',
       ]),
     );
   });

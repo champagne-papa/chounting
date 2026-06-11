@@ -9,7 +9,11 @@ import {
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import {
+  actingUserId,
+  type ServiceContext,
+  type SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
 
 // Pattern B unwrapped service per chunks 1-3 + 5 precedent.
@@ -31,9 +35,16 @@ import { dispatchTrigger } from '@/services/document-platform/documentRouterServ
 
 export async function enqueueException(
   input: EnqueueExceptionInputRaw,
-  ctx: ServiceContext,
+  // Wave 6 D2.1 T3: widened to admit SystemActorServiceContext — the
+  // transitive half of the resolveCandidates widening (its branch-(b)/(c)
+  // cross-service call lands here from the system-actor pipeline). Same
+  // shape as completeCandidate/resolveCandidates: direct invocation, no
+  // withInvariants, no Invariant-4 role authz; attribution below via
+  // actingUserId(ctx) (ADR-0007 Q78 Path X). resolveException stays
+  // ServiceContext (human exception-resolution boundary — untouched).
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<ExceptionQueueEntry> {
-  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id ?? undefined });
 
   // Layer 2 boundary: Zod parse at service entry.
   let parsed;
@@ -60,10 +71,13 @@ export async function enqueueException(
       source_document_id: parsed.source_document_id ?? null,
       exception_reason: parsed.exception_reason,
       trace_id: ctx.trace_id,
-      created_by: parsed.created_by ?? ctx.caller.user_id,
+      // actingUserId: system actors attribute to the Path-X service
+      // account, not null (Wave 6 D2.1 T3 — the created_by-misattribution
+      // class).
+      created_by: parsed.created_by ?? actingUserId(ctx),
     },
     p_audit: {
-      user_id: ctx.caller.user_id,
+      user_id: actingUserId(ctx),
       trace_id: ctx.trace_id,
       action: 'exception_enqueued',
       entity_type: 'exception_queue_entry',
@@ -128,6 +142,38 @@ export async function resolveException(
   }
 
   const db = adminClient();
+
+  // Wave 6 D3 T3 — in-service org verification (IDOR; brief D-1.1a).
+  // resolveException previously fired the MUTATING RPC directly with
+  // the caller-supplied entry id (org-blind — the same class as
+  // transition(), but with the write before any read). The org check
+  // requires a pre-RPC read: fetch the entry's org_id and verify it
+  // against ctx.caller.org_ids — org derived from the read row, never
+  // from caller input. Same-org callers proceed; the RPC remains the
+  // atomicity boundary.
+  const { data: orgProbe, error: orgProbeErr } = await db
+    .from('exception_queue_entries')
+    .select('org_id')
+    .eq('exception_queue_entry_id', parsed.exception_queue_entry_id)
+    .maybeSingle();
+  if (orgProbeErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `resolveException org probe failed: ${orgProbeErr.message}`,
+    );
+  }
+  if (!orgProbe) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `resolveException: exception_queue_entry ${parsed.exception_queue_entry_id} not found`,
+    );
+  }
+  if (!ctx.caller.org_ids?.includes(orgProbe.org_id as string)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `Caller does not have access to org_id=${orgProbe.org_id}`,
+    );
+  }
 
   // RPC call: atomic UPDATE queue entry + UPDATE document_case
   // (terminal state per 9-action mapping) + INSERT audit_log.
@@ -208,7 +254,9 @@ export async function resolveException(
 
 export async function readExceptionQueueEntry(
   id: string,
-  ctx: ServiceContext,
+  // ctx is unused (signature uniformity); widened for the system-actor
+  // enqueue path (Wave 6 D2.1 T3 — the readDocumentCase analog).
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<ExceptionQueueEntry> {
   const db = adminClient();
   const { data, error } = await db

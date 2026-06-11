@@ -5,7 +5,7 @@
 // canvas view header renders, and confirm the table-or-empty-state
 // shape. No filter UI in v1; single fetch on mount.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID, LOCALE } from './fixtures/auth';
 
 test.describe('OpenBillsView', () => {

@@ -3,12 +3,35 @@
 What the system is, what its major components are, and how the
 source code is organized. The day-one document for a new engineer.
 
-Source: extracted from PLAN.md §1 and §1a during Phase 1.1 closeout
-restructure. The docs/ tree has been updated to reflect the
-post-restructure folder structure. The "Model Context" section
-below was added 2026-04-21 following the external CTO
-architecture review (see
-`docs/07_governance/friction-journal.md` entry for that date).
+> **Provenance (ADR-0022 §2 lineage).** Body rewritten 2026-06-07 at
+> the post-V1 doc-refresh arc, superseding the Phase-1.1-vintage
+> body whose full rewrite the 2026-06-01 Wave-0 banner deferred
+> (chartered at the V1 Wave-0 retrospective §5). The original body
+> was extracted from PLAN.md §1/§1a at the Phase 1.1 closeout
+> restructure; the "Model Context" section was added 2026-04-21
+> after the external CTO architecture review and is carried forward
+> below with its roadmap claims updated. The superseded body —
+> including the Phase-1 single-app folder tree — is preserved in
+> git history (last pre-rewrite state at `b30c5ae0`).
+
+---
+
+## What the system is
+
+**CHOUnting** (working shell name: **The Bridge**) is a
+multi-tenant, agent-first accounts-payable control system built on
+an invariant-enforced double-entry ledger core. Humans and AI
+agents share one posting path; the core's job is to make that path
+safe regardless of who drives it.
+
+The **V1 wedge is live end-to-end**: documents enter through the
+ingestion channels, the Tier 2 pipeline classifies and extracts
+them, matched proposals park at `status='parked_unposted'` and the
+case advances to `needs_review` — the pipeline's terminal hand-off
+to a human, who approves→posts from the review inbox with evidence
+objects persisted. Ungoverned auto-commit is disabled (ADR-0007
+§Tier 2 Q78 V1 re-scoping); governed per-rule autonomy is the
+post-V1 re-wire, gated by the Agent Ladder.
 
 ---
 
@@ -17,7 +40,7 @@ architecture review (see
 A reader coming from a traditional accounting system will notice
 that chounting looks unusually *narrow* compared to products like
 LedgerSMB, NetSuite, SAP, or QuickBooks. That is not an accident
-of Phase 1 scope — it reflects a deliberate architectural
+of early-phase scope — it reflects a deliberate architectural
 positioning. Two dominant models exist for accounting software,
 and chounting is explicitly building the first of them on a
 trajectory to the third.
@@ -52,63 +75,62 @@ domain modules layered on top, and a separate reporting layer
 (materialized views, checkpoint snapshots, scheduled audits) to
 support financial statements and period-close rituals. This is
 the shape of the production system chounting is aiming at. Phase
-1.1 ships the core; Phase 2 and later phases add the domain
-modules and reporting layer.
+1.1 shipped the core; the May 2026 run layered the first domain
+modules (the AP domain, the document platform) and the
+rules/decision substrate on top.
 
 ### Where chounting sits today
 
-chounting is **Model B core, on a Hybrid trajectory.** Phase
-1.1 delivered the invariant-enforced core (see
-`docs/02_specs/ledger_truth_model.md` for the 18 invariants that
-make up the core). Every Phase 2+ brief under `docs/09_briefs/`
-adds either a domain module, a reporting-layer component, or a
-Model-B primitive chounting has not yet needed.
+chounting is **Model B core, on a Hybrid trajectory — with the
+first modules now layered on.** The invariant-enforced core
+carries **28 invariants (16 L1a + 12 L2)** as of the V1 Wave-6
+governance reconcile — see `docs/02_specs/invariants.md` (the
+canonical index) and `docs/02_specs/ledger_truth_model.md` (the
+full leaves). Phase 1.1 shipped 18; the INV-RULE family landed
+through Ring 2B; INV-WORKFLOW-001/002 and INV-EVIDENCE-001
+registered at Wave 6.
 
 A "missing" feature compared to Model-A systems (payroll, fixed
-assets, tax modules, recurring transactions, cost-center
+assets, AR subledgers, recurring transactions, cost-center
 dimensions) is not a defect of the Model B core — it is a module
 that has not yet been layered on. The Model B core does not need
 to change to accommodate these modules; the core's job is to be
-the safety substrate they post through. The Phase 2+ roadmap is
-the schedule for layering them on.
+the safety substrate they post through. The roadmap is the
+schedule for layering them on.
 
-### How to read the Phase 2 backlog through this lens
+### How to read the roadmap through this lens
 
-The Phase 2 backlog under `docs/09_briefs/phase-2/` (and the
-priority ordering recorded in the 2026-04-21 friction-journal
-entry) has three categories once you know which model the
-project is building to:
+Work in this codebase falls into three categories once you know
+which model the project is building to:
 
 - **Core hardening (Model B).** Work that strengthens or extends
-  the invariant-enforced core itself. Examples:
-  - Layer 1a / Layer 1b split in the truth model (ADR-0008).
-  - New invariant stubs (INV-CHECKPOINT-001,
-    INV-SUBLEDGER-LINK-001, INV-SUBLEDGER-TIEOUT-001).
-  - Multi-stage approval state machine generalizing `ai_actions.status`.
-  - Simplification 1 and 2 corrections (events-projection, pg-boss audit write).
-- **Domain modules (Model A, layered on Model B).** Work that
-  adds accounting-domain features through separate modules that
-  post through the core. Examples: account-purpose tagging, source↔JE
-  linkage, effective-date / accrual model, batch / voucher abstraction,
-  dimensions (cost centers / projects), year-end closing, journal
-  taxonomy, subsidiary ledgers for AR/AP, fixed assets, payroll,
-  recurring transactions.
+  the invariant-enforced core itself. Shipped examples: the
+  Layer 1a / Layer 2 split; the INV-RULE family (Ring 2B); the
+  Wave-6 INV-WORKFLOW / INV-EVIDENCE registrations; `withInvariants`
+  admitting governed system actors. Ahead: checkpoint invariants,
+  subledger tie-outs.
+- **Domain modules (Model A, layered on Model B).** Work that adds
+  accounting-domain features through separate modules that post
+  through the core. Shipped examples: the AP domain
+  (bills, payments, vendor substrate — Phases 5/5.1), the document
+  platform (Phases 2/4/6/7/8). Ahead: payroll, fixed assets, AR
+  subledgers, recurring transactions, dimensions.
 - **Reporting layer.** Work that supports financial statements,
-  period-close rituals, and audit queries. Examples:
-  `account_checkpoint` and checkpoint-based trial balance, P&L
-  and balance-sheet report services, the Layer 1b audit runner
-  that executes prompts under `docs/07_governance/audits/`.
+  period-close rituals, and audit queries. Shipped examples: P&L /
+  Trial Balance RPCs, AP aging. Ahead: `account_checkpoint` and
+  checkpoint-based trial balance, the Layer 1b audit runner for
+  the prompts under `docs/07_governance/audits/`.
 
 The categories overlap — checkpointing is both a reporting-layer
-component and a core-hardening invariant — but the mental
-model helps when deciding whether a new piece of work belongs in
-the ledger core or as a module that sits on top of it. **Changes
-to the ledger core bear a heavier review burden than module
-additions**, because the core's job is to be stable. A new
-domain module should not require changes to
-`ledger_truth_model.md` beyond adding a named invariant; if a
-module needs the core to change, that is a signal worth
-examining before the change is made.
+component and a core-hardening invariant — but the mental model
+helps when deciding whether a new piece of work belongs in the
+ledger core or as a module that sits on top of it. **Changes to
+the ledger core bear a heavier review burden than module
+additions**, because the core's job is to be stable. A new domain
+module should not require changes to `ledger_truth_model.md`
+beyond adding a named invariant; if a module needs the core to
+change, that is a signal worth examining before the change is
+made.
 
 ### Why this framing matters for contributors
 
@@ -119,206 +141,145 @@ examining before the change is made.
    strict.
 2. **The scheduled-audit pattern is not a fallback; it is a
    category.** See ADR-0008 and the Layer 1b paragraph in
-   `ledger_truth_model.md`. A Phase 2 invariant that cannot be
-   checked synchronously is a first-class audit-scan invariant,
-   not a compromise.
+   `ledger_truth_model.md`. An invariant that cannot be checked
+   synchronously is a first-class audit-scan invariant, not a
+   compromise.
 3. **Gaps relative to Model A systems are expected.** A reader
-   listing "what LedgerSMB has that chounting doesn't" will
-   find a long list. Every entry on that list is either (a) a
-   domain module scheduled for Phase 2+, or (b) a reporting-layer
-   component scheduled for Phase 2+. Neither class indicates the
-   core is wrong; both indicate the core is narrow *on purpose*.
+   listing "what LedgerSMB has that chounting doesn't" will find
+   a long list. Every entry on that list is either (a) a domain
+   module on the roadmap, or (b) a reporting-layer component on
+   the roadmap. Neither class indicates the core is wrong; both
+   indicate the core is narrow *on purpose*.
 
 ---
 
-## Phase 1 Folder Tree (single Next.js app)
+## The system today (as of 2026-06-07)
 
-The Phase 1 folder structure inside `src/` mirrors the future
-monorepo layout so that the Phase 2 split is mechanical (move
-folders out of `src/` into `packages/`), not a rewrite.
+The major components, each with its canonical doc. This section
+is a map; the pointed-at docs are the truth.
+
+- **Ledger core.** Journal entries, chart of accounts, fiscal
+  periods, reversals; `withInvariants` service wrapper; the Two
+  Laws (all DB access through services; all journal entries via
+  `journalEntryService.post()`). 28 invariants (16 L1a + 12 L2).
+  → `docs/02_specs/ledger_truth_model.md`,
+  `docs/02_specs/invariants.md`.
+- **Document platform.** Cases, sources, artifacts, polymorphic
+  source-document links, exception queue (Phase 2); relationship
+  router (Phase 4); ingestion substrate and channels — drag-drop,
+  forwarded mailbox — with batches and jobs (Phase 6).
+  → the Phase 2/4/6 retrospectives under
+  `docs/07_governance/retrospectives/`.
+- **Tier 2 document pipeline.** Stages 0–7 orchestration
+  (`ingestDocument`): OCR (Modal sidecar), Tier A deterministic
+  classification with Tier C Claude fallback, per-document-type
+  extraction, candidate matching and per-feature scoring,
+  proposal building, autonomy gate, pipeline trace. Matched
+  proposals park `parked_unposted`; the case advances to
+  `needs_review`. → ADR-0014 (stage names §1 canonical), the
+  Phase 7/8 retrospectives.
+- **AP domain + the V1 wedge.** Bills, payments, vendor
+  substrate, AP reporting (Phases 5/5.1); review inbox with human
+  approve→post, real coding, evidence-object persistence, live
+  routing with no silent drops (V1 Waves 1–6, closed 2026-06-06).
+  → `docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`,
+  the Wave-0/5/6 retrospectives.
+- **Rules and decisions.** Rule-type core substrate with
+  class-table registry (ADR-0023); rule evaluator, agent-ladder
+  gate, append-only `rule_evaluation_log` (ADR-0024,
+  INV-RULE-001); shadow rule evaluation wired into the pipeline
+  (Ring 2B, substrate-only); decision-modules composition and the
+  Autonomy Ladder on a single `rule_autonomy_rung` (ADR-0029,
+  ADR-0030). → those four ADRs +
+  `docs/02_specs/agent_autonomy_model.md`.
+- **Workflow Core (Layer 2.5).** `workflow_instances` +
+  `workflow_events` substrate (ADR-0028, migration `20240171`) —
+  **still inert**: no runtime writer exists (the only `src/`
+  reference is generated `db/types.ts`); a consumer wave activates
+  it. Not to be conflated with the **live document-case workflow**:
+  the Wave-6 D2.1 routing hand-off writes `document_cases`, and the
+  Wave-6 workflow invariants govern that machine and the
+  intent-producer registry — INV-WORKFLOW-002 on the case state
+  machine, INV-WORKFLOW-001 on `core/intent/producers.ts` via the
+  `intent-producers` CI job — not the ADR-0028 tables.
+  → ADR-0028, the Wave-6 retrospective.
+- **Agent layer.** Orchestrator, tools, persona prompts, session
+  persistence, canvas-context injection; the conversational
+  Double Entry Agent (journal entries by chat) and the pipeline's
+  system-actor path. Governance: the Agent Ladder (three rungs)
+  and the four-dimension limit model.
+  → `docs/02_specs/agent_autonomy_model.md`,
+  `docs/02_specs/agent_interface.md`.
+- **UI shell.** The Bridge: three-zone shell (nav rail / chat /
+  contextual canvas), multi-tab canvas with source-driven routing,
+  chat-input drag-drop ingestion (Phase 6.5); full-page routes
+  render without shell zones. → the Phase 6.5 retrospective.
+
+---
+
+## How the source is organized
+
+A pnpm/turbo monorepo:
 
 ```
-the-bridge/                    # single Next.js app, single repo, no pnpm workspaces
-  src/
-    app/                       # Next.js App Router
-      layout.tsx               # root layout
-      page.tsx                 # root redirect
-      [locale]/
-        layout.tsx             # locale layout (next-intl provider)
-        page.tsx               # locale root
-        [orgId]/
-          page.tsx             # org dashboard — catch-all for org-scoped routes
-          accounting/
-            chart-of-accounts/
-            journals/
-          agent/
-            actions/
-          reports/
-            pl/
-        consolidated/
-          dashboard/
-        admin/
-          orgs/
-            page.tsx           # Org creation with industry CoA template selection
-        sign-in/
-          page.tsx
-        sign-out/
-          page.tsx
-      api/                     # Next.js API routes — thin adapters over src/services/
-        _helpers/
-          serviceErrorToStatus.ts  # maps ServiceError codes to HTTP status
-        health/
-          route.ts             # GET health check
-        org/
-          route.ts             # POST org creation
-        orgs/
-          [orgId]/
-            chart-of-accounts/
-              route.ts         # GET list chart of accounts
-            fiscal-periods/
-              route.ts         # GET list open fiscal periods
-            journal-entries/
-              route.ts         # GET list / POST create journal entry
-              [entryId]/
-                route.ts       # GET journal entry detail
-            reports/
-              pl/
-                route.ts       # GET P&L report
-              trial-balance/
-                route.ts       # GET Trial Balance report
-        tax-codes/
-          route.ts             # GET tax codes
-      test/
-        page.tsx               # dev-only test page
-    services/                  # ALL business logic — INV-SERVICE-001, single source of truth
-      auth/
-        canUserPerformAction.ts
-        getMembership.ts
-      accounting/
-        journalEntryService.ts          # journalEntryService.post() — INV-SERVICE-002
-        chartOfAccountsService.ts
-        periodService.ts                # periodService.isOpen()
-        taxCodeService.ts
-      org/
-        orgService.ts
-        membershipService.ts
-        generateFiscalPeriods.ts
-      audit/
-        recordMutation.ts               # synchronous audit_log write — Simplification 1
-      errors/
-        ServiceError.ts                 # typed service error class
-      middleware/
-        withInvariants.ts               # the universal service wrapper — INV-AUTH-001
-        serviceContext.ts               # ServiceContext type with trace_id, org_id, caller
-        errors.ts                       # middleware error utilities
-      reporting/
-        reportService.ts                # P&L and Trial Balance via Postgres RPC
-    agent/                              # the agent layer — empty stubs in Phase 1.1, populated in Phase 1.2
-      orchestrator/
-        systemPrompts/                  # empty — persona prompts added in Phase 1.2
-      tools/                            # empty — tool definitions added in Phase 1.2
-      session/                          # empty — AgentSession persistence added in Phase 1.2
-      memory/                           # empty — org context manager added in Phase 1.2
-      canvas/                           # empty — CanvasDirective moved to src/shared/types/ in Phase 1.1
-    contracts/                          # reserved for Phase 1.2 — .gitkeep only
-    db/
-      adminClient.ts                    # service-role Supabase client (server-only)
-      userClient.ts                     # user-scoped Supabase client (RLS-respecting)
-      types.ts                          # generated by `supabase gen types typescript`
-      seed/
-        dev.sql                         # orgs + memberships + fiscal periods
-    shared/
-      env.ts                            # runtime environment validation
-      schemas/                          # Zod primitives shared across services and UI
-        accounting/
-          journalEntry.schema.ts        # the canonical schema, imported by service + tool + form
-          money.schema.ts               # MoneyAmount/FxRate branded types, arithmetic helpers
-      types/
-        canvasContext.ts                # CanvasContext type — created in Phase 1.1, consumed in Phase 1.2
-        canvasDirective.ts              # CanvasDirective discriminated union
-        proposedEntryCard.ts
-        userRole.ts
-      i18n/
-        config.ts                       # next-intl config — en, fr-CA, zh-Hant
-        request.ts                      # next-intl request configuration
-      logger/
-        pino.ts                         # structured logger with redact list
-    components/
-      ProposedEntryCard.tsx             # rendered when directive.type === 'proposed_entry_card'
-      bridge/
-        SplitScreenLayout.tsx           # the main shell — chat panel + canvas panel + Mainframe rail
-        AgentChatPanel.tsx
-        ApiStatusDot.tsx                # Mainframe API status indicator
-        ContextualCanvas.tsx
-        MainframeRail.tsx
-        OrgSwitcher.tsx
-        SuggestedPrompts.tsx            # persona-aware empty-state prompts
-      canvas/
-        BasicPLView.tsx                 # standalone P&L report view
-        BasicTrialBalanceView.tsx        # standalone Trial Balance view
-        ChartOfAccountsView.tsx         # standalone — does not require the agent
-        ComingSoonPlaceholder.tsx        # renders for Phase 2+ canvas directive types
-        JournalEntryDetailView.tsx       # journal entry detail
-        JournalEntryForm.tsx            # manual journal entry form
-        JournalEntryListView.tsx         # journal entry list
-        ReversalForm.tsx                # reversal entry form with period gap banner
-  supabase/
-    migrations/                         # Supabase CLI timestamp-prefixed migrations
-      20240101000000_initial_schema.sql
-      20240102000000_add_reversal_reason.sql
-      20240103000000_seed_tax_codes.sql
-      20240104000000_add_entry_number.sql
-      20240105000000_add_entry_type.sql
-      20240106000000_add_attachments.sql
-      20240107000000_report_rpc_functions.sql
-  messages/                             # next-intl translation files
-    en.json                             # populated in Phase 1.1
-    fr-CA.json                          # placeholder structure (English fallback)
-    zh-Hant.json                        # placeholder structure (English fallback)
-  docs/                                 # documentation — see docs/README.md for index
-    00_product/                         # product vision, personas, glossary
-    01_prd/                             # feature-level PRDs (Phase 2 feature specs from 2026-04-16 agent autonomy design sprint)
-    02_specs/                           # system truth — invariants, data model, ledger rules
-    03_architecture/                    # system design — this file, phase simplifications, lifecycle
-    04_engineering/                     # developer setup, conventions, security, testing strategy
-    05_operations/                      # runbooks (empty in Phase 1.1)
-    06_audit/                           # control matrix
-    07_governance/                      # ADRs, friction journal, audits, retrospectives
-    08_releases/                        # CHANGELOG
-    09_briefs/                          # per-phase execution briefs and working documents
-    99_archive/                         # superseded documents
-  tests/
-    setup/
-      testDb.ts                         # parameterized SUPABASE_TEST_URL fallback chain — no hardcoded localhost
-      loadEnv.ts                        # loads .env.test.local for integration tests
-      globalSetup.ts                    # Vitest global setup — migrations + seed
-      test_helpers.sql                  # SQL helper functions for test fixtures
-    integration/                        # 7 files, 26 tests
-      unbalancedJournalEntry.test.ts              # Category A floor #1 — deferred constraint
-      lockedPeriodRejection.test.ts               # Category A floor #2 — period-lock trigger
-      crossOrgRlsIsolation.test.ts                # Category A floor #3 — RLS
-      serviceMiddlewareAuthorization.test.ts      # Category A floor #4 — INV-AUTH-001
-      reversalMirror.test.ts                      # Category A floor #5 — INV-REVERSAL-001
-      reportProfitAndLoss.test.ts                 # P&L report correctness
-      reportTrialBalance.test.ts                  # Trial Balance report correctness
-    unit/                               # 4 files, 49 tests
-      generateFiscalPeriods.test.ts
-      journalEntrySchema.test.ts
-      mirrorLines.test.ts
-      moneySchema.test.ts
-  scripts/
-    seed-auth-users.ts                  # tsx — creates Supabase Auth users via admin API
-  .env.example
-  .nvmrc
-  next.config.ts
-  package.json
-  tsconfig.json
+apps/web/        # the product (Next.js App Router) — all source below
+apps/demo/       # demo shell
+packages/ui/     # design-system primitives
+packages/tokens/ # design tokens
+supabase/        # migrations + local stack
+sidecar-ocr/     # Modal OCR sidecar (Tier 2 pipeline Stage 1)
+docs/            # specs, architecture, governance — see docs/INDEX.md
+scripts/         # session tooling (locks, hooks, seeds)
 ```
 
-**The Phase 2 monorepo migration is mechanical:**
-`src/services/` → `packages/services/`, `src/agent/` →
-`packages/agent/`, `src/db/` → `packages/db/`, `src/contracts/` →
-`packages/contracts/`, `src/shared/` → `packages/shared/`. The
-Next.js app becomes `apps/web/`. A new `apps/api/` is created. No
-business logic moves. No agent logic moves. The seams are already in
-the right places.
+Inside `apps/web/src/`, code sits in **authority layers** ratified
+by ADR-0020 (Agent-First Authority-Gradient Source Architecture).
+The canonical request/source traversal:
+
+```
+app/ → agent/ → contracts/ → services/ → core/ → db/
+```
+
+- **`app/`** — workflow-shaped routes; thin adapters only.
+- **`agent/`** — the cognitive layer: orchestrator, tools,
+  prompts, policies. Probabilistic; may not reach the DB directly.
+- **`contracts/`** — Zod boundary artifacts at the agent ↔
+  services seam.
+- **`services/`** — the deterministic engine; the only layer that
+  touches the DB (Law 1); `withInvariants` wraps mutations.
+- **`core/`** — pure deterministic rules (no DB, no network, no UI).
+- **`db/`** — persistence boundary: admin client, generated types,
+  repositories.
+- Cross-cutting: `components/`, `hooks/`, `shared/`,
+  `middleware/`. Tests live at `apps/web/tests/`
+  (unit / integration / e2e).
+
+The full tree with per-folder semantics and import rules is
+canonical at **`docs/03_architecture/folder-structure.md`**
+(layout) and **`docs/03_architecture/authority-gradient.md`**
+(the four-layer framing) — not duplicated here; the previous
+body's copy of the tree drifted exactly once, which is why this
+doc now points instead. The import boundaries are enforced by the
+`agent-first-import-boundaries` ESLint rule, active at
+`'error'` (`apps/web/eslint.config.mjs`). Known minor drift in
+the layout doc at this writing, named for its own refresh:
+it lists a `lib/` folder that never materialized, and places
+`tests/` at the repo top level (they live under `apps/web/tests/`).
+
+---
+
+## Where to go next (day-one reading order)
+
+1. Root `CLAUDE.md` — the standing rules; `docs/INDEX.md` — the
+   one-line map of everything.
+2. `docs/02_specs/ledger_truth_model.md` +
+   `docs/02_specs/invariants.md` — what the core promises.
+3. `docs/02_specs/agent_autonomy_model.md` — how agents are
+   governed.
+4. `docs/03_architecture/authority-gradient.md` +
+   `docs/03_architecture/folder-structure.md` — where code goes
+   and why.
+5. `docs/02_specs/glossary.md` ("V1 workflow-native vocabulary")
+   — the words.
+6. `docs/09_briefs/CURRENT_STATE.md` — where the project is right
+   now, newest section first.

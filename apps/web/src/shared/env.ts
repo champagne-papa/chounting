@@ -16,13 +16,15 @@ const REQUIRED_SERVER = [
   // fire fatal-startup-message, not soft-fail at first request.
   'UPSTASH_REDIS_KV_REST_API_URL',
   'UPSTASH_REDIS_KV_REST_API_TOKEN',
-  // Phase 6 chunk 6.3a: Postmark inbound webhook shared secret.
-  // Required at boot per F1 environment-isomorphism finding —
-  // missing-on-deploy must fire fatal-startup-message, not soft-fail
-  // at first webhook hit. Vercel env scope: Production + Preview +
-  // staging (mirror Upstash scoping); local .env.local carries a
-  // deterministic test value for integration tests.
-  'POSTMARK_INBOUND_WEBHOOK_SECRET',
+  // Phase 6 chunk 6.3a: Postmark inbound webhook HTTP Basic Auth
+  // password (Postmark authenticates via Basic Auth credentials in the
+  // webhook URL; it sends no body signature). Required at boot per F1
+  // environment-isomorphism finding — missing-on-deploy must fire
+  // fatal-startup-message, not soft-fail at first webhook hit. Vercel
+  // env scope: Production + Preview + staging (mirror Upstash scoping);
+  // local .env.local carries a deterministic test value for integration
+  // tests.
+  'POSTMARK_INBOUND_BASIC_AUTH_PASSWORD',
 ] as const;
 
 const REQUIRED_PUBLIC = [
@@ -64,7 +66,20 @@ export const env = {
   APP_URL:                   process.env.NEXT_PUBLIC_APP_URL!,
   UPSTASH_REDIS_KV_REST_API_URL:   process.env.UPSTASH_REDIS_KV_REST_API_URL!,
   UPSTASH_REDIS_KV_REST_API_TOKEN: process.env.UPSTASH_REDIS_KV_REST_API_TOKEN!,
-  POSTMARK_INBOUND_WEBHOOK_SECRET: process.env.POSTMARK_INBOUND_WEBHOOK_SECRET!,
+  POSTMARK_INBOUND_BASIC_AUTH_PASSWORD: process.env.POSTMARK_INBOUND_BASIC_AUTH_PASSWORD!,
+  // Charter B (a) sharepoint_drive provider — app-only Graph auth
+  // (client certificate). OPTIONAL at boot (no `!`, not in
+  // REQUIRED_SERVER): the provider is inert until the resolver
+  // activates it (plan Task 6) and real auth is gated on the Azure app
+  // registration (plan Task 8). graphClient.ts reads these lazily and
+  // throws a typed ServiceError if absent when the provider is actually
+  // used — so a missing value can't fatal-boot the live app.
+  // GRAPH_CLIENT_CERT_PEM is the base64-encoded PEM contents (NOT a
+  // filesystem path — Vercel's FS is read-only); it is a PRIVATE KEY, so
+  // set it Sensitive in Vercel and never log it.
+  GRAPH_TENANT_ID:           process.env.GRAPH_TENANT_ID,
+  GRAPH_CLIENT_ID:           process.env.GRAPH_CLIENT_ID,
+  GRAPH_CLIENT_CERT_PEM:     process.env.GRAPH_CLIENT_CERT_PEM,
   LOG_LEVEL:                 process.env.LOG_LEVEL ?? 'info',
   NODE_ENV:                  process.env.NODE_ENV ?? 'development',
 } as const;

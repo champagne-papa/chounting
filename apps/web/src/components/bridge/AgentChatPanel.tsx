@@ -11,6 +11,26 @@
 //     user turn for network failures; normal template rendering
 //     for agent-emitted errors), empty-state SuggestedPrompts
 //     wired to the send path (one-click-fire).
+//
+// Phase 6.5 chunk 3: ProductionChat gains chat-input drag-drop /
+// paste / "+" button intake affordances per Sub-Q9.b.α staged-
+// with-explicit-ingest. Staged attachments tray renders above the
+// chat input form. Unified Send fires both ingest + chat message
+// (Sub-Q9.c.α): ingest-only-path = attachments + empty text;
+// send-with-attached-message-path = attachments + text. Three-
+// moment acknowledgment composite (Sub-Q10): drop → tray entry
+// (no separate UI); Send → transient toast "Ingesting N
+// documents..." (~3s fade); ingest completion → onDropEvent Prop
+// fire (SplitScreenLayout consumer opens new canvas tab via
+// canvasTabRouting.routeNewTab Pattern γ Rule 1 + EC3.β one-tab-
+// per-batch). Failure-path toast persists until dismissed
+// (Sub-Q10.b.γ). beforeunload prompt for staged-files-on-reload
+// (Sub-Q9.d.α session-only persistence; File objects don't
+// serialize). Cut 1 Flow (a) substrate inheritance:
+// /api/orgs/[orgId]/documents/ingest/drag-drop endpoint reused
+// without modification; ingestionService.handleDragDropUpload
+// withInvariants-wrapped per Pattern B external-wrap (Phase 6
+// chunk 6.2b precedent).
 
 'use client';
 
@@ -33,6 +53,13 @@ import type {
 } from '@/shared/types/canvasDirective';
 import type { CanvasContext } from '@/shared/types/canvasContext';
 import { hasGroundingContext } from '@/agent/canvas/reduceSelection';
+
+// Phase 6.5 chunk 3: window event fired by ProductionChat after an
+// ingest completes; Zone1ConsolidatedPanel listens and refreshes
+// the "Pending Documents" nav-item count badge. Same event name as
+// Zone1ConsolidatedPanel's listener (module-private; one canonical
+// string).
+const PENDING_DOCUMENTS_REFRESH_EVENT = 'chounting:pending-documents-changed';
 
 interface Props {
   orgId: string | null;
@@ -74,6 +101,27 @@ interface Props {
    * SuggestedPrompts empty state.
    */
   firstArrival?: boolean;
+  /**
+   * Phase 6.5 chunk 1: when true, render the collapsed 44px rail-
+   * mode with new-output badge instead of the full chat panel.
+   * Parent SplitScreenLayout flows this from useShellState
+   * .zone2Collapsed.
+   */
+  collapsed?: boolean;
+  /**
+   * Phase 6.5 chunk 1: click-to-expand callback for the collapsed
+   * rail. Counterpart to onCollapse.
+   */
+  onExpand?: () => void;
+  /**
+   * Phase 6.5 chunk 3 (Task 7): invoked after ingest completion
+   * with a `pending_documents` canvas directive carrying the just-
+   * created ingest_batch_id. SplitScreenLayout consumer fires
+   * canvasTabRouting.routeNewTab per Pattern γ Rule 1 + EC3.β
+   * one-tab-per-batch (no focusExistingExactMatch; every drop
+   * batch is unique via drop_session_id and gets its own tab).
+   */
+  onDropEvent?: (directive: CanvasDirective) => void;
 }
 
 export function AgentChatPanel({
@@ -85,7 +133,33 @@ export function AgentChatPanel({
   canvasContext,
   onNavigate,
   firstArrival,
+  collapsed,
+  onExpand,
+  onDropEvent,
 }: Props) {
+  // Phase 6.5 chunk 1: collapsed-rail unread tracking. unreadCount
+  // increments when a new assistant turn arrives WHILE collapsed;
+  // resets to 0 when collapsed flips false (expand).
+  const [unreadCount, setUnreadCount] = useState(0);
+  const collapsedRef = useRef<boolean>(collapsed ?? false);
+
+  useEffect(() => {
+    collapsedRef.current = collapsed ?? false;
+    if (!collapsed) {
+      setUnreadCount(0);
+    }
+  }, [collapsed]);
+
+  const handleAssistantTurnAdded = useCallback(() => {
+    if (collapsedRef.current) {
+      setUnreadCount((prev) => prev + 1);
+    }
+  }, []);
+
+  if (collapsed) {
+    return <CollapsedAgentRail unreadCount={unreadCount} onExpand={onExpand} />;
+  }
+
   if (initialOnboardingState) {
     return (
       <OnboardingChat
@@ -103,13 +177,64 @@ export function AgentChatPanel({
       canvasContext={canvasContext}
       onNavigate={onNavigate}
       firstArrival={firstArrival}
+      onAssistantTurnAdded={handleAssistantTurnAdded}
+      onDropEvent={onDropEvent}
     />
+  );
+}
+
+// -----------------------------------------------------------------
+// CollapsedAgentRail — Phase 6.5 chunk 1
+// -----------------------------------------------------------------
+
+function CollapsedAgentRail({
+  unreadCount,
+  onExpand,
+}: {
+  unreadCount: number;
+  onExpand?: () => void;
+}) {
+  return (
+    <aside
+      data-zone="2"
+      data-collapsed="true"
+      aria-label="Agent chat collapsed rail"
+      className="flex h-full w-11 flex-col items-center border-r border-neutral-200 bg-white py-3"
+    >
+      <button
+        type="button"
+        onClick={onExpand}
+        title="Expand agent chat (Cmd+Shift+\\)"
+        aria-label="Expand agent chat"
+        className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-neutral-100"
+        data-testid="agent-collapsed-expand"
+      >
+        <span className="text-[10px] font-bold tracking-widest text-neutral-500">
+          AI
+        </span>
+        {unreadCount > 0 && (
+          <span
+            data-testid="agent-collapsed-badge"
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-neutral-800 bg-white px-1 text-[10px] font-bold text-neutral-800"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+    </aside>
   );
 }
 
 // -----------------------------------------------------------------
 // ProductionChat — Session 7 Commit 3
 // -----------------------------------------------------------------
+
+// Phase 6.5 chunk 3 (Task 6): toast lifecycle state machine.
+type ToastState =
+  | { kind: 'idle' }
+  | { kind: 'ingesting'; fileCount: number; appearedAt: number }
+  | { kind: 'success'; appearedAt: number }
+  | { kind: 'error'; code: string; message: string };
 
 function ProductionChat({
   orgId,
@@ -118,6 +243,8 @@ function ProductionChat({
   canvasContext,
   onNavigate,
   firstArrival,
+  onAssistantTurnAdded,
+  onDropEvent,
 }: {
   orgId: string | null;
   onCollapse?: () => void;
@@ -125,6 +252,19 @@ function ProductionChat({
   canvasContext?: CanvasContext;
   onNavigate?: CanvasNavigateFn;
   firstArrival?: boolean;
+  /**
+   * Phase 6.5 chunk 1: fired after a new assistant turn is appended
+   * via the `send` path. Used by the AgentChatPanel wrapper to bump
+   * the collapsed-rail unread badge. Card-resolution acks (from
+   * `onCardResolved`) deliberately do NOT fire this — those are
+   * user-initiated outputs, not unsolicited agent output.
+   */
+  onAssistantTurnAdded?: () => void;
+  /**
+   * Phase 6.5 chunk 3 (Task 7): fired after ingest completion with
+   * a `pending_documents` directive carrying the new ingest_batch_id.
+   */
+  onDropEvent?: (directive: CanvasDirective) => void;
 }) {
   const tHeading = useTranslations('agent');
   const tRoot = useTranslations();
@@ -138,6 +278,19 @@ function ProductionChat({
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Phase 6.5 chunk 3 (Task 4): staged attachments tray + drop
+  // affordance state. attachments is in-memory React state per
+  // Sub-Q9.d.α session-only; File objects don't serialize so
+  // localStorage / IndexedDB persistence is post-v1 candidate.
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Phase 6.5 chunk 3 (Task 6): three-moment acknowledgment toast
+  // lifecycle. Success → ~3s fade (Sub-Q10.b.α); error → persist-
+  // until-dismissed (Sub-Q10.b.γ); ingesting → in-flight indicator.
+  const [toastState, setToastState] = useState<ToastState>({ kind: 'idle' });
 
   // Mount-time conversation fetch (Pre-decision 8).
   useEffect(() => {
@@ -178,6 +331,166 @@ function ProductionChat({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [turns.length]);
+
+  // Phase 6.5 chunk 3 (Task 4): file-intake helpers shared by
+  // drag-drop / paste / "+" button affordances. All three funnel
+  // into the same staged tray state via addAttachments.
+  const addAttachments = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    setAttachments((prev) => [...prev, ...files]);
+  }, []);
+
+  const handleRemoveAttachment = useCallback((idx: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(false);
+      const fileList = Array.from(e.dataTransfer.files);
+      addAttachments(fileList);
+    },
+    [addAttachments],
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const fileList = Array.from(e.clipboardData?.files ?? []);
+      if (fileList.length === 0) return;
+      e.preventDefault();
+      addAttachments(fileList);
+    },
+    [addAttachments],
+  );
+
+  const handleAddClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const fileList = Array.from(e.target.files ?? []);
+      addAttachments(fileList);
+      // Reset input so selecting the same file twice in a row fires
+      // a fresh change event.
+      e.target.value = '';
+    },
+    [addAttachments],
+  );
+
+  // Phase 6.5 chunk 3 (Task 4): beforeunload prompt for staged-
+  // files-on-reload. Registers when tray has entries; unregisters
+  // when empty. Native browser prompt (cannot be styled per browser
+  // security model).
+  useEffect(() => {
+    if (attachments.length === 0) return;
+    function handler(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [attachments.length]);
+
+  // Phase 6.5 chunk 3 (Task 6): success-toast auto-fade. Standard
+  // ~3000ms fade per Sub-Q10.b.α; adaptive early-fade (250ms) if
+  // canvas tab opened past mid-window so the toast doesn't linger
+  // after the tab is already visible. Error toasts persist (no
+  // auto-fade) per Sub-Q10.b.γ.
+  useEffect(() => {
+    if (toastState.kind !== 'success') return;
+    const elapsed = Date.now() - toastState.appearedAt;
+    const remaining = elapsed > 1500 ? 250 : 3000 - elapsed;
+    const t = setTimeout(() => setToastState({ kind: 'idle' }), Math.max(remaining, 0));
+    return () => clearTimeout(t);
+  }, [toastState]);
+
+  // Phase 6.5 chunk 3 (Task 6): explicit error-toast dismissal.
+  // Triggers: close-button click; new-ingest-fire (clears prior
+  // error on retry); click-outside not wired at v1 (would require
+  // ref-tracking; deferred to post-v1 if friction surfaces).
+  const dismissToast = useCallback(() => {
+    setToastState({ kind: 'idle' });
+  }, []);
+
+  // Phase 6.5 chunk 3 (Task 5): ingest fire path. POST staged files
+  // to existing /api/orgs/[orgId]/documents/ingest/drag-drop
+  // endpoint per Cut 1 Flow (a) substrate inheritance; on 201 fire
+  // onDropEvent Prop with pending_documents directive carrying the
+  // batch id; toast lifecycle transitions per Sub-Q10 three-moment
+  // composite.
+  const fireIngest = useCallback(
+    async (files: File[]) => {
+      if (!orgId || files.length === 0) return;
+      const drop_session_id = crypto.randomUUID();
+      const formData = new FormData();
+      formData.append('drop_session_id', drop_session_id);
+      for (const file of files) formData.append('files', file);
+
+      setToastState({
+        kind: 'ingesting',
+        fileCount: files.length,
+        appearedAt: Date.now(),
+      });
+
+      try {
+        const res = await fetch(
+          `/api/orgs/${orgId}/documents/ingest/drag-drop`,
+          { method: 'POST', body: formData },
+        );
+        if (!res.ok) {
+          const errBody = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            message?: string;
+          };
+          setToastState({
+            kind: 'error',
+            code: errBody.error ?? 'INGEST_FAILED',
+            message:
+              errBody.message ?? `Ingest failed (HTTP ${res.status}).`,
+          });
+          return;
+        }
+        const result = (await res.json()) as {
+          ingest_batch_id: string;
+          document_count: number;
+        };
+        setToastState({ kind: 'success', appearedAt: Date.now() });
+        // Fire Zone 1 nav badge refresh.
+        window.dispatchEvent(new Event(PENDING_DOCUMENTS_REFRESH_EVENT));
+        // Fire onDropEvent Prop with pending_documents directive
+        // (consumer = SplitScreenLayout.handleDropEvent; opens new
+        // canvas tab via canvasTabRouting.routeNewTab without
+        // focusExistingExactMatch per EC3.β).
+        onDropEvent?.({
+          type: 'pending_documents',
+          orgId,
+          ingestBatchId: result.ingest_batch_id,
+        });
+      } catch (err) {
+        setToastState({
+          kind: 'error',
+          code: 'NETWORK_ERROR',
+          message: err instanceof Error ? err.message : 'Network error',
+        });
+      }
+    },
+    [orgId, onDropEvent],
+  );
 
   const send = useCallback(
     async (message: string) => {
@@ -279,6 +592,7 @@ function ProductionChat({
           return [...flipped, assistantTurn];
         });
         setSessionId(data.session_id);
+        onAssistantTurnAdded?.();
       } catch (err) {
         // Network failure — fetch threw. Inline retry on user turn.
         const msg = err instanceof Error ? err.message : 'Network error';
@@ -293,7 +607,7 @@ function ProductionChat({
         setSubmitting(false);
       }
     },
-    [orgId, locale, sessionId, submitting, canvasContext],
+    [orgId, locale, sessionId, submitting, canvasContext, onAssistantTurnAdded],
   );
 
   const retryTurn = useCallback(
@@ -384,8 +698,56 @@ function ProductionChat({
     }
   };
 
+  // Phase 6.5 chunk 3 (Task 5): unified Send disabled-rule per
+  // Sub-Q9.c.α. Enabled when attachments present OR text present
+  // (or both); disabled when both empty. Tooltip on disabled state
+  // communicates the requirement.
+  const sendEnabled =
+    !submitting &&
+    (attachments.length > 0 || input.trim().length > 0);
+
+  // Phase 6.5 chunk 3 (Task 5): unified Send handler. Fires ingest
+  // (if attachments) AND chat message (if text), conditionally.
+  // Ingest-only-path: attachments + empty text → ingest fires; no
+  // chat turn appended. Send-with-attached-message-path: attachments
+  // + text → both fire (ingest + chat turn). Chat-only-path: no
+  // attachments + text → existing send flow unchanged.
+  const handleUnifiedSend = useCallback(() => {
+    if (!sendEnabled) return;
+    const filesToIngest = attachments;
+    const textToSend = input.trim();
+    // Clear tray + input optimistically; toast / chat-turn reflect
+    // status.
+    setAttachments([]);
+    if (filesToIngest.length > 0) {
+      void fireIngest(filesToIngest);
+    }
+    if (textToSend.length > 0) {
+      void send(textToSend);
+    }
+  }, [sendEnabled, attachments, input, fireIngest, send]);
+
   return (
-    <aside className="w-[380px] flex flex-col border-r border-neutral-200 bg-white">
+    <aside
+      className="w-[380px] flex flex-col border-r border-neutral-200 bg-white relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      data-testid="agent-chat-panel"
+    >
+      {/* Phase 6.5 chunk 3 (Task 4): drag-over visual indicator —
+          full-panel overlay only when files are being dragged over. */}
+      {dragOver && (
+        <div
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-blue-50/70 border-2 border-dashed border-blue-500"
+          data-testid="agent-drag-over-indicator"
+        >
+          <div className="rounded-md bg-white px-4 py-2 text-sm font-medium text-blue-700 shadow">
+            Drop to attach
+          </div>
+        </div>
+      )}
+
       <div className="h-10 border-b border-neutral-200 flex items-center justify-between px-3">
         <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
           Agent
@@ -452,17 +814,129 @@ function ProductionChat({
         ))}
       </div>
 
+      {/* Phase 6.5 chunk 3 (Task 6): three-moment acknowledgment
+          toast — ingesting / success / error. Renders above tray
+          + form so it doesn't push the message area. Success auto-
+          fades; error persists until dismissed. */}
+      {toastState.kind !== 'idle' && (
+        <div
+          className={
+            toastState.kind === 'error'
+              ? 'border-t border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 flex items-center justify-between'
+              : 'border-t border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700 flex items-center justify-between'
+          }
+          data-testid="agent-ingest-toast"
+          data-toast-state={toastState.kind}
+        >
+          {toastState.kind === 'ingesting' && (
+            <span>
+              Ingesting {toastState.fileCount} document
+              {toastState.fileCount === 1 ? '' : 's'}…
+            </span>
+          )}
+          {toastState.kind === 'success' && <span>✓ Ingested</span>}
+          {toastState.kind === 'error' && (
+            <span data-testid="agent-ingest-toast-error">
+              <span className="font-semibold uppercase tracking-wider">
+                {toastState.code}
+              </span>
+              {' — '}
+              {toastState.message}
+            </span>
+          )}
+          {toastState.kind === 'error' && (
+            <button
+              type="button"
+              onClick={dismissToast}
+              className="underline text-red-900 ml-2"
+              aria-label="Dismiss ingest error"
+              data-testid="agent-ingest-toast-dismiss"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Phase 6.5 chunk 3 (Task 4): staged attachments tray. Renders
+          between transcript and form when attachments present.
+          Max-height ~144px (~4 entries at 36px each); scrollbar
+          beyond. Per-file remove button on hover. */}
+      {attachments.length > 0 && (
+        <div
+          className="border-t border-neutral-200 bg-neutral-50 px-3 py-2"
+          style={{ maxHeight: 144, overflowY: 'auto' }}
+          data-testid="agent-staged-tray"
+        >
+          <div className="flex flex-col gap-1">
+            {attachments.map((file, idx) => (
+              <div
+                key={`${file.name}-${idx}`}
+                className="group flex h-9 items-center gap-2 rounded px-2 hover:bg-neutral-100"
+                data-testid="agent-staged-tray-entry"
+              >
+                <span className="text-xs text-neutral-400">
+                  {/^image\//.test(file.type)
+                    ? '\u{1F5BC}'
+                    : file.type === 'application/pdf'
+                    ? '\u{1F4C4}'
+                    : '\u{1F4CE}'}
+                </span>
+                <span
+                  className="flex-1 truncate text-xs text-neutral-700"
+                  title={file.name}
+                >
+                  {file.name}
+                </span>
+                <span className="text-[10px] text-neutral-400">
+                  {Math.round(file.size / 1024)}KB
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(idx)}
+                  className="text-neutral-400 opacity-0 hover:text-neutral-700 group-hover:opacity-100"
+                  aria-label={`Remove ${file.name}`}
+                  data-testid="agent-staged-tray-remove"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form
         className="border-t border-neutral-200 p-3 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          void send(input);
+          handleUnifiedSend();
         }}
       >
+        {/* Phase 6.5 chunk 3 (Task 4): "+" button affordance for file
+            picker; hidden <input type="file"> triggered on click. */}
+        <button
+          type="button"
+          onClick={handleAddClick}
+          className="flex h-9 w-9 items-center justify-center rounded border border-neutral-300 text-sm text-neutral-500 hover:bg-neutral-50"
+          aria-label="Attach file"
+          data-testid="agent-attach-button"
+        >
+          +
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          hidden
+          onChange={handleFileInputChange}
+          data-testid="agent-attach-input"
+        />
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onPaste={handlePaste}
           placeholder="Type a message…"
           className="flex-1 border border-neutral-300 rounded px-3 py-2 text-sm"
           disabled={submitting}
@@ -470,8 +944,13 @@ function ProductionChat({
         />
         <button
           type="submit"
-          disabled={submitting || input.trim().length === 0}
-          className="bg-emerald-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+          disabled={!sendEnabled}
+          title={
+            !sendEnabled && !submitting
+              ? 'Add a message or attach a file to send'
+              : undefined
+          }
+          className="bg-emerald-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="agent-send"
         >
           {submitting ? '...' : 'Send'}

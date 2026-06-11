@@ -7,6 +7,7 @@ import { toolsForPersona } from '@/agent/orchestrator/toolsForPersona';
 const ALL_TOOLS = [
   'checkPeriod',
   'createOrganization',
+  'draftVendorRule',
   'listChartOfAccounts',
   'listIndustries',
   'listJournalEntries',
@@ -18,7 +19,7 @@ const ALL_TOOLS = [
 ] as const;
 
 describe('CA-44: per-persona tool whitelist', () => {
-  it('controller sees all 10 tools', () => {
+  it('controller sees all 11 tools', () => {
     const names = toolsForPersona('controller').map((t) => t.name).sort();
     expect(names).toEqual([...ALL_TOOLS].sort());
   });

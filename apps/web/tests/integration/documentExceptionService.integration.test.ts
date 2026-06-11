@@ -550,8 +550,9 @@ describe('exception_queue_entries direct-org_id RLS + RPC atomicity + chunk-6 CH
     // (4 values) to document_cases_state_chunk_6_active (6 values
     // adding needs_review + classified). Chunk-2-Phase-4 further broadens
     // to document_cases_state_chunk_7_active (7 values adding 'matched').
-    // Direct admin INSERT or UPDATE to these admitted states should
-    // succeed.
+    // Wave-6-D2.1 broadens to document_cases_state_chunk_8_active
+    // (8 values adding 'extracting'). Direct admin INSERT or UPDATE to
+    // these admitted states should succeed.
     const created = await createDocumentCase(
       { org_id: SEED.ORG_HOLDING, document_type: 'vendor_invoice' },
       ctx,
@@ -570,14 +571,30 @@ describe('exception_queue_entries direct-org_id RLS + RPC atomicity + chunk-6 CH
       .eq('id', created.id);
     expect(needsReviewErr).toBeNull();
 
-    // Still-reserved-at-Layer-1 states (extracting, committed, archived)
-    // remain CHECK-rejected post-chunk-2-Phase-4. 'matched' was admitted
-    // by chunk-2-Phase-4 (Subsystem 2 branch (a) state-transition target);
-    // pick a still-reserved state for the rejection assertion to keep the
-    // test forward-compat across future broadening events.
-    const { error: reservedErr } = await db
+    // 'extracting' was admitted by the Wave-6-D2.1 chunk-8 broaden
+    // (pipeline matrix-advancement intermediate). Assert the positive side:
+    const { error: extractingErr } = await db
       .from('document_cases')
       .update({ state: 'extracting' })
+      .eq('id', created.id);
+    expect(extractingErr).toBeNull();
+
+    // 'committed' was admitted by the Wave-6-D3-T1 chunk-9 broaden
+    // (human approve→post terminal marking). Assert the positive side:
+    const { error: committedErr } = await db
+      .from('document_cases')
+      .update({ state: 'committed' })
+      .eq('id', created.id);
+    expect(committedErr).toBeNull();
+
+    // The sole still-reserved-at-Layer-1 state (archived) remains
+    // CHECK-rejected post-chunk-9. Pick a still-reserved state for the
+    // rejection assertion to keep the test forward-compat across future
+    // broadening events (this test's original discipline — re-picked at
+    // Wave 6 D2.1 and again at Wave 6 D3 T1 exactly as prescribed).
+    const { error: reservedErr } = await db
+      .from('document_cases')
+      .update({ state: 'archived' })
       .eq('id', created.id);
     expect(reservedErr).not.toBeNull();
     expect(reservedErr!.message).toMatch(/document_cases_state_chunk_\d+_active/);

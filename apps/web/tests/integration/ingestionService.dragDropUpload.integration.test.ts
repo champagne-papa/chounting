@@ -28,6 +28,15 @@ vi.mock('@/services/storage/resolver', () => ({
 const { ingestionService } = await import(
   '@/services/document-platform/ingestionService'
 );
+// Class D T4: handleDragDropUpload's IngestInvoker param is required;
+// these direct-service tests wire the REAL ingestDocument — exactly
+// what the service invoked internally pre-inversion, so the exercised
+// surface is unchanged (pipeline failures on synthetic docs are
+// swallowed by the Pattern-B catch, as before). Dynamic import after
+// vi.mock, matching the file's mock-hoisting pattern.
+const { ingestDocument } = await import(
+  '@/agent/orchestrator/extraction/ingestDocument'
+);
 const { getStorageProvider } = await import(
   '@/services/storage/resolver'
 );
@@ -61,8 +70,17 @@ describe('ingestionService.handleDragDropUpload', () => {
 
   beforeEach(() => {
     mockPut = makeMockPut();
+    // Phase 7 chunk 7.1a — orchestrator hook fires post-RPC. Stage 1
+    // byteFetch calls provider.fetch; mock returns synthetic bytes.
+    const fetchMock = vi.fn().mockResolvedValue({
+      bytes: new TextEncoder().encode('stub bytes'),
+      content_hash:
+        '0000000000000000000000000000000000000000000000000000000000000000',
+      provider: 'supabase_storage' as const,
+    });
     (getStorageProvider as Mock).mockReturnValue({
       put: mockPut,
+      fetch: fetchMock,
     });
     traceIds = [];
   });
@@ -85,6 +103,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         files: [makeFile('test-n1.pdf')],
       },
       ctx,
+      ingestDocument,
     );
 
     expect(result.document_count).toBe(1);
@@ -149,6 +168,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         ],
       },
       ctx,
+      ingestDocument,
     );
 
     expect(result.document_count).toBe(3);
@@ -217,6 +237,7 @@ describe('ingestionService.handleDragDropUpload', () => {
           ],
         },
         ctx,
+        ingestDocument,
       );
     } catch (err) {
       thrown = err;
@@ -259,6 +280,7 @@ describe('ingestionService.handleDragDropUpload', () => {
           files: [makeFile('test-zod.pdf')],
         },
         ctx,
+        ingestDocument,
       );
     } catch (err) {
       thrown = err;
@@ -290,6 +312,7 @@ describe('ingestionService.handleDragDropUpload', () => {
         ],
       },
       ctx,
+      ingestDocument,
     );
 
     const { data: batchRow } = await db

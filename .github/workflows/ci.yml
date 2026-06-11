@@ -1,7 +1,8 @@
 name: CI
 
-# PR/branch gating for the monorepo. Runs typecheck, lint, and
-# build across all workspaces.
+# PR/branch gating for the monorepo. Runs typecheck, lint, adr
+# checks, the intent-producers coverage check (INV-WORKFLOW-001,
+# Wave 6 D6 — blocking), and build across all workspaces.
 #
 # History note: the @chounting/web app previously carried lint
 # errors that blocked both `pnpm lint` and `next build` for the
@@ -117,6 +118,34 @@ jobs:
 
       - name: ADR lint + index drift check
         run: pnpm adr:check
+
+  intent-producers:
+    # Wave 6 D6 — INV-WORKFLOW-001 teeth (ADR-0031 D-0031.2/.3): the
+    # producer-coverage check exits 1 on any Intent lacking a non-AI
+    # producer (the ratified Q2 `query` carve-out excepted). Blocking by
+    # job-failure semantics. Consumes no github.event.* context (the
+    # workflow's security-note property preserved). adr-check-isomorphic;
+    # no turbo cache (a two-file tsx traversal).
+    name: intent-producers (INV-WORKFLOW-001)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Intent producer-coverage check (blocking)
+        run: pnpm intent-producers:check
 
   build:
     name: build (all workspaces)

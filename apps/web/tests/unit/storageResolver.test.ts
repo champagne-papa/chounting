@@ -11,8 +11,24 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
+// Inlined six-method stubs (vi.mock factories are hoisted above any
+// top-level const, so no shared helper here).
 vi.mock('@/services/storage/providers/supabaseStorageProvider', () => ({
   createSupabaseStorageProvider: vi.fn(() => ({
+    put: vi.fn(),
+    fetch: vi.fn(),
+    fetchVersion: vi.fn(),
+    previewUrl: vi.fn(),
+    delete: vi.fn(),
+    verifyIntegrity: vi.fn(),
+  })),
+}));
+
+// Charter B (a) Task 6: sharepoint_drive is now activated in the
+// resolver. Mock its factory (the real one's transitive imports reach
+// graphClient/env + adminClient) — this is enum-dispatch testing only.
+vi.mock('@/services/storage/providers/sharepointDriveProvider', () => ({
+  createSharepointDriveProvider: vi.fn(() => ({
     put: vi.fn(),
     fetch: vi.fn(),
     fetchVersion: vi.fn(),
@@ -37,17 +53,18 @@ describe('getStorageProvider', () => {
     expect(typeof provider.verifyIntegrity).toBe('function');
   });
 
-  it('throws STORAGE_OPERATION_FAILED for sharepoint_drive (reserved)', () => {
-    expect(() => getStorageProvider('sharepoint_drive')).toThrow(ServiceError);
-    try {
-      getStorageProvider('sharepoint_drive');
-      throw new Error('expected throw');
-    } catch (err) {
-      expect(err).toBeInstanceOf(ServiceError);
-      expect((err as ServiceError).code).toBe('STORAGE_OPERATION_FAILED');
-      expect((err as ServiceError).message).toContain('reserved');
-      expect((err as ServiceError).message).toContain('sharepoint_drive');
-    }
+  // Charter B (a) Task 6: sharepoint_drive ACTIVATED — was reserved/throw,
+  // now returns a provider (deliberate activation edit; the never guard
+  // did not force it). This test was updated from a throw-assertion.
+  it('returns a StorageProvider instance for sharepoint_drive (activated)', () => {
+    const provider = getStorageProvider('sharepoint_drive');
+    expect(provider).toBeDefined();
+    expect(typeof provider.put).toBe('function');
+    expect(typeof provider.fetch).toBe('function');
+    expect(typeof provider.fetchVersion).toBe('function');
+    expect(typeof provider.previewUrl).toBe('function');
+    expect(typeof provider.delete).toBe('function');
+    expect(typeof provider.verifyIntegrity).toBe('function');
   });
 
   it('throws STORAGE_OPERATION_FAILED for s3_bucket (reserved)', () => {

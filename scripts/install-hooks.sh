@@ -5,9 +5,16 @@
 # per clone / worktree; git doesn't track hooks themselves.
 #
 # The installed hook enforces:
-#   1. Session Lock File Convention (see conventions.md).
+#   1. Session Lock File Convention — identity (COORD_SESSION match)
+#      + location (repo-root cwd via GIT_PREFIX) when the lock file
+#      exists (see
+#      docs/04_engineering/conventions/session/iterative-catching.md
+#      and docs/04_engineering/conventions/code.md §Commit-shell
+#      hygiene under a session lock).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
+#   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
+#      issue #13905) when .claude/rules/*.md files are staged.
 
 set -euo pipefail
 
@@ -21,9 +28,16 @@ trap 'rm -f "$TMP_HOOK"' EXIT
 cat > "$TMP_HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
 # Installed by scripts/install-hooks.sh. Enforces:
-#   1. Session Lock File Convention (see conventions.md).
+#   1. Session Lock File Convention — identity (COORD_SESSION match)
+#      + location (repo-root cwd via GIT_PREFIX) when the lock file
+#      exists (see
+#      docs/04_engineering/conventions/session/iterative-catching.md
+#      and docs/04_engineering/conventions/code.md §Commit-shell
+#      hygiene under a session lock).
 #   2. ADR linting + index-regeneration check (per ADR-0021) when
 #      the staged commit touches ADR-related files.
+#   3. .claude/rules/ frontmatter lint (quoted globs per Claude Code
+#      issue #13905) when .claude/rules/*.md files are staged.
 
 set -euo pipefail
 
@@ -55,6 +69,19 @@ else
     echo "Stop and resolve before retrying. Commit blocked." >&2
     exit 1
   fi
+
+  # ---- cwd guard (commit-shell hygiene; Wave-6 retro §3.2) ----
+  if [[ -n "${GIT_PREFIX:-}" ]]; then
+    echo "[coordination] error: commit invoked from subdirectory" >&2
+    echo "'${GIT_PREFIX}', not the repo root, while session lock" >&2
+    echo "'$LOCK_LABEL' is active. Commit-shell hygiene" >&2
+    echo "(conventions/code.md) requires repo-root commits under a" >&2
+    echo "lock. Run:" >&2
+    echo "  cd \"\$(git rev-parse --show-toplevel)\"" >&2
+    echo "and retry. Commit blocked. (--no-verify is the deliberate" >&2
+    echo "exception path; record why in the commit body if used.)" >&2
+    exit 1
+  fi
 fi
 
 # ---- ADR check (only when ADR-related files have changed) ----
@@ -68,6 +95,17 @@ if [[ -n "$ADR_CHANGED" ]]; then
   fi
   if ! pnpm adr:index --check; then
     echo "[adr] error: index out of sync. Run 'pnpm adr:index' and re-stage README.md." >&2
+    exit 1
+  fi
+fi
+
+# ---- .claude/rules/ frontmatter lint ----
+RULES_CHANGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^\.claude/rules/.*\.md$' || true)
+
+if [[ -n "$RULES_CHANGED" ]]; then
+  echo "[rules-lint] .claude/rules/*.md files staged; running frontmatter lint..."
+  if ! bash scripts/lint-rules-frontmatter.sh "$RULES_CHANGED"; then
+    echo "[rules-lint] error: lint failed. Fix findings before committing." >&2
     exit 1
   fi
 fi
@@ -98,10 +136,13 @@ echo "Pre-commit hook installed at $HOOK_PATH."
 echo ""
 echo "The hook enforces:"
 echo "  1. Session Lock File Convention (.coordination/session-lock.json"
-echo "     vs COORD_SESSION env var)."
+echo "     vs COORD_SESSION env var; repo-root cwd via GIT_PREFIX when"
+echo "     the lock exists)."
 echo "  2. ADR linting and index regeneration when ADR-related files"
 echo "     are staged (docs/07_governance/adr/, docs/02_specs/taxonomy.md,"
 echo "     docs/02_specs/invariants.md, scripts/adr/)."
+echo "  3. .claude/rules/ frontmatter lint (quoted globs per Claude Code"
+echo "     issue #13905) when .claude/rules/*.md files are staged."
 echo ""
 echo "Re-run this script in every worktree / clone you commit from,"
 echo "and after any change to the hook content (e.g., when ADR-0021's"

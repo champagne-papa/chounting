@@ -472,3 +472,121 @@ as Z1 #13 per Session 2E Task 10). This ADR's scope is the
 schema-ready affordance + recognized variants, not the workflow
 behavior or activation governance that will eventually consume
 the affordance.
+
+## Amendment — Phase 6.5 retrospective (2026-05-17, commit [Commit A SHA — set post-commit])
+
+Two sub-clarifications surfaced at Phase 6.5 close, ratified per
+founder routing rule 2026-05-17.
+
+### N=4 catalog of functionally-independent-substrate UI-layer instances
+
+The substrate-now-enforcement-later cross-pattern (this ADR's
+canonical territory per the Cross-references section above and
+the `D6 §6.8` formalization) shipped at Phase 6.5 with four
+functionally-independent-substrate UI-layer instances stable at
+chunk-3 close. Each carries independent meaning at the storage /
+contract / persistence layer regardless of whether a v1 consumer
+emits against the substrate; each names a post-v1 upgrade path
+without blocking the v1 ship.
+
+1. **Sub-Q7.4.α′ Region 7.4 hidden with structural reservation**
+   (chunk 1 commit `5a9492b`). Region 7.4 ships as a zero-render
+   empty `<div data-region="7.4">` with `display: none` at v1; the
+   structural placeholder reserves the layout slot for post-v1
+   multi-session-chat without exposing UI. A single-row
+   `agent_sessions` per org backs the surface at v1 — schema-
+   ready for the future N-session shape per the substrate-now-
+   enforcement-later discipline.
+2. **Sub-Q8.c.α₁→α₂ localStorage→DB column post-v1** (chunk 1
+   commit `5a9492b`). Shell-state persistence ships as
+   localStorage at v1 (per-browser scope; SSR-safe hydration via
+   pure-helper extraction at
+   `apps/web/src/shared/storage/shellStateStorage.ts` + thin
+   React hooks). Post-v1 cross-browser sync upgrades to a DB
+   column with the same logical contract; the pure-helper
+   boundary preserves the upgrade path without v1 lock-in.
+3. **Sub-Q9.d.α→δ session-only→IndexedDB attachments post-v1**
+   (chunk 3 commit `29e2ba1`). Staged attachments persist as
+   session-only in-memory state at v1; IndexedDB substrate
+   (localStorage infeasible for File objects; FileReader
+   serialization deferred) ships post-v1 as the
+   enforcement-later half. The session-only v1 surface is
+   functionally independent — File-shape contract holds at the
+   in-memory boundary regardless of which persistence layer
+   eventually backs it.
+4. **EC1.β v1-default `window.confirm()` → React modal post-v1**
+   (chunk 2 commit `c5d7e89`). Pattern γ source-driven routing's
+   edge case EC1 ("replace active drop on tab collision") fires
+   `window.confirm()` always-prompt as v1 default; the prompt's
+   contract (operator confirms replace; service-layer routing
+   honors the decision) holds regardless of UI shell. Post-v1
+   upgrade to per-form dirty-state detection + React modal
+   substrate is the enforcement-later half; the v1 prompt
+   contract carries forward unchanged.
+
+Catalog stable at N=4 post-chunk-3. The `onDropEvent` prop
+proposed at chunk 2 brief as a candidate N=5 instance was
+recognized at chunk 2 implementation as an additive-interface-
+requiring-consumer surface and reclassified out of this catalog
+per the boundary refinement below.
+
+### Substrate-now-enforcement-later vs RI-1 strict atomic ship — boundary refinement
+
+Phase 6.5 chunk 2 surfaced a discrimination clarifying when an
+additive surface belongs in this ADR's "substrate-now-
+enforcement-later" territory vs RI-1's "strict atomic ship with
+consumer" territory
+(`docs/04_engineering/conventions/session/scope-lock.md`
+§Verify-forward-at-scope-lock for computational-shape chunks
+→ §Consumer-presence verification before substrate addition (RI-1)):
+
+- **Functionally-independent substrate (this ADR's territory).**
+  A database column, RPC parameter, enum value, table
+  reservation, or type definition with independent meaning at
+  the storage / schema / contract layer regardless of whether a
+  v1 consumer exists. Example: reserving `cancelled` in the
+  `exception_status` enum at chunk 6.2 close preserves the
+  value's identity for chunk 6.3+ consumers without emitting any
+  v1 code path that depends on the value. The substrate has
+  meaning at the schema layer even when no service reads or
+  writes the reserved value at v1.
+
+- **Additive interface requiring consumer presence (RI-1
+  territory).** A function parameter, component prop, callback
+  signature, or any surface whose interface contract is
+  meaningless without a v1 consumer reading or invoking it.
+  Example: the `onDropEvent` prop proposed at the chunk 2 brief
+  as a candidate substrate-now-enforcement-later N=5 instance —
+  recognized at chunk 2 implementation as cosmetic-only (a prop
+  nothing reads is dead surface area, not deferred substrate;
+  the prop's interface contract is meaningless without a v1
+  consumer wiring its invocation). Chunk 2 deferred `onDropEvent`
+  to chunk 3 atomic shipping per RI-1; chunk 3 Commit 1 `29e2ba1`
+  shipped BOTH the prop signature AND the consumer wave at the
+  same commit (Pattern γ Rule 1 `routeNewTab` consumer + EC3.β
+  one-tab-per-batch semantics).
+
+The discriminator: ask whether the surface holds contract meaning
+at the storage / schema / persistence layer in absence of any v1
+consumer. If yes (DB column, enum value, RPC parameter, table
+reservation, type definition, session-scoped persistence layer),
+this ADR's substrate-now-enforcement-later territory applies. If
+no (function parameter, component prop, callback signature whose
+contract is meaningless without invocation), RI-1's strict
+atomic ship discipline applies — ship the interface with its v1
+consumer at the same commit.
+
+**Cross-references.**
+
+- Phase 6.5 retrospective at `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #1 + Candidate #2 for full empirical narrative.
+- `docs/04_engineering/conventions/session/scope-lock.md`
+  §Consumer-presence verification before substrate addition (RI-1)
+  — sibling discipline at additive-interface grain.
+- `docs/04_engineering/conventions/session/scope-lock.md`
+  §Substrate-now-enforcement-later cross-pattern — parent
+  codification of the discipline this ADR's Phase 6.5 N=4 catalog
+  instantiates.
+- ADR-0011 Amendment 2026-05-15 — `ingest_items` deferral as the
+  parallel substrate-grain "land schema with consumer code"
+  precedent in the substrate-now-enforcement-later territory.

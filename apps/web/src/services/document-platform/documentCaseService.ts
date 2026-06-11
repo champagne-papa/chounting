@@ -1,7 +1,9 @@
 import {
+  AdvanceCaseAutomationInputSchema,
   CreateDocumentCaseInputSchema,
   DocumentCaseSchema,
   TransitionInputSchema,
+  type AdvanceCaseAutomationInputRaw,
   type CreateDocumentCaseInputRaw,
   type DocumentCase,
   type TransitionInputRaw,
@@ -9,7 +11,11 @@ import {
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import {
+  actingUserId,
+  type ServiceContext,
+  type SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 
 // The full 10-state document_case_state membership per ADR-0011 §3,
 // independent of the Zod-narrowed chunk-2 DocumentCaseState (4 states).
@@ -121,7 +127,9 @@ export async function createDocumentCase(
 
 export async function readDocumentCase(
   id: string,
-  ctx: ServiceContext,
+  // ctx is unused (signature uniformity); widened for the automation
+  // caller (advanceCaseAutomation, Wave 6 D2.1 T2).
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<DocumentCase> {
   const db = adminClient();
   const { data, error } = await db
@@ -170,6 +178,23 @@ export async function transition(
 
   // Read current state.
   const current = await readDocumentCase(caseId, ctx);
+
+  // Wave 6 D3 T3 — in-service org verification (IDOR; brief D-1.1).
+  // Derives org from the READ ROW — never a caller-supplied org_id (no
+  // input field to forge; withInvariants Invariant 3 cannot cover this
+  // boundary because TransitionInput carries no org_id). Lands after
+  // the read, BEFORE any state change. Supersedes D2.1 §5(A)'s
+  // "transition() stays byte-untouched" with provenance: §5(A) was
+  // ratified when transition() had zero callers (the org-blind read
+  // was unexposed); D3's review routes are the first exposer.
+  // System actors never call transition() (they use
+  // advanceCaseAutomation), so this binds exactly the human boundary.
+  if (!ctx.caller.org_ids?.includes(current.org_id)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `Caller does not have access to org_id=${current.org_id}`,
+    );
+  }
 
   // Layer 3a: matrix legality check.
   const legalTargets = LEGAL_TRANSITIONS[current.state] ?? [];
@@ -225,6 +250,197 @@ export async function transition(
       reason: parsed.reason ?? null,
     },
     'Document case transitioned',
+  );
+  return result;
+}
+
+// ---------------------------------------------------------------------
+// Wave 6 D2.1 T2 — automation-side advance (the system-actor sibling of
+// transition()).
+// ---------------------------------------------------------------------
+
+// The automation-owned slice of the ADR-0011 §3 matrix — the gap
+// transitions D2.1 fills (Wave 6 build plan §5, closure (A)) plus the
+// Wave 6 D3 T4 approved→committed terminal marking (ADR-0011 §3:
+// "automation (ledger commit succeeds)" — driven by the approve→post
+// route AFTER journalEntryService.post succeeds; the route is the sole
+// driver, single ownership preserved).
+// classified→{matched, needs_review} are deliberately ABSENT: Subsystem 2
+// (documentRouterService.resolveCandidates) owns that segment with its
+// rich decision-record audit (set_case_head_pointer_with_audit /
+// record_router_decision + enqueueException). Single ownership by
+// construction — advanceCaseAutomation REFUSES classified-source advances.
+const AUTOMATION_ADVANCE_EDGES: ReadonlyMap<AllCaseStates, AllCaseStates> =
+  new Map<AllCaseStates, AllCaseStates>([
+    ['received', 'extracting'],
+    ['extracting', 'classified'],
+    ['matched', 'needs_review'],
+    ['approved', 'committed'],
+  ]);
+
+// Pipeline-forward order for idempotent re-run tolerance: a case at or
+// past the requested target is a no-op success (re-ingestion against an
+// already-advanced case must not error). Only the automation segment
+// (0–4) needs discrimination; human-side / terminal states all rank past
+// it.
+const PIPELINE_ORDER: Record<AllCaseStates, number> = {
+  received: 0,
+  extracting: 1,
+  classified: 2,
+  matched: 3,
+  needs_review: 4,
+  proposed: 5,
+  approved: 6,
+  rejected: 6,
+  committed: 7,
+  archived: 8,
+};
+
+/**
+ * advanceCaseAutomation — state-aware chain-advance along the
+ * automation-owned matrix slice. Reads the current state and advances
+ * hop-by-hop (each hop its own audited RPC transaction) until the target
+ * is reached; a case already at/past the target is an idempotent no-op.
+ *
+ * Wave 6 D2.1 T2: ctx admits the orchestrator's SystemActorServiceContext
+ * directly, mirroring completeCandidate (documentRouterService.ts) —
+ * invoked directly (NOT through withInvariants), so no role-based
+ * authorization (Invariant 4) on this path; reads only union-common
+ * fields (trace_id, caller.user_id). The authz story for these
+ * STATE-MUTATING transitions: every edge this function can execute is
+ * AUTOMATION_ONLY (the human boundary refuses them at transition()
+ * Layer 3b). TWO designed caller classes (Wave 6 D3 T4 update — the
+ * original "system actor is the designed caller class" framing went
+ * stale when D3 added the second):
+ *   1. The pipeline orchestrator / sweep as a system actor
+ *      (received→extracting→classified, matched→needs_review) —
+ *      attribution via actingUserId(ctx) = the Path-X service-account
+ *      id (ADR-0007 Q78), not null.
+ *   2. The D3 approve→post route under the HUMAN reviewer's
+ *      ServiceContext (approved→committed, after
+ *      journalEntryService.post succeeds) — attribution =
+ *      the reviewer's user_id: honest causality, the reviewer's
+ *      approval caused the commit; the marking itself is mechanical
+ *      ("automation (ledger commit succeeds)", ADR-0011 §3), which is
+ *      why the edge stays AUTOMATION_ONLY at the transition() boundary
+ *      while the mechanism admits the human ctx.
+ * Org-scoping derives from the parent document_cases row (audit org_id
+ * = the case's own org_id; the RPC locks the row FOR UPDATE). See
+ * ADR-0007 §Tier 2 and the D3 brief D-3.3.
+ */
+export async function advanceCaseAutomation(
+  input: AdvanceCaseAutomationInputRaw,
+  ctx: ServiceContext | SystemActorServiceContext,
+): Promise<DocumentCase> {
+  const log = loggerWith({
+    trace_id: ctx.trace_id,
+    // user_id is string|null under the widened union; loggerWith wants
+    // string|undefined — the `?? undefined` shape per the N=2 precedent
+    // (vendorService.ts:128, documentRouterService.ts:779).
+    user_id: ctx.caller.user_id ?? undefined,
+  });
+
+  // Layer 2 boundary: Zod parse (.strict()).
+  let parsed;
+  try {
+    parsed = AdvanceCaseAutomationInputSchema.parse(input);
+  } catch (err) {
+    if (err instanceof Error) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `advanceCaseAutomation validation failed: ${err.message}`,
+      );
+    }
+    throw err;
+  }
+
+  const current = await readDocumentCase(parsed.document_case_id, ctx);
+  const target = parsed.target_state;
+
+  // Idempotent re-run tolerance: at/past target → no-op success.
+  if (PIPELINE_ORDER[current.state] >= PIPELINE_ORDER[target]) {
+    log.info(
+      {
+        document_case_id: current.id,
+        state: current.state,
+        target_state: target,
+      },
+      'advanceCaseAutomation no-op: case at/past target',
+    );
+    return current;
+  }
+
+  // Compute the hop path along the automation-owned edges. A walk that
+  // dead-ends (no automation edge from the cursor) means the path crosses
+  // a segment this function does not own.
+  const hops: Array<{ from: AllCaseStates; to: AllCaseStates }> = [];
+  let cursor: AllCaseStates = current.state;
+  while (cursor !== target) {
+    const next = AUTOMATION_ADVANCE_EDGES.get(cursor);
+    if (!next) {
+      throw new ServiceError(
+        'INVALID_TRANSITION',
+        cursor === 'classified'
+          ? `advanceCaseAutomation refuses classified→${target}: the ` +
+            `classified→{matched,needs_review} segment is owned by ` +
+            `Subsystem 2 (documentRouterService.resolveCandidates) — ` +
+            `single ownership by construction`
+          : `advanceCaseAutomation: no automation-owned path from ` +
+            `${current.state} to ${target} (owned edges: ` +
+            `received→extracting→classified, matched→needs_review, ` +
+            `approved→committed)`,
+      );
+    }
+    // Defense in depth: every owned edge must also be matrix-legal.
+    if (!(LEGAL_TRANSITIONS[cursor] ?? []).includes(next)) {
+      throw new ServiceError(
+        'INVALID_TRANSITION',
+        `advanceCaseAutomation: edge ${cursor}->${next} not in ADR-0011 §3 matrix`,
+      );
+    }
+    hops.push({ from: cursor, to: next });
+    cursor = next;
+  }
+
+  // Execute hop-by-hop: each hop its own audited RPC transaction (the
+  // post-hoc at-decision chain per the D2.1 brief; a mid-chain crash
+  // strands the case at the last persisted state — a named
+  // INV-WORKFLOW-002 residual, sweep-recoverable).
+  const db = adminClient();
+  for (const hop of hops) {
+    const { error } = await db.rpc('update_document_case_state_with_audit', {
+      p_case_id: current.id,
+      p_target_state: hop.to,
+      p_audit: {
+        org_id: current.org_id,
+        // Attribution per ADR-0007 Q78 Path X: humans → user_id; system
+        // actors → the service-account system_user_id (joinable identity,
+        // not null) via actingUserId.
+        user_id: actingUserId(ctx),
+        trace_id: ctx.trace_id,
+        action: 'document_case_transitioned',
+        entity_type: 'document_case',
+        tool_name: null,
+        reason: null,
+      },
+    });
+    if (error) {
+      throw new ServiceError(
+        'POST_FAILED',
+        `advanceCaseAutomation ${hop.from}->${hop.to} RPC failed: ${error.message}`,
+      );
+    }
+  }
+
+  const result = await readDocumentCase(current.id, ctx);
+  log.info(
+    {
+      document_case_id: result.id,
+      from_state: current.state,
+      to_state: result.state,
+      hops: hops.length,
+    },
+    'Document case advanced (automation)',
   );
   return result;
 }

@@ -50,6 +50,10 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the journal entry list';
     case 'proposed_entry_card':
       return 'a proposed entry awaiting approval';
+    case 'proposed_attachment_card':
+      return 'a proposed document attachment awaiting approval';
+    case 'proposed_rule_card':
+      return 'a proposed vendor-coding rule awaiting approval';
     case 'ai_action_review_queue':
       return 'the AI action review queue';
     case 'report_pl':
@@ -96,6 +100,10 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the recurring journal runs list';
     case 'none':
       return 'no canvas view';
+    case 'pending_documents':
+      return 'the pending documents queue';
+    case 'review_inbox':
+      return 'the document review inbox (approve/reject/resolve)';
     case 'user_profile':
       return 'the user profile editor';
     case 'org_profile':
@@ -116,5 +124,7 @@ function describeDirective(directive: CanvasDirective): string {
       return 'the AR aging report';
     case 'consolidated_dashboard':
       return 'the consolidated dashboard';
+    case 'rule_registry':
+      return 'the vendor rules registry';
   }
 }

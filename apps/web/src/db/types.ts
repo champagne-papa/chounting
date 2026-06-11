@@ -218,6 +218,50 @@ export type Database = {
           },
         ]
       }
+      autonomy_gate_log: {
+        Row: {
+          created_at: string
+          effective_action: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition: string | null
+          id: string
+          org_id: string
+          realized_outcome: string
+          seam_branch: string
+          source_document_id: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition?: string | null
+          id?: string
+          org_id: string
+          realized_outcome: string
+          seam_branch: string
+          source_document_id: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          gate_disposition?: string | null
+          id?: string
+          org_id?: string
+          realized_outcome?: string
+          seam_branch?: string
+          source_document_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autonomy_gate_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_number_last_four: string | null
@@ -927,7 +971,7 @@ export type Database = {
           document_case_id: string
           id: string
           link_role: Database["public"]["Enums"]["link_role"]
-          linked_entity_id: string
+          linked_entity_id: string | null
           linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
           org_id: string
           source_document_id: string
@@ -942,7 +986,7 @@ export type Database = {
           document_case_id: string
           id?: string
           link_role: Database["public"]["Enums"]["link_role"]
-          linked_entity_id: string
+          linked_entity_id?: string | null
           linked_entity_type: Database["public"]["Enums"]["linked_entity_type"]
           org_id: string
           source_document_id: string
@@ -957,7 +1001,7 @@ export type Database = {
           document_case_id?: string
           id?: string
           link_role?: Database["public"]["Enums"]["link_role"]
-          linked_entity_id?: string
+          linked_entity_id?: string | null
           linked_entity_type?: Database["public"]["Enums"]["linked_entity_type"]
           org_id?: string
           source_document_id?: string
@@ -1052,6 +1096,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
+      evidence_objects: {
+        Row: {
+          created_at: string
+          created_by: string
+          domain_extension: Json | null
+          id: string
+          org_id: string
+          status: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id: string
+          subject_type: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          domain_extension?: Json | null
+          id?: string
+          org_id: string
+          status: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id: string
+          subject_type: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          domain_extension?: Json | null
+          id?: string
+          org_id?: string
+          status?: Database["public"]["Enums"]["evidence_object_status"]
+          subject_id?: string
+          subject_type?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_objects_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1855,6 +1943,104 @@ export type Database = {
           },
         ]
       }
+      org_settings: {
+        Row: {
+          agent_verbosity_for_rules:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
+          ai_fallback_budget: number
+          calibration_cadence: number | null
+          calibration_test_set_version: string | null
+          classification_fallback_order: string[]
+          confidence_threshold_ambiguity_margin: number | null
+          confidence_threshold_payment_confirmation: number | null
+          confidence_threshold_receipt: number | null
+          confidence_threshold_vendor_invoice: number | null
+          created_at: string
+          default_initial_rung_for_new_rules:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
+          default_storage_provider: Database["public"]["Enums"]["storage_provider"]
+          gc_cadence: string
+          gc_threshold_hours: number
+          org_id: string
+          rule_proposal_threshold: number | null
+          rule_type_preference:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
+          sharepoint_drive_id: string | null
+          sharepoint_site_id: string | null
+          updated_at: string
+          vendor_match_threshold: number
+        }
+        Insert: {
+          agent_verbosity_for_rules?:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
+          ai_fallback_budget?: number
+          calibration_cadence?: number | null
+          calibration_test_set_version?: string | null
+          classification_fallback_order?: string[]
+          confidence_threshold_ambiguity_margin?: number | null
+          confidence_threshold_payment_confirmation?: number | null
+          confidence_threshold_receipt?: number | null
+          confidence_threshold_vendor_invoice?: number | null
+          created_at?: string
+          default_initial_rung_for_new_rules?:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
+          default_storage_provider?: Database["public"]["Enums"]["storage_provider"]
+          gc_cadence?: string
+          gc_threshold_hours?: number
+          org_id: string
+          rule_proposal_threshold?: number | null
+          rule_type_preference?:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
+          sharepoint_drive_id?: string | null
+          sharepoint_site_id?: string | null
+          updated_at?: string
+          vendor_match_threshold?: number
+        }
+        Update: {
+          agent_verbosity_for_rules?:
+            | Database["public"]["Enums"]["agent_verbosity_for_rules"]
+            | null
+          ai_fallback_budget?: number
+          calibration_cadence?: number | null
+          calibration_test_set_version?: string | null
+          classification_fallback_order?: string[]
+          confidence_threshold_ambiguity_margin?: number | null
+          confidence_threshold_payment_confirmation?: number | null
+          confidence_threshold_receipt?: number | null
+          confidence_threshold_vendor_invoice?: number | null
+          created_at?: string
+          default_initial_rung_for_new_rules?:
+            | Database["public"]["Enums"]["rule_autonomy_rung"]
+            | null
+          default_storage_provider?: Database["public"]["Enums"]["storage_provider"]
+          gc_cadence?: string
+          gc_threshold_hours?: number
+          org_id?: string
+          rule_proposal_threshold?: number | null
+          rule_type_preference?:
+            | Database["public"]["Enums"]["rule_type_preference"]
+            | null
+          sharepoint_drive_id?: string | null
+          sharepoint_site_id?: string | null
+          updated_at?: string
+          vendor_match_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+        ]
+      }
       organization_addresses: {
         Row: {
           address_id: string
@@ -2339,6 +2525,273 @@ export type Database = {
           },
         ]
       }
+      rule_branches: {
+        Row: {
+          applies_to_evaluation_triggers: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order: number
+          branch_type: Database["public"]["Enums"]["branch_type"]
+          id: string
+          max_outcome_action: Database["public"]["Enums"]["action_type"]
+          rule_id: string
+        }
+        Insert: {
+          applies_to_evaluation_triggers: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers?:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order: number
+          branch_type: Database["public"]["Enums"]["branch_type"]
+          id?: string
+          max_outcome_action: Database["public"]["Enums"]["action_type"]
+          rule_id: string
+        }
+        Update: {
+          applies_to_evaluation_triggers?: Database["public"]["Enums"]["trigger_type"][]
+          applies_to_source_triggers?:
+            | Database["public"]["Enums"]["trigger_type"][]
+            | null
+          branch_order?: number
+          branch_type?: Database["public"]["Enums"]["branch_type"]
+          id?: string
+          max_outcome_action?: Database["public"]["Enums"]["action_type"]
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_branches_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_conditions: {
+        Row: {
+          branch_id: string
+          condition_order: number
+          condition_type: Database["public"]["Enums"]["condition_type"]
+          condition_value: Json
+          id: string
+          target_field: string
+        }
+        Insert: {
+          branch_id: string
+          condition_order: number
+          condition_type: Database["public"]["Enums"]["condition_type"]
+          condition_value: Json
+          id?: string
+          target_field: string
+        }
+        Update: {
+          branch_id?: string
+          condition_order?: number
+          condition_type?: Database["public"]["Enums"]["condition_type"]
+          condition_value?: Json
+          id?: string
+          target_field?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_conditions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "rule_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_evaluation_log: {
+        Row: {
+          created_at: string
+          disposition: string | null
+          effective_action: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace: Json
+          id: string
+          match_classification: string
+          org_id: string
+          proposed_mutation_id: string | null
+          rule_id: string
+          trace_id: string
+          winning_branch_max_action:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          disposition?: string | null
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace: Json
+          id?: string
+          match_classification: string
+          org_id: string
+          proposed_mutation_id?: string | null
+          rule_id: string
+          trace_id: string
+          winning_branch_max_action?:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          disposition?: string | null
+          effective_action?: Database["public"]["Enums"]["action_type"] | null
+          evaluation_trace?: Json
+          id?: string
+          match_classification?: string
+          org_id?: string
+          proposed_mutation_id?: string | null
+          rule_id?: string
+          trace_id?: string
+          winning_branch_max_action?:
+            | Database["public"]["Enums"]["action_type"]
+            | null
+          winning_branch_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_evaluation_log_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
+      rule_registry: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_rung: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at: string | null
+          demoted_by: string | null
+          id: string
+          lifecycle_state: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name: string | null
+          org_id: string
+          predecessor_rule_id: string | null
+          promoted_at: string | null
+          promoted_by: string | null
+          retired_at: string | null
+          retired_by: string | null
+          rule_type: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_rung?: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at?: string | null
+          demoted_by?: string | null
+          id?: string
+          lifecycle_state: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name?: string | null
+          org_id: string
+          predecessor_rule_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          rule_type: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_rung?: Database["public"]["Enums"]["rule_autonomy_rung"]
+          demoted_at?: string | null
+          demoted_by?: string | null
+          id?: string
+          lifecycle_state?: Database["public"]["Enums"]["rule_lifecycle_state"]
+          name?: string | null
+          org_id?: string
+          predecessor_rule_id?: string | null
+          promoted_at?: string | null
+          promoted_by?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          rule_type?: Database["public"]["Enums"]["rule_type"]
+          successor_rule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_registry_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rule_registry_predecessor_rule_id_fkey"
+            columns: ["predecessor_rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_registry_successor_rule_id_fkey"
+            columns: ["successor_rule_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_track_records: {
+        Row: {
+          clean_approval_count: number
+          guardrail_confirmed_count: number
+          guardrail_fire_count: number
+          guardrail_resolved_into_primary_bounds_count: number
+          last_clean_approval_at: string | null
+          last_guardrail_fire_at: string | null
+          last_rejection_at: string | null
+          last_winning_match_at: string | null
+          model_version: string | null
+          rejection_count: number
+          rule_id: string
+        }
+        Insert: {
+          clean_approval_count?: number
+          guardrail_confirmed_count?: number
+          guardrail_fire_count?: number
+          guardrail_resolved_into_primary_bounds_count?: number
+          last_clean_approval_at?: string | null
+          last_guardrail_fire_at?: string | null
+          last_rejection_at?: string | null
+          last_winning_match_at?: string | null
+          model_version?: string | null
+          rejection_count?: number
+          rule_id: string
+        }
+        Update: {
+          clean_approval_count?: number
+          guardrail_confirmed_count?: number
+          guardrail_fire_count?: number
+          guardrail_resolved_into_primary_bounds_count?: number
+          last_clean_approval_at?: string | null
+          last_guardrail_fire_at?: string | null
+          last_rejection_at?: string | null
+          last_winning_match_at?: string | null
+          model_version?: string | null
+          rejection_count?: number
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_track_records_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: true
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_document_links: {
         Row: {
           created_at: string
@@ -2627,6 +3080,140 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_credit_applications: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at: string
+          created_by: string
+          id: string
+          org_id: string
+          trace_id: string
+          vendor_credit_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          applied_at: string
+          bill_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          org_id: string
+          trace_id: string
+          vendor_credit_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          applied_at?: string
+          bill_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          org_id?: string
+          trace_id?: string
+          vendor_credit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credit_applications_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_vendor_credit_id_fkey"
+            columns: ["vendor_credit_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_credits: {
+        Row: {
+          amount_cad: number
+          amount_original: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          fx_rate: number | null
+          id: string
+          issue_date: string
+          legal_entity_id: string | null
+          org_id: string
+          status: string
+          trace_id: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_cad: number
+          amount_original: number
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          issue_date: string
+          legal_entity_id?: string | null
+          org_id: string
+          status?: string
+          trace_id: string
+          vendor_id: string
+        }
+        Update: {
+          amount_cad?: number
+          amount_original?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          fx_rate?: number | null
+          id?: string
+          issue_date?: string
+          legal_entity_id?: string | null
+          org_id?: string
+          status?: string
+          trace_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credits_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credits_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_credits_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["vendor_id"]
+          },
+        ]
+      }
       vendor_prepayment_applications: {
         Row: {
           amount_cad: number
@@ -2787,10 +3374,9 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
-          autonomy_tier: Database["public"]["Enums"]["autonomy_tier"]
-          created_at: string
-          created_by: string | null
+          bundle_type: Database["public"]["Enums"]["bundle_type"]
           default_account_id: string | null
+          legal_entity_id: string | null
           org_id: string
           rule_id: string
           vendor_id: string
@@ -2798,10 +3384,9 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
-          autonomy_tier?: Database["public"]["Enums"]["autonomy_tier"]
-          created_at?: string
-          created_by?: string | null
+          bundle_type: Database["public"]["Enums"]["bundle_type"]
           default_account_id?: string | null
+          legal_entity_id?: string | null
           org_id: string
           rule_id?: string
           vendor_id: string
@@ -2809,10 +3394,9 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
-          autonomy_tier?: Database["public"]["Enums"]["autonomy_tier"]
-          created_at?: string
-          created_by?: string | null
+          bundle_type?: Database["public"]["Enums"]["bundle_type"]
           default_account_id?: string | null
+          legal_entity_id?: string | null
           org_id?: string
           rule_id?: string
           vendor_id?: string
@@ -2826,11 +3410,25 @@ export type Database = {
             referencedColumns: ["account_id"]
           },
           {
+            foreignKeyName: "vendor_rules_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
             foreignKeyName: "vendor_rules_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "vendor_rules_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
           },
           {
             foreignKeyName: "vendor_rules_vendor_id_fkey"
@@ -2892,6 +3490,120 @@ export type Database = {
           },
         ]
       }
+      workflow_events: {
+        Row: {
+          activity_key: string | null
+          ai_output: Json | null
+          event_type: Database["public"]["Enums"]["workflow_event_type"]
+          id: string
+          org_id: string
+          payload: Json
+          recorded_at: string
+          sequence_number: number
+          trace_id: string
+          workflow_instance_id: string
+        }
+        Insert: {
+          activity_key?: string | null
+          ai_output?: Json | null
+          event_type: Database["public"]["Enums"]["workflow_event_type"]
+          id?: string
+          org_id: string
+          payload: Json
+          recorded_at?: string
+          sequence_number?: number
+          trace_id: string
+          workflow_instance_id: string
+        }
+        Update: {
+          activity_key?: string | null
+          ai_output?: Json | null
+          event_type?: Database["public"]["Enums"]["workflow_event_type"]
+          id?: string
+          org_id?: string
+          payload?: Json
+          recorded_at?: string
+          sequence_number?: number
+          trace_id?: string
+          workflow_instance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "workflow_events_workflow_instance_id_fkey"
+            columns: ["workflow_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          definition_key: string
+          definition_version: string
+          id: string
+          learning_metadata: Json | null
+          org_id: string
+          parent_instance_id: string | null
+          started_at: string | null
+          state: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          definition_key: string
+          definition_version: string
+          id?: string
+          learning_metadata?: Json | null
+          org_id: string
+          parent_instance_id?: string | null
+          started_at?: string | null
+          state: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          definition_key?: string
+          definition_version?: string
+          id?: string
+          learning_metadata?: Json | null
+          org_id?: string
+          parent_instance_id?: string | null
+          started_at?: string | null
+          state?: Database["public"]["Enums"]["workflow_instance_state"]
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_instances_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       document_cards_view: {
@@ -2918,8 +3630,41 @@ export type Database = {
           },
         ]
       }
+      rule_evaluation_30d_view: {
+        Row: {
+          almost_match_count: number | null
+          disposition_auto_posted_count: number | null
+          disposition_blocked_count: number | null
+          disposition_pending_count: number | null
+          disposition_routed_count: number | null
+          effective_auto_post_rung_2_count: number | null
+          effective_auto_post_rung_3_count: number | null
+          effective_block_count: number | null
+          effective_route_count: number | null
+          effective_suggest_count: number | null
+          evaluation_count: number | null
+          guardrail_match_count: number | null
+          last_evaluated_at: string | null
+          org_id: string | null
+          primary_match_count: number | null
+          rule_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_evaluation_log_rule_registry_fk"
+            columns: ["rule_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "rule_registry"
+            referencedColumns: ["id", "org_id"]
+          },
+        ]
+      }
     }
     Functions: {
+      approve_vendor_rule_atomic: {
+        Args: { p_approved_by: string; p_org_id: string; p_rule_id: string }
+        Returns: string
+      }
       attach_document_case_source_with_audit: {
         Args: { p_audit: Json; p_link: Json }
         Returns: string
@@ -2966,6 +3711,15 @@ export type Database = {
       }
       create_source_document_with_audit: {
         Args: { p_audit: Json; p_source_document: Json }
+        Returns: string
+      }
+      create_vendor_rule_atomic: {
+        Args: {
+          p_branches?: Json
+          p_registry: Json
+          p_track_record: Json
+          p_vendor_rule: Json
+        }
         Returns: string
       }
       enqueue_exception_with_audit: {
@@ -3072,8 +3826,15 @@ export type Database = {
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
       accounting_framework: "aspe" | "ifrs" | "us_gaap" | "other"
+      action_type:
+        | "auto_post_at_rung_2"
+        | "auto_post_at_rung_3"
+        | "suggest_with_required_approval"
+        | "route_to_exception_queue_with_reason"
+        | "block_with_reason"
       address_type: "mailing" | "physical" | "registered" | "payment_stub"
       adjustment_status: "posted" | "pending_approval" | "approved" | "rejected"
+      agent_verbosity_for_rules: "terse" | "standard" | "educational"
       ai_action_status:
         | "pending"
         | "confirmed"
@@ -3081,7 +3842,6 @@ export type Database = {
         | "auto_posted"
         | "stale"
         | "edited"
-      autonomy_tier: "always_confirm" | "notify_auto" | "silent"
       bill_lifecycle_state:
         | "draft"
         | "pending_approval"
@@ -3090,6 +3850,11 @@ export type Database = {
         | "fully_paid"
         | "voided"
         | "cancelled"
+      branch_type: "primary" | "otherwise_if"
+      bundle_type:
+        | "born_paid_bill"
+        | "final_invoice_with_applied_deposit"
+        | "vendor_credit_applied_to_bill"
       business_structure:
         | "sole_prop"
         | "partnership"
@@ -3105,6 +3870,17 @@ export type Database = {
         | "drift_controller_override"
         | "drift_rejected_kept_original"
         | "unknown_drift"
+      condition_type:
+        | "field_equals"
+        | "field_in_range"
+        | "field_outside_range"
+        | "field_in_set"
+        | "field_matches_pattern"
+        | "source_trigger_equals"
+        | "schedule_matches"
+        | "cadence_matches"
+        | "semantic_match_above_threshold"
+        | "category_classification_matches"
       confidence_level: "high" | "medium" | "low" | "novel"
       document_artifact_engine: "paddleocr" | "tesseract" | "claude_vision_3_5"
       document_case_source_role:
@@ -3151,6 +3927,7 @@ export type Database = {
         | "payroll_document"
         | "asset_purchase_support"
       entry_type: "regular" | "adjusting" | "closing" | "reversing"
+      evidence_object_status: "reserved" | "partial" | "complete"
       exception_reason:
         | "manual_route"
         | "low_confidence_classification"
@@ -3160,6 +3937,9 @@ export type Database = {
         | "invariant_violation"
         | "wrong_entity_exception"
         | "drift_detected"
+        | "ai_fallback_validation_failed"
+        | "bundle_partial_commit_reconciliation_pending"
+        | "provider_unavailable"
       exception_status: "open" | "resolved" | "cancelled"
       ingest_channel:
         | "drag_drop_pdf"
@@ -3285,6 +4065,17 @@ export type Database = {
         | "route_to_bank_reconciliation"
         | "route_to_AR_future"
         | "backfill_vendor_prepayment_suggested"
+      rule_autonomy_rung:
+        | "always_confirm"
+        | "notify_and_auto_post"
+        | "silent_auto"
+      rule_lifecycle_state: "proposed" | "active" | "demoted" | "retired"
+      rule_type: "pattern" | "temporal" | "inferential"
+      rule_type_preference:
+        | "pattern_preferred"
+        | "temporal_preferred"
+        | "inferential_preferred"
+        | "no_preference"
       storage_provider:
         | "supabase_storage"
         | "sharepoint_drive"
@@ -3303,6 +4094,15 @@ export type Database = {
         | "at_final_invoice"
         | "review_required"
         | "controller_chooses_per_invoice"
+      trigger_type:
+        | "proposed_mutation_generated"
+        | "proposed_mutation_bundle_generated"
+        | "scheduled_time_occurs"
+        | "external_event_ingested"
+        | "user_drag_drop"
+        | "user_form_submit"
+        | "user_palette_action"
+        | "agent_proposal"
       user_role: "executive" | "controller" | "ap_specialist"
       vendor_prepayment_status:
         | "open"
@@ -3320,6 +4120,20 @@ export type Database = {
         | "prepaid_service"
         | "inventory_deposit"
         | "fixed_asset_deposit"
+      workflow_event_type:
+        | "activity_started"
+        | "activity_completed"
+        | "activity_failed"
+        | "compensation_started"
+        | "compensation_completed"
+        | "ai_step_recorded"
+      workflow_instance_state:
+        | "pending"
+        | "running"
+        | "completed"
+        | "compensating"
+        | "compensated"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3452,8 +4266,16 @@ export const Constants = {
     Enums: {
       account_type: ["asset", "liability", "equity", "revenue", "expense"],
       accounting_framework: ["aspe", "ifrs", "us_gaap", "other"],
+      action_type: [
+        "auto_post_at_rung_2",
+        "auto_post_at_rung_3",
+        "suggest_with_required_approval",
+        "route_to_exception_queue_with_reason",
+        "block_with_reason",
+      ],
       address_type: ["mailing", "physical", "registered", "payment_stub"],
       adjustment_status: ["posted", "pending_approval", "approved", "rejected"],
+      agent_verbosity_for_rules: ["terse", "standard", "educational"],
       ai_action_status: [
         "pending",
         "confirmed",
@@ -3462,7 +4284,6 @@ export const Constants = {
         "stale",
         "edited",
       ],
-      autonomy_tier: ["always_confirm", "notify_auto", "silent"],
       bill_lifecycle_state: [
         "draft",
         "pending_approval",
@@ -3471,6 +4292,12 @@ export const Constants = {
         "fully_paid",
         "voided",
         "cancelled",
+      ],
+      branch_type: ["primary", "otherwise_if"],
+      bundle_type: [
+        "born_paid_bill",
+        "final_invoice_with_applied_deposit",
+        "vendor_credit_applied_to_bill",
       ],
       business_structure: [
         "sole_prop",
@@ -3488,6 +4315,18 @@ export const Constants = {
         "drift_controller_override",
         "drift_rejected_kept_original",
         "unknown_drift",
+      ],
+      condition_type: [
+        "field_equals",
+        "field_in_range",
+        "field_outside_range",
+        "field_in_set",
+        "field_matches_pattern",
+        "source_trigger_equals",
+        "schedule_matches",
+        "cadence_matches",
+        "semantic_match_above_threshold",
+        "category_classification_matches",
       ],
       confidence_level: ["high", "medium", "low", "novel"],
       document_artifact_engine: ["paddleocr", "tesseract", "claude_vision_3_5"],
@@ -3539,6 +4378,7 @@ export const Constants = {
         "asset_purchase_support",
       ],
       entry_type: ["regular", "adjusting", "closing", "reversing"],
+      evidence_object_status: ["reserved", "partial", "complete"],
       exception_reason: [
         "manual_route",
         "low_confidence_classification",
@@ -3548,6 +4388,9 @@ export const Constants = {
         "invariant_violation",
         "wrong_entity_exception",
         "drift_detected",
+        "ai_fallback_validation_failed",
+        "bundle_partial_commit_reconciliation_pending",
+        "provider_unavailable",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       ingest_channel: [
@@ -3683,6 +4526,19 @@ export const Constants = {
         "route_to_AR_future",
         "backfill_vendor_prepayment_suggested",
       ],
+      rule_autonomy_rung: [
+        "always_confirm",
+        "notify_and_auto_post",
+        "silent_auto",
+      ],
+      rule_lifecycle_state: ["proposed", "active", "demoted", "retired"],
+      rule_type: ["pattern", "temporal", "inferential"],
+      rule_type_preference: [
+        "pattern_preferred",
+        "temporal_preferred",
+        "inferential_preferred",
+        "no_preference",
+      ],
       storage_provider: [
         "supabase_storage",
         "sharepoint_drive",
@@ -3704,6 +4560,16 @@ export const Constants = {
         "review_required",
         "controller_chooses_per_invoice",
       ],
+      trigger_type: [
+        "proposed_mutation_generated",
+        "proposed_mutation_bundle_generated",
+        "scheduled_time_occurs",
+        "external_event_ingested",
+        "user_drag_drop",
+        "user_form_submit",
+        "user_palette_action",
+        "agent_proposal",
+      ],
       user_role: ["executive", "controller", "ap_specialist"],
       vendor_prepayment_status: [
         "open",
@@ -3722,6 +4588,22 @@ export const Constants = {
         "prepaid_service",
         "inventory_deposit",
         "fixed_asset_deposit",
+      ],
+      workflow_event_type: [
+        "activity_started",
+        "activity_completed",
+        "activity_failed",
+        "compensation_started",
+        "compensation_completed",
+        "ai_step_recorded",
+      ],
+      workflow_instance_state: [
+        "pending",
+        "running",
+        "completed",
+        "compensating",
+        "compensated",
+        "failed",
       ],
     },
   },

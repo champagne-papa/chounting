@@ -185,6 +185,9 @@ async function post(
       reference: parsed.reference ?? null,
       source: parsed.source,
       source_system: parsed.source,
+      // Wave 6 D3 — dedup key for idx_je_source_external (null for
+      // every caller that doesn't set it; the partial index skips NULL).
+      source_external_id: parsed.source_external_id ?? null,
       idempotency_key: parsed.idempotency_key ?? null,
       reverses_journal_entry_id,
       reversal_reason,
@@ -214,6 +217,19 @@ async function post(
   });
 
   if (error || !data?.[0]) {
+    // Wave 6 D3 — typed already-posted discriminant, keyed on the
+    // CONSTRAINT NAME (not bare 23505): journal_entries has a second
+    // 23505 source (unique_entry_number_per_org_period, concurrent
+    // entry-number collision) that must stay POST_FAILED — keying on
+    // the name keeps an entry-number collision from being
+    // mis-recovered as already-posted by the approve→post route.
+    if (error?.message?.includes('idx_je_source_external')) {
+      log.error({ error }, 'Journal entry duplicate source_external_id');
+      throw new ServiceError(
+        'DUPLICATE_SOURCE_EXTERNAL_ID',
+        `journal entry already posted for this source_external_id: ${error.message}`,
+      );
+    }
     log.error({ error }, 'Journal entry RPC failed');
     throw new ServiceError('POST_FAILED', error?.message ?? 'RPC failed');
   }
@@ -567,6 +583,34 @@ async function getEntryNumbersBatch(
   return out;
 }
 
+// Recovery read (Wave 6 D-4 dup-catch): resolve a posted JE by its
+// per-child dedup key when billService.post / paymentService.record
+// reported DUPLICATE_SOURCE_EXTERNAL_ID. Hoisted from the approve-post
+// route (ADR-0020; adminClient is services-only). Error code + message
+// are byte-identical to the pre-hoist route lookup. Wrapped via
+// withInvariants at the export (org access via Invariant 3), matching
+// the read-wrapping convention of list/get below.
+async function lookupBySourceExternalId(
+  input: { org_id: string; source_external_id: string },
+  _ctx: ServiceContext,
+): Promise<string> {
+  const db = adminClient();
+  const { data: existing, error: lookupErr } = await db
+    .from('journal_entries')
+    .select('journal_entry_id')
+    .eq('org_id', input.org_id)
+    .eq('source_system', 'manual')
+    .eq('source_external_id', input.source_external_id)
+    .single();
+  if (lookupErr || !existing) {
+    throw new ServiceError(
+      'POST_FAILED',
+      `already-posted lookup failed for ${input.source_external_id}: ${lookupErr?.message ?? 'no row'}`,
+    );
+  }
+  return existing.journal_entry_id as string;
+}
+
 export const journalEntryService = {
   // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'journal_entry.post' + 'journal_entry.adjust' variant); also wrapped service-to-service in recurringJournalService.approveRun for defense-in-depth)
   post,
@@ -574,4 +618,5 @@ export const journalEntryService = {
   get: withInvariants(get),
   getEntryNumber: withInvariants(getEntryNumber),
   getEntryNumbersBatch: withInvariants(getEntryNumbersBatch),
+  lookupBySourceExternalId: withInvariants(lookupBySourceExternalId),
 };

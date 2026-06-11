@@ -146,6 +146,12 @@ export async function recordMutation(
 ): Promise<void> {
   const { error } = await db.from('audit_log').insert({
     org_id: entry.org_id,
+    // Commit-path attribution (auto-commit arc, ADR-0007 Q78 Path X) is
+    // handled upstream by withInvariants, which adapts a system actor to a
+    // verified service-account ServiceContext before the mutation runs — so
+    // ctx.caller.user_id is the service-account uuid here for auto-committed
+    // ledger writes. Non-commit system-actor audits (e.g. the mailbox
+    // webhook) keep user_id=null as before.
     user_id: ctx.caller.user_id,
     trace_id: ctx.trace_id,
     action: entry.action,

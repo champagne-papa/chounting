@@ -1,11 +1,26 @@
 // src/components/bridge/ContextualCanvas.tsx
-// The right-pane canvas. Renders whatever directive it was last given.
-// Maintains its OWN navigation history (back/forward arrows in the
-// canvas header) — completely separate from chat history.
+// The right-pane canvas. Renders the active tab's directive content.
+//
+// Phase 6.5 chunk 2a (Session 10a): navigation history lifted to
+// parent SplitScreenLayout per Sub-Q11.b.α tab data model state lift.
+// ContextualCanvas is now a pure render-from-Props component — the
+// `directive`, `history` position (via `historyPositionLabel`), and
+// back/forward navigation (`canGoBack`/`canGoForward` + `onGoBack`/
+// `onGoForward` callbacks) all flow from parent. Pre-chunk-2 internal
+// `useState<CanvasDirective[]>([directive])` + `useState(0)` for
+// historyIndex + useEffect sync all removed; this component holds no
+// navigation state of its own.
+//
+// At chunk-2a, the parent (SplitScreenLayout) holds a single tab by
+// default and routes all per-source callbacks through an append-to-
+// active-tab semantic (degenerate Pattern γ); user-visible behavior
+// is identical to pre-chunk-2 single-history-stack. At chunk-2b,
+// the parent diverges per-source semantics per Pattern γ Rules 1-4
+// and mounts the CanvasTabStrip UI.
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import type { CanvasDirective, CanvasNavigateFn } from '@/shared/types/canvasDirective';
 import type { SelectedEntity } from '@/shared/types/canvasContext';
@@ -13,6 +28,9 @@ import { ChartOfAccountsView } from '@/components/canvas/ChartOfAccountsView';
 import { JournalEntryListView } from '@/components/canvas/JournalEntryListView';
 import { ComingSoonPlaceholder } from '@/components/canvas/ComingSoonPlaceholder';
 import { ProposedEntryCard } from '@/components/ProposedEntryCard';
+import { ProposedRuleCard } from '@/components/ProposedRuleCard';
+import { RuleRegistryView } from '@/components/canvas/RuleRegistryView';
+import { ProposedAttachmentCard } from '@/components/canvas/ProposedAttachmentCard';
 import { JournalEntryForm } from '@/components/canvas/JournalEntryForm';
 import { JournalEntryDetailView } from '@/components/canvas/JournalEntryDetailView';
 import { ReversalForm } from '@/components/canvas/ReversalForm';
@@ -39,9 +57,16 @@ import { BillReverseCard } from '@/components/canvas/BillReverseCard';
 import { UserProfileEditor } from '@/components/canvas/UserProfileEditor';
 import { OrgProfileEditor } from '@/components/canvas/OrgProfileEditor';
 import { OrgUsersView } from '@/components/canvas/OrgUsersView';
+import { PendingDocumentsView } from '@/components/canvas/PendingDocumentsView';
+import { ReviewInboxView } from '@/components/canvas/ReviewInboxView';
 
 interface Props {
   directive: CanvasDirective;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  historyPositionLabel: string;
+  onGoBack: () => void;
+  onGoForward: () => void;
   onDirectiveChange: (d: CanvasDirective) => void;
   onSelectEntity?: (entity: SelectedEntity) => void;
 }
@@ -63,61 +88,40 @@ function WelcomeNavigator() {
   return <ComingSoonPlaceholder directiveType="welcome" />;
 }
 
-export function ContextualCanvas({ directive, onDirectiveChange, onSelectEntity }: Props) {
-  const [history, setHistory] = useState<CanvasDirective[]>([directive]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-
-  // Sync external directive changes into local history
-  useEffect(() => {
-    if (directive !== history[historyIndex]) {
-      const newHistory = [...history.slice(0, historyIndex + 1), directive];
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-    }
-  }, [directive]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function goBack() {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      onDirectiveChange(history[newIndex]);
-    }
-  }
-
-  function goForward() {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      onDirectiveChange(history[newIndex]);
-    }
-  }
-
+export function ContextualCanvas({
+  directive,
+  canGoBack,
+  canGoForward,
+  historyPositionLabel,
+  onGoBack,
+  onGoForward,
+  onDirectiveChange,
+  onSelectEntity,
+}: Props) {
   return (
     <main className="flex-1 flex flex-col overflow-hidden bg-white">
       <div className="h-10 border-b border-neutral-200 flex items-center px-3 gap-2">
         <button
-          onClick={goBack}
-          disabled={historyIndex === 0}
+          onClick={onGoBack}
+          disabled={!canGoBack}
           className="px-2 py-1 text-sm rounded hover:bg-neutral-100 disabled:opacity-30"
           aria-label="Canvas back"
         >
           &larr;
         </button>
         <button
-          onClick={goForward}
-          disabled={historyIndex >= history.length - 1}
+          onClick={onGoForward}
+          disabled={!canGoForward}
           className="px-2 py-1 text-sm rounded hover:bg-neutral-100 disabled:opacity-30"
           aria-label="Canvas forward"
         >
           &rarr;
         </button>
-        <div className="text-xs text-neutral-500 ml-2">
-          {historyIndex + 1} / {history.length}
-        </div>
+        <div className="text-xs text-neutral-500 ml-2">{historyPositionLabel}</div>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {renderDirective(history[historyIndex], onDirectiveChange, onSelectEntity)}
+        {renderDirective(directive, onDirectiveChange, onSelectEntity)}
       </div>
     </main>
   );
@@ -208,12 +212,22 @@ function renderDirective(
       return <PendingApprovalsView orgId={d.orgId} onNavigate={onNavigate} onSelectEntity={onSelectEntity} />;
     case 'proposed_entry_card':
       return <ProposedEntryCard card={d.card} />;
+    case 'proposed_attachment_card':
+      return <ProposedAttachmentCard card={d.card} />;
     case 'none':
       return (
         <div className="text-neutral-400 text-sm">
-          Use the Mainframe rail on the left to choose a view.
+          Pick a view from the left panel to get started.
         </div>
       );
+
+    // Phase 6.5 chunk 3 — pending documents queue surface.
+    case 'pending_documents':
+      return <PendingDocumentsView orgId={d.orgId} ingestBatchId={d.ingestBatchId} />;
+
+    // Wave 6 D3 T7 — review inbox (approve→post / reject / resolve).
+    case 'review_inbox':
+      return <ReviewInboxView orgId={d.orgId} />;
 
     // Phase 1.2 Session 6 — form-escape surfaces.
     case 'user_profile':
@@ -226,6 +240,13 @@ function renderDirective(
       return <OrgUsersView orgId={d.orgId} initialMode="invite" />;
     case 'welcome':
       return <WelcomeNavigator />;
+
+    // Ring 2A-authoring (ADR-0026 §3/§8) — the rule-draft card + the registry
+    // canvas (RuleRegistryView shipped at Ring 2A-core, wired to nav here).
+    case 'proposed_rule_card':
+      return <ProposedRuleCard card={d.card} onNavigate={onNavigate} />;
+    case 'rule_registry':
+      return <RuleRegistryView orgId={d.orgId} />;
 
     // Phase 2+ directive types — render placeholder
     case 'ai_action_review_queue':

@@ -194,7 +194,8 @@ the 3 sites are deleted in one pass.
 
 - `phase_simplifications.md` — Phase 1 deliberate divergences from
   the long-term target.
-- `system_overview.md` — major components and folder tree (will
-  be updated in a future pass to reflect the apps/web layout).
+- `system_overview.md` — major components + how the source is
+  organized (body refreshed 2026-06-07 at the post-V1 doc-refresh
+  arc; the folder tree retired to `folder-structure.md`).
 - `agent_interface.md` — durable agent contract.
 - `ui_architecture.md` — split-screen shell, canvas directive.

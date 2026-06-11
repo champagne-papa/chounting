@@ -1,3 +1,43 @@
+> **STATUS — SUPERSEDED 2026-05-16**
+>
+> This triage-bucket-intake-rail vision is superseded by the
+> chat-input drop entry-point shipped at Phase 6.5 amendment
+> cycle (cycle closeout 2026-05-16 at commit 79a6ceb).
+>
+> Per Phase 6.5 substrate cuts:
+>
+> - Cut 1 (Flow (a) substrate exclusively at v1; Flow (b)
+>   deferred past v1)
+> - Sub-Q4 lock (DocumentIntakeRail removed entirely;
+>   PendingDocumentsView ports the `idle_with_recent_cards`
+>   state machine to chat-drop entry-point at Phase 6.5 chunk 3)
+> - Sub-Q9 lock (staged-with-explicit-ingest at chat input;
+>   tray above input per Sub-Q9.b.α; unified Send fires both
+>   ingest + chat message per Sub-Q9.c.α)
+> - Sub-Q11 Cut 9 (drop opens new canvas tab with
+>   PendingDocumentsView per Pattern γ source-driven routing)
+>
+> The intake-rail vision in this document operated on Phase 2
+> brief-stub grain (2026-04-16 capture; not yet scoped, not
+> yet specified beyond this stub). Phase 6.5 reframed intake
+> as chat-input-drop entry-point per token-economy reframe
+> (cycle closeout brief §2.1) — backend-routing-driven AI
+> agent invocation on document drop, not UI-rail-driven.
+>
+> The PendingDocumentsView state machine
+> (`idle_with_recent_cards` / `showing_batch` transitions)
+> inherits semantic structure from this document's vision-of-
+> pending-mutations-moving-into-Lifecycle-View. Implementation
+> in Phase 6.5 chunk 3 per chunk-3 brief (Session 11; not yet
+> drafted).
+>
+> Cross-reference: cycle closeout brief at
+> `docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`
+>
+> This `triage_bucket_intake.md` document preserved as
+> historical record per ADR-0022 §2 supersession discipline.
+> All content below this header is unchanged.
+
 # Triage Bucket Intake — Phase 2 Brief
 
 A vertical intake rail on the far right of the canvas. Users

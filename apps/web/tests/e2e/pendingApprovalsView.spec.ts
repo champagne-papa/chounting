@@ -10,7 +10,7 @@
 // E2E execution is informational (founder-review-workflow grain) — NOT
 // a chunk-close gate.
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID, LOCALE } from './fixtures/auth';
 import {
   seedTestVendor,

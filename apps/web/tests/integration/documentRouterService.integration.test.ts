@@ -108,17 +108,21 @@ async function seedOpenBill(
       | 'fully_paid'
       | 'voided'
       | 'cancelled';
+    issueDate?: string;
+    billNumber?: string;
   } = {},
 ): Promise<string> {
   const billId = crypto.randomUUID();
-  const { error } = await db.from('bills').insert({
+  const insert: Record<string, unknown> = {
     bill_id: billId,
     org_id: orgId,
     vendor_id: vendorId,
-    issue_date: '2026-05-13',
+    issue_date: opts.issueDate ?? '2026-05-13',
     lifecycle_state: opts.lifecycleState ?? 'approved_for_payment',
     amount_cad: opts.amount ?? 1000,
-  });
+  };
+  if (opts.billNumber !== undefined) insert.bill_number = opts.billNumber;
+  const { error } = await db.from('bills').insert(insert);
   if (error) throw new Error(`seedOpenBill failed: ${error.message}`);
   return billId;
 }
@@ -130,17 +134,25 @@ async function seedOpenPayment(
   opts: {
     amount?: number;
     paymentState?: 'pending' | 'paid' | 'failed';
+    paymentDate?: string;
+    authorizationReference?: string;
+    paymentMethod?: 'check' | 'eft' | 'wire' | 'cash' | 'other';
   } = {},
 ): Promise<string> {
   const paymentId = crypto.randomUUID();
-  const { error } = await db.from('payments').insert({
+  const insert: Record<string, unknown> = {
     payment_id: paymentId,
     org_id: orgId,
     vendor_id: vendorId,
-    payment_date: '2026-05-13',
+    payment_date: opts.paymentDate ?? '2026-05-13',
     amount: opts.amount ?? 1000,
     payment_state: opts.paymentState ?? 'pending',
-  });
+  };
+  if (opts.authorizationReference !== undefined) {
+    insert.authorization_reference = opts.authorizationReference;
+  }
+  if (opts.paymentMethod !== undefined) insert.payment_method = opts.paymentMethod;
+  const { error } = await db.from('payments').insert(insert);
   if (error) throw new Error(`seedOpenPayment failed: ${error.message}`);
   return paymentId;
 }
@@ -233,7 +245,10 @@ describe('documentRouterService.completeCandidate — happy-path Subsystem 1 mat
     expect(result[0].linked_entity_type).toBe('bill');
     expect(result[0].linked_entity_id).toBe(billId);
     expect(result[0].link_role).toBe('primary_invoice');
-    expect(result[0].confidence_score).toBeGreaterThanOrEqual(0.85);
+    // Chunk 3 multi-feature scoring: vendor_match.confidence (0.95) × 0.30 weight
+    // + amount_match (true from default fixture) × 0.30 weight = ~0.585; no
+    // date/invoice_number/payment_method extracted_fields in default fixture.
+    expect(result[0].confidence_score).toBeGreaterThanOrEqual(0.5);
     expect(result[0].document_case_id).toBe(fixture.caseId);
     expect(result[0].source_document_id).toBe(fixture.sourceDocId);
     expect(result[0].org_id).toBe(SEED.ORG_HOLDING);
@@ -258,13 +273,25 @@ describe('documentRouterService.completeCandidate — happy-path Subsystem 1 mat
     }
   });
 
-  it('vendor_invoice + zero open bills for vendor → returns empty array (NOT an error)', async () => {
+  it('vendor_invoice + zero open bills for vendor → returns one Scenario A inferred-target candidate (chunk 4)', async () => {
+    // Chunk 4 (Phase 8) ships Scenario A inferred-target emission per
+    // ADR-0015 §7 + brief §2.4 F-3 scope (a): when no existing bill
+    // matches, completeCandidate emits one candidate with
+    // linked_entity_type='bill' + linked_entity_id=null signaling
+    // "create new bill" (invoice-arrives-no-bill-yet). Pre-chunk-4 this
+    // path returned an empty array; chunk 4 changes the semantic so the
+    // routing decision (attach-to-existing vs create-new) materializes
+    // at Subsystem 2.
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     // No bills seeded.
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].link_role).toBe('primary_invoice');
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 
   it('receipt + open payment for vendor → returns (payment, payment_evidence) candidate (Scenario A)', async () => {
@@ -412,23 +439,29 @@ describe('documentRouterService.completeCandidate — Tier 2.5 read filter contr
     expect(result[0].linked_entity_id).toBe(includedId);
   });
 
-  it('vendor_prepayments in refunded/fully_applied status — read helper filters correctly (verified via no-match scenario)', async () => {
+  it('vendor_prepayments in refunded/fully_applied status — read helper filters correctly (verified via inferred-target-only scenario)', async () => {
     // chunk-1 Subsystem 1 does NOT produce prepayment candidates from
     // vendor_invoice / receipt / payment_confirmation document_types
     // (no prepayment pair in chunk-5's VALID_PAIRS for these doc_types
     // at v1). The filter contract is verified by the helper's SQL
     // (status IN ('open', 'partially_applied')); this test confirms
-    // the helper at least runs without error against a vendor with
-    // mixed-status prepayments and that no candidates are produced.
+    // the helper runs without error against a vendor with mixed-status
+    // prepayments and that no Scenario B (bill/payment) candidates are
+    // produced. Chunk 4 adds Scenario A inferred-target emission so the
+    // result carries one (bill, null) candidate signaling create-new-bill.
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
     await seedOpenPrepayment(db, SEED.ORG_HOLDING, fixture.vendorId, { status: 'refunded' });
     await seedOpenPrepayment(db, SEED.ORG_HOLDING, fixture.vendorId, { status: 'fully_applied' });
-    // No bills/payments seeded — vendor_invoice should produce zero candidates.
+    // No bills/payments seeded — vendor_invoice should produce only the
+    // Scenario A inferred-target (no Scenario B existing-bill matches).
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 
   it('listLinksForCaseSourceDocuments excludes already-linked bills (double-routing detection)', async () => {
@@ -452,8 +485,15 @@ describe('documentRouterService.completeCandidate — Tier 2.5 read filter contr
 
     const result = await completeCandidate(buildInput(fixture, ctx), ctx);
 
-    // Already-linked → no candidate produced (double-routing prevention).
-    expect(result).toHaveLength(0);
+    // Already-linked → no Scenario B candidate (double-routing prevention
+    // at chunk-1 + chunk-5 substrate). Chunk 4 still emits the Scenario A
+    // inferred-target — the inferred target signals create-new-bill, which
+    // is structurally distinct from attach-to-existing-bill and so does not
+    // collide with the existing source_document_links row.
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].candidate_features.scenario).toBe('invoice_inferred_target');
   });
 });
 
@@ -525,16 +565,23 @@ describe('documentRouterService.completeCandidate — audit-log cardinality (chu
     expect(auditRow!.entity_type).toBe('document_relationship_candidate');
   });
 
-  it('zero candidates produced → zero audit_log rows (M4 explicit callout)', async () => {
-    // Use a local context with a fresh trace_id to isolate the
-    // assertion from sibling tests in this describe block (which share
-    // the outer ctx.trace_id and accumulate audit_log rows).
+  it('Scenario A inferred-target produced → one audit_log row (M4 explicit callout, chunk 4 semantic)', async () => {
+    // Chunk 4 (Phase 8) replaces the pre-chunk-4 "zero candidates → zero
+    // audit_log rows" framing: when no existing entity matches, the
+    // Scenario A inferred-target emits one candidate (linked_entity_id=
+    // null) and the atomic RPC writes one audit_log row. The 1:1 audit
+    // cardinality with emitted candidates per the M4 callout is preserved.
+    //
+    // Use a local context with a fresh trace_id to isolate the assertion
+    // from sibling tests in this describe block (which share the outer
+    // ctx.trace_id and accumulate audit_log rows).
     const localCtx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, localCtx);
-    // No bills/payments seeded — zero matches.
+    // No bills/payments seeded — Scenario A inferred-target only.
 
     const result = await completeCandidate(buildInput(fixture, localCtx), localCtx);
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBeNull();
 
     const db = adminClient();
     const { data: auditRows } = await db
@@ -542,7 +589,7 @@ describe('documentRouterService.completeCandidate — audit-log cardinality (chu
       .select('audit_log_id')
       .eq('trace_id', localCtx.trace_id)
       .eq('action', 'document_relationship_candidate_created');
-    expect(auditRows).toHaveLength(0);
+    expect(auditRows).toHaveLength(1);
 
     // Clean up local trace_id rows (audit_log only; document_cases is
     // append-only via chunks-1-2 trigger).
@@ -807,5 +854,505 @@ describe('documentRouterService.completeCandidate — RPC atomicity (chunk 1)', 
     expect(error!.message).toMatch(
       /document_relationship_candidates_confidence_score_v1_active/,
     );
+  });
+});
+
+// =====================================================================
+// Describe 9 — Phase 8 chunk 2 per-feature contribution surface expansion
+// (vendor_invoice + receipt + payment_confirmation per-feature signals at
+// candidate_features JSONB grade; Scenario A inferred-target + Scenario A
+// variant null linked_entity_id paths DEFERRED to chunk 4 per F-3 substrate
+// change scope discipline; VALID_PAIRS-based pair-validity emission
+// assertion per chunk 2 brief Task 4 §B.1 amendment Path β preliminary
+// recommendation)
+// =====================================================================
+
+describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-feature contribution surface expansion', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(async () => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  // Helpers for chunk 3 structured candidate_features shape (per
+  // CandidateFeaturesSchema at apps/web/src/shared/schemas/document-platform/
+  // candidate_features.schema.ts). chunk 2's flat feature_*_match keys are
+  // now inside per-feature record raw_value fields per axis.
+  function getFeature(
+    features: unknown,
+    name: string,
+  ): { raw_value: unknown; normalized_score: number; weight: number; contribution: number } | undefined {
+    const arr = (features as { features?: Array<{ feature_name: string; raw_value: unknown; normalized_score: number; weight: number; contribution: number }> })
+      .features;
+    return arr?.find((f) => f.feature_name === name);
+  }
+
+  function getRawValue<T = Record<string, unknown>>(features: unknown, name: string): T | undefined {
+    return getFeature(features, name)?.raw_value as T | undefined;
+  }
+
+  it('vendor_invoice + matching extracted amount + date → candidate_features carries per-feature contributions (match=true)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+      billNumber: 'BILL-001',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: {
+          invoice_amount: 1000,
+          invoice_date: '2026-05-13',
+          invoice_number: 'BILL-001',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(billId);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean; diff_cad: number }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    expect(amountRaw?.diff_cad).toBe(0);
+    const dateRaw = getRawValue<{ proximity_days: number; within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(0);
+    expect(dateRaw?.within_window_14d).toBe(true);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
+  });
+
+  it('vendor_invoice + non-matching extracted amount → amount_match=false; diff_cad=200', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: { invoice_amount: 1200, invoice_date: '2026-05-13' },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean; diff_cad: number }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(false);
+    expect(amountRaw?.diff_cad).toBe(200);
+  });
+
+  it('vendor_invoice + date outside 14-day window → date_within_window_14d=false', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        extractedFields: { invoice_amount: 1000, invoice_date: '2026-06-15' },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features;
+    const dateRaw = getRawValue<{ proximity_days: number; within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(33);
+    expect(dateRaw?.within_window_14d).toBe(false);
+  });
+
+  it('vendor_invoice + missing extracted_fields → feature contributions are null', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { extractedFields: {} }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean | null; diff_cad: number | null }>(features, 'amount_match');
+    expect(amountRaw?.match).toBeNull();
+    expect(amountRaw?.diff_cad).toBeNull();
+    const dateRaw = getRawValue<{ proximity_days: number | null; within_window_14d: boolean | null }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBeNull();
+    expect(dateRaw?.within_window_14d).toBeNull();
+    const refRaw = getRawValue<{ match: boolean | null }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBeNull();
+  });
+
+  it('receipt + payment with authorization_reference + payment_method match → feature contributions present', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      paymentDate: '2026-05-13',
+      authorizationReference: 'AUTH-12345',
+      paymentMethod: 'wire',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'receipt',
+        extractedFields: {
+          receipt_amount: 1000,
+          receipt_date: '2026-05-13',
+          authorization_reference: 'AUTH-12345',
+          payment_method: 'wire',
+        },
+      }),
+      ctx,
+    );
+
+    // 1 candidate: (payment, payment_evidence). Scenario B (bill, receipt)
+    // emits zero because no bill seeded.
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(paymentId);
+    expect(result[0].link_role).toBe('payment_evidence');
+    const features = result[0].candidate_features;
+    const amountRaw = getRawValue<{ match: boolean }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    const dateRaw = getRawValue<{ within_window_14d: boolean }>(features, 'date_proximity');
+    expect(dateRaw?.within_window_14d).toBe(true);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
+    const methodRaw = getRawValue<{ match: boolean }>(features, 'payment_method_consistency');
+    expect(methodRaw?.match).toBe(true);
+  });
+
+  it('payment_confirmation + matching extracted features → candidate_features carries per-feature contributions', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 5000,
+      paymentDate: '2026-05-10',
+      authorizationReference: 'ACH-TRACE-99999',
+      paymentMethod: 'eft',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'payment_confirmation',
+        extractedFields: {
+          payment_amount: 5000,
+          payment_date: '2026-05-10',
+          authorization_reference: 'ACH-TRACE-99999',
+          payment_method: 'eft',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(paymentId);
+    expect(result[0].link_role).toBe('payment_evidence');
+    const features = result[0].candidate_features;
+    expect((features as { scenario?: string }).scenario).toBe('payment_confirmation_to_payment');
+    const amountRaw = getRawValue<{ match: boolean }>(features, 'amount_match');
+    expect(amountRaw?.match).toBe(true);
+    const dateRaw = getRawValue<{ proximity_days: number }>(features, 'date_proximity');
+    expect(dateRaw?.proximity_days).toBe(0);
+    const refRaw = getRawValue<{ match: boolean }>(features, 'reference_alignment');
+    expect(refRaw?.match).toBe(true);
+    const methodRaw = getRawValue<{ match: boolean }>(features, 'payment_method_consistency');
+    expect(methodRaw?.match).toBe(true);
+  });
+
+  it('all emitted candidates carry (linked_entity_type, link_role) pair in VALID_PAIRS (Task 4 structural assertion)', async () => {
+    // Smoke-test: all candidates emitted across vendor_invoice + receipt +
+    // payment_confirmation branches at chunk 2 grade carry pairs in
+    // VALID_PAIRS (13-cell matrix at v1 per Sub-Q3 β substrate-tables-only-
+    // without-cell-activation discipline). Per chunk 2 brief Task 4 §B.1
+    // amendment Path β: VALID_PAIRS-based pair-validity emission assertion
+    // via service-layer assertion at Subsystem 1 output emission boundary;
+    // vendor_credit / vendor_credit_application pairs structurally excluded
+    // (zero entries in VALID_PAIRS per Phase 5.1 chunk 5.1a). The
+    // assertion in completeCandidate throws POST_FAILED on violation; this
+    // positive test verifies no v1-active emission path violates VALID_PAIRS.
+    const { VALID_PAIRS } = await import(
+      '@/shared/schemas/document-platform/sourceDocumentLink.schema'
+    );
+
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, { amount: 1000 });
+    await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, { amount: 1000 });
+
+    // vendor_invoice → primary_invoice pair.
+    const invoiceResult = await completeCandidate(
+      buildInput(fixture, ctx, { extractedFields: { invoice_amount: 1000 } }),
+      ctx,
+    );
+    for (const c of invoiceResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+
+    // receipt → payment_evidence + receipt pairs.
+    const receiptFixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    await seedOpenBill(db, SEED.ORG_HOLDING, receiptFixture.vendorId, { amount: 1000 });
+    await seedOpenPayment(db, SEED.ORG_HOLDING, receiptFixture.vendorId, {
+      amount: 1000,
+    });
+    const receiptResult = await completeCandidate(
+      buildInput(receiptFixture, ctx, {
+        documentType: 'receipt',
+        extractedFields: { receipt_amount: 1000 },
+      }),
+      ctx,
+    );
+    for (const c of receiptResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+
+    // payment_confirmation → payment_evidence pair.
+    const pcFixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    await seedOpenPayment(db, SEED.ORG_HOLDING, pcFixture.vendorId, { amount: 1000 });
+    const pcResult = await completeCandidate(
+      buildInput(pcFixture, ctx, {
+        documentType: 'payment_confirmation',
+        extractedFields: { payment_amount: 1000 },
+      }),
+      ctx,
+    );
+    for (const c of pcResult) {
+      expect(VALID_PAIRS.has(`${c.linked_entity_type}|${c.link_role}`)).toBe(true);
+    }
+  });
+
+  it('VALID_PAIRS structurally excludes reserved post-v1 (vendor_credit, *) + (vendor_credit_application, *) pairs', async () => {
+    // Structural prevention test: VALID_PAIRS has ZERO entries for
+    // vendor_credit + vendor_credit_application across ALL link_role
+    // values per Phase 5.1 chunk 5.1a Sub-Q3 β substrate-tables-only-
+    // without-cell-activation discipline. Any Subsystem 1 emission attempt
+    // with these linked_entity_types would fail the VALID_PAIRS.has()
+    // assertion at chunk 2 grade.
+    const { VALID_PAIRS, LinkedEntityTypeSchema, LinkRoleSchema } = await import(
+      '@/shared/schemas/document-platform/sourceDocumentLink.schema'
+    );
+
+    // Sanity: enum admits 8 values (post-Phase-5.1 chunk-5.1a ratification);
+    // VALID_PAIRS has 13 cells (no vendor_credit rows per Sub-Q3 β).
+    expect(LinkedEntityTypeSchema.options).toContain('vendor_credit');
+    expect(LinkedEntityTypeSchema.options).toContain('vendor_credit_application');
+
+    for (const linkRole of LinkRoleSchema.options) {
+      expect(VALID_PAIRS.has(`vendor_credit|${linkRole}`)).toBe(false);
+      expect(VALID_PAIRS.has(`vendor_credit_application|${linkRole}`)).toBe(false);
+    }
+  });
+});
+
+// =====================================================================
+// Phase 8 chunk 4 Task 3 axis 4 — F-3 substrate change inferred-target
+// emission (Decision γ-1 conditional-emit + Decision γ-2
+// suppress_inferred_target).
+//
+// Verifies completeCandidate's chunk 4 emission paths:
+//   - vendor_invoice Scenario A inferred-target (linked_entity_type='bill',
+//     linked_entity_id=null, scenario='invoice_inferred_target') per
+//     ADR-0015 §7 invoice-arrives-no-bill-yet.
+//   - receipt Scenario A variant inferred-target
+//     (linked_entity_type='payment', linked_entity_id=null,
+//     scenario='receipt_inferred_target') per ADR-0015 §7 variant
+//     disambiguation.
+//
+// Decision γ-1 (Session 65 ratification): Scenario A inferred-target
+// fires ONLY when no Scenario B match for the same document_type
+// (mutual-exclusivity per ADR-0015 §7).
+//
+// Decision γ-2 (Session 65 ratification): completeCandidate accepts
+// suppress_inferred_target: boolean option. When true, Scenario A
+// emission paths are suppressed; rematchCandidate passes true on
+// inner completeCandidate calls to preserve pre-chunk-4 orphan-prior
+// → exception semantics at T5/T8/T10 dispatchTrigger grade.
+// =====================================================================
+
+describe('documentRouterService.completeCandidate — F-3 inferred-target emission (chunk 4 axis 4)', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(() => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('receipt + zero open payments + zero open bills → returns one Scenario A variant inferred-target candidate (linked_entity_type=payment, linked_entity_id=null)', async () => {
+    // F-3 scope (b) receipt-as-primary emission per ADR-0015 §7 variant
+    // disambiguation. completeCandidate emits a single Scenario A variant
+    // inferred-target candidate when neither Scenario A existing (payment
+    // match) nor Scenario B (bill match) candidates produced.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('payment');
+    expect(result[0].linked_entity_id).toBeNull();
+    expect(result[0].link_role).toBe('payment_evidence');
+    expect(result[0].candidate_features.scenario).toBe('receipt_inferred_target');
+  });
+
+  it('γ-1 mutual-exclusivity: vendor_invoice + Scenario B bill match → Scenario A inferred-target NOT emitted (single Scenario B candidate)', async () => {
+    // Decision γ-1: Scenario A emission is conditional on no Scenario B
+    // match. When at least one bill matches the vendor, only Scenario B
+    // candidates are emitted; no Scenario A inferred-target.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(buildInput(fixture, ctx), ctx);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBe(billId);
+    expect(result[0].link_role).toBe('primary_invoice');
+    // Verify NO Scenario A inferred-target emitted alongside Scenario B.
+    const inferredTargets = result.filter((r) => r.linked_entity_id === null);
+    expect(inferredTargets).toHaveLength(0);
+  });
+
+  it('γ-1 mutual-exclusivity: receipt + Scenario A existing payment match → Scenario A variant inferred-target NOT emitted', async () => {
+    // Decision γ-1 applied to receipt branch: when a Scenario A existing
+    // payment match emits, the Scenario A variant inferred-target path
+    // is suppressed (mutual-exclusivity per ADR-0015 §7).
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+    );
+
+    const paymentCandidate = result.find(
+      (r) => r.linked_entity_type === 'payment' && r.linked_entity_id !== null,
+    );
+    expect(paymentCandidate).toBeDefined();
+    expect(paymentCandidate!.linked_entity_id).toBe(paymentId);
+
+    // Verify NO Scenario A variant inferred-target emitted alongside
+    // Scenario A existing.
+    const inferredVariants = result.filter(
+      (r) => r.linked_entity_type === 'payment' && r.linked_entity_id === null,
+    );
+    expect(inferredVariants).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true: vendor_invoice + zero bills → ZERO candidates emitted (Scenario A suppressed)', async () => {
+    // Decision γ-2: suppress_inferred_target=true option preserves
+    // pre-chunk-4 orphan-prior-candidate → exception semantics at
+    // T5/T8/T10 dispatchTrigger re-evaluation grade. When the option is
+    // true, Scenario A inferred-target emission paths short-circuit
+    // before pushing any candidate to the produce set.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true: receipt + zero payments + zero bills → ZERO candidates emitted (Scenario A variant suppressed)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, { documentType: 'receipt' }),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('γ-2 suppress_inferred_target=true does NOT suppress Scenario B emission: vendor_invoice + bill match → Scenario B candidate emitted', async () => {
+    // Decision γ-2 specifically gates Scenario A inferred-target emission,
+    // not Scenario B existing-target. The flag preserves T5/T8/T10
+    // dispatchTrigger semantics where rematchCandidate's inner
+    // completeCandidate call must still see Scenario B matches when bills
+    // remain in the watched set.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId);
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx),
+      ctx,
+      { suppress_inferred_target: true },
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_type).toBe('bill');
+    expect(result[0].linked_entity_id).toBe(billId);
+  });
+
+  it('γ-2 suppress_inferred_target=false (default omitted) preserves Scenario A emission: vendor_invoice + zero bills → 1 Scenario A inferred-target', async () => {
+    // Default behavior: when options.suppress_inferred_target is not
+    // passed, Scenario A inferred-target emission fires per Decision γ-1
+    // conditional-emit. This is the canonical Subsystem 1 initial-
+    // emission grade (rematchCandidate explicitly opts in to suppression).
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+
+    const resultDefault = await completeCandidate(buildInput(fixture, ctx), ctx);
+    expect(resultDefault).toHaveLength(1);
+    expect(resultDefault[0].linked_entity_id).toBeNull();
+
+    // Same input + explicit suppress_inferred_target=false produces same result.
+    const fixture2 = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const resultExplicit = await completeCandidate(
+      buildInput(fixture2, ctx),
+      ctx,
+      { suppress_inferred_target: false },
+    );
+    expect(resultExplicit).toHaveLength(1);
+    expect(resultExplicit[0].linked_entity_id).toBeNull();
+  });
+
+  it('Scenario A inferred-target candidate persists to Layer 1 with null linked_entity_id (substrate change post-migration 153)', async () => {
+    // F-3 Layer 1 verification: chunk 4 axis 4 substrate change widens
+    // document_relationship_candidates.linked_entity_id column to NULL-
+    // able (migration 20240159000000_make_linked_entity_id_nullable.sql).
+    // Read-back via DocumentRelationshipCandidateSchema parse accepts
+    // null per chunk 4 Task 5.2 Zod widening.
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+
+    await completeCandidate(buildInput(fixture, ctx), ctx);
+
+    const { data: rows } = await db
+      .from('document_relationship_candidates')
+      .select('linked_entity_type, linked_entity_id, candidate_features')
+      .eq('document_case_id', fixture.caseId);
+    expect(rows).toHaveLength(1);
+    expect(rows![0].linked_entity_type).toBe('bill');
+    expect(rows![0].linked_entity_id).toBeNull();
+    expect(
+      (rows![0].candidate_features as { scenario: string }).scenario,
+    ).toBe('invoice_inferred_target');
   });
 });

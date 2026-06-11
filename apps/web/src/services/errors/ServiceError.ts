@@ -15,6 +15,12 @@ export type ServiceErrorCode =
   | 'PERIOD_LOCKED'
   | 'PERIOD_DATE_OUT_OF_RANGE'
   | 'POST_FAILED'
+  // Wave 6 D3 — double-post guard: 23505 naming idx_je_source_external
+  // (the (org_id, source_system, source_external_id) partial unique,
+  // migration 20240111). Keyed on the CONSTRAINT NAME so the other
+  // journal_entries 23505 source (unique_entry_number_per_org_period)
+  // stays a POST_FAILED, never mis-recovered as already-posted.
+  | 'DUPLICATE_SOURCE_EXTERNAL_ID'
   // Period lifecycle (Phase 1.x)
   | 'PERIOD_ALREADY_LOCKED'
   | 'PERIOD_NOT_LOCKED'
@@ -81,6 +87,7 @@ export type ServiceErrorCode =
   | 'STORAGE_KEY_MALFORMED'                // ADR-0013 §7 — malformed key, illegal chars, path-too-long
   | 'INTEGRITY_VERIFY_FAILED'              // ADR-0013 §7 + §9 — hash mismatch on integrity check
   | 'STORAGE_PROVIDER_TRANSIENT_EXHAUSTED' // ADR-0013 §8 — retry budget exhausted on transient failure
+  | 'STORAGE_PROVIDER_UNAVAILABLE'         // ADR-0013 §7 — provider unreachable (401/403/404; no-retry); Charter B real-flow D-5
   | 'STORAGE_OPERATION_FAILED'             // Repo-convention catchall (not in ADR text)
   // Document core (Phase 2 chunk 2)
   | 'INVALID_TRANSITION'
@@ -100,12 +107,40 @@ export type ServiceErrorCode =
   // Caller-side symmetric with EXCEPTION_ALREADY_OPEN (both signal
   // "queue entry is in unexpected state for this operation").
   | 'EXCEPTION_ALREADY_CANCELLED'
+  // Document core (Phase 5.1 chunk 5.1a) — INV-DOC-001 evidence-
+  // completeness enforcement at billService.post(); fired when neither
+  // primary_document_id nor override_evidence_completeness=true provided.
+  // Per ADR-0011 §15 reservation graduation; leaf at
+  // ledger_truth_model.md INV-DOC-001.
+  | 'EVIDENCE_INCOMPLETE'
   // Rate limiting (Path A carve-out)
   // The route-layer policy decision returns 429 directly without
   // throwing a ServiceError; this code is added for future
   // service-layer firings where rate-limiting needs to flow
   // through the standard ServiceError → HTTP-status mapping.
-  | 'RATE_LIMITED';
+  | 'RATE_LIMITED'
+  // Tier 2 document pipeline (Phase 7 chunk 7.1a)
+  // Per ADR-0014 §12 verbatim: transient-retry-budget-exhausted +
+  // service-unavailable categories at Stages 0-7. Verbatim ADR
+  // text uses these codes (§12.1: "typed ServiceError with code
+  // `PIPELINE_TRANSIENT_EXHAUSTED`"; §12.2: pipeline_unavailable
+  // exception class with no-retry semantics).
+  | 'PIPELINE_TRANSIENT_EXHAUSTED'
+  | 'PIPELINE_UNAVAILABLE'
+  // Rule services (Ring 2A-core Commit 3; ADR-0025 §6). Generic IO failures
+  // reuse READ_FAILED / POST_FAILED (periodService precedent); these are the
+  // rule-domain semantic codes.
+  | 'RULE_NOT_FOUND'          // rule_registry / vendor_rules lookup miss
+  | 'RULE_LIFECYCLE_INVALID'  // illegal lifecycle transition (e.g. promote/demote/retire a retired rule)
+  | 'RULE_CREATE_FAILED'      // create_vendor_rule_atomic RPC failure
+  | 'RULE_BRANCH_ASSEMBLY_FAILED' // stored condition_value fails its condition_type validator (ruleBranchService boundary)
+  // Wave 6 D5 (T2 read-back, Option A condition 4): crash-class-X — a
+  // recovered JE whose posting entity (bill/payment) never landed
+  // (billService.post's JE→bill non-atomicity window). NON-RETRYABLE:
+  // every retry hits the JE dedup before the entity insert, so the state
+  // is unrepairable by re-approve; routes to manual repair. Maps 409
+  // (state conflict), NOT 500 — a 500 invites the retry loop.
+  | 'POSTING_RECOVERY_UNREPAIRABLE';
 
 export class ServiceError extends Error {
   constructor(

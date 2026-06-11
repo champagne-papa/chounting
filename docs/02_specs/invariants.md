@@ -1,6 +1,6 @@
 # Invariants Index
 
-The canonical index for the 20 Phase 0-1.1 + Arc A invariants.
+The canonical index for the 28 invariants.
 The single place to look up "what are all the rules, where are
 they documented, and where are they enforced in code?"
 
@@ -24,34 +24,152 @@ briefs under `docs/09_briefs/phase-2/`. See
 ## Bidirectional reachability statement
 
 As of commit `65bcfe0` (Waypoint F verification, completed
-during the Phase 1.1 closeout docs restructure) and confirmed
+during the Phase 1.1 closeout docs restructure), confirmed
 again at the Arc A Step 11 doc-sync (Arc A added INV-AUDIT-002
 at Step 1, INV-ADJUSTMENT-001 at Step 9a, and INV-RECURRING-001
 at Step 10a; Step 11 of Arc A formalizes all three in this
-index):
+index), and re-verified at the Wave 6 D8 doc-sync (live run at
+`c42a402f`; D8's doc-only edits are outside both grep scopes):
 
-- **20 distinct INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md` (14 Layer 1a, 6 Layer 2,
+- **28 registered INV-IDs** documented in
+  `docs/02_specs/ledger_truth_model.md` (**16 Layer 1a**, **12 Layer 2**,
   0 Layer 1b)
-- **20 distinct INV-IDs** annotated in code (`src/` +
-  `supabase/migrations/`) (14 Layer 1a, 6 Layer 2, 0 Layer 1b)
-- **Symmetric difference: empty.** Every documented invariant
-  has at least one annotation site in code; every annotated
-  INV-ID has a corresponding leaf in the doc.
+- **28 registered INV-IDs** annotated in code (`apps/web/src/` +
+  `supabase/migrations/`) (16 Layer 1a, 12 Layer 2, 0 Layer 1b)
+- **Symmetric difference at the registered-set grain: empty.**
+  Every registered invariant has at least one annotation site in
+  code; every registered INV-ID annotated in code has a
+  corresponding leaf in the doc. The raw command output carries
+  exactly four named exceptions outside the registered set —
+  `INV-CHECKPOINT-001` (doc-side; Phase-2 Layer-1b reserved stub,
+  ADR-0008), `INV-AGENT-002` (code-side; ADR-0029 reserved,
+  comment-grain citations), and `INV-AP-001` / `INV-AP-002`
+  (code-side; Phase-5 registration gap, enforced-but-unregistered
+  — carry-forward) — and nothing else.
+
+Phase 5.1 chunk 5.1a (2026-05-19) added INV-DOC-001 (Layer 2;
+evidence completeness for committed bills) per ADR-0011 §15
+reservation graduation. Layer 2 count updates from 6 → 7.
+
+ADR-0024 (2026-05-26) added INV-RULE-001 (Layer 1a; `rule_evaluation_log`
+is append-only against the user path) per the Ring 2A-core migration arc,
+introducing the new **`INV-RULE-*`** domain family (rule-core
+invariants). Layer 1a count updates from 14 → 15; total distinct INV-IDs
+from 21 → 22. INV-RULE-001 is *user-path* append-only (RLS-only;
+`service_role` bypasses, service-path append-only by single-writer
+discipline) — not the trigger-authoritative all-path shape of
+INV-AUDIT-002; see its leaf "Scope" subsection.
+
+ADR-0025 (2026-05-26) added INV-RULE-002 (Layer 2; the pure-core rule evaluator
+is deterministic) at the Ring 2A-core authoring rollout's Commit 1, when the
+evaluator + its determinism test landed. Layer 2 count updates from 7 → 8; total
+distinct INV-IDs from 22 → 23. INV-RULE-002 is the **first test-verified INV** in
+the registry — a property *across invocations* (byte-identical output for identical
+input), verified by a unit test rather than DB-enforced or runtime-guarded; see its
+leaf "Scope" subsection. (The "## The 20 invariants" heading below + the
+`control_matrix.md` section-heading counts remain frozen snapshots, reconciled at a
+dedicated doc-sync pass — not per-addition; the reachability statement here is the
+live count.)
+
+ADR-0025 (2026-05-27) added INV-RULE-003 (Layer 2; `rule_evaluation_log` has a
+single writer — `ruleEvaluationService.recordEvaluation` is the sole append site)
+at the Ring 2A-core authoring rollout's Commit 3, when that service became the
+sole writer. Layer 2 count updates from 8 → 9; total distinct INV-IDs from
+23 → 24. INV-RULE-003 establishes the **second Layer-2 enforcement sub-type**:
+*runtime/structural* (the enforcement site is a code pattern + reviewer
+attention), distinct from INV-RULE-002's *test-verified* sub-type. The Layer-2
+family now spans two sub-types — (a) test-verified (INV-RULE-002: a deterministic
+test failure surfaces a violation) and (b) runtime/structural (INV-RULE-003:
+sole-writer service pattern + code-review discipline; no test asserts "only this
+function writes," no DB constraint binds it). Future Layer-2 INVs should name which
+sub-type they fall under; see its leaf "Scope" + "Enforcement" subsections.
+
+ADR-0027 (2026-05-30) added INV-RULE-004 (Layer 1a; `rule_branches` /
+`rule_conditions` are logic-frozen — the §5.1 write-once branch/condition substrate)
+at the Ring 2B implementation arc, when the column-immutability trigger + RLS landed
+in `20240169`. Layer-1a count updates from 15 → 16; total distinct INV-IDs from
+24 → 25. INV-RULE-004 is the **first hybrid-scope INV**: UPDATE + TRUNCATE are
+*all-path* (the trigger fires for `service_role` too — stronger than INV-RULE-001's
+RLS-only user-path, the INV-AUDIT-002 shape), while DELETE is *user-path only* (RLS
+`USING(false)` + `ruleBranchService` single-writer discipline — the same model as
+INV-RULE-001, deliberately not trigger-blocked so the `rule_registry`
+`ON DELETE CASCADE` cleanup path works; the service-path-direct-DELETE residual is
+named in its leaf "Residual"). Future INVs whose scope differs by mutation verb
+should state the per-verb scope, as INV-RULE-004's leaf does.
+
+Wave 6 D2.1 (2026-06-03, `49179fba`) added INV-WORKFLOW-002 (Layer 2; every
+pipeline-processed document case reaches a terminal disposition — no silent
+drops; `needs_review` = the terminal hand-off to the human, not a final state)
+at the live-routing arc, registered atomically with the routing wiring.
+Layer 2 count updates from 9 → 10; total distinct INV-IDs from 25 → 26.
+INV-WORKFLOW-002 is *runtime/structural* (Layer-2 sub-type (b)) with
+test-verified support; its eventual-consistency backstop is the D2.3
+stranded-case sweep (`sweepStrandedCases`), whose one-time backlog-clearing
+run retired the transitional Class-1 residual on 2026-06-04.
+
+Wave 6 D5 (2026-06-05, `9510173d`) added INV-EVIDENCE-001 (Layer 2; every AP
+posting committed through the review path produces exactly one canonical
+evidence object per subject — org-scoped — before the case reaches
+`committed`; completeness descriptive at V1) per ADR-0033 D-0033.7's
+realization (Amendment 2026-06-05). Layer 2 count updates from 10 → 11; total
+distinct INV-IDs from 26 → 27. The enforcement is two-half: Layer-1 UNIQUE
+(`evidence_objects_subject_unique`, migration `20240177`) plus
+runtime/structural persist-before-marking at the sole committed-marking site.
+
+Wave 6 D6 (2026-06-05, `aa85390c`) added INV-WORKFLOW-001 (Layer 2; every
+Intent in the producer registry has ≥1 non-AI producer; `query` carved out at
+V1 by the ratified Q2 scope-out, with its binding re-include trigger) per
+ADR-0031's teeth-flip. Layer 2 count updates from 11 → 12; total distinct
+INV-IDs from 27 → 28. INV-WORKFLOW-001 establishes the **third Layer-2
+enforcement sub-type**: *build-time structural* — the producer-coverage check
+exits non-zero on any unscoped gap, wired as a blocking ci.yml job + the root
+validation harness; merge-blocking is operator-grain (branch protection). Its
+registration closed a reverse-only reachability window open since Wave 4 (the
+registry had carried the token warn-only).
+
+The Ring 2B implementation-arc close (2026-05-30) reconciled the frozen-count
+snapshots to the live 25 in the same pass as the per-addition note above (the arc's
+Condition-2 doc-sync): the heading below (`## The 24 invariants` → `## The 25
+invariants`) and the `control_matrix.md` section-heading counts (24/15/9 → 25/16/9).
+
+The `hygiene-post-ring2a-core` doc-sync pass (2026-05-27) reconciled the frozen-count
+snapshots to the live 24: the heading below (`## The 20 invariants` → `## The 24
+invariants`) and the `control_matrix.md` section-heading counts (20/14/6 → 24/15/9). It
+also corrected the reverse-direction grep in the verification command below — and its
+twin in `control_matrix.md` — from `src/` to `apps/web/src/` (post-monorepo path). Per
+the convention above: the per-addition notes in this narrative are the live count; the
+heading + `control_matrix.md` counts reconcile in dedicated doc-sync passes, not
+per-addition.
+
+The Wave 6 D8 doc-sync pass (2026-06-05) reconciled the frozen-count
+snapshots to the live 28: the heading below (`## The 25 invariants` → `## The
+28 invariants`), the layer sub-counts (16/9 → 16/12), and the
+`control_matrix.md` counts — including the intro-line straggler ("the 24
+invariants") carried forward from the hygiene pass. It also replaced the
+literal "empty" expectation on the verification command — here and in the
+`control_matrix.md` twin — with the named-exception framing in the statement
+above: the raw output has carried the four exceptions since at least the
+Ring 2B close (verified by re-run at `11633dc6`); the registered set is what
+both directions must reach. The remaining live pointer surfaces
+(`glossary.md` Bidirectional-reachability + Evidence-object tail,
+`CLAUDE.md` navigation, `authority-gradient.md`) reconcile in the same D8
+pass.
 
 The verification command, reproducible at any future point:
 
 ```bash
 diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u) \
-     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
+     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
-Expected output: empty (no diff).
+Expected raw output: exactly the four named exceptions (`<`
+INV-CHECKPOINT-001; `>` INV-AGENT-002; `>` INV-AP-001; `>` INV-AP-002) and
+nothing else — symmetric difference empty at the registered-set grain.
 
-## The 20 invariants
+## The 28 invariants
 
 The order matches the leaf's Summary section: Layer 1 first
-(14 invariants), then Layer 2 (6 invariants). Within each
+(16 invariants), then Layer 2 (12 invariants). Within each
 layer, the order matches the order the invariants appear in
 `ledger_truth_model.md`.
 
@@ -77,6 +195,14 @@ layer, the order matches the order the invariants appear in
 | 18 | INV-MONEY-001 | 2 | Money at the service boundary is string-typed, never JavaScript `Number` | Branded types + Zod schemas + arithmetic helpers + decimal.js confinement (collective) | [leaf](ledger_truth_model.md#inv-money-001--money-at-the-service-boundary-is-string-typed-never-javascript-number) | `src/shared/schemas/accounting/money.schema.ts` (collective enforcement) |
 | 19 | INV-REVERSAL-001 | 2 | Reversal lines must mirror the original | TypeScript service function (5-step algorithm) | [leaf](ledger_truth_model.md#inv-reversal-001--reversal-lines-must-mirror-the-original) | `src/services/accounting/journalEntryService.ts` (function `validateReversalMirror`) |
 | 20 | INV-AUDIT-001 | 2 | Every mutating service call writes an `audit_log` row in the same transaction | TypeScript service function + call-site discipline | [leaf](ledger_truth_model.md#inv-audit-001--every-mutating-service-call-writes-an-audit_log-row-in-the-same-transaction) | `src/services/audit/recordMutation.ts` (primary); `src/services/accounting/journalEntryService.ts` (call site in `post`) |
+| 21 | INV-DOC-001 | 2 | Bills require attached primary document | TypeScript service function (Zod schema + business-logic check) | [leaf](ledger_truth_model.md#inv-doc-001--evidence-completeness-for-committed-bills-layer-2) | `src/services/spend/billService.ts` (function `post`) |
+| 22 | INV-RULE-001 | 1a | `rule_evaluation_log` is append-only (user-path) | RLS policy (user-path; UPDATE/DELETE `USING(false)`, no user INSERT) | [leaf](ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a) | `supabase/migrations/20240164000000_rule_evaluation_log.sql` (policies `rule_evaluation_log_no_update` / `rule_evaluation_log_no_delete`) |
+| 23 | INV-RULE-002 | 2 | The pure-core rule evaluator is deterministic | Pure-function property (test-verified) | [leaf](ledger_truth_model.md#inv-rule-002--the-pure-core-rule-evaluator-is-deterministic-layer-2) | `apps/web/src/core/rules/evaluator.ts` (`evaluate`); verified by `apps/web/tests/unit/ruleEvaluator.test.ts` |
+| 24 | INV-RULE-003 | 2 | `rule_evaluation_log` has a single writer | Runtime/structural (sole-writer service pattern + code-review discipline) | [leaf](ledger_truth_model.md#inv-rule-003--rule_evaluation_log-has-a-single-writer-layer-2) | `apps/web/src/services/rules/ruleEvaluationService.ts` (`recordEvaluation`, the sole append site; `// INV-RULE-003`) |
+| 25 | INV-RULE-004 | 1a | `rule_branches` / `rule_conditions` are logic-frozen (write-once) | Column-immutability triggers (UPDATE+TRUNCATE, all-path) + RLS `USING(false)` (DELETE user-path) + REVOKE TRUNCATE | [leaf](ledger_truth_model.md#inv-rule-004--rule_branches--rule_conditions-are-logic-frozen-layer-1a) | `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql` (functions `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` + triggers); `apps/web/src/services/rules/ruleBranchService.ts` (single-writer contract) |
+| 26 | INV-WORKFLOW-002 | 2 | Every pipeline-processed document case reaches a terminal disposition (no silent drops; `needs_review` = the terminal hand-off to the human, not a final state) | Runtime/structural (orchestrator routing path + automation chain-advance + Subsystem-2 routing; test-verified support) | [leaf](ledger_truth_model.md#inv-workflow-002--terminal-disposition-completeness--no-silent-drops-layer-2) | `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts` (Stage-6.5 routing + park-exit hand-offs; `INV-WORKFLOW-002` annotation); `apps/web/src/services/document-platform/documentCaseService.ts` (`advanceCaseAutomation`); `apps/web/src/services/document-platform/documentRouterService.ts` (`resolveCandidates`); `apps/web/src/agent/orchestrator/maintenance/sweepStrandedCases.ts` (D2.3 sweep — the eventual-consistency backstop; Class-1 RETIRED 2026-06-04 via the backlog-clearing run, run_trace_id `2855c8e3-…`) |
+| 27 | INV-EVIDENCE-001 | 2 | Every AP posting committed through the review path produces exactly one canonical evidence object per subject (org-scoped) before the case reaches `committed`; completeness is descriptive at V1 | Layer-1 UNIQUE `(org_id, subject_type, subject_id)` + runtime/structural persist-before-marking at the sole committed-marking site (test-verified support) | [leaf](ledger_truth_model.md#inv-evidence-001--canonical-evidence-object-required-at-commit-layer-2) | `supabase/migrations/20240177000000_wave_6_d5_evidence_objects_persistence_substrate.sql` (constraint `evidence_objects_subject_unique` — the Layer-1 half); `apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts` (persist-before-marking seam; `INV-EVIDENCE-001` annotation); `apps/web/src/services/evidence/evidenceObjectService.ts` (`persist` — subject-ownership guard + idempotent upsert) |
+| 28 | INV-WORKFLOW-001 | 2 | Every Intent in the producer registry has ≥1 non-AI producer (no AI-only path to any intent; `query` carved out at V1 by the ratified Q2 scope-out, re-include trigger named at the carve-out) | Build-time structural — the producer-coverage check exits non-zero on any unscoped gap, wired as a blocking ci.yml job + the root validation harness; a red CI run blocks merge only where branch protection requires the check (operator-grain); the CI job's first execution occurs at the wave-close push (test-verified support) | [leaf](ledger_truth_model.md#inv-workflow-001--no-ai-only-paths--producer-coverage-layer-2) | `apps/web/src/core/intent/producers.ts` (the registry + `runCheck` + `V1_TEETH_SCOPE_OUT`; `INV-WORKFLOW-001` annotation — the grep-visible anchor; the enforcing mechanism — `scripts/check-intent-producers.ts` + the ci.yml `intent-producers` job — is grep-invisible by location and cited from the anchor) |
 
 ## Cross-layer pairings
 
@@ -147,7 +273,9 @@ order to keep bidirectional reachability intact:
    enforcement-mechanism specifics.
 5. **Verify bidirectional reachability.** Run the diff command
    from the "Bidirectional reachability statement" section
-   above. Expected output: empty.
+   above. Expected output: the four named exceptions and nothing
+   else — a correctly-added invariant appears on neither side of
+   the diff (see that statement for the exception list).
 
 **Sub-layer classification.** Layer 1 invariants carry a
 `(Layer 1a)` or `(Layer 1b)` tag in their leaf header, their

@@ -3,15 +3,21 @@
 // INV-SERVICE-001 wrap-site discipline:
 //   - handleDragDropUpload: Pattern B external-wrap per Phase 5 spend
 //     brief precedent. The service body has NO `withInvariants`
-//     reference; route handlers wrap at the call site via:
-//       withInvariants(ingestionService.handleDragDropUpload,
-//         { action: 'ingest.drag_drop' })(input, ctx)
+//     reference; the drag-drop route wraps at the call site via an
+//     adapter closure that also binds the required IngestInvoker
+//     (Class D T4 inversion; the route is actionless per the
+//     chunk-6.2b action-seeding deferral — the prior example here
+//     showed an { action } option the route never shipped):
+//       withInvariants((input, c) =>
+//         ingestionService.handleDragDropUpload(input, c, ingestDocument),
+//       )(input, ctx)
 //   - handleForwardedMailbox (chunk 6.3a): system-actor invocation
 //     pattern. Webhook route handler bypasses withInvariants entirely
 //     and constructs SystemActorServiceContext directly per Sub-Q6
 //     Artifact 3. The withInvariants pre-flight (verified caller +
-//     org_id-vs-memberships check) is replaced by HMAC verification
-//     + MailboxHash org-resolve at the route handler boundary.
+//     org_id-vs-memberships check) is replaced by HTTP Basic Auth
+//     verification (Postmark sends no body signature) + MailboxHash
+//     org-resolve at the route handler boundary.
 //
 // INV-SERVICE-002 adminClient discipline: every database access in
 // this file goes through `adminClient()` from `@/db/adminClient`. No
@@ -122,7 +128,9 @@
 
 import { adminClient } from '@/db/adminClient';
 import { recordMutation } from '@/services/audit/recordMutation';
+import { resolvePrimaryIngestSource } from './strandedCaseReadService';
 import { getStorageProvider } from '@/services/storage/resolver';
+import { resolveStorageProvider } from '@/services/storage/resolveStorageProvider';
 import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import type {
@@ -138,15 +146,31 @@ import type {
   DragDropUploadResult,
   ForwardedMailboxUploadInput,
   ForwardedMailboxUploadResult,
+  IngestInvoker,
 } from './types';
 
-// v1 system-fixed per ADR-0013 §2 mechanical selection. Per-org
-// configurability lands when org_settings sub-arc ships post-v1.
-const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
+// SELECTION IS DYNAMIC as of Charter B real-flow (D-2/D-4) — this RESOLVES
+// the deferred-Zod carry the former V1_STORAGE_PROVIDER constant carried.
+// Both batch ingest paths below resolve the org's default provider via
+// resolveStorageProvider (the single selection authority, ADR-0013 §2
+// per-org default) and thread the resolved value into BOTH the put and the
+// p_documents stamp (put/stamp agree). The Layer-2 admit-set
+// z.enum(['supabase_storage','sharepoint_drive']) (storageProvider.schema.ts)
+// lands inside the helper — the CHECK-broaden ⇒ Zod-broaden pair. The
+// hardcoded write constant is gone; there is no static write value anymore.
+//
+// NOTE: this is the INGEST selection (org default). byteFetch dispatches on
+// the ROW's storage_provider (D-3), never the org default —
+// resolveStorageProvider is ingest-only.
 
 async function handleDragDropUploadImpl(
   input: DragDropUploadInput,
   ctx: ServiceContext,
+  // REQUIRED (Class D T4): the entry surface supplies the pipeline
+  // invoker; no default — an optional no-op would silently skip the
+  // pipeline, and a service-side agent default would re-create the
+  // services→agent edge this parameter removes.
+  invokeIngest: IngestInvoker,
 ): Promise<DragDropUploadResult> {
   const log = loggerWith({
     trace_id: ctx.trace_id,
@@ -181,7 +205,10 @@ async function handleDragDropUploadImpl(
   // chunk 6.1 RPC. Successful prior puts before a mid-batch failure
   // orphan their bytes; ADR-0014 §10 GC cleans them up at the daily
   // 24-hour-threshold cadence.
-  const storageProvider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // Charter B real-flow D-2: resolve the org default ONCE, thread to both the
+  // put (here) and the p_documents stamp below (resolve-in-TS-then-thread).
+  const storage_provider = await resolveStorageProvider(parsed.org_id);
+  const storageProvider = getStorageProvider(storage_provider);
 
   // Per-file collected metadata: pre-generated UUID + storage put
   // result + the mime_type from the input (tracked here to avoid a
@@ -268,7 +295,7 @@ async function handleDragDropUploadImpl(
     // legal_entity_id defaults to org_id per ADR-0011 §10 v1 1-1
     // mapping (Phase 1 documentPlatformService precedent).
     legal_entity_id: parsed.org_id,
-    storage_provider: V1_STORAGE_PROVIDER,
+    storage_provider,
     original_storage_key: r.storage_key,
     original_content_hash: r.content_hash,
     original_byte_size: r.byte_size,
@@ -377,6 +404,34 @@ async function handleDragDropUploadImpl(
     'ingestionService.handleDragDropUpload: complete',
   );
 
+  // Phase 7 chunk 7.1a Task 7.1a.8 — orchestrator invocation hook.
+  // Per Sub-Q2 sync v1 invocation lock: invoke the pipeline per
+  // source_document post-ingestion-commit, via the injected
+  // invokeIngest (Class D T4 inversion — the concrete ingestDocument
+  // is wired at the drag-drop route; this service holds no @/agent
+  // import). Pattern B external-wrap best-effort isolation per Phase
+  // 5.1 chunk 5.1b T2 dispatcher precedent — pipeline failures emit
+  // failure-class audit events internally; HTTP response always
+  // returns the successful DragDropUploadResult.
+  for (const record of putRecords) {
+    try {
+      await invokeIngest({
+        org_id: parsed.org_id,
+        source_document_id: record.source_document_id,
+        trace_id: ctx.trace_id,
+      });
+    } catch (orchErr) {
+      log.error(
+        {
+          err: orchErr,
+          source_document_id: record.source_document_id,
+          trace_id: ctx.trace_id,
+        },
+        'ingestionService.handleDragDropUpload: orchestrator invocation failed (best-effort; not propagating)',
+      );
+    }
+  }
+
   return {
     ingest_batch_id,
     document_count: parsed.files.length,
@@ -448,6 +503,13 @@ const SYSTEM_CREATED_BY = 'ingestionService.handleForwardedMailbox';
 async function handleForwardedMailboxImpl(
   input: ForwardedMailboxUploadInput,
   ctx: SystemActorServiceContext,
+  // REQUIRED (mailbox-finish 2026-06-07): the webhook entry surface supplies
+  // the pipeline invoker, mirroring handleDragDropUpload's Class D T4
+  // inversion. No default — an optional no-op would silently skip the
+  // pipeline (the pre-mailbox-finish behavior this arc removes: mailbox docs
+  // sat 'received' until a manual sweep), and a service-side @/agent default
+  // would re-create the services→agent edge the inversion removed.
+  invokeIngest: IngestInvoker,
 ): Promise<ForwardedMailboxUploadResult> {
   const log = loggerWith({
     trace_id: ctx.trace_id,
@@ -550,7 +612,10 @@ async function handleForwardedMailboxImpl(
 
   // Step 4: Sequential storage puts (mirrors handleDragDropUpload).
   // No parallelism at v1 per Sub-Q6 (drag-drop) carry-forward.
-  const storageProvider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // Charter B real-flow D-2: resolve the org default ONCE, thread to both the
+  // put (here) and the p_documents stamp below (resolve-in-TS-then-thread).
+  const storage_provider = await resolveStorageProvider(input.org_id);
+  const storageProvider = getStorageProvider(storage_provider);
   const putRecords: Array<{
     source_document_id: string;
     original_filename: string;
@@ -633,7 +698,7 @@ async function handleForwardedMailboxImpl(
     id: r.source_document_id,
     org_id: input.org_id,
     legal_entity_id: input.org_id,
-    storage_provider: V1_STORAGE_PROVIDER,
+    storage_provider,
     original_storage_key: r.storage_key,
     original_content_hash: r.content_hash,
     original_byte_size: r.byte_size,
@@ -763,6 +828,41 @@ async function handleForwardedMailboxImpl(
     'ingestionService.handleForwardedMailbox: complete',
   );
 
+  // mailbox-finish (2026-06-07): synchronous pipeline invocation, ONCE per
+  // case, on the primary ingest source (an attachment, not the .eml body —
+  // resolvePrimaryIngestSource). NOT a per-source_document loop like
+  // drag-drop: drag-drop is 1:1 case:document, but a mailbox batch is N+1
+  // documents under ONE case, and the pipeline is single-source +
+  // advances the case out of sweep eligibility on success — so invoking
+  // per-document would race N+1 runs against one case and (worse) classify
+  // the .eml body. Best-effort isolation (Pattern B, drag-drop precedent):
+  // pipeline failure is logged, never propagated — the HTTP response stays
+  // the successful result and the sweep remains the backstop (case stays
+  // 'received', sweep-eligible, recovered via the shared resolver).
+  try {
+    const primarySourceId = await resolvePrimaryIngestSource(case_id);
+    if (primarySourceId) {
+      await invokeIngest({
+        org_id: input.org_id,
+        source_document_id: primarySourceId,
+        trace_id: ctx.trace_id,
+      });
+    } else {
+      // Should be unreachable — the RPC just wrote N+1 jobs for this case.
+      // Logged (not thrown) so the successful ingest still returns; the
+      // sweep backstop will retry.
+      log.error(
+        { ingest_batch_id, document_case_id: case_id, trace_id: ctx.trace_id },
+        'ingestionService.handleForwardedMailbox: no primary ingest source resolved post-RPC; pipeline not invoked (sweep backstop will retry)',
+      );
+    }
+  } catch (orchErr) {
+    log.error(
+      { err: orchErr, document_case_id: case_id, trace_id: ctx.trace_id },
+      'ingestionService.handleForwardedMailbox: orchestrator invocation failed (best-effort; not propagating; sweep backstop will retry)',
+    );
+  }
+
   return {
     status: 'accepted',
     ingest_batch_id,
@@ -775,11 +875,8 @@ async function handleForwardedMailboxImpl(
 type ForwardedMailboxFileInputWithSyntheticName = ForwardedMailboxUploadInput['email_body'];
 
 export const ingestionService = {
-  // Pattern B: methods exported as plain async functions; route handler
-  // wraps via withInvariants at the call site. NO withInvariants here.
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped at the drag-drop call site via an adapter closure binding IngestInvoker; actionless per the chunk-6.2b action-seeding deferral — see file header)
   handleDragDropUpload: handleDragDropUploadImpl,
-  // chunk 6.3a: webhook-invoked system-actor method; route handler
-  // constructs SystemActorServiceContext and calls directly (bypasses
-  // withInvariants per Sub-Q6 Artifact 3).
+  // withInvariants: skip-org-check (pattern-S: system-actor; webhook route constructs SystemActorServiceContext + bypasses withInvariants per Sub-Q6 Artifact 3; preflight replaced by HTTP Basic Auth verification (Postmark sends no body signature) + MailboxHash org-resolve at the route boundary)
   handleForwardedMailbox: handleForwardedMailboxImpl,
 };

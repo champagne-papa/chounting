@@ -212,7 +212,12 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
       const { error: deleteError } = await db.storage.deleteBucket(
         STORAGE_BUCKET,
       );
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        const stillPresent = await listAllStorageKeys(db, STORAGE_BUCKET);
+        throw new Error(
+          `deleteBucket(${STORAGE_BUCKET}) failed: ${deleteError.message} (${stillPresent.length} objects still present after defensive cleanup)`,
+        );
+      }
     });
 
     afterAll(async () => {

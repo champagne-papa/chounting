@@ -2024,3 +2024,122 @@ preserved (no title-line revision). Scope spans four §-items
 covering chunks-1-3 shipped substrate reality + chunk-3
 framing-discovery refinements; broader §Decision review
 deferred per arc-class first-instance status framing.
+
+## Amendment — Phase 5.1 close: bidirectional dispatcher activation discipline (2026-05-19)
+
+ADR-0018 is amended at Phase 5.1 retrospective close (the Phase 5.1
+amendment cycle following three chunks: chunk 5.1a c228512 INV-DOC-001
++ vendor_credits β + ADR-0016 third amendment; chunk 5.1b 12847bf
+paymentService greenfield + T2 dispatcher activation; chunk 5.1c
+9ec9235 apReportService SELECT IN → nested-select refactor for Cat 2
+N=3 substrate-fix). Path (a) of the audit-cycle (β) reconciliation
+pattern: ADR text catches up to chunk-5.1b substrate ship state for
+T2_new_payment dispatcher slot activation, plus codifies the
+four-part bidirectional activation discipline for future T4/T6
+activations.
+
+### Substance
+
+One reconciliation:
+
+1. **§item 4 T2_new_payment activation + four-part bidirectional
+   activation discipline.** Phase 4 retrospective Amendment (above)
+   §item 4 codified T2/T4/T6 as **reserved per Framing F** ("land
+   schema with consumer code" reverse-discipline — `paymentService.ts`
+   and `vendorCreditService.ts` do not exist at v1; their dispatcher
+   wiring activates when the services ship in a future Phase 5
+   amendment chunk). Chunk 5.1b 12847bf is that future chunk for T2.
+   The amendment appends a sub-block at the end of §item 4 codifying:
+   (1) **T2_new_payment now v1-active-emission-wired** — chunk 5.1b
+   ships `paymentService.ts` greenfield with `paymentService.record()`
+   firing `dispatchTrigger({trigger_type: 'T2_new_payment', ...})`
+   post-commit per Pattern B external-wrap variant + P3-i F-J-4
+   best-effort isolation; (2) **bidirectional activation as
+   four-part discipline** — schema admit (Zod discriminated union
+   extension at `DispatchTriggerInputSchema`) + consumer admit (switch
+   statement case addition at `dispatchTrigger()`) + helper rename if
+   semantic class extends (`computeT1T3FanOut` → `computeT1T2T3FanOut`
+   for the "new-domain-entity-created" semantic class) + comment
+   refresh across affected file (Zod schema header + dispatcher
+   comments). Each part is operationally distinct; missing any part
+   produces TypeScript exhaustiveness failure (consumer switch) or
+   silently-stale narrative (helper name + comments). Chunk 5.1b
+   Phase A Step 4 verify-from-disk surfaced the consumer-admit gap as
+   Risk 1 firing; mitigation expanded Task 4 within brief scope (not
+   Path C reactive invocation). (3) **Activation-trigger framing for
+   T4/T6** — when `vendorCreditService.ts` ships in a future Phase 5
+   amendment chunk (post-v1 operational-signal-contingent per Phase 5
+   retro §6:404 framing), the four-part discipline applies: schema
+   admit T4_new_vendor_credit + T6_payment_state_transition branches,
+   consumer admit at dispatcher switch, helper rename if new semantic
+   class emerges (e.g., `computeT4FanOut` if T4 doesn't fit the
+   T1/T2/T3 "new-domain-entity-created" or T5/T6 "state-transition"
+   class), comment refresh. Closes Phase 5.1 retrospective Observation
+   #18 forward-pointer placement at the ADR level.
+
+### Why this amendment
+
+Per the Phase 5.1 retrospective scope-lock + Session 22 close
+adjudication: Phase 5.1 closes the amendment cycle at chunk 5.1c
+substrate-fix complete. **§item 4 amendment is substantive
+contract refinement** — T2_new_payment graduates from Framing F
+"reserved per land-schema-with-consumer-code reverse-discipline"
+(Phase 4 retrospective Amendment §item 4) to v1-active-emission-wired
+at chunk 5.1b; the four-part bidirectional activation discipline is
+the operational shape that future T4/T6 activations inherit. Without
+the discipline codified at the ADR, future activations re-derive the
+four-part shape ad-hoc (Risk 1 firing recurs at T4/T6) instead of
+reading it at the ADR. The §item 4 amendment carries forward Phase 4
+Amendment's "ADR text catches up to substrate ship state" principle
+to Phase 5.1's substrate ship reality.
+
+### Bundling
+
+Phase 5.1 retrospective Commit A bundles a single reconciliation
+(§item 4 T2 activation + four-part discipline). The Phase 5.1
+amendment-cycle scope (paymentService + INV-DOC-001 + vendor_credits
+β) ratified at scope-lock cycle Round 4 (`8631a5d`) does not surface
+other ADR-0018 amendment candidates at retrospective grade. ADR-0011
+§15 editorial cluster + ADR-0016 third amendment already shipped
+within the chunk-5.1a commit window (c228512) per amendment-cycle
+shape — not deferred to retrospective grade. Commit B (T4
+conventions codifications per codify-convention skill routing) and
+Commit C (T1 retrospective writeup + friction-journal banking) close
+the retrospective work.
+
+### Cross-references
+
+- `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1a.md` —
+  chunk 5.1a brief (INV-DOC-001 + vendor_credits β substrate +
+  ADR-0016 third amendment).
+- `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1b.md` —
+  chunk 5.1b brief (paymentService greenfield + T2 dispatcher
+  activation; §8 Risk 1 firing predicted; consumer-side amendment
+  scope captured).
+- `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1c.md` —
+  chunk 5.1c brief (apReportService SELECT IN → nested-select refactor
+  for Cat 2 N=3 substrate-fix).
+- Chunk 5.1a commit `c228512`; chunk 5.1b commit `12847bf`; chunk
+  5.1c commit `9ec9235`.
+- `apps/web/src/services/document-platform/documentRouterService.ts` —
+  chunk 5.1b `dispatchTrigger` switch case 'T2_new_payment' +
+  `computeT1T2T3FanOut` helper (source of truth for §item 4 T2
+  activation reality).
+- `apps/web/src/shared/schemas/document-platform/documentRelationshipCandidate.schema.ts` —
+  chunk 5.1b `DispatchTriggerInputSchema` discriminated-union T2
+  branch addition (source of truth for §item 4 schema admit reality).
+- `apps/web/src/services/spend/paymentService.ts` — chunk 5.1b
+  greenfield service with `paymentService.record()` T2 dispatch hook
+  (source of truth for §item 4 emit-side reality).
+- `docs/07_governance/retrospectives/phase-5-1-retrospective.md`
+  (forthcoming at Phase 5.1 retrospective Commit C) — Observation
+  #18 detailed disposition + four-part discipline operational
+  evidence chain.
+
+This is **ADR-0018's second amendment**. Title-line stability
+preserved (no title-line revision). Scope spans one §-item covering
+T2 activation reality + future T4/T6 activation discipline; broader
+§Decision review remains deferred. Phase 4 retrospective Amendment
+(above) and this Phase 5.1 retrospective Amendment are additive
+provenance-preserving per ADR-0022 §5 — both blocks stay; the
+ADR sequence reads chronologically.

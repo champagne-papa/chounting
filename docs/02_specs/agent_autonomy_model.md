@@ -634,7 +634,10 @@ agent orchestrator (Phase 1.2 partial, Phase 2 full).
 Every autonomous agent posting produces a Logic Receipt —
 a structured justification tuple with no raw LLM reasoning. See
 `docs/02_specs/intent_model.md` §6 for the Logic Receipt
-specification.
+specification; the shape is partially codified today as
+`ProposalJustificationSchema`
+(`apps/web/src/shared/schemas/accounting/proposalJustification.schema.ts`)
++ `rule_evaluation_log.evaluation_trace` (write path still post-V1).
 
 **Layer:** Layer 2 (service enforcement — the Logic Receipt is
 written as part of the auto-post service call). To be registered
@@ -645,7 +648,9 @@ when the Logic Receipt write path lands.
 Promotion from Always Confirm to Notify & Auto-Post requires
 controller approval. Promotion to Silent Auto requires owner
 approval (Q24 default — controller proposes, owner approves).
-Every promotion is recorded in the audit log.
+Every promotion is recorded in the audit log. Promotion is
+effected by `ruleRegistryService.promote` updating
+`rule_registry.current_rung` (ADR-0025).
 
 **Layer:** Layer 2 (service enforcement via `withInvariants` +
 `canUserPerformAction`). To be registered when the promotion
@@ -665,7 +670,9 @@ the limit change API lands.
 
 Any controller can demote any rule to Always Confirm from any
 agent-attributed entry, effective immediately. No ceremony, no
-approval flow — demotion is a safety valve.
+approval flow — demotion is a safety valve. Demotion is effected
+by `ruleRegistryService.demote` setting
+`rule_registry.current_rung = 'always_confirm'` (ADR-0025).
 
 **Layer:** Layer 2 (service enforcement). To be registered when
 the re-probate action lands.

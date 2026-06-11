@@ -649,6 +649,40 @@ Resolution gated on Q33 closure.
 **Source:** Pattern 3 monorepo migration, 2026-04-30; partial
 resolution arc 2026-04-30 (4-of-7 cleared).
 
+**Status update 2026-06-06 (agent→adminClient cleanup Arcs 1–2).**
+This update supersedes two statements above — true at 2026-04-30,
+stale on disk as of this date; the original text stays byte-intact
+per the additive-correction discipline:
+
+- **Containment mechanism superseded.** "Current containment" above
+  describes a narrow exemption scoping the rule to exactly the 3
+  agent-runtime files. On disk today the `eslint.config.mjs` Q33
+  block disables only `no-restricted-imports` (the old mechanism),
+  globbed over ALL of `src/agent/**` — and the live boundary rule
+  (`architecture/agent-first-import-boundaries`, active at error
+  for all of `src/**`) is silenced at the 3 deferred sites by
+  per-line `eslint-disable-next-line` annotations under
+  `TODO(adr-0020-decision-6)` markers, not by config.
+- **Line numbers superseded.** The 3 deferred sites' import lines
+  are now `orgContextManager.ts:20`, `orchestrator/index.ts:42`,
+  `loadOrCreateSession.ts:13` (were :17/:39/:10 — comment-block
+  growth above the imports).
+
+**Accretion-and-clearance history.** After the 2026-04-30
+narrowing, the Tier-2 pipeline phases (6–8) accreted nine NEW
+agent→adminClient sites under `orchestrator/extraction/`, none
+annotated, all firing the boundary rule. Cleared in two arcs:
+Arc 1 (2026-06-06, `3e51389a`) hoisted the reviewPreview +
+sweepStrandedCases reads to services (9→7); Arc 2 (2026-06-06,
+`055c40fd`..`62715681`) hoisted the remaining 7 — audit-emit
+transport (`pipelineAuditService`), reads (`extractionReadService`,
+`ruleOutcomeReadService`, `commitDefaultsReadService`), and the
+runOCR write chain (`extractionArtifactWriteService`) — to 0
+boundary errors at `src/agent` grain. The 3 deferred agent-runtime
+sites above are UNCHANGED by both arcs; their resolution timing
+stays tied to the Double Entry Agent build per the original
+rationale, and this question stays OPEN for exactly those 3 sites.
+
 ### Q34 — Should `ai_actions` lifecycle mutations have their own permission keys?
 
 **Surfaced from Q33's partial-resolution arc (2026-04-30).** When the

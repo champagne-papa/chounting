@@ -268,6 +268,17 @@ and the Status-line clause-accumulation pattern.
 | [ADR-0020](./0020-agent-first-authority-gradient-source-architecture.md) | Agent-First Authority-Gradient Source Architecture (substrate-only v1) | Ratified | 2026-05-05 |
 | [ADR-0021](./0021-adr-frontmatter-and-tooling.md) | ADR Frontmatter and Tooling | Ratified | 2026-05-08 |
 | [ADR-0022](./0022-adr-lifecycle-workflows.md) | ADR Lifecycle Workflows — Amendment vs Supersession | Ratified | 2026-05-08 |
+| [ADR-0023](./0023-rule-type-core-substrate.md) | Rule Type Core Substrate and ADR-0017 Reconciliation | Ratified | 2026-05-26 |
+| [ADR-0024](./0024-ring2a-core.md) | Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate | Ratified | 2026-05-26 |
+| [ADR-0025](./0025-ring2a-core-implementation-seams.md) | Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas | Ratified | 2026-05-26 |
+| [ADR-0026](./0026-ring2a-authoring.md) | Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring | Ratified | 2026-05-29 |
+| [ADR-0027](./0027-ring2b-substrate.md) | Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring | Ratified | 2026-05-30 |
+| [ADR-0028](./0028-workflow-core-substrate.md) | Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 | Ratified | 2026-06-01 |
+| [ADR-0029](./0029-autonomy-ladder-generalization.md) | Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass | Ratified | 2026-05-31 |
+| [ADR-0030](./0030-decision-module-composition.md) | Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy | Ratified | 2026-05-31 |
+| [ADR-0031](./0031-no-ai-only-paths.md) | No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 | Ratified | 2026-06-02 |
+| [ADR-0032](./0032-canonical-autonomy-gate-seam.md) | Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 | Ratified | 2026-06-02 |
+| [ADR-0033](./0033-canonical-evidence-object-model.md) | Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 | Ratified | 2026-06-01 |
 <!-- END:generated-current-adrs -->
 
 **Phase 0 governance plan (2026-05-03) reservations.** ADR-0011 through ADR-0019 are reserved for the Document Platform reframe per
@@ -279,10 +290,53 @@ and the Status-line clause-accumulation pattern.
 > frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-module -->
+### agent
+
+- [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+- [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
+- [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
+- [ADR-0032](./0032-canonical-autonomy-gate-seam.md) — Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 (Ratified; 2026-06-02)
+
+### app-components
+
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+
+### core
+
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+
+### db
+
+- [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+- [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
+- [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
+- [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0032](./0032-canonical-autonomy-gate-seam.md) — Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 (Ratified; 2026-06-02)
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
+
+### evidence
+
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
+
 ### infra
 
 - [ADR-0021](./0021-adr-frontmatter-and-tooling.md) — ADR Frontmatter and Tooling (Ratified; 2026-05-08)
 - [ADR-0022](./0022-adr-lifecycle-workflows.md) — ADR Lifecycle Workflows — Amendment vs Supersession (Ratified; 2026-05-08)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
+
+### rules
+
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
 <!-- END:generated-by-module -->
 
 ## By invariant
@@ -291,7 +345,29 @@ and the Status-line clause-accumulation pattern.
 > without frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-invariant -->
-_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
+### INV-EVIDENCE-001
+
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
+
+### INV-RULE-001
+
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+
+### INV-RULE-002
+
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+
+### INV-RULE-003
+
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+
+### INV-RULE-004
+
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+
+### INV-WORKFLOW-001
+
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
 <!-- END:generated-by-invariant -->
 
 ## By phase
@@ -300,7 +376,19 @@ _No ADRs with this field populated yet. The first ADR with frontmatter values po
 > frontmatter do not appear here.
 
 <!-- BEGIN:generated-by-phase -->
-_No ADRs with this field populated yet. The first ADR with frontmatter values populating this field will appear here on next index regeneration._
+### post-mvp
+
+- [ADR-0023](./0023-rule-type-core-substrate.md) — Rule Type Core Substrate and ADR-0017 Reconciliation (Ratified; 2026-05-26)
+- [ADR-0024](./0024-ring2a-core.md) — Ring 2A-core — Evaluator, Agent Ladder Gate, Stage 1 Canvas, and Evaluation Log Substrate (Ratified; 2026-05-26)
+- [ADR-0025](./0025-ring2a-core-implementation-seams.md) — Ring 2A-core Implementation Seams — Evaluator, Agent Ladder Gate, Services, Routes, Stage 1 Canvas (Ratified; 2026-05-26)
+- [ADR-0026](./0026-ring2a-authoring.md) — Ring 2A-authoring — Conversational rule-drafting, Four-Questions card, approval, create-path wiring (Ratified; 2026-05-29)
+- [ADR-0027](./0027-ring2b-substrate.md) — Ring 2B — Branch/condition substrate, production branchSource, and Seam-1 shadow wiring (Ratified; 2026-05-30)
+- [ADR-0028](./0028-workflow-core-substrate.md) — Workflow Core Substrate — net-new general instance/event substrate, inert at Wave 1 (Ratified; 2026-06-01)
+- [ADR-0029](./0029-autonomy-ladder-generalization.md) — Autonomy Ladder Generalization — single canonical rung, five-ADR reconciliation, INV-AGENT precision pass (Ratified; 2026-05-31)
+- [ADR-0030](./0030-decision-module-composition.md) — Decision-Module Composition + Disposition Reconciliation (Decision 11) + (V2) Learning Trichotomy (Ratified; 2026-05-31)
+- [ADR-0031](./0031-no-ai-only-paths.md) — No-AI-Only-Paths — code-defined producer registry + warn-only CI; teeth + INV-WORKFLOW-001 at Wave 6 (Ratified; 2026-06-02)
+- [ADR-0032](./0032-canonical-autonomy-gate-seam.md) — Canonical Autonomy Gate Seam — single live-path recording seam; recording at V1, deciding post-V1 (Ratified; 2026-06-02)
+- [ADR-0033](./0033-canonical-evidence-object-model.md) — Canonical Evidence Object Model — net-new general by-reference evidence object, read/assemble at Wave 2 (Ratified; 2026-06-01)
 <!-- END:generated-by-phase -->
 
 ## Related files

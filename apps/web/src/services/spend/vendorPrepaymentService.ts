@@ -200,8 +200,7 @@ export const vendorPrepaymentService = {
    * (authorized_future_cash | classified_after_the_fact) fire at higher
    * orchestration — see file header.
    */
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'vendor_prepayment.record'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'vendor_prepayment.record'))
   async record(
     input: RecordVendorPrepaymentInputRaw,
     ctx: ServiceContext,
@@ -330,8 +329,7 @@ export const vendorPrepaymentService = {
    * Audit event: vendor_prepayment.apply (entity-grain, in addition to
    * the journal_entry.post audit emitted by journalEntryService.post).
    */
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'vendor_prepayment.apply'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'vendor_prepayment.apply'))
   async apply(
     input: ApplyVendorPrepaymentToBillInputRaw,
     ctx: ServiceContext,
@@ -502,8 +500,7 @@ export const vendorPrepaymentService = {
    *
    * Audit event: vendor_prepayment.refund.
    */
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'vendor_prepayment.refund'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'vendor_prepayment.refund'))
   async refund(
     input: RecordVendorPrepaymentRefundInputRaw,
     ctx: ServiceContext,

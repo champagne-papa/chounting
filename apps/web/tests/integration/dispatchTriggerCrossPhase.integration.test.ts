@@ -262,6 +262,8 @@ describe('billService.post → T1_new_bill dispatch (P3-i external-wrap; uncondi
             tax_code_id: null,
           },
         ],
+        // INV-DOC-001 bypass per Sub-Q4-d (Phase 5.1 chunk 5.1a Task 7b).
+        override_evidence_completeness: true,
       },
       ctx,
     );
@@ -304,6 +306,8 @@ describe('billService.post → T1_new_bill dispatch (P3-i external-wrap; uncondi
             tax_code_id: null,
           },
         ],
+        // INV-DOC-001 bypass per Sub-Q4-d (Phase 5.1 chunk 5.1a Task 7b).
+        override_evidence_completeness: true,
       },
       ctx,
     );
@@ -481,6 +485,8 @@ describe('billService.reverse → T5 conditional on pre-reverse watched-set', ()
             tax_code_id: null,
           },
         ],
+        // INV-DOC-001 bypass per Sub-Q4-d (Phase 5.1 chunk 5.1a Task 7b).
+        override_evidence_completeness: true,
       },
       postCtx,
     );
@@ -515,6 +521,8 @@ describe('billService.reverse → T5 conditional on pre-reverse watched-set', ()
             tax_code_id: null,
           },
         ],
+        // INV-DOC-001 bypass per Sub-Q4-d (Phase 5.1 chunk 5.1a Task 7b).
+        override_evidence_completeness: true,
       },
       postCtx,
     );

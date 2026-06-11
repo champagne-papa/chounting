@@ -1500,6 +1500,42 @@ The fresh-session adjudication considers founder priority signal +
 chunk-6.3b retrospective close substrate + operational urgency.
 This retrospective does not pre-lock the sequencing.
 
+### Post-close additions — 2026-05-16 supersession + SharePoint amendment
+
+Two governance amendments shipped post-Phase-6-close that
+affect §6's carry-forward registry:
+
+1. **a9f1071 supersession (commit 7265f4f).**
+   The drag-drop scope-lock cycle anchored at a9f1071 has
+   been superseded by the v2 scope-lock-input artifact at
+   `docs/09_briefs/phase-6/2026-05-16-document-drop-and-shell-consolidation-scope-lock-input.md`
+   per CTO sign-off on v3 proposal 2026-05-16. The carry-
+   forward reference in §6 to the "post-Phase-6 drag-drop
+   scope-lock cycle (scope-input artifact at a9f1071)" should
+   be read as referring to the v2 scope-lock-input artifact
+   post-supersession. a9f1071 preserved with supersession
+   header per ADR-0022 §2 discipline.
+
+2. **SharePoint continuity-of-business amendment (commit
+   01a0fa6).** A four-artifact ADR-0013 §13 amendment
+   shipped 2026-05-15 introducing the product-vs-vendor
+   availability split + `org_settings.sharepoint_durability_mode`
+   substrate reservation. Doc-only governance amendment (no
+   code, no migration); substrate reservation rides with the
+   deferred `org_settings` cross-cutting sub-arc per migration
+   135 anti-scope notes. Named in this section for
+   retrospective completeness as a post-Phase-6-close
+   governance event; sequencing belongs to post-v1
+   activation-brief territory per ADR-0013's 2026-05-15
+   Amendment §Activation-brief consumer.
+
+### Cross-references
+
+- v2 scope-lock-input artifact: `docs/09_briefs/phase-6/2026-05-16-document-drop-and-shell-consolidation-scope-lock-input.md`
+- v3 proposal: `docs/09_briefs/phase-6/2026-05-16-cto-proposal-v3-document-drop-shell-consolidation.md`
+- Session A preserved-evidence: `docs/09_briefs/phase-6/2026-05-16-session-a-preserved-evidence.md`
+- ADR-0013 2026-05-15 Amendment + Phase 4 retrospective post-close additions items 6/7/8 (SharePoint forward-pointers)
+
 ## 7. Surface-precedence note (T3 > T4 > T1)
 
 When future readers encounter a discrepancy across Phase 6 artifacts

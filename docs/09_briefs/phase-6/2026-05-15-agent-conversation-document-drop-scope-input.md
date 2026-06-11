@@ -1,3 +1,29 @@
+> **STATUS — SUPERSEDED 2026-05-16**
+>
+> This a9f1071 scope-input artifact is superseded by the v2
+> scope-lock-input artifact at:
+> `docs/09_briefs/phase-6/2026-05-16-document-drop-and-shell-consolidation-scope-lock-input.md`
+>
+> v2 reframes the original scope per CTO sign-off on the v3
+> proposal (`docs/09_briefs/phase-6/2026-05-16-cto-proposal-v3-document-drop-shell-consolidation.md`):
+>
+> - Flow (a) substrate exclusively at v1; Flow (b) deferred
+>   past v1 (Sub-Q2 / Sub-Q3 / Sub-Q5 dissolve)
+> - Shell consolidation reframe: four-zone → three-zone with
+>   Claude.ai-inspired workspace-as-module navigation + limited
+>   multi-tab canvas
+> - Cross-phase scope at Phase 6.5 amendment cycle grain per
+>   Phase 2.5 precedent
+>
+> Session A (drag-drop scope-lock cycle Rounds 0-3 against this
+> artifact) closeout shipped at commit 7834a26 with preserved-
+> evidence artifact at:
+> `docs/09_briefs/phase-6/2026-05-16-session-a-preserved-evidence.md`
+>
+> This a9f1071 document preserved as historical record per
+> ADR-0022 §2 supersession discipline. All content below this
+> header is unchanged.
+
 # Agent-Conversation Document-Drop — scope-lock-input artifact
 
 **Date**: 2026-05-15

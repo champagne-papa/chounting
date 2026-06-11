@@ -86,6 +86,18 @@ export const PostBillInputSchema = z.object({
   fiscal_period_id: z.string().uuid(), // for journalEntryService.post period-lock check
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   ap_control_account_id: z.string().uuid(), // Cr account in JE
+  // INV-DOC-001 enforcement inputs (Phase 5.1 chunk 5.1a per Sub-Q4-shape-2).
+  // Caller provides primary_document_id OR sets override_evidence_completeness=true;
+  // otherwise billService.post() throws ServiceError('EVIDENCE_INCOMPLETE').
+  // override_evidence_completeness Zod-level default mirrors Layer 1 NOT NULL
+  // DEFAULT false at migration 20240138000000:172.
+  primary_document_id: z.string().uuid().optional(),
+  override_evidence_completeness: z.boolean().optional().default(false),
+  // Wave 6 D3 — optional dedup key threaded to journalEntryService.post
+  // (idx_je_source_external partial unique). The approve→post route sets
+  // document_case_id here; absent for every other caller (NULL skips
+  // the partial index).
+  source_external_id: z.string().min(1).optional(),
 });
 export type PostBillInput = z.infer<typeof PostBillInputSchema>;
 export type PostBillInputRaw = z.input<typeof PostBillInputSchema>;

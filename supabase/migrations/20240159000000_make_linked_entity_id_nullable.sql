@@ -1,0 +1,127 @@
+-- ============================================================
+-- 20240159000000_make_linked_entity_id_nullable.sql
+-- Phase 8 chunk 4 axis 4 — F-3 substrate change scope (a) + (b)
+-- foundation: relax document_relationship_candidates.linked_entity_id
+-- from NOT NULL to NULL-able per chunk 2 brief §2.4 requirement (i)
+-- (inherited from Sessions 59 + 60 chunk 2 brief amendment cycles
+-- per F-3 scope (a) vendor_invoice Scenario A inferred-target +
+-- F-3 scope (b) receipt Scenario A variant (payment, receipt) per
+-- ADR-0015 §7) + Session 62 chunk 4 brief amendment cycle absorption
+-- per axis 4 substantive surface scope per Candidate (β) ratification
+-- grade.
+-- ============================================================
+--
+-- Per chunk 4 amended brief §2.4 enumeration: F-3 scope (a) vendor_
+-- invoice "invoice-arrives-no-bill-yet" path emission with
+-- linked_entity_type='bill' + linked_entity_id=null + F-3 scope (b)
+-- receipt-as-primary path emission with linked_entity_type='payment'
+-- + linked_entity_id=null require Layer 1 column nullability to admit
+-- these inferred-target candidate shapes. Original Phase 4 chunk 1
+-- substrate at 20240149000000 shipped linked_entity_id NOT NULL per
+-- chunks-1-3 single-Scenario-B-existing-target framing; Phase 8
+-- chunks 2-3 reactive amendment cycles + Phase 8 chunk 4 proactive
+-- amendment cycle expanded scope to absorb Scenario A inferred-target
+-- emission paths.
+--
+-- Layer 1 nullability is the FOUNDATION sub-task per Task 5 4-sub-
+-- task decomposition (5.1 migration + types regen + 5.2 Zod widening
+-- + 5.3 service-layer emission paths + 5.4 downstream consumer
+-- audit). Task 5.1 is upstream of Tasks 5.2-5.4 + Tasks 1-3 at
+-- substrate-dependency ordering grade.
+--
+-- ============================================================
+-- Substrate-mod test-staleness review per migration rule:
+-- ============================================================
+--
+-- Removing NOT NULL constraint BROADENS admission set at Layer 1
+-- (null + uuid values admitted vs uuid-only previously). Per
+-- migrations.md substrate-mod-event test-staleness review discipline,
+-- dependent tests audited at substrate-mod commit time:
+--
+-- 1. document_relationship_candidates direct insert tests (Phase 4
+--    chunk 1 substrate tests): EXISTING tests pass uuid linked_entity_
+--    id values; behavioral semantics preserved (null is admitted but
+--    not emitted by existing tests). NO STALENESS at substrate level.
+--
+-- 2. create_candidates_with_audit RPC tests: RPC parameter validation
+--    derived from Layer 2 Zod schema (DocumentRelationshipCandidate
+--    Schema). Layer 2 widening per Task 5.2 admits null linked_entity_
+--    id; RPC tests audited at Task 5.2 + 5.3 grade per substrate-
+--    dependency ordering.
+--
+-- 3. Service-layer consumer tests (resolveCandidates / dispatchTrigger
+--    integration tests at Phase 4 chunks 2 + 3 substrate): consumer
+--    semantics audited at Task 5.4 grade. Existing tests use uuid
+--    linked_entity_id fixtures; null thread-through tests new at
+--    Task 3 integration tests grade per axis 4 F-3 scope coverage.
+--
+-- 4. rematchCandidate vendor_id lookup tests (Phase 4 chunk 3
+--    framing F substrate at documentRouterService.ts:495+): vendor_id
+--    lookup via bills.vendor_id WHERE bill_id = priorCandidate.
+--    linked_entity_id (line 583) + vendor_prepayments.vendor_id WHERE
+--    id = priorCandidate.linked_entity_id (line 596). For null
+--    priorCandidate.linked_entity_id (Scenario A inferred-target),
+--    these lookups would surface "no rows" → POST_FAILED. Audited at
+--    Task 5.4 grade — Scenario A inferred-target candidates are
+--    NEWLY created (no prior re-match cycle); rematchCandidate
+--    invocation against null linked_entity_id is structurally
+--    unreachable at v1 per supersession discipline (ADR-0011 §9).
+--    Defensive null-guard ADDED at Task 5.4 grade per migration
+--    rule defensive-coding-at-substrate-broadening grade.
+--
+-- 5. documentLinkService verifyLinkedEntityExists tests (Phase 2
+--    chunk 5 substrate): source_document_links rows have linked_
+--    entity_id NOT NULL per ADR-0016 §1; chunk 4 axis 4 F-3 scope
+--    does NOT propagate null linked_entity_id to source_document_
+--    links (the links table remains NON-nullable). Inferred-target
+--    candidates that mature to bills/payments via Subsystem 3 T1
+--    dispatch resolve linked_entity_id to a real UUID BEFORE link
+--    creation. No source_document_links staleness.
+--
+-- 6. proposalBuilder Stage 7 build_proposal tests (Phase 7 chunk
+--    7.3b substrate): topCandidate.linked_entity_id used at
+--    ProposedMutation.justification composition (lines 197/266/310).
+--    For null topCandidate.linked_entity_id (Scenario A inferred-
+--    target), justification composition needs null-safety guard.
+--    Audited at Task 5.4 grade — Stage 7 build_proposal handles
+--    inferred-target candidates via downstream T1 propose-the-best
+--    dispatch (creates new bill/payment, then links).
+--
+-- ============================================================
+-- Migration: ALTER TABLE document_relationship_candidates
+--   ALTER COLUMN linked_entity_id DROP NOT NULL
+-- ============================================================
+
+ALTER TABLE document_relationship_candidates
+  ALTER COLUMN linked_entity_id DROP NOT NULL;
+
+-- ============================================================
+-- Rollback semantics (forward + backward):
+-- ============================================================
+--
+-- Forward (this migration): NOT NULL → NULL-able. Existing rows
+-- preserve their uuid linked_entity_id values; no backfill required;
+-- null is admitted only at forward emission grade post-Task-5.3
+-- service-layer ship.
+--
+-- Backward (rollback): NULL-able → NOT NULL only if no null rows
+-- present at rollback grade. Post-Task-5.3 ship, Subsystem 1 may
+-- emit Scenario A inferred-target candidates with null linked_entity_
+-- id; rollback would fail with constraint violation. Rollback
+-- requires DELETE-or-resolve of null-linked-entity-id rows BEFORE
+-- the constraint reapplication. Standard NULL-able→NOT-NULL
+-- rollback procedure per Postgres ALTER COLUMN SET NOT NULL
+-- semantics.
+--
+-- ============================================================
+-- Audit-log entry per Phase 4 chunk 1 RPC audit-trail convention:
+-- ============================================================
+--
+-- The create_candidates_with_audit RPC at 20240149000000 ships
+-- audit_log INSERTs per candidate creation. Layer 1 nullability
+-- broadening does NOT modify RPC body; RPC continues to write
+-- audit_log entries with linked_entity_id as recorded (may be null
+-- for Scenario A inferred-target candidates). Audit trail captures
+-- null linked_entity_id as canonical null per JSONB semantics.
+--
+-- ============================================================

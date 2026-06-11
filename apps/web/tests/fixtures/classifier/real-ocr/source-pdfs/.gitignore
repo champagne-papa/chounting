@@ -1,0 +1,7 @@
+# Real personal/business documents (founder self-dogfooding corpus).
+# Never commit the binaries — only the sanitized OCR line-text in
+# ../corpus.sanitized.ts is committed (founder-authorized; CRA business-
+# records retention). Also excludes Windows NTFS *:Zone.Identifier artifacts.
+*
+!.gitignore
+!README.md

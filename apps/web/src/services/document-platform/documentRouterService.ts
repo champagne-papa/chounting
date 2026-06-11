@@ -158,14 +158,20 @@ import {
   type RouterDecisionOutcome,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 import type { ExceptionReason } from '@/shared/schemas/document-platform/exceptionQueueEntry.schema';
-import { LINKED_ENTITY_TABLE_MAP } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import { LINKED_ENTITY_TABLE_MAP, VALID_PAIRS } from '@/shared/schemas/document-platform/sourceDocumentLink.schema';
+import type { CandidateFeatures, ScoredDocumentType } from '@/shared/schemas/document-platform/candidate_features.schema';
+import { composeScore, type RawFeatureSignals } from '@/core/document-platform/scoreComposition';
 import type { DocumentType } from '@/shared/schemas/document-platform/documentCase.schema';
 import { adminClient } from '@/db/adminClient';
 import { enqueueException } from '@/services/document-platform/documentExceptionService';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { loggerWith } from '@/shared/logger/pino';
-import type { ServiceContext } from '@/services/middleware/serviceContext';
+import {
+  actingUserId,
+  type ServiceContext,
+  type SystemActorServiceContext,
+} from '@/services/middleware/serviceContext';
 
 type Db = ReturnType<typeof adminClient>;
 
@@ -219,6 +225,7 @@ interface OpenBillForRouter {
   amount_cad: number;
   issue_date: string;
   due_date: string | null;
+  bill_number: string | null;
 }
 
 interface OpenPaymentForRouter {
@@ -227,6 +234,8 @@ interface OpenPaymentForRouter {
   payment_state: 'pending' | 'paid';
   amount: number;
   payment_date: string;
+  authorization_reference: string | null;
+  payment_method: string;
 }
 
 interface OpenPrepaymentForRouter {
@@ -244,15 +253,25 @@ interface ExistingLinkForRouter {
 }
 
 // Internal candidate payload shape pre-RPC.
+//
+// candidate_features narrowed from Record<string, unknown> to CandidateFeatures
+// at chunk 3 (Phase 8) per chunk 3 brief Task 2 acceptance criterion — typed
+// schema replaces permissive record per ADR-0018 §2 lines 472-475 feature
+// vector recording framing.
 interface NewCandidatePayload {
   document_case_id: string;
   source_document_id: string;
   supersedes_candidate_id: string | null;
   linked_entity_type: string;
-  linked_entity_id: string;
+  // Null at Scenario A inferred-target emission: vendor_invoice with
+  // linked_entity_type='bill' (invoice-arrives-no-bill-yet) per ADR-0015 §7;
+  // receipt with linked_entity_type='payment' (receipt-as-primary variant).
+  // Scenario B existing-target emissions stay non-null. Layer 1 column
+  // NULL-able per migration 20240159000000.
+  linked_entity_id: string | null;
   link_role: string;
   confidence_score: number;
-  candidate_features: Record<string, unknown>;
+  candidate_features: CandidateFeatures;
   trace_id: string;
 }
 
@@ -268,7 +287,7 @@ async function loadOpenBillsForVendor(
 ): Promise<OpenBillForRouter[]> {
   const { data, error } = await db
     .from('bills')
-    .select('bill_id, vendor_id, lifecycle_state, amount_cad, issue_date, due_date')
+    .select('bill_id, vendor_id, lifecycle_state, amount_cad, issue_date, due_date, bill_number')
     .eq('org_id', org_id)
     .eq('vendor_id', vendor_id)
     .in('lifecycle_state', ['approved_for_payment', 'partially_paid']);
@@ -293,7 +312,7 @@ async function loadOpenPaymentsForVendor(
 ): Promise<OpenPaymentForRouter[]> {
   const { data, error } = await db
     .from('payments')
-    .select('payment_id, vendor_id, payment_state, amount, payment_date')
+    .select('payment_id, vendor_id, payment_state, amount, payment_date, authorization_reference, payment_method')
     .eq('org_id', org_id)
     .eq('vendor_id', vendor_id)
     .in('payment_state', ['pending', 'paid']);
@@ -535,8 +554,55 @@ async function rematchCandidate(
   }
 
   // Derive vendor_match.vendor_id via linked_entity_id fallback.
-  const features = priorCandidate.candidate_features as Record<string, unknown>;
+  // Reconstruction fields extracted from chunk 3 structured candidate_features
+  // shape (per CandidateFeaturesSchema at candidate_features.schema.ts):
+  //   - document_type ← candidate_features.document_type (top-level)
+  //   - classification_confidence ← candidate_features.classification_confidence (top-level optional)
+  //   - vendor_match_* ← vendor_match feature record's raw_value (match_type + confidence)
+  //   - extracted_amount ← amount_match feature record's raw_value.extracted
+  //   - extracted_invoice_date ← date_proximity feature record's raw_value.extracted
+  const candidateFeatures = priorCandidate.candidate_features;
+  const vendorFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'vendor_match',
+  );
+  const amountFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'amount_match',
+  );
+  const dateFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'date_proximity',
+  );
+  const vendorRaw = vendorFeature?.raw_value as
+    | { match_type?: string; confidence?: number }
+    | null
+    | undefined;
+  const amountRaw = amountFeature?.raw_value as
+    | { extracted?: number | null }
+    | null
+    | undefined;
+  const dateRaw = dateFeature?.raw_value as
+    | { extracted?: string | null }
+    | null
+    | undefined;
   let vendor_id: string | null = null;
+
+  // Defensive null-guard at Scenario A inferred-target rematch grade.
+  // Null priorCandidate.linked_entity_id at v1 is structurally unreachable
+  // per ADR-0011 §9 supersession discipline (Scenario A candidates are
+  // freshly emitted at chunk 4 grade; no prior re-match cycle has fired
+  // against them; T1/T3/T5/T8/T10 dispatches handle inferred-target
+  // maturation before any rematch). Defensive degradation matches the
+  // unrecognized-linked_entity_type fallthrough below.
+  if (priorCandidate.linked_entity_id === null) {
+    log.warn(
+      {
+        case_id,
+        candidate_id: priorCandidate.id,
+        linked_entity_type: priorCandidate.linked_entity_type,
+      },
+      'rematchCandidate: null linked_entity_id at prior candidate (Scenario A inferred-target); structurally unreachable at v1 per ADR-0011 §9; returning [] defensively',
+    );
+    return [];
+  }
 
   if (priorCandidate.linked_entity_type === 'bill') {
     const { data, error } = await db
@@ -576,21 +642,22 @@ async function rematchCandidate(
     return [];
   }
 
-  // Reconstruct CompleteCandidateInput from candidate_features.
+  // Reconstruct CompleteCandidateInput from candidate_features (chunk 3
+  // structured shape).
   const reconstructedInput: CompleteCandidateInputRaw = {
     document_case_id: case_id,
     source_document_id: priorCandidate.source_document_id,
-    document_type: features.document_type as DocumentType,
-    classification_confidence: features.classification_confidence as number,
+    document_type: candidateFeatures.document_type as DocumentType,
+    classification_confidence: candidateFeatures.classification_confidence ?? 0,
     extracted_fields: {
-      invoice_amount: features.extracted_amount ?? null,
-      invoice_date: features.extracted_invoice_date ?? null,
-      receipt_amount: features.extracted_amount ?? null,
+      invoice_amount: amountRaw?.extracted ?? null,
+      invoice_date: dateRaw?.extracted ?? null,
+      receipt_amount: amountRaw?.extracted ?? null,
     },
     vendor_match: {
       vendor_id,
-      confidence: features.vendor_match_confidence as number,
-      match_type: features.vendor_match_type as
+      confidence: vendorRaw?.confidence ?? 0,
+      match_type: (vendorRaw?.match_type ?? 'no_match') as
         | 'exact_name'
         | 'alias'
         | 'tax_id'
@@ -603,7 +670,88 @@ async function rematchCandidate(
     trace_id,
   };
 
-  return await completeCandidate(reconstructedInput, ctx);
+  // Re-evaluation suppresses Scenario A inferred-target emission so an
+  // orphaned prior candidate (e.g., T5 on a bill transitioned out of the
+  // watched set) routes to exception queue at rule 4 rather than silently
+  // shifting to a Scenario A candidate_superseded outcome.
+  return await completeCandidate(reconstructedInput, ctx, {
+    suppress_inferred_target: true,
+  });
+}
+
+// ---------------------------------------------------------------------
+// Per-feature contribution helpers (chunk 2 Session 60 grade).
+//
+// Pure functions emitting raw per-feature signal values for inclusion in
+// candidate_features JSONB at Subsystem 1 output emission grade. Chunk 2
+// emits per-feature contribution SURFACE only; composition formula
+// (per-feature weight allocation + score summing) defers to chunk 3 score
+// composition expansion per Sub-Q14 sub-chunk b decomposition + ADR-0018
+// §2 lines 450-475 confidence scoring composition framing.
+//
+// AMOUNT_TOLERANCE_CAD provisional value: $0.01 (one cent tolerance for
+// floating-point + numeric(20,4) round-trip; chunk 3 score composition
+// ratifies via ADR-0019 calibration cycle).
+//
+// DATE_PROXIMITY_WINDOW_DAYS provisional value: 14 days (per chunk 2
+// brief Task 1 partial-information value pick at v1 grade per ADR-0018
+// §2 lines 466-471 implementation-owned-at-v1 framing; chunk 3 score
+// composition expansion ratifies via ADR-0019 calibration cycle).
+// ---------------------------------------------------------------------
+const AMOUNT_TOLERANCE_CAD = 0.01;
+const DATE_PROXIMITY_WINDOW_DAYS = 14;
+
+function computeAmountFeatures(
+  extractedAmount: unknown,
+  candidateAmount: number,
+): { match: boolean | null; diff_cad: number | null } {
+  if (typeof extractedAmount !== 'number' || !Number.isFinite(extractedAmount)) {
+    return { match: null, diff_cad: null };
+  }
+  const candidateNum =
+    typeof candidateAmount === 'number' ? candidateAmount : Number(candidateAmount);
+  if (!Number.isFinite(candidateNum)) {
+    return { match: null, diff_cad: null };
+  }
+  const diff = Math.abs(extractedAmount - candidateNum);
+  return {
+    match: diff <= AMOUNT_TOLERANCE_CAD,
+    diff_cad: diff,
+  };
+}
+
+function computeDateFeatures(
+  extractedDate: unknown,
+  candidateDate: string,
+): { proximity_days: number | null; within_window: boolean | null } {
+  if (typeof extractedDate !== 'string' || extractedDate.length === 0) {
+    return { proximity_days: null, within_window: null };
+  }
+  const extractedMs = Date.parse(extractedDate);
+  const candidateMs = Date.parse(candidateDate);
+  if (!Number.isFinite(extractedMs) || !Number.isFinite(candidateMs)) {
+    return { proximity_days: null, within_window: null };
+  }
+  const diffDays = Math.round(Math.abs(extractedMs - candidateMs) / (1000 * 60 * 60 * 24));
+  return {
+    proximity_days: diffDays,
+    within_window: diffDays <= DATE_PROXIMITY_WINDOW_DAYS,
+  };
+}
+
+function computeStringMatchFeature(
+  extracted: unknown,
+  candidate: string | null | undefined,
+): boolean | null {
+  if (
+    typeof extracted !== 'string' ||
+    extracted.length === 0 ||
+    candidate === null ||
+    candidate === undefined
+  ) {
+    return null;
+  }
+  return extracted.trim().toLowerCase() === candidate.trim().toLowerCase();
 }
 
 // ---------------------------------------------------------------------
@@ -620,9 +768,29 @@ async function rematchCandidate(
 // ---------------------------------------------------------------------
 export async function completeCandidate(
   input: CompleteCandidateInputRaw,
-  ctx: ServiceContext,
+  // Phase 8 chunk 10 (partial): widened to admit the orchestrator's
+  // SystemActorServiceContext directly, retiring the synthCtxForRouter shim
+  // at ingestDocument.ts. This is a pure type widening — completeCandidate
+  // reads only union-common fields (trace_id, caller.user_id) and is invoked
+  // directly (NOT through withInvariants), so no role-based authorization
+  // (Invariant 4) is involved on this path. See ADR-0007 §Tier 2.
+  ctx: ServiceContext | SystemActorServiceContext,
+  options: { suppress_inferred_target?: boolean } = {},
 ): Promise<DocumentRelationshipCandidate[]> {
-  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  // user_id is string|null under the widened union (null for system actors);
+  // loggerWith wants string|undefined — same `?? undefined` shape as the N=2
+  // precedent (vendorService.ts:128).
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id ?? undefined });
+
+  // suppress_inferred_target gates the chunk 4 Scenario A emission paths
+  // (vendor_invoice invoice-arrives-no-bill-yet, receipt receipt-as-primary).
+  // Subsystem 3 re-evaluation (rematchCandidate) passes true to preserve
+  // the "orphaned prior candidate → exception queue" semantic at T5/T8/T10
+  // dispatch grade per brief Task 5.4.2 framing ("Scenario A inferred-target
+  // candidates are NEWLY created via Subsystem 1 emission at chunk 4 grade;
+  // no prior re-match cycle has fired against them"). Initial Subsystem 1
+  // invocation leaves the flag at its default (false) so Scenario A emits.
+  const suppressInferredTarget = options.suppress_inferred_target === true;
 
   // Layer 2 boundary: Zod parse at service entry.
   let parsed: CompleteCandidateInput;
@@ -700,8 +868,15 @@ export async function completeCandidate(
   // §item 5(f)). Subsystem 1 avoids producing candidates that
   // duplicate an existing committed link for the same source_document.
   const existingLinks = await listLinksForCaseSourceDocuments(db, [parsed.source_document_id]);
-  const existingPairKey = (entity_type: string, entity_id: string) =>
-    `${entity_type}|${entity_id}`;
+  // Null entity_id sentinel: Scenario A inferred-target candidates carry
+  // linked_entity_id=null. Existing source_document_links always have
+  // non-null linked_entity_id per ADR-0016 §1, so the null sentinel
+  // never matches against existingKeys (read from listLinksForCaseSourceDocuments
+  // which queries source_document_links). The sentinel preserves
+  // pair-key uniqueness within candidatesToProduce for inferred-target
+  // dedup symmetry with Scenario B.
+  const existingPairKey = (entity_type: string, entity_id: string | null) =>
+    entity_id === null ? `${entity_type}|null` : `${entity_type}|${entity_id}`;
   const existingKeys = new Set(
     existingLinks.map((link) =>
       existingPairKey(link.linked_entity_type, link.linked_entity_id),
@@ -731,18 +906,72 @@ export async function completeCandidate(
     return [];
   }
 
-  const baseFeatures: Record<string, unknown> = {
-    vendor_match_type: parsed.vendor_match.match_type,
-    vendor_match_confidence: parsed.vendor_match.confidence,
-    document_type: parsed.document_type,
-    classification_confidence: parsed.classification_confidence,
-  };
+  // Per-branch chunk 2 per-feature contribution surfaces feed into chunk 3
+  // composeScore() helper at scoreComposition.ts. composeScore normalizes
+  // raw signals to [0, 1] per axis, applies document_type-specific weight
+  // allocation (V1_PROVISIONAL_WEIGHTS per ADR-0019 §9 + ADR-0018 §2 lines
+  // 465-470), and sums to aggregate_score = confidence_score per chunk 3
+  // brief Task 2. vendor_match_raw_value carries vendor_match_type +
+  // vendor_match_confidence forensic reconstruction surface inherited from
+  // chunk 2 baseFeatures (consumed by rematchCandidate per F-J-13).
 
   if (parsed.document_type === 'vendor_invoice') {
     // vendor_invoice → bill matching (link_role = primary_invoice).
+    //   - Scenario B: existing-bill matching (chunk 2 substrate). Emits one
+    //     candidate per matching open bill.
+    //   - Scenario A inferred-target: invoice-arrives-no-bill-yet path —
+    //     emits one candidate with linked_entity_id=null per ADR-0015 §7 +
+    //     chunk 2 brief §2.4 F-3 scope (a). Fires only when no Scenario B
+    //     candidate was produced (no existing bill matched the invoice).
+    //     Subsystem 3 T1 dispatch (Stage 7 → post_bill ProposedEntry →
+    //     billService.post) matures the inferred target into a bill.
+    const scenarioBCountBefore = candidatesToProduce.length;
     const openBills = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBills) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.invoice_amount,
+        bill.amount_cad,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.invoice_date,
+        bill.issue_date,
+      );
+      const billNumberMatch = computeStringMatchFeature(
+        parsed.extracted_fields.invoice_number,
+        bill.bill_number,
+      );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.invoice_amount ?? null,
+          candidate: bill.amount_cad,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          bill_lifecycle_state: bill.lifecycle_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.invoice_date ?? null,
+          candidate: bill.issue_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: billNumberMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.invoice_number ?? null,
+          candidate: bill.bill_number,
+          match: billNumberMatch,
+        },
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const composed = composeScore(signals, 'vendor_invoice');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -750,22 +979,138 @@ export async function completeCandidate(
         linked_entity_type: 'bill',
         linked_entity_id: bill.bill_id,
         link_role: 'primary_invoice',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
-          bill_lifecycle_state: bill.lifecycle_state,
-          bill_amount_cad: bill.amount_cad,
-          extracted_amount: parsed.extracted_fields.invoice_amount ?? null,
-          extracted_invoice_date: parsed.extracted_fields.invoice_date ?? null,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'vendor_invoice',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
+        },
+        trace_id: parsed.trace_id,
+      });
+    }
+
+    // Scenario A inferred-target emission. Fires only when no Scenario B
+    // candidate was produced (no existing bill matched) and the caller did
+    // not request suppression (re-evaluation via rematchCandidate passes
+    // suppress_inferred_target=true to preserve T5/T8/T10 orphan →
+    // exception-queue semantics). Only vendor_match contributes to the
+    // score; other axes are null and normalize to 0 in composeScore.
+    if (!suppressInferredTarget && candidatesToProduce.length === scenarioBCountBefore) {
+      const inferredSignals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: null,
+        amount_raw_value: null,
+        date_within_window: null,
+        date_raw_value: null,
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const inferredComposed = composeScore(inferredSignals, 'vendor_invoice');
+      candidatesToProduce.push({
+        document_case_id: parsed.document_case_id,
+        source_document_id: parsed.source_document_id,
+        supersedes_candidate_id: null,
+        linked_entity_type: 'bill',
+        linked_entity_id: null,
+        link_role: 'primary_invoice',
+        confidence_score: inferredComposed.aggregate_score,
+        candidate_features: {
+          features: inferredComposed.features,
+          aggregate_score: inferredComposed.aggregate_score,
+          document_type: 'vendor_invoice',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
+          scenario: 'invoice_inferred_target',
         },
         trace_id: parsed.trace_id,
       });
     }
   } else if (parsed.document_type === 'receipt') {
-    // Scenario A: receipt → payment (link_role = payment_evidence).
+    // Scenario A: receipt → payment (link_role = payment_evidence) — receipt
+    // evidences existing payment.
+    // Scenario B: receipt → bill (link_role = receipt) — receipt evidences
+    // bill payment.
+    //
+    // Scenario A variant (payment, receipt) receipt-as-primary inferred-target:
+    // shipped at end of receipt branch (see below) per ADR-0015 §7 + chunk 2
+    // brief §2.4 F-3 scope (b). T2 propose_payment_record dispatch is reserved
+    // pending paymentService.ts (chunk 8); at chunk 4 grade Stage 7 routes
+    // through the existing receipt fallthrough → exception queue at
+    // exception_reason='inferred_target_unmatched_v1' per ADR-0010
+    // substrate-now-enforcement-later.
+    //
+    // Both scenarios use composeScore with 'receipt' document_type weights
+    // per chunk 3 V1_PROVISIONAL_WEIGHTS; Scenario B (receipt→bill) lacks
+    // authorization_reference + payment_method semantics → reference_match
+    // + payment_method_match passed as null → normalized to 0 per axis →
+    // Scenario B aggregate_score capped at 0.65 max per receipt weight
+    // allocation (vendor 0.25 + amount 0.25 + date 0.15). This structurally
+    // penalizes evidence-poor Scenario B vs evidence-rich Scenario A; the
+    // operational asymmetry is intentional per receipt-evidence-precision
+    // disambiguation.
+    const scenarioAPaymentCountBefore = candidatesToProduce.length;
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.receipt_amount,
+        payment.amount,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.receipt_date,
+        payment.payment_date,
+      );
+      const authorizationReferenceMatch = computeStringMatchFeature(
+        parsed.extracted_fields.authorization_reference,
+        payment.authorization_reference,
+      );
+      const paymentMethodMatch = computeStringMatchFeature(
+        parsed.extracted_fields.payment_method,
+        payment.payment_method,
+      );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          candidate: payment.amount,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          payment_state: payment.payment_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.receipt_date ?? null,
+          candidate: payment.payment_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: authorizationReferenceMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          candidate: payment.authorization_reference,
+          match: authorizationReferenceMatch,
+        },
+        payment_method_match: paymentMethodMatch,
+        payment_method_raw_value: {
+          extracted: parsed.extracted_fields.payment_method ?? null,
+          candidate: payment.payment_method,
+          match: paymentMethodMatch,
+        },
+      };
+      const composed = composeScore(signals, 'receipt');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -773,13 +1118,14 @@ export async function completeCandidate(
         linked_entity_type: 'payment',
         linked_entity_id: payment.payment_id,
         link_role: 'payment_evidence',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'receipt_to_payment',
-          payment_state: payment.payment_state,
-          payment_amount: payment.amount,
-          extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
         },
         trace_id: parsed.trace_id,
       });
@@ -788,6 +1134,41 @@ export async function completeCandidate(
     const openBillsForReceipt = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBillsForReceipt) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.receipt_amount,
+        bill.amount_cad,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.receipt_date,
+        bill.issue_date,
+      );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          candidate: bill.amount_cad,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          bill_lifecycle_state: bill.lifecycle_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.receipt_date ?? null,
+          candidate: bill.issue_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const composed = composeScore(signals, 'receipt');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -795,22 +1176,134 @@ export async function completeCandidate(
         linked_entity_type: 'bill',
         linked_entity_id: bill.bill_id,
         link_role: 'receipt',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'bill',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'receipt_to_bill',
-          bill_lifecycle_state: bill.lifecycle_state,
-          bill_amount_cad: bill.amount_cad,
-          extracted_amount: parsed.extracted_fields.receipt_amount ?? null,
+        },
+        trace_id: parsed.trace_id,
+      });
+    }
+
+    // Scenario A variant (payment, receipt) receipt-as-primary inferred-target
+    // emission. Fires only when no Scenario A existing emission (receipt →
+    // payment match) was produced — receipt-as-primary semantically means
+    // the underlying payment does not exist yet (ADR-0015 §7 variant
+    // disambiguation). Scenario B (receipt → bill) emissions don't gate
+    // this: they are an orthogonal scenario class (receipt evidences a bill
+    // payment vs receipt-as-primary creates a payment). T2 dispatch reserved
+    // pending paymentService.ts (chunk 8); Stage 7 routes through the receipt
+    // fallthrough → orchestrator exception queue.
+    //
+    // openBillsForReceipt loop pushes 'bill'-typed candidates; the predicate
+    // below checks for any payment-typed emission specifically, which is
+    // the Scenario A existing surface.
+    const hasScenarioAPaymentExisting = candidatesToProduce
+      .slice(scenarioAPaymentCountBefore)
+      .some((c) => c.linked_entity_type === 'payment');
+    if (!suppressInferredTarget && !hasScenarioAPaymentExisting) {
+      const inferredReceiptSignals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: null,
+        amount_raw_value: null,
+        date_within_window: null,
+        date_raw_value: null,
+        reference_match: null,
+        reference_raw_value: null,
+        payment_method_match: null,
+        payment_method_raw_value: null,
+      };
+      const inferredReceiptComposed = composeScore(inferredReceiptSignals, 'receipt');
+      candidatesToProduce.push({
+        document_case_id: parsed.document_case_id,
+        source_document_id: parsed.source_document_id,
+        supersedes_candidate_id: null,
+        linked_entity_type: 'payment',
+        linked_entity_id: null,
+        link_role: 'payment_evidence',
+        confidence_score: inferredReceiptComposed.aggregate_score,
+        candidate_features: {
+          features: inferredReceiptComposed.features,
+          aggregate_score: inferredReceiptComposed.aggregate_score,
+          document_type: 'receipt',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
+          scenario: 'receipt_inferred_target',
         },
         trace_id: parsed.trace_id,
       });
     }
   } else if (parsed.document_type === 'payment_confirmation') {
     // payment_confirmation → payment (link_role = payment_evidence).
+    // Canonical (payment, payment_evidence) shape per ADR-0018 §2 lines
+    // 442-449. Distinct from receipt at scoring weight allocation surface —
+    // payment_confirmation's authorization_reference is bank-issued
+    // (canonical identifier reliability) vs receipt's authorization_reference
+    // is merchant-issued, so payment_confirmation weight allocation per
+    // V1_PROVISIONAL_WEIGHTS at scoreComposition.ts puts reference_alignment
+    // at 0.35 (heavier) vs receipt's 0.20.
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
+      const amountFeatures = computeAmountFeatures(
+        parsed.extracted_fields.payment_amount,
+        payment.amount,
+      );
+      const dateFeatures = computeDateFeatures(
+        parsed.extracted_fields.payment_date,
+        payment.payment_date,
+      );
+      const authorizationReferenceMatch = computeStringMatchFeature(
+        parsed.extracted_fields.authorization_reference,
+        payment.authorization_reference,
+      );
+      const paymentMethodMatch = computeStringMatchFeature(
+        parsed.extracted_fields.payment_method,
+        payment.payment_method,
+      );
+      const signals: RawFeatureSignals = {
+        vendor_match_confidence: parsed.vendor_match.confidence,
+        vendor_match_raw_value: {
+          match_type: parsed.vendor_match.match_type,
+          confidence: parsed.vendor_match.confidence,
+        },
+        amount_match: amountFeatures.match,
+        amount_raw_value: {
+          extracted: parsed.extracted_fields.payment_amount ?? null,
+          candidate: payment.amount,
+          diff_cad: amountFeatures.diff_cad,
+          match: amountFeatures.match,
+          payment_state: payment.payment_state,
+        },
+        date_within_window: dateFeatures.within_window,
+        date_raw_value: {
+          extracted: parsed.extracted_fields.payment_date ?? null,
+          candidate: payment.payment_date,
+          proximity_days: dateFeatures.proximity_days,
+          within_window_14d: dateFeatures.within_window,
+        },
+        reference_match: authorizationReferenceMatch,
+        reference_raw_value: {
+          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          candidate: payment.authorization_reference,
+          match: authorizationReferenceMatch,
+        },
+        payment_method_match: paymentMethodMatch,
+        payment_method_raw_value: {
+          extracted: parsed.extracted_fields.payment_method ?? null,
+          candidate: payment.payment_method,
+          match: paymentMethodMatch,
+        },
+      };
+      const composed = composeScore(signals, 'payment_confirmation');
       candidatesToProduce.push({
         document_case_id: parsed.document_case_id,
         source_document_id: parsed.source_document_id,
@@ -818,16 +1311,39 @@ export async function completeCandidate(
         linked_entity_type: 'payment',
         linked_entity_id: payment.payment_id,
         link_role: 'payment_evidence',
-        confidence_score: parsed.vendor_match.confidence,
+        confidence_score: composed.aggregate_score,
         candidate_features: {
-          ...baseFeatures,
+          features: composed.features,
+          aggregate_score: composed.aggregate_score,
+          document_type: 'payment_confirmation',
+          linked_entity_type: 'payment',
+          classification_confidence: parsed.classification_confidence,
           scenario: 'payment_confirmation_to_payment',
-          payment_state: payment.payment_state,
-          payment_amount: payment.amount,
-          extracted_amount: parsed.extracted_fields.payment_amount ?? null,
         },
         trace_id: parsed.trace_id,
       });
+    }
+  }
+
+  // VALID_PAIRS-based pair-validity emission assertion (chunk 2 Task 4 per
+  // chunk 2 brief §B.1 amendment Path β preliminary recommendation).
+  // Assert each emitted (linked_entity_type, link_role) pair is in canonical
+  // VALID_PAIRS set at sourceDocumentLink.schema.ts:68 (13-cell pair-validity
+  // matrix at v1 per Sub-Q3 β substrate-tables-only-without-cell-activation
+  // discipline inheritance from Phase 5.1 chunk 5.1a). Reserved post-v1
+  // pairs (vendor_credit, *) + (vendor_credit_application, *) structurally
+  // prevented via VALID_PAIRS zero-entry exclusion. Service-layer assertion
+  // at Subsystem 1 output emission boundary; no type-union narrowing at
+  // DocumentRelationshipCandidate.linked_entity_type (canonical 8-value
+  // LinkedEntityTypeSchema preserved per HEAD substrate at Phase 5.1 chunk
+  // 5.1a ratification grade).
+  for (const candidate of candidatesToProduce) {
+    const pairKey = `${candidate.linked_entity_type}|${candidate.link_role}`;
+    if (!VALID_PAIRS.has(pairKey)) {
+      throw new ServiceError(
+        'POST_FAILED',
+        `completeCandidate: emission with invalid (linked_entity_type, link_role) pair "${pairKey}" violates VALID_PAIRS at sourceDocumentLink.schema.ts (Sub-Q3 β substrate-tables-only-without-cell-activation discipline; reserved post-v1 pairs not emittable at v1)`,
+      );
     }
   }
 
@@ -915,9 +1431,16 @@ export async function completeCandidate(
 // ---------------------------------------------------------------------
 export async function resolveCandidates(
   input: ResolveCandidatesInputRaw,
-  ctx: ServiceContext,
+  // Wave 6 D2.1 T3: widened to admit the orchestrator's
+  // SystemActorServiceContext directly, mirroring completeCandidate above
+  // (pure type widening; direct invocation, NOT through withInvariants, so
+  // no role-based authorization (Invariant 4) on this path; reads only
+  // union-common fields). Attribution sites below use actingUserId(ctx)
+  // (ADR-0007 Q78 Path X — system actors write the joinable
+  // service-account id, not null). See ADR-0007 §Tier 2.
+  ctx: ServiceContext | SystemActorServiceContext,
 ): Promise<RouterDecision> {
-  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
+  const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id ?? undefined });
 
   // Layer 2 boundary: Zod parse at service entry.
   let parsed: ResolveCandidatesInput;
@@ -1022,7 +1545,7 @@ export async function resolveCandidates(
       },
       p_audit_decision: {
         org_id,
-        user_id: ctx.caller.user_id,
+        user_id: actingUserId(ctx),
         trace_id: parsed.trace_id,
         action: 'router_decision_recorded',
         entity_type: 'document_case',
@@ -1033,7 +1556,7 @@ export async function resolveCandidates(
       },
       p_audit_mutation: {
         org_id,
-        user_id: ctx.caller.user_id,
+        user_id: actingUserId(ctx),
         trace_id: parsed.trace_id,
         action: 'document_case_transitioned',
         entity_type: 'document_case',
@@ -1097,7 +1620,7 @@ export async function resolveCandidates(
     },
     p_audit: {
       org_id,
-      user_id: ctx.caller.user_id,
+      user_id: actingUserId(ctx),
       trace_id: parsed.trace_id,
       action: 'router_decision_recorded',
       entity_type: 'document_case',
@@ -1372,8 +1895,10 @@ async function runPerCaseReEvaluation(
 // Each helper returns the list of document_case_ids that
 // runPerCaseReEvaluation should apply to for a given trigger event.
 // Per the amended brief §Per-trigger semantic-coverage table:
-//   - T1 / T3: fan-out across stranded cases in exception queue
+//   - T1 / T2 / T3: fan-out across stranded cases in exception queue
 //     (audit-only at v1; rematchCandidate returns [] for stranded).
+//     T2 added at Phase 5.1 chunk 5.1b (paymentService.record activation)
+//     per shared "new-domain-entity-created" semantic class with T1/T3.
 //   - T5: cases with pre-commit candidates pointing at the transitioned
 //     bill (re-routing-functional via rematchCandidate).
 //   - T8: cases with pre-commit candidates whose extracted_invoice_date
@@ -1382,27 +1907,51 @@ async function runPerCaseReEvaluation(
 //     has priors; audit-only if stranded).
 // ---------------------------------------------------------------------
 
-// T1 / T3 fan-out (v1 audit-only): open exception_queue_entries with
-// exception_reason='unmatched_router_candidate' for the org. Vendor-
-// targeted fan-out activates when Phase 7 ships substrate to link
-// stranded cases to vendor identifiers.
-async function computeT1T3FanOut(db: Db, org_id: string): Promise<string[]> {
-  const { data, error } = await db
-    .from('exception_queue_entries')
-    .select('document_case_id')
-    .eq('org_id', org_id)
-    .eq('exception_status', 'open')
-    .eq('exception_reason', 'unmatched_router_candidate');
-  if (error) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `computeT1T3FanOut failed for org ${org_id}: ${error.message}`,
-    );
+// T1 / T2 / T3 fan-out (v1 audit-only): open exception_queue_entries
+// with exception_reason='unmatched_router_candidate' for the org.
+// Vendor-targeted fan-out activates when Phase 7 ships substrate to
+// link stranded cases to vendor identifiers.
+async function computeT1T2T3FanOut(db: Db, org_id: string): Promise<string[]> {
+  // Paginated fetch: PostgREST's PGRST_DB_MAX_ROWS (1000 in this project
+  // per supabase/config.toml) silently truncates an unbounded .select() to
+  // 1000 rows. Without explicit .order('exception_queue_entry_id')+.range()
+  // iteration, an org with >1000 open unmatched-router-candidate
+  // exceptions would silently drop rows from the fan-out. Same
+  // architectural shape as computeT8FanOut (T8 investigation arc
+  // 2026-05-28, same-bug-different-site defensive fix; current fan-out
+  // counts in test substrate are below 1000 — T1=134, T3=135 — so this
+  // site has not yet fired the truncation but is latent at scale).
+  // SQL-side filter via stored function (F1b in the arc's adjudication)
+  // is the correctness-ceiling fix; deferred until perf telemetry
+  // surfaces need.
+  const PAGE_SIZE = 1000;
+  const ids = new Set<string>();
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from('exception_queue_entries')
+      .select('document_case_id')
+      .eq('org_id', org_id)
+      .eq('exception_status', 'open')
+      .eq('exception_reason', 'unmatched_router_candidate')
+      .order('exception_queue_entry_id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `computeT1T2T3FanOut failed for org ${org_id}: ${error.message}`,
+      );
+    }
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      ids.add(row.document_case_id as string);
+    }
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
-  const ids = (data ?? []).map((r) => r.document_case_id as string);
   // De-duplicate (partial UNIQUE on open status guarantees uniqueness
   // per case, but be defensive).
-  return Array.from(new Set(ids));
+  return Array.from(ids);
 }
 
 // T5 fan-out: head-of-chain candidates pointing at the transitioned bill.
@@ -1428,12 +1977,13 @@ async function computeT5FanOut(
   return Array.from(new Set(ids));
 }
 
-// T8 fan-out: head-of-chain candidates whose candidate_features
-// .extracted_invoice_date falls in the reopened period's date range.
-// accounting_date derivation at v1 uses extracted_invoice_date as the
-// proxy (verify-at-impl ledger item 3; brief assumed shape, verified
-// here). Phase 7 may introduce a dedicated accounting_date column on
-// the case substrate; if so, the filter migrates.
+// T8 fan-out: head-of-chain candidates whose date_proximity feature's
+// raw_value.extracted (chunk 3 structured candidate_features per
+// CandidateFeaturesSchema) falls in the reopened period's date range.
+// accounting_date derivation at v1 uses extracted invoice/receipt/payment
+// date as the proxy (verify-at-impl ledger item 3). Phase 7 may introduce
+// a dedicated accounting_date column on the case substrate; if so, the
+// filter migrates.
 async function computeT8FanOut(
   db: Db,
   org_id: string,
@@ -1459,29 +2009,56 @@ async function computeT8FanOut(
   }
 
   // Filter head-of-chain candidates by extracted_invoice_date in range.
-  const { data, error } = await db
-    .from('document_relationship_candidates')
-    .select('document_case_id, candidate_features')
-    .eq('org_id', org_id)
-    .is('supersedes_candidate_id', null);
-  if (error) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `computeT8FanOut head-of-chain query failed: ${error.message}`,
-    );
-  }
-
+  //
+  // Paginated fetch: PostgREST's PGRST_DB_MAX_ROWS (1000 in this project
+  // per supabase/config.toml) silently truncates an unbounded .select() to
+  // 1000 rows. Without explicit .order('id')+.range() iteration, an org
+  // with >1000 head-of-chain candidates silently drops rows from the
+  // fan-out (T8 investigation arc 2026-05-28 — local substrate held 1834
+  // head-of-chain candidates for ORG_HOLDING from accumulated integration
+  // test runs; the failing test's freshly-seeded candidate was in the
+  // 834 silently truncated). The date filter is applied per-batch in JS.
+  // SQL-side filter via stored function (F1b in the arc's adjudication)
+  // is the correctness-ceiling fix that avoids loading all head-of-chain
+  // rows; deferred until perf telemetry surfaces need.
+  const PAGE_SIZE = 1000;
   const start = (period as { start_date: string }).start_date;
   const end = (period as { end_date: string }).end_date;
   const ids = new Set<string>();
-  for (const row of data ?? []) {
-    const features = (row as { candidate_features: Record<string, unknown> })
-      .candidate_features;
-    const extractedDate = features?.extracted_invoice_date as string | null | undefined;
-    if (!extractedDate) continue;
-    if (extractedDate >= start && extractedDate <= end) {
-      ids.add((row as { document_case_id: string }).document_case_id);
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from('document_relationship_candidates')
+      .select('document_case_id, candidate_features')
+      .eq('org_id', org_id)
+      .is('supersedes_candidate_id', null)
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) {
+      throw new ServiceError(
+        'READ_FAILED',
+        `computeT8FanOut head-of-chain query failed: ${error.message}`,
+      );
     }
+    if (!data || data.length === 0) break;
+    for (const row of data) {
+      const features = (row as { candidate_features: CandidateFeatures | null })
+        .candidate_features;
+      const dateFeature = features?.features?.find(
+        (f) => f.feature_name === 'date_proximity',
+      );
+      const dateRaw = dateFeature?.raw_value as
+        | { extracted?: string | null }
+        | null
+        | undefined;
+      const extractedDate = dateRaw?.extracted ?? null;
+      if (!extractedDate) continue;
+      if (extractedDate >= start && extractedDate <= end) {
+        ids.add((row as { document_case_id: string }).document_case_id);
+      }
+    }
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
   return Array.from(ids);
 }
@@ -1489,12 +2066,13 @@ async function computeT8FanOut(
 // ---------------------------------------------------------------------
 // Public: dispatchTrigger (Subsystem 3 entry point).
 //
-// Layer 2 boundary: Zod parse via DispatchTriggerInputSchema (5-branch
-// discriminated union). Per-trigger fan-out via the helpers above;
-// per-case loop wrapping runPerCaseReEvaluation in try/catch.
+// Layer 2 boundary: Zod parse via DispatchTriggerInputSchema (6-branch
+// discriminated union; T2_new_payment added at Phase 5.1 chunk 5.1b).
+// Per-trigger fan-out via the helpers above; per-case loop wrapping
+// runPerCaseReEvaluation in try/catch.
 //
 // Per-trigger-type failure policy (Round 5.b-i lock):
-//   - T1 / T3 / T5 / T8: log + skip + continue (best-effort fan-out).
+//   - T1 / T2 / T3 / T5 / T8: log + skip + continue (best-effort fan-out).
 //     Failed case emits dispatch_failed audit in SEPARATE small
 //     transaction so the audit survives the per-case rollback.
 //   - T10: re-throw the original error after dispatch_failed audit.
@@ -1514,8 +2092,9 @@ export async function dispatchTrigger(
   const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
 
   // Layer 2 boundary: Zod parse at service entry. Discriminated union
-  // rejects unknown trigger_type values (T2/T4/T6 reserved per Framing
-  // F; T7/T9 reserved post-v1).
+  // rejects unknown trigger_type values (T4/T6 reserved per Framing F
+  // pending vendorCreditService; T7/T9 reserved post-v1). T2_new_payment
+  // activated at Phase 5.1 chunk 5.1b (paymentService.record ship).
   let parsed: DispatchTriggerInput;
   try {
     parsed = DispatchTriggerInputSchema.parse(input);
@@ -1537,8 +2116,9 @@ export async function dispatchTrigger(
   let fanOutCaseIds: string[];
   switch (parsed.trigger_type) {
     case 'T1_new_bill':
+    case 'T2_new_payment':
     case 'T3_new_vendor_prepayment':
-      fanOutCaseIds = await computeT1T3FanOut(db, parsed.org_id);
+      fanOutCaseIds = await computeT1T2T3FanOut(db, parsed.org_id);
       break;
     case 'T5_bill_state_transition':
       fanOutCaseIds = await computeT5FanOut(db, parsed.org_id, parsed.bill_id);

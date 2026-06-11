@@ -9,6 +9,7 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
+    "test:full": "pnpm db:reset:clean && pnpm test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm --filter @chounting/web typecheck",
@@ -17,7 +18,7 @@
     "test:e2e:ui": "pnpm --filter @chounting/web test:e2e:ui",
     "test:e2e:install": "pnpm --filter @chounting/web test:e2e:install",
     "agent:floor": "pnpm --filter @chounting/web agent:floor",
-    "agent:validate": "pnpm --filter @chounting/web agent:validate",
+    "agent:validate": "pnpm --filter @chounting/web agent:validate && pnpm intent-producers:check",
     "test:no-hardcoded-urls": "pnpm --filter @chounting/web test:no-hardcoded-urls",
     "verify-audit-coverage": "pnpm --filter @chounting/web verify-audit-coverage",
     "db:start": "supabase start",
@@ -31,7 +32,8 @@
     "db:reset:clean": "pnpm db:reset && docker restart supabase_kong_chounting && sleep 3 && pnpm db:seed:all",
     "adr:index": "tsx scripts/adr/generate-index.ts",
     "adr:lint": "tsx scripts/adr/lint.ts",
-    "adr:check": "pnpm adr:lint && pnpm adr:index --check"
+    "adr:check": "pnpm adr:lint && pnpm adr:index --check",
+    "intent-producers:check": "tsx scripts/check-intent-producers.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",

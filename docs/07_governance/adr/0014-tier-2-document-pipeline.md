@@ -225,6 +225,45 @@ commit step in `withInvariants()` and re-verifies the pipeline's
 output per the Q28 matrix in `agent_architecture_policy.md` before
 the commit lands.
 
+**Amendment 2026-05-23 (Phase 8 §3 closeout — runtime `stage_name`
+reconciliation).** The illustrative orchestrator above is the **v1-minimal
+pipeline skeleton** (8 stages, Stage 0–7) and remains the canonical
+architecture sequence. The shipped runtime `pipeline_trace` emits a slightly
+larger set of distinct `stage_name` values: Phase 4 (Relationship Router
+substrate) split the relationship step, and the dedup / AI-fallback paths
+carry their own variant and child-sub-stage records. **§1 is the canonical
+home of the `stage_name` enumeration** — code comments cite §1 for canonical
+stage names; §13 is the Logic Receipt contract, not the stage_name registry
+(the original finding was code comments mis-citing "§13 canonical
+stage_names"; friction-journal 2026-05-23, commit `6f35281`). The full runtime
+set — **10 parent-level `stage_name` values plus 2 AI-fallback child
+sub-stages (12 distinct)**:
+
+| §1 stage | Emitted `stage_name`(s) | Notes |
+|---|---|---|
+| Stage 0 — dedup | `dedup_short_circuit` \| `dedup_no_match` | hash-match short-circuit, vs no-match-pipeline-proceeds (`dedupByHash.ts`) |
+| Stage 1 — byte fetch | `byte_fetch` | via `storageProviderService.fetch` |
+| Stage 2 — OCR | `run_ocr` | Modal sidecar (Phase 7 chunk 7.1b) |
+| Stage 3 — classify (parent) | `classify_document_type` | parent record for all three tier paths |
+| Stage 3 — classify (child) | `ai_fallback_classify` | Tier C only; child sub-stage per item 8 |
+| Stage 4 — extract (parent) | `extract_fields` | per-document-type extractors |
+| Stage 4 — extract (child) | `ai_fallback_extract` | Tier C only; child sub-stage per item 8 |
+| Stage 5 — vendor match | `match_vendor` | reads vendor identity-and-matching fields only (item 9) |
+| Stage 6 — relationship | `match_against_existing_state` **+** `router_match_against_state` | Stage 6 emits **two** records from one `completeCandidate` call: the orchestrator-grade match record and the Subsystem-1-grade Router audit record per ADR-0018 §2 (Phase 4 chunk 1 substrate; Phase 8 chunk 4 wiring) |
+| Stage 7 — proposal | `build_proposal` | routes to ProposedMutation / Bundle / Attachment (item 11) |
+
+**Provenance and discipline.** The expansions beyond the Stage 0–7 skeleton
+are: the relationship-step split (`match_against_existing_state` +
+`router_match_against_state`, Phase 4 substrate + Phase 8 chunk 4 wiring); the
+`dedup_no_match` Stage-0 variant; and the `ai_fallback_classify` /
+`ai_fallback_extract` child sub-stages (item 8 ratification; wired Phase 7
+chunk 7.2 / 7.3a). Per ADR-0022 additive discipline this amendment preserves
+the original 8-stage framing above and enumerates the shipped runtime without
+restructuring the skeleton — the spec is reconciled to the runtime, not the
+runtime to the spec, because the runtime is what ships, what the real-OCR
+corpus tests against, and what `ProposalJustificationSchema.pipeline_trace`
+(chunk 9) consumes.
+
 ### 2. OCR engine selection — v1 PaddleOCR (locked)
 
 **v1 active OCR engine: PaddleOCR.** The `document_artifacts.engine`
@@ -996,6 +1035,22 @@ exception queue with a typed `pipeline_transient_failure` exception
 v1 set — the controller can manually trigger another pipeline run
 when conditions change).
 
+**Amendment 2026-05-20 (Phase 7 chunk 7.1b ratification surface).**
+Stage 2 (OCR) overrides the per-stage ~3.5s wall-clock budget to
+~30s wall-clock per Modal cold-start substrate (5-8s typical
+cold-start first-request; up to 3 retries with exponential backoff;
+total per-stage budget accommodates cold-start + retry chain).
+Documented at `apps/web/src/agent/orchestrator/extraction/stages/runOCR.ts`
+header for operational visibility. The 3.5s budget remains canonical
+for Stages 0+1+3-7; Stage 2 is the named exception per Modal
+cold-start operational reality. Future stages with external-service
+cold-start substrate may surface analogous amendments. Per-request
+timeout (10s) is enforced at the sidecar client via `AbortController`
+per chunk 7.1 brief §4 Task 7.1b.5 partial-information value pick;
+per-attempt retry backoff (500ms base + 2x exponential + ±20% jitter)
+preserved verbatim at chunk-impl grade. Per ADR-0022 additive
+provenance-preserving discipline.
+
 #### 12.2 Persistent / unavailable
 
 AI API auth failure, sidecar service down, classifier model
@@ -1103,6 +1158,19 @@ Logic Receipt at proposal creation time. Receipt content:
   match_vendor, match_against_existing_state, build_proposal).
   Each stage's records flow through the orchestrator into the
   receipt at the proposal-creation step.
+
+  **Amendment 2026-05-23 (Phase 8 §3 closeout).** The 8-name list
+  above is the **v1-minimal pipeline skeleton**; the **canonical
+  `stage_name` enumeration now lives in §1** (Pipeline architecture
+  overview), which carries the full shipped runtime set — the 8
+  names here plus the `match_against_existing_state` →
+  `router_match_against_state` relationship-step split and the
+  `dedup_no_match` Stage-0 variant (10 parent-level names), plus the
+  `ai_fallback_classify` / `ai_fallback_extract` child sub-stages
+  (item 8). This section (§13) is the Logic Receipt contract, not
+  the stage_name registry; code comments cite §1 for canonical stage
+  names. Original finding: friction-journal 2026-05-23 (commit
+  `6f35281`).
 
 **Audit-log writer boundary.** The Logic Receipt is written
 through the canonical audit-log writer per ADR-0011 §1 (the same

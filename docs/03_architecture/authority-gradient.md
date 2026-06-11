@@ -14,7 +14,7 @@ The canonical sources remain authoritative; this is the rollup.
 - `docs/00_product/product_vision.md` — the Thesis ("deterministic
   financial engine with a probabilistic interface") and Thesis
   Extension ("the product is the control surface over the AI").
-- `docs/02_specs/ledger_truth_model.md` — the 20 invariants with
+- `docs/02_specs/ledger_truth_model.md` — the 28 invariants with
   full leaves; INV-SERVICE-001 (`withInvariants`), INV-SERVICE-002
   (`adminClient`), INV-AUTH-001 (authorization), INV-LEDGER-001
   through INV-LEDGER-006, etc.

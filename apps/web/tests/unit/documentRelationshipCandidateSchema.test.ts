@@ -26,6 +26,51 @@ import {
   DocumentRelationshipCandidateSchema,
 } from '@/shared/schemas/document-platform/documentRelationshipCandidate.schema';
 
+// candidate_features narrowed to CandidateFeaturesSchema at chunk 3 (Phase 8);
+// minimal valid shape per scoreComposition.composeScore output.
+const VALID_CANDIDATE_FEATURES = {
+  features: [
+    {
+      feature_name: 'vendor_match' as const,
+      raw_value: null,
+      normalized_score: 0.95,
+      weight: 0.3,
+      contribution: 0.285,
+    },
+    {
+      feature_name: 'amount_match' as const,
+      raw_value: null,
+      normalized_score: 0,
+      weight: 0.3,
+      contribution: 0,
+    },
+    {
+      feature_name: 'date_proximity' as const,
+      raw_value: null,
+      normalized_score: 0,
+      weight: 0.15,
+      contribution: 0,
+    },
+    {
+      feature_name: 'reference_alignment' as const,
+      raw_value: null,
+      normalized_score: 0,
+      weight: 0.25,
+      contribution: 0,
+    },
+    {
+      feature_name: 'payment_method_consistency' as const,
+      raw_value: null,
+      normalized_score: 0,
+      weight: 0,
+      contribution: 0,
+    },
+  ],
+  aggregate_score: 0.285,
+  document_type: 'vendor_invoice' as const,
+  linked_entity_type: 'bill' as const,
+};
+
 const VALID_ROW = {
   id: '00000000-0000-0000-0000-000000000001',
   org_id: '00000000-0000-0000-0000-000000000002',
@@ -36,7 +81,7 @@ const VALID_ROW = {
   linked_entity_id: '00000000-0000-0000-0000-000000000005',
   link_role: 'primary_invoice' as const,
   confidence_score: 0.9,
-  candidate_features: {},
+  candidate_features: VALID_CANDIDATE_FEATURES,
   trace_id: '00000000-0000-0000-0000-000000000006',
   created_at: '2026-05-13T00:00:00.000Z',
   created_by: 'agent',

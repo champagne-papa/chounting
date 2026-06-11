@@ -15,44 +15,90 @@ concern and lives in
 
 ## The Split-Screen Layout
 
-Three zones, plus the Mainframe rail. The split-screen shell is built
-fully in Phase 1.1; canvas views are added per phase.
+> **Amended 2026-05-16 by Phase 6.5 amendment cycle.** Original
+> four-zone description (Left Panel — Agent Chat + Right Panel
+> — Contextual Canvas + Top Nav + Mainframe rail) preserved in
+> § "Shell architecture history (pre-Phase-6.5)" at end of
+> document per ADR-0022 §2 supersession discipline. Cross-
+> reference: cycle closeout brief at
+> `docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
 
-1. **Left Panel — Agent Chat** (~380px fixed, collapsible via keyboard
-   shortcut). Conversation history; message input with file drop zone
-   (drop zone is inactive in Phase 1, the upload pipeline is Phase 2);
-   persona-specific suggested prompts on empty state. Agent messages
-   may contain inline ProposedEntryCards with Approve / Reject buttons.
+Three zones. The split-screen shell shipped as four-zone at Phase
+1.1; consolidated to three-zone at Phase 6.5 amendment cycle
+(cycle closeout 2026-05-16) per Cuts 4-8. Canvas views are added
+per phase.
 
-2. **Right Panel — Contextual Canvas** (fills remaining width). A
-   blank stage that renders whatever the agent last directed it to
-   show. Has its own independent navigation history (back/forward
-   arrows in the canvas header) so the user can drill down through
-   multiple levels and return without disrupting the conversation.
+1. **Zone 1 — Consolidated Left Panel** (~280-320px expanded;
+   ~64px collapsed to rail-mode per Cut 7; collapsibility
+   triggered via keyboard shortcut + button per Sub-Q8.a;
+   localStorage persistence per Sub-Q8.c.α₁). Four regions per
+   Sub-Q7 cycle leans:
+   - Region 7.1 — Workspace tabs (vertical sidebar list per
+     Sub-Q7.1.b.β; v1-active Billing | Reports per Sub-Q7.1.a
+     7.1.α two parallel; v2+ candidates Tax / Banking / Payroll)
+   - Region 7.2 — Workspace-scoped navigation items (Billing
+     9-item list / Reports 3-item list per Sub-Q7.2.a; "New
+     Bill" as primary action button per refinement; account
+     drill-down stays under CoA)
+   - Region 7.3 — Persistent foundational footer (4 items per
+     Sub-Q7.3.β: Chart of Accounts + Journal Entries +
+     Recurring Journals + AI Action Review; cross-workspace)
+   - Region 7.4 — Chat history surface (hidden at v1 with
+     structural reservation per Sub-Q7.4.α′; activates post-v1
+     multi-session chat substrate per ADR-0010)
 
-3. **Top Nav.** Org switcher (role-aware — AP specialist sees assigned
-   orgs only, CFO sees all + consolidated), global search stub,
-   notification bell (count of pending AI actions), user menu.
+2. **Zone 2 — Agent Chat Panel** (~380px expanded; collapsible
+   to ~40-48px rail-mode with new-output badge per Sub-Q8.b
+   Zone 2; collapsibility wiring inherits existing
+   AgentChatPanel `onCollapse` Prop). Conversation history;
+   message input with drag-drop + paste + "+" button
+   affordances per Phase 6.5 chunk 3 (Sub-Q9.a.β staged-with-
+   explicit-ingest); persona-specific suggested prompts on
+   empty state; agent messages may contain inline
+   ProposedEntryCards with Approve / Reject buttons.
 
-**The Mainframe** — A collapsed icon rail on the far left, narrower
-than the chat panel, always visible. Direct-launch icons for the most
-common canvas views: Chart of Accounts, Journal Entry, AP Queue
-(Phase 2+), P&L Report. Clicking any icon bypasses the agent entirely
-and loads that canvas view directly. **This is the fallback navigation
-when the user knows where they want to go, AND the graceful
-degradation path when the Claude API is unavailable.** Label it
-"Mainframe" in the UI — lean into the Star Trek metaphor.
+3. **Zone 3 — Contextual Canvas** (fills remaining width).
+   Renders the active tab's directive content. **Multi-tab
+   structure per Phase 6.5 chunk 2 Cut 9 (Path 2 limited at
+   v1)**: canvas holds N tabs each with its own directive +
+   per-tab navigation history (back/forward arrows per active
+   tab; tab strip at top of canvas area per Sub-Q11.c.α);
+   Pattern γ source-driven routing (drop event → new tab; agent
+   canvas_directive → new tab or focus-existing per EC2.β;
+   Zone 1 navigation → replace active tab per EC1.β prompt
+   if dirty; in-canvas drill-down → stays in active tab).
 
-**Mainframe constraint:** No Phase 1 canvas component is allowed to
-require the agent to function. Every Phase 1 canvas view (Chart of
-Accounts, Journal Entry form, Journal list, basic P&L, AI Action
-Review) must work fully when accessed directly via the Mainframe.
-The agent is a composer that can also load these views; the views
-themselves are standalone.
+**Top Nav** (unchanged from pre-Phase-6.5). Org switcher
+(role-aware — AP specialist sees assigned orgs only, CFO sees
+all + consolidated), global search stub, notification bell
+(count of pending AI actions), user menu.
+
+**Mainframe-constraint successor (post-Phase-6.5):** No canvas
+component is allowed to require the agent to function. Every
+canvas view (Chart of Accounts, Journal Entry form, Journal
+list, basic P&L, AI Action Review, PendingDocumentsView per
+chunk 3, etc.) must work fully when accessed directly via Zone
+1 navigation items. The agent is a composer that can also load
+these views; the views themselves are standalone. The
+Mainframe rail (pre-Phase-6.5 fallback navigation surface) is
+removed at Phase 6.5 chunk 1; its semantic role transfers to
+Zone 1's Region 7.2 + 7.3 navigation surfaces.
 
 ---
 
 ## The `canvas_directive` Contract (Agent-to-UI Protocol)
+
+> **Amended 2026-05-16 by Phase 6.5 amendment cycle.** Phase
+> 6.5 chunk 2 introduces multi-tab structure at canvas level
+> (Cut 9 Path 2 limited at v1). The `canvas_directive` contract
+> preserves its singleton shape at TYPE level (per Sub-Q18.α
+> active-tab binding); the canvas itself holds N tabs each
+> with its own directive + per-tab navigation history (per
+> Sub-Q11.b.α state lift into SplitScreenLayout). canvasContext
+> reads the active tab's directive + selectedEntity;
+> orchestrator prompt-suffix unchanged. Cross-reference: cycle
+> closeout brief at
+> `docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
 
 The most important interface in The Bridge. Defined as a TypeScript
 discriminated union in `src/shared/types/canvasDirective.ts`. Every
@@ -158,6 +204,27 @@ every agent response.
 directive type exist; the renderer shows "Coming Soon" for that type.
 Phase 2 fills in the implementation. Phase 2 is an extension, not a
 rewrite.
+
+> **Amended 2026-05-16 by Phase 6.5 amendment cycle.** Three
+> rows have Phase 6.5 implications:
+>
+> - **"Split-screen layout (chat + canvas + Mainframe)"** —
+>   The "(chat + canvas + Mainframe)" four-zone parenthetical
+>   superseded by three-zone consolidation per Cuts 4-8 at
+>   Phase 6.5 chunk 1. See § The Split-Screen Layout above.
+> - **"Canvas navigation history (back/forward)"** — Phase
+>   1.1 shipped single canvas navigation history stack; Phase
+>   6.5 chunk 2 (Sub-Q11.b.α state lift) makes navigation
+>   history per-tab. Each tab carries its own back/forward
+>   history.
+> - **"Canvas tabs (multiple views open)"** — table reads
+>   "Phase 1.1 Stub interface only + Phase 2 Build." Phase 6.5
+>   chunk 2 (Cut 9 Path 2 limited at v1) IS the multi-tab
+>   build, fired before Phase 7. Phase 2 column reading is
+>   superseded.
+>
+> Cross-reference: cycle closeout brief at
+> `docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
 
 ---
 
@@ -338,6 +405,42 @@ workspace. They share context (via injection) but they do not
 share history. This prevents the disorienting behavior where
 "going back" in the canvas un-says something the agent said.
 
+### Amendment 2026-05-16 (Phase 6.5 amendment cycle) — multi-tab canvas
+
+Phase 6.5 chunk 2 introduces multi-tab canvas (Cut 9 Path 2
+limited at v1). Two substrate changes affect this section's
+rules:
+
+1. **Canvas navigation history is per-tab, not single-stack.**
+   The "canvas navigation history stack (back/forward)"
+   referenced in the section opener is one stack per tab at v1.
+   Sub-Q11.b.α state lift moves tab data model
+   (`Array<{tabId, directive, selectedEntity, history,
+   historyIndex}> + activeTabId`) into SplitScreenLayout.
+   ContextualCanvas becomes pure render-from-Props for active
+   tab. The separation rule (chat ≠ canvas history) is
+   preserved per-tab; each tab's canvas-back navigates only
+   that tab's stack.
+
+2. **Bookmark pill rule (Outbound rule #3) follows Pattern γ
+   source-driven routing.** Original rule: pill "fires the
+   same `CanvasDirective` again, pushing a new entry onto the
+   canvas stack." Phase 6.5 amendment: pill firing follows
+   Pattern γ — agent-emitted canvas_directive opens a new tab
+   (per Sub-Q11.a Pattern γ) OR focuses an existing tab on
+   exact directive + selectedEntity match (per EC2.β). The
+   pill remains a convenience affordance; its effect at multi-
+   tab grain is "open or focus a tab for this directive," not
+   "push onto the active tab's history stack."
+
+Outbound rules #1, #2, #4 unchanged (the directive still does
+not navigate the chat transcript; chat history remains a pure
+conversation log; canvas back never navigates chat). The
+separation rule unchanged.
+
+Cross-reference: cycle closeout brief at
+`docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
+
 ---
 
 ## The Three-Path Entry Model
@@ -346,13 +449,29 @@ Every user action that produces work for the system enters through
 one of three paths. All three converge on `Intent` objects (see
 `docs/02_specs/intent_model.md`). No path has bespoke routing.
 
-### Path 1: Mainframe
+### Path 1: Zone 1 (post-Phase-6.5)
 
-The collapsed icon rail on the far left. Direct-launch icons for
-common canvas views. Produces **Navigation intents only** — the
-Mainframe is a navigation surface, not a mutation surface. Every
-Mainframe click fires a `CanvasDirective` pushed onto the canvas
-stack.
+> **Amended 2026-05-16 by Phase 6.5 amendment cycle.** Original
+> Path 1 Mainframe description (collapsed icon rail on the far
+> left) preserved in § "Shell architecture history (pre-Phase-
+> 6.5)" at end of document per ADR-0022 §2 supersession
+> discipline.
+
+Zone 1 — Consolidated Left Panel — per Phase 6.5 chunk 1 (Cut 4
+three-zone consolidation). Workspace tabs (vertical sidebar list
+per Sub-Q7.1.b.β; v1-active Billing | Reports) + workspace-
+scoped navigation items per workspace (Region 7.2) + persistent
+foundational footer (Region 7.3 — CoA + Journal Entries +
+Recurring Journals + AI Action Review) + chat history surface
+(Region 7.4 — hidden at v1 with structural reservation).
+Produces **Navigation intents only** — Zone 1 is a navigation
+surface, not a mutation surface. Every Zone 1 navigation click
+fires a `CanvasDirective` that replaces the active tab's
+directive per Cut 9 Pattern γ source-driven routing (with
+EC1.β always-prompt-on-replace if active tab is dirty).
+
+Cross-reference: cycle closeout brief at
+`docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
 
 ### Path 2: Chat
 
@@ -362,6 +481,20 @@ types**: navigation ("show me the CoA"), mutation ("post this
 journal entry"), or query ("what's my cash position?"). Chat is
 the most expressive path — it can do anything the other two can,
 plus handle ambiguity.
+
+> **Amended 2026-05-16 by Phase 6.5 amendment cycle.** Phase
+> 6.5 chunk 3 adds drag-drop + paste + "+" button affordances
+> to AgentChatPanel — users can drop documents directly into
+> chat input as staged attachments (per Sub-Q9.a.β staged-with-
+> explicit-ingest; tray above input per Sub-Q9.b.α); unified
+> Send fires both ingest + chat message per Sub-Q9.c.α; canvas
+> tab opens with PendingDocumentsView on ingest completion per
+> Sub-Q11 Cut 9 Pattern γ source-driven routing. Document drop
+> at Path 2 is the v1 ingestion entry-point per Cut 1 (Flow (a)
+> substrate exclusively at v1); Flow (b) chat-message-with-
+> attachments substrate deferred past v1. Cross-reference:
+> cycle closeout brief at
+> `docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
 
 ### Path 3: Command Palette
 
@@ -517,3 +650,66 @@ them without re-evaluating the rationale.
   on the list form proving insufficient in use. Shipping spatial
   first is premature optimization of a surface that may never
   need it.
+
+---
+
+## Shell architecture history (pre-Phase-6.5)
+
+The following text describes the four-zone Bridge shell as
+shipped at Phase 1.1 close, plus the Path 1 Mainframe entry-
+point description from § The Three-Path Entry Model.
+
+Phase 6.5 amendment cycle (cycle closeout 2026-05-16 at commit
+79a6ceb) consolidated the four-zone shell to three-zone per
+Cuts 4-8 and removed the Mainframe rail (semantic role
+transferred to Zone 1's Region 7.2 + 7.3 navigation surfaces).
+This section preserves the pre-Phase-6.5 architecture as
+historical record per ADR-0022 §2 supersession discipline.
+
+Cross-reference: cycle closeout brief at
+`docs/09_briefs/phase-6.5/2026-05-16-document-drop-and-shell-consolidation-scope-lock-cycle-close.md`.
+
+### § The Split-Screen Layout (pre-Phase-6.5)
+
+Three zones, plus the Mainframe rail. The split-screen shell is built
+fully in Phase 1.1; canvas views are added per phase.
+
+1. **Left Panel — Agent Chat** (~380px fixed, collapsible via keyboard
+   shortcut). Conversation history; message input with file drop zone
+   (drop zone is inactive in Phase 1, the upload pipeline is Phase 2);
+   persona-specific suggested prompts on empty state. Agent messages
+   may contain inline ProposedEntryCards with Approve / Reject buttons.
+
+2. **Right Panel — Contextual Canvas** (fills remaining width). A
+   blank stage that renders whatever the agent last directed it to
+   show. Has its own independent navigation history (back/forward
+   arrows in the canvas header) so the user can drill down through
+   multiple levels and return without disrupting the conversation.
+
+3. **Top Nav.** Org switcher (role-aware — AP specialist sees assigned
+   orgs only, CFO sees all + consolidated), global search stub,
+   notification bell (count of pending AI actions), user menu.
+
+**The Mainframe** — A collapsed icon rail on the far left, narrower
+than the chat panel, always visible. Direct-launch icons for the most
+common canvas views: Chart of Accounts, Journal Entry, AP Queue
+(Phase 2+), P&L Report. Clicking any icon bypasses the agent entirely
+and loads that canvas view directly. **This is the fallback navigation
+when the user knows where they want to go, AND the graceful
+degradation path when the Claude API is unavailable.** Label it
+"Mainframe" in the UI — lean into the Star Trek metaphor.
+
+**Mainframe constraint:** No Phase 1 canvas component is allowed to
+require the agent to function. Every Phase 1 canvas view (Chart of
+Accounts, Journal Entry form, Journal list, basic P&L, AI Action
+Review) must work fully when accessed directly via the Mainframe.
+The agent is a composer that can also load these views; the views
+themselves are standalone.
+
+### § The Three-Path Entry Model — Path 1 Mainframe (pre-Phase-6.5)
+
+The collapsed icon rail on the far left. Direct-launch icons for
+common canvas views. Produces **Navigation intents only** — the
+Mainframe is a navigation surface, not a mutation surface. Every
+Mainframe click fires a `CanvasDirective` pushed onto the canvas
+stack.

@@ -132,4 +132,38 @@ describe('classifyStorageFailure', () => {
       expect(classifyStorageFailure({ status: 301 })).toBeNull();
     });
   });
+
+  // Charter B (a) Task 4: Microsoft Graph errors carry `statusCode`
+  // (GraphError), distinct from supabase's `status` — so the Graph
+  // branch never collides with the supabase mapping above.
+  describe('Graph error shape (statusCode) — sharepoint_drive', () => {
+    it('classifies Graph 5xx (incl. 507 Insufficient Storage) as transient', () => {
+      expect(classifyStorageFailure({ statusCode: 503 })).toEqual({ kind: 'transient' });
+      expect(classifyStorageFailure({ statusCode: 507 })).toEqual({ kind: 'transient' });
+    });
+
+    it('classifies Graph 429 / 408 / 423 (Locked) as transient', () => {
+      expect(classifyStorageFailure({ statusCode: 429 })).toEqual({ kind: 'transient' });
+      expect(classifyStorageFailure({ statusCode: 408 })).toEqual({ kind: 'transient' });
+      expect(classifyStorageFailure({ statusCode: 423 })).toEqual({ kind: 'transient' });
+    });
+
+    it('classifies Graph 401 / 403 (auth revoked / consent removed) as provider_unavailable', () => {
+      expect(classifyStorageFailure({ statusCode: 401 })).toEqual({ kind: 'provider_unavailable' });
+      expect(classifyStorageFailure({ statusCode: 403 })).toEqual({ kind: 'provider_unavailable' });
+    });
+
+    it('classifies Graph 404 as provider_unavailable (Step 2a decision (a): all-404 → exception queue)', () => {
+      expect(classifyStorageFailure({ statusCode: 404, code: 'itemNotFound' })).toEqual({
+        kind: 'provider_unavailable',
+      });
+    });
+
+    it('classifies other Graph 4xx as permanent_malformed', () => {
+      expect(classifyStorageFailure({ statusCode: 400 })).toEqual({
+        kind: 'permanent_malformed',
+        code: 'STORAGE_KEY_MALFORMED',
+      });
+    });
+  });
 });

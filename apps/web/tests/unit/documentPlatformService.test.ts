@@ -29,6 +29,16 @@ vi.mock('@/services/storage/resolver', () => ({
   getStorageProvider: vi.fn(),
 }));
 
+// Charter B real-flow D-2: createSourceDocument now resolves the org's default
+// provider via resolveStorageProvider before put+stamp. This unit test isolates
+// the storage layer, so mock the resolution to the v1 default ('supabase_storage'
+// — matches the former hardcoded V1_STORAGE_PROVIDER these tests were written
+// against). Org-default resolution itself is covered by resolveStorageProvider's
+// own unit/integration tests.
+vi.mock('@/services/storage/resolveStorageProvider', () => ({
+  resolveStorageProvider: vi.fn(async () => 'supabase_storage'),
+}));
+
 vi.mock('@/db/adminClient', () => ({
   adminClient: vi.fn(),
 }));

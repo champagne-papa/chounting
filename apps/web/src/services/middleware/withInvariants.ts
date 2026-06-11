@@ -15,24 +15,100 @@
 // a service function MUST wire it through withInvariants. Code review
 // rejects PRs that bypass this wrapper.
 
-import type { ServiceContext } from './serviceContext';
+import type {
+  ServiceContext,
+  SystemActorServiceContext,
+} from './serviceContext';
+import { actingUserId, isSystemActorContext } from './serviceContext';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { loggerWith } from '@/shared/logger/pino';
 import { canUserPerformAction, type ActionName } from '@/services/auth/canUserPerformAction';
 
 type ServiceFn<I, O> = (input: I, ctx: ServiceContext) => Promise<O>;
 
+// The wrapper accepts either caller shape. Human callers (ServiceContext)
+// run the full four-invariant pre-flight. System actors
+// (SystemActorServiceContext) bypass the identity-coupled invariants per
+// ADR-0007 Q78 Option A and are adapted to a verified service-account
+// ServiceContext (Path X) before the wrapped function runs.
+type WrappedServiceFn<I, O> = (
+  input: I,
+  ctx: ServiceContext | SystemActorServiceContext,
+) => Promise<O>;
+
 interface WithInvariantsOptions {
   action?: ActionName;
 }
 
+// Cosmetic email on the adapted service-account context (matches the seeded
+// pipeline service account in seed-auth-users.ts). Nothing keys on it; the
+// service-account uuid (caller.user_id) is the attribution identity.
+const SYSTEM_ACTOR_ADAPTED_EMAIL = 'pipeline@thebridge.local';
+
 export function withInvariants<I, O>(
   fn: ServiceFn<I, O>,
   opts?: WithInvariantsOptions,
-): ServiceFn<I, O> {
+): WrappedServiceFn<I, O> {
   return async (input, ctx) => {
-    const log = loggerWith({ trace_id: ctx?.trace_id, user_id: ctx?.caller?.user_id });
+    const log = loggerWith({
+      trace_id: ctx?.trace_id,
+      user_id: ctx?.caller?.user_id ?? undefined,
+    });
 
+    // System-actor branch (ADR-0007 Q78 Option A + Path X). A trusted system
+    // actor is authenticated at the boundary that constructs its
+    // SystemActorServiceContext (route / job-queue / orchestrator), not via
+    // role grants — so it BYPASSES the identity-coupled invariants (Inv 1
+    // user_id presence, Inv 2 verified, Inv 4 role). It then commits AS the
+    // seeded service account: we adapt to a verified ServiceContext whose
+    // user_id is the service-account uuid, so the NOT-NULL actor column
+    // (bill_payment_allocations.created_by) and audit attribution resolve to
+    // a real, joinable identity. The trace_id
+    // and org-consistency (vs ctx.org_id) checks still run.
+    if (isSystemActorContext(ctx)) {
+      if (!ctx.trace_id) {
+        throw new ServiceError('MISSING_TRACE_ID', 'ServiceContext.trace_id is required');
+      }
+      const claimedOrgId = (input as Record<string, unknown>)?.org_id;
+      if (
+        typeof claimedOrgId === 'string' &&
+        claimedOrgId &&
+        claimedOrgId !== ctx.org_id
+      ) {
+        throw new ServiceError(
+          'ORG_ACCESS_DENIED',
+          `System actor org mismatch: ctx.org_id=${ctx.org_id} vs input.org_id=${claimedOrgId}`,
+        );
+      }
+      const actorId = actingUserId(ctx);
+      if (actorId === null) {
+        throw new ServiceError(
+          'MISSING_CALLER',
+          `System actor '${ctx.caller.system_actor}' carries no system_user_id; cannot attribute a ledger write (ADR-0007 Q78 Path X)`,
+        );
+      }
+      const adaptedCtx: ServiceContext = {
+        trace_id: ctx.trace_id,
+        caller: {
+          user_id: actorId,
+          email: SYSTEM_ACTOR_ADAPTED_EMAIL,
+          verified: true,
+          org_ids: [ctx.org_id],
+        },
+      };
+      log.debug(
+        { fn: fn.name, system_actor: ctx.caller.system_actor },
+        'withInvariants: system-actor bypass + service-account adapt',
+      );
+      try {
+        return await fn(input, adaptedCtx);
+      } catch (err) {
+        log.error({ err, fn: fn.name }, 'Service function threw');
+        throw err;
+      }
+    }
+
+    // ---- Human caller path (existing four invariants, unchanged) ----
     // Invariant 1: ServiceContext shape
     if (!ctx) {
       throw new ServiceError('MISSING_CONTEXT', 'ServiceContext is required');

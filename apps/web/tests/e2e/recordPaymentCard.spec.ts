@@ -28,7 +28,7 @@
 // E2E execution is informational (founder-review-workflow grain per catch #37
 // lesson) — NOT a chunk-close gate. pnpm typecheck is the validation step.
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID } from './fixtures/auth';
 import {
   seedTestVendor,

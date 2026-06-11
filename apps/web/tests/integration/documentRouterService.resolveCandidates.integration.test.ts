@@ -119,6 +119,14 @@ async function seedNOpenBillsForVendor(
   vendorId: string,
   N: number,
 ): Promise<string[]> {
+  // Bills seeded with IDENTICAL amount_cad to preserve chunk-3
+  // ambiguity-margin-zero semantics. With chunk 3 multi-feature scoring,
+  // bills with distinct amounts produce distinct aggregate confidence_scores
+  // → margin > 0 → branch (a). To exercise branch (b) ambiguous-N≥2 path,
+  // fixture must have all candidate entities producing IDENTICAL scores.
+  // (Chunk 2's single-feature scoring made margin = 0 structurally for
+  // any N≥2 per F-J-α; chunk 3 multi-feature lifts this and requires
+  // intentional fixture identity to test zero-margin path.)
   const billIds: string[] = [];
   for (let i = 0; i < N; i++) {
     const billId = crypto.randomUUID();
@@ -128,7 +136,7 @@ async function seedNOpenBillsForVendor(
       vendor_id: vendorId,
       issue_date: '2026-05-14',
       lifecycle_state: 'approved_for_payment',
-      amount_cad: 1000 + i * 100,
+      amount_cad: 1000,
     });
     if (error) throw new Error(`seedNOpenBillsForVendor failed: ${error.message}`);
     billIds.push(billId);
@@ -142,6 +150,8 @@ async function seedNOpenPaymentsForVendor(
   vendorId: string,
   N: number,
 ): Promise<string[]> {
+  // Identical amount per chunk-3 ambiguity-margin-zero discipline (see
+  // seedNOpenBillsForVendor above for rationale).
   const paymentIds: string[] = [];
   for (let i = 0; i < N; i++) {
     const paymentId = crypto.randomUUID();
@@ -150,7 +160,7 @@ async function seedNOpenPaymentsForVendor(
       org_id: orgId,
       vendor_id: vendorId,
       payment_date: '2026-05-14',
-      amount: 1000 + i * 100,
+      amount: 1000,
       payment_state: 'pending',
     });
     if (error) throw new Error(`seedNOpenPaymentsForVendor failed: ${error.message}`);
@@ -454,8 +464,11 @@ describe('documentRouterService.resolveCandidates — branch (c) happy-path (chu
   it('N=0 case → head pointer NOT set; zero candidate rows; exception_queue_entries with unmatched_router_candidate', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    // No bills seeded → completeCandidate returns [] → N=0 candidates
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate to keep N=0 at Subsystem 2 entry. Chunk 4
+    // (Phase 8) emits Scenario A inferred-target when no Scenario B
+    // matches, so calling completeCandidate against an unseeded fixture
+    // would produce N=1 not N=0. The test claim is about resolveCandidates
+    // behavior at N=0; how we get there is incidental.
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     const decision = await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
@@ -487,7 +500,7 @@ describe('documentRouterService.resolveCandidates — branch (c) happy-path (chu
   it('decision-record audit row carries before_state.branch=c + null top_confidence + empty candidate_set_ids', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (see prior test).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
@@ -726,7 +739,9 @@ describe('documentRouterService.resolveCandidates — cross-service propagation 
   it('EXCEPTION_ALREADY_OPEN from chunk-6 enqueueException propagates verbatim through branch (c)', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (chunk 4 Scenario A emission
+    // would produce N=1; cross-service propagation surface is at branch (c)
+    // when N=0 lands at Subsystem 2).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     // First invocation: branch (c) succeeds, creates exception_queue_entry
@@ -766,7 +781,8 @@ describe('documentRouterService.resolveCandidates — forensic noise on retry (c
   it('two invocations under same trace_id produce two decision-record rows with identical idempotency_key', async () => {
     const db = adminClient();
     const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
-    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    // Skip completeCandidate per N=0 setup (forensic-noise retry surface
+    // observed at branch (c)).
     await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
 
     // Known-zero baseline: zero decision-record rows for trace_id
@@ -901,5 +917,127 @@ describe('documentRouterService.resolveCandidates — FK enforcement (chunk 2)',
       .maybeSingle();
     expect(stillExists?.id).toBe(decision.winner_candidate_id);
     void deleteResult;
+  });
+});
+
+// =====================================================================
+// Phase 8 chunk 4 Task 3 axis 3a — Subsystem 2 wiring regression with
+// Scenario A inferred-target candidates (chunks 2+3+4 substrate
+// threading verification).
+//
+// Verifies that null `linked_entity_id` Scenario A candidates emitted
+// by chunk 4 completeCandidate thread through Subsystem 2 ambiguity-
+// margin computation without regression to Phase 4 chunk 2 substrate.
+// Ambiguity-margin computation reads `confidence_score` field
+// (independent of linked_entity_id) per Phase 4 chunk 2 substrate;
+// chunk 4 substrate change is upstream-grade only.
+// =====================================================================
+
+describe('Phase 8 chunk 4 Task 3 axis 3a — Subsystem 2 wiring with Scenario A inferred-target (chunk 4 substrate threading)', () => {
+  let ctx: ServiceContext;
+
+  beforeAll(() => {
+    ctx = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+  });
+
+  afterAll(async () => {
+    const db = adminClient();
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('vendor_invoice + zero open bills → Scenario A inferred-target threads through resolveCandidates as branch (a) winner with null linked_entity_id', async () => {
+    // Chunk 4 axis 4 F-3 scope (a) emission: completeCandidate emits 1
+    // Scenario A inferred-target candidate (linked_entity_type='bill',
+    // linked_entity_id=null) per ADR-0015 §7 invoice-arrives-no-bill-yet.
+    // Subsystem 2 should pick this N=1 candidate as branch (a) winner.
+    const db = adminClient();
+    const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
+    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
+
+    const decision = await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
+
+    expect(decision.branch).toBe('a');
+    expect(decision.document_case_id).toBe(fixture.caseId);
+    expect(decision.winner_candidate_id).not.toBeNull();
+    expect(decision.candidate_set_ids).toHaveLength(1);
+
+    // Verify the winner is the Scenario A inferred-target (null linked_entity_id).
+    const { data: winner } = await db
+      .from('document_relationship_candidates')
+      .select('linked_entity_type, linked_entity_id, link_role, candidate_features')
+      .eq('id', decision.winner_candidate_id!)
+      .single();
+    expect(winner!.linked_entity_type).toBe('bill');
+    expect(winner!.linked_entity_id).toBeNull();
+    expect(winner!.link_role).toBe('primary_invoice');
+    expect((winner!.candidate_features as Record<string, unknown>).scenario).toBe(
+      'invoice_inferred_target',
+    );
+
+    // Head pointer set + state transitioned to 'matched' per chunk-2 substrate.
+    const { data: caseRow } = await db
+      .from('document_cases')
+      .select('state, current_relationship_candidate_id')
+      .eq('id', fixture.caseId)
+      .single();
+    expect(caseRow?.state).toBe('matched');
+    expect(caseRow?.current_relationship_candidate_id).toBe(decision.winner_candidate_id);
+  });
+
+  it('receipt + zero open payments + zero open bills → Scenario A variant inferred-target threads through resolveCandidates as branch (a) winner with null linked_entity_id', async () => {
+    // Chunk 4 axis 4 F-3 scope (b) emission: receipt-as-primary path
+    // emits 1 Scenario A variant candidate (linked_entity_type='payment',
+    // linked_entity_id=null) per ADR-0015 §7 variant disambiguation.
+    const db = adminClient();
+    const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'receipt');
+    await completeCandidate(buildCompleteInput(fixture, ctx, 'receipt'), ctx);
+    await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
+
+    const decision = await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
+
+    expect(decision.branch).toBe('a');
+    expect(decision.candidate_set_ids).toHaveLength(1);
+
+    const { data: winner } = await db
+      .from('document_relationship_candidates')
+      .select('linked_entity_type, linked_entity_id, link_role')
+      .eq('id', decision.winner_candidate_id!)
+      .single();
+    expect(winner!.linked_entity_type).toBe('payment');
+    expect(winner!.linked_entity_id).toBeNull();
+    expect(winner!.link_role).toBe('payment_evidence');
+  });
+
+  it('ambiguity-margin computation reads confidence_score independently of linked_entity_id (chunk 2 substrate preserved at chunk 4 grade)', async () => {
+    // Chunk 4 axis 3a regression check: Subsystem 2 ambiguity-margin
+    // computation per Phase 4 chunk 2 substrate uses confidence_score
+    // field; null linked_entity_id at Scenario A inferred-target grade
+    // does NOT affect margin computation. Verify the N=1 inferred-target
+    // case decision-record carries the chunk-2 audit shape (top_confidence
+    // populated; runner_up_confidence null; ambiguity_margin_computed null
+    // for N=1 branch a) per chunk-2-Phase-4 audit-shape inheritance.
+    const db = adminClient();
+    const fixture = await seedRouterReadyCase(SEED.ORG_HOLDING, ctx, 'vendor_invoice');
+    await completeCandidate(buildCompleteInput(fixture, ctx, 'vendor_invoice'), ctx);
+    await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
+
+    await resolveCandidates(buildResolveInput(fixture.caseId, ctx), ctx);
+
+    const { data: decisionRow } = await db
+      .from('audit_log')
+      .select('before_state')
+      .eq('trace_id', ctx.trace_id)
+      .eq('entity_id', fixture.caseId)
+      .eq('action', 'router_decision_recorded')
+      .single();
+
+    const before = decisionRow?.before_state as Record<string, unknown>;
+    expect(before.branch).toBe('a');
+    expect(typeof before.top_confidence).toBe('number');
+    expect(before.runner_up_confidence).toBeNull();
+    expect(before.ambiguity_margin_computed).toBeNull();
+    expect(before.winner_candidate_id).not.toBeNull();
+    expect(before.document_type).toBe('vendor_invoice');
   });
 });

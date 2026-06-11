@@ -98,10 +98,15 @@ export interface CreateSourceDocumentResult {
 }
 
 // =============================================================
-// Drag-drop ingestion contract (chunk 6.2b)
+// Drag-drop ingestion contract (chunk 6.2b; chat-input re-entry at
+// chunk 6.5 chunk 3)
 //
-// Sub-Q1 lock: drag-drop UX surface is canvas-only (DocumentIntakeRail
-//   on the right edge of the layout per PRD Phase 2 vision).
+// Sub-Q1 lock (chunk 6.2b): drag-drop UX surface was canvas-only
+//   (DocumentIntakeRail on the right edge of the layout per PRD Phase 2
+//   vision). Phase 6.5 chunk 3 re-entry-points the drag-drop UX surface
+//   to AgentChatPanel chat input per Cut 1 Flow (a); the underlying
+//   contract (drop_session_id + multi-file POST + atomic batch) is
+//   identical.
 // Sub-Q3 lock: multi-file POST, no explicit application-layer cap at
 //   v1 (Next.js body limits apply as implicit fallback).
 // Sub-Q9 lock: all-or-nothing + Zod pre-validate at ingress. If any
@@ -222,3 +227,18 @@ export type ForwardedMailboxUploadResult =
       status: 'rejected';
       reason: 'not_allowlisted';
     };
+
+/**
+ * Per-document pipeline invoker, injected by the entry surface
+ * (Class D inversion, T4 2026-06-06; ADR-0020 App. A). The concrete
+ * value is agent-layer ingestDocument, wired at the drag-drop route
+ * behind the sanctioned entry-surface disable — service code holds
+ * only this structural type, never an @/agent import. Return value
+ * is ignored by the invocation loop (pre-inversion behavior: awaited
+ * and discarded).
+ */
+export type IngestInvoker = (args: {
+  org_id: string;
+  source_document_id: string;
+  trace_id: string;
+}) => Promise<unknown>;

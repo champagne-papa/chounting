@@ -1,0 +1,23 @@
+-- 20240180000000_charter_b_exception_reason_provider_unavailable_reserve.sql
+--
+-- Charter B real-flow arc — D-5: reserve a provider_unavailable-class
+-- exception_reason value, NOT-active.
+--
+-- The value is added to the enum as a named forward-hook for the Phase-7
+-- routing surface, but is deliberately NOT added to the v1-active CHECK
+-- (exception_reason_chunk_6_active stays as-is, admitting only its 6 values).
+-- The v1 deliverable is the honest-classification wire contract (D-5 Task 5
+-- at retry.ts/byteFetch.ts), NOT exception-queue routing — the routing surface
+-- + the enqueue coupling-wall design are deferred-with-their-consumer to
+-- Phase-7 (the case at byte-fetch time is 'received', pre-classification, which
+-- enqueue_exception_with_audit's classified|matched coupling rejects). See
+-- spec D-5 + decision #2 (option 1). drift_detected stays DISTINCT — it is the
+-- §5-6 scheduled-drift surface, not this inline-read-failure class.
+--
+-- Postgres ALTER TYPE ADD VALUE cannot be referenced by name in the same
+-- transaction (the Phase-7 chunk-7 precedent at 20240160/20240161 split the
+-- ADD VALUE from its CHECK broaden for exactly this reason). This migration
+-- adds NO CHECK reference to the new value, so it is safe to run solo — the
+-- v1-active CHECK is intentionally left unbroadened.
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'provider_unavailable';

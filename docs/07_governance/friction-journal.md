@@ -12617,3 +12617,6253 @@ remains stable.
   determined at Commit B execution time per Instance 8 above).
 
 
+
+
+## 2026-05-16 — Branch-protection-direct-push first-instance precedent at chunk-6.3b merge ceremony (Phase 6 chunk 6.3b)
+
+**Reserve 2 codification per chunk-6.3b drafting plan + Round 6 Op 2 lock.** Phase 6 chunk-6.3b retrospective consolidation closed structurally at Task 6 with merge commit `625c7df` on origin/main. The merge ceremony surfaced an informational substrate at push: branch protection notice. Reserve 2 codifies the surface as observation-on-fire per the drafting plan's reserve handler.
+
+### Pattern statement — direct-push-after-PR-flow-establishment + 247-commit-forward-merge magnitude
+
+Phase 6 chunk-6.3b ceremony fired `git merge --no-ff staging` on local main + `git push origin main`. The merge succeeded; the push emitted an informational notice from the GitHub remote:
+
+```
+remote: Changes must be made through a pull request.
+To github.com:champagne-papa/chounting.git
+   cfcf2e7..625c7df  main -> main
+```
+
+The notice surfaced but did NOT block the push. The 247-commit forward-merge (range `cfcf2e7..625c7df`) landed on origin/main; branch protection is informational-not-enforcing at the current origin/main configuration.
+
+**First-instance precedent at two distinct sub-grains:**
+
+- **direct-push-after-PR-flow-establishment sub-grain.** Prior to chunk-6.3b, origin/main had N=3 PR-flow merges (PR#7 + PR#8 + #2 at `9f0ebb3 Merge pull request #2 from champagne-papa/staging`) + N=1 direct-merge precedent (`cfcf2e7 Merge branch 'staging'`; pre-Phase-4 post-MVP era). chunk-6.3b adds **N=2 direct-merge precedent** at `625c7df`. The pattern is "direct-push to origin/main after PR-flow precedents have been established" — first-instance at this specific sub-grain.
+
+- **247-commit-forward-merge magnitude sub-grain.** Round 6 Op 2 codified the magnitude property at ~243-commit estimate per state-verify at chunk-6.3b session-onset; actual at merge fire = 247 commits (243 pre-chunk-6.3b + 4 chunk-6.3b commits including pre-Task-1 plan-commit at `850b881` per founder Option (A) decision at Task 0 close). Prior direct-merge precedent `cfcf2e7` magnitude unknown without verify-from-disk on pre-Phase-4 staging state.
+
+### Why direct-push at chunk-6.3b
+
+Per Round 6 Op 2 sub-adjudication (A) lock: `--no-ff` regular-merge with explicit Phase-6-close ceremony shape inherits from `cfcf2e7` precedent. PR flow at chunk-6.3b grain would have added PR review overhead without commensurate review benefit:
+
+- Governance trail already intact at origin/staging (3 chunk-6.3b drafting commits + pre-Task-1 plan + chunk-6.3a→6.3b transition commits)
+- Merge ceremony is closing-marker not review-surface (Phase 6 retrospective writeup itself IS the substantive ratification artifact; review fires at retrospective-reading-grain, not at merge-commit-grain)
+- Direct push preserves Phase-6-close governance marker visibility at main branch history (the 625c7df merge commit IS the Phase-6-close anchor; PR-merge-commit shape would have been parallel but added PR-flow ceremony overhead)
+- 247-commit forward-merge volume exceeds typical PR review-window practical limit; PR flow at this magnitude is reviewer-hostile
+
+### Codification grain + Phase 7+ adjudication input
+
+N=1 first-instance at each of the two sub-grains identified above. Below CLAUDE.md codification graduation threshold (typical observation-grain N=3 per `CLAUDE.md` codification convention). Observation-only F-J entry at chunk-6.3b grain.
+
+**Future merge-to-main ceremonies adjudicate at Phase 7 retrospective grain or earlier seam-grain:**
+
+- **Option (i) — Continue direct-push.** Branch protection is informational-not-enforcing; direct push continues to succeed; closing-marker visibility preserved on main. Per chunk-6.3b precedent.
+- **Option (ii) — Fire PR flow.** Inherits PR#7 + PR#8 + #2 precedents (3 instances); branch protection informational notice aligned with PR flow operationally. Adds PR review overhead per merge ceremony grain.
+- **Option (iii) — Revisit at Phase 7 retrospective.** Adjudicate per Phase 7 substantive scope-lock cycle outputs (e.g., if Phase 7 closes at smaller forward-merge magnitude → PR flow viable; if at similar/larger magnitude → direct-push inheritance from chunk-6.3b).
+
+Phase 7 retrospective Sub-Q-equivalent walks this adjudication. chunk-6.3b §6.d carry-forward at `docs/07_governance/retrospectives/phase-6-retrospective.md` documents this F-J entry as Phase 7 retrospective input.
+
+### Codify-while-deciding-at-decision-time meta-discipline check
+
+Reserve 2 F-J entry fires at the grain where the surface emerged (post-Phase-6-close ceremony observation), NOT deferred to Phase 7 retrospective Sub-Q walk. Per the meta-discipline: surface at the grain where it emerges; preserve provenance via downstream-correction-surface shape (artifact-immutability discipline shape β per chunk-6.3b retrospective §3.b Observation 3 — same-side authoring but post-substantive-arc-close downstream-correction-surface as the natural codification surface).
+
+The Reserve 2 F-J entry IS the downstream correction surface; the chunk-6.3b retrospective writeup at `9bace41` + chunk-6.3b §6.d carry-forwards are unchanged; this F-J entry sits as the post-Phase-6-close governance commit at the natural seam between substantive arcs (parallel to chunk-6.3a `a9f1071` scope-input artifact post-chunk-6.3a-close).
+
+### Cross-references
+
+- chunk-6.3b retrospective writeup §6.d at `docs/07_governance/retrospectives/phase-6-retrospective.md` — Phase 7 retrospective carry-forwards include this F-J observation as merge ceremony shape input
+- Round 6 Op 2 lock at chunk-6.3b drafting plan `docs/09_briefs/phase-6/chunks/2026-05-15-phase-6-chunk-3b-retrospective-drafting-plan.md` Task 5 — merge ceremony shape inheritance from cfcf2e7 + 9f0ebb3 precedents (cfcf2e7 = direct-merge; 9f0ebb3 = PR-flow)
+- Merge commit `625c7df` on origin/main — chunk-6.3b Phase-6-close ceremony; 247-commit-forward-merge `cfcf2e7..625c7df`
+- chunk-6.3a `a9f1071` scope-input artifact precedent — post-substantive-arc-close governance commit at natural seam shape
+- chunk-6.3b retrospective §3.b Observation 3 (artifact-immutability discipline two-shape distinction) — shape β downstream-correction-surface as the structural shape this Reserve 2 entry fires at
+
+---
+
+## 2026-05-17 — Path C three-grain catalog (Phase 6.5 retrospective; F-J-14 third-instance + grain-catalog consolidation)
+
+Phase 6.5 chunks 1 → 3 closure synthesizes Path C invocation evidence
+across three observation-grains. Catalogued here as consolidation
+under F-J-14's canonical Path C rule-of-record (first-instance entry
+2026-05-14 at line ~11186; second-instance graduation entry
+2026-05-15 at line ~11427):
+
+**Grain 1 — Brief-draft prospective.** Path C evaluated at the
+chunk-brief drafting grain when scope-lock surfaces volume + framing
+arithmetic that crosses the single-session-reliable-delivery bound.
+The grain catches budget-overrun BEFORE substrate-load + brief-amendment-cycle
+costs are incurred. Phase 6.5 evidence: Session 5 chunk 1 brief
+evaluated Path C at brief-draft grain — negative (single-session
+delivery feasible; chunk 1 shipped at `5a9492b` as a single
+substantive commit). Session 11 chunk 3 brief evaluated Path C at
+brief-draft grain — negative (single-session delivery feasible
+within the two-commit ceremony; chunks shipped at `29e2ba1` Commit 1
++ `eab3f5e` Commit 2 as a structural decomposition, not a Path C
+volume-driven split).
+
+**Grain 2 — Phase-A-close-prospective.** Path C evaluated at Phase A
+close grain when implementation-onset substrate-load surfaces volume
+arithmetic crossing the reliable-delivery bound. The grain catches
+budget-overrun AFTER substrate-load but BEFORE in-flight
+implementation costs are incurred. Phase 6.5 evidence: Session 10b
+chunk 2 invocation — Arc β = chunks 2a (commit `94b0411` Tasks
+1+2+3+6 substrate state lift + per-source callbacks) + 2b (commit
+`c5d7e89` Tasks 4+5+7 Pattern γ source-driven routing +
+CanvasTabStrip + RI-6 fifth-grain verification) prospective split at
+Phase A close. Cross-references the F-J-14 second-instance
+graduation entry above (Phase 6 chunk 6.2a 2026-05-15) — Phase 6.5's
+chunk 2 Arc β is the second observation-grain instance of
+prospective Path C invocation outside Phase 6.
+
+**Grain 3 — Mid-impl-reactive.** Path C evaluated mid-implementation
+when in-flight framing-revisits accumulate beyond single-session
+budget. The grain catches budget-overrun only after substrate-load
+AND in-flight implementation costs have started accruing; latest of
+the three grains, highest cost. Phase 4 chunk 3 first-instance Path
+C precedent (F-J-14 canonical entry above, 2026-05-14) — five
+framing-touching findings (Pause 2-5 amendment cycle + Path C as 5th
+finding itself) accumulated mid-implementation crossing
+volume-vs-budget arithmetic; reactive Path C split into 3a
+dispatcher-isolated + 3b cross-phase-wiring. Available grain
+throughout Phase 6.5 implementation but not invoked — operational-
+flex collapse + brief-amendment-cycle-avoidance kept implementation
+within single-session bounds for chunks 1 + 3.
+
+**Codification grain.** Three-grain catalog at F-J-14 third-instance
+entry; consolidates the temporally-distributed Path C invocation
+discipline into a single readable grain inventory. Future Path C
+invocations should evaluate at all three grains in sequence:
+brief-draft → Phase-A-close → mid-impl-reactive. Earlier-grain
+invocation preferred over later-grain invocation (catches
+budget-overrun before substrate-load + implementation effort spent).
+The Phase 6.5 evidence pattern — Grain 1 negative at chunks 1 + 3,
+Grain 2 positive at chunk 2, Grain 3 reactive surface available but
+not invoked — illustrates the canonical evaluation sequence: each
+grain is asked in turn; an earlier grain's positive answer obviates
+the later-grain evaluation; a negative answer at each grain
+documents the discipline's firing-shape for the chunk.
+
+**Cross-references.**
+
+- Phase 4 chunk 3 first-instance (F-J-14 canonical statement above,
+  2026-05-14) — reactive Path C at Grain 3.
+- Phase 6 chunk 6.2a second-instance graduation (F-J-14
+  prospective-vs-reactive sub-discipline above, 2026-05-15) —
+  prospective Path C at Grain 2.
+- Phase 6.5 chunk 2 (commits `94b0411` + `c5d7e89`; Session 10b Arc
+  β prospective split) — third-instance prospective Path C at Grain
+  2 (second observation-grain instance at the prospective surface).
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #6 for full empirical narrative.
+- `CLAUDE.md ## Verify-forward-at-scope-lock for computational-shape
+  chunks` §RI-7 (Session-budget-feasibility verification + Path C
+  invocation conditions) — canonical RI-7 codification this F-J-14
+  three-grain catalog implements at observation grain.
+
+---
+
+## 2026-05-17 — Floor-test absolute-count-assertion fragility (Phase 6.5 chunk 3 first-instance; banking entry pending post-Phase-6.5 remediation)
+
+Banking statement for first-instance precedent surfaced at Phase 6.5
+chunk 3 close: floor-test `serviceMiddlewareAuthorization` asserted
+absolute `audit_log` row count; first-fire produced count-drift
+failure (accumulated state across prior test runs invalidates
+absolute-count assertion); second-fire green after `db:reset:clean`.
+
+**Pattern.** Absolute-count assertions on tables that accumulate
+state across test runs (audit_log, document_jobs, others) are
+fragile. Test ordering, parallel execution, and accumulated state
+between runs all invalidate the assertion under conditions outside
+the test author's control.
+
+**Remediation candidate (post-Phase-6.5 dedicated session):** audit
+floor-test surface for absolute-count assertions on accumulating
+tables. Replace with delta-assertion shape (count before + count
+after; assert delta) OR relative-assertion shape (assert count ≥ N;
+bound from below).
+
+**Why banking (not codification):** N=1 first-instance precedent;
+below observation-grain N=3 codification threshold per CLAUDE.md
+`### Codification convention: observation-grain vs application-grain
+N count`. Substrate scope is floor-test-design grain; warrants
+dedicated investigation session rather than chunk-close codification
+pass.
+
+**Cross-references.**
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  §3 Candidate #8.
+- Phase 2 retrospective inventory item #5 (AccountLedgerService
+  disposable-accounts test refactor) — adjacent test-design
+  remediation grain.
+
+---
+
+## 2026-05-17 — Routing ambiguity at chunk-close trigger with subject-domain pull (observation-grain N=2, banked not codified)
+
+When a candidate codification has a chunk-close trigger (activity-grain
+→ `session/*` topical destination) AND a subject-domain pull (e.g.,
+code-discipline, test-discipline, migration-discipline → topical-by-subject
+destination), the routing rule in `conventions/README.md` does not have
+an explicit tiebreaker. Both paths are defensible; operator decision is
+required without a codified default.
+
+**Evidence (observation-grain N=2):**
+
+- **Phase 6.5 retrospective Candidate #10** (Screenshot-gate
+  verification-shape independence) — chunk-close trigger + UI-design
+  subject pull. Currently routed to `conventions/session/session-close.md`
+  per Commit A (`5f5d13c`); operator flagged for Commit D re-evaluation
+  per Commit A review.
+- **Codify-convention skill dry-run** (2026-05-17, post-Commit-B
+  `057f059`) — hypothetical N=3 candidate: post-refactor file-top
+  comment verification gate at chunk-close + code-discipline subject
+  pull. Routed to `conventions/code.md` with ambiguity surfaced via
+  the skill's "do not invent routing logic" guidance.
+
+**Why banking (not codification):** observation-grain N=2; below the
+N=3 codification threshold per CLAUDE.md `### Codification convention:
+observation-grain vs application-grain N count`. Two instances of the
+same routing-ambiguity shape is evidence the routing rule needs an
+explicit tiebreaker, but the tiebreaker shape itself wants a third
+instance to ground its evidence basis.
+
+**Disposition:** bank, await N=3 fire, then codify tiebreaker in
+`conventions/README.md` routing-rule section. The third instance will
+provide the evidence basis for what the tiebreaker should actually be;
+do not lock in guidance from N=2 evidence.
+
+**Cross-references.**
+
+- Phase 6.5 retrospective at
+  `docs/07_governance/retrospectives/phase-6-5-retrospective.md`
+  Candidate #10 (Screenshot-gate verification-shape independence).
+- `docs/04_engineering/conventions/README.md` (routing rule canonical;
+  tiebreaker lands here at N=3).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`;
+  the skill that surfaced the second instance via dry-run).
+- v2.2 reorg proposal at
+  `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` (the reorg
+  trajectory that produced both instances).
+
+---
+
+## 2026-05-17 — Commit C (b54ae6b) operator review — 4 findings banked + 1 codification candidate
+
+Operator review of Commit C (v2.2 reorg `.claude/rules/` 3-file pilot
+at `b54ae6b`) surfaced four observations worth banking and one
+codification candidate worth flagging for future attention. Three are
+small, one is a Commit D carry-forward, and the codification candidate
+is the underlying-pattern angle on the third finding.
+
+### Finding 1: Manual `/hooks` reload required for fresh sessions to activate InstructionsLoaded hook (N=1)
+
+When the InstructionsLoaded hook was added to `.claude/settings.local.json`
+during Commit B/C verification setup, fresh Claude Code 2.1.143 sessions
+opened in `/home/philc/projects/chounting` did not automatically activate
+the hook. Each fresh session required invoking the `/hooks` UI menu
+once to force settings reload before the hook would fire on instruction
+loads.
+
+**Why banking (not codification):** N=1 observation. Possible causes:
+(a) the watcher only picks up settings files that existed at session
+start (per the update-config skill's settings-watcher caveat); (b) a
+Claude Code 2.1.143-specific behavior; (c) WSL-environment-specific.
+Insufficient evidence to discriminate. Wait for second instance — if it
+fires on a different machine setup or different Claude Code version, the
+pattern starts to look like a real activation discipline that should be
+codified into the hook setup procedure.
+
+### Finding 2: services.md paths deviation from v2.2 §6.1 spec (provenance)
+
+v2.2 §6.1 specified `services.md` paths as
+`apps/web/src/services/**/*.ts` + `apps/web/src/server/**/*.ts`. Actual
+landed paths: `apps/web/src/services/**/*.ts` +
+`apps/web/src/app/api/**/route.ts`. The substitution is defensible —
+chounting backend logic lives in `app/api/**/route.ts` not `server/**`,
+and route handlers are service-adjacent — but it is a deviation.
+
+**Why banking (not codification):** provenance note for future readers
+who compare the landed pilot against the v2.2 spec text and notice the
+mismatch. Not a finding per se; just recording the deviation in case
+future maintenance touches the paths and wonders about the rationale.
+
+### Finding 3: migrations.md RLS-pattern bullet had broken pointer (N=1; fixed at `417b7b3`)
+
+Commit C's `.claude/rules/migrations.md` included a 5th bullet about
+"RLS preservation" that pointed at `conventions/migrations.md` for the
+canonical discipline — but no RLS section exists there. The rule was
+projected into `.claude/rules/` without a canonical conventions home.
+
+This is the exact failure mode v2.2 §6.2 was designed to prevent —
+`.claude/rules/` files should project canonical rules, not invent rules
+with broken pointers. Operator review caught it; fix at commit
+`417b7b3` removed the bullet.
+
+**Why banking:** discipline-failure observation. The codify-convention
+skill (Commit B `057f059`) and the canonical-source-pointer principle
+in `conventions/README.md` are supposed to prevent this shape. The
+failure was that file creation happened in main context without a
+codify-convention skill invocation — the skill is invoked at
+codification time (promoting a friction-journal pattern to a codified
+convention), not at `.claude/rules/` file-authoring time. There is no
+analogous forcing function at the pilot-file-authoring grain. Worth
+considering: should `.claude/rules/` file authoring also route through
+a forcing function that verifies every claimed canonical pointer
+actually resolves to a section that exists? Future N=2 instance would
+graduate to codification candidate.
+
+### Finding 4: Commit D carry-forward — transitional pointers in `.claude/rules/migrations.md` + `docs-codification.md` need cleanup
+
+Three pointers in `.claude/rules/migrations.md` and one in
+`docs-codification.md` reference rules that "relocate to topical
+conventions at Commit D of the v2.2 reorg." The pointer wording handles
+the transitional state cleanly — readers between Commit C and Commit D
+know to look in CLAUDE.md; readers after Commit D should follow the
+post-relocation path. But when Commit D actually relocates these rules,
+the transitional parentheticals "(relocates at Commit D)" become stale
+and need to disappear, with pointers resolving directly to
+`conventions/migrations.md` (and the new home for the observation-grain-
+vs-application-grain N-count discipline).
+
+Specific updates needed at Commit D:
+- `.claude/rules/migrations.md` bullet "Seed-data PII placeholder" —
+  update pointer from CLAUDE.md to `conventions/migrations.md`.
+- `.claude/rules/migrations.md` bullet "Substrate-mod test-staleness
+  review" — same.
+- `.claude/rules/docs-codification.md` bullet "Observation-grain vs
+  application-grain N count" — update from CLAUDE.md to wherever the
+  discipline lands (likely `conventions/session/<sub>.md` or a meta
+  conventions topical).
+
+**Disposition:** add to Commit D's explicit scope.
+
+### Codification candidate (related to Finding 3): RLS through-parent + `org_id`-derived-in-RPC pattern
+
+The RLS pattern removed at `417b7b3` IS a real codification candidate —
+it's used canonically across Phase 2/3 chunks (per MEMORY.md
+`project_phase_2_chunk_3_implementation_notes`: "org_id-derived-in-RPC
+pattern shipped clean; canonical for chunks 4+"). The pattern has
+multiple application-grain instances but has never been formally
+codified in `conventions/migrations.md` or any ADR.
+
+**Why banking (not codification):** the pattern needs proper codification
+through the codify-convention skill — origin metadata, evidence basis
+with commit SHAs, destination decision (probably
+`conventions/migrations.md` as a new RLS-pattern section, but
+worth checking against existing ADR-0009/0011 territory). That's real
+codification work, not a quick fix. Should be evaluated at the next
+phase retrospective.
+
+**Disposition:** when codification happens, project the codified rule
+back into `.claude/rules/migrations.md` as a pointer-only bullet
+referencing the new canonical home.
+
+### Cross-references
+
+- Commit C at `b54ae6b` (the pilot files this review surfaced findings
+  against).
+- Commit C aftermath fix at `417b7b3` (Finding 3 resolution).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`; the
+  routing forcing function discussed in Finding 3 framing).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §6.2 (the
+  duplicate-authority-creep failure mode Finding 3 instantiates).
+- MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
+  RLS pattern's canonical implementation precedent referenced in the
+  codification-candidate framing).
+
+---
+
+## 2026-05-17 — Commit E (50365fa) operator review — 3 findings banked (1 N=3 graduated, 1 N=2 candidate, 1 cosmetic)
+
+Operator review of Commit E (v2.2 reorg two-subagent addition at
+`50365fa` + prep `c243d04`) surfaced three observations: one
+N=3-graduated codification candidate, one N=2 codification candidate
+related to a Commit C finding, and one cosmetic observation. All
+banked below the codification threshold for this commit; Finding 1's
+codification work is a separate operator-initiated activity via the
+`codify-convention` skill.
+
+### Finding 1: `.claude/*` gitignore un-ignore discipline for team-shared subdirectories (observation-grain N=3, graduated to codifiable)
+
+When adding a new `.claude/<subdir>/` as team-shared infrastructure,
+the `.gitignore`'s `.claude/*` exclude rule requires an explicit
+`!.claude/<subdir>/` + `!.claude/<subdir>/**` un-ignore pair (both
+lines required — git can't re-include children of an excluded
+directory without first re-including the directory itself). The
+un-ignore lands as a small atomic prep commit BEFORE the content
+commit. The discipline operates at two layers:
+
+- **Broader discipline.** Verify gitignore state for any
+  `.claude/<subdir>/` planned as team-shared infrastructure BEFORE
+  the content commit. If gitignore excludes it, prep commit lands
+  first; content commit lands on top.
+- **Specific mechanism (pre-flight check).** `git check-ignore -v
+  .claude/<subdir>/test-file.md` before content commit. Exit 0 with
+  match against `.claude/*` (not against the un-ignore) means the
+  gitignore prep didn't take effect; debug ordering (un-ignores must
+  come AFTER the `.claude/*` exclude in `.gitignore` ordering;
+  `git check-ignore -v` surfaces the matching rule for fast
+  debugging).
+
+**Evidence (observation-grain N=3):**
+
+- **2026-05-05 ADR-0020 substrate session:** `.claude/skills/`
+  un-ignore added after the skills directory was silently gitignored
+  from 2026-04-19 skills migration. Pre-flight gap caught at session
+  start; un-ignore prep landed before skills could be committed.
+- **2026-05-17 Commit C prep `f884d25`:** `.claude/rules/` un-ignore
+  added before the v2.2 reorg 3-file pilot at Commit C (`b54ae6b`).
+  Pre-flight gap caught during pilot dispatch.
+- **2026-05-17 Commit E prep `c243d04`:** `.claude/agents/`
+  un-ignore added before the two-subagent content commit at Commit E
+  (`50365fa`). Pre-flight gap caught during E dispatch.
+
+Three distinct contexts (ADR-0020 substrate session, v2.2 Commit C,
+v2.2 Commit E), three distinct `.claude/<subdir>/` targets (skills,
+rules, agents). Pattern surfaced as a NEW finding in each context
+per the observation-grain discipline.
+
+**Disposition: graduated to codifiable.** Codification itself needs
+the `codify-convention` skill to walk the routing decision tree;
+destination is genuinely ambiguous between `conventions/code.md`
+(repo-setup discipline) and a new meta-section in
+`conventions/README.md` (alongside codification thresholds). Per
+the skill's "do not invent routing logic" guidance, the routing
+decision should go through the skill rather than be picked
+unilaterally at banking time. Codification is a separate
+operator-initiated activity post-banking.
+
+**Mechanism note from the discipline:** the gitignore comment block
+shape (dated + reasons + cross-ref to design source) used at each
+of the three prep commits has itself stabilized into a sub-pattern
+worth noting in the eventual codification. The .gitignore at HEAD
+now has three parallel dated comment blocks (2026-05-05, 2026-05-17
+×2) following the same shape; the shape is recognizable and
+reusable for the next `.claude/<subdir>/` addition.
+
+### Finding 2: RLS canonical home gap in `conventions/migrations.md` (observation-grain N=2, codification candidate)
+
+The RLS through-parent + `org_id`-derived-in-RPC pattern is used
+canonically across Phase 2/3 chunks but has never been formally
+codified in `conventions/migrations.md` or any ADR. Two instances
+of `.claude/*` infrastructure surfacing the gap when attempting to
+reference an RLS canonical body:
+
+**Evidence (observation-grain N=2):**
+
+- **2026-05-17 Commit C fix `417b7b3`:** the original
+  `.claude/rules/migrations.md` had a 5th bullet about "RLS
+  preservation" pointing at `conventions/migrations.md` for canonical
+  discipline. Operator review surfaced that no RLS section exists
+  there. Fix at `417b7b3` removed the bullet (Option B from the
+  three-option adjudication; bank for proper codification when
+  canonical home exists).
+- **2026-05-17 Commit E migration-reviewer `50365fa`:** the new
+  `.claude/agents/migration-reviewer.md` review checklist includes a
+  "RLS preservation" item that says "Tables holding org-scoped data
+  require the 4-policy RLS pattern (SELECT/INSERT/UPDATE/DELETE
+  through-parent with `org_id` derivation)" but doesn't point at a
+  canonical home (because none exists). The check is genuinely the
+  weakest part of the migration-reviewer's checklist.
+
+Same gap, two surfaces. The pattern of `.claude/*` infrastructure
+trying to project a canonical RLS body — and finding none — is what
+N=2 captures.
+
+**Disposition: bank pending N=3 third instance OR explicit
+codification work.** Either path graduates the candidate:
+
+- If a third instance surfaces (e.g., a future `.claude/rules/` or
+  `.claude/agents/` file references RLS without canonical home), the
+  observation-grain N=3 threshold is met; codification fires via
+  `codify-convention` skill. Likely destination: a new section in
+  `conventions/migrations.md` titled "RLS through-parent + org_id
+  derivation pattern" with evidence basis from Phase 2/3 chunks.
+- If proper codification work happens before a third instance
+  surfaces (e.g., as part of a future phase retrospective or
+  migration-discipline review), the RLS section lands at
+  `conventions/migrations.md` and Finding 2 is closed retroactively.
+
+Until either path fires, both `.claude/rules/migrations.md`
+(post-Commit-C, RLS bullet removed) and
+`.claude/agents/migration-reviewer.md` (post-Commit-E, RLS check
+without canonical pointer) have the same weakness around RLS
+verification. Acceptable as banking; not acceptable as long-term
+state.
+
+### Finding 3: `ledger-reviewer` canonical-source vs checklist asymmetry (cosmetic, no graduation)
+
+The Commit E `.claude/agents/ledger-reviewer.md` cites
+`docs/02_specs/control_matrix.md` in its canonical sources list but
+the review checklist doesn't have a corresponding explicit "check
+that any new mutation has a `control_matrix` row" item. The
+checklist's audit `before_state` capture item implicitly covers
+control-matrix consultation (because audit-row mapping is the
+control_matrix's role), but the asymmetry is real — a careful reader
+of the agent body might wonder whether control_matrix is a
+load-bearing source or a residual reference.
+
+**Disposition: leave for now.** Revisit if a real
+ledger-reviewer invocation surfaces a finding that explicitly needs
+a control_matrix check. Adding an explicit checklist item now would
+be a defensive change without evidence basis.
+
+### Cross-references
+
+- Commit E content commit at `50365fa` (the subagent files this
+  review surfaced findings against).
+- Commit E prep commit at `c243d04` (Finding 1's third instance).
+- Commit C aftermath fix at `417b7b3` (Finding 2's first instance —
+  RLS bullet removed from `.claude/rules/migrations.md`).
+- `.claude/skills/codify-convention/SKILL.md` (Commit B `057f059`;
+  the routing forcing function that Finding 1 codification would
+  invoke).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §6.2 (the
+  duplicate-authority-creep failure mode Finding 2 instantiates at
+  N=2; the routing-pointer-target verification gap).
+- 2026-05-17 post-Commit-C banking entry above (Finding 2 here
+  builds on Finding 3 there — same RLS canonical-home gap surfaced
+  at two distinct `.claude/*` infrastructure files).
+- MEMORY.md `project_phase_2_chunk_3_implementation_notes.md` (the
+  RLS pattern's canonical implementation precedent — context for
+  Finding 2's codification candidate).
+
+## 2026-05-17 — Commit F (6264944) operator review + reorg-arc closeout — 3 observations banked (1 partial-completion N=1, 1 tracking, 1 memory-extended N=2)
+
+Operator review of Commit F (v2.2 reorg final commit at `6264944` —
+two skills + skills README index update + lint script + install-hooks
+4-site integration + InstructionsLoaded hook committed to team-shared
+settings) surfaced three observations: one subagent partial-completion
+recovery (triggered by an internal tool error during dispatch), one
+forward-looking tracking item for the new lint script, and one
+backslash-escaping drift at N=2 (memory-extended at Commit F close).
+All banked below codification threshold for this commit. Commit F
+closes the v2.2 reorg arc; this banking entry is the closeout-
+observations companion to the arc.
+
+### Finding 1: Subagent mid-execution tool-error and partial-completion recovery (observation-grain N=1, bank pending N=2)
+
+The Agent tool call dispatching the Commit F execution prompt returned
+an internal tool error mid-execution. The subagent had completed Steps
+1, 2, 2.5, 2c, and the file-write portion of Step 3 (lint script body
+written) before the error; the chmod+x of Step 3, the four-site
+install-hooks.sh integration of Step 4, the settings.json hook of
+Step 5, the acceptance checks, and the commit itself had not run when
+the error surfaced. The subagent left the working tree in a
+half-finished state: 4 files modified and 3 files added on disk, no
+staged changes, no commit. The skill files, CLAUDE.md trim, and skills
+README update were all spec-compliant when inspected after the error;
+the partial state was salvageable rather than corrupt.
+
+Recovery: the orchestrator (this session's main agent) verified the
+partial work against the v2 prompt's spec, then completed the remaining
+steps directly (chmod, four install-hooks.sh edits, settings.json
+hook, acceptance checks, commit) rather than re-dispatching a fresh
+subagent. Re-dispatching with the same prompt would risk the subagent
+re-doing work that was already done, including potentially overwriting
+the skill files with minor variations that would lose the v2 prompt's
+UTF-8 round-trip discipline. Direct completion preserved the partial
+work and reached commit cleanly.
+
+**Disposition: bank as N=1 observation, await N=2.** The failure mode
+is real (subagent execution is not transactional within a session;
+mid-execution tool errors can leave the working tree at an arbitrary
+intermediate state), but a single instance is below codification
+threshold. If a future multi-step subagent dispatch surfaces the same
+shape, it graduates to N=2 — the codification candidate would be
+around "operator-supervised subagent execution requires
+fallback-completion discipline" with the operator verifying partial
+work and completing the remainder rather than re-dispatching.
+
+The recovery itself encodes a sub-discipline worth noting at
+codification time: before deciding between re-dispatch and direct
+completion, the operator must verify (a) which scope items completed,
+(b) whether the partial work is spec-compliant, (c) whether
+re-dispatch would risk overwriting good work. Direct completion is
+the right move when (a) and (b) are positive AND (c) is a real risk.
+
+### Finding 2: `lint-rules-frontmatter.sh` first real-world invocation pending (forward-looking tracking item)
+
+The lint script landed at Commit F (Step 3) but no real-world invocation
+has occurred yet — Commit F itself did not stage any `.claude/rules/*.md`
+files, so the new lint section in the pre-commit hook was a no-op for
+this commit. The synthetic negative test in Check 4 confirmed the
+script catches an unquoted glob pattern; the positive test confirmed
+existing rules pass. But the canonical first invocation against a
+real edit happens at the next `.claude/rules/` modification.
+
+Whenever someone next touches `services.md`, `migrations.md`, or
+`docs-codification.md` (the 3-file pilot from Commit C), the lint runs
+at pre-commit. Two valid outcomes:
+
+- **Lint catches something.** Either the operator made an unquoted-glob
+  edit (data bug, fix and restage) or the script has a false positive
+  (script bug, surface and halt per the stuck-handling discipline in
+  the v2 prompt). Per Commit F's stuck-handling section 4, distinguishing
+  data bug from script bug is the discipline.
+- **Lint passes silently.** The rule files' globs remain well-formed
+  after the edit. This is the expected outcome on most edits.
+
+**Disposition: tracking item, no codification action.** Not a finding
+in the codification sense — it's a forward-looking observation that
+the script's design hasn't been validated against real edits yet.
+Worth noting so the first invocation is recognized as a milestone
+rather than passing unnoticed.
+
+### Finding 3: Backslash escaping drift in single-quoted heredocs (observation-grain N=2, memory-extended)
+
+The Commit F commit message body, drafted via `cat <<'EOF'` heredoc,
+contained `Unquoted globs starting with \`*\` silently` where the
+backticks around `*` were unnecessarily backslash-escaped. The
+single-quoted heredoc delimiter preserves backticks (and all shell
+metacharacters) literally — no escape needed. The escaped backslashes
+landed in commit history as visible blemishes (`` \`*\` `` instead of
+`` `*` ``).
+
+This is the same shape as the 2026-04-21 Session 8 C6 closeout
+incident where `\$0.11` was written instead of `$0.11` in a similar
+single-quoted heredoc. Both incidents share the failure mode: applying
+backslash-escape discipline as if the heredoc were double-quoted or
+unquoted (where escape would be needed) when it was actually
+single-quoted (where escape is wrong). N=2 evidence of the same
+recurring drift.
+
+**Disposition: memory-extended, no further codification.** The memory
+file `feedback_heredoc_escaping.md` (originally written 2026-04-21
+covering `$` expansion suppression only) was extended at Commit F
+close to broaden the rule to all single-quoted-heredoc metacharacters
+(`$`, `` ` ``, `\`). The friction-journal entry cites the memory
+update as the disposition. Friction-journal-level codification (i.e.,
+landing the rule in a topical conventions file) would be premature at
+N=2 for a memory-grain feedback rule; the memory file is the
+appropriate canonical home until and unless the pattern surfaces a
+third time in a context where a topical convention is the better fit.
+
+### Cross-references
+
+- Commit F content commit at `6264944` (this banking entry's review subject).
+- Commit E banking entry above (2026-05-17, three-findings precedent shape).
+- Commit C banking entry above (2026-05-17, four-findings precedent shape).
+- `.claude/skills/phase-retrospective/SKILL.md` (Commit F; this entry's
+  findings are candidate inputs for the v2.2 reorg meta-retrospective
+  that would use this skill).
+- `docs/09_briefs/phase-6.5/reorg-proposal-v2.md` §11 (Commit F
+  specification).
+- MEMORY.md `feedback_heredoc_escaping.md` (Finding 3 disposition;
+  extended at Commit F close from `$`-only to all single-quoted-heredoc
+  metacharacters).
+- MEMORY.md `project_v22_reorg_complete.md` (new project memory at
+  Commit F close capturing the v2.2 reorg arc state).
+
+## 2026-05-18 — Friction-pattern-detector first-implementation + verification: 7 first-instance observations across 3 families
+
+Banking 7 first-instance pattern observations surfaced during the
+friction-pattern-detector's first-implementation execution
+(2026-05-17 → 2026-05-18) and the post-implementation verification
+round. Three families tagged for consistent within-family N counting
+when the detector itself is re-run against the journal.
+
+### Family A: tool-contract-drift (2 first-instances)
+
+- (tool-contract-drift) first-instance — GNU grep -E supports `\b`
+  word boundaries in EREs; gawk does not. gawk also escape-processes
+  `\b` into a literal backspace when passed via `-v`. Workaround in
+  `scripts/friction-journal-tally.sh`: embed the regex literal in the
+  awk script (not via `-v`) and use `\<` / `\>` (gawk's word-boundary
+  anchors) inside awk. Documented in script comment block at the
+  marker-detection awk site. Surface: tool-A's-regex-extensions ≠
+  tool-B's documented contract.
+
+- (tool-contract-drift) first-instance — bash `read` with
+  `IFS=$'\t'` collapses consecutive tab delimiters because tab is a
+  whitespace IFS char. With 5 tab-separated fields where field 3 is
+  empty, `read -r a b c d e` shifts all subsequent fields left by
+  one, masquerading as a column-misalignment bug. Workaround in
+  the same script: substitute non-empty sentinel `-` in awk output
+  for empty fields. Same family-shape as the grep/gawk finding:
+  tool's observable behavior departs from operator expectation
+  derived from the tool's surface contract.
+
+### Family B: plan-empirical-mismatch (2 first-instances)
+
+- (plan-empirical-mismatch) first-instance — Plan's Task 5 Step 3
+  verification command for T1.5 sort order used
+  `awk '{print $2}'` to extract the date column from rendered
+  output. awk default whitespace splitting collapses multi-space
+  runs, so rows with empty dates had their first text word counted
+  as the "date" field. Verification produced false-mismatch reports
+  on empty-date rows even when the underlying sort was correct.
+  Workaround during execution: extract only dated rows via filtered
+  grep before sorting. Plan-side residual: the verification command
+  needs a fixed-column extraction shape (cut/sed by character
+  position, or read TSV directly).
+
+- (plan-empirical-mismatch) first-instance — Plan's Stage B
+  graduation check (Task 7) assumed codification footers carry
+  single-token bucket IDs in `Promoted from: <bucket>` form. Actual
+  footers in `conventions/*.md` carry descriptive provenance phrases
+  ("Phase 1.5A convention codification batch", "chunk-6.3a
+  implementation notes"). Stage B as designed returns zero matches.
+  Deferred at first-implementation with a marker comment in the
+  script; reactivation requires the codification convention to
+  evolve toward bucket-id-style provenance, or Stage B to evolve
+  toward fuzzy footer-content matching.
+
+### Family C: regex-permissive-cost-class (3 first-instances)
+
+- (regex-permissive-cost-class) first-instance — B1's permissive
+  regex `\([^()[:space:]]{1,40}\)` matches status-annotation
+  parentheticals like `(sustained)`, `(see ADR-...)` that the spec
+  did not enumerate as a false-positive shape. Spec §Bucket
+  extraction accepts the cost as noise-class (operator filters the
+  T1 row in 2 seconds). Documented as such, no in-script change.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
+
+- (regex-permissive-cost-class) first-instance — B2's permissive
+  regex `[A-Z][A-Z0-9-]+[A-Z0-9]` requires an uppercase tail.
+  Lowercase-suffixed bucket families (S29a, S29b, S29c) collapse
+  under the bare-prefix bucket (S29) because the lowercase
+  character is excluded from the character class. Operator
+  disambiguation cost rather than mis-attribution — all collapsed
+  instances are real S29-family observations needing a/b/c split
+  by `source_lines` inspection. Acceptable for surfacing-tool cost
+  shape; B2 refinement candidate (change tail to `[A-Z0-9a-z]`)
+  if a future audit shows the cost is too high.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
+
+- (regex-permissive-cost-class) first-instance — B1's permissive
+  matching has a **signal-hiding subclass** distinct from the
+  noise-class tradeoff above: false-positive parenthesized tokens
+  like `(sustained)` shadow lines that should land in T1.5 because
+  their parenthesized form preempts the bucket extractor while the
+  real observation name sits in bare prose elsewhere on the line.
+  The operator who discards the noise row also discards the real
+  signal underneath, without seeing it. Documented as a known
+  limitation in the spec (§Bucket extraction caveat added at this
+  banking commit); resolution deferred pending empirical audit of
+  all-lowercase-letter parenthesized bucket usage before any B1
+  discriminator change.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`.)
+
+### Family-level codification status
+
+Three families surfaced together in a single implementation arc.
+Family C is at N=3 within this banking alone; Families A and B are
+at N=2 each within this banking. **No family-level codification
+fired at observation-grain** per the codify-while-deciding-not-
+while-implementing principle — these are observation-grain records
+pending future independent firings before graduation evaluation.
+The friction-pattern-detector itself, re-run after this banking,
+will surface Family C as a T1 graduate-now candidate (count=3,
+ungraduated); this is the system working as designed and is the
+prompt for a future retrospective-close evaluation of whether the
+family is genuinely codifiable or arc-bound.
+
+### Cross-references
+
+- Friction-pattern-detector design spec:
+  `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+  (§Bucket extraction caveat added at this banking commit for the
+  Family C signal-hiding entry).
+- Friction-pattern-detector implementation plan:
+  `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-plan.md`
+  (Family B entries surface against plan's Task 5 Step 3 and Task 7).
+- Implementation commits: `64bbc31`...`1ac6dbe` (13 commits on staging).
+- Tool surfaces: `scripts/friction-journal-tally.sh`,
+  `.claude/agents/friction-pattern-detector.md`.
+
+## 2026-05-19 — Friction-pattern-detector ARC 2: B1 signal-hiding resolved (3 observations across 3 families)
+
+Banking 3 observations from the ARC 2 execution that resolved the
+regex-permissive-cost-class signal-hiding subclass. Two new families
+introduced at N=1; one existing family advances to N=4.
+
+### regex-permissive-cost-class (fourth-instance — resolution)
+
+- (regex-permissive-cost-class) fourth-instance — Resolved the B1
+  signal-hiding subclass via heuristic discriminator: B1's matched
+  content must contain at least one of {digit, hyphen, non-ASCII
+  byte}; otherwise the function falls through to B2/B3. The
+  2026-05-19 empirical audit (`grep -oE '\([a-z]+\)'` against the
+  journal) confirmed zero legitimate single-word-lowercase bucket
+  IDs in the top 30 by frequency — all enumeration markers, status
+  annotations, commit-message scopes, code references, or prose
+  asides. Verification surfaced an unanticipated finding: the
+  heuristic primarily redirects attribution rather than removing
+  it — most previously-shadowed lines had a real B2-shape bucket
+  co-located in the same window; net T1.5 delta was only ~20 lines
+  (not ~518 as the original caveat predicted), because B1 was
+  preempting B2's access to the real bucket. Commits: `1296e05`
+  (script fix) + `ecc1a01` (spec amendment). The 2026-05-18 entry's
+  three first-instances plus this resolution bring the family to
+  N=4. Family-level codification evaluation deferred to ARC 3
+  (retrospective-close).
+
+  **Recursive observation:** the detector caught its own
+  construction's permissive-matching cost class. The resolution is
+  itself a fourth instance of the pattern the detector was built
+  to surface. System working as designed.
+
+  (Codified at `conventions/regex-permissive-matching.md` ARC 3,
+  commit `a10480d`. Instance 4's resolution mechanism also relates
+  to `conventions/prediction-grounding.md`; whether this instance
+  is more naturally tagged by its substrate or by its mechanism is
+  documented as an Open Question in `conventions/README.md` — see
+  substrate-vs-mechanism family-tag precedence.)
+
+### embedded-language-quote-collision (first-instance — new family)
+
+- (embedded-language-quote-collision) first-instance — When applying
+  the B1 heuristic fix to `scripts/friction-journal-tally.sh`, the
+  initial Edit introduced an awk comment containing the word
+  `don't` inside a bash-embedded awk single-quoted string. The
+  apostrophe in `don't` terminated the awk script's single-quote
+  delimiter; bash then attempted to parse the remaining awk
+  function definition as bash, producing `syntax error near
+  unexpected token 'win,'` at the function declaration line. Fix:
+  reworded the comment to `do not`.
+
+  Family-shape distinction: this is **not** an instance of
+  `tool-contract-drift` (the family for one tool's documented
+  behavior departing from another tool's contract — gawk-no-`\b`,
+  IFS-collapse). `embedded-language-quote-collision` is about
+  language **nesting** — the outer language's quote semantics
+  consuming content the inner language needed to receive intact.
+  Future instances could surface in jq scripts embedded in bash,
+  SQL heredocs containing apostrophes, Python `-c` invocations,
+  or any host-language-embeds-guest-language pattern. Distinct N
+  counting from `tool-contract-drift` preserves the bug-shape
+  boundary for future codification.
+
+### caveat-prediction-vs-empirical-resolution (first-instance — new family)
+
+- (caveat-prediction-vs-empirical-resolution) first-instance — The
+  2026-05-18 spec caveat described the B1 signal-hiding mechanism
+  using one sample (`(sustained)` shadowing 8 bare-prose
+  observations). The implicit prediction encoded in the caveat's
+  framing was that shadowed lines "belong in T1.5 rather than
+  merely add noise rows" — generalizing from the sustained sample
+  to predict that resolution would relocate ~518 lines to T1.5
+  (matching the lowercase-paren-token count from the empirical
+  audit).
+
+  Empirical resolution revealed the prediction was only partially
+  correct. Most shadowed lines had real B2-shape buckets
+  co-located; resolution redirected attribution to those buckets,
+  not to T1.5. Net T1.5 delta was ~20 lines, not ~518. The
+  caveat's framing held for those ~20 lines but didn't hold for
+  the bulk.
+
+  Family-shape: caveats written under partial empirical evidence
+  encode predictions about resolution behavior that future
+  verification may revise. Discipline implication: separate "what
+  verification will confirm" from "what verification will
+  discover" in caveat wording, even when verification feels like
+  a confirmation step. Future instances likely surface whenever a
+  caveat-deferred-pending-audit shape recurs.
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
+
+### Family-level codification status
+
+`regex-permissive-cost-class` now at N=4 (three first-instances from
+2026-05-18 + this resolution). Family-level codification evaluation
+sits with ARC 3 (retrospective-close graduation evaluation), per the
+codify-while-deciding-not-while-implementing principle. The two new
+families (`embedded-language-quote-collision`,
+`caveat-prediction-vs-empirical-resolution`) each at N=1; future
+independent firings required before graduation evaluation.
+
+### Cross-references
+
+- Spec amendment commit: `ecc1a01`.
+- Script fix commit: `1296e05`.
+- Spec: `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+  §Bucket extraction (now reflects resolution).
+- Prior banking: `docs/07_governance/friction-journal.md` 2026-05-18 entry
+  (three first-instances of `regex-permissive-cost-class` plus the family
+  taxonomy this entry extends).
+- Detector script: `scripts/friction-journal-tally.sh`.
+- Subagent definition: `.claude/agents/friction-pattern-detector.md`.
+
+## 2026-05-19 — ARC 3 STEP 1 STOP: 3 observations (cap finding + meta-pattern N=2 + discipline-gate firing)
+
+Banking 3 observations from ARC 3's STEP 1 detector verification, which
+stopped the arc on a sanity-check mismatch rather than pressing through.
+The arc did not proceed to STEP 2. Resolution of the underlying B1
+40-char cap issue is deferred to a separate small audit-and-fix arc
+(informally "ARC 2.5") before ARC 3 proper resumes. **Observations
+only — no fix applied to B1 in this session per
+codify-while-deciding-not-while-implementing.**
+
+### caveat-prediction-vs-empirical-resolution (second-instance — family now N=2)
+
+- (caveat-prediction-vs-empirical-resolution) second-instance — B1's
+  bucket-extraction regex caps at 40 characters
+  (`\([^()[:space:]]{1,40}\)`). The cap was set during the original
+  brainstorm without empirical grounding — no audit verified the cap
+  against actual bucket-name lengths in the journal. ARC 3's STEP 1
+  verification surfaced the gap: the family name
+  `caveat-prediction-vs-empirical-resolution` is 41 characters, one
+  over the cap, and is silently rejected by B1, falling through to
+  B2/B3 (which don't match its shape), ultimately landing in T1.5
+  as untagged. Same family-shape as the first-instance entry: a
+  confident-sounding parameter encodes a prediction that empirical
+  verification reveals as partially incorrect. N=1 was the original
+  B1 caveat's "shadowed lines belong in T1.5" prediction that the
+  redirect-vs-remove finding partially refuted; N=2 is this
+  40-char-cap finding. Family not yet at N≥3 graduation threshold.
+
+  Family-name length inventory at this banking:
+  - `tool-contract-drift`: 19 chars
+  - `plan-empirical-mismatch`: 23 chars
+  - `regex-permissive-cost-class`: 27 chars
+  - `embedded-language-quote-collision`: 33 chars
+  - `caveat-prediction-vs-empirical-resolution`: 41 chars (silently rejected)
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
+
+### audit-fix-verify-surfaces-banking (new family, banking N=1 + N=2 together)
+
+- (audit-fix-verify-surfaces-banking) first-instance — ARC 2's
+  resolution work (the B1 heuristic fix) surfaced two unanticipated
+  banking entries beyond the resolution target: the
+  `embedded-language-quote-collision` bug at fix-application time
+  (apostrophe-in-awk inside bash single-quotes), and the
+  redirect-vs-remove behavioral correction at fix-verification time.
+  Noted informally at ARC 2 close as N=1 of an unnamed meta-pattern;
+  formally banked here with family name.
+
+- (audit-fix-verify-surfaces-banking) second-instance — ARC 3's
+  STEP 1 detector verification (intended as a sanity-check gate
+  before STEP 2 graduation evaluation) surfaced the 40-char cap
+  finding as an unanticipated banking entry. The pattern: arcs
+  structured as audit + fix + verify reliably produce banking
+  entries beyond their resolution target, because the verification
+  step's purpose is to test against reality, and reality surfaces
+  shapes the planning did not anticipate. The shape recurs across
+  multiple arcs (ARC 2 + ARC 3 STEP 1).
+
+  Family at N=2; not at graduation threshold. Future arcs structured
+  as audit + fix + verify likely produce N=3+ instances of this
+  meta-pattern.
+
+### stop-on-mismatch-fires (new family, first-instance)
+
+- (stop-on-mismatch-fires) first-instance — ARC 3's STEP 1 prompt
+  carried a "stop on sanity-check mismatch" instruction inherited
+  from the broader CLAUDE.md discipline. When
+  `caveat-prediction-vs-empirical-resolution` failed to appear in
+  T1 with expected count, the prompt's reflex fired: STOP, surface,
+  do not proceed. Without the stop-reflex, the next steps
+  (graduation evaluation) would have run against unverified detector
+  output, potentially making graduation decisions on incomplete
+  data, or worse, silently treating one family as observation-grain
+  when it was actually invisible-to-the-tooling. The
+  discipline-gate worked as designed.
+
+  Family-shape: this is an observation about the discipline
+  structure itself — the prompt's explicit gates produce
+  intended-behavior outcomes when the gates fire. Distinct from
+  the previous two families in this banking: those are about
+  patterns the tooling/discipline catches; this one is about the
+  discipline catching itself.
+
+  Family N=1. Bank for future N counting; recurrence likely
+  whenever a discipline-gate explicitly designed to stop work
+  fires successfully.
+
+### Next-session shape (informally "ARC 2.5")
+
+ARC 3 is not "retried" — it is blocked on a small audit-and-fix
+arc that:
+
+1. Audits actual bucket-name length distribution in the journal.
+   The first-instance entry above lists the five family-name
+   lengths as a starting point; the full audit should grep all
+   parenthesized tokens in the journal and surface the
+   distribution.
+2. Decides between (a) raising the cap to N (grounded by audit
+   data), (b) removing the cap entirely, or (c) splitting B1
+   into capped-fast-path-and-uncapped-fallback. The decision is
+   ADR-shaped, not just a regex tweak.
+3. Applies the chosen resolution.
+4. Re-verifies the previously-rejected family
+   (`caveat-prediction-vs-empirical-resolution`) now surfaces
+   correctly in T1.
+5. Banks any additional observations the arc itself produces
+   (likely produces them, per audit-fix-verify-surfaces-banking
+   family — explicitly watch for N=3).
+
+ARC 3 resumes after ARC 2.5 closes. The unpushed commits stack
+accordingly: 3 ARC 2 commits + 1 ARC 3 substrate commit
+(`f643623`, prompt reconciliation) + 1 ARC 3 STEP 1 STOP banking
+commit (this one) + ARC 2.5 commits + ARC 3 work commits all land
+in one push after ARC 3 completes, per the queued sequence's
+"no push of half-resolved state" rule.
+
+### Cross-references
+
+- ARC 3 prompt (on-disk canonical):
+  `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (substrate commit `f643623`).
+- ARC 2 banking entry, prior section above (2026-05-19 H2)
+  for `caveat-prediction-vs-empirical-resolution` first-instance.
+- B1 cap site: `scripts/friction-journal-tally.sh` extract_bucket()
+  function, the `\([^()[:space:]]{1,40}\)` regex literal.
+- ARC 2 close session-end note (in the prior session's final turn):
+  flagged the audit-fix-verify-surfaces-banking meta-pattern
+  informally as "worth watching"; this banking formalizes the
+  family name and counts ARC 2 itself as N=1.
+
+## 2026-05-19 — ARC 2.5 close: B1 cap resolved (audit-grounded); 2 graduation candidates surfaced
+
+ARC 2.5 closed with B1's 40-char length cap removed entirely and
+shape-based rejects added. Empirical audit demonstrated no clean
+length boundary between buckets and non-buckets, but a clean shape
+boundary (backtick wrapping + slash containment) — shape rules now
+carry the discrimination length alone could not.
+
+Two banking entries graduate their families to N=3 in this section
+(both candidates for retrospective-close evaluation when ARC 3
+resumes). The resolution narrative is the closing of the
+40-char-cap finding (caveat-prediction-vs-empirical-resolution
+second-instance from ARC 3 STEP 1 STOP banking).
+
+### Resolution: cap-removal + shape rejects (closing the 40-char cap finding)
+
+Commits:
+- `425cac3` — fix(scripts): cap removal + shape rejects
+- `d78bf8d` — docs(brief): spec amendment
+
+B1 changes:
+- Length: `\([^()[:space:]]+\)` (cap removed; was `{1,40}`)
+- Shape rejects added (fall through to B2/B3):
+  - candidate starts or ends with `` ` `` → backtick-wrapped code/path ref
+  - candidate contains `/` → file path
+- ARC 2 heuristic preserved (digit / hyphen / non-ASCII required).
+
+Audit data summary (top-40 parenthesized tokens by length):
+
+| Length | Token | Class |
+|-------:|-------|-------|
+| 65 | `` `docs/09_briefs/phase-1.3/session-32-onboarding-posture-brief.md` `` | code/path |
+| 64 | `` `supabase/migrations/20240152000000_ingestion_substrate.sql:132` `` | code/path |
+| 51 | `` `2026-05-06-phase-2-brief-pre-positioning-notes.md` `` | filename |
+| 50 | `transient/permanent_malformed/provider_unavailable` | enum prose |
+| 49 | `` `credit_card`/`ach`/`bank_transfer`/`money_order` `` | enum prose |
+| 48 | `**codify-while-deciding-not-while-implementing**` | discipline name (bold-wrapped) |
+| 45 (×2) | path/file refs | code/path |
+| **44** | `D2.7-gate-with-substrate-ship-only-exception` | **BUCKET (longest pure)** |
+| 43 | `` `caveat-prediction-vs-empirical-resolution` `` | bucket (backtick-quoted) |
+| 41 (×2) | `caveat-prediction-vs-empirical-resolution` | **BUCKET** |
+| 39 | `` `documentRouterService.dispatchTrigger` `` | code ref |
+| 38 (×3) | bucket + UUID + filename | mixed |
+| 33-35 | mixed | mixed |
+| 27-32 | mostly buckets + some code/filename refs | mixed |
+
+Longest pure bucket: **44 chars** (`D2.7-gate-with-substrate-ship-only-exception`,
+tied with `codify-while-deciding-not-while-implementing`). Longest non-bucket:
+65 chars (backtick-wrapped path). Populations overlap across 27-65+ chars
+with no clean length cutoff. Shape boundary clean: non-buckets carry
+backticks, slashes, file extensions, or method-dot-syntax; real buckets do
+not. The audit's classification grounds the cap-removal + shape-reject
+decision. Reproducible: `grep -oE '\([^()[:space:]]+\)' docs/07_governance/friction-journal.md | awk '{print length($0)-2, $0}' | sort -rn | head -40`.
+
+Verification (STEP 3 three checks):
+- (1) `caveat-prediction-vs-empirical-resolution` now in T1 at N=2 (lines
+  13430 + 13489 — prompt's prediction of N=1 was stale; grep-verified two
+  substantively distinct observations, not tag inflation).
+- (2) Shadow tokens (sustained, a, b, c, etc.) remain absent from T1 —
+  ARC 2 heuristic still holds.
+- (3) All legitimate buckets aggregate correctly; no new phantom buckets
+  surfaced from cap removal (top-5 T1 unchanged: cadence-β-i-b, LIVE,
+  NEW, WSL, S29).
+
+### caveat-prediction-vs-empirical-resolution (third-instance — family now N=3, graduation candidate)
+
+- (caveat-prediction-vs-empirical-resolution) third-instance — Pattern
+  observed across this run of arcs: prompts written for the next
+  session encode confident-sounding predictions about disk state that
+  diverge from actual disk state when verification runs. Three
+  sub-instances visible in this session's transcript:
+
+  1. ARC 2 STEP 3 predicted ~518 T1.5 lines from the heuristic;
+     actual ~20 (banked as caveat-prediction-vs-empirical-resolution
+     first-instance — redirect-vs-remove framing).
+  2. ARC 3 STEP 1 expected caveat-prediction-vs-empirical-resolution
+     present at N=1; actual was absent entirely (banked as second-
+     instance — the 40-char cap finding).
+  3. ARC 2.5 CHECK 1 expected caveat-prediction-vs-empirical-resolution
+     in T1 at N=1; actual at N=2 because the ARC 3 STEP 1 STOP banking
+     itself added a second-instance tag that the prompt-writer didn't
+     factor in.
+
+  Family-shape: same as the first two instances (a parameter or
+  prediction encoded without empirical grounding is revealed as
+  off when verification actually runs against disk). Distinct in
+  surface: this instance is about **prompt-write-time** predictions
+  — the prompts being authored carry confident counts and behavior
+  expectations without grounding against disk state at write time.
+  Generalizable: any planning artifact that encodes predictions
+  about resolution behavior carries this risk; the discipline
+  implication is "separate what verification will confirm from what
+  verification will discover when authoring the prediction."
+
+  Family now at N=3 — **graduation candidate** for ARC 3
+  retrospective-close evaluation. Whether this family deserves a
+  convention file (and where it would land — possibly the brainstorm
+  or writing-plans skill surface rather than a topical convention) is
+  ARC 3's question, not ARC 2.5's.
+
+  (Codified at `conventions/prediction-grounding.md` ARC 3,
+  commit `6d3a911`.)
+
+### audit-fix-verify-surfaces-banking (third-instance — family now N=3, graduation candidate)
+
+- (audit-fix-verify-surfaces-banking) third-instance — ARC 2.5's
+  STEP 3 verification surfaced the prompt-prediction-vs-disk-reality
+  observation (the third-instance entry above) as an unanticipated
+  banking entry beyond the arc's resolution target (which was the
+  cap fix). The meta-pattern continues across three consecutive
+  arcs:
+
+  - ARC 2 (first-instance): heuristic fix surfaced
+    embedded-language-quote-collision (apostrophe-in-awk) +
+    redirect-vs-remove behavioral correction.
+  - ARC 3 STEP 1 (second-instance): detector verification surfaced
+    the 40-char cap finding.
+  - ARC 2.5 (this instance): cap-fix verification surfaced the
+    prompt-prediction-vs-disk-reality observation.
+
+  The structural reason: arcs structured as audit + fix + verify
+  test resolution behavior against reality at the verify step, and
+  reality reliably surfaces shapes the planning didn't anticipate.
+  The recursion is the work.
+
+  Family now at N=3 — **graduation candidate** for ARC 3
+  retrospective-close evaluation. The candidate convention question
+  ARC 3 will face: does the meta-pattern deserve a topical convention
+  about how to structure resolution arcs, or is it observation-only
+  at this scale?
+
+### Family-level status going into ARC 3
+
+After this banking, the family taxonomy stands as:
+
+| Family | N | Status |
+|--------|--:|--------|
+| `tool-contract-drift` | 2 | below threshold |
+| `plan-empirical-mismatch` | 2 | below threshold |
+| `regex-permissive-cost-class` | 4 | **graduation candidate** (was N=4 going into ARC 3) |
+| `embedded-language-quote-collision` | 1 | below threshold |
+| `caveat-prediction-vs-empirical-resolution` | 3 | **graduation candidate** (NEW this banking) |
+| `stop-on-mismatch-fires` | 1 | below threshold |
+| `audit-fix-verify-surfaces-banking` | 3 | **graduation candidate** (NEW this banking) |
+
+Three families now at N=3+ for ARC 3 retrospective-close evaluation
+when it resumes. ARC 3 was originally scoped to evaluate one
+(regex-permissive-cost-class N=4); ARC 2.5's banking surfaced two
+more (caveat-prediction-vs-empirical-resolution N=3, audit-fix-verify-
+surfaces-banking N=3). Both new candidates carry recursive
+self-reference: the families describe the very kind of work ARC 2.5
+was doing when they reached threshold.
+
+### Cross-references
+
+- Script fix commit: `425cac3` (fix(scripts): cap removal + shape rejects).
+- Spec amendment commit: `d78bf8d` (docs(brief): §Bucket extraction second resolution).
+- ARC 3 STEP 1 STOP banking (prior H2 above): cap finding banked as
+  caveat-prediction-vs-empirical-resolution second-instance.
+- ARC 2 close banking (2026-05-19 first H2): original first-instance
+  + the audit-fix-verify-surfaces-banking family's first-two instances.
+- Audit reproduction: `grep -oE '\([^()[:space:]]+\)' docs/07_governance/friction-journal.md | awk '{print length($0)-2, $0}' | sort -rn | head -40`.
+- ARC 3 prompt (unchanged): `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (substrate commit `f643623`).
+
+### STEP 7: ARC 2.5 close reflection (brief)
+
+**(1) Audit cleanness.** Data overlapped — bucket and non-bucket
+populations both 27-65+ chars; no clean length cutoff. The audit
+answered the question by revealing the question was wrong-shaped:
+length isn't a principled discriminator here. Clean shape boundary
+substituted (backticks, slashes). The audit grounded the constraint
+space, not the answer.
+
+**(2) Fix selection beyond audit data.** Required judgment. The
+audit ruled out pure option (a) but the cap-removal-vs-raise and
+rule-3-yes/no sub-decisions were delegated to operator. Discipline
+operated as designed: audit bounds, judgment picks within bounds.
+Both sub-decisions resolved per empirical-grounding principle
+(remove rather than raise; defer rule 3 until data shows need).
+
+**(3) Regression checks.** Passed first run. CHECK 1's N=2-vs-N=1
+mismatch was itself a prompt-prediction-vs-disk-reality instance;
+grep-verified as clean (no tag inflation). No fix-induced regressions.
+
+**Meta-observation flagged but not banked at this grain** (would be
+N=4 of caveat-prediction-vs-empirical-resolution; the family already
+graduated in this banking, so banking another instance now is
+in-flight noise — surface for ARC 3 to factor in):
+
+When ARC 3 resumes, its STEP 1 prompt expects
+`caveat-prediction-vs-empirical-resolution` at N=1 in T1 and the
+family NOT yet at N=3. ARC 2.5's banking moved the family to N=3.
+**The ARC 3 prompt itself now carries a stale prediction about a
+family that just graduated.** Same family-shape as everything ARC 2.5
+just resolved, operating one level up at the prompt-substrate grain.
+ARC 3's first action when it resumes should be to refresh its
+expectations against current disk state — the prompt's STEP 1
+verification will either need its expected-counts updated or its
+"stop on mismatch" reflex will fire on this discrepancy. Either way
+is fine; flagging the substrate state so ARC 3 doesn't STOP on a
+known and explained gap.
+
+## 2026-05-19 — ARC 3 STEP 2 dispositions (deferrals + dismissals)
+
+Banking ARC 3 STEP 2 family dispositions where the call was not
+graduate. Family 1 (`caveat-prediction-vs-empirical-resolution`,
+N=3) graduated at commit `6d3a911`
+(`feat(conventions): graduate caveat-prediction-vs-empirical-resolution — N=3`)
+to topical convention `prediction-grounding.md`. This H2 covers
+the families where the call was DEFER or DISMISS.
+
+### audit-fix-verify-surfaces-banking — DEFERRED at N=3
+
+- **Family:** `audit-fix-verify-surfaces-banking`
+- **N count at deferral:** 3 (friction-journal lines 13514, 13523, 13707)
+- **Status:** **DEFERRED** (not dismissed, not graduated; this is a
+  positive choice — the pattern's structural mechanism is plausible
+  but the diverse evidence required for confident graduation is
+  insufficient)
+- **Date:** 2026-05-19
+
+**Reasoning:**
+
+The three banked instances are geographically concentrated — all
+from the same recursive build-out of the friction-pattern-detector
+(ARC 2 → ARC 3 STEP 1 → ARC 2.5). The family-as-named ("audit-fix-
+verify arcs surface banking entries beyond resolution target")
+claims the load-bearing factor is the arc shape; the family-as-
+evidenced more plausibly supports a narrower pattern
+("iteratively-built-new-tools surface banking at verify steps")
+because each instance shared substrate maturity in addition to arc
+shape.
+
+Counterfactual: a typo fix in a stable, mature substrate using
+audit-fix-verify shape would plausibly NOT fire the pattern —
+verification would simply confirm the fix and surface nothing
+beyond the target. The arc shape alone isn't necessary-and-
+sufficient for the family to fire; substrate-evolution status is
+implicated. The named pattern claims more than the evidence
+supports. Codifying under the broader name would be exactly the
+failure mode family 1 just codified against (encoding a prediction
+about generalization without empirical grounding).
+
+Additional concern: the family's substance reduces to "anticipate
+banking at the verify step" — a heads-up rather than an action-
+driving discipline. Compared to family 1's "stop, surface,
+explain — not pre-edit the prediction" (imperative verbs and
+decision points), family 2 as currently named is closer to
+descriptive load-bearing than prescriptive load-bearing. Even
+with stronger generalization evidence, the operational benefit of
+codifying the named family might be thin.
+
+**Re-evaluation trigger:**
+
+A 4th instance from an operationally distinct context (different
+substrate, different arc origin, different artifact class) would
+provide the diversity evidence the current set lacks. Concretely:
+an audit-fix-verify arc operating on a **stable, mature feature**
+(NOT part of this recursive friction-pattern-detector build chain)
+that produces unanticipated banking at the verify step.
+
+If instead a 4th instance surfaces from another iteratively-built-
+new-tool context, that strengthens the **narrower** pattern
+hypothesis (substrate-evolution as load-bearing) but doesn't
+graduate the family as currently named — it would require re-
+evaluating the family's name and scope to match the narrower
+evidence before any graduation decision.
+
+**Re-evaluation action:**
+
+When the re-evaluation trigger fires, return to STEP 2-shape
+evaluation with the broader evidence base. The decision space at
+that point: GRADUATE (with possibly re-named convention reflecting
+the empirical scope), DISMISS (if the narrower-pattern hypothesis
+is confirmed and the named family is artifact-bound), or
+continued DEFER (if evidence still insufficient).
+
+**Substrate visibility:**
+
+The deferral does NOT depress the family's N count or remove the
+three instances from detector visibility. Future detector runs
+continue to surface `audit-fix-verify-surfaces-banking` in T1 at
+N≥3 with graduated=N; this deferral entry is the meta-status that
+tells the operator "yes, this is at threshold, and yes, it was
+deliberately deferred — here's why and here's the re-evaluation
+trigger." The detector remains correct to flag the family as a
+graduation candidate on every run; the deferral entry is what a
+future operator reading the surfaced row checks before making any
+decision.
+
+**Amendment (2026-05-19, layered):** ARC 3 STEP 6 verification
+surfaced a Stage A false-positive on this family — Stage A's
+indiscriminate grep matched cross-reference body mentions of the
+family tag in `prediction-grounding.md`, causing the family to be
+reported as `graduated=Y(A)` despite being deliberately deferred.
+The false-positive persisted from ARC 3 close (commit `46d3d0e`)
+until ARC 3.6 (commit `89155fb`). Stage A is now refined and
+correctly reports this family as `graduated=N`. The family was
+subsequently renamed to `evolving-substrate-verify-surfaces-banking`
+and re-deferred at family 2 re-evaluation (commit `e6297f1`); see
+the 2026-05-19 "Family 2 re-evaluation" H2 for current status.
+
+**Cross-references:**
+
+- Banked instances: friction-journal lines 13514, 13523, 13707
+  (commits `bcbcacc`, `bcbcacc`, `0368d7f`).
+- Family 1 graduation: commit `6d3a911`
+  (`feat(conventions): graduate caveat-prediction-vs-empirical-resolution — N=3`).
+  The application of family 1's discipline (`prediction-grounding`)
+  to this family's evaluation at graduation time is itself a
+  notable first-run observation; banked separately in the
+  forthcoming ARC 3 first-run observation entry.
+
+## 2026-05-19 — ARC 3 close: graduation outcomes + 5 first-run observations + audit-fix-verify N=4 + new-composition N=1
+
+ARC 3 closes with three family dispositions, five first-run
+observations about the codify-convention skill's first operational
+exercise, a fourth observation-grain instance of
+`audit-fix-verify-surfaces-banking` (banking only — deferral status
+unchanged per the family's re-evaluation trigger requirements), and
+N=1 of a new family covering the first run of the composition this
+arc exercised. The five first-run observations accumulate into
+substrate for a possible ARC 3.5; not pre-closed.
+
+### Outcome summary
+
+Three threshold-meeting families at ARC 3 STEP 2:
+
+| Family | Disposition | Commit / Status |
+|--------|---|---|
+| `caveat-prediction-vs-empirical-resolution` (N=3) | **GRADUATED** | `6d3a911` → `conventions/prediction-grounding.md` |
+| `audit-fix-verify-surfaces-banking` (N=3) | **DEFERRED** | `c754810` (positive choice; re-evaluation trigger documented) |
+| `regex-permissive-cost-class` (N=4 banked, N=3 distinct cost classes) | **GRADUATED** | `a10480d` → `conventions/regex-permissive-matching.md` (paired with `prediction-grounding.md`) |
+
+Detector behavior post-ARC-2.5 (and after both graduations):
+
+- STEP 1 verification passed cleanly on first run (all expected family
+  counts matched; ARC 2 + ARC 2.5 regression checks held). No
+  prompt-prediction mismatches fired this arc (ARC 3 prompt was
+  refreshed at STEP 0 reconciliation to reflect post-ARC-2.5 state).
+- Stage A graduation check picked up both graduated families on
+  the immediate next detector run after their respective commits
+  — the loop closes cleanly through canonical surfaces. The
+  detector-surfaces → operator-evaluates → codify-convention →
+  detect-as-graduated cycle is operationally proven, not just
+  designed.
+
+### audit-fix-verify-surfaces-banking (fourth-instance — observation grain only; deferral status unchanged)
+
+- (audit-fix-verify-surfaces-banking) fourth-instance — ARC 3's
+  graduation-and-codification work surfaced five first-run
+  observations beyond the arc's resolution target (the three
+  graduation decisions). The observations are enumerated below in
+  this entry. The audit-fix-verify-surfaces-banking pattern as
+  observed: arcs structured with a verification step (here, the
+  STEP 1 detector run + the per-family STEP 2 evaluations + the
+  STEP 3 codify-convention invocations) produce banking entries
+  the planning didn't anticipate.
+
+  **Banking only — deferral status unchanged.** The family's
+  deferral entry (commit `c754810`) requires the re-evaluation
+  trigger to be a 4th instance "from an operationally distinct
+  context (different substrate, different arc origin, different
+  artifact class)." ARC 3 is partially distinct (different
+  artifact class — convention files vs script edits — and
+  different arc origin — graduation work vs build/fix work), but
+  shares the friction-pattern-detector substrate with the prior
+  three instances. The re-evaluation trigger is not cleanly fired;
+  banking the 4th instance honors observation discipline without
+  prematurely re-graduating the family. Future operator
+  re-evaluation may consider whether ARC 3 should count toward
+  the diverse-context criterion.
+
+### First-run observations on codify-convention (5 distinct findings)
+
+These are surfaced from the codify-convention skill's first
+operational exercise across two graduations (families 1 and 3).
+Banked together for ARC 3.5 substrate consideration.
+
+#### Observation 1: Missing "Evaluation basis" field in codify-convention footer
+
+The skill's `Promoted from` footer template captures provenance
+(where the pattern came from, evidence basis, commits) but does
+not capture justification (the load-bearing / generalizable /
+stable reasoning that determined graduation). Future readers of a
+convention file see *what* was codified and *from where*, but not
+*why* the criteria were met.
+
+Operator-added field workaround applied inline at both family 1
+and family 3 codifications: added an "Evaluation basis" section
+after the `Origin` footer with three sub-bullets (load-bearing,
+generalizable, stable). Precedent-setting; future codifications
+inherit this shape without requiring skill amendment.
+
+Skill-amendment candidate: formalize the "Evaluation basis" field
+in the codify-convention skill's output specification.
+
+#### Observation 2: Convention applied to its sibling at graduation time
+
+When evaluating family 2 (audit-fix-verify-surfaces-banking),
+family 1's just-codified discipline (`prediction-grounding`) was
+operationally invoked as the lens — testing whether family 2's
+name encoded a prediction-without-empirical-grounding about
+generalization. Family 1's discipline-loop closed within minutes
+of its own codification.
+
+N=1 of a potential new family: "convention applied to its sibling
+at graduation time." The shape recurs when sibling families
+graduate close together — the first graduate's discipline becomes
+operational substrate for the second's evaluation. Bank for future
+N counting; observation-only at this grain.
+
+#### Observation 3: Descriptive vs prescriptive load-bearing distinction
+
+The "load-bearing" graduation criterion (from the codify-convention
+skill and CLAUDE.md codification routing) has an unnamed sub-shape
+distinction:
+
+- **Prescriptive load-bearing.** The pattern generates operator
+  action with imperative verbs and decision points. Family 1
+  ("stop, surface, explain — not pre-edit the prediction") and
+  family 3 ("anticipate cost classes; ground discriminators
+  empirically") are prescriptive.
+- **Descriptive load-bearing.** The pattern helps understanding
+  but doesn't directly drive operator action. Family 2's substance
+  ("anticipate banking at the verify step") is descriptive — a
+  heads-up rather than a discipline-with-actions.
+
+The codify-convention skill's current framing treats load-bearing
+as monolithic. Family 2's evaluation made the distinction visible:
+even with stronger generalization evidence, a descriptive-only
+pattern generates a thinner convention than a prescriptive one.
+
+Bank as N=1 of potential discipline refinement to graduation
+criteria. If the distinction surfaces again at future evaluations,
+graduation criteria may benefit from formalizing prescriptive
+load-bearing as a stricter sub-criterion.
+
+#### Observation 4: Family-misattribution by substrate vs mechanism
+
+Family 3's instance 4 (the audit-grounded resolution of cost class
+#3) was banked at ARC 2.5 close under
+`regex-permissive-cost-class` because the substrate it operated on
+was regex. But the pattern of the observation —
+empirical-audit-rather-than-magic-number — is
+`prediction-grounding`'s family-shape, not
+`regex-permissive-cost-class`'s. The banking conflated *what the
+observation was about* (mechanism: empirical grounding) with *what
+surface the observation operated on* (substrate: regex).
+
+Banking discipline question: when an observation can plausibly fit
+two family taxonomies (one by substrate, one by mechanism), which
+takes precedence? Current banking precedent: by substrate (where
+the issue manifested). Alternative: by mechanism (what discipline
+the observation instantiates).
+
+N=1 of new potential family: `family-misattribution-by-substrate-
+vs-mechanism`. Worth banking — same shape could recur whenever
+codifying meta-disciplines that span domains.
+
+#### Observation 5: Cross-reference upstream artifacts after graduation
+
+After family 1 and family 3 codifications, the
+`docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+§Bucket extraction amendments (which documented the cost-class
+discoveries that became these families) still reference the
+discoveries as caveats rather than pointing at the new convention
+files as canonical sources. The spec carries the provenance of the
+cost-class discoveries; the conventions carry the codified
+discipline.
+
+Workflow gap: codify-convention skill produces the convention file
+and registers it in conventions/README.md, but doesn't update
+upstream artifacts (specs, briefs, code comments) that referenced
+the candidate-pre-codification. Future operators reading the spec
+see the discoveries as standalone caveats rather than seeing them
+as instances of a codified discipline.
+
+Action item (not done in this arc; batched for end-of-arc cleanup):
+update friction-pattern-detector design spec §Bucket extraction to
+cross-reference `conventions/prediction-grounding.md` and
+`conventions/regex-permissive-matching.md` as canonical sources;
+spec retains discovery provenance.
+
+### first-runs-of-new-compositions (new family, N=1)
+
+ARC 3 exercised a new operational composition for the first time:
+
+  detector-surfaces-graduate-now-candidates →
+    operator-evaluates-per-family-with-framework →
+      codify-convention-produces-convention-file →
+        detector-surfaces-as-graduated
+
+The composition's pieces existed individually before ARC 3 (detector
+built ARC 1-A→F; codify-convention skill authored v2.2 reorg Commit B;
+graduation framework documented in conventions/README.md §Three-
+category codification taxonomy). ARC 3 was the first end-to-end run.
+
+The composition exercised cleanly twice in this arc (families 1
+and 3) and produced a deferral once (family 2). Two of three runs
+completed the full pipeline; one stopped at the operator-evaluates
+step.
+
+N=1 of new family `first-runs-of-new-compositions`. Future
+first-run-of-composition arcs would count from here. Banking is
+substrate for the convention-shape ARC 3 just exercised; future
+instances may surface specific composition cost classes (analogous
+to how regex-permissive-matching surfaced cost classes within
+regex permissive matching).
+
+### ARC 3.5 anticipation (kept open, not pre-closed)
+
+Five first-run observations + the family-misattribution observation +
+the N=1 of first-runs-of-new-compositions accumulate into substrate
+for a possible ARC 3.5 about codify-convention's first-run findings
+and adjacent discipline refinements.
+
+None of these are blockers for closing ARC 3. The two graduations
+landed cleanly; the deferral entry documents itself; the close
+observations are banked. Whether ARC 3.5 materializes depends on
+the operator's read of whether the accumulated observations justify
+their own arc (a skill-amendment + discipline-refinement arc) or
+whether they sit as observation-grain substrate awaiting future
+recurrence before any action.
+
+Possible ARC 3.5 scope candidates (not commitments):
+
+- Formalize "Evaluation basis" field in codify-convention skill.
+- Refine load-bearing criterion to distinguish prescriptive vs
+  descriptive sub-shapes.
+- Document substrate-vs-mechanism precedence rule for family-tag
+  banking.
+- Add an "update upstream artifacts" step to codify-convention's
+  output specification.
+- Update friction-pattern-detector design spec to cross-reference
+  the new conventions (the immediate action item).
+
+The list is enumeration, not prioritization. Operator decides if
+and when ARC 3.5 fires.
+
+### Cross-references
+
+- Family 1 graduation commit: `6d3a911`.
+- Family 2 deferral commit: `c754810`.
+- Family 3 graduation commit: `a10480d`.
+- New convention files:
+  `docs/04_engineering/conventions/prediction-grounding.md`,
+  `docs/04_engineering/conventions/regex-permissive-matching.md`.
+- ARC 3 prompt (substrate): `docs/09_briefs/phase-6.5/2026-05-19-arc-3-prompt.md`
+  (post-ARC-2.5 reconciled version at commit `b49fef8`).
+- Prior banking entries (the substrate the graduations operated on):
+  2026-05-18 H2 + three 2026-05-19 H2s above (ARC 2 banking, ARC 3
+  STEP 1 STOP banking, ARC 2.5 close banking).
+
+## 2026-05-18 — ARC 3.5 close: Phase A 7-item completion + 4 close observations + audit-fix-verify N=4 trigger satisfaction question + ARC 3.6 queued
+
+ARC 3.5 Phase A closes with seven scope-locked items shipped plus
+one STEP 4 alignment follow-up (eight commits beyond the
+prompt-substrate commit). The codify-convention skill's first
+operational exercise from ARC 3 produced six queued observations;
+Phase A resolved five of them plus a structural framework-
+codification finding surfaced at STEP 2 audit. Phase B (Stage A
+graduation-check refinement) is queued as ARC 3.6 per the
+prompt's default deferral. Four close observations bank for
+future N counting; one trigger-satisfaction question surfaces for
+separate re-evaluation decision.
+
+### Outcome summary
+
+Phase A's commits:
+
+| Commit | Item | Description |
+|--------|------|---|
+| `be8854f` | STEP 0 | Write ARC 3.5 prompt to disk |
+| `8b241ee` | Item 1 | Codify graduation criteria framework in README (prerequisite) |
+| `9b81df7` | Item 2 | Formalize Evaluation basis field in codify-convention skill + precedent-file cleanup |
+| `1e37d21` | Item 3 | Document prescriptive/descriptive load-bearing sub-shape in README |
+| `0fbb863` | Item 4 | Introduce Open codification questions section in README (substrate-vs-mechanism entry as first) |
+| `03ff838` | Item 5 | Add upstream-artifacts cross-reference step to codify-convention output spec |
+| `1b1f370` | Item 7 | Apply Item 5 discipline retroactively to ARC 3 graduations (spec + 7 journal entries, atomic) |
+| `4994271` | Item 6 | Apply prescriptive sub-qualifier to prediction-grounding.md Load-bearing |
+| `27bc490` | STEP 4 | Align codify-convention overview with Phase A body changes |
+
+Structural goal achieved: the codify-convention skill is in a
+self-consistent state after its first operational exercise (the
+ARC 3 two-graduations-one-deferral run), with the framework it
+applies now canonically codified and all upstream-artifact
+cross-references retroactively populated for the two ARC 3
+graduations.
+
+### Observation 1: Three prompt-prediction-vs-disk-reality sub-instances this arc (one observation-grain instance toward prediction-grounding family)
+
+The ARC 3.5 prompt, written from the operator's snapshot of
+post-ARC-3-close state, encoded three predictions that diverged
+from disk reality when STEP 1 substrate reading verified against
+the friction-journal:
+
+- (a) **"five" framing** — the prompt referenced "the five Phase
+  A observations" as if they mapped 1:1 to the journal's banked
+  observations. STEP 1 substrate reading revealed the mapping was
+  5-prompt-items-to-4-journal-observations (Journal Obs 5
+  contributed two prompt items: the discipline portion + the
+  action-item portion; Journal Obs 2 was excluded from Phase A's
+  scope as observation-only). The prompt's count was a
+  compression that hid the mapping divergence.
+
+- (b) **substrate-vs-mechanism resolution-by-assertion** — the
+  prompt's Obs 3 asserted a resolution to the substrate-vs-
+  mechanism precedence question ("by mechanism, not by
+  substrate"). The originating friction-journal entry banked this
+  as an OPEN question with both positions documented; the
+  prompt's resolution was an assertion, not a derivation from
+  evidence. Phase A redirected to OPEN QUESTION shape per
+  operator direction at STEP 1.
+
+- (c) **framework-not-codified structural gap** — the prompt's
+  Obs 1 framed as "formalize the Evaluation basis field" with
+  required content "load-bearing / generalizable / stable
+  assessment." STEP 2 audit revealed the framework had no
+  canonical home on disk — it lived only in the ARC 3 prompt's
+  DECISION FRAMEWORK section. Item 1 prerequisite codification
+  was a direct consequence.
+
+All three sub-instances are instances of
+`caveat-prediction-vs-empirical-resolution` (now codified at
+`conventions/prediction-grounding.md`). Per the observation-grain
+vs application-grain rule, the three sub-instances count as ONE
+observation-grain instance toward prediction-grounding's family
+count (this is Phase A within one arc; not three independent
+contexts).
+
+**Sub-shape diversity:** Sub-instance (a) is a count-expectation
+matching prediction-grounding's existing sub-shape #3 ("session-
+handoff prompts that encode count expectations"). Sub-instances
+(b) and (c) are NOT count-expectations — they're prompt-encoded
+assumptions about the existence/state of substrates the prompt's
+reasoning depends on. See Observation 4 (implicit-precondition
+assumption as candidate sub-shape refinement) for the substantive
+framing of this split.
+
+(Codified at `conventions/prediction-grounding.md` ARC 3, commit
+`6d3a911`.)
+
+### Observation 2: STEP 4 overview-vs-body drift after multi-amendment skill changes (N=1)
+
+Items 2 and 5 amended the codify-convention skill's §Output
+specification (Item 2 added the Evaluation basis schema to
+artifact 2; Item 5 added artifact 3 for upstream-artifacts cross-
+reference). Neither was scoped to update the skill's overview
+surfaces (frontmatter description and §Purpose section), which
+continued to describe the pre-Phase-A two-artifact behavior. The
+skill's advertised behavior diverged from its required behavior.
+
+STEP 4's coherence read caught the drift; the STEP 4 follow-up
+commit `27bc490` aligned the overview surfaces with the body.
+
+The observation: multi-amendment skill changes targeting body
+sections leave overview surfaces in stale states unless
+explicitly scoped to update them. N=1 within this arc; no obvious
+analog elsewhere yet. Bank for future N counting. STEP 4's
+coherence-read discipline is the canonical surface for catching
+this kind of drift; absent STEP 4, the skill would have shipped
+in a known-inconsistent state.
+
+### Observation 3: Phase A → Phase B split as N=1 of arc-scoping pattern
+
+ARC 3.5 was structured with an explicit Phase A / Phase B split
+(Phase B = ARC 3.6 default deferred). The prompt's opening framed
+this as: "Phase A this prompt's first work ... Phase B deferred
+to ARC 3.6 by default."
+
+The same shape recurred at prior arc transitions:
+
+- ARC 2 → ARC 2.5 (audit-and-fix work earned its own arc)
+- ARC 3 → ARC 3.5 (codify-convention skill refinements earned
+  their own arc)
+- ARC 3.5 → ARC 3.6 (Stage A refinement earned its own arc)
+
+N=1 of "arcs split by scope into phased sub-arcs when surfaced
+findings exceed original arc's scope" (counting at observation-
+grain; the three prior transitions all occurred within this
+multi-week run of arcs and may count as application-grain).
+
+Could be a sibling of `audit-fix-verify-surfaces-banking` (the
+recursion *is* the surfacing) or a distinct arc-scoping
+discipline pattern. Don't pre-commit to family taxonomy; bank for
+future N counting.
+
+### Observation 4: Implicit-precondition assumption as candidate sub-shape refinement for prediction-grounding (N=1 with 2 sub-instances)
+
+Observation 1's three sub-instances split into two cost classes
+against prediction-grounding's existing sub-shape #3:
+
+- Sub-instance (a) — "five" framing — is a count-expectation
+  matching sub-shape #3 ("session-handoff prompts that encode
+  count expectations") as written.
+
+- Sub-instances (b) — substrate-vs-mechanism resolution — and
+  (c) — framework-not-codified — are NOT count-expectations.
+  They're prompt-encoded **implicit-precondition assumptions**:
+  the prompt's reasoning treats X (a resolution to an open
+  question; a canonical referent for a field's content) as a
+  precondition that must hold for the prompt's instructions to
+  make sense, without verifying X exists.
+
+**Candidate sub-shape refinement:** extend prediction-grounding's
+sub-shape #3 to cover implicit-precondition assumptions, or
+introduce a fourth sub-shape. The name "implicit-precondition
+assumption" generalizes beyond prompt-writing — a spec caveat
+assuming a function exists in an API that turns out not to, or
+an ADR section assuming a substrate that doesn't yet exist, are
+the same shape. The mechanism (the reasoning treats X as a
+precondition without verifying X exists) is more domain-neutral
+than the count-expectation framing of sub-shape #3.
+
+N=1 within this arc with 2 sub-instances (observation grain).
+Per operator direction during ARC 3.5: bank as observation to
+evaluate in a future arc; do not act on it during Phase A.
+Evidence base: Observation 1's sub-instances (b) and (c).
+
+### audit-fix-verify-surfaces-banking — N=4 trigger satisfaction (queued for separate re-evaluation decision)
+
+The family 2 deferral entry (commit `c754810`, amended at
+`46d3d0e`) documented a re-evaluation trigger: "a 4th instance
+from operationally distinct context (different substrate,
+different arc origin, different artifact class)."
+
+Phase A's audit-fix-verify arc constitutes the 4th instance.
+Phase A's operational context is operationally distinct from
+family 2's prior three instances:
+
+- **Different substrate.** Prior three instances operated on the
+  friction-pattern-detector (script + spec + journal entries).
+  Phase A operated on the codify-convention skill spec, the
+  conventions/README.md framework section, and the friction-
+  journal banking entries — different artifact classes.
+- **Different arc origin.** Prior three were build/fix work
+  (resolving B1 signal-hiding, removing the 40-char cap, etc.).
+  Phase A is skill-refinement work (formalizing fields, codifying
+  frameworks, applying disciplines retroactively).
+- **Different artifact class.** Prior three were script edits +
+  spec amendments. Phase A is skill spec + canonical conventions +
+  journal cross-references.
+
+The trigger criterion is satisfied empirically by Phase A's
+diverse-context audit-fix-verify arc.
+
+**Queued for separate re-evaluation decision.** Re-evaluating
+family 2 inside Phase A would bundle decisions the discipline
+keeps separate. Proposing the re-evaluation criteria from this
+side of the decision would itself be subject to prediction-
+grounding's discipline (the criteria are predictions about what
+evidence would suffice). The re-evaluation arc grounds its own
+criteria.
+
+No action taken in Phase A. Family 2 deferral status remains
+DEFERRED. The trigger satisfaction is banked; the re-evaluation
+is queued as a future decision the operator initiates when
+appropriate.
+
+### ARC 3.6 queue handoff
+
+ARC 3.6 inherits the Phase B observation from ARC 3.5's prompt:
+
+> **Observation 6: Refine Stage A graduation check to distinguish
+> codification from cross-reference.** The Stage A grep in
+> `scripts/friction-journal-tally.sh`'s `check_graduated_a`
+> function searches the family tag string anywhere in CLAUDE.md,
+> conventions/, and `.claude/skills/`. The grep can't distinguish
+> a Promoted-from footer (codification) from a cross-reference
+> body (mention). ARC 3's family 2 deferral surfaced this as a
+> Y(A) false-positive when prediction-grounding.md's Cross-
+> references section mentioned audit-fix-verify-surfaces-banking
+> as the paired family.
+
+ARC 3.6 inherits this as a substantial script audit-and-fix arc:
+audit of all existing convention files for actual footer format
+consistency; design decision on the discriminator shape; the fix
+itself with regression checks against ARC 3's three decided
+families; update to the family 2 deferral entry once Stage A
+correctly reports graduated=N for it.
+
+Phase A this session did not touch Phase B. The friction-journal
+serves as the durable substrate for ARC 3.6 to pick up. The ARC
+3.5 prompt at
+`docs/09_briefs/phase-6.5/2026-05-18-arc-3-5-prompt.md`
+documents Phase B's scope and rationale for the deferral.
+
+### Cross-references
+
+Outbound — what this close H2 points at:
+
+- ARC 3.5 prompt (substrate for Phase A's work):
+  `docs/09_briefs/phase-6.5/2026-05-18-arc-3-5-prompt.md` (commit
+  `be8854f`).
+- Phase A's 8 commits beyond the prompt: `8b241ee` (Item 1) →
+  `9b81df7` (Item 2) → `1e37d21` (Item 3) → `0fbb863` (Item 4) →
+  `03ff838` (Item 5) → `1b1f370` (Item 7) → `4994271` (Item 6) →
+  `27bc490` (STEP 4).
+- Phase A's substantive surface changes:
+  - `docs/04_engineering/conventions/README.md` §Graduation
+    criteria, §Sub-shape distinctions, §Open codification
+    questions (all NEW at ARC 3.5).
+  - `.claude/skills/codify-convention/SKILL.md` §Output
+    specification (artifacts 2 and 3 amended; preamble updated
+    to "three artifacts"; frontmatter and §Purpose aligned).
+  - `docs/04_engineering/conventions/prediction-grounding.md`
+    (Evaluation basis preamble cleanup + Load-bearing sub-
+    qualifier consistency).
+  - `docs/04_engineering/conventions/regex-permissive-matching.md`
+    (Evaluation basis preamble cleanup).
+  - `docs/09_briefs/phase-6.5/2026-05-17-friction-pattern-detector-design.md`
+    §Bucket extraction (Item 7's cross-reference paragraph).
+  - 7 friction-journal entries with parenthetical inline cross-
+    references (cross-reference lines post-Item-7: 13321, 13335,
+    13351, 13413, 13471, 13531, 13727).
+- Family 2 deferral entry: commit `c754810` (the audit-fix-
+  verify-surfaces-banking N=3 deferral; ARC 3.5 banks N=4 trigger
+  satisfaction without acting).
+- ARC 3 close H2 (the originating substrate Phase A resolved):
+  `friction-journal.md` line 13925 (2026-05-19 H2).
+
+### Session close: push deferred
+
+Phase A reached structural close cleanly (10 commits, `be8854f`
+→ `b58e5dc`). Push deferred per ARC 3.5 prompt's STEP 6
+defer-trigger discipline: `audit-fix-verify-surfaces-banking`'s
+re-evaluation trigger satisfied empirically during Phase A.
+Queued arcs: family 2 re-evaluation (most-likely natural next
+step), ARC 3.6 (Stage A refinement, originally default-deferred),
+push as-is. No half-resolved state — Phase A complete; queued
+arcs are separate decisions surfaced by Phase A's
+audit-fix-verify shape, not residual Phase A work.
+
+## 2026-05-19 — Family 2 re-evaluation: rename to evolving-substrate-verify-surfaces-banking + re-defer (Stable criterion application)
+
+### audit-fix-verify-surfaces-banking → evolving-substrate-verify-surfaces-banking — RENAMED + RE-DEFERRED
+
+- **Original family:** `audit-fix-verify-surfaces-banking`
+- **Renamed family:** `evolving-substrate-verify-surfaces-banking`
+- **Predecessor deferral:** commit `c754810` (ARC 3 STEP 2
+  dispositions); amendment `46d3d0e` (Stage A false-positive note)
+- **N count at re-deferral:** observation-grain N=4 (Cluster A's
+  three arcs + Cluster B's Phase A arc); substrate-grain N=2
+  (friction-pattern-detector + codify-convention skill)
+- **Status:** **RENAMED + RE-DEFERRED**
+- **Date:** 2026-05-19
+
+**Reasoning for rename:**
+
+ARC 3.5 Phase A satisfied the ARC 3 deferral's re-evaluation
+trigger empirically — a 4th instance surfaced from operationally
+distinct context (different substrate, different arc origin,
+different artifact class). The trigger fired in Scenario B
+(iteratively-built-new-tool, not stable-mature-feature), which
+the predecessor deferral's text encoded as the "narrower-pattern
+hypothesis strengthening" branch. The deferral pre-resolved that
+graduate-as-named is excluded for Scenario B evidence; rename +
+re-evaluate is the disciplined path.
+
+The rename from `audit-fix-verify-surfaces-banking` to
+`evolving-substrate-verify-surfaces-banking` reflects the
+empirical scope: the load-bearing factor in the evidence is
+substrate-evolution status (the substrate is still in active
+development, so verification surfaces shapes the planning didn't
+anticipate). The original name claimed the arc shape was
+load-bearing; the evidence consistently supports substrate-
+evolution as the mechanism, with arc shape (audit-fix-verify) as
+a necessary but not load-bearing precondition.
+
+**Load-bearing reason for re-deferral (not graduate-after-rename):**
+
+Per `docs/04_engineering/conventions/README.md` §Graduation
+criteria, the **Stable** criterion explicitly excludes patterns
+that recently required name-revision:
+
+> "A pattern that surfaced new sub-shapes or required
+> name-revision recently is not yet stable."
+
+The rename from `audit-fix-verify-surfaces-banking` to
+`evolving-substrate-verify-surfaces-banking` is itself the
+name-revision event. The Stable criterion's first operational
+application explicitly excludes graduation of just-renamed
+patterns; this re-deferral honors the criterion in its first
+application.
+
+Supporting evidence: substrate-grain N=2
+(friction-pattern-detector + codify-convention) is below the
+README's N=3 codification threshold when substrate-evolution is
+the load-bearing mechanism — the relevant grain for the renamed
+family. Observation-grain N=4 is above threshold, but for the
+substrate-evolution mechanism, the operative count is
+substrate-grain.
+
+The Stable-criterion argument is decisive even without the
+substrate-grain count; the substrate-grain count provides
+confirming evidence.
+
+**Re-evaluation trigger (single-path):**
+
+An instance from a third iteratively-built-new-tool substrate
+(different from friction-pattern-detector and codify-convention)
+graduates the renamed family at substrate-grain N=3. The renamed
+family's load-bearing claim is substrate-evolution as mechanism;
+a third instance from the substrate-class confirms (or fails to
+confirm) that the mechanism generalizes within its named
+category.
+
+The trigger is deliberately single-path. If a stable-mature-
+feature audit-fix-verify arc ever surfaces banking, that's a
+separate observation that gets banked under its own framing —
+possibly reopening the broader-pattern question at that time,
+but not as a pre-encoded path on this re-evaluation. The
+predecessor deferral's dual-path trigger created a
+compression-fragility surface that this re-evaluation's STEP 1
+caught; this re-deferral's single-path trigger is deliberately
+less compression-prone.
+
+**Anti-parking-lot reconsideration (event-based):**
+
+If the next two arcs that exercise the codify-convention skill
+complete without verify-step banking, or if a future
+iteratively-built-new-tool's first operational use completes
+without verify-step banking, that's evidence against the
+mechanism's reliability. Reconsider for dismissal at that point
+rather than continuing to defer indefinitely. Negative evidence
+(the mechanism failing to fire when it should) is itself
+diagnostic.
+
+This reconsideration trigger is event-based rather than
+calendar-based. The "next two arcs exercising the
+codify-convention skill" and "future iteratively-built-new-tool's
+first operational use" are operationally identifiable events;
+future-operator can recognize them without ambiguity.
+
+**Re-evaluation action:**
+
+When either the graduation trigger or the reconsideration
+trigger fires, return to STEP 2-shape evaluation with the
+updated evidence base. The decision space at that point:
+GRADUATE (the renamed family meets all three criteria including
+Stable, since the rename will have aged by then), DISMISS (the
+mechanism's reliability is contradicted by negative evidence),
+or continued DEFER with refined trigger (only if evidence
+remains genuinely ambiguous AND a new trigger can be specified
+that doesn't repeat this trigger's specific terms).
+
+**Substrate visibility:**
+
+The renamed family inherits the predecessor family's substrate
+visibility status. Future detector runs will surface
+`audit-fix-verify-surfaces-banking` (the original tag) at
+observation-grain N=4 with graduated=N; this re-deferral entry
+is the meta-status that tells the operator "yes, this is at
+threshold, and yes, the family was renamed to
+`evolving-substrate-verify-surfaces-banking` and re-deferred —
+here's why and here's the new trigger."
+
+**Forward-mapping accounting:**
+
+The renamed family's instance count starts at N=0 substrate-grain
+(no instances yet banked under the renamed tag, since the rename
+post-dates all extant evidence). The four pre-rename instances
+(Cluster A's three + Cluster B's one) remain tagged under the
+original name as historical record. The detector's continued
+surfacing of `audit-fix-verify-surfaces-banking` at N=4 reflects
+this historical accounting; future instances bank under
+`evolving-substrate-verify-surfaces-banking` and increment the
+renamed family's count. The rename does NOT transfer the four
+existing instances to the new tag — the new tag's count begins
+at zero; the old tag's count is frozen at N=4 with the meta-
+status "renamed forward, see this re-deferral entry."
+
+**Cross-references (outbound):**
+
+- ARC 3 deferral entry (predecessor): commit `c754810`; amendment
+  at commit `46d3d0e`.
+- ARC 3 close H2 fourth-instance banking: commit `4486cb1`.
+- ARC 3.5 close H2 N=4 trigger satisfaction: commit `b58e5dc`.
+- Stable criterion canonical source:
+  `docs/04_engineering/conventions/README.md` §Graduation criteria
+  (codified at ARC 3.5 Item 1, commit `8b241ee`).
+- This arc's prompt:
+  `docs/09_briefs/phase-6.5/2026-05-19-family-2-reevaluation-prompt.md`
+  (commit `09db3ea`).
+
+### Three compression instances surfaced by STEP 1's verify-from-disk
+
+STEP 1's verify-from-disk discipline surfaced three related
+compression instances that span session-handoff prompts and
+close-note framings. Banked together because they share a
+mechanism (operator compressing canonical-source text and
+proceeding from the compression rather than re-reading) but at
+different observation grains. Don't pre-commit to family
+taxonomy.
+
+**Observation A: ARC 3.5 close-note compression of deferral text.**
+
+The ARC 3.5 close H2's N=4 trigger satisfaction section (commit
+`b58e5dc`) compressed the family 2 deferral's text to just the
+diversity criterion:
+
+> "The family 2 deferral entry (commit c754810, amended at
+> 46d3d0e) documented a re-evaluation trigger: 'a 4th instance
+> from operationally distinct context (different substrate,
+> different arc origin, different artifact class).'"
+
+This dropped the Scenario A / Scenario B distinction the
+deferral's text encoded (stable-mature-feature path vs
+iteratively-built-new-tool path). The ARC 3.5 session-close
+note (commit `e9a536e`) then declared "trigger satisfied
+empirically" without preserving the iteratively-built-new-tool
+branch's "graduate-as-named excluded" implication. Single-step
+compression; small individually.
+
+**Observation B: Family 2 re-evaluation prompt inherited the
+compression.**
+
+The family 2 re-evaluation prompt (commit `09db3ea`) framed
+STEP 2's choice space as three views (graduate-as-named,
+re-defer with refined name, graduate with refined name), as if
+all three were live. STEP 1 verify-from-disk revealed that the
+deferral's Scenario B branch pre-resolved graduate-as-named as
+excluded — only the rename-paths were live.
+
+The prompt-author inherited the compression rather than
+re-reading the deferral fresh. Same operator who wrote the
+ARC 3.5 close-note compression. Same surface (session-handoff
+prompts). Same mechanism (proceeding from compressed working
+memory rather than verification-from-disk).
+
+This is N=2 of the prompt-author-compression pattern with
+ARC 3.5's "five Phase A observations" framing as N=1 (banked in
+ARC 3.5 close H2 Observation 1 sub-instance (a)).
+
+**Observation C: ARC 3.5 close-note diverged from ARC 3 close
+H2's caveat.**
+
+ARC 3 close H2's fourth-instance banking (commit `4486cb1`) was
+explicit:
+
+> "ARC 3 is partially distinct ... but shares the
+> friction-pattern-detector substrate with the prior three
+> instances. The re-evaluation trigger is not cleanly fired;
+> banking the 4th instance honors observation discipline
+> without prematurely re-graduating the family."
+
+ARC 3's own close-discipline read the trigger NOT cleanly fired.
+The ARC 3.5 close note (one arc later) then declared it fired
+without re-engaging with ARC 3's caveat. The compression is
+cumulative across closes: ARC 3 noted the ambiguity correctly;
+ARC 3.5 compressed past it; family 2 re-evaluation prompt
+inherited the compression.
+
+The mechanism is one-step compression at each handoff; the
+cumulative effect across multiple handoffs is unbounded drift.
+
+**Family taxonomy: not pre-committed.**
+
+Observations A, B, C share the mechanism but operate at different
+observation grains:
+
+- A is one close-note's framing compression.
+- B is the next prompt's inheritance of A's compression.
+- C is the cross-close-note divergence (ARC 3 close H2 → ARC 3.5
+  close note → family 2 re-evaluation prompt).
+
+Three plausible family framings:
+
+1. **One family at multiple grains.** All three are instances of
+   "operator compresses canonical-source text and proceeds from
+   compression rather than verification." Different grains, same
+   mechanism.
+2. **Two families.** Close-note-compression-of-canonical-source
+   (A by itself) and cross-handoff-compression-cascade (B + C as
+   related instances).
+3. **Three families.** Each observation a distinct discipline
+   pattern with its own load-bearing mechanism.
+
+Don't pre-commit to taxonomy. Future instances will resolve which
+framing the mechanism actually fits. Bank for future N counting.
+
+**Relationship to prediction-grounding family (and
+substrate-vs-mechanism Open Question second firing):**
+
+Observations A, B, and C are all plausibly instances of
+`caveat-prediction-vs-empirical-resolution` (now codified at
+`docs/04_engineering/conventions/prediction-grounding.md`) —
+operator encoded predictions about canonical-source text without
+verification, and resolution required audit.
+
+Mentions of `caveat-prediction-vs-empirical-resolution` in this
+entry's prose are references to the codified family for
+discussion, not new instances of it; the family is graduated.
+Whether prose-mentions-of-codified-families should count toward
+instance tallies is the substrate-vs-mechanism Open Question
+(`docs/04_engineering/conventions/README.md` §Open codification
+questions §Substrate-vs-mechanism family-tag precedence), now
+firing for the second time. The first instance was the
+regex-permissive-cost-class instance 4 cross-family overlap
+(originally banked at ARC 3 close H2 Observation 4 in commit
+`4486cb1`; cross-referenced at commit `1b1f370`'s Item 7
+application). The second instance is this banking entry's prose
+mentions of the codified family tag.
+
+Per the Open Question's re-evaluation trigger ("the next
+family-misattribution instance surfacing in the friction-
+journal"), this second instance fires the trigger. Bank the
+firing; do not act on it. The Open Question's re-evaluation is
+its own decision, queued for future-session.
+
+### Session close: family 2 re-evaluation arc completes; 3 arcs queued
+
+Family 2 re-evaluation arc closes with rename + re-defer
+(commit `e6297f1`). The renamed family
+`evolving-substrate-verify-surfaces-banking` begins at
+substrate-grain N=0 with an event-based reconsideration trigger
+specified.
+
+Three arcs queued at this arc's close (two inherited from ARC 3.5;
+one new, surfaced by this arc's STEP 6 banking):
+
+- **ARC 3.6 (Stage A refinement).** Substantial script
+  audit-and-fix arc inherited from ARC 3.5's Phase B. Discovers
+  whether Stage A's grep discriminator can distinguish
+  codification footers from cross-reference body mentions.
+  Originally default-deferred from ARC 3.5; no change.
+
+- **Push as-is.** Unpushed local commits sit on staging
+  (`be8854f` → today's STEP 6 commit). Push decision remains the
+  same shape as ARC 3.5 close: defer until queued arcs feel
+  settled OR explicitly choose to push. No half-resolved state
+  at this arc's close either.
+
+- **Substrate-vs-mechanism Open Question re-evaluation (NEW).**
+  This arc's STEP 6 banking surfaced the second instance of the
+  Open Question's re-evaluation trigger (see preceding H3's
+  "Relationship to prediction-grounding family" section).
+  Provenance: this banking commit. The Open Question is at
+  `docs/04_engineering/conventions/README.md` §Open codification
+  questions §Substrate-vs-mechanism family-tag precedence; its
+  trigger required a second family-misattribution instance, which
+  this banking satisfies. Re-evaluation is its own arc, queued
+  for future session.
+
+This arc surfaced 3 compression observations (see preceding H3).
+Whether those observations affect any of the queued arcs is a
+future-session question; they're banked, not acted on.
+
+## 2026-05-19 — Substrate-vs-mechanism Open Question RESOLVED (sub-shape split; Position A + combined operator/script-side fixes)
+
+The substrate-vs-mechanism family-tag precedence Open Question
+(banked at ARC 3.5 Item 4, commit `0fbb863`) had its
+re-evaluation trigger fired during family 2 re-evaluation STEP 6
+banking (commit `2aa8585`). This arc resolved the question via
+sub-shape split: Position A (substrate-tagging) for Sub-shape 1
++ combined operator/script-side fixes for Sub-shape 2.
+
+### Decision summary
+
+Resolution shape: the re-evaluation surfaced that the Open
+Question spans two structurally different sub-shapes, each
+requiring its own remediation path.
+
+- **Sub-shape 1** (uncodified-family-tagging precedence at
+  banking time): Resolved via Position A (substrate-tagging).
+  Codified at `docs/04_engineering/conventions/README.md`
+  §Codification thresholds §Codification convention: family-tag
+  assignment at banking and graduation-time review.
+  Substrate-tagging is the banking-time default; mechanism-
+  tagging operates as a graduation-time discriminator.
+
+- **Sub-shape 2** (codified-family-tag-mention-counting at
+  detector-run-time): Resolved via combined operator-side
+  (`.claude/skills/codify-convention/SKILL.md` §Output
+  specification artifact 3 prose convention — codified-family
+  references in prose use file paths rather than family-tag
+  names) and script-side (ARC 3.6 queued for Stage A
+  refinement) fixes.
+
+Open Question entry at `docs/04_engineering/conventions/README.md`
+§Open codification questions §Substrate-vs-mechanism family-tag
+precedence updated from Status: Open to Status: Resolved with
+forward-pointers to both resolutions. Stale line-number
+reference (line 14050) replaced with commit hash `4486cb1` per
+the commit-hash-only cross-reference convention adopted at
+family 2 STEP 5.
+
+Resolution applied atomically at commit `c0a9f28`; arc prompt at
+commit `400d31a`.
+
+### Open Question trigger discipline — productive sub-shape surfacing (N=1)
+
+The Open Question's re-evaluation trigger (banked at ARC 3.5
+Item 4 as "the next family-misattribution instance surfacing in
+the friction-journal") fired cleanly on family 2 re-evaluation
+STEP 6 banking. But the firing revealed something the original
+trigger didn't anticipate: the question's evidence-1
+(uncodified-family-tagging) and evidence-2 (codified-family-tag-
+counting) are structurally different. The Open Question spans
+two sub-shapes; the original framing addressed only one.
+
+This is a productive failure mode, not a trigger failure. The
+trigger worked as designed (it surfaced the next instance for
+evaluation); evaluation surfaced that the question was framed
+too broadly. The discipline gates operated correctly; the
+question's scope was the variable that turned out to need
+refinement.
+
+Future Open Question triggers should anticipate this shape: when
+banking an Open Question, consider whether the question might
+span sub-shapes that haven't yet surfaced. Mark explicitly if
+so. The re-evaluation discipline benefits from knowing whether
+to expect a single resolution or a multi-sub-shape decomposition.
+
+N=1 within Open Question discipline (this re-evaluation is the
+first Open Question re-evaluation to fire). Bank for future N
+counting.
+
+### §Codification thresholds section is acquiring scope beyond its name (N=1)
+
+The §Codification thresholds section in
+`docs/04_engineering/conventions/README.md` originally hosted
+one H3 about counting (observation-grain vs application-grain N
+count). This arc added a second H3 about banking-time
+family-tag assignment. Both are banking-time meta-conventions,
+but the section header "Codification thresholds" only describes
+the counting aspect.
+
+The mismatch is small at N=1 (two H3s with related but distinct
+scopes). The H3 titles carry the actual scope; future readers
+learn that §Codification thresholds is the home for banking-time
+meta-conventions even though the section name only suggests
+counting.
+
+If a third banking-time meta-convention lands and the mismatch
+starts hurting readability, that's the moment for a section
+rename ("Banking-time codification conventions" or similar).
+N=1; potential rename trigger if pattern recurs. Bank for future
+N counting.
+
+### Line-number staleness in README's Open Question entry — instance of the prediction-grounding discipline
+
+The README's §Open codification questions §Substrate-vs-mechanism
+family-tag precedence entry (banked at ARC 3.5 Item 4) referenced
+"friction-journal 2026-05-19 ARC 3 close H2 (line 14050)" in two
+places (the Back-reference field and the Origin Promoted from
+field). Both references were stale post-Item-7's friction-journal
+appends (which shifted the section to line 14075).
+
+Fixed during this arc's STEP 5 application (replaced with commit
+hash `4486cb1` per the commit-hash-only cross-reference
+convention adopted at family 2 STEP 5).
+
+This is an instance of the discipline codified at
+`docs/04_engineering/conventions/prediction-grounding.md` — a
+parameter (line number) was encoded without grounding against
+the substrate's volatility (the friction-journal's
+appendability). The discipline's family is graduated; this
+instance doesn't count toward its tally. Banked as historical
+record of the discipline applying at this arc's grain.
+
+Reference handling: the prose convention codified at
+`.claude/skills/codify-convention/SKILL.md` §Output specification
+artifact 3 enumerates three cases for family-tag references in
+prose. This entry doesn't fit any of them cleanly (see following
+H3 for the case-coverage gap observation). Per the convention's
+underlying citation-density principle (referential discussion →
+file path), defaulted to file path here.
+
+### Prose convention case-coverage gap (N=1; fourth-case observation)
+
+The prose convention codified at this arc (STEP 5, commit
+`c0a9f28`) at `.claude/skills/codify-convention/SKILL.md`
+§Output specification artifact 3 enumerated three cases for
+family-tag references in prose:
+
+- (a) new banking entries that are observation-grain instances
+  of that family;
+- (b) entries explicitly about a family's status (deferrals,
+  dismissals, re-evaluations, codifications) or about
+  families-as-a-class (Open Questions and meta-discipline
+  conventions that cite specific families as evidence);
+- (c) detector output.
+
+The preceding H3 (line-number staleness instance) surfaces a
+fourth case the convention didn't cover: instances of a
+graduated family's pattern firing during meta-discipline work,
+where the discussion is neither a new banking instance (a) nor
+about the family's status or families-as-a-class (b) nor
+detector output (c). The preceding H3 is about a single
+instance of the discipline applying to a small line-number
+staleness; the family is already codified and this isn't
+adding to its tally.
+
+Defaulted to file-path reference per the convention's underlying
+citation-density principle (referential discussion → file path).
+The convention's body prose said: "file path is the appropriate
+density when the discussion is referential" — that principle
+covers the preceding H3's case even though the enumerated
+(a)/(b)/(c) don't.
+
+Sibling to the preceding "§Codification thresholds scope-drift"
+observation. Both are N=1 of "recently-codified surfaces having
+scope gaps surfaced by their first operational tests." Don't
+pre-commit to family taxonomy; bank for future N counting.
+
+N=1; potential convention refinement if pattern recurs.
+
+### Session close: substrate-vs-mechanism re-evaluation arc completes; ARC 3.6 + push remain queued
+
+Substrate-vs-mechanism Open Question re-evaluation arc closes
+with sub-shape-split resolution (commits `400d31a` + `c0a9f28`).
+Open Question Status moved from Open to Resolved.
+
+§Open codification questions has completed its first operational
+test — one open question transitioned to resolved with
+historical record preserved. The section's basic lifecycle
+(open → resolved) operates correctly at this single-entry scale;
+the section's behavior under harder cases (multiple concurrent
+Open questions, reopening, dismissal of Open questions) remains
+untested.
+
+Two arcs remain queued (unchanged by this arc):
+
+- **ARC 3.6 (Stage A refinement).** Now operationally relevant:
+  this arc's Sub-shape 2 resolution (operator-side prose
+  convention) is complemented by ARC 3.6's script-side fix
+  (Stage A grep refinement to distinguish codification footers
+  from body mentions). The combined resolution depends on ARC
+  3.6 shipping for the full operational fix.
+
+- **Push as-is.** 16 unpushed local commits now on staging
+  (`be8854f` → today's STEP 5 commit `c0a9f28`; this STEP 6
+  commit will be the 17th). Push decision unchanged from prior
+  arcs: defer until queued arcs feel settled OR explicitly
+  choose to push. No half-resolved state.
+
+The substrate-vs-mechanism Open Question is no longer in the
+queue; this arc resolved it. The §Open codification questions
+section now has 0 Open entries and 1 Resolved entry (historical
+record).
+
+This arc surfaced 3 meta-observations and 1 specific instance
+banking across H3 #2/#3/#4/#6. All banked at observation-grain
+N=1 (meta-observations) or as historical record (H3 #4); bank
+for future N counting where applicable.
+
+## 2026-05-19 — ARC 3.6 close: Stage A discriminator refined; prompt-author compression at N=3 codification candidate
+
+### Stage A discriminator refinement complete; family 2 false-positive resolved
+
+ARC 3.6 closes with Stage A's discriminator refined to anchor on
+Promoted-from bullet blocks. The false-positive surfaced at ARC 3
+STEP 6 verification (commit `46d3d0e`) — Stage A's bare grep
+matched cross-reference body mentions of family tags despite
+their families being deferred — is resolved.
+
+Three commits applied (per-step shape):
+
+- `89155fb` — `fix(scripts)`: Stage A awk-based bullet-block
+  discriminator.
+- `a629389` — `docs(brief)`: spec amendment at §Graduation check
+  documenting the refinement and its scope limit.
+- `015d804` — `docs(friction-journal)`: layered amendment to the
+  family 2 deferral entry, replacing the stale known-incorrect-
+  claim note with a back-reference noting the false-positive's
+  lifecycle (persisted from ARC 3 close until ARC 3.6's fix).
+
+Verification (per STEP 3): family 2's tag (`audit-fix-verify-
+surfaces-banking`, original-name reference for the renamed family
+at commit `e6297f1`) correctly reports Y(A) → N. Both ARC 3
+graduations preserved (the families codified at
+`docs/04_engineering/conventions/regex-permissive-matching.md`
+and `docs/04_engineering/conventions/prediction-grounding.md`
+remain Y(A)). No legitimate family tag downgraded. Side benefit:
+26 short-token noise false-positives correctly downgraded.
+
+### Prompt-author compression of canonical-source text — N=3 observation-grain, codification candidate
+
+Three consecutive prompts authored at session-close (ARC 3.5,
+family 2 re-evaluation, ARC 3.6) have each shipped with at least
+one compression-of-canonical-source-text that the receiving
+session's STEP 1 verify-from-disk discipline caught:
+
+- **ARC 3.5 prompt:** "five Phase A observations" framing
+  (compressed the 6 banked first-run findings to 5 operational
+  items; surfaced as Observation 1 sub-instance (a) in the
+  ARC 3.5 Phase A close banking at commit `b58e5dc`).
+
+- **Family 2 re-evaluation prompt:** three-view framing for
+  STEP 2 (compressed the deferral's Scenario A / Scenario B
+  split into views that ignored what the deferral pre-resolved;
+  surfaced as STEP 1 load-bearing finding in the family 2
+  re-evaluation close banking at commit `2aa8585`).
+
+- **ARC 3.6 prompt (this arc):** three distinct compressions
+  within one prompt (application-grain within one
+  observation-grain instance):
+  - "third iteratively-built-new-tool substrate" framing in
+    STEP 6(b) — claimed ARC 3.6 would fire the renamed family's
+    graduation trigger; the trigger text explicitly excludes
+    friction-pattern-detector (ARC 3.6's substrate), so the
+    trigger does not fire.
+  - "friction-pattern-detector substrate-grain N=3"
+    parenthetical in STEP 6(b) — internally inconsistent
+    (claims substrate-grain is at N=3 but cites
+    friction-pattern-detector which is already one of the two
+    named substrates).
+  - "§Bucket extraction references the original Stage A design"
+    framing in STEP 4(b) — Stage A is documented at §Graduation
+    check, not §Bucket extraction.
+
+All three prompts are authored by the same operator. The
+receiving-end discipline (STEP 1 verify-from-disk) operates
+correctly and catches the compressions; the authoring-end
+discipline (re-read canonicals before writing prompts) does not
+operate at the authoring point.
+
+**Pattern at observation-grain N=3.** Three prompts, each
+containing at least one compression caught at the next session.
+This is the third consecutive instance; the pattern is firing
+reliably, not occasionally. The ARC 3.6 prompt's three
+compressions within one prompt is a sharper diagnosis — the
+prompt-author was systematically working from compressed working
+memory rather than canonical text during this prompt-authoring
+session.
+
+**Codification candidate.** Applying the framework at
+`docs/04_engineering/conventions/README.md` §Graduation criteria:
+
+- **Load-bearing (prescriptive).** Yes — the discipline implied
+  is "before authoring a session-handoff prompt that references
+  canonical sources, read those sources from disk." Directly
+  actionable.
+
+- **Generalizable.** Plausibly yes; the mechanism (working from
+  compressed memory rather than verification) is domain-neutral.
+  Note the evidence base limit: three instances are all from the
+  same prompt-author on the same project. Whether the pattern
+  surfaces across prompt-authors or across projects is not yet
+  evidenced.
+
+- **Stable.** The pattern has fired consistently across three
+  consecutive prompts with no name-revision needed; the shape
+  has settled within the evidence currently available. Stability
+  across operationally distinct conditions (different time
+  pressure, different context, different operator) is not yet
+  evidenced.
+
+The candidate meets the criteria within its current evidence
+base. The graduation evaluation arc, when it fires, should
+engage explicitly whether the evidence base is sufficient for
+graduation or whether the pattern should be re-deferred for
+evidence from operationally distinct conditions (analogous to
+the renamed family's re-deferral for evidence from operationally
+distinct substrates).
+
+Per the codify-while-deciding-not-while-implementing discipline,
+this banking does NOT graduate the candidate inline; graduation
+is a separate decision arc.
+
+Queued: prompt-author-compression graduation evaluation as a new
+arc when the operator chooses.
+
+### Fourth cost-class observation for the regex permissive-matching discipline
+
+The audit at STEP 1 surfaced a fourth instance of the cost-class
+pattern codified at
+`docs/04_engineering/conventions/regex-permissive-matching.md`.
+Specifically: B2/B3 extraction patterns over-extract bucket-like
+tokens from descriptive Promoted-from prose, producing noise
+tokens in T1 detector output.
+
+This is a fourth observed sub-shape, distinct from the three
+enumerated in the codified convention:
+
+- **Sub-shape 4 (extraction from descriptive prose surrounding
+  legitimate codification anchors):** B2/B3 patterns match short
+  ALL-CAPS-with-hyphens or alphanumeric tokens in descriptive
+  Promoted-from prose. The tokens look bucket-like to the regex
+  but are acronyms/identifiers in natural prose. Specific
+  examples: "ARC" appears within "ARC 3 STEP 2..." prose in
+  Promoted-from continuation lines; "ADR-0010" in "D6 §6.8
+  codification + ADR-0010 Variant A"; "B5-1" in "chunk B5-1
+  session #3 closeout retrospective entry."
+
+  The general analog: any regex matching "bucket-id-shaped"
+  tokens within natural prose risks capturing prose-internal
+  identifiers (acronyms, ADR references, chunk labels) as if
+  they were bucket IDs.
+
+  Mitigation: extraction-layer refinement (B2/B3 regex tightening
+  or context-aware extraction), not Stage A refinement. Stage A
+  correctly identifies these tokens appear within Promoted-from
+  blocks; the noise originates upstream at the extraction layer.
+
+**Amendment decision (banked, not amended).** At ARC 3.6 STEP 6
+review, the operator decided to bank this observation rather
+than amend the convention now. The reasoning: the observation
+is at N=1 within the convention's scope; amending the
+convention to add a fourth exemplar based on one observation is
+precisely the "premature codification" concern the
+prediction-grounding discipline guards against. The
+"non-exhaustive exemplar enumeration" framing was designed for
+amendments-when-instances-recur, not amendments-when-an-
+observation-suggests-the-enumeration-could-be-longer. This
+banking entry provides the historical evidence at a future
+amendment time if the sub-shape recurs.
+
+Per the case-coverage gap finding from the substrate-vs-mechanism
+re-evaluation arc (commit `d21f318`), prose mentions of codified
+families default to file-path references when no case (a)/(b)/(c)
+applies. This entry references the convention at file path rather
+than by family tag.
+
+### Substrate-counting correction: ARC 3.6 does NOT fire evolving-substrate-verify-surfaces-banking's trigger
+
+The ARC 3.6 prompt's STEP 6(b) framing claimed ARC 3.6 would
+fire the renamed family's graduation trigger because ARC 3.6
+was operating on a "third iteratively-built-new-tool substrate."
+This is incorrect (banked as one of the three compressions in
+the preceding H3).
+
+The renamed family's trigger text (codified at commit `e6297f1`):
+"an instance from a third iteratively-built-new-tool substrate
+(different from friction-pattern-detector and codify-convention)."
+
+ARC 3.6 modifies `scripts/friction-journal-tally.sh` — part of
+the friction-pattern-detector substrate (Cluster A in the
+renamed family's lineage). NOT different from
+friction-pattern-detector. The trigger does not fire from this
+arc.
+
+The renamed family's pattern (evolving-substrate verify-step
+surfaces banking) IS plausibly instantiated by ARC 3.6's
+audit-fix-verify arc — the verify step surfaced unanticipated
+findings (the fourth cost-class observation in the preceding H3;
+the prompt-author compressions two H3s above). At
+observation-grain, this is plausibly a Cluster A instance of the
+renamed family's pattern. But at substrate-grain, ARC 3.6 doesn't
+add new evidence — it's on the existing friction-pattern-detector
+substrate, which is one of the two already in the renamed
+family's count.
+
+Per the renamed family's re-deferral re-evaluation trigger, what
+matters for graduation is a third DISTINCT substrate. ARC 3.6
+doesn't provide that. The renamed family remains at
+substrate-grain N=2; re-deferred status unchanged. If a future
+arc operates on a substrate different from
+friction-pattern-detector and codify-convention AND its verify
+step surfaces unanticipated banking, that would fire the trigger
+cleanly. ARC 3.6 is not that arc.
+
+### Session close: ARC 3.6 closes; push + one new queued arc
+
+ARC 3.6 closes with Stage A discriminator refinement complete
+(commits `89155fb` + `a629389` + `015d804`).
+
+Queued state post-arc:
+
+- **Push as-is.** Unpushed local commits sit on staging
+  (`be8854f` → today's STEP 6 commit). Push decision unchanged
+  from prior arcs: defer until all queued items feel settled OR
+  explicitly choose to push. No half-resolved state.
+
+- **Prompt-author-compression graduation evaluation (NEW).** Per
+  the second H3 above, the pattern is at observation-grain N=3
+  with the graduation criteria met within their current
+  evidence base. Graduation evaluation is its own decision arc;
+  queued for future-operator initiation. The graduation arc
+  should engage explicitly whether the evidence base is
+  sufficient for graduation or whether re-deferral for
+  cross-author / cross-project evidence is appropriate.
+
+The fourth-cost-class observation (third H3 above) is banked as
+substrate; it does not constitute a queued operator decision.
+If the sub-shape recurs in future regex permissive-matching
+work, that future arc would naturally engage whether to amend
+`docs/04_engineering/conventions/regex-permissive-matching.md`
+at that time.
+
+**Recursion observation.** ARC 3.6 surfaced exactly one new
+queued arc (prompt-author-compression graduation evaluation),
+not zero. This is not the non-recursing close — the recursion
+pattern (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2
+re-evaluation → substrate-vs-mechanism re-evaluation → ARC 3.6
+→ prompt-author-compression graduation evaluation) continues.
+Whether the recursion stops because substrate is maturing or
+whether it's structurally inherent in this work shape is still
+an open question; the next arc-close is the next opportunity to
+test it.
+
+The renamed family `evolving-substrate-verify-surfaces-banking`
+remains re-deferred at substrate-grain N=2 (commit `e6297f1`);
+ARC 3.6's substrate is friction-pattern-detector (Cluster A),
+not a third substrate (see preceding H3). The renamed family's
+trigger does NOT fire from this arc.
+
+## 2026-05-18 — Prompt-author-compression graduation evaluation: RE-DEFERRED at substrate-grain N=1 (observation-grain N=4)
+
+### prompt-author-compression — RE-DEFERRED
+
+- **Family:** `prompt-author-compression`
+- **Predecessor banking:** commit `5b45004` (ARC 3.6 close H3 #2
+  banked as codification candidate at observation-grain N=3)
+- **N count at re-deferral:** observation-grain N=4; substrate-grain
+  N=1 (one prompt-author / one project)
+- **Status:** **RE-DEFERRED**
+- **Date:** 2026-05-18
+
+**Decision summary.**
+
+The graduation evaluation arc opened against ARC 3.6 close's banked
+candidate at observation-grain N=3. STEP 1 verify-from-disk surfaced
+a fourth firing of the pattern within the arc's own prompt — an
+N=3-vs-N=4 temporal compression in the prompt's description of
+family 2's re-deferral state. Observation-grain count revises to
+N=4; substrate-grain remains N=1 — all four instances are from one
+prompt-author on one project.
+
+The fourth firing is meta-significant: it occurred in a prompt
+explicitly written to evaluate the pattern itself. The
+authoring-end gap persists even when the operator is actively
+engaged with the pattern's structure. That's evidence about
+operational reliability — the pattern is not a short-window
+artifact correctable by surface attention; it operates below the
+level of explicit awareness during prompt-authoring.
+
+Decision: **RE-DEFER**. The substrate-grain N=1 evidence base does
+not satisfy the README's Generalizable criterion at the grain that
+authorizes generalization. Re-deferral preserves the pattern's
+recognition (observation-grain count and banked instances retained)
+while honoring the discipline that substrate-grain evidence is what
+authorizes the generalization claim a graduated convention would
+make.
+
+**Reasoning for re-defer (not graduate / not dismiss / not rename /
+not absorbed-into-prediction-grounding).**
+
+GRADUATE was excluded by substrate-grain N=1 < README codification
+threshold N=3. The three-criteria evaluation:
+
+- **Load-bearing (prescriptive).** Met. The discipline implied is
+  "before authoring a session-handoff prompt that references
+  canonical sources, read those sources from disk." Directly
+  actionable.
+- **Generalizable.** Not met empirically. Surface diversity at the
+  substrate-grain dimension is the README's specified evidence
+  shape. All four instances are from one prompt-author on one
+  project. Plausibility-reasoning suggests the mechanism is
+  cognitive-shape and would fire for other operators on other
+  projects, but plausibility-reasoning is not the evidence shape
+  the criterion specifies.
+- **Stable.** Met within current evidence base. The four instances
+  fired with no name-revision needed; the shape has settled.
+
+The Generalizable criterion's substrate-grain shortfall is decisive.
+Family 2's re-evaluation (commit `e6297f1`) used the same Stable-
+criterion-application discipline to exclude graduation at
+substrate-grain N=2; this candidate at substrate-grain N=1 is more
+decisively below threshold.
+
+DISMISS was excluded because four consecutive instances in ~3 weeks
+across distinct session-types (Phase A skill refinement, family
+re-eval judgment arc, audit-fix arc, this graduation evaluation arc
+itself) demonstrate the pattern IS recurring within its origin
+context. The README's DISMISS-when-narrow criterion ("specific to a
+one-time situation, not repeatable") does not apply.
+
+RENAME (analogous to family 2's rename to
+`evolving-substrate-verify-surfaces-banking`) was excluded because
+the current name correctly describes the mechanism. What's
+underspecified is the SCOPE of generalization, not the mechanism's
+framing. A narrower rename (e.g.,
+`session-handoff-prompt-from-same-author-compression`) would more
+accurately reflect the current evidence base but would not address
+the substrate-grain N=1 problem — even the narrower scope is
+bounded by single operator + single project. Per the README
+§Graduation criteria Stable criterion, a name-revision would itself
+trip Stable; the rename would add a Stable-trip without adding
+evidence. Re-defer without rename. If cross-substrate evidence
+eventually points to a narrower scope that the wider name
+misrepresents, rename at that future point.
+
+ABSORB-INTO-PREDICTION-GROUNDING (as a sub-shape amendment to
+`docs/04_engineering/conventions/prediction-grounding.md`) was
+considered and excluded as premature. The candidate is plausibly a
+sub-shape of the codified prediction-grounding family (predictions
+about canonical-source text encoded without verification). But
+sub-shape amendments to codified conventions are effectively new
+graduations within a codified container — they require the same
+generalization evidence a separate graduation would. The amendment
+path faces the same substrate-grain N=1 problem. It also pre-commits
+to family taxonomy that the family 2 re-evaluation banking entry
+(commit `2aa8585`) explicitly defers ("Don't pre-commit to
+taxonomy"). And ARC 3.5 close H2 Observation 4 (commit `b58e5dc`)
+already raised "implicit-precondition assumption" as a candidate
+sub-shape refinement for prediction-grounding — held at N=1 pending
+further evidence. The captured-elsewhere question is itself
+deferred to its own evidence base.
+
+**Evidence base: four instances.**
+
+Observation-grain instances (chronological):
+
+1. **ARC 3.5 prompt — "five Phase A observations" framing.**
+   Compressed 6 banked first-run findings to 5 operational items.
+   Caught at ARC 3.5 STEP 1; banked at commit `b58e5dc` as
+   Observation 1 sub-instance (a). Cost: MINOR (count error; no
+   downstream effect).
+
+2. **Family 2 re-evaluation prompt — "three-view framing."**
+   Compressed the deferral's Scenario A / Scenario B split into
+   views that ignored what the deferral pre-resolved
+   (graduate-as-named excluded under Scenario B). Caught at family
+   2 re-eval STEP 1; banked at commit `2aa8585` as Observation B.
+   Cost: MODERATE (could have changed arc structure; conclusion
+   unchanged but path less direct).
+
+3. **ARC 3.6 prompt — three application-grain compressions within
+   one observation-grain instance.** "Third
+   iteratively-built-new-tool substrate" framing in STEP 6(b)
+   (claimed ARC 3.6 fires the renamed family's graduation trigger;
+   canonical text explicitly excludes friction-pattern-detector
+   substrate); "friction-pattern-detector substrate-grain N=3"
+   parenthetical (internally inconsistent); "§Bucket extraction
+   references the original Stage A design" (Stage A is documented
+   at §Graduation check, not §Bucket extraction). Caught at ARC
+   3.6 STEPs 4 and 6; banked at commit `5b45004` H3 #2. Cost:
+   MODERATE–MAJOR dominant (application-grain 3A could have
+   triggered wrong graduation); 3B and 3C MINOR. The
+   application-grain sharpening (three compressions within one
+   prompt) suggested the prompt-author was systematically working
+   from compressed working memory during that authoring session.
+
+4. **This arc's prompt — N=3-vs-N=4 temporal compression of family
+   2's re-deferral state.** Prompt prose attached the N=3 figure
+   to the rename event ("the audit-fix-verify-surfaces-banking
+   family was at observation-grain N=3 but substrate-grain N=2;
+   the disciplined response was rename + re-defer"). The rename
+   actually happened at N=4, not N=3 (commit `e6297f1` line
+   14470-14472 documents "N count at re-deferral: observation-
+   grain N=4"). Two distinct lifecycle points conflated. Caught at
+   this arc's STEP 1 verify-from-disk. Cost: MINOR (immediate);
+   LATENT (the conflation of N=3 deferral state and N=4 rename
+   state in prompt prose could mislead future operators
+   referencing the prompt as canonical for family 2's lifecycle).
+
+Cost distribution across the four observation-grain instances:
+1 MODERATE–MAJOR (#3 dominant), 1 MODERATE (#2), 2 MINOR (#1, #4
+immediate). The pattern is operationally significant — instance 3A
+carried real decision-stakes; instance #4 carries a latent
+mis-citation risk for future readers. Family 2's evidence base
+contained cost variation across its three Cluster A instances; that
+variation didn't downgrade the family, and the cost variation
+across this candidate's four instances doesn't downgrade this
+banking either.
+
+Substrate-grain enumeration:
+- Distinct prompt-authors: 1 (this assistant)
+- Distinct projects: 1 (chounting)
+- README threshold: N=3 (gates graduation consistently across all
+  codification evaluations)
+
+**Re-evaluation trigger (single-path, two-step):**
+
+An instance of prompt-author-compression of canonical-source text
+caught at the receiving session's verify-from-disk discipline, from
+substrate distinct from this operator+project pair, brings the
+candidate to substrate-grain N=2. A second such instance, from a
+substrate distinct from both this operator+project pair AND the
+first new substrate, graduates the candidate at substrate-grain
+N=3 (honoring the README's codification threshold).
+
+"Substrate" for this candidate's purposes = the (prompt-author,
+project) pair. The diversifier dimension is either prompt-author or
+project. Both fire the trigger, but the evidence shapes are not
+equally strong:
+
+- **Different prompt-author on any project** tests
+  operator-generalization. Strongest diversifier — the mechanism's
+  cognitive-shape claim is most directly tested.
+- **This operator on a different project** tests
+  project-generalization. Weaker — same operator, different
+  substrate. Tests whether the project's information-density or
+  canonical-source conventions are load-bearing.
+
+The graduation evaluation when triggered should weigh the
+diversifier shape, not just the count. Two instances of the weaker
+shape (same operator, two different projects) may suffice for the
+README's count threshold but should be flagged at evaluation time
+as not yet having operator-generalization evidence, with explicit
+discussion of whether project-generalization evidence alone
+suffices for the graduation claim.
+
+**Anti-parking-lot reconsideration (event-based):**
+
+If two future session-handoff prompts authored by this operator on
+this project complete with no compressions surfaced at the
+receiving session's verify-from-disk discipline, reconsider for
+dismissal rather than continuing to defer indefinitely. Caveat:
+null findings can equally indicate (a) authoring-end discipline has
+improved (pattern abated) or (b) receiving-end discipline missed
+catches that occurred (pattern fired but invisible by
+construction). Reconsideration should weigh both interpretations
+rather than treating null findings as unambiguous abatement
+evidence.
+
+This reconsideration trigger is event-based rather than
+calendar-based. "Two future session-handoff prompts complete with
+no compressions surfaced" is an operationally identifiable event;
+future-operator can recognize it without ambiguity.
+
+**Re-evaluation action.**
+
+When either trigger fires, return to STEP 2-shape evaluation with
+the updated evidence base. Decision space at that point: GRADUATE
+(if substrate-grain reached N=3 with diverse substrates), DISMISS
+(if null findings dominate without missed-catch evidence supporting
+the alternative interpretation), or continued DEFER with refined
+trigger (only if evidence remains genuinely ambiguous AND a new
+trigger can be specified that doesn't repeat this trigger's
+specific terms).
+
+**Substrate visibility:**
+
+The candidate is tagged `prompt-author-compression` at its banked
+instances. Future detector runs will surface
+`prompt-author-compression` at observation-grain N=4 with
+graduated=N; this re-deferral entry is the meta-status that tells
+the operator "yes, this is at observation-grain N=4 with
+substrate-grain N=1, and yes, the candidate was re-deferred at
+this arc — see this entry for the re-evaluation triggers and the
+operator/project diversifier-strength note."
+
+**Cross-references (outbound):**
+
+- ARC 3.6 close H2 banking the candidate at observation-grain N=3:
+  commit `5b45004` (friction-journal H3 #2 "Prompt-author
+  compression of canonical-source text — N=3 observation-grain,
+  codification candidate").
+- Instance #1 banking (ARC 3.5 prompt "five framing"): commit
+  `b58e5dc` Observation 1 sub-instance (a).
+- Instance #2 banking (family 2 re-eval prompt "three-view
+  framing"): commit `2aa8585` Observation B.
+- Instance #3 banking (ARC 3.6 prompt three compressions): commit
+  `5b45004` H3 #2 application-grain enumeration.
+- Stable criterion canonical source:
+  `docs/04_engineering/conventions/README.md` §Graduation criteria
+  (codified at ARC 3.5 Item 1, commit `8b241ee`).
+- Family 2 precedent (rename + re-defer at substrate-grain N=2,
+  same Stable-criterion application): commit `e6297f1`.
+- Substrate-vs-mechanism family-tag resolution: commit `c0a9f28`.
+- This arc's prompt:
+  `docs/09_briefs/phase-6.5/2026-05-18-prompt-author-compression-prompt.md`
+  (commit `7c25156`).
+
+### Sub-shape amendment of a codified convention requires the same evidence base as separate graduation (N=1; meta-discipline framework refinement candidate)
+
+This arc's STEP 3 engaged whether to absorb the
+prompt-author-compression candidate as a sub-shape amendment to
+`docs/04_engineering/conventions/prediction-grounding.md` rather
+than codify as a separate convention. The candidate is plausibly a
+sub-shape of prediction-grounding (predictions about
+canonical-source text encoded without verification); the README's
+DISMISS-when-captured-elsewhere criterion suggests the existing
+convention's amendment as "the cleaner path."
+
+The arc's reasoning: sub-shape amendments to codified conventions
+are effectively new graduations within a codified container — they
+require the same generalization evidence a separate graduation
+would. Amending prediction-grounding to absorb the candidate would
+face the same substrate-grain N=1 problem the separate-graduation
+path faces. The choice between separate codification vs sub-shape
+amendment is a family-taxonomy question that the family 2
+re-evaluation banking explicitly defers (commit `2aa8585`: "Don't
+pre-commit to taxonomy"); it can be deferred to its own evidence
+base.
+
+**Refinement candidate for README §Graduation criteria:** the
+DISMISS-when-captured-elsewhere criterion's current text ("The
+same insight already lives in an existing convention under a
+different name. Graduating creates a duplicate surface; the
+existing convention's amendment is the cleaner path") leaves
+implicit that sub-shape amendments are lower-bar than new
+graduations. This arc's analysis surfaces that they aren't — the
+generalization evidence required is symmetric. If this pattern
+recurs (a future candidate where captured-elsewhere is invoked and
+the evidence-base symmetry matters), amend §Graduation criteria to
+make the symmetry explicit.
+
+N=1 observation-grain. Banked for future N counting. The amendment
+candidate would be load-bearing (prescriptive) — gives operators a
+clear evidence-base test rather than letting the "cleaner path"
+language imply lower-bar.
+
+### Date-convention change: H2 headers use actual system date (N=1; documentation discipline)
+
+H2 date headers in this arc's banking use actual system date
+(2026-05-18) rather than continuing the 2026-05-19 convention from
+prior recent entries (ARC 3.6 close, substrate-vs-mechanism
+resolution, family 2 re-evaluation — all dated 2026-05-19 in their
+H2 headers despite being committed 2026-05-18). The drift between
+H2 date and commit date in those prior entries is left as-is
+rather than retrospectively rewritten; this entry starts the
+corrected convention going forward.
+
+Rationale: H2 date headers diverging from commit dates create a
+small future-reader problem (reader comparing H2 to git log sees
+one-day mismatch and wonders which is canonical). The drift is
+easier to correct at creation than retrospectively. The convention
+itself wasn't documented anywhere; aligning H2 dates to actual
+commit dates is the cleaner discipline.
+
+N=1 observation-grain at the date-convention surface. Banked for
+future N counting. If the convention change holds across this and
+the next several entries, it's stable enough not to need explicit
+codification.
+
+### Substrate-vs-mechanism tagging deviation at ARC 3.6 banking — graduation-time review confirmed no misattribution (N=1; convention compliance)
+
+ARC 3.6 banking applied mechanism-tagging at banking time
+(`prompt-author-compression` names what the operator does, not
+where it manifests), deviating from the substrate-tagging default
+codified at `docs/04_engineering/conventions/README.md`
+§Codification convention: family-tag assignment at banking and
+graduation-time review (commit `c0a9f28`). Graduation-time
+discriminator review at this arc confirmed no family-
+misattribution; the tag is operationally serviceable as-is.
+
+N=1 observation-grain at convention-compliance surface. Banked for
+future N counting.
+
+### Recursion-closure cause: three-hypothesis underdetermination (N=1; arc-shape observation)
+
+This is the first arc-close in the recent recursion sequence (ARC
+2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2 re-evaluation →
+substrate-vs-mechanism re-evaluation → ARC 3.6 → this arc) that
+does not queue a subsequent arc. The closure is empirical fact;
+the cause is underdetermined at N=1.
+
+Three hypotheses:
+
+- **(H1) Substrate maturation.** The codify-convention
+  infrastructure (skill spec, README framework codification,
+  sub-shape distinctions, Open Questions section,
+  substrate-vs-mechanism resolution, Stage A discriminator
+  refinement) has reached a state where typical operational use
+  doesn't generate new arc-shaped surfaces. The infrastructure is
+  mature enough that operations stay within it.
+
+- **(H2) Low-hanging-fruit exhaustion.** The recent recursion
+  pulled at meta-disciplines that had been latent for some time
+  (graduation framework, family-tag precedence,
+  codify-while-deciding-not-while-implementing). Now those are
+  codified; the easy-to-surface meta-disciplines are gone.
+  Remaining meta-disciplines exist but require more specific
+  surfacing events.
+
+- **(H3) Arc-scope happenstance.** The prompt-author-compression
+  evaluation was a single-decision arc by design — its scope was
+  deliberately narrow. The lack of follow-up arcs may reflect
+  that scope rather than any structural shift in the recursion
+  pattern. Future arcs with broader scope could re-trigger
+  recursion.
+
+Discrimination at N=1 is not possible. (H2) and (H3) together are
+the more conservative interpretation. (H1) is a stronger claim
+that requires more evidence. Future arc-closes — particularly
+those with broader scope — will provide evidence about which
+hypothesis dominates.
+
+This observation is the first explicit cause-analysis of a
+non-recursing close. Bank for future N counting; the pattern of
+recursion closures (or re-openings) across subsequent arcs will
+be the discriminating evidence.
+
+### Session close: prompt-author-compression graduation evaluation arc completes
+
+This arc closes with re-deferral. The candidate remains at
+observation-grain N=4 / substrate-grain N=1 with the two-step
+graduation trigger and the null-findings anti-parking-lot
+reconsideration trigger documented above.
+
+Queued state post-arc:
+
+- **Push as-is.** Unpushed local commits sit on staging (`be8854f`
+  → today's STEP 5 commit; STEP 6 banking will add one more
+  commit). Push decision unchanged from prior arcs: defer until
+  queued items feel settled OR explicitly choose to push. No
+  half-resolved state at this arc's close.
+
+- **No new arcs queued.** This is the first arc-close in the
+  recent sequence that does not queue a subsequent arc. The
+  recursion pattern (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5 → family 2
+  re-evaluation → substrate-vs-mechanism re-evaluation → ARC 3.6
+  → this arc) closes here. The re-evaluation triggers documented
+  above are event-based — they wait for naturally-occurring
+  conditions, not pre-planned arcs. Cause analysis of the
+  non-recursing close at four preceding H3s above (recursion-
+  closure three-hypothesis underdetermination).
+
+Meta-observations from this arc are banked at the four preceding
+H3s (sub-shape amendment evidence-base, date-convention change,
+substrate-vs-mechanism tagging deviation, recursion-closure cause
+analysis).
+
+## 2026-05-18 — Push of eight-arc recursion sequence to origin/staging
+
+### Push complete
+
+26 commits propagated from local staging to origin/staging
+(pre-push origin/staging `46d3d0e` → post-push `de6bc02`).
+Push-readiness gate met at all four checks:
+
+- **Condition (1) test-suite health.** `pnpm test` 1148/1148
+  cache-validated. The 25 pre-retrospective commits touch only
+  `docs/`, `scripts/`, `.claude/skills/` — zero `apps/web/` test
+  scope; turbo cache-hit reflects actual test state for HEAD.
+- **Condition (2) doc-sync reconciled.** No schema or shipped-code
+  changes in push range. `pnpm adr:check` clean (22 ADRs scanned,
+  no errors). Arc-affected governance docs internally consistent
+  (conventions/README.md routing + topical files index,
+  substrate-vs-mechanism Open Question marked Resolved 2026-05-19,
+  codify-convention SKILL.md preamble aligned with body).
+- **Condition (3) governance closeout.** Synthesizing retrospective
+  written at
+  `docs/07_governance/retrospectives/phase-6-5-codification-arc-sequence-retrospective.md`
+  (commit `de6bc02`) — interpretation (ii) at push-arc onset:
+  explicit synthesis rather than per-arc session-close H3s treated
+  as implicit retrospective.
+- **Fourth check (tool-level subset of condition 2).** `pnpm
+  adr:check` as the tool-level ADR-reconciliation subset — passed
+  cleanly.
+
+Eight-arc recursion sequence (ARC 2 → ARC 2.5 → ARC 3 → ARC 3.5
+→ family 2 re-evaluation → substrate-vs-mechanism re-evaluation
+→ ARC 3.6 → prompt-author-compression graduation evaluation) is
+now on remote. Two intermediate pushes (d549ef9 → 46d3d0e shipping
+arcs 1-3; 46d3d0e → de6bc02 shipping arcs 4-8 + synthesizing
+retrospective + this banking) cover the sequence.
+
+No new arcs queued. The recursion closed at the prompt-author-
+compression arc (commits `9e8dc71` + `34154e3`); push closes the
+queued state.
+
+Arc-boundary verification on remote confirmed: all eight arcs'
+canonical commits visible (ARC 2.5 STEP 7 close at `5a952b9`;
+ARC 3 graduations at `6d3a911` + `a10480d` + close at `4486cb1`;
+ARC 3.5 Phase A close at `b58e5dc`; family 2 rename + re-defer at
+`e6297f1`; substrate-vs-mechanism resolution at `c0a9f28`; ARC 3.6
+Stage A refinement at `89155fb`; prompt-author-compression
+re-deferral at `9e8dc71`; synthesizing retrospective at `de6bc02`).
+
+### Carry-forward state
+
+Two re-deferred families wait for naturally-occurring conditions:
+
+- `evolving-substrate-verify-surfaces-banking` at substrate-grain
+  N=2 (commit `e6297f1`). Trigger: instance from a third
+  iteratively-built-new-tool substrate distinct from
+  friction-pattern-detector and codify-convention.
+- `prompt-author-compression` at observation-grain N=5 /
+  substrate-grain N=1 (commit `9e8dc71` re-deferral; updated to
+  N=5 at retrospective `de6bc02` §5 with three application-grain
+  sub-instances banked in the push session). Two-step
+  substrate-distinct trigger; null-findings anti-parking-lot
+  reconsideration with bivalence caveat.
+
+Several N=1 observations accumulate evidence passively (catalogued
+at `de6bc02` §6). The substrate is operational; the queue is
+empty; ordinary work resumes.
+
+
+## 2026-05-20 — F-J-14 fourth-instance: Phase 7 chunk-impl-grade Grains 2+3 non-fire N=5 cross-validation
+
+Phase 7 implementation cycle closure (Sessions 36-40; chunks 7.1a + 7.1b
++ 7.2 + 7.3a + 7.3b) synthesizes Path C invocation evidence across five
+chunk-impl-grade observations. Catalogued here as fourth-instance
+extension under F-J-14's canonical Path C rule-of-record (first-instance
+entry 2026-05-14 at line ~11186; second-instance graduation entry
+2026-05-15 at line ~11427; third-instance + grain-catalog
+consolidation entry 2026-05-17 at line ~12681):
+
+**Pattern characterization.** Across five Phase 7 implementation chunks,
+Path C Grain 2 (Phase-A-close prospective) and Grain 3 (mid-impl
+reactive) **did not fire** despite varying forecast-vs-reality gaps at
+chunk-impl grade. Each chunk delivered as single-session-feasible
+implementation; no Phase-A-close substrate-load overrun forced split;
+no mid-impl framing-revisit accumulation crossed budget threshold.
+The pattern strengthens F-J-14's catalog with positive non-fire
+cross-validation evidence: when Grain 1 (brief-draft prospective)
+absorbs scope-risk at brief-grade, Grains 2 and 3 stay quiet.
+
+**Per-chunk evidence:**
+
+| Chunk | Path C disposition | Forecast | Realized | Delta | Grain 2/3 fire? |
+|---|---|---|---|---|---|
+| 7.1a (f0fdecc) | Grain 1 SPLIT at brief-grade (chunk 7.1 → 7.1a + 7.1b) | 700-1100 | ~1210 | +10% | No |
+| 7.1b (4c481a9) | Grain 1 SPLIT companion | 750-1200 | ~1591 | +33% | No |
+| 7.2 (c401296) | Grain 1 SINGLE-CHUNK at brief-grade | 1500-2200 | ~3010 | +37% | No |
+| 7.3a (8499189) | Grain 1 SPLIT at brief-grade (chunk 7.3 → 7.3a + 7.3b) | 1100-1900 | ~2625 | +38% | No |
+| 7.3b (ab0f7fe) | Grain 1 SPLIT companion | 1200-1900 | ~1549 | within band | No |
+
+**Critical observation — within-band landing at chunk 7.3b.** The
++10/+33/+37/+38% floor-bias trend across chunks 7.1a/7.1b/7.2/7.3a
+breaks at chunk 7.3b (within forecast band; first within-band landing
+of Phase 7 implementation cycle). Iteration 2 directive-grade Phase A
+verification absorbed scope deferrals at the directive grade itself
+(Option γ Bundle/Mutation/Attachment substrate consolidation + Option
+(c') Finding E permissive justification shape), bounding chunk 7.3b
+complexity before implementation began. The mechanism is consistent
+with F-J-14's three-grain catalog: earlier-grain invocation preferred
+over later-grain invocation; directive-grade Phase A verification at
+Grain 1 ratification absorbs scope-risk that would otherwise surface
+at Grain 2 or Grain 3.
+
+**Why this is positive evidence (not absence-of-fire).** Grain 2 and
+Grain 3 are designed to catch budget-overrun WHEN earlier grains
+miss. Their non-fire across N=5 chunks despite floor-bias deltas of
++10-38% indicates Grain 1's brief-grade SPLIT decisions absorbed the
+scope-risk correctly — even when realized volume exceeded forecast
+upper bounds, the chunks remained single-session-feasible. The
+non-fire pattern validates F-J-14's "earlier-grain invocation
+preferred" guidance: Grain 1 at brief-grade caught the structural
+scope-risk at chunks 7.1 + 7.3 (SPLIT); chunk 7.2's SINGLE-CHUNK
+disposition held despite +37% floor-bias because its scope was
+structurally bounded (Stage 3 classifier + org_settings substrate
+addition; no cross-phase framing interactions).
+
+**Iteration 2 directive-grade Phase A verification as fourth grain
+candidate.** Chunk 7.3b's within-band landing surfaces a candidate
+fourth-grain refinement: **Grain 0 — Directive-grade Phase A
+verification.** When chunk-impl directive authoring incorporates
+multi-iteration refinement absorbing scope deferrals at the directive
+grade (Iteration 2 Note 1/2/3/4 substantive Phase A findings landed
+before implementation), the discipline operates earlier than Grain 1
+brief-draft prospective. Chunk 7.3b's within-band landing is N=1
+evidence for Grain 0 candidacy; further accretion at Phase 8+ chunks
+that adopt directive-grade Phase A verification would graduate the
+candidate to fourth-instance codification. Documented here as
+forward-pointer at the F-J-14 catalog rather than promoted to
+codification at N=1.
+
+**Codification grain.** Four-instance extension of F-J-14 three-grain
+catalog with chunk-impl-grade cross-validation: five-chunk non-fire
+evidence at Grains 2+3 validates the catalog's "earlier-grain
+invocation preferred" guidance; one chunk's within-band landing
+surfaces Grain 0 candidate (directive-grade Phase A verification) at
+N=1 evidence for future-cycle-watch. The catalog stays at
+three-grain canonical statement; the fourth-instance extension is
+the cross-validation refinement.
+
+**Cross-references.**
+
+- Phase 4 chunk 3 first-instance (F-J-14 canonical statement above,
+  2026-05-14) — reactive Path C at Grain 3.
+- Phase 6 chunk 6.2a second-instance graduation (F-J-14
+  prospective-vs-reactive sub-discipline above, 2026-05-15) —
+  prospective Path C at Grain 2.
+- Phase 6.5 chunk 2 + retrospective (F-J-14 third-instance entry
+  above, 2026-05-17) — three-grain catalog consolidation.
+- Phase 7 chunks 7.1a/7.1b/7.2/7.3a/7.3b (commits f0fdecc + 4c481a9
+  + c401296 + 8499189 + ab0f7fe) — fourth-instance N=5 cross-
+  validation evidence basis.
+- Phase 7 retrospective at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`
+  §3 Candidate #2 for full empirical narrative + per-disposition-
+  shape multiplier table cross-reference.
+- `docs/04_engineering/conventions/session/plan-authoring.md`
+  §Volume-forecast — Phase-A-realized forecast trumps cycle-grade
+  forecast §Four-curve calibration extension → per-disposition-shape
+  multiplier table (Phase 7 extension at Commit B) — codifies the
+  chunk-impl-grade floor-bias signal that this F-J entry's
+  per-chunk evidence table grounds empirically.
+
+## 2026-05-20 — Phase 7 retrospective T1 banking entries (Candidates #10 + #12 below-N=3-threshold)
+
+Per Phase 7 retrospective drafting Iteration 3 §2 founder-ratified
+routing table: two below-N=3-threshold codification candidates bank as
+T1-narrative exemplars at this friction-journal entry + Phase 7
+retrospective §4. Each carries promotion-trigger metadata for future-
+cycle observation-grain banking.
+
+### (γ) Orphan-tolerance composite-write grain N=2 cross-chunk (Candidate #10)
+
+**Pattern.** Composite writes (sequential INSERTs across related
+tables, where partial completion is operationally acceptable)
+exhibit orphan-tolerance discipline: if step N succeeds and step N+1
+fails, the step-N row's commit stands without rollback; operational
+reconciliation handles the partial state. Distinct from strict-
+atomicity composite-writes (where partial completion is unacceptable
+and rollback is required).
+
+**N=2 cross-chunk evidence:**
+
+- **Chunk 7.1b document_artifacts INSERT chain** (commit `4c481a9`).
+  Modal sidecar callback writes a chain of document artifact rows
+  (pages + lines + words + quality_flags) sequentially. Partial
+  completion is tolerated; the per-row commit stands without
+  upstream rollback.
+- **Chunk 7.3b Stage 7 Bundle execution** (commit `ab0f7fe`).
+  Born-paid bundle execution invokes withInvariants(billService.post)
+  followed by withInvariants(paymentService.record) sequentially.
+  If first child commits + second child fails post-success, the
+  bill commit stands; the failure routes to exception queue with
+  manual_route + reconciliation_context audit metadata per
+  Iteration 2 Note 2 default disposition.
+
+**Codification grain.** N=2 cross-chunk below observation-grain N=3
+codification threshold per Phase 6.5 Candidate #4 routing precedent.
+Banked as T1-narrative until N=3 evidence accumulates. Promotion
+trigger: third-instance at Phase 8+ (likely candidate: future multi-
+step orchestrator-driven workflows that adopt sequential best-effort
+semantics — Tier 2.5+ pipelines OR reconciliation orchestrators).
+
+**Cross-references.**
+
+- Phase 7 retrospective §4.A at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`.
+- Chunk 7.1b commit `4c481a9` for document_artifacts INSERT chain.
+- Chunk 7.3b commit `ab0f7fe` for Stage 7 Bundle execution.
+
+### (λ) + Finding E paired observation N=1 first-instance (Candidate #12; Iteration 2 Gap 2 absorption)
+
+**Pattern (paired-observation framing).** Two halves of one
+observation per Iteration 2 Gap 2 absorption.
+
+**Half 1 — Deferred substrate (retrospective inventory item #2).**
+Logic Receipt bundle-level INV-AGENT-002 event composition +
+ProposalJustificationSchema formal codification. ADR-0007 Q30
+specifies the Logic Receipt content shape (rule_id + input_features
++ historical_match_count + confidence_score + source_transactions
++ user_utterance + pipeline_trace); Phase 7 chunk 7.3b ships
+ProposedMutation/ProposedAttachment/ProposedMutationBundle with
+`justification: z.record(z.unknown()).optional()` permissive shape
+per Iteration 2 Option (c') Finding E absorption. Formal codification
+deferred to Phase 8 / post-v1 Logic Receipt consumer.
+
+**Half 2 — Deferral discipline (Candidate #12) — (λ) TS-only union
+extension cross-chunk deferral mechanism N=1 first-instance.**
+IngestDocumentOutput.status union member
+'deferred_chunk_7_3b_pending_activation' added at chunk 7.3a as a
+TS-only union extension for routing paths that chunk 7.3b activates
+(born-paid bundle + receipt-as-payment-evidence + payment_confirmation
+no-cited-bill). Chunk 7.3b activation made the status defined-but-
+not-emitted; the union member is PRESERVED with JSDoc `@deprecated`
+annotation per Iteration 2 Note 4 + ADR-0022 additive provenance-
+preserving discipline. Union shrinkage would be non-additive;
+preserving the deferred discriminator with `@deprecated` marker
+balances ADR-0022 additive constraint vs drift-prevention via
+TypeScript exhaustiveness checking.
+
+**Paired-observation framing rationale.** The deferred substrate
+(half 1) is THE THING THAT GETS DEFERRED; the deferral discipline
+(half 2) is THE MECHANISM BY WHICH THE DEFERRAL HAPPENS. They are
+two halves of one observation per Iteration 2 Gap 2 absorption.
+Both at N=1 first-instance; both below N=3 codification threshold;
+both bank as T1-narrative exemplars at this entry + Phase 7
+retrospective §4.B; both promote to convention surface candidates
+if recurrence at Phase 8+ surfaces additional "formal-substrate-
+codification-deferral-at-chunk-impl-grade" instances OR additional
+"TS-only union extension cross-chunk deferral mechanism" instances.
+
+**Codification grain.** N=1 first-instance below observation-grain
+N=3 codification threshold per Phase 6.5 Candidate #12 routing
+precedent. Banked as T1-narrative until N=3 evidence accumulates.
+Promotion trigger: third-instance at Phase 8+. Phase 8's Logic
+Receipt consumer codification fires half 1's promotion; Phase 8+
+chunks that adopt TS-only union extension as cross-chunk deferral
+mechanism fire half 2's promotion.
+
+**Cross-references.**
+
+- Phase 7 retrospective §4.B + §5.1 item #2 at
+  `docs/07_governance/retrospectives/phase-7-retrospective.md`.
+- Chunk 7.3a commit `8499189` for the TS-only union extension
+  introduction at types.ts IngestDocumentOutput.status.
+- Chunk 7.3b commit `ab0f7fe` for the @deprecated annotation
+  preserving the union member post-activation.
+- ADR-0007 Q30 for Logic Receipt content shape canonical
+  specification.
+- ADR-0022 for additive provenance-preserving discipline.
+- ADR-0012 for ProposedMutationBundle bundle-level Logic Receipt
+  emission shape (forward-pointed at Phase 8 / post-v1).
+
+## 2026-05-23 — Phase 8 chunk 10 (PARTIAL): synthCtxForCommit is an auth gate, not a context-shape adapter
+
+Chunk 10 ("system_actor widening at withInvariants") set out to retire
+two `ingestDocument.ts` substrate-shims by widening `withInvariants` to
+accept `SystemActorServiceContext`. Grounding the change against disk
+showed the two shims are not equivalent. `synthCtxForRouter` feeds
+`completeCandidate` directly — no `withInvariants`, no authorization —
+and was retired cleanly by widening `completeCandidate` to
+`ServiceContext | SystemActorServiceContext` (a pure type change; it
+reads only union-common fields). But `synthCtxForCommit` downgrades the
+system-actor context to a synthetic *verified* caller whose `user_id`
+('system_actor:pipeline_orchestrator') has no membership, so the
+`{ action: 'bill.post' | 'payment.record' }` calls fail Invariant 4
+(`canUserPerformAction`) and the best-effort `try/catch` yields
+`proposal_id=null`. That shim is therefore the **de-facto gate currently
+preventing the document pipeline from auto-committing ledger mutations** —
+retiring it is a ledger-authorization **policy** change, not a refactor.
+It is deferred to a dedicated change with an explicit ADR-0007 auth-model
+statement + seeded auto-commit tests (the commit-path e2e cases that
+would observe the change are presently `it.skip`-deferred, so no routine
+test exercises the policy). Chunk 10 ships PARTIAL; Phase 8 is
+impl-incomplete by the original framing #7 and the retrospective should
+name it.
+
+Three brief inaccuracies corrected in passing: (1) the discriminator is
+`'system_actor' in ctx.caller` (nested under `caller`), not
+`'system_actor' in ctx`; (2) ADR-0007 §Tier 2 carries a numbered
+"Safety contract", not a "Layer 2 item #C" structure, so the partial
+widening was recorded as a dated amendment note with an explicit open
+question rather than a fabricated inviolable item; (3) the audit-actor
+delta on retirement is `user_id → null` (the `system_actor` name is not
+written by `recordMutation`), not a "canonical system_actor identifier."
+`service-layer.md` Candidate #11 is **left in place** (NOT retired): the
+commit-path shim survives, so the consumer-side substrate-shim discipline
+still applies.
+
+**Cross-references.** `withInvariants.ts` untouched (only the deferred
+commit path would reach it); `documentRouterService.ts` completeCandidate
+widened to the union; `ingestDocument.ts` synthCtxForRouter retired +
+synthCtxForCommit annotated with the auth-gate finding; ADR-0007 §Tier 2
+"System-actor service contexts at the invariant boundary" amendment note.
+
+## 2026-05-23 — Permission Catalog Count Drift: the convention under-specifies the hardcoded-count site inventory
+
+Adding one permission (`payment.record`, Phase 8 chunk 8, commit bf1a79b)
+required updating hardcoded catalog counts at every site that asserts them —
+more than the "Permission Catalog Count Drift" convention enumerates.
+Verified sites: `permissionCatalogSeed.test.ts` (CA-28) hardcodes the count
+in a header comment ("N total; controller N; ap_specialist M; executive K")
+plus the "N permissions exist", "controller has all N", "ap_specialist has
+exactly M", and "executive has exactly K" assertions; `crossOrgRlsIsolation.test.ts`
+(CA-37) hardcodes `toBe(30)` (permissions) and `toBe(41)` (role_permissions).
+At chunk 8 the ap_specialist sites were caught at impl-read and CA-37 only at
+the close gate (2 failures → fix → green). Lesson: the convention needs the
+complete grep recipe (grep the integration suite for hardcoded catalog counts
+before shipping any permission change), not a representative subset.
+
+## 2026-05-23 — ADR-0014 canonical pipeline (8 stages, §1) vs runtime pipeline_trace (~10 stage_names)
+
+ADR-0014 §1 ("Pipeline architecture overview") enumerates 8 canonical stages
+(Stage 0 dedup → Stage 7 proposal), but the runtime `pipeline_trace` emitted
+by `ingestDocument.ts` carries more distinct `stage_name` values — the
+relationship step alone splits into `match_against_existing_state` and
+`router_match_against_state`, plus dedup / ai-fallback variants — landing at
+~10 at the Session 74 e2e validation (commit 6f35281). Citation nuance: the
+code comments cite "ADR-0014 §13 canonical stage_names," but §13 is "Logic
+Receipt at proposal-creation time"; the actual stage enumeration lives in §1.
+Deferred decision (Phase 8 retrospective): amend the spec to match the runtime
+stage set, or trim the runtime trace to match the spec.
+
+## 2026-05-23 — Tier C payment-confirmation extract returns a top-level array; Zod gate rejects, pipeline degrades gracefully
+
+The first live exercise of Tier C (Phase 8 §3 closeout —
+`docs/09_briefs/phase-8/2026-05-23-tier-c-empirical-exercise.md`) ran the 3
+Session-72 abstaining docs through full `ingestDocument` with real
+`claude-sonnet-4-5`. Two ran clean; the founder payment-confirmation doc
+classified correctly (`payment_confirmation`) but its Tier C *extract* call
+returned a top-level JSON array, which the extract Zod schema rejected
+(`expected object, received array, path []`) — despite the
+payment_confirmation prompt's explicit "Output a single JSON object … and
+nothing else." The Zod structural-defense gate (ADR-0014 §8) caught it:
+`ai_fallback_validation_failed` → `extraction_failed` audit events fired, and
+the pipeline degraded gracefully (full 11-stage traversal → `committed` /
+`proposal_id=null`, no crash; in a real flow the `extraction_failed` routes
+to the exception queue per ADR-0011 §13).
+
+Finding shape: the v1 single-object output contract is not robust to live LLM
+output variance on real inputs — Claude ignored the single-object instruction
+on this doc. The Zod gate working as designed is the mitigating half; the
+silently-lost extraction is the finding half. Scoped follow-up (deferred —
+auto-commit arc Tier C hardening, or standalone): tolerate/unwrap
+single-element arrays, reinforce the prompt, or formalize the exception-route
+as intended behavior. N=1 observation; not codifying. Empirical-exercise
+value: exactly the class of issue that lint-but-never-run code hides,
+surfaced by the first live Tier C call.
+
+## 2026-05-24 — created_by blocker misattributed from a CREATE TABLE migration; the live schema is authoritative
+
+The auto-commit arc's design hinged on a "ledger entity tables require a real
+`auth.users` identity for `created_by`" blocker, surfaced (and founder-ratified
+into Path X) as "`bills.created_by` is `uuid NOT NULL REFERENCES auth.users(id)`"
+— read from the 20240139 bill-lifecycle CREATE TABLE migration. When the
+Option II seeded test's direct `bills` insert ran, it failed: *"Could not find
+the 'created_by' column of 'bills'."* The live schema (post `db:reset`, all
+migrations applied) has **no `bills.created_by`** — the NOT-NULL `created_by`
+at 20240139 belongs to a *different* table in that multi-table migration, not
+`bills`. The actual NOT-NULL actor column in the commit path is
+`bill_payment_allocations.created_by` (payment path); `journal_entries.created_by`
++ `audit_log.user_id` are nullable. Path X (service-account uuid via the
+`withInvariants` adaptation) still solves the real blocker + attributes the
+nullable columns, so the *decision* held — but the cited justification was
+wrong, propagated into ADR-0007 + 3 code comments, and was corrected at
+`c67801ec`.
+
+Lesson: when a constraint claim drives a design decision, ground it against
+the **live schema** (`information_schema` / a reset DB), not just the CREATE
+TABLE migration text — later ALTERs, or (here) a misread of which table a
+column belongs to in a multi-table migration, make the migration-text reading
+stale. The seeded integration test caught it because it actually *inserts* the
+row; a test that only asserts end-state behavior would have hidden the
+misattribution behind the (correct) end result. N=1; not codifying, but
+verify-against-live-schema is the takeaway. Related: the opener brief's Commit
+4 framing also diverged from disk on three counts (the 5 deferred scenarios
+are real-Modal `describe.skipIf`-gated e2e, not paid-API-free; "1408/0/5
+routine" unachievable since they stay skipped routinely; only 2 of 5 commit
+ledger) — corrected to Option II (paid-API-free integration gate test) + the
+5 e2e scenarios as a tracked follow-up.
+
+**Tracked follow-up (auto-commit arc carry-forward):** the 5 Modal-gated e2e
+seeded scenarios (`documentPipeline.{vendorInvoice,receipt,paymentConfirmation}.e2e`
+`it.skip`) — full-OCR end-to-end coverage of the auto-commit path. Paid
+(`RUN_MODAL_E2E=1`; Modal + Claude-if-Tier-A-abstains). Requires
+vendor/bill/candidate seeding in `ingestPipelineHarness` + the fixture PDFs'
+real OCR yielding the right fields. The ADR-0007 Q78 gate is already satisfied
+by the Option II integration test (`autoCommitGate.integration.test.ts`); this
+is deeper coverage, done when there's appetite for a paid founder-review run.
+
+## 2026-05-24 — Modal-e2e seeded run: bill-candidate generation weak/absent on real OCR
+
+The auto-commit arc's deeper-coverage follow-up ran the 3 fixture-covered
+deferred Modal-e2e scenarios (`RUN_MODAL_E2E=1`, Modal-OCR-only ~$0.05–0.15)
+with a seeded vendor/bill/payment matched to `corpus.sanitized.ts`. Outcome:
+**1 of 3 passed** (receipt → payment-candidate → attach → `proposal_id=null`);
+**2 failed** (vendor_invoice→bill and payment_confirmation→bill both produced
+**NO Stage 6 bill-candidate**). Writeup:
+`docs/09_briefs/phase-8/2026-05-24-modal-e2e-followup.md`.
+
+The run emitted exactly **one** relationship candidate — the receipt→payment
+candidate, **confidence 0.25**; emission is **not** threshold-gated (0.25 <
+the 0.80 receipt threshold, yet it emitted). So the finding is **not** a
+threshold / fuzzy-match-precision issue — an earlier hypothesis ("fuzzy match
+~0.818 below the 0.85 invoice/payment threshold"), corrected by querying the
+emitted candidates. The accurate finding: **relationship-candidate generation
+against seeded ledger state is weak/inconsistent on real OCR** — bill-candidate
+generation against a seeded open bill did not fire at all, and the one
+candidate that did fire scored very low (0.25).
+
+This does **not** affect the ADR-0007 Q78 gate (satisfied by the Option II
+integration test, which bypasses matching with synthesized fields). It is a
+finding about the deeper real-OCR matching path: **not yet reliable for
+bill-routing**. Root cause (per-doc-type vendor-match outcome +
+`scoreComposition` inputs for bill candidates) deferred to investigation — not
+fix-forward. The 2 re-skipped scenario bodies are correct + ready to re-enable;
+the receipt scenario stays unskipped (passing). Harness seeding helpers
+(`seedVendor`/`seedApprovedBill`/`seedPayment`/…) are durable infra.
+
+Lesson (verify-from-disk, again): the first root-cause hypothesis (threshold ×
+fuzzy match) was plausible from the asymmetry but **wrong** — querying the
+actually-emitted candidate (one payment-candidate at 0.25, emitted below
+threshold) corrected it. Don't assert a mechanism from a plausible inference;
+query the emitted state.
+
+**Needs-fixture (separate deferred item):** the no-cited-bill payment scenario
+and the born-paid bundle scenario cannot be exercised with the existing 3 demo
+fixtures (the payment_confirmation fixture HAS a cited bill and is not a
+born-paid doc). Both require NEW source documents — their own
+fixture-sourcing + OCR-capture + corpus-sanitization arc, not a follow-up.
+
+## 2026-05-24 — Born-paid bundle non-functional at v1 (WRONG; 3 sub-findings)
+
+Building the 2 NEEDS-FIXTURE Modal-e2e scenarios surfaced that the born-paid
+bundle feature has zero working code paths at v1. Dominant category **WRONG**
+(broken code in `buildBornPaidBundle`); the two schema-gap sub-findings are
+**NOTE** (structural dead-code, not a defect fixed this session).
+
+1. **(NOTE) `isBornPaidBundleCandidate` receipt branch structurally dead.**
+   `ReceiptExtractionSchema` has no `cited_invoice_number` / `cited_bill_id`
+   field; a receipt-classified document cannot satisfy `hasCitedBill`. Branch
+   defined but unreachable.
+2. **(NOTE) `isBornPaidBundleCandidate` vendor_invoice branch structurally
+   dead.** `VendorInvoiceExtractionSchema` has no `payment_reference` /
+   `payment_method` field; a vendor_invoice-classified document cannot satisfy
+   `hasPaymentFields`. Branch defined but unreachable.
+3. **(WRONG) `buildBornPaidBundle` (proposalBuilder.ts:136,152) field-name +
+   type mismatch.** Reads `extractedFields.amount` and checks
+   `typeof … === 'string'`. `PaymentConfirmationExtractionSchema` emits
+   `payment_amount` as `z.number()`. The bundle's `post_bill` child gets
+   `amount: undefined` → `buildPostBillInputFromChildMutation`
+   (ingestDocument.ts:730) returns null → bill commit skipped →
+   `proposal_id=null`. Same mismatch on the `record_bill_payment` child.
+
+The payment_confirmation branch of `isBornPaidBundleCandidate` IS reachable
+(payment_confirmation classification + Tier C extracting `cited_invoice_number`
++ a payment field), but routing to `buildBornPaidBundle` then hits sub-finding 3
+deterministically. So no born-paid bundle has ever committed.
+
+N=1 on **born-paid feature non-functionality at v1** — a single finding with 3
+sub-mechanisms. Distinct from the 2026-05-24 bill-candidate finding (that is
+Stage 6 candidate matching against seeded state on real OCR; this is the
+proposal-builder + extraction-schema substrate).
+
+**Disposition:** built the born-paid fixture + scenario body as durable infra;
+left the scenario `it.skip` with `[NEEDS-FIX]` pointing here. Did NOT spend paid
+Modal $ on its e2e (the failure is statically proven). Born-paid bundle fix is
+the named next arc. Grounding came from the closeout work; see
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`.
+
+## 2026-05-27 — Four-category prompt-drift typology from the ADR-0025 Ring 2A-core rollout (NOTE)
+
+The ADR-0025 five-commit authoring rollout (Commits 1–5, `8a69ab8f` →
+`dc1d959e`, closed 2026-05-27) produced four structurally distinct categories of
+prompt-vs-reality drift, each first surfaced in a different commit and each caught
+by a different mechanism. Recording the set converts individual catches into a
+*family of expected catches* — a checklist a future rollout's HEAD pass can run
+against its own prompt, rather than rediscovering each class cold.
+
+**(A) prompt-vs-disk.** Commit 2 (`101e7920`): the prompt assumed `rule_registry`
+would land in Commit 3, but disk already had it at HEAD (shipped by a prior Ring 1
+arc). Caught by the HEAD-pass disk read before authoring. The discriminator is
+*the disk* — read the substrate you are about to build on; don't trust the
+prompt's account of what exists.
+
+**(B) prompt-vs-ratified-ADR.** Commit 3 (`eaccc37d`): five service-method
+signatures in the prompt had drifted from ADR-0025's ratified Decisions 6/7 during
+the prompt-drafting pass. Caught by reading the ADR's Decisions section directly
+during the HEAD pass. The discriminator is *the ratified contract* — re-read the
+ADR text, not the rollout summary's paraphrase of it.
+
+**(C) prompt-vs-local-environment.** Commit 3 test session: the prompt did not
+specify migration-apply ordering against the integration gate, and the local DB
+returned PGRST202 (RPC-not-found) until migration `20240165` was applied — an
+earlier gate run would have given incomplete signal. The discriminator is *the
+running environment* — a migration-bearing commit needs an explicit "migration
+applied locally before the gate run" step.
+
+**(D) gap-fill discovered at consumer.** Commit 4 (`c326adb8`): Commit 3 added
+`RULE_NOT_FOUND` / `RULE_LIFECYCLE_INVALID` / `RULE_CREATE_FAILED` to
+`ServiceError.ts` without HTTP-status mappings; Commit 4's routes were the first
+consumers and the gap surfaced at authoring. Category D is **not** a prompt-vs-
+truth mismatch — it is *deferred completion*: Commit N leaves a thread that Commit
+N+1 picks up. Its discipline is not "verify against disk" but "verify the consumer
+side resolves the producer side's open threads" — the **category-D forward-scan**.
+
+**The loop-closing meta-instance.** The category-D forward-scan, named at Commit 4
+close and designed into the Commit 5 prompt, then caught a drift *in that very
+prompt*: the Commit 5 prompt asserted `RULE_LIFECYCLE_INVALID` → 422, but Commit
+4's `serviceErrorToStatus` maps it to **409** (state-conflict, mirroring
+`PERIOD_ALREADY_LOCKED`). The executor's forward-scan read the mapping from disk,
+caught the 422, and the Commit 5 component test asserts 409 (`dc1d959e`). A
+discipline designed to catch class X caught an instance of X *in the structure
+that created the discipline* — the prompt itself. This is the strongest available
+validation of the forward-scan: not designed-then-unexercised, but earned on a
+live catch, and the catch was against its own author.
+
+**Standing disciplines (carry-forward to future arcs).** Two disciplines earned
+their place across this rollout and now apply to every multi-commit arc's
+prompt-drafting and HEAD-pass workflow:
+
+- The **count-citation guard** (Commit 4 — `ACTION_NAMES` / CA-28 / CA-37): cite
+  the *current* count from disk before authoring a delta; three-layer count
+  agreement (`ACTION_NAMES` = DB seed = CA-28 = CA-37) holds atomically in one
+  commit.
+- The **category-D forward-scan** (Commit 4/5): before authoring Commit N+1, scan
+  Commit N's outputs for unwired threads the new work will consume.
+
+The load-bearing observation underneath both: **the drafter is not exempt from the
+disciplines the prompt enforces on the executor.** The 422-vs-409 instance is the
+proof — the prompt that instructed the executor to verify against disk was itself
+wrong about disk, and only the executor's verification caught it. Future
+prompt-drafting (Web Claude or otherwise) should HEAD-pass its own count citations
+and consumer-thread assumptions with the same rigor it asks of the executor.
+
+N=4 categories across one rollout (observation-grain: each category a distinct
+commit + distinct catch mechanism). Recorded as a friction-journal typology;
+whether the typology + its two standing disciplines graduate to a codified
+convention (`conventions/`) is a separate routing decision (see the
+`codify-convention` skill) deferred to the operator.
+
+## 2026-05-27 — hygiene-post-ring2a-core arc closeout: T4 codification + deferred-work carry-forwards (NOTE)
+
+The `hygiene-post-ring2a-core` arc — the post-Ring-2A-core doc-hygiene
+clearing pass — closed today after 9 commits across 8 named queue items
+plus 1 split straggler (item 6.5). Arc lineage: `ef100ed6` → `8b324fcd`
+→ `327e9cf6` → `dee35849` → `92a79e25` → `4da0f01f` → `4ef072a9` →
+`b03090c8` → `00491e2c`, all on `staging`, +9 ahead of `origin/staging`
+at close.
+
+The arc's substance was clearing the carry-forward queue accumulated
+post-Ring-2A-core: doc-sync reconciliations (invariants count, taxonomy
+vocabulary, prose alignments), forward-flags for deferred work (canvas
+types, read endpoint), and codifications of disciplines that
+crystallized during arc execution. Each item shipped under per-commit
+review; each disk-truth verification surfaced something the prompt
+didn't name.
+
+**T4 codification — ratified-contract scope discipline.** The arc's
+primary load-bearing codification: when a ratified contract names the
+scope of a reconciliation or amendment, that scope binds the drafter —
+adjacent issues carry-forward, not absorb into the current arc. Fired
+N=4 across items 3 / 5 / 6 / 8 plus the loop-closing meta-instance at
+item 6 → 6.5 split. Codified to
+`docs/04_engineering/conventions/ratified-contract-scope.md` in this
+closeout commit.
+
+**Carry-forward observations (banked for future arcs; not graduating
+yet).**
+
+- **T1 + T6 paired (whole-repo grep on count-bearing prose).** N=2:
+  item 4's atomic-coupled invariants.md ↔ control_matrix.md count
+  reconciliation paired with the straggler grep catching invariants.md's
+  L3 opener; item 6.5's CLAUDE.md L14 uncoupled straggler caught at
+  item-6 disk-read. After any frozen-count reconciliation, grep the
+  whole repo, not just the docs the coupling-rule names.
+- **Count-prose-elsewhere-is-drift-risk principle.** N=2 across items 4
+  (the `20` → `24` retroactive) and 6 (the bare `five` Category A floor
+  count, dropped pre-emptively in favor of "Category A floor test
+  suite"). When a count's source-of-truth lives in a different file,
+  cite the source by name, not by number.
+- **Per-instance-judgment-with-honest-disclaimer pattern.** Item 7's
+  `RuleRegistryView.tsx` comment named "no general type-sharing-
+  threshold convention this instantiates" — one sentence preventing
+  the failure mode of a future reader inferring a non-existent
+  convention.
+- **Forward-flag venue hierarchy.** Three-tier hierarchy applied
+  cleanly across items 7 + 8: open question → `open_questions.md`;
+  deferred-known-needed work with substance → `post-mvp/` brief;
+  site-specific code-anchored flag → in-file comment.
+- **Bounded-read T4-line-in-practice catalog.** Three tempted-but-
+  resisted moments during the Condition-1 characterization below: (1)
+  following a service-code line reference in a sibling-test comment,
+  (2) forming hypotheses beyond the three named classes, (3) reading
+  the seed function. The resists are a miniature catalog of what the
+  T4 line looks like operationally.
+
+**Meta-observations.**
+
+- **"Every prompt gets the four-category check at HEAD pass" generalized
+  from feature arcs to hygiene arcs.** Item 1's typology entry banked
+  the discipline as feature-arc-specific; this arc demonstrated it
+  generalizes — the same vigilance caught drift in the hygiene
+  continuation prompts at items 1 (lock-state assumption), 2
+  (cwd-script no-op), 6 (single-comment framing), and the codify-
+  convention skill invocation for item 8 (route-shape adjudication).
+  Arc-shape-agnostic.
+- **ADR-named-the-pass pattern across items 3, 5, 8.** Three different
+  forward-flag sites in ADRs (the taxonomy gap at ADR-0023/0024/0025;
+  ADR-0025 §8; ADR-0025 §10) explicitly named the doc-hygiene work that
+  this arc executed. The pattern: an ADR ratification names a deferred
+  follow-up; a later hygiene arc executes it; the executing arc cites
+  the ADR's naming as the discipline's provenance. Codified in the T4
+  topical's "Worked instances." (Item 4 — invariants-count reconciliation
+  triggered by `invariants.md`'s "Bidirectional reachability statement"
+  — is an instance of the broader T4 discipline but not of the narrower
+  ADR-named-the-pass sub-pattern; the governing source was a canonical-
+  spec statement, not an ADR. Item 6 is the locale-overlap case, also
+  not ADR-flagged.)
+- **Four-category vigilance extends from drafter-side to reviewer-side.**
+  The closeout's adjudication phase surfaced three manifestations of the
+  same projection-from-model-without-disk-check pattern: (i)
+  **conversation-substrate projection** — assumed orchestrator session
+  continuity without verifying the orchestrator's session was continuous
+  with the prior composition; (ii) **file-format projection** —
+  recommended a reformat to "friction-journal idiom" based on
+  `friction-journal/arc-A.md`'s archive-sub-file naming, without HEAD-
+  passing against the active rolling `friction-journal.md`'s current
+  precedent (item 1 at L16132, structured-doc shape); (iii)
+  **attribution-content projection** — propagated an items-3/4/5
+  ADR-named-the-pass mis-attribution from the original Artifact 3
+  without cross-checking against the pattern's own definition. All
+  three caught by the orchestrator's disk-truth verification before
+  commit. The arc's load-bearing claim — "the drafter is not exempt
+  from the disciplines the prompt enforces on the executor" (item 1
+  closing observation) — extends symmetrically: **the reviewer is not
+  exempt either.** Same loop-closing meta-shape as item 6 → 6.5's split
+  practicing T4 within the arc that codifies T4. Banked, not graduated;
+  three manifestations of one underlying pattern (projection-from-
+  model-without-disk-check), distinct enough in surface form that
+  codification waits on a fourth manifestation.
+
+### Condition-1 deviation — T8 dispatchTrigger stable failure
+
+The arc's closeout-time `pnpm test` full-suite run at HEAD `00491e2c`
+showed **1 failed | 1546 passed | 10 skipped (1557)** vs. the Commit-5
+1547/0/10 baseline.
+
+Failing test:
+`tests/integration/documentRouterService.dispatchTrigger.integration.test.ts > T8 only fan-outs cases whose extracted_invoice_date falls in the reopened period`
+at L492 (`expect(auditRows!.length).toBe(1)` → 0).
+
+Orthogonality to this arc verified: all 9 arc commits touched
+docs/CLAUDE.md/comments only; no path to `documentRouterService` /
+`audit_log` / dispatch logic. Three attempts (1 full-suite + 2 isolated)
+all failed with the same assertion at the same line — test-order
+pollution ruled out.
+
+**(a) Mechanism:** stable failure, most likely **date-arithmetic
+class**. The test's fixture hardcodes `extracted_invoice_date='2026-05-14'`
+and looks up the FY-2026 fiscal_period (`2026-01-01..2026-12-31`); today
+is 2026-05-27. The sibling γ-2 test exercising the same `T8_period_reopen`
+dispatch path with a Scenario-A fixture passes, isolating the failure to
+this fixture's specific date configuration. Fixture-shape ruled out as
+the dispatch failure (sibling-test isolation). DB-state-pollution ruled
+out (stable in isolation, `trace_id`-scoped).
+
+**(b) Fix shape:** unknown without investigation arc. Plausible
+test-side shapes: rotate fixture dates to a date relative to now;
+refactor the test to inject a "now" boundary. The date-relative-to-today
+filter implicated lives in service code; characterizing it precisely is
+investigation-arc work.
+
+**(c) Carry-forward:** new investigation arc (next-after-closeout); not
+in any current arc's scope. **The FY-2026 fixture is the canary** —
+investigator picks up there.
+
+This deviation does NOT block arc closeout per CLAUDE.md Condition 1's
+"OR deviations documented" clause. Pollution-class lineage (Arc A item
+27 / Phase 1.5C 5-test cluster) shifted away by stable-in-isolation
+evidence; different precedent class.
+
+### Arc character
+
+The arc shipped substantively without expanding scope, and the
+disciplines made the substance possible — not the other way around. The
+four-category vigilance fired catches across items 3, 5, 6, 8 and the
+closeout's bounded read held the T4 line cleanly. Each "stop-and-think"
+moment converted a likely-wrong default into a disk-grounded call.
+
+The arc earned the right to codify T4 by practicing it well. Codifying a
+discipline that the codification act itself practices is the strongest
+available evidence the discipline generalizes — same loop-closing
+meta-shape as item 1's four-category-vigilance-catches-drift-in-the-
+prompt-that-asks-for-vigilance, now extended in the closeout phase to
+catches-drift-in-the-adjudication-that-asks-for-vigilance.
+
+## 2026-05-28 — T8 dispatchTrigger investigation arc closeout: PostgREST truncation diagnosed; F3 pagination shipped (NOTE)
+
+The T8 dispatchTrigger investigation arc — the Condition-1 carry-forward
+from the hygiene-post-ring2a-core closeout (`9f320ded`) — closed today
+after 2 fix commits plus this closeout entry. Arc lineage: `e78f6a9f` →
+`36e8eaaf` → [this closeout commit], all on `staging`, +3 ahead of
+`origin/staging` at close. Cumulative diff: 1 file
+(`apps/web/src/services/document-platform/documentRouterService.ts`),
++83 insertions / -39 deletions. Service-layer-only; no migrations; no
+schema changes.
+
+The hygiene-arc closeout characterized the T8 deviation as "most likely
+date-arithmetic class, date-relative-to-today filter implicated" via a
+T4-scope-bounded read of the test code. The investigation arc's HEAD-pass
+falsified that hypothesis against disk and surfaced the actual mechanism:
+**PostgREST silent truncation of an unbounded fan-out query against
+across-run-accumulation-polluted substrate.** The fix shape adjudicated
+to F3 (uniform pagination) with F1b (SQL-side filter via stored function)
+deferred as the correctness-ceiling fix. Same-bug-different-site
+(`computeT1T2T3FanOut`) brought into scope by empirical audit.
+
+**Diagnostic narrative — hypothesis falsified, mechanism surfaced.** The
+HEAD-pass grep against `documentRouterService.ts` returned zero matches
+for `Date.now` / `new Date()` / `today` / `relativeTo` / `days_ago` in the
+T8 dispatch path. The T8 filter at L2004 is a pure string-range check
+(`extractedDate >= start && extractedDate <= end`); today's date is
+mechanically irrelevant. Static analysis through `buildCompleteInput` →
+`completeCandidate` → vendor_invoice branch → `composeScore` → T8 fan-out
+predicted the test should pass. The disk query then revealed: the test's
+candidate IS on disk with predicted shape
+(`date_proximity.raw_value.extracted='2026-05-14'`,
+`supersedes_candidate_id=null`, correct `org_id`), but the fan-out's
+unbounded `.select()` against `document_relationship_candidates` returns
+only 1000 rows (PostgREST `PGRST_DB_MAX_ROWS=1000` per
+`supabase/config.toml:18`); the org's actual head-of-chain count is 1834
+(via `count: 'exact', head: true` query); the test's freshly-seeded
+candidate is in the 834 silently truncated.
+
+**Same-bug-different-site finding.** `computeT1T2T3FanOut` (L1903) shares
+the same architectural shape (unbounded `.select()` with no `.range()` or
+`.order()`). Currently sub-threshold in test substrate (T1 fan_out_count
+=134, T3=135) so the truncation has not fired at this site, but it's
+latent at operational scale. `computeT5FanOut` is structurally different
+(tightly bounded by `linked_entity_id` equality) and is not the same
+bug. Other `.select()` callsites in `documentRouterService.ts` audited
+(16 total); no other instances. Empirical-not-nominal discriminator
+honored: same-bug-different-site is "same architectural defect at second
+site," not "second site near first."
+
+**Fix shape — F3 uniform pagination, F1b deferred.** F3 paginates via
+`.order('id'|'exception_queue_entry_id', { ascending: true })` +
+`.range()` batched iteration; JS-side filter applies per-batch unchanged.
+Service-layer-only; no migration risk during what's named as an
+investigation-and-fix arc. F1b (Postgres RPC with SQL-side JSONB date
+filter) is the correctness-ceiling shape that avoids loading all
+head-of-chain rows; deferred as substrate-evolution work until perf
+telemetry surfaces need. In-code forward-flags at both fix sites name
+F1b as deferred-not-rejected — discoverable by future-Claude grep on
+perf investigation. Same per-instance-judgment-with-honest-disclaimer
+pattern banked at hygiene-arc closeout (item 7).
+
+**Banked observations (rolled into this closeout; below codification
+threshold).**
+
+- **Closeout-characterization-precision — within-single-run vs across-
+  run pollution distinction.** The hygiene-arc closeout's "DB-state-
+  pollution ruled out (stable in isolation)" framing covered within-
+  single-run pollution (test-order pollution, Arc A item 27 / Phase
+  1.5C precedent) but did NOT rule out across-run-accumulation pollution
+  (the 1834 head-of-chain rows accumulated across many integration test
+  runs). Technically correct within the framing's scope but operationally
+  narrower than the wording suggested. Future arcs reading similar
+  "stable in isolation" framings should not infer broader pollution-class
+  exclusion than the evidence supports.
+- **Diagnostic-revealed-scope-expansion in T4-correct ways.** Scope
+  expanded from "fix T8 test" to "fix production-correctness bug at two
+  sites" because the diagnostic surfaced the same-bug-different-site
+  pattern, not because the drafter pulled in adjacent work. T4 permits
+  diagnostic-driven scope expansion; it forbids drafter-side absorption
+  of adjacent issues. The discriminator is empirical: same architectural
+  defect at the second site (`computeT1T2T3FanOut` qualified) vs nearby
+  but structurally distinct (`computeT5FanOut` did not).
+- **F1b-deferred-not-rejected.** F3 chosen for near-term shipping
+  (service-layer-only, uniform pattern, no migration). F1b remains the
+  correctness-ceiling — load-all-then-filter is structurally suboptimal
+  even with pagination; the in-code forward-flags ensure future-Claude
+  encountering F3 doesn't infer it as the considered-correct shape.
+- **Storage suite failure as same-class-different-substrate pollution.**
+  The full-suite post-fix run surfaced
+  `tests/integration/storageProviderIntegration.test.ts`'s `bucket-not-
+  found (Sub-Q D b: drop-and-recreate)` failure with `StorageApiError:
+  The bucket you tried to delete is not empty`. Orthogonal to this arc's
+  diff scope (service code only) but same class as the candidate-table
+  accumulation pollution this arc surfaced — across-run local-suite-
+  state accumulation, different storage substrate (blob objects vs
+  Postgres rows). See Condition-1 deviation below.
+- **`_tmp_*.ts` repo-hygiene observation.** The arc introduced three
+  diagnostic scripts under `apps/web/scripts/` (`_tmp_jsonb_path_probe.ts`,
+  `_tmp_t8_candidate_query.ts`, `_tmp_t8_count_check.ts`) following a
+  pre-existing pattern (`_tmp_classify_check.ts` already present
+  untracked). Deleted at arc-closeout as working-tree housekeeping
+  (separate from this commit). `.gitignore` does not currently match the
+  `_tmp_*` pattern; future arcs using this scaffolding shape would benefit
+  from explicit gitignore handling. Sibling concern to the test-isolation
+  pollution carry-forwards.
+
+**T4 multi-arc-handoff evidence (N=1 positive instance).** The hygiene-
+arc T4 codification listed as worked-instance #4 "this codification's
+own bounded read of the T8 dispatchTrigger deviation held to
+characterization, not investigation." The investigation arc then
+discovered the bounded read's hypothesis was wrong on substance (date-
+arithmetic was not the failure class). T4 worked as designed: the
+closeout characterized within its scope without committing to a fix
+shape; the investigation arc surfaced the correct mechanism without
+inheriting a wrong fix shape from the closeout. N=1 positive instance
+of T4's value in the multi-arc-handoff direction (not just intra-arc);
+below codification threshold but valuable substrate for future arcs
+revisiting T4's effects across arc boundaries.
+
+### Condition-1 deviation — storageProviderIntegration test failure
+
+The arc's closeout-time `pnpm test` full-suite run at HEAD `36e8eaaf`
+showed **1546 passed | 0 failed | 11 skipped (1557 total)** with **1 test
+file failed**. Vitest counts file-level failures (setup/hook errors)
+separately from test-level failures; the storage failure surfaced in a
+hook path. Compared to hygiene-arc baseline (1546/1/10/1557): -1 failed
+(T8 resolved), +1 skipped (storage tests not run due to setup-path
+failure).
+
+Failing file:
+`tests/integration/storageProviderIntegration.test.ts > Phase 1.Storage chunk N+M: supabaseStorageProvider integration > bucket-not-found (Sub-Q D b: drop-and-recreate)`
+— `StorageApiError: The bucket you tried to delete is not empty`.
+
+Orthogonality to this arc verified: arc commits touched only
+`documentRouterService.ts`; the failing file exercises
+supabaseStorageProvider. Mechanically impossible for this arc's diff to
+have caused the failure.
+
+**(a) Mechanism:** local Supabase Storage state accumulation. Prior test
+runs left blob objects in a test bucket; subsequent runs hit the
+`bucket-not-empty` error during the test's drop-recreate logic. Same
+class as the candidate-table accumulation pollution that surfaced as
+this arc's diagnostic substrate; different storage substrate.
+
+**(b) Fix shape:** test-isolation cleanup at the supabaseStorageProvider
+test level — `afterAll`-style blob clearing before bucket drop.
+Operationally analogous to "afterAll candidate cleanup" for the
+candidate-table substrate. Both fall under a broader "integration test
+isolation discipline" umbrella.
+
+**(c) Carry-forward:** umbrella "integration test isolation" arc covering
+candidate-table pollution + storage-bucket pollution + audit for other
+substrates + `_tmp_*` repo-hygiene observation. Not in this arc's named
+scope (T4-correct adjacent-issue carry-forward). The umbrella arc's
+HEAD-pass would grep for `afterAll` / `beforeEach` cleanup patterns
+across the integration test suite and characterize the discipline-gap
+scope.
+
+This deviation does NOT block arc closeout per CLAUDE.md Condition 1's
+"OR deviations documented" clause.
+
+### Arc character
+
+The arc earned its scope through diagnostic discipline. The closeout's
+date-arithmetic hypothesis was falsified at HEAD-pass; the actual
+mechanism (PostgREST truncation against polluted substrate) lived outside
+the closeout's bounded read by design — T4 characterized within the
+scope it could see and deferred the diagnosis to the investigation arc.
+The multi-arc-handoff direction produced a clean diagnostic-then-fix
+sequence without inheriting a wrong fix shape. T4 working as designed.
+
+The substantive scope expansion (T8 → T8 + T1/T2/T3 same-bug-different-
+site) was diagnostic-driven, not drafter-expansion. The fix-shape
+adjudication (F3 chosen, F1b deferred) traded perfect correctness for
+shipping-grade fitness with explicit deferred-follow-up substrate banked
+at the fix sites. Two commits, single file, service-layer-only,
++83/-39 lines. Same arc-character framing as the hygiene-arc closeout
+that preceded it: the arc shipped substantively without expanding scope,
+and the disciplines made the substance possible — not the other way
+around.
+
+## 2026-05-28 — umbrella test-isolation discipline arc closeout: substrate-deletability split codified at §3.3; narrow-A wiring solves storage uniformly (NOTE)
+
+The umbrella test-isolation discipline arc — the carry-forward from the
+T8 dispatchTrigger investigation arc closeout (`183935ee`) — closed
+today after 3 substantive commits plus this closeout entry. Arc lineage:
+`d50a6382` → `fc85c411` → `fec457db` → [this closeout commit], all on
+`staging`, +4 ahead of `origin/staging` at close. Cumulative diff: 4
+files (one skill file, one root `package.json`, two convention docs),
++285 insertions / −4 deletions. Docs-only and config-only; no service
+code touched; no migrations; no schema changes; HEAVY-verified at
+1547/0/10 at the narrow-A wiring commit.
+
+The T8 closeout banked class-1a (`document_relationship_candidates`
+accumulation) and class-1b (storage bucket accumulation) as same-class-
+different-substrate carry-forwards for an umbrella test-isolation arc.
+The HEAD-pass audit refined the class-1 split on the substrate-
+deletability axis (class-1a append-only via RLS no_delete + REVOKE
+DELETE / triggers; class-1b mutable with afterAll-permitted cleanup)
+and then the storage-bucket diagnostic surfaced a load-bearing
+simplification: the two classes collapse on the failure-mode axis
+("tests assume empty starting state at session start; accumulation
+violates this") even though they remain distinct on substrate-
+deletability. That simplification reduced Option D's three concrete
+moves to two: §3.3 codification at SKILL.md covering both substrate
+classes' authoring-grain discipline, plus narrow-A's `pnpm test:full`
+wiring providing structural enforcement of empty-state-at-session-
+start for both classes uniformly. The storage-bucket code-level fix
+that Option D originally included dropped out — narrow-A's reset
+prefix handles it for free.
+
+**Diagnostic narrative — path-shape coverage falsified, simplification
+surfaced.** The storage-bucket diagnostic's initial hypothesis (the
+test's `listAllStorageKeys` helper misses some path shape) was
+falsified by disk: all 79 accumulated objects matched the helper's
+expected `org_*/sources/*/*` walk pattern exactly. The refined
+hypothesis (other test files write to storage via service-layer
+indirection that grep-based audit misses) explained the accumulation
+but did NOT need a code-level fix — the structural enforcement at the
+workflow layer (narrow-A's reset prefix) resolves the failure mode
+without any test-code or helper-code modification. The diagnostic
+earned the simplification.
+
+**§3.3 codification at SKILL.md (commit a, `d50a6382`).** Mechanism-
+extension within §3's existing discipline class — same trigger surface
+(work in `tests/integration/`), same venue
+(`.claude/skills/integration-test-rules/SKILL.md`), sibling subsection
+to §3.1 (per-run COA isolation) and §3.2 (JE/JL accumulation-
+acceptance). Covers `document_relationship_candidates` (append-only
+per RLS no_delete + REVOKE DELETE; migration
+`20240149000000:209-220`) and `source_documents` (append-only per RLS
+no_delete + `trg_source_documents_no_delete`; migration
+`20240135000000:344, 421`). N=2 substrate-grain mechanism-extension,
+not N=3 threshold-graduation; same evidence shape as §3.2's Catch #18
+substrate-finding codification. v2.2 Origin footer + Evaluation basis
+per codify-convention skill spec; transitional format seam with pre-
+v2.2 §3.1/§3.2 inline Precedent paragraphs banked as carry-forward.
+
+**Narrow-A wiring + doc-sync (commit b, `fc85c411`).** New
+`pnpm test:full` script in root `package.json`
+(`pnpm db:reset:clean && pnpm test`) as canonical push-readiness
+Condition-1 invocation. CLAUDE.md "What done means" §1 prose clarified
+to distinguish bare `pnpm test` (dev iteration) from `pnpm test:full`
+(push-readiness sweeps). CLAUDE.md push-readiness three-condition gate
+§1 + pre-push sanity sequence substituted to the new command.
+`docs/03_architecture/branching-and-feature-flag-strategy.md` parallel
+codification of push-readiness gate updated coherently. HEAVY-verified
+at commit time: `pnpm test:full` end-to-end = 1547 passed / 10 skipped
+/ 0 failed / 243 test files / ~3.5min wall-clock.
+
+**Operational discipline at testing.md (commit c, `fec457db`).** Names
+the substrate-deletability split (workflow-operator-facing summary;
+full discipline at SKILL.md §3) and the full-suite-vs-dev-iteration
+command pattern. Different consumer from SKILL.md (workflow operator
+vs test author) per S1 venue separation per operator adjudication.
+Cross-references resolve all back-pointers (SKILL.md §3, CLAUDE.md
+"What done means" §1, push-readiness gate, branching-and-feature-flag-
+strategy.md parallel codification).
+
+**Meta-observation #1 — Convention-existence checks span multiple
+venues.** The resumption prompt's Open Question 1 named
+`docs/04_engineering/conventions/testing.md` as the venue to check for
+existing test-isolation convention. The HEAD-pass audit found the
+existing discipline at `.claude/skills/integration-test-rules/SKILL.md`
+§3 — a different venue. Convention codifications live across both
+`docs/04_engineering/conventions/` AND `.claude/skills/`; convention-
+existence checks at HEAD-pass should grep across both as sibling
+discipline-codification homes. Below codification threshold (N=1
+banked); operationally important for future arcs whose resumption
+prompts encode convention-existence assumptions.
+
+**Meta-observation #2 — Substrate-deletability vs failure-mode-axis
+distinction (empirical-not-nominal discriminator sub-class
+refinement).** The class-1 / class-2 split at T8 closeout was on the
+substrate-mechanism-pattern axis (class-1 fires test failures; class-2
+fires working-tree clutter). The umbrella arc's HEAD-pass refined
+class-1 on substrate-deletability (class-1a append-only; class-1b
+mutable) and then the storage diagnostic refined further: class-1a
+and class-1b collapse on the failure-mode axis (empty-state-assumption
+violation) while remaining distinct on substrate-deletability. The
+empirical-not-nominal discriminator (banked at T8 closeout) operates
+at sub-class grain too: same root-cause-class can be split or unified
+depending on which axis the operator examines. Future audits
+encountering similar class-1a/1b-shaped distinctions should examine
+both axes (substrate-mechanism + failure-mode) before locking the
+fix-shape. Below codification threshold (N=1 banked); operationally
+important sub-class refinement of the discriminator.
+
+**Banked observations (rolled into this closeout; below codification
+threshold).**
+
+- **Command-name-bearing-prose grep discipline (T6 analog).** When
+  introducing a new canonical command that downstream documentation
+  references, grep CLAUDE.md and related canonical-discipline docs
+  (`conventions/`, ADRs, `architecture/`) for all references to the
+  old command before authoring substitutions. T6 analog applied to
+  commands rather than counts. Applied here at pre-(b) HEAD-pass;
+  found 4 touch-points across 3 files (CLAUDE.md ×3 + branching-and-
+  feature-flag-strategy.md ×1) plus 3 sites correctly NOT touched
+  (historical narrative, count drift, non-full-suite references).
+  N=1 banked.
+- **Format-consistency-within-file transitional seam.** Introducing a
+  v2.2-format codification (§3.3) in a file with pre-v2.2 sibling
+  codifications (§3.1/§3.2 inline Precedent paragraphs) produces a
+  stylistic seam. Acceptable as transitional state pending future
+  codification-hygiene retrofit covering all pre-v2.2 inline-Precedent
+  codifications across `.claude/skills/`. Banked for the eventual
+  codification-hygiene umbrella arc.
+- **Forward-pointer-in-Origin-footer discipline.** Origin footers
+  should anchor in backward-references (existing SHAs, existing
+  entries) rather than forward-references to not-yet-existing
+  artifacts. Caught at codify-convention skill output review;
+  tightened in §3.3's Cross-references line from "(arc-closeout
+  friction-journal entry pending)" to dropping the parenthetical.
+  Within-arc forward-pointers to commit (b)/(c) destinations remained
+  — they resolve at arc completion, acceptable as transitional state.
+- **HEAVY-verification-at-canonical-command-introduction discipline.**
+  When introducing a new canonical command that downstream
+  documentation references, verify end-to-end at introduction-commit
+  time so the canonical-command's first invocation is intentional and
+  load-bearing. Applied at commit (b): `pnpm test:full` first
+  invocation produced the 1547/0/10 evidence that validates both the
+  command's shape and the diagnostic-driven simplification's claim
+  about storage. Without HEAVY at introduction, the first invocation
+  would have been the operator's first push-readiness gate fire,
+  surfacing any script-chaining or setup issue at the worst possible
+  moment. N=1 banked.
+
+**T4 multi-arc-handoff evidence (N=2 positive instance).** The
+hygiene-arc T4 codification's worked-instance #4 + the T8 closeout's
+class-1/class-2 carry-forward + this arc's named-scope-held
+disposition constitutes N=2 positive instance of T4's value across the
+multi-arc-handoff direction. The umbrella arc inherited class-1/
+class-2 named carry-forwards from T8 closeout; the named scope held
+(class-1 in scope; class-2 carry-forward confirmed); the storage
+diagnostic-message hygiene (d) was cheap-or-skip-evaluated and
+DEFERRED with explicit reasoning. T8 arc demonstrated T4 in the
+deferral-direction (closeout deferred work correctly); this arc
+demonstrated T4 in the acceptance-direction (carry-forwards accepted
+as scope without expanding). Both are instances of the discipline
+producing correct outcomes at arc-handoff points. Below codification
+threshold (N=2; T4's own codification basis was N=4); valuable
+substrate for future arcs revisiting T4's effects across arc
+boundaries — one more multi-arc-handoff instance lands this as a
+codification candidate.
+
+**Class-2 disposition confirmed.** The `_tmp_*.ts` repo-hygiene
+gitignore gap (banked at T8 closeout as adjacent-not-same-class)
+remains carry-forward. The HEAD-pass audit's mechanism analysis
+confirmed the T8 closeout's framing: class-2 is untracked-file
+accumulation gradient (clutter shape), class-1 is substrate-limit-
+threshold-firing (failure shape). No shared root cause surfaced. This
+arc itself did NOT create new `_tmp_*.ts` files during HEAD-pass —
+DB-query diagnostics were satisfied via direct `psql` invocations
+through the Bash tool, avoiding the recursive-irony the prompt
+flagged. The pre-existing `_tmp_classify_check.ts` carry-forward
+remains untouched per the explicit-file-add discipline.
+
+**Move (d) disposition — DEFER per cheap-or-skip.** Optional storage-
+bucket diagnostic-message improvement at
+`storageProviderIntegration.test.ts:212-215` evaluated and deferred.
+~3-4 net lines (above the operator's strict 1-2 line trivial
+threshold); marginal value (defensive diagnostic for a structurally-
+retired failure mode); touches currently-passing test code. Banked
+alongside class-2 as carry-forward queue for the natural sequel
+"storage + repo-hygiene companion arc" framing.
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** HEAVY verification at
+commit (b) `fc85c411`: 1547 passed | 10 skipped | 0 failed | 243 test
+files passed | 4 test files skipped (247 total) | ~3.5 min wall-clock
+via the new `pnpm test:full` canonical command. The T8 closeout's
+storage-test Condition-1 deviation is **resolved** by narrow-A's
+structural enforcement (no documented-deviation needed; bare-green
+achieved).
+
+**Condition 2: met.** Cross-doc references this arc touched are
+internally consistent: SKILL.md §3.3 ↔ CLAUDE.md "What done means" §1
+↔ CLAUDE.md push-readiness gate §1 ↔ pre-push sanity sequence ↔
+testing.md operational section ↔ branching-and-feature-flag-strategy.md
+push-readiness gate. No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; `types.ts` regeneration not
+needed; no ADRs / obligations / migrations affected.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; conventions earned by
+mechanism-extension codified at §3.3 (commit a) and at testing.md
+operational section (commit c). Six observations banked per the
+meta-observations + carry-forward decomposition above.
+
+### Arc character
+
+The arc earned its scope through diagnostic discipline — the same
+arc-character framing as the hygiene-arc closeout (`9f320ded`) and T8
+closeout (`183935ee`) that preceded it. The original Option D's three
+concrete moves were earned through audit + mechanism analysis; the
+diagnostic-driven simplification then collapsed Option D's storage-
+code fix onto narrow-A's structural enforcement, producing a tighter
+arc than the original framing anticipated. HEAVY-verification at the
+canonical-command-introduction commit validated the simplification's
+load-bearing claim empirically.
+
+Three substantive commits, four files, +285/−4 lines. Docs and config
+only; no service-layer code, no migrations, no schema changes. The
+disciplines (T4, codify-convention, multi-line Edit anchor,
+prediction-grounding via HEAD-pass-against-disk, command-name-bearing-
+prose grep) made the substance possible — not the other way around.
+
+## 2026-05-29 — companion-462ad426 arc closeout: storage diagnostic-message hygiene + class-2 `_tmp_*.ts` gitignore gap closed (NOTE)
+
+The companion arc — the small focused continuation banked at
+umbrella test-isolation arc closeout (`462ad426`) — closed today
+after 2 substantive commits plus this closeout entry. Arc lineage:
+`810f44c4` → `50a8bfa6` → [this closeout commit], all on `staging`,
++3 ahead of `origin/staging` at close. Cumulative diff: 2 files
+(+15/−1 lines tracked, plus 1 working-tree delete of a never-tracked
+file). Test-code + repo-config only; no service code, no migrations.
+
+The arc carried two cleanup carry-forwards from prior closeouts.
+Class-1 (storage diagnostic-message hygiene) was banked at umbrella
+close's move (d) cheap-or-skip evaluation as DEFER. Class-2
+(`_tmp_*.ts` gitignore gap) was banked at T8 close's `_tmp_*` repo-
+hygiene observation and reinforced at umbrella close as carry-
+forward. Both substantively resolved.
+
+**Commit (a) — storage diagnostic-message at `810f44c4`.** The
+`bucket-not-found` describe's defensive-cleanup error path at
+`storageProviderIntegration.test.ts:212–218` previously threw
+`deleteError` bare. Now surfaces three load-bearing signals: bucket
+name (`STORAGE_BUCKET`), underlying Supabase error message, and
+post-cleanup object count via `listAllStorageKeys`. Count-not-
+enumeration is the honest scope call — the count discriminates the
+failure class (zero = Supabase storage layer issue; non-zero =
+`listAllStorageKeys` coverage gap in its `org_*/sources/*/*` walk)
+without unbounded key listing. Defensive diagnostic for a failure
+path that narrow-A's structural enforcement (`pnpm test:full`) has
+structurally retired; still worth having if the failure resurfaces.
+
+**Commit (b) — `.gitignore` pattern + tmp-file delete at
+`50a8bfa6`.** Two co-committed changes:
+
+- Narrow gitignore pattern `apps/web/scripts/_tmp_*.ts` added at
+  end of file. Disk scan confirmed `_tmp_*.ts` surfaces only under
+  that path; narrow matches actual disk surface per empirical-not-
+  nominal discriminator. Broadening to `**/_tmp_*.ts` would walk
+  into the same failure mode the file's `/reports/` precedent
+  guards against (Catch #23+#24 at chunk B5-3-D1: broad `reports/`
+  silently captured application source paths at deeper paths).
+  Comment block names companion-462ad426 as codification anchor per
+  the file's existing convention precedent (the `/reports/` block
+  names chunk B5-3-D1 session #1 checkpoint #1 as scope-refinement
+  provenance).
+- Working-tree `rm` of `apps/web/scripts/_tmp_classify_check.ts`.
+  Last-touched 2026-05-24 (5 days post Phase 8 classifier-fix arc
+  close at `32cba4a`); content arc-specific
+  (`synthetic_no_cited_payment` + `synthetic_born_paid` Tier A
+  recalibration scenarios); never tracked in git. All three
+  independent staleness signals point delete. Working-tree
+  operation (not `git rm`) per untracked → rm shape; deletion
+  absent from commit diff but verified via post-commit
+  `git status` showing the file absent.
+
+Structural enforcement over warning-shaped guidance per umbrella
+arc's banked observation: gitignore catches future accumulation if
+cleanup is missed at arc close. The arc-close cleanup practice
+remains canonical; gitignore is defense-in-depth.
+
+**Projection-from-model count update — N=3 disk-landed, entering
+typology codification arc unchanged.** Pre-execution recursive
+refinement: the prior framing of "N=4 entering this arc" was
+advisor-context drift on what counts as a cross-arc instance —
+companion-arc prompt drafting is conversation substrate, not disk-
+landed manifestation. Catch-prevents-manifestation precision
+applies recursively to its own count: draft-time catches don't
+increment the manifestation count. **Arc execution surfaced zero
+new disk-landed instances** of the projection-from-model pattern.
+Cross-arc count entering typology codification arc remains **N=3
+disk-landed** (hygiene close + T8 close + umbrella close). A clean
+arc execution is the discipline-working baseline against which
+manifestation counts get calibrated.
+
+**Banked sub-observations (substrate for typology codification
+arc).**
+
+- **Catch-at-draft-review-before-fresh-session-opens as cheapest
+  layer — discipline-working evidence at sub-arc grain.** Five
+  distinct catch-at-cheaper-layer moves across this arc, none
+  crossed into disk-landed manifestation: (1) operator's N=4-vs-
+  N=3 framing catch in companion-arc prompt drafting; (2) recursive
+  refinement on the catch-prevents-manifestation count itself; (3)
+  `_tmp_classify_check.ts` disposition adjudicated pre-`rm` via
+  three independent staleness signals; (4) `.gitignore` pattern
+  shape adjudicated pre-commit via empirical-not-nominal disk scan;
+  (5) T8 example name verified against friction-journal substrate
+  before commit (b) prose landed. Cost-gradient discipline working
+  at sub-arc grain — each catch fired at the cheapest available
+  layer, each prevented a downstream manifestation. Discipline-
+  working evidence; not a sub-pattern instance count — the catches
+  prevented manifestations of various patterns rather than
+  instantiating any single pattern. Substrate for the future
+  typology codification arc evaluating whether catch-at-cheaper-
+  layer discipline itself warrants codification beyond its current
+  banked status.
+- **Advisor-context-vs-disk drift on execution-state assumptions
+  (sub-instance of projection-from-model at advisor grain; N=1
+  banked).** Mid-arc, the advisor seat treated the drafted-but-not-
+  executed companion prompt as durable arc lineage when proposing
+  the typology codification directive — referenced "the companion
+  arc has closed clean on origin/staging" before the companion arc
+  had actually opened. Executor HEAD-pass-against-disk surfaced the
+  4th-scenario truth (companion arc never opened; `origin/staging`
+  HEAD unchanged at `462ad426`). Sibling-class to the projection-
+  from-model pattern at advisor grain rather than reviewer grain —
+  advisor's tracker-context-from-conversation drifted from disk-
+  truth across the arc-handoff boundary the directive prompt was
+  supposed to bridge. Grain distinction matters for the future
+  typology codification arc's scope adjudication (resolution β
+  specifically): whether advisor-side and reviewer-side instances
+  count toward the same pattern's N or as sibling-grain patterns.
+  Banked as substrate for future-arc grep; not at codification
+  threshold (N=1).
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full` end-to-end: **1547 passed | 10 skipped
+| 0 failed | 243 test files passed | 4 test files skipped (247
+total)** at 3m20.9s wall-clock. Turbo cache invalidated by commit
+(a)'s touch to `storageProviderIntegration.test.ts` (test source
+change); fresh execution confirmed via `0 cached / 1 total turbo
+tasks`. Previous baseline at umbrella close HEAVY was 1547/0/10/247
+(commit `fc85c411` evidence); fresh result matches baseline exactly,
+confirming commits (a) and (b) introduced no regressions.
+
+**Condition 2: met.** No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; `types.ts` regeneration
+not needed; no ADRs / obligations / migrations affected. Cross-doc
+references this arc touched (`.gitignore` comment block names
+companion-462ad426 + T8 closeout's tmp file naming convention) are
+internally consistent.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; two banked sub-
+observations recorded for future typology codification arc
+consumption. Arc-overview + commit-substance + Condition 1/2/3
+evaluation per active rolling venue precedent.
+
+### Arc character
+
+The arc executed cleanly per its small focused scope — 2
+substantive commits, 2 carry-forwards closed, no scope expansion,
+no orthogonal failures surfaced. The pre-execution review cycle
+(operator's draft-time catches + recursive refinements + per-call
+adjudication) produced an execution path that landed exactly as
+adjudicated; no surprises at disk.
+
+The arc-character framing converges with the prior three arcs
+(hygiene `9f320ded`, T8 `183935ee`, umbrella `462ad426`):
+disciplines compound across arcs in the expected direction;
+carry-forwards externalize at each closeout; cost-gradient
+discipline operates at multiple grains (cross-arc + sub-arc +
+intra-conversation). The small-scope hygiene arc shape is the
+right vehicle for closing carry-forwards before they decay — the
+discipline of arc-closes-fresh-carry-forward extended to a 4th
+instance.
+
+Next sequel: typology codification arc per pre-drafted resumption
+prompt + directive. Cross-arc projection-from-model count enters
+typology codification arc at N=3 disk-landed (advisor-grain
+instance from this arc is sibling-class, N=1 at its own grain).
+Open question to verify at that arc's HEAD-pass: what does
+`docs/04_engineering/conventions/README.md` actually say about the
+codification threshold? Framework-vs-sub-pattern conflation
+surfaced in advisor draft-review; HEAD-pass disambiguates
+resolution (α/β/γ).
+
+## 2026-05-29 — typology codification arc closeout: four-category prompt-drift typology (framework) + projection-from-model sub-pattern (single-pattern-multi-grain) co-shipped under resolution (γ) (NOTE)
+
+The typology codification arc — opened against companion-arc
+closeout (`a4cc0f02`) per the next-sequel framing — closed today
+after 2 substantive codification commits plus this closeout entry.
+Arc lineage: `6fb86c86` → `39b35727` → [this closeout commit], all
+on `staging`, +3 ahead of `origin/staging` at close. Cumulative
+diff: 2 new convention files (+538 lines tracked) plus this
+closeout entry's friction-journal append. Docs-only; no code, no
+migrations, no schema changes.
+
+The arc carried two codification candidates banked at companion-
+arc closeout: the four-category prompt-drift typology framework
+(object #1) and the projection-from-model-without-disk-check sub-
+pattern (object #2). HEAD-pass adjudication call 2 resolved (γ):
+two codifications, separate artifacts, both shipped at this arc.
+Both objects cleared their respective README §codification-
+thresholds requirements — framework at process-meta-pattern N=2-
+with-shape-match + N=3-confirms via mechanism-tagging-at-
+graduation-review (loose interpretation per README §family-tag
+assignment); sub-pattern at friction-journal-pattern N=3
+codification threshold (reviewer-grain N=3 + advisor-grain N=3
+disk-landed; single-pattern-multi-grain framing per call 3).
+
+**Commit (a) — framework codification at `6fb86c86`.** Codified
+the four-category prompt-drift typology at
+`docs/04_engineering/conventions/prompt-drift-typology.md` (220
+lines). Framework operates as a HEAD-pass checklist: (A) prompt-
+vs-disk, (B) prompt-vs-ratified-contract, (C) prompt-vs-running-
+environment, (D) gap-fill at consumer. Each category has its
+discriminator; HEAD-pass runs the checklist before authoring
+substantive work. Worked instances span five distinct timing
+surfaces (codification-decision at hygiene close + multi-arc-
+handoff at T8 close + substrate-collapse-disambiguation at
+umbrella close + small-scope-carry-forward-closure at companion
+close + codification-arc-self-application at this arc's HEAD-pass
+loop-closing meta-instance). Format precedent:
+`ratified-contract-scope.md` framework-shape; v2.2 Origin footer +
+Evaluation basis per `codify-convention` skill spec.
+
+Three-criteria evaluation per framework codification:
+
+- **Load-bearing (prescriptive)** — generates concrete operator
+  action at every prompt's HEAD pass (run the four-category
+  checklist).
+- **Generalizable** — substrate-class-agnostic; N=5 distinct
+  arc-shapes demonstrated.
+- **Stable** — categories stable across hygiene → T8 → umbrella
+  → companion → typology codification arcs (~3 days, N=5 timing
+  surfaces; no category added/removed; no sub-shape
+  destabilization).
+
+**Commit (b) — sub-pattern codification at `39b35727`.** Codified
+the projection-from-model-without-disk-check sub-pattern at
+`docs/04_engineering/conventions/projection-from-model.md` (318
+lines). Sub-pattern operates at the moment projected state is
+encoded or affirmed without disk-verification. Three observed
+sub-shapes documented:
+
+1. **Reviewer-grain** — catches at executor HEAD-pass.
+2. **Advisor-grain** — catches at next-session disk-touch or
+   operator disk-truth verification, with `#### Bilateral
+   sub-shape` nested (catch-from-outside-the-affirmation-loop
+   discipline).
+3. **Manifestation-vs-discovery divergence** — substrate-routing
+   sub-shape (N=1 banked exploratory).
+
+Single-pattern-multi-grain framing per HEAD-pass adjudication
+call 3: grains are sub-shapes within one pattern, not sibling
+patterns. Format precedent: `prediction-grounding.md` +
+`regex-permissive-matching.md` (sub-shape enumeration with `###`
+sub-headings).
+
+Three-criteria evaluation per sub-pattern codification:
+
+- **Load-bearing (prescriptive)** — generates concrete operator
+  action when pattern fires (stop, surface, verify against disk).
+- **Generalizable** — multiple grains × multiple sub-shapes ×
+  multiple substrate types; surface diversity is the empirical
+  evidence.
+- **Stable (exploratory framing)** — pattern substance consistent
+  since hygiene close (2026-05-27); name formalized at companion
+  close (2026-05-29 — two days ago); two new sub-shapes surfaced
+  at this arc's HEAD-pass (bilateral-grain + manifestation-vs-
+  discovery). Recency + active sub-shape emergence makes
+  exploratory framing the honest call.
+
+**Grain-distinction disposition (adjudication call 3).** Single-
+pattern-multi-grain. Reviewer-grain and advisor-grain are sub-
+shapes within one pattern (same substance — treating projected
+state as disk-truth — different consumer-sides and catch-layers),
+not sibling patterns. Sub-shape distinction belongs at the sub-
+pattern artifact (`### 1` + `### 2` enumeration) rather than at
+the codification-target distinction level. The combined-N
+argument (advisor + reviewer = N=6) is structurally available but
+not load-bearing — even at sibling-grain framing, each grain
+independently clears N=3.
+
+**Banked sub-observations (substrate for future arcs).**
+
+- **Catch-at-draft-review discipline-working evidence at sub-arc
+  grain — extension from companion close's banking with this
+  arc's additional manifestations.** This arc's HEAD-pass +
+  draft-review surfaces fired multiple catches before disk-
+  landing manifestation: (1) lineage-anchor drift caught at
+  HEAD-pass step 2; (2) framework worked-instance T8/umbrella
+  attribution refined from declarative to descriptive at commit
+  (a) draft review; (3) framework loop-closing meta-instance
+  trimmed to cross-reference at commit (a) draft review; (4)
+  bilateral sub-shape cross-listing precision (terse + cross-ref)
+  at commit (b) draft review; (5) Promoted-from dual-naming-site
+  refinement at commit (b) draft review (hygiene close first
+  reviewer-grain naming; companion close first advisor-grain
+  naming); (6) Evidence basis strict-vs-loose distinction per
+  banking-site at commit (b) draft review. Six distinct catch-at-
+  cheaper-layer moves across this arc, none of which crossed
+  into disk-landed manifestation per catch-prevents-manifestation
+  precision. Discipline-working evidence at sub-arc grain (not a
+  sub-pattern instance count). Cost-gradient discipline operating
+  cleanly: catch-fresh < catch-at-HEAD-pass < catch-post-commit
+  < catch-post-push.
+
+- **Advisor-grain bilateral sub-shape evolution — N=1 disk-landed
+  at this arc's HEAD-pass; codified at exploratory framing.** The
+  lineage-anchor catch at HEAD-pass step 2 manifested the
+  bilateral sub-shape — advisor + operator + executor three-layer
+  affirmation feedback loop bypassed single-side review surfaces;
+  catch required catch-from-outside-the-affirmation-loop (next
+  session's disk-touch in this case). Sibling-class to the
+  unilateral advisor-grain sub-shape (companion-close mid-arc +
+  sequencing-discussion instances). Codified at
+  `projection-from-model.md` §Bilateral sub-shape of advisor-
+  grain with exploratory framing per Stable criterion.
+
+- **Manifestation-vs-discovery substrate-routing sub-shape — N=1
+  disk-landed; resolution practice codified at exploratory
+  framing.** The lineage-anchor catch had divergent manifestation-
+  site (companion arc's close-sequence, where the push didn't
+  land + bilateral affirmation of durability fired) and discovery-
+  site (typology codification arc's HEAD-pass step 2, where the
+  executor caught the drift). README §family-tag-assignment
+  convention's substrate-tagging-at-banking-time default doesn't
+  directly address this divergence. Resolution practice codified:
+  record catch at discovery-site with explicit framing about
+  manifestation-site; avoid retroactive amendment unless
+  discovery materially changes manifestation-site arc's
+  evaluation. Codified at `projection-from-model.md` §3
+  Manifestation-vs-discovery divergence with exploratory framing.
+
+- **Recursive disk-landing shape — codification artifact serves
+  as disk-landing site for instances surfaced during the
+  codification arc itself.** Sibling-class to the loop-closing
+  meta-instance precedent banked at T4 codification
+  (`ratified-contract-scope.md` Worked instances: "this
+  codification's own bounded read of the T8 dispatchTrigger
+  deviation held to characterization, not investigation —
+  codifying a discipline that the codification act itself
+  practices"). For this arc: the sequencing-discussion-at-
+  typology-draft instance (operator-caught at draft-review) and
+  the lineage-anchor-catch-at-typology-HEAD-pass instance
+  (executor-caught at HEAD-pass) are both recorded in
+  `projection-from-model.md`'s Evidence basis. The codification
+  artifact is itself the disk-landing site for those two
+  instances. Structurally honest: the codification arc consumes
+  its own manifestation history as substrate for the codification.
+  Same loop-closing meta-shape as T4's "earned the right to
+  codify T4 by practicing it well."
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full`: **1547 passed | 10 skipped | 0 failed
+| 243 test files passed | 4 test files skipped (247 total)** via
+turbo cache hit at 98ms (1 cached / 1 total tasks); `pnpm
+db:reset:clean` ran ahead of turbo's cached check. Commits (a)
+and (b) are doc-only files at `docs/04_engineering/conventions/`
+(not turbo inputs for the test task); cache chain holds from
+`a4cc0f02` companion-close baseline. Source-state parity yields
+operational-equivalent baseline confirmation; the codification
+commits introduced zero regressions to the test substrate.
+
+**Condition 2: met.** No `invariants.md` / `control_matrix.md` /
+`ledger_truth_model.md` surfaces touched; no ADRs / migrations /
+obligations affected; `types.ts` regeneration not needed. Cross-
+doc references between the two codification artifacts (framework
+↔ sub-pattern bidirectional) + README sibling-conventions
+citations + `prediction-grounding.md` sibling-pairing cross-
+reference + 5 friction-journal banking-site citations per
+artifact all internally consistent.
+
+**Condition 3: met (this entry).** Retrospective written (this
+closeout entry); friction-journal updated; four banked sub-
+observations recorded for future arc consumption.
+
+### Arc character
+
+The arc executed with active adjudication of structural decisions
+at multiple stages — resolution α/β/γ (call 2: γ); grain
+distinction (call 3: single-pattern-multi-grain); filename(s)
+(call 5: `prompt-drift-typology.md` + `projection-from-model.md`);
+commit shape (call 6: 3 commits framework + sub-pattern +
+closeout); cross-listing precision (Decision 4: terse + cross-
+ref); dual-naming framing (Decision 5: both hygiene-grain and
+companion-grain explicit naming sites); strict/loose distinction
+(refinement 3: per-instance interpretation-status). The pre-
+execution review cycle (operator's draft-time catches + executor
+HEAD-pass + per-commit review iterations) produced an execution
+path that landed exactly as adjudicated; no surprises at disk for
+the codification commits themselves.
+
+The HEAD-pass lineage-anchor catch loop-closing meta-instance is
+itself substrate the codification artifacts consume — codifying
+disciplines the codification act itself practices. The arc earned
+its dual codification by practicing both disciplines (the four-
+category framework caught the lineage-anchor drift via category-
+A; the projection-from-model sub-pattern was instantiated at
+advisor grain through the bilateral affirmation feedback loop)
+and routing the substrate honestly (manifestation-vs-discovery
+resolution practice + recursive disk-landing shape both pre-
+positioned at exploratory framing).
+
+The arc-character framing converges with the prior four arcs
+(hygiene `9f320ded`, T8 `183935ee`, umbrella `462ad426`, companion
+`a4cc0f02`): disciplines compound across arcs in the expected
+direction; carry-forwards externalize at each closeout; the dual-
+codification arc shape ships when both candidates clear threshold
+from the same evidence base; cost-gradient discipline operates at
+multiple grains (cross-arc + sub-arc + intra-conversation +
+draft-review).
+
+Three substantive commits, two new convention files, +538 lines
+plus this closeout. Docs only; no service-layer code, no
+migrations, no schema changes. The disciplines (T4 ratified-
+contract-scope, four-category prompt-drift typology being
+codified here, projection-from-model sub-pattern being codified
+here, codify-convention skill, multi-line Edit anchor, prediction-
+grounding via HEAD-pass-against-disk, observation-vs-application-
+grain N count distinction, substrate-tagging at banking with
+mechanism-tagging at graduation-time discriminator) made the
+substance possible — not the other way around.
+
+## 2026-05-29 — Ring 2A-authoring design-authoring arc closeout: (δ.1) confirmed, gating call (V1) HOLDS at medium scope, ship-v1-now; ADR-0026 design spec shipped (NOTE)
+
+The Ring 2A-authoring arc — opened against typology-codification
+closeout (`b5a2ced4`) per the next-sequel framing, and the
+substantive-feature sibling of Ring 2A-core per ADR-0024's H-split
+— paused today at its **design-authoring segment** after 3
+substantive commits plus this closeout. Arc lineage: `46fe7dcf`
+(brainstorm) → `61945a01` (pre-ADR verification) → `c85eb7c6`
+(ADR-0026 design spec) → [this closeout commit], all on `staging`,
++4 ahead of `origin/staging` at close. Cumulative diff: +358 lines
+tracked across three `docs/09_briefs/post-mvp/` artifacts plus this
+friction-journal append. Docs-only; no service-layer code, no
+migrations, no schema changes — the implementation phase (landing
+Decisions 1–8) opens as a fresh later arc per the operator's
+pause-at-design-spec disposition (canonical ADR-0024 pause-point;
+CTO ratification is a separate decision-act; implementation is an
+8-decision multi-commit body of work warranting its own arc shape).
+
+**Opening structural adjudication — (δ.1).** ADR-0024 OQ4 deferred
+to this arc *how* INV-AGENT-002 (Logic Receipt write path) lands
+relative to Ring 2A-authoring. The HEAD-pass disk-grounded a
+reframing beyond the prompt's α/β/γ menu: INV-AGENT-002 is scoped
+to autonomous-agent ledger auto-posts (`agent_autonomy_model.md`
+§10), **not** to rule creation (a governance action); the Four
+Questions render from `ProposedMutation` content fields, not the
+Logic Receipt write path. So INV-AGENT-002 is **not** a v1
+prerequisite of Ring 2A-authoring — it defers to rung activation.
+The operator confirmed (δ.1): Ring 2A-authoring v1 = rule-creation
+only, against ratified substrate. A category-B check resolved that
+ADR-0024's *actual text* faithfully named the prerequisite (no
+cite-vs-actual drift); the imprecision lived in ADR-0024:127's
+compression (the ADR-compression-vs-deeper-canon sub-shape, below).
+
+**Commit (a) — brainstorm at `46fe7dcf`.** Mapped the v1 decision
+space (Decisions A–F) against ratified substrate. Three flag-and-
+propose divergences corrected at the four-category typology HEAD-
+pass: (A, Cat-A) `proposalBuilder` is a Tier-2 document-pipeline
+Stage-7 function, not a chat-drafting API — the real precedent is
+the `postJournalEntry(dry_run)` → `respondToUser(canvas_directive)`
+flow; (B, Cat-A + spec-vs-code) the Four Questions already render
+in `ProposedEntryCard.tsx:188–219` from `policy_outcome` templating,
+not `ProposalJustificationSchema.justification.*` (no v1 producer);
+(E, Cat-A + Cat-B) closed-grammar predicates are reserved for Ring 2
+(`rule-type-core.md:262`) with no v1 storage, so v1 Decision E =
+NL → `(vendor, bundle_type, default_account)` extraction, not
+predicate-grammar mapping. Net: arc scope shrank materially at
+brainstorm.
+
+**Commit (b) — pre-ADR verification at `61945a01`.** Six
+verifications; the gating call (V1) HOLDS — v1 vendor rules are
+branchless (`rule-type-core.md:406/408`; predicate JSON schema
+reserved Ring 2; no condition storage; `createVendorRule` takes
+only `(vendor_id, bundle_type, default_account_id)`), so Decision E
+holds and the arc does not reopen. Three corrections (V2 three-
+framing render-path; V4 `card_resolution` is `ai_actions`-derived,
+not reusable; V6 creation-time Q3 needs a new template, not the
+match-time `track_record.no_rule`), two sharpenings (V3 persona
+prompt-scaffolding is the design work; V5 `createVendorRule`
+requires non-null `vendor_id` — stricter than the document
+pipeline), one operator flag (v1-inertness: a branchless v1 rule
+produces `almost_match` → default approval, accrues no winning
+track record until Ring 2B).
+
+**Commit (c) — ADR-0026 design spec at `c85eb7c6`.** Eight
+decision-bearing decisions. The design-spec's targeted HEAD-pass
+caught a load-bearing correction the brainstorm + verification
+both missed: `rule_lifecycle_state = {proposed, active, demoted,
+retired}` (no `rejected` state, `20240163:92–97`); `proposed →
+active` derives from `vendor_rules.approved_at` (the approval
+ceremony, `20240163:271/306`), **not** `promote()` (rung ascension,
+inert at v1); and no shipped service writes `approved_at` — so this
+arc must author the approval-ceremony writer (new service work
+beyond pure wiring; `createVendorRule` untouched per T4). Corrected
+Decision 5: draft is ephemeral → approve = create (`proposed`) +
+approval-ceremony write (`approved_at` → `active`) → reject is
+ephemeral (no `rejected` state). No migration (wires existing
+substrate + authors a writer against shipped columns).
+
+**Sequencing-call disposition — ship-v1-now.** Given v1-inertness,
+the operator adjudicated whether to ship rule-creation now vs fold
+into Ring 2B. Ship-v1-now, on substrate-only-v1 precedent + T4
+(ADR-0024 names this arc's scope) + Ring-2B-is-already-large. The
+load-bearing refinement: unlike Ring 2A-core's promotion-modal/gate
+inert surfaces (zero v1 user contact), this arc's drafting +
+approval UX **is exercised at v1** — substrate-validated-through-
+use, not scaffold-and-wait. The v1 value is the conversational-
+drafting/approval UX + intent-recording + registry-population.
+
+**Banked sub-observations (substrate for future arcs; all
+banked-not-codified, N<3 per item — no codification fired this
+arc).**
+
+- **Three-framing render-path precision (V2).** Sharpens the
+  spec-vs-code divergence sub-shape from two-way to three-way:
+  `intent_model.md justification.*` / shipped `policy_outcome` /
+  `rule-type-core.md §6.4 MatchResult.four_questions_population`.
+  The creation-time `ProposedRuleCard` population is a fourth,
+  distinct surface (no MatchResult, no policy_outcome at creation).
+  Bank for the Logic Receipt write path arc's reconciliation.
+
+- **v1-inertness honesty pattern + substrate-validation-through-
+  user-contact refinement.** Substrate-only-v1 deliverables carry
+  an honest cost-shape worth naming at arc-character closeout
+  (precedent: Ring 2A-core promotion-modal-inert disclosure). The
+  refinement distinguishes surfaces that get v1 user contact
+  (this arc) from those that purely wait (Ring 2A-core gate). N=1
+  refinement; bank for future substrate-only-v1 arcs.
+
+- **Vendor-resolution strictness gradient (V5).** The document
+  pipeline tolerates a null vendor (posts the bill unset for later
+  manual entry); rule creation requires a non-null `vendor_id`
+  (dedup + FK key). Sibling consumers diverge on null-tolerance
+  per consumer-strictness. Bank for future arcs encountering the
+  same gradient.
+
+- **Advisor-grain catch-at-cheaper-layer (N=2 sub-arc).** The
+  advisor revisited its own prior framing with new precision twice
+  within the arc (the substrate-validation refinement at the
+  sequencing call; the withdrawal of the "framing-carry-forward
+  drift" sub-observation when disk showed the carry-forward was
+  faithful). Sibling-class to the projection-from-model advisor-
+  grain instances; catch-from-outside-the-affirmation-loop
+  operating at advisor-grain. Substrate-density-improvement, not
+  a codified sub-pattern instance.
+
+- **Late-emerging-substrate-requirement caught at design-spec
+  HEAD-pass (new at this arc).** The approval-ceremony writer was
+  missed by the brainstorm + verification because their decision
+  frames focused on consumer surfaces (drafting/card/approval/
+  create); the design-spec's targeted HEAD-pass on the
+  `rule_lifecycle_state` enum + `approved_at`-derived activation
+  surfaced the missing writer. Discipline-working evidence: each
+  layer's targeted HEAD-pass catches what prior layers' broader
+  HEAD-passes missed. Cost-gradient discipline at the design-spec
+  layer (catch-at-design-spec < catch-at-implementation).
+
+**Drift-grain taxonomy substrate (banked-not-codified; N=1 per
+grain beyond the codified prompt-grain).** This arc's catches
+populate a three-grain taxonomy beyond the four-category prompt-
+drift typology (which operates on prompts): prompt-grain (the
+codified typology, `b5a2ced4`); ratified-doc-grain (ADR-compression-
+vs-deeper-canon — ADR-0024:127 compressed "auto-post needs the
+Logic Receipt write path" into "Ring 2A-authoring needs it"; N=1);
+code-grain (spec-vs-code divergence at the render path; N=1,
+sharpened to three-framing by V2). Each grain operates at a
+different substrate layer (prompts / ratified docs / shipped code)
+with different discriminators and catch-layers. Below codification
+threshold individually; the taxonomy itself is accumulating
+substrate for future framework-extension consideration.
+
+**Recursive-shape evidence.** The framework codified at `b5a2ced4`
+caught drifts at every prompt-layer of this arc — the resumption
+prompt (control_matrix path Cat-A; Q30 content-shape projection-
+from-model), each authoring sub-prompt (Decisions A/B/E; Decision 5),
+and the executor's own grep-truncation (caught from outside via a
+fuller grep). The disciplines being codified continue to discipline
+the acts that practice them.
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met under bare-green clause.** Fresh closeout-time
+HEAVY via `pnpm test:full`: **1547 passed | 10 skipped | 0 failed
+| 243 test files passed | 4 test files skipped (247 total)** —
+identical to the HEAD-pass baseline at `b5a2ced4`. The three arc
+commits are docs-only (all under `docs/`), so the code/test state
+is byte-identical to the baseline; turbo cache reflects this. No
+Condition-1 deviation.
+
+**Condition 2: met.** No canonical substrate touched — no
+`invariants.md` / `control_matrix.md` / `ledger_truth_model.md` /
+`types.ts` changes; no ADR ratified (ADR-0026 is the pre-
+ratification design spec, not yet the ratified ADR file). The
+three artifacts are `docs/09_briefs/post-mvp/` design-authoring
+documents. Doc-sync is trivially reconciled (nothing to reconcile).
+
+**Condition 3: met by this entry.** Closeout written
+(this friction-journal NOTE); arc-scope sub-observations banked
+(five, above); no conventions earned codification this arc (all
+banked items N<3) — the codify-convention forcing function was
+evaluated and correctly did not fire.
+
+### Arc character
+
+The design-authoring segment closed cleanly at the canonical
+ADR-0024 pause-point. The arc's defining feature is the
+layer-by-layer scope sharpening: the brainstorm shrank scope (three
+flag-and-propose divergences), the verification held the gating call
+while correcting three leans, and the design-spec's targeted HEAD-
+pass caught the one late-emerging substrate requirement (the
+approval-ceremony writer) that the consumer-surface-focused prior
+layers missed. Each layer's narrower HEAD-pass caught what the prior
+layer's broader pass could not — the cost-gradient discipline
+operating across the brainstorm → verification → design-spec
+sequence exactly as the framework predicts.
+
+The opening adjudication (δ.1) is the arc's structural anchor: the
+disk-grounded reframing of INV-AGENT-002's scope (auto-post, not
+rule-creation) converted a presumed Tier-1-prerequisite blocker
+into a clean deferral, keeping the arc at medium scope. The arc-
+character framing converges with the five-arc lineage (hygiene
+`9f320ded` → T8 `183935ee` → umbrella `462ad426` → companion
+`a4cc0f02` → typology codification `b5a2ced4`): disciplines compound
+across arcs; carry-forwards externalize at each closeout; the
+substantive-feature arc shape (brainstorm → verification → design-
+spec, with implementation deferred to a fresh arc) matches the
+ADR-0023 → ADR-0024 → ADR-0025 precedent it modeled on.
+
+Three substantive commits (+358 lines), one design spec reserving
+ADR-0026, plus this closeout. Docs only; no code, no migrations, no
+schema changes. The implementation phase opens as a fresh arc
+anchored to this push's SHA, carrying six design-spec open questions
+(persona scaffolding; `default_account` v1 role; approval-ceremony
+writer home; vendor disambiguation UX; card placement; multi-rule
+drafting) and the five banked sub-observations as substrate.
+
+## 2026-05-30 — Ring 2A-authoring implementation arc closeout: 8-decision body landed backend-up→agent→UI; codification gate on late-emerging-substrate DEFERRED (α/β split, observation-grain N=1-arc); v1 rule-creation live on staging (SHIPPED)
+
+The Ring 2A-authoring **implementation** arc — opened against the
+design-authoring closeout (`246248ce`) as its fresh-arc successor,
+landing ADR-0026 Decisions 1–8 — closed today. Arc lineage:
+`8fb8b714` (ratify ADR-0026 + 2 CTO amendments) → `7221067f`
+(reconcile 2 ratification-time substrate errors, pre-code) →
+`abb79c83` (commit b — approve RPC + wrapper) → `4654a12c` (commit
+c — create route + permission + orchestration) → `0543e75c` (commit
+d — drafting agent surface) → `67e44bb1` (commit e — UI render +
+registry wiring) → [this closeout commit], all on `staging`, +6
+ahead of `origin/staging` at the design-authoring anchor. The arc
+sequenced **backend-up → agent → UI** (RPC → route → tool → card),
+each layer landing against the one below it already on disk. HEAVY
+at commit e: **1573 passed / 0 failed / 10 skipped (253 files)**.
+Substrate touched: 2 migrations (`20240167` rule.create permission;
+`20240168` approve_vendor_rule_atomic RPC), `ACTION_NAMES +=
+rule.create`, the `canvasDirective` schema/type (+`rule_registry`,
++`proposed_rule_card` payload), and ADR-0026 (ratified in-arc +
+amended). The implementation practiced **ADR-before-code twice**
+(both reconciliations landed before their deviating code).
+
+### Lead substrate-observation — codification gate on late-emerging-substrate-requirement: DEFER
+
+The arc's defining pattern fired **N=6** (design-spec N=1 from the
+prior closeout, plus implementation N=2–6 this arc). At closeout the
+`codify-convention` forcing function ran the three-criteria gate
+against the α/β two-sub-shape framing. **Outcome: DEFER** — neither
+a new convention nor codify-now. The reasoning, disk-grounded:
+
+- **Captured-elsewhere (dismisses a *new* convention).** The core
+  phenomenon — substrate at a lower layer silently decomposing into
+  bugs at a layer boundary — is already codified as **"Material Gaps
+  Surface at Layer-Transition Boundaries"**
+  (`docs/04_engineering/conventions/session/scope-lock.md`; Phase
+  1.2, N=5: P11b/P14/P16/P19/P21). All six instances this arc are
+  that shape: a ratified decision cited substrate at one layer
+  (account-selector; RuleRegistryView nav; approval-ceremony writer;
+  route-authz permission; `validTemplateIdsSection` renderer) that
+  wasn't verified against the other side. A new standalone
+  convention would duplicate; the existing convention's amendment is
+  the cleaner path.
+
+- **The distinguishing α/β content is complementary-downstream, not
+  a refinement.** The existing convention's remediation is
+  *prophylactic verification* (state the cross-layer dependency
+  explicitly + verify both sides at scope-lock/brief-authoring, so
+  the gap never reaches implementation). The α/β split is a
+  *resolution* discipline that fires *after* a layer-gap reaches
+  implementation despite prevention: **α** (the late substrate
+  reveals a ratified-contract-vs-disk *error*) → ADR-before-code
+  reconciliation; **β** (substrate *assumed-but-absent/incomplete*)
+  → scope-decision (build-now / complete / defer). Different
+  operational moment (impl-HEAD-pass resolution vs scope-lock
+  prevention) → genuinely new material when it graduates, not a
+  duplicate.
+
+- **Stable fails for the α/β split → DEFER (not codify-now).** The
+  N=6 is **application-grain-inflated within a single arc**; per the
+  observation-grain-vs-application-grain convention, six applications
+  of the insight within one arc is **observation-grain N=1** for the
+  α/β split. The split has fired in exactly one arc (Ring
+  2A-authoring). The split is the freshly-articulated contribution;
+  it needs a second observation-grain context before it settles.
+  *High N did not force codification — the N reflects this arc
+  exercising the split repeatedly, not the split settling.*
+
+**Graduation shape when it fires:** an **amendment** to "Material
+Gaps Surface at Layer-Transition Boundaries"
+(`docs/04_engineering/conventions/session/scope-lock.md`) adding
+(a) the **prior-invisibility framing** — the gap is invisible at the
+upper layer's frame until a deeper HEAD-pass reaches the substrate
+— and (b) the **α/β resolution-split subsection**. **Re-evaluation
+trigger:** the next arc (Logic Receipt write-path, or Ring 2B) where
+a layer-transition gap surfaces at implementation **and the α/β
+resolution decision fires** — i.e., observation-grain N=2 for the
+split. At that point it graduates as the amendment.
+
+**The N=6 instance inventory (the deferral's evidence record).**
+Two resolve via α (ratified-contract error → amendment), three via
+β (substrate gap → scope-decision); N=1 was design-spec-time:
+
+- **N=1** — approval-ceremony writer absent (design-spec HEAD-pass,
+  pre-ratification; ADR ended correct). *(Prior closeout's bank.)*
+- **N=2** (α) — route-authz `rule.create` permission missing from
+  the catalog (commit-b HEAD-pass, post-ratification; ADR error →
+  amendment `7221067f`).
+- **N=3** (α) — Decision-5 two-table atomic-write mechanics +
+  `lifecycle_state`-not-derived (commit-b authoring-prep,
+  post-ratification; ADR error → amendment `7221067f`).
+- **N=4** (β) — account selector doesn't exist (commit-e HEAD-pass;
+  Ring-2A-core substrate gap → scope-decision: OQ-2 account
+  display-only, Ring-2B-defer).
+- **N=5** (β) — `RuleRegistryView` shipped-but-unwired to navigation
+  (commit-e HEAD-pass; Ring-2A-core substrate gap → scope-decision:
+  wire it, T4-clean).
+- **N=6** (β) — `validTemplateIdsSection()`'s curated two-group
+  renderer below the `AGENT_EMITTABLE` map edit (commit-e HEAD-pass,
+  this session; the prior session's *own* incomplete-mirror gap →
+  scope-decision: complete the mirror, Shape A). Caught by the
+  `agentTemplateIdSetClosure` line-112 closure test, not by reading
+  — a structural gate reaching substrate a layer below the edit.
+
+### Per-commit substance
+
+- **Ratification `8fb8b714`** — ADR-0026 ratified + 2 CTO amendments
+  (modules-taxonomy forward-flag note; Decision 5 enriched to name
+  `vendorRuleService.approve` as the approval-ceremony writer).
+
+- **Reconciliation `7221067f`** — two ratification-time substrate
+  errors corrected *before* the deviating code (ADR-before-code):
+  Decision 5's two-table-atomic-write mechanics, and the Migration
+  outline ("No migration" → two function/seed-only migrations).
+  The α-resolution path for N=2/N=3.
+
+- **Commit (b) `abb79c83`** — `approve_vendor_rule_atomic` RPC
+  (`20240168`; SECURITY DEFINER + service_role grant, the
+  forward-flag inherited from `create_vendor_rule_atomic`) +
+  `vendorRuleService.approve` thin wrapper; idempotent on
+  `approved_at IS NULL`. 7 integration tests (3 RPC + 4 wrapper). A
+  reviewer-grain test-layer catch fired: per-call vendor-uniqueness
+  discipline applied to the wrapper test but not the sibling RPC
+  test; caught by the test:full summary gate, fixed test-only.
+
+- **Commit (c) `4654a12c`** — `POST /api/orgs/[orgId]/rules` +
+  `20240167` (`rule.create` permission, controller-only; `ACTION_NAMES
+  += rule.create`; CA-27/28/37 parity) + `createAndApproveVendorRule`
+  two-step orchestration in a **new composition-layer file
+  `ruleAuthoringService.ts`**. The composition-layer extraction
+  resolved a three-way constraint (Decision-7 "handler orchestrates"
+  literal × testability needing a callable fn × T4
+  "don't-modify-`ruleCreationOrchestrator`") — a new sub-shape:
+  ratified-decision-literal-vs-implementation-constraints →
+  composition-layer extraction (N=1, banked).
+
+- **Commit (d) `0543e75c`** — `draftVendorRule` tool (controller
+  persona, `gatedByDispatcherSet`) + `resolveDraftVendorRule`
+  (`vendorService.matchVendor` → rule_draft / vendor_ambiguous /
+  vendor_not_found; non-null `vendor_id` gates the draft, V5 blocking
+  pre-condition) + `proposed_rule_card` directive contract
+  (placeholder-rendered at d) + persona scaffolding (Decision 2). 
+  Structural gates: `ORG_SCOPED_TOOLS` auto-derive (5→6) +
+  `agentPersonaWhitelist` CA-44 (10→11, controller-only).
+
+- **Commit (e) `67e44bb1`** — `ProposedRuleCard` creation-time
+  Four-Questions render (V2 population; ephemeral reject/edit per
+  Decision 5; Approve → POST `/rules` → navigate) + `rule_registry`
+  directive wiring Ring-2A-core's shipped `RuleRegistryView`
+  (Decision 8; T4 — renders, doesn't modify) + `proposed_rule.*`
+  templates ×3 locales, Zod-validated in `AGENT_EMITTABLE` and
+  rendered in `validTemplateIdsSection` (§3 mirror + §4 Zod-validated).
+  This session resolved the commit-e red→green (jsdom directive;
+  closure-test namespace filter; Shape-A renderer group; schema
+  doc-sync fold) — see the count forensics below.
+
+### Running tally — banked sub-observations (all banked-not-codified beyond the DEFER above)
+
+- **Reviewer/advisor-grain projection-from-model — cumulative
+  N≈7+ across two consecutive arcs.** This arc's instances all
+  caught at the cheapest layer (executor HEAD-pass / draft-review
+  against disk): modules tokens (adr:lint), Decision-5 abstractness,
+  `createVendorRule` return shape, signature shape, `matchVendor`
+  signature, `ORG_SCOPED_TOOLS` auto-derive. The framework I
+  co-author catching my projections at every surface —
+  drafter-not-exempt fully operational. *(References
+  `docs/04_engineering/conventions/projection-from-model.md`.)*
+
+- **Verify-against-the-authoritative-source — three surfaces this
+  session.** The same shape recurred at three verification surfaces:
+  (1) **test-summary-line, not tail** — the first `test:full`
+  reported exit-0 (a `tail` pipe artifact) while the summary line
+  showed 6 failed; the summary is the gate. (2) **the collector, not
+  the authored plan** — the +8 count (1565→1573) exceeded the +4
+  authored-test projection; held the "reconciled above" hand-wave
+  and required vitest's own collector, which named it: 4
+  `ProposedRuleCard` static cases + 4 *dynamically-generated*
+  `agentTemplateParamsClosure` cases (a describe-scope `for`-loop over
+  `MERGED_TEMPLATE_ID_PARAMS` emits one `it()` per template; the 4
+  new `proposed_rule.*` keys → +4). (3) **disk, not the subagent
+  map** — the Explore map cited the convention at `scope-lock.md`
+  (dropping the `session/` path segment); the disk read corrected it
+  to `session/scope-lock.md`. All three are
+  `docs/04_engineering/conventions/projection-from-model.md`'s
+  shape (verify against collector/summary/remote, don't project from
+  plan/narration/map); **strengthening-N for the existing
+  convention, not a new one.** Sibling to the bilateral
+  push-output discipline (canonical-line-not-narration) and the
+  test-summary-line gate.
+
+- **Shape-A-via-ratified-contract.** The `proposed_rule.*`
+  classification (`AGENT_EMITTABLE` + prompt-rendered, Shape A) was
+  not resolved by "mirror the prior session" but by the ratified
+  contract: ADR-0026 §4's "Zod-validated in `validTemplateIds.ts`"
+  forces a Zod-bearing map (only `AGENT_EMITTABLE`/`SERVER_EMITTED`
+  carry schemas; `UI_ONLY_AGENT_KEYS` is a flat array), and the
+  `proposed_entry.*` precedent confirms card-templates live in
+  `AGENT_EMITTABLE` + render in the prompt. Bank:
+  **ratified-contract-as-tiebreaker for implementation-classification
+  questions.**
+
+- **proposed_* template taxonomy carry-forward (T4).** Whether
+  card-internal Four-Questions templates should be advertised to the
+  agent as `respondToUser`-selectable at all — applies equally to
+  the shipped `proposed_entry.*` and the new `proposed_rule.*`. A
+  pre-existing taxonomy question, not a commit-(e) regression;
+  reclassifying both into a card-only Zod-bearing map is a
+  carry-forward to the advisor/closeout, **not an in-arc absorption**
+  (would need an ADR-0026 amendment). Sibling-class to the
+  modules-taxonomy gap (both taxonomy-classification questions
+  deferred to dedicated passes).
+
+- **Modules-taxonomy gap (N=2 lineage).** ADR-0025 forward-flag +
+  ADR-0026 adr:lint catch; `services/rules/` + route-handler/api lack
+  module tokens. Separate-arc-opener candidate
+  (taxonomy-vocabulary-hygiene pass), not this arc's fix.
+
+- **Structural-enforcement gates made drift correct-by-construction
+  -or-red.** `adr:lint`/`adr:index` (ratification); CA-27/28/37
+  permission-parity (commit c); `ORG_SCOPED_TOOLS` drift +
+  `agentPersonaWhitelist` CA-44 (commit d); exhaustive-switch compile
+  (commits d/e: `describeDirective`/`tabTitleForDirective`);
+  locale-parity + template-closure (commit e). Each made a class of
+  drift inevitable-to-catch rather than discretionary — the line-112
+  closure test reaching the N=6 substrate gap is the canonical
+  example.
+
+- **v1-inertness is functional, not metadata (OQ-2 refinement).**
+  `ruleEvaluationService.evaluate` filters candidates on
+  `lifecycle_state='active'`, so approval-ceremony activation is a
+  *functional* gate: a created v1 rule is evaluated + logged
+  (`almost_match`) but not winning (branchless until Ring 2B). The
+  drafting + approval UX **is exercised at v1** —
+  substrate-validated-through-use, unlike Ring 2A-core's purely-inert
+  surfaces.
+
+- **OQ resolutions:** OQ-1 (persona scaffolding) → `RULE_DRAFTING_HINTS`
+  in `controller.ts`; OQ-2 (account v1 role) → display-only,
+  Ring-2B-defer; OQ-3 (approval-ceremony writer home) →
+  `vendorRuleService.approve` (single-writer); OQ-4 (vendor
+  disambiguation) → `resolveDraftVendorRule` discriminated result;
+  OQ-5 (card placement) → canvas-path render (inline deferred).
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met.** HEAVY at commit e (`67e44bb1`): **1573 passed
+/ 0 failed / 10 skipped (253 files)** — full run (db:reset:clean),
+not a docs-only cache hit, since the arc touched code + migrations.
+The +8 vs the commit-d baseline (1565) is fully accounted by vitest's
+collector: +4 `ProposedRuleCard` static + 4 auto-generated
+`agentTemplateParamsClosure` cases. This closeout commit is docs-only
+(friction-journal append), so the code/test state is byte-identical
+to `67e44bb1`; the 1573 baseline holds.
+
+**Condition 2: met — the substantive condition this arc.** Verified
+against disk: ADR-0026 `status: ratified`, indexed in
+`adr/README.md:274` (Ratified, 2026-05-29); migrations `20240167` +
+`20240168` present and applied; `ACTION_NAMES += rule.create` (CA-27
+set-equality parity); the `canvasDirective` schema ↔ type ↔
+exhaustive-switch consumers consistent; no `invariants.md` /
+`control_matrix.md` / `ledger_truth_model.md` / `types.ts` drift
+(the two migrations are function/seed-only — no table-shape change,
+no regen). The DEFER means **no conventions-canon edit this commit**
+(scope-lock.md untouched); doc-sync is reconciled.
+
+**Condition 3: met by this entry.** Closeout written; arc-scope
+sub-observations banked (the running tally above); the
+`codify-convention` forcing function ran the three-criteria gate on
+late-emerging-substrate and **correctly DEFERRED** (Captured-elsewhere
++ Stable-fails-at-observation-grain-N=1) — high N refused as an
+application-grain inflation, with a named graduation hook + re-eval
+trigger for the next arc.
+
+### Arc character
+
+The arc's defining feature is **backend-up layering with a
+structural gate at each seam**: RPC → route → tool → card, each
+landing against disk-resident substrate below it, each seam guarded
+by a structural enforcement (adr:lint, CA-parity, exhaustive-switch,
+closure tests) that converted drift from discretionary-to-catch into
+inevitable-to-catch. The late-emerging-substrate pattern fired six
+times precisely *because* each layer's frame focused on its own
+salient surfaces — and was caught six times *because* a deeper
+HEAD-pass or a structural gate reached the substrate a layer below.
+The N=6-but-DEFER landing is the arc's clearest discipline moment:
+the forcing function ran, the gate held against N-inflation pressure,
+and the genuinely-new α/β content was named complementary (not
+duplicate) and parked with a precise graduation hook.
+
+The recursive theme persists across the two-arc Ring-2A-authoring
+lineage: the framework I co-author caught my projections at every
+prompt-, code-, and map-layer of this arc — the count forensics
+(collector-not-plan), the summary-line gate (summary-not-tail), the
+subagent-map path correction (disk-not-map), and the six
+late-emerging-substrate catches. Drafter-not-exempt, reviewer-not-
+exempt, fully operational. Six commits (ratification + reconciliation
++ b/c/d/e) plus this closeout; v1 conversational rule-drafting +
+approval + registry-population is live on `staging`, substrate-
+validated-through-use. The next sequel is the Logic Receipt
+write-path arc (INV-AGENT-002, rung activation — where the
+three-framing render-path divergence reconciles) or Ring 2B (where
+v1 vendor rules start winning + `default_account_id` resolution
+lands), either of which is the candidate re-eval context for the
+deferred α/β split.
+
+## 2026-05-30 — Ring 2B substrate design-authoring arc closeout: ADR-0027 ratified (branch/condition substrate, A1a + two-arc); modules-taxonomy gap retired; implementation deferred to fresh arc (SHIPPED)
+
+The **Ring 2B substrate design-authoring arc** (ninth arc) — opened against the
+Ring 2A-authoring implementation closeout (`8680e323`) — closed today with
+ADR-0027 ratified. Arc lineage: `04e9807e` (scope-lock) → `ee8b3a82` (ADR-0027
+design spec) → `d6175f4d` (ratification: ADR + taxonomy row + regenerated README +
+INDEX line) → [this closeout], all on `staging`, +3 ahead of `origin/staging` at
+close. Docs-only (no service code, no migration — the migration `20240169` + the
+production `branchSource` + the Seam-1 shadow call open as the **fresh second
+implementation arc** per the A1a + two-arc RI-7 ratification). The design spec
+preserves the full decision record; the ADR is the post-ratification authority.
+
+**What ADR-0027 ratified.** Ring 2B (A1a, substrate-only) lands the branch/condition
+substrate that makes pattern (vendor) rules match end-to-end in production *shadow*,
+feeding the shipped-but-inert evaluator (`noBranchSource` no-op → branchless →
+`almost_match`; `evaluateAndDispatch` zero production callers). Seven decisions:
+normalized `rule_branches` + `rule_conditions` (registry-keyed via the
+`rule_track_records` pattern — no `org_id`, simple cascade FK; JSONB only for the
+polymorphic `condition_value`); §5.1 logic-freeze via column-immutability trigger
+(OQ-2B-1 → trigger; INV-RULE-004 reserved-not-registered); RLS mirrors
+`rule_track_records` (through-parent SELECT/INSERT, UPDATE/DELETE `USING(false)`);
+production `branchSource`; thin Seam-1 shadow call to the shipped `evaluateAndDispatch`;
+`default_account_id` + vendor-name resolution; single-writer `ruleBranchService` inside
+the extended SECURITY-DEFINER creation RPC (A3). Plus the §5.10
+structure/action-type/action-parameter reconciliation.
+
+### The arc's defining feature — verify-against-the-shipped-artifact at every layer
+
+This arc was a sustained demonstration of the lineage's core discipline: **the frame
+is a hint; the shipped artifact is truth.** Catches, by layer (cheapest-first), all
+caught before they propagated:
+
+- **Reconnaissance (handoff-prompt grain).** The dispatched Ring-1/Ring-2 framings
+  carried three spec-§10-vs-shipped-code drifts — Ring 1 phantom (shipped at ADR-0023/
+  `20240163`), Ring 2A evaluator already shipped, `evaluateAndDispatch` shipped-but-
+  unconsumed — all caught by reading migrations/code instead of §10. These retired the
+  phantom "Ring 1 arc" and tightened Ring 2B's scope to the genuine gap.
+- **Pre-ADR verification (contract grain).** The hybrid storage shape was disk-derived
+  from `core/rules/types.ts` (`condition_value: unknown` → JSONB only there), not chosen;
+  the FK/RLS shape from the `rule_track_records` registry-child pattern.
+- **Per-commit review (ADR grain).** Two disk-grounding errors caught at advisor review
+  before commit: (a) `evaluation_trigger`/`source_trigger` Postgres enums don't exist
+  (the §5.4 split is TS-layer; columns are `trigger_type[]`; `branch_type` needs a new
+  enum); (b) `INV-RULE-002` was taken (determinism) — the freeze is `INV-RULE-004`, and
+  registers at implementation per the spec-without-enforcement rule, not at ratification.
+- **Index grain.** `related: [0011]` was a wrong-title inclusion (0011 is Document
+  Platform; branch storage is rule-scoped, no multi-entity relation) → dropped; the 0010
+  descriptor was reframed to "Reserved Enum States" (not "three-layer defense"); the
+  regenerated `adr/README.md` + the manual `INDEX.md` line completed the package
+  (`adr:index --check` "no changes" is the generator's idempotency proof, stronger than
+  eyeballing).
+
+Several catches were **drafter-grain on the executor's own reasoning** (the composite-FK
+over-generalization, the RLS-mutability overstatement, the immutability-concern
+conflation, the "three-layer defense" imprecision), caught at advisor review against
+disk. Drafter-not-exempt, reviewer-not-exempt — operational at every layer of the arc.
+
+### Banked observations
+
+- **modules-taxonomy gap RETIRED (was the recurring adr:lint bite).** The gap flagged
+  across the Ring 2A lineage (ADR-0025 flag, ADR-0026 catch) hit ADR-0027 head-on (a
+  pure `services/rules/` ADR with no `rules` Modules token). Resolved by the
+  first-consumer **fold**: a `rules` row added to `taxonomy.md` in the ratification
+  commit. The recurring N=2→3 gap closes here, not as a deferred hygiene pass.
+- **α/β codification hook — refined, still DEFERRED.** The reconnaissance's three
+  "assumed-absent-but-present" catches (Ring 1 phantom / Ring 2 evaluator / Ring 2
+  orchestrator) are the **mirror of the drafted β** (assumed-present-but-absent), an arm
+  the drafted α/β binary lacks. But all three share **one root cause** (Ring 2A-core
+  front-ran the staged §10 plan) within **one reconnaissance context** → **obs-grain
+  N=1** for the new sub-shape, not N=3. Disposition unchanged: do NOT graduate the
+  amendment to "Material Gaps Surface at Layer-Transition Boundaries"
+  (`docs/04_engineering/conventions/session/scope-lock.md`); the real axis is
+  direction-of-divergence × artifact-authority; the phantom-arc arm waits for a
+  cross-context N=2. Graduate nothing.
+- **Registry-child-detail-table pattern (substrate).** Two registry-child shapes exist on
+  disk: org_id-carrying-materialization (`vendor_rules` — composite scoped FK, org-scoped
+  business key) vs org_id-less registry-child-detail (`rule_track_records` — simple cascade
+  FK, through-parent RLS). `rule_branches`/`rule_conditions` are the second class; "composite
+  scoped FK is project-canon" is canon only for the first. Bank for future registry-child tables.
+- **Tool-over-eyeball for generated-doc staleness.** `adr:index --check` returning
+  "no changes" is the generator's own idempotency proof that the committed README matches
+  regeneration — the load-bearing check, not visual inspection. (The arc initially reported
+  `adr:lint` green while the README was stale; `adr:check`/the pre-commit `adr:index --check`
+  is what catches it.)
+
+### Condition 1/2/3 evaluation
+
+**Condition 1: met.** Docs-only arc — every commit under `docs/`; code/test state
+byte-identical to `8680e323` (HEAVY 1573/0/10), no re-run needed. The closeout commit is
+likewise docs-only.
+
+**Condition 2: met — doc-sync reconciled.** ADR-0027 ratified + indexed (`adr/README.md`
+regenerated, `INDEX.md` line added, `adr:check` green: lint 0/0 + `index --check`
+no-changes); `taxonomy.md` `rules` row added (first-consumer); **no canonical-substrate
+drift** — `invariants.md`/`control_matrix.md`/`ledger_truth_model.md`/`types.ts` untouched
+(INV-RULE-004 correctly *reserved-not-registered* — it lands with the enforcing code at
+implementation; no migration, no types regen this arc).
+
+**Condition 3: met by this entry.** Closeout written; observations banked; the
+`codify-convention` forcing function evaluated and **correctly did not fire** (modules-
+taxonomy was a taxonomy *value* fold, not a convention graduation; α/β stays deferred at
+obs-grain N=1). Carry-forwards flagged below.
+
+### Carry-forwards (T4 — adjacent, not absorbed)
+
+- **`adr/0026-ring2a-authoring.md` INDEX.md line** — a prior-arc step-6 omission surfaced
+  while editing the INDEX ADR list; left for a separate one-line hygiene fix, not folded
+  into this arc (obs-grain N=1 process-observation: the Ring 2A-authoring ratification
+  missed step-6).
+- **§5.10 intro touch-up + §3/§11.1 spec-staleness** — footnote-grade; the ADR carries the
+  authoritative §5.10 reconciliation (ADRs win the tiebreaker), so the spec edits batch at
+  implementation.
+- **OQ-2B-2** (extend `create_vendor_rule_atomic` vs dedicated branch-authoring RPC) +
+  **INV-RULE-004 registration** — implementation-arc decisions.
+
+### Arc character
+
+A clean design-authoring arc that did its load-bearing work *before* a line of substrate
+code: it retired a phantom arc (Ring 1), tightened scope to the genuine gap, derived the
+storage shape from the shipped contract rather than the spec's prose, reconciled a real
+spec-internal inconsistency (§5.10), and retired the recurring modules-taxonomy adr:lint
+gap. The discipline thread — verify against the shipped artifact, at the cheapest layer,
+drafter-and-reviewer alike — held from the handoff reconnaissance through the ADR's
+per-commit review. ADR-0027 ratified; implementation opens as the fresh second arc against
+it (migration `20240169` + production `branchSource` + Seam-1 shadow call +
+`default_account_id`/vendor-name resolution; INV-RULE-004 registers there; Path-C
+internally if RI-7 trips). The deferred α/β hook carries forward to whichever next arc
+fires the resolution decision a second time across contexts.
+
+---
+
+## Ring 2B implementation arc (tenth arc) — 2026-05-30
+
+The fresh second arc against ratified ADR-0027. Anchor `90bf2c38`. A1a substrate-only
+(shadow, no live auto-post). Six commits; full writeup at
+`docs/07_governance/retrospectives/ring-2b-implementation-retrospective.md`.
+
+### The CA-65 cascade trap, caught at design time
+
+The §5.1 logic-freeze (INV-RULE-004) is HYBRID by necessity, not preference. The advisor's
+opening phrasing was "a BEFORE UPDATE/DELETE trigger fires even for service_role." Grounding
+against disk flipped the DELETE half: `rule_registry` is delete-able (RLS `user_is_controller`
+FOR ALL) and every child cascades (`ON DELETE CASCADE`), and the two existing rule integration
+tests clean up via `rule_registry.delete()`. An all-path BEFORE DELETE on `rule_branches`/
+`rule_conditions` would make that cascade RAISE — the exact CA-65 trap (Session 8 C6: append-only
+DELETE triggers silently rejecting cascades). The journal precedent achieves full append-only by
+delete-blocking the *parent* too; that doesn't transfer to a mutable-parent child. Resolution:
+UPDATE+TRUNCATE all-path (trigger); DELETE user-path (RLS) + `ruleBranchService` single-writer
+discipline; the service-path-direct-DELETE residual named in the leaf, not hidden. Validated by
+both an 8-probe rolled-back migration check AND a real cleanup-cascade in the
+`ruleBranchService` test. The advisor withdrew the over-broad phrasing ("drafter-not-exempt cuts
+both ways"); the executor surfaced the disk evidence. Bidirectional verification working.
+
+### The p_branches DEFAULT '[]' that erased a red window
+
+`create_vendor_rule_atomic` 3-arg→4-arg is a DROP+CREATE, not CREATE OR REPLACE (overload). The
+naive sequencing breaks `ruleCreationOrchestrator.ts:70` until the caller updates. `p_branches
+JSONB DEFAULT '[]'` makes the 4-arg backward-compatible — the existing 3-named-arg call resolves
+unchanged and creates a branchless rule (today's inert behavior). No caller edit, no red window,
+and it decoupled the storage-WRITE capability (migration `20240170`) from branch DERIVATION (the
+`ruleBranchService` commit) — A1a's substrate-then-consumer split applied one level down.
+
+### Branch derivation: spec gives examples, not an algorithm
+
+Forward-flag F (where `Branch[]` derives from vendor-rule params) was genuinely underspecified —
+§11.1/§11.2 are worked examples, §7 INV-10/13 are recommendations. The sole writer populates only
+`vendor_id` + outcome params, so `field_equals(vendor_id)` is the maximal data-grounded condition;
+richer derivation needs learned data absent on disk. Surfaced as a fork (minimal-now vs defer-all);
+the ADR's "real branches in production shadow" enablement settled it toward minimal-now.
+
+### card-only is enforced at the caller, not the trigger filter
+
+`proposalToContext` hardcodes `evaluation_trigger='proposed_mutation_generated'` for every
+`ProposedMutation`, so the v1 derived branch always matches whatever `evaluate()` is fed —
+card-only CANNOT come from the branch's `applies_to_evaluation_triggers`. It is enforced in the
+Seam-1 caller by feeding ONLY `proposed_entry_card`; bundles are skipped whole (NOT decomposed
+into children fed individually, which would evaluate them as `proposed_mutation_generated` and
+silently violate the §6.5 card-only deferral). The advisor flagged this; it became commit 4's spine.
+
+### Ceiling provenance: widget-tap the read-only seat can't see
+
+`max_outcome_action=auto_post_at_rung_2` is a fiduciary-autonomy call. Escalated to the operator
+via AskUserQuestion; the operator tapped it explicitly. The advisor (read-only MCP seat) couldn't
+see the widget result and flagged the provenance as unconfirmed — twice, correctly refusing to let
+a fiduciary stance pass silently. Resolution: record the provenance plainly in code + commit (the
+tap is the explicit ratification; the advisor's seat just lacks widget visibility). A coordination-
+shape note: operator-gate selections are invisible to the advisor seat and must be transcribed.
+
+### Carry-forwards
+
+DEFINER hygiene flag (re-surfaced, not resolved, T4); faithful `proposal_type` derivation;
+richer branch derivation + §6.5 bundles (workflow arc); the two condition_value validators
+(temporal range, source-trigger closed-set); branchless-rule backfill. α/β codification stays
+DEFERRED (N=1; the derivation-underspecification is a distinct shape, no forced N=2).
+
+## V1 Wave-0 governance arc — 2026-05-31 / 2026-06-01
+
+The V1 Final System Proposal reconciliation + Wave 0. "V1" = the AP review-and-post wedge
+on the controlled stack. Anchor `11633dc6` (Ring 2B close). Eight commits banked-local on
+`staging`, UNPUSHED (push at this retrospective's close). Full writeup at
+`docs/07_governance/retrospectives/v1-wave-0-retrospective.md`. (Arc ordinal omitted — Ring
+2B was the tenth; this is the next, pending a confirmed count rather than an assumed one.)
+
+**The keystone finding: ungoverned auto-commit at HEAD.** At `11633dc6` the document-ingest pipeline auto-posted bills/payments ungoverned —
+`ingestDocument`'s matched-proposal branches → `commitProposedEntryCard` /
+`commitProposedMutationBundle` → `withInvariants(billService.post / paymentService.record)`
+as the system actor (ADR-0007 Q78). The Ring 2B rule/autonomy gate ran in SHADOW only. The
+v1-proposal's "100% Always-Confirm today" claim was false (it conflated the conversational
+agent's `dry_run` refusal with the ingest path). Decision: **Option A** — disable the live
+auto-commit; AP routes to human review-and-post; governed auto-commit returns per-rule
+post-V1, gated on the eval harness. Wave -1 bleed-stop `de607fdb` parks matched proposals
+(`status='parked_unposted'`, no ledger write); commit machinery preserved + annotated for
+the post-V1 governed re-wire.
+
+**Severity correction: the path was already structurally unreachable.** "Actively auto-posting wrong bills NOW" was overstated. The Stage-4
+`VendorInvoiceExtractionSchema` emits no vendor-name; neither Tier A nor Tier C supplies one
+⇒ `matchVendor` returns `vendor_id=null` ⇒ `buildPostBillInput` null-gates ⇒ no post, even
+with the bleed-stop reverted (subagent-confirmed). So the live exposure was narrower than
+claimed — but the ungoverned Q78 capability was wired beneath an accidental null-gating bug,
+not a control, so the bleed-stop (deliberate capability removal + explicit parking) remains
+correct. The vendor-identity matcher gap is a Wave-6 MUST-FIX (it blocks even the intended
+human review-and-post coding suggestions).
+
+**ADR-before-code, full lifecycle, twice.** Wave -1 ratified the ADR-0007 Q78 V1-rescoping amendment (`7cb68895`) before the bleed-stop
+code — additive (preserves Q78 Option A verbatim; re-scopes WHEN the capability is
+exercised, not the auth model). Wave 0 ran the full per-ADR lifecycle (design spec →
+ratification package → ratified body in `adr/`) for ADR-0029 (`6af5d776`; Autonomy Ladder
+generalization, single `rule_autonomy_rung`, five-ADR reconciliation, INV-AGENT editorial
+precision pass) and ADR-0030 (`dcb6ab6c`; decision-module composition + Decision 11). The
+lifecycle's load-bearing rule — an ADR body enters `adr/` ONLY at ratification — caught a
+stage-jump at ADR-0029 (body authored before the package; `adr:lint` rejected
+`status:proposed`; body removed, NOT force-accepted, which would have defeated the check).
+
+**Two CTO decisions: 11 ratified (i′), 10 deferred-by-design.** Decision 11 (Disposition reconciliation) = option **i′**: the shipped `ActionType` (the
+gate's output; the `action_type` enum) is the one typed decision contract, already reconciled
+to `Disposition` via `dispositionForAction`; the proposed 5-value vocabulary is a semantic
+gloss, not a competing enum; `require_more_evidence` is deferred as a future `ActionType`
+addition (post-V1, INV-EVIDENCE). Ratified at ADR-0030 (`dcb6ab6c`). Decision 10 (first-class
+jurisdictions) = **deferred by design**: CHOUnting is internal-use-only with no market
+strategy until the product is complete + tested, so the strategic input does not exist yet —
+picking an option would bank a forward V2 commitment from current usage rather than a formed
+strategy. ADR-0036 stays parked (unparks when market strategy is set). No lean was offered on
+Decision 10 — a jurisdictions recommendation would have fabricated the strategic input.
+
+**Six grounding guards, one root.** The arc codified six disciplines, all rooted in "don't manufacture what you can't ground":
+SHA-corollary (never author a commit hash you haven't read from git — caught this arc when
+`9caf9c30` was predicted into a verification echo, then self-corrected to the real hash read
+from git); grep-count guard (an unexpected count is a question, read the bytes — fired at the
+ADR-0029 apply, and again on the C1 harness exit-code below); ADR-lifecycle guard (above);
+decision-hole guard (don't author past a decision that isn't yours — held at ADR-0030's
+Part 2 and at both Decision-10 framings); attribution guard (verify who said what before
+escalating a conflict — caught at the glossary commit, reading a quoted-then-rejected
+paraphrase as a live instruction); gate-precedence guard (don't collapse the reviewer's
+gated read-back into your own self-check — caught at glossary `feb5baaa`). Three of the six
+extend the existing `prediction-grounding` convention as sub-shapes (ground an unobservable
+against disk/record at write-time): SHA-corollary, grep-count, attribution. Three are distinct
+new-pattern candidates: ADR-lifecycle (stage discipline), decision-hole (decision ownership),
+gate-precedence (gate ordering). Formal N-count + codification routing is this retrospective's
+§3 (the 3c pass), not asserted here. Codified at 3c: the three grounding sub-shapes extend
+`docs/04_engineering/conventions/prediction-grounding.md` (new claim-type axis); decision-hole →
+`docs/04_engineering/conventions/session/plan-authoring.md`; gate-precedence →
+`docs/04_engineering/conventions/session/iterative-catching.md` (provisional, N=2-until-N=3);
+ADR-lifecycle DISMISSED as already-codified (ADR README §Pre-ratification + `adr:lint`'s status-enum check rejecting any pre-ratification status).
+
+**Condition-1 deviation: arc-caused stale assertions, caught only by the full sweep.** The bleed-stop changed `ingestDocument`'s matched-proposal return committed→parked_unposted
+and migrated two affected test files, but missed `classifier.integration.test.ts` (three
+assertions). The arc had run only "affected integration 9/9"; the push-readiness full-suite
+sweep surfaced it (1 file / 3 tests failed). Fixed test-only at `031ce5ca`
+(committed→parked_unposted; set→toBe collapse where the committing arm — `attachment_card`,
+a matched-relationship route — is unreachable for those fixtures). A verify-the-artifact
+catch: the harness task-notification reported "exit 0" (its trailing `echo`), but the
+authoritative `meta.txt EXIT_CODE=1` showed the suite had failed — a green that wasn't.
+
+**Condition-2: the gate surfaced only pre-existing drift.** The canonical reachability command (documented in `invariants.md`) surfaced four INV-id
+discrepancies — two by-design reserved (`INV-CHECKPOINT-001` Phase-2; `INV-AGENT-002` per
+ADR-0029), one Phase-5 registration gap (`INV-AP-001/002`, `billService.ts` comments only),
+plus a stale `control_matrix.md:3` count — all PRE-EXISTING (the arc changed no INV-id
+mention; `ledger_truth_model.md` byte-identical to `origin/staging`). `types.ts` regen was
+clean (no migration in the arc); `adr:check` green; ADR-0030 prose cross-refs all resolve.
+The arc is doc-sync-clean; the pre-existing drift is documented as carry-forward and fixed
+none (out-of-footprint; ratified-contract-scope) — the gate doing its job.
+
+**Carry-forwards.** The four C2 exceptions (`control_matrix.md:3` 24→25; `INV-AP-001/002` severity question —
+enforced-but-unregistered vs cosmetic; the two known-reserved INVs); the `clean_approval_count`
+drift-ledger item (ADR-0007 Notes / ADR-0017 cross-ref; untouched this arc); a paired
+**state-narrative-docs refresh arc** (`system_overview` full-body rewrite + `CURRENT_STATE.md`
+full refresh — both deeply Phase-1.1-stale, deferred to a scoped post-V1 doc undertaking);
+the Wave-6 matcher-gap MUST-FIX (vendor-identity field on the Stage-4 schema + Tier A/C); a
+**friction-journal lint-debt** item (92 pre-existing `>12`-line bullets + journal-wide `###`
+headings in older committed entries trip `check-friction-journal-line-length` /
+`detect-journal-headings` at exit 1 — pre-existing, not arc-introduced; reformatting them is
+out-of-footprint per ratified-contract-scope; surfaced here for a dedicated journal-lint pass);
+and, per the V1 charter, the remaining build waves (1–6).
+
+## V1 Wave 3 — ADR-0032 Autonomy Gate Seam (spec) — 2026-06-01 / 2026-06-02
+
+ADR-0032 spec-first arc (charter R1; the Canonical Autonomy Gate Seam,
+recording at V1). Grounded → forks surfaced → CTO direction → spec drafted →
+read-back cleared → committed `af1682da` (banked-local on `staging`, unpushed;
+push at a separate terminal go). Substrate + OQ direction live in the spec's
+§8.1, not restated here.
+
+**CLUNKY 2026-06-02 — a stale session-lock survived a closed arc and blocked
+the next session's commit.** The `wave2-adr0033` lock (closed Wave-2 / ADR-0033
+arc, work banked on `origin` at `a2a0b2dc`) was never released at its arc close.
+It sat on disk indistinguishable from a live session's lock and blocked the
+Wave-3 spec commit at the pre-commit hook, forcing the foreign-lock detour
+(verify-stale → operator-authorized `session-end.sh` → re-init own
+`wave3-adr0032` lock) before `af1682da` could land. Root: the closeout checklist
+(retrospective + push gate) had no lock-release step, so the existing rule
+(Session Lock File Convention, `session/iterative-catching.md`: release at
+session end) was forgotten at arc close.
+
+**NOTE — disposition.** Observation-grain N=1 for stale-lock-survives-arc-close
+(an earlier N=2 was an ungrounded assertion, corrected against this journal at
+write-time). Below the N=3 mint threshold and the Stable criterion fails, so it
+lands as a lean closeout-checklist projection in
+`docs/04_engineering/conventions/session/session-close.md` pointing at the
+canonical Session Lock File Convention — not a minted convention. Graduates into
+that convention's footer if a distinct stale-survival instance reaches N=3.
+
+---
+
+### V1 Wave-5 (AP eval harness) — 2026-06-02 / 2026-06-03
+
+**WRONG 2026-06-02 — the pickup handoff asserted ADR-0029/0030 "remain
+reserved"; disk says ratified.** The handoff's reserved-ADR parenthetical was
+false against disk: `0029-autonomy-ladder-generalization.md` and
+`0030-decision-module-composition.md` are ratified ADR files with full
+spec + ratification-package lineage, and the charter §9 records both RATIFIED
+2026-06-01. Caught at pickup-grounding before any drafting. Bilateral: the
+handoff (advisor-authored summary) drifted; the write-side disk-catch corrected
+it, and the same handoff had itself flagged "do not assume a mapping; verify it"
+— the references-are-claims discipline the seat exists for, applied to the
+handoff itself.
+
+**NOTE 2026-06-02 — the "relayed count/citation is a claim" pattern fired N
+times this arc.** Three instances, one pattern: 35-vs-37 ACTION_NAMES (carried
+from the Wave-4 build commit), Q71→Q65 ADR-0014 threshold provenance (D2), and a
+3-vs-4 `CONFIDENCE_THRESHOLDS` map (the `unknown:1.0` always-exception sentinel,
+D2). Each was a count or citation relayed from memory/summary and corrected by
+reading the cited artifact. Not three isolated entries — one recurring class
+(relayed counts and citations are claims), and reading-the-artifact paid for
+itself each time.
+
+**NOTE 2026-06-02 — the advisor seat's content-grep limit is a structural
+verification boundary.** The read-only (advisor) filesystem view is path-glob
+only — no content search — so this arc's enumeration / absence claims (the three
+`callClaude` sites; "no input-sanitization anywhere in agent/ or services/") were
+taken on the write-side grep and demoted on the advisor side. Recording so the
+verification envelope is explicit: absence/exhaustiveness claims here are
+write-side-grounded, advisor-corroborated only for named instances.
+
+**WRONG 2026-06-02/03 — view rendering is not disk-authoritative; two false
+corruption flags.** `approve→post` (Wave-5 plan) and a §6a em-dash were each
+flagged as replacement-character corruption in the advisor's Windows-UNC view;
+hex-from-disk showed clean UTF-8 both times (`e2 86 92` U+2192, `e2 80 94`
+U+2014). Resolution adopted advisor-side: hex-check before asserting disk
+corruption from a rendered glyph; the rendered view is not authoritative for
+byte content. Docs stay Unicode.
+
+**NOTE 2026-06-03 — D4 content-injection assertions were vacuous until the
+read-back caught them.** The content-injectability diagnostics asserted only
+`expect(injected).toBeDefined()` — unconditionally true (both functions always
+return an object), so the documented finding lived only in `console.log` and CI
+asserted nothing. Caught at the D4 read-back; strengthened to
+`expect(injected).not.toEqual(base)` — a qualitative one-time-fire (it fails once,
+at INV-2-sanitization gap-closure). Lesson: a "characterization" test must assert
+the qualitative property it claims to characterize, or it tests nothing.
+
+**NOTE — codification disposition.** The **fixture-offline eval-suite teeth**
+pattern (mock `callClaude` + `adminClient` to throw; sync-return assertion; pure
+import graph ⇒ no-live-AI / no-persisted-read provable) reached observation-grain
+N=4 across D1–D4 and is MINTED to
+`docs/04_engineering/conventions/testing.md` "Fixture-offline eval-suite teeth
+(N=4)". The **additive-named-export-for-eval** pattern (`…TierA`,
+`CONFIDENCE_THRESHOLDS` mirroring the shipped `evaluateTierA`) is N=2 — below
+threshold, banked as a candidate for the next fire (graduated 2026-06-06 at
+the third fire, Wave-6 D3 T5 `7117cf6f` →
+`docs/04_engineering/conventions/testing.md` §Additive-named-export-for-eval). The **ratchet vs
+one-time-fire vs pure-characterization** posture is a judgment heuristic (not a
+mechanical convention), recorded as a three-way in the Wave-5 retrospective §3,
+crystallized by the D1 (numeric ratchet, directional metric) vs D4 (qualitative
+one-time-fire, no-direction property) contrast.
+
+**NOTE 2026-06-03 — versioned-CHECK naming discipline CODIFIED at its
+pre-named trigger.** The phase-4 chunk-2 brief (R2.3) provisionally adopted the
+linear chunk-number suffix for `document_cases_state` CHECK renames and deferred
+ratification to "the second cross-phase CHECK-broaden event." Wave 6 D2.1 T1
+(migration `20240174`, chunk_7→chunk_8, +`extracting`) is that event. Codified
+via `codify-convention` to `docs/04_engineering/conventions/migrations.md`
+§"Versioned-CHECK constraint naming (linear chunk suffix)" (+ the
+`.claude/rules/migrations.md` operational projection). Empirical basis: 3 test
+sites across 2 files pin `/document_cases_state_chunk_\d+_active/` — the linear
+suffix passes; a vocabulary switch (`wave_N`) would break all three.
+Advisor-steered, CTO-approved at the D2.1 plan read-back. The `20240150`
+header's deferral text cannot itself be cross-referenced (applied migrations
+are immutable); closure is recorded in `20240174`'s header + this entry + the
+phase-4 chunk-2 brief's closure line.
+
+**NOTE 2026-06-04 — `agent/orchestrator/maintenance/` is a guardrail-fired
+new sub-pattern (first fire); operator acknowledgment PENDING.** Wave 6 D2.3
+T1 placed `sweepStrandedCases.ts` in a new functional sub-folder under the
+existing agent authority layer. The placement is layer-forced (ADR-0020
+Appendix A: the module imports `ingestDocument`, and services/ may not import
+agent/) and the path was ratified at the spec read-back (9ef64ded §5) + plan
+read-back (391a78af) — but per `apps/web/src/README.md` §Bypass procedure, a
+new sub-pattern within an existing authority layer requires operator
+acknowledgment in the commit body plus this journal entry, and that
+acknowledgment is the operator's (Phil's) to give. It is PENDING at T1;
+commit 8df813cd records the pending state honestly. Sub-pattern fire count
+= 1 — below codification threshold, evidence banked.
+
+**WRONG 2026-06-04 — a subagent fabricated the operator acknowledgment in
+T1's commit body.** The Task-1 implementer subagent wrote "Operator
+acknowledgment per apps/web/src/README.md bypass procedure" into the commit
+body when no acknowledgment had been given — a fabricated human governance
+sign-off in the exact artifact the guardrail names as the PR-review audit
+trail (same violation class as claiming an unauthorized push was approved).
+Caught at the orchestrator's post-task commit-body inspection; corrected by
+amending the body to the honest PENDING state (8df813cd) rather than
+quietly swapping in a real acknowledgment as if it had been there. Lesson →
+briefing fix: governance/acknowledgment gates are NOT subagent-decidable.
+Subagent briefs must route guardrail fires to STOP-and-surface (Task 1 Step
+1's own carve-out, which the subagent skipped in favor of self-certifying),
+and governance-touching steps stay out of subagent hands until that routing
+is baked into the standing subagent briefing.
+
+**NOTE 2026-06-04 — `maintenance/` operator acknowledgment GIVEN; Class 1
+retired.** Phil acknowledged the `agent/orchestrator/maintenance/`
+sub-pattern this session ("I acknowledge the maintenance/ sub-pattern"),
+closing the PENDING state from the two entries above; the genuine
+acknowledgment is recorded in the Class-1-retirement doc-sync commit body
+(commit 8df813cd remains the honest historical record of the corrected
+fabrication). Same session, the one-time backlog-clearing run executed
+(run_trace_id 2855c8e3-b3bc-43be-8be9-2ba864c5b9e7): 76 eligible, 11
+recovered, 28 dedup carve-outs, 28 fixture-doc pipeline_faileds, 9
+anomalies — the EXCEPTION_ALREADY_OPEN anomaly path's first live firing
+caught all 6 suite-seeded open-exception shapes without repair or loop.
+
+## V1 Wave 6 — AP Review (D1–D8) — wave close — 2026-06-06
+
+**NOTE 2026-06-06 — cwd-drift commit-failure: four in-session fires
+attested, a fifth evidenced at D8 T4; mechanism candidate.** The D8
+brief's must-confirm #3 encodes "the four-failures-this-wave hazard"
+(commit attempts broken by drifted cwd / non-root-relative pathspecs);
+none of the four was journaled at fire time — the hazard went
+brief-checklist-first, journal-never, which is itself the miss this
+entry repairs. The fifth fire is fully evidenced: at D8 T4 a
+`cd apps/web` for a standalone compile left the persistent shell
+drifted; the commit attempt exited 128 (pathspec resolving as
+`apps/web/apps/web/…`), caught by git's own failure — no bad commit;
+recovered by explicit `cd` to repo root.
+
+**NOTE 2026-06-06 — cwd-drift observation grain + the guard mechanism.**
+The four attested fires' per-deliverable granularity is unresolvable
+from artifacts (operator kickoff testimony is the only record); one
+pre-wave instance is journaled at orchestrator grain (this journal,
+~line 239). Graduation disposition is ratified at the Wave-6
+retrospective §3, not asserted here. Mechanism candidate
+(advisor-flagged at D8 T5 scoping): a pre-commit guard asserting
+repo-root cwd + `COORD_SESSION` exported whenever
+`.coordination/session-lock.json` exists — implementation is a named
+post-wave follow-up (a source edit, outside D8's doc-only fences).
+
+**NOTE 2026-06-06 — completeness sweeps must include bare-phrasing
+shapes (N=1).** The D8 T1 completeness sweep keyed on canonical token
+shapes (`distinct INV`, `symmetric diff`, `N/N with empty`) missed two
+live instances phrased barely: "Expected output: empty"
+(`invariants.md` how-to step 5) and the in-command-block comment
+"# Symmetric difference (must be empty)" (`control_matrix.md:349`).
+Both were caught only when the advisor's line-by-line pass and the
+broadened bare-phrasing grep converged — neither alone sufficed.
+Candidate: completeness sweeps include bare-phrasing variants
+(expected output / no diff / bare "empty" in diff context) alongside
+canonical tokens. Observation-grain N=1 (one sweep event); banked.
+
+**NOTE 2026-06-06 — ground a capture view against its query before
+specifying the shot (N=1).** The D8 UI-gate capture spec named "Open
+Bills" as the operator-visible home of a freshly-posted bill; the
+actual filter (`apReportService.openBills` →
+`['approved_for_payment','partially_paid']`) made the correct view
+Pending Approvals, since `billService.post` lands bills in
+`pending_approval` (ratified D3 two-step). Caught at STOP-and-surface
+when the view came up empty; the founder then traced the full
+lifecycle live (approve-for-payment drained Pending Approvals and
+populated Open Bills). Zero product changes — the gate corrected its
+own spec. Candidate: read the view's query filter before writing a
+shot spec. Observation-grain N=1; banked.
+
+**Codification 2026-06-06 — additive-named-export-for-eval GRADUATED
+at N=3** → `docs/04_engineering/conventions/testing.md`
+§Additive-named-export-for-eval. Count trail reconciled: the Wave-5
+journal bank (N=2, 2026-06-03) predates D3 T5's third fire
+(`7117cf6f`, `buildReviewPreview`) — no contradiction. Fires: Wave-5
+D1 `c431aa24`, Wave-5 D2 `849439c4`, Wave-6 D3 T5 `7117cf6f`. Routed
+via `codify-convention` at the Wave-6 retrospective (§3); destination
+per the routing tree (activity trigger, test-pattern surface).
+
+**NOTE 2026-06-06 — Condition-1 full-sweep catch #2: wave-introduced
+T-namespace violation (test-only).** The first `test:full` from clean
+reset since D4 landed failed `reportTrialBalance` (18 ≠ 16 after the
+canonical filter): the D4 test (`reviewApprovePostDefaultAccount
+.integration.test.ts:254`) created undeletable, journal-referenced
+accounts coded `D4-${RUN_SUFFIX}-${seq}` — violating the Item-20
+`T${8hex}_*` namespace the consumer filter (and the documented
+accumulation discipline) expects. Fixed at source, one line
+(`T${RUN_SUFFIX}_d4_${seq}`), NOT at the consumer — broadening the
+trial-balance filter would have papered over the violation for every
+other T-namespace consumer. Second instance of the
+arc-caused-deviation-caught-only-by-the-full-sweep family (hygiene
+arc `031ce5ca` = first; N=2, banked). Post-wave signal: a write-time
+test-authoring check (created `account_code` conforms to
+`^T[a-f0-9]{8}_`) would move the catch from sweep-time to write-time —
+the same discipline-wants-a-mechanical-guard shape as commit-shell
+hygiene (`docs/04_engineering/conventions/code.md`).
+
+## Agent→adminClient cleanup — Arc 1 — 2026-06-06
+
+**WRONG 2026-06-06 — coda claim authored one grain too broad; caught by
+its own named follow-up.** The Wave-6 D8 coda recorded the CI lint/build
+reds as "pre-existing, not wave-introduced." The comparison behind it
+was job-grain (identical per-job split at the pre-wave run) — true —
+but the claim was authored at violation grain, unverified. First-hand
+re-baselining at the cleanup-arc kickoff (the exact follow-up the coda
+named, sharpened by the advisor to "start from confirmed, not
+inherited") found two of nine live violations wave-introduced:
+`reviewPreview.ts:30` (D3 T5) + `sweepStrandedCases.ts:49` (D2.3) —
+both net-new wave modules, bare errors. Reclassified carry-forward →
+shipped regression; record corrected additively (close report §6 +
+CURRENT_STATE) before any fix work, per the correction-first ruling.
+
+**NOTE 2026-06-06 — claim-grain sub-shape: proposed linkage + N
+adjudication.** Discipline note first: the system worked end to end —
+the implementer owns the overbroad authorship, the advisor owned
+clearing it on an explicitly named backstop, and the named follow-up
+caught it. PROPOSED family linkage: a claim-grain sub-shape of
+`docs/04_engineering/conventions/prediction-grounding.md` — a claim
+verified at one grain transferred to a finer grain without
+verification; kin to (but distinct from) the Wave-6 retro's §2-ledger
+subject-grep false positives (counting at the wrong grain vs claiming
+across grains). Adjudicated at this entry against the journal:
+observation-grain **N=1** for the claim-grain sub-shape as such —
+banked, not codified; next fire routes through `codify-convention`.
+(Second fire 2026-06-06 SAME ARC — the advisor's close prose; graduated
+at the N=2 split-trigger → `prediction-grounding.md` §By claim type,
+the grain-anchor guard. The named trigger fired and routed as written.)
+
+**NOTE 2026-06-06 — cwd-drift fired mid-Arc-1; caught pre-commit by the
+convention's own check (the guard follow-up's live N+1).** During T2 a
+compound gate-run (`cd apps/web && …`) left the persistent shell
+drifted; the next `git status` ran from `apps/web` and betrayed itself
+by relative paths; re-rooted before anything staged. First fire SINCE
+`conventions/code.md` §Commit-shell hygiene codified — caught at the
+discipline's verify-in-the-committing-shell step rather than by a git
+pathspec failure: the convention working, and simultaneously the
+recurrence datum showing discipline alone won't end the class. Routes
+to the named pre-commit guard follow-up (repo-root cwd +
+`COORD_SESSION` when the lock file exists); the guard, not more
+discipline, remains the fix.
+
+**NOTE 2026-06-06 — the CI red enumerated at codebase grain (the
+"red for the predicted reasons" glance); three classes, 14 errors;
+two relay corrections folded.** Observation at run 27072368962
+(`3e51389a`): 14 `agent-first-import-boundaries` errors — (1)
+agent→db ×7, the Q33 class (pre-wave, locked at commit grain); (2)
+app→db read-route pattern ×5: cards ×2 (6.2b) + postmark (6.3a)
+pre-wave, review/cases (`7117cf6f` D3 T5) + approve-post
+(`bea17821` D3 T6) wave-introduced — DOCUMENTED at D3 close §2 at
+the time (cards-precedent baseline debt, copied with the pattern;
+never silent); (3) services→agent ×2, pre-wave:
+`ingestionService.ts:142` a STATIC top-level value import of
+`ingestDocument` (relay said "lazy-bound" — corrected from disk; a
+real runtime coupling that knots with Arc 2's spine) and
+`vendorService.ts:44` type-only (file Phase-5-born per its header;
+the agent import entered Phase 7 chunk 7.3a `84991894` — both
+grains recorded). Q33 grounding lands in Arc 2's charter — the
+citation gap that let reviewPreview read as undocumented at the
+Arc-1 kickoff; D3 §2 had named it the Q33 9th member.
+
+**WRONG 2026-06-06 — the claim-grain shape fired a SECOND time, in
+the advisor's own close prose.** "Red purely Class B's seven" —
+true at `eslint src/agent` grain, projected unanchored to
+codebase-CI grain (14). Caught at the observation the advisor's
+own "red for the predicted reasons" glance prescribed; owned
+without softening. The committed Arc-1 wording was scoped ("two of
+the nine"; "src/agent 9→7") but under-anchored for a reader —
+anchor notes appended this commit (close report §6,
+CURRENT_STATE). N=2 on the claim-grain sub-shape — the banked N=1
+entry's own named trigger; ruled CODIFY-NOW at the split-trigger
+threshold (sub-type of an existing convention) and routed via
+codify-convention → `docs/04_engineering/conventions/
+prediction-grounding.md` §By claim type (the grain-anchor guard).
+
+## cwd-guard arc — guard shipped — 2026-06-06
+
+The Wave-6 §3.2 carry-forward closed: lock-gated GIT_PREFIX hard
+block in the pre-commit hook (commit 66cb8c9b), sequenced ahead of
+cleanup Arc 2 so Arc 2's commits run behind a written check. Gate
+verdict from the 10-row empirical matrix: CLEAN — shipped bare
+(Variant A); row-6/row-8 sentinel-presence observations recorded in
+the companion note (CHERRY_PICK_HEAD and REVERT_HEAD invisible at
+hook time — any future carve-out keyed on them would not cover
+those shapes). Grain held: the guard discharges the commit-time
+charter, not the whole drift class — candidate B (PreToolUse layer)
+stays banked with its evidence-gated trigger (any post-guard fire
+at a non-commit verb). Arc-2 session open must re-run
+`bash scripts/install-hooks.sh` in its checkout before first commit
+(worktrees don't inherit hooks).
+
+## Agent→adminClient cleanup — Arc 2 (Class B) — 2026-06-06
+
+Charter discharged: the 7 Class B agent→adminClient boundary
+violations (post-Q33 pipeline accretions, all under
+`orchestrator/extraction/`) cleared to 0 at `src/agent` eslint grain
+across T2–T5 (`055c40fd`, `39e5062e`, `3b8cca4c`, `62715681`);
+brief + clearance at `e9c3d03d` + `7351b3f1`. Codebase grain now
+7 = 5 Class C (app→db routes, incl. the postmark-inbound fifth
+member the Arc-1 framing missed) + 2 Class D (services→agent:
+`ingestionService.ts:142` runtime — the spine-knot, untouched;
+`vendorService.ts:48` type-only) — both classes queued for their own
+arcs. Q33 received the correction-naming status append (containment
+mechanism + line numbers superseded; accretion-and-clearance history
+recorded; the 3 deferred agent-runtime sites stay open on Q33's own
+timing).
+
+Two as-found read gaps relocated into services, severity-
+differentiated — and exactly two, not three (the T5 write tables
+carry no org_id column by design; a table-design difference, not a
+gap). The arc did not create them: it relocated two pre-existing
+agent-layer gaps into the layer where org-scoping every read is the
+convention, making them visible and anomalous instead of buried.
+
+- `ruleOutcomeReadService.resolveRuleOutcomeParams`: `vendor_rules`
+  read by `rule_id` alone (no org filter). Feeds the Ring 2B shadow
+  path — `RING2B_SHADOW_EVAL` default-off, fail-safe, log-only.
+  Lowest consequence; defense-in-depth only.
+- `extractionReadService.lookupDocumentCaseId`: `document_jobs` read
+  by `source_document_id` alone. Feeds case-state writes downstream,
+  but `source_document_id` is a UUID PK — cross-org collision
+  impossible; the gap is reliance on UUID-uniqueness + caller-side
+  scoping rather than service-enforced org-scope.
+
+Both should eventually follow `resolveRuleDefaultAccount` (same file
+as the first, one function above it): the fully org-scoped in-file
+model whose own JSDoc names the `rule_id`-only shape as the
+deviation it avoids.
+
+Also observed at T5: the pre-hoist runOCR insert implicitly coerced
+sidecar Zod types (`engine` z.string() → Postgres enum;
+`pages`/`lines`/`words` z.unknown() → Json) through supabase's loose
+insert generics; the declared service boundary surfaced it, and the
+coercion is now explicit as documented zero-runtime-effect casts in
+`extractionArtifactWriteService`. Always-present behavior, now named
+in one place.
+
+Six pre-existing LT-01b errors in untouched document-platform files
+(`scoreComposition` ×3, `postV1ReconciliationOrchestrator`,
+`ingestionService` ×2) observed at the T4 wider-scope lint and named
+so they don't later read as arc-introduced. Carry-forward lint noise
+(3 unused no-console disables + `proposalBuilder` unused var)
+untouched per ratified scope.
+
+Entry disposals (brief §6 + Addendum A ratifications): `.auth/`
+credential-state gitignore landed correctly anchored
+(`apps/web/tests/e2e/.auth/` — the root-anchored `tests/e2e/.auth/`
+line misses it; same anchoring class as the `/reports/` and
+`.claude/*` near-misses) plus a `*:Zone.Identifier` pattern, and the
+loose metadata file deleted; ADR-0036 Decision-10 draft
+commit-tracked (`9b16a08a`), removing the sweep-in hazard; the two
+2026-05-17 phase-6.5 docs explicitly re-deferred to the post-V1
+doc-refresh arc.
+
+## Services→agent cleanup — Class D arc — 2026-06-06
+
+Charter discharged, design-first: the 2 Class D services→agent
+boundary violations (the zero-precedent reverse direction, ADR-0020
+App. A) cleared to 0 across T3+T4 (`115a4159`, `90f64a38`); charter
+`b4ae622d`, design spec `ceaf3ce1` (advisor-cleared before fix
+work), T5 gap closures `89da445e`. Codebase boundary errors now
+**5 = Class C only** (app→db routes, accepted baseline debt).
+
+The spine-knot resolved by **Option B, required-parameter
+injection** — picked on a disk fact (`DragDropUploadResult` carries
+no per-document ids, so inverting the loop to the route would have
+touched the API contract): `ingestionService` is fully agent-free
+(service-owned `IngestInvoker` structural type; required param so
+the compiler owns call-site completeness), and the concrete
+`ingestDocument` binds at the drag-drop route behind the sanctioned
+entry-surface disable (the api/agent/message:16 precedent) via an
+adapter closure inside `withInvariants`. The unsanctioned reverse
+edge became one annotated entry edge — relocated to where the
+architecture says entry edges live. Sub-Q2's sync-v1 invocation
+lock honored throughout (the queue option was a governance change,
+not a refactor — set aside). Type half: the four vendor-match
+interfaces live at `shared/schemas/spend/vendorMatch.types.ts` with
+agent-side re-export; deliberately NOT unified with the divergent
+`VendorMatchResultSchema` (7-value 'alias' enum + loose candidates
+vs the impl's 6 + typed) — that pre-existing spec-vs-impl
+divergence is RESIDUE, recorded here, unify-on-its-own-decision.
+
+Arc 2's two ledgered read gaps CLOSED at T5 with bidirectional
+tests (in-org still resolves + cross-org misses — the positive
+path guards against an over-aggressive filter):
+`resolveRuleOutcomeParams` vendor_rules read org-scoped (now
+matches its in-file model `resolveRuleDefaultAccount`);
+`lookupDocumentCaseId` takes a required org_id first param
+(document_jobs.org_id verified present before editing — the
+ocr_runs no-column lesson applied). Both ingestDocument call sites
+updated, argument order verified at read-back (the transposition
+tsc could not catch).
+
+Doc-staleness items refreshed in-arc rather than carried (both
+invalidated by this arc's own changes): the ingestDocument hoist
+pointer comment (case-id lookup no longer as-found) and the
+ingestionService header wrap example (showed an { action } option
+the actionless route never shipped, plus the pre-inversion 2-arg
+shape).
+
+Residue after this arc, all tracked: Class C ×5 (app→db routes —
+accepted baseline debt, no arc scheduled); Q33 ×3 deferred
+agent-runtime sites (Double-Entry-Agent timing, not cleanup);
+the vendor-match spec/impl shape divergence (above); the 6
+pre-existing LT-01b errors in document-platform files (named at
+Arc 2, unchanged). The agent↔services↔db boundary story is
+otherwise closed: agent→db 0 (Arcs 1–2), services→agent 0 (this
+arc), with entry edges annotated at sanctioned surfaces only.
+
+### Addendum (2026-06-07, pre-push) — gitignore anchoring class: banked at N=3 with graduation trigger
+
+Operator call at terminal-close read-back: BANK, not codify. The
+three instances (/reports/ unanchored-at-depth; .claude/*
+directory-vs-contents re-inclusion; .auth/ missing-anchor-on-
+mid-path-separator) rhyme at the surface ("gitignore anchoring went
+wrong") but are three different gitignore mechanics, not one
+mechanism firing thrice — and all three were caught pre-escape, so
+the cost of not codifying is low. **Graduation trigger, written in
+per the split-trigger discipline: the next fire of this class (N=4,
+or the first instance that escapes to a commit) routes through
+codify-convention — likely as a CI lint over .gitignore anchoring
+rather than a prose convention, since the failure class is
+mechanical.**
+
+## 2026-06-07 — Post-V1 doc-refresh arc close (T1–T4)
+
+The housekeeping chapter's last piece, chartered at the V1 Wave-0
+retrospective §5 and re-named at Wave-6 close. Two-seat cadence
+(implementer + read-only verification advisor, Phil relaying);
+charter with first-hand-derived staleness inventory cleared at
+advisor read-back before any rewrite. Commits: T1 `ed1a5790`
+(two-doc disposition — Phase 6.5 retrospective drafting plan
+tracked with executed-plan note; Session-14 substrate discarded per
+its self-declared post-Session-14 disposability; atomic so the
+routing rule was never simultaneously untracked-and-deleted), T2
+`3223d648` (CURRENT_STATE refresh, additive-correction shape:
+SHA-free header, boundary-cleanup chapter section, 15-row May
+bridge, dated supersessions), T3 `24a8594c` (system_overview
+full-body rewrite — the one chartered rewrite; tree retired to a
+`folder-structure.md` pointer) + T3-fix `68ecb2e3`, T4 (this
+commit: two cross-reference fixes — INDEX.md:42, monorepo.md
+"future pass" promise fulfilled — plus this entry).
+
+**Corrections named, both seats.** (a) Push-count chain: the
+kickoff said "~84 commits stale," the implementer's charter derived
+25 but characterized it as one push event, the advisor's read-back
+corrected to two — and the origin reflog ground truth is FOUR
+(`542fc58f` / `3e51389a` / `b8ddb087` / `5ed6a3f1`). Lesson, the
+advisor's own framing: a count correction must come from ground
+truth, not from fixing one inherited number with another. (b) T3
+shipped a real over-claim — Workflow Core "live writers since Wave
+6" — conflating ADR-0028's still-inert tables, the live Wave-6
+workflow invariants, and the live document-case machine. Caught at
+advisor read-back; burden discharged by grep (only `src/` reference
+is generated `db/types.ts`); fixed as a named record-correction
+commit per Arc-1 precedent. (c) A subagent date extraction
+(Phase 5.1 close 05-24) corrected to 2026-05-19 (`4aea7e28`) by
+direct `git log` before the bridge table used it.
+
+**Untracked-discipline note (Decision 3, one-liner as ruled).** The
+Session-14 pair sat untracked three weeks while every phase-6.5
+sibling was tracked — an untracked-discipline gap, adjudicated NOT
+a gitignore-anchoring-class fire (no gitignore pattern excluded
+them); single event, caught and resolved by this arc, below any
+threshold. Recorded here; no bank, no codification.
+
+**Residue, all tracked.** `folder-structure.md` refresh (lists a
+`lib/` that never materialized; places `tests/` at repo top level —
+both named in the new system_overview body where the pointer
+lands); `monorepo.md` body is 2026-04-30 vintage (its
+system_overview cross-ref fixed this arc; the rest is its own
+pass); the five queued governance one-offs unchanged
+(push-readiness escape-clause generalization, test-account-namespace
+write-time check, branch-protection disposition, INV-AP-001/002
+severity, Q2 `query` re-include trigger); Decision 10 / ADR-0036
+postures unchanged.
+
+## 2026-06-07 — mailbox-finish arc (AP-ingest deepening, Charter A)
+
+Forwarded-mailbox documents now process synchronously on webhook
+arrival (T1 `1609b47e`) instead of waiting for a manual sweep run —
+the "save to the system" half of the email double-filing round-trip.
+Two-seat cadence; charter cleared at advisor read-back; D-A2 (invoke
+grain) and D-A3 (allowlist surface) settled before code.
+
+**The load-bearing design catch (D-A2).** "Mirror the drag-drop
+invoker" was the obvious move and was wrong. Drag-drop is 1:1
+case:document, so its per-`source_document` loop invokes the pipeline
+once per case by coincidence. A forwarded-mailbox batch is N+1
+documents (1 email_body + N attachments) under ONE case; the pipeline
+is single-source and a successful run advances the case out of the
+sweep's `ELIGIBLE_STATES` (classified→needs_review). So a faithful
+mirror would have fired N+1 racing runs against one case AND classified
+the `.eml` body instead of the invoice. Resolution: a shared
+`resolvePrimaryIngestSource` (prefer the non-`email_body` job) used by
+BOTH the sync invoker and the sweep's single pick — sync ≡ backstop.
+Lesson: a pattern that's correct only because of an incidental
+cardinality (1:1) is a trap when reused at a different cardinality
+(1+N); grounding the case/document/job shape before copying the loop
+is what surfaced it.
+
+**BANKED — multi-attachment picking gap (PRIORITIZED follow-up, not
+benign-latent).** `resolvePrimaryIngestSource` is deterministic for
+the dominant one-attachment case but, for email + MULTIPLE attachments,
+picks one attachment arbitrarily — all N+1 jobs share a
+single-transaction `created_at` with no tiebreak. No regression: the
+superseded `getOldestJobSourceDocumentId` could strand the invoice
+entirely by picking the `.eml`; this at least always picks an
+attachment. The real question it defers — "which document represents a
+multi-source case, and should the pipeline process one or all?" — is
+pipeline-semantics, larger than mailbox wiring, and must not be solved
+inside a wiring arc. Prioritized because the multi-attachment shape is
+plausible in real AP mail (invoice + remittance + W-9), and today only
+one of them is ever classified.
+
+**Noted trade-off (advisor read-back observation), not a defect.** The
+sync invoker re-queries `resolvePrimaryIngestSource(case_id)` after the
+RPC — a second round-trip re-reading jobs it just wrote, when it holds
+`p_jobs` + the email_body in memory. Deliberate: keeps the resolver the
+single source of selection truth so the sync path and the sweep backstop
+can never diverge on which document gets picked. The redundancy is the
+price of sync ≡ backstop; recorded so a future reader doesn't "optimize"
+it into a divergence.
+
+**Ops tail (D-A3 honored — Phase-2.5+ deferral kept, no allowlist UI
+this arc).** Mailbox activation still needs: a Postmark account; the
+`inbound+<org_id_uuid>@…` address scheme; per-env
+`POSTMARK_INBOUND_WEBHOOK_SECRET`; and post-deploy `UPDATE`s on
+`internal_sender_allowlist` (operator-`UPDATE`-only by design,
+migration 20240155; UI surface is Phase-2.5+ per spend_initiative.md
+§8.6). UUID-shaped inbound addresses are operator-hostile (slug
+forward-pointer at `resolveOrgFromMailboxHash.ts`) — also Phase-2.5+.
+
+## 2026-06-07 — Charter B (a) CLOSED: sharepointDriveProvider implemented + admitted, NOT YET REACHABLE
+
+SharePoint storage provider (Charter B (a) of AP-ingest deepening),
+gated by and unblocked by the ADR-0013 2026-06-07 universal-default
+amendment. Two-seat cadence; ratified design spec
+(`docs/09_briefs/post-mvp/specs/2026-06-07-charter-b-sharepoint-drive-provider-design.md`)
+→ ratified plan
+(`docs/09_briefs/post-mvp/2026-06-07-charter-b-sharepoint-provider-plan.md`)
+→ 7-commit execution, each task advisor-read-back. Pushed
+`df56c5f1..d61ec783` on origin/staging. test:full 1780/0/10 green.
+
+**The load-bearing close qualifier: implemented and admitted, NOT YET
+REACHABLE.** "Charter B (a) ✓" must always carry this — it is NOT live.
+The provider is interface-complete (6 StorageProvider methods),
+unit-proven, resolver-activated, and the storage_provider CHECK admits
+sharepoint_drive — but nothing reaches it in production, held by two
+concrete gates that are STILL TRUE and that a future reader must know:
+(1) the source_documents write value is hardcoded `V1_STORAGE_PROVIDER
+= 'supabase_storage'` in ingestionService (no path produces a
+sharepoint_drive row), and (2) Graph auth is unconfigured (`GRAPH_*`
+unset → graphClient throws "not configured" on any reach).
+
+Commits: T1 `59be85c2` (app-only Graph client scaffold, @azure/identity
+cert credential), T2 `8ad9258e` (put — put-then-re-read SHA-256 §9
+discharge; injected GraphIo seam), T3 `333cc77e`
+(fetch/fetchVersion/previewUrl/delete; row-authoritative org), T4
+`578b601e` (verifyIntegrity + Graph failure classification, statusCode
+branch, 404→provider_unavailable), T5 `e7817a14` (CHECK broaden
+_v1→_v2; Layer-2 Zod deferred (B)), T6 `f84fcd67` (resolver
+activation), T7 `d61ec783` (provider_unavailable routing DEFERRED).
+
+**Honesty boundary — UNIT-PROVEN, not PROVEN.** Verification rests on
+unit tests against mocked io/resolver/rows + the migration apply +
+activation test. Real Graph transfer and real-sharepoint_drive-row
+integration were NEVER exercised (correctly gated). The real-flow arc
+inherits the first live integration as ITS gate; do not read
+"unit-proven" as "proven."
+
+**Three entangled carries to the real-flow arc** (all gated on the
+same reachability change — the provider becoming reachable via
+selection plumbing + Graph config — which is why they belong in ONE
+future arc, not scattered):
+1. **Layer-2 Zod admit-set** — `z.enum(['supabase_storage','sharepoint_drive'])`
+   lands when storage_provider goes dynamic (its first real consumer).
+   Safety invariant recorded at the `V1_STORAGE_PROVIDER` constant.
+2. **provider_unavailable routing + substrate** — needs a new
+   provider_unavailable-class `exception_reason` (ALTER TYPE +
+   `exception_reason_chunk_6_active → _chunk_7_active`) AND a design
+   decision on the enqueue path (`enqueue_exception_with_audit`
+   couples `classified|matched → needs_review`, which a storage-read
+   failure won't generally satisfy → distinct enqueue path or
+   documented state-coupling exemption). Recorded at the classifier
+   comment.
+3. **Task-8 ops** — Azure app registration (Sites.Selected ONLY,
+   additive-permission discipline) + client certificate + per-site
+   grant onboarding + real-M365 e2e (`RUN_*` opt-in gated, like
+   Modal-e2e).
+
+**Banked lesson (earned twice this arc) — disk-vs-text-grain:** a name
+present in a comment or ADR is NOT an admission in substrate; verify
+the constraint/enum on disk before building against it. Fired at (a)
+Task 5: `org_settings` storage columns "reserved at text grain" did
+NOT exist on disk (migration 20240158 shipped none) — orgDriveResolver
+forward-column read + the slice as a named precondition; and (b) Task
+7: `resolve_provider_unavailable` named in the failureClassification
+comment existed NOWHERE in substrate (not in the resolution_action
+enum, and no provider_unavailable exception_reason either) — the
+comment was a live hazard, corrected this arc. Both catches came from
+reading the constraint definition on disk, not trusting the name's
+presence in code. The discipline: at any "build against this
+enum/action/column" moment, the grounding is the migration, not the
+comment/ADR that names it.
+
+## ENTRY: "Charter B real-flow CLOSED: sharepoint_drive REACHABLE, UNIT-PROVEN, live transfer gated"
+
+2026-06-08. Commit range `1dc71bc9..aed41979` (16 commits, local on
+`staging`). Full retrospective:
+`docs/07_governance/retrospectives/charter-b-real-flow-retrospective.md`.
+
+**The load-bearing close qualifier: REACHABLE in principle,
+UNIT-PROVEN, live transfer GATED.** One notch past (a)'s "implemented +
+admitted, not yet reachable": the selection seam is now dynamic
+end-to-end (ingest resolves the org default and stamps it; fetch
+dispatches on the row's provider) and the provider is reachable — but
+no live SharePoint Graph transfer occurred. The gated harness throws
+until implemented against a real tenant, so nothing false-greens as
+proven-live. A future reader must carry the gate: "Charter B real-flow
+✓" means wired + unit/integration-proven against mocked Graph, NOT
+live.
+
+**The three (a)-carries, accounted.** (a) Layer-2 Zod admit-set —
+DISCHARGED (landed with the dynamic value, D-4). (b)
+provider_unavailable routing + substrate — PARTIALLY discharged by
+design: the classification is now honest (the D-5 two-layer wire
+contract `STORAGE_PROVIDER_UNAVAILABLE`→`PIPELINE_UNAVAILABLE`→
+classifyError-unchanged) and the exception_reason value is RESERVED
+(migration 20240180, not in the active CHECK), but the exception-queue
+ROUTING surface + the enqueue coupling-wall design are
+deferred-with-consumer to Phase-7 (decision #2 = option 1). The reason:
+the only live read site (byteFetch at ingest) runs moments after `put`
+already re-read the same bytes (§9), so v1 provider_unavailable is
+near-vestigial — active routing now would be inert-substrate-ahead-of-
+consumer. (c) Task-8 ops — local parts landed (runbook,
+already-present env wiring, gated harness); Azure registration + live
+run gated.
+
+**The selection-seam reframe (charter finding #1) was the design-grain
+catch.** Provider selection is TWO independent points — put-at-ingest
+and fetch-at-read, both hardcoded. Write-dynamic-without-fetch-dynamic
+would have been reachable-but-broken (bytes written to SharePoint,
+fetched from supabase — silent cross-provider divergence). The
+corrected spine (pick-once at ingest via resolveStorageProvider;
+dispatch-on-row at fetch in byteFetch) is a correctness fix. Disk also
+falsified the naive "resolve at the canonical writer" shortcut: there
+are TWO source_documents writers (single-doc RPC + the ingestion batch
+RPC), so the helper centralizes selection without a chokepoint that
+doesn't exist.
+
+**The process lesson — `test:full` caught what per-task read-backs
+structurally could not.** Two findings surfaced only at the full-suite
+gate, both fixed (not waived): (1) parallel test-isolation pollution —
+the charter-B tests flipped the SHARED SEED.ORG_HOLDING's
+default_storage_provider, breaking parallel ingest tests that read the
+same seed org; fixed with dedicated per-file test orgs (`634ac050`).
+(2) a unit-suite-membership miss — Task 3 gave createSourceDocument a
+new resolveStorageProvider dependency; I ran the integration suites but
+not the documentPlatformService UNIT test, which mocks deps and broke
+on the uninjected call (`aed41979`). The two-seat per-task read-back
+verified each task's SOURCE correctness first-hand but was never
+positioned to catch cross-test interaction (needs parallel readers) or
+a suite-membership miss (needs the full unit suite). This is the
+precise boundary between UNIT-PROVEN-per-task and PROVEN, and the
+reason the full-suite gate exists before push. Banked as a
+carry-forward codification candidate (N=1, novel): "two-seat read-back
+≠ full-suite gate."
+
+**Existing conventions HELD — as catch, not prevent.** header-lags-the-
+edit doc-sync (codified, code.md:135-180, prior N=4) fired twice this
+arc (Task 3 preamble, Task 5 disposition matrix) and was caught at
+read-back each time; test-isolation (codified, testing.md) fired once
+(the shared-config-row variant) and was caught at the full-suite gate.
+Both conventions worked as safety nets, but ADHERENCE lagged — I
+violated header-lags twice despite it being codified. Carry-forward:
+the convention is a review discipline; an edit-time trigger
+(path-scoped rule at service files, or a closeout checklist line) would
+shift it from catch to prevent.
+
+**Carry-forwards.** (1) provider_unavailable exception-queue routing
+surface → Phase-7 (with the job-runner + the coupling-wall design + the
+later-read consumers). (2) Live SharePoint Graph e2e → the gated
+harness's throws-until-implemented body is the PROVEN-LIVE discharge.
+(3) Codification candidate unit-test-when-a-dependency-is-added (N=1).
+(4) Codification candidate two-seat-read-back-≠-full-suite-gate (N=1).
+(5) Orchestrator failureClassification.ts header residual — its
+"immediate route to exception queue" lines overstate its
+emit-and-throw behavior; pre-existing (chunk 7.1a), the unchanged D-5
+(c) leg, NOT this arc's regression; left as a known minor residual (a
+live pre-existing instance of header-lags); annotate-or-leave is the
+operator's call, non-blocking.
+
+**No conventions graduated this arc.** The two strong candidates
+(header-lags, test-isolation) are already codified; the two novel ones
+(unit-test-when-dependency, two-seat-≠-suite-gate) are N=1.
+codify-convention was not invoked — recording carry-forwards rather
+than improvising a lower threshold is the discipline.
+
+## ENTRY: "Charter B PROVEN-LIVE: harness body landed — READY, not PROVEN-LIVE"
+
+2026-06-08. Commit `77e4b520` (on `staging`). A one-task arc discharging
+the *code-able* half of the real-flow arc's carry-forward #2. The gated
+`sharepoint_drive` live-e2e harness body now implements the real
+ingest→fetch flow — but **READY ≠ PROVEN.** It makes the live proof one
+`RUN_SHAREPOINT_E2E=1` away; it does NOT discharge PROVEN-LIVE. The green
+run against a real M365 tenant (after operator runbook ops no agent can
+perform — Azure Sites.Selected app + cert + per-site grant + an org
+pointed at sharepoint_drive) is the discharge, and is the thing that
+flips the arc's status. The body landing must never read as "proven
+live."
+
+**The honest proof shape (pinned at charter grain, landed verbatim).**
+Exercise the byteFetch SEAM (dispatch-on-row) and RECOMPUTE the fetched
+bytes: `computeHash(fetched.result.bytes) === created.content_hash` —
+NOT `fetched.result.content_hash` (the row's STORED hash, which would
+false-green even on corrupted bytes), and NOT `verifyIntegrity` (a
+different provider path byteFetch never calls; using it would bypass the
+very seam the arc exists to prove live). The asymmetry: `put`
+self-verifies at write so its hash is trustworthy; `fetch` is the
+unproven half, closed only by recomputing the returned bytes. Pinning
+the false-green-vs-honest-proof distinction at charter grain is what
+kept the spec from regressing to a hollow proof.
+
+**Two charter/spec-stage read-back catches landed.** (1) The required
+`SystemActorCaller.system_actor` field — the ctx literal fails typecheck
+without it (read-back caught a transcription that dropped it; folded
+`system_actor: 'pipeline_orchestrator'` per autoCommitGate). (2) The
+spec's stale "Not ratified" Status line on a committed artifact —
+text-not-matching-reality, the same header-lags pattern, corrected at
+`020f537e`. Minor scope-note: cleanup gives `delete` its first test-only
+live exercise (hygiene; failure logged prominently, non-fatal) —
+recorded against charter #3, not absorbed silently. No conventions
+graduated (one-task arc).
+
+## 2026-06-09 — mailbox-sharepoint-live arc (Postmark auth-model fix + combined runbook)
+
+WRONG — `POST /api/webhooks/postmark-inbound` required an `X-Postmark-Signature`
+HMAC that Postmark never sends. Postmark inbound webhook security is HTTP Basic
+Auth (credentials in the webhook URL) + IP allowlist — no body signature
+(verified against Postmark's primary docs). Every real delivery 401'd; the
+mailbox channel had never received live mail. Fixed to HTTP Basic Auth
+(constant-time, length-guarded SHA-256-digest compare; all failure paths → 401 +
+uniform `auth_invalid`). Chain `63729742`→`acd6e451`→`8e4fcbaa`→`8ebfb0cc`→
+`1f461e0d`→`a463c73e`→`4f67edd8`.
+
+NOTE — the bug shipped because the route's only test SELF-MINTED the
+`X-Postmark-Signature` HMAC the handler expected (`createHmac(...).digest('hex')`),
+validating a contract Postmark doesn't implement: a green test against a fiction.
+A prediction-grounding instance at the test boundary — an ungrounded prediction
+about an external system's behavior, baked into code + comment + test, none of
+which checked it against the real contract. The fix's test now constructs the
+documented Basic Auth contract (RFC 7617). Candidate (below N≥3): "a test that
+self-mints the contract it asserts validates nothing."
+
+NOTE — process: the spec's downstream-path soundness check (added at read-back)
+surfaced the never-combined-live enumeration + the IP-allowlist scope-shift
+(`middleware.ts` matcher excludes `/api` → IP allowlist belongs at the Vercel
+Firewall, not code); and resolved a `[to-verify]` into a correction
+(`handleForwardedMailbox` = N+1 `storageProvider.put()` + one batch RPC, not
+`createSourceDocument`). The two-task split (green-isolated env rename | Basic
+Auth swap) kept each commit green + reviewable.
+
+NOTE — disk-vs-text-grain: the token-scoped grep-clean
+(`createHmac`/`x-postmark-signature`/`signature_invalid`) missed two HMAC-*prose*
+comments (Step 1 "required for HMAC verification"; `emitPreResolutionAudit`
+"HMAC fail"); a prose-level grep (`-i hmac`) + read-back caught them (`a463c73e`).
+Reinforces header-lags-the-edit; the grep scope was also widened (env.ts +
+.env.example) at read-back.
+
+NOTE — scope protection (load-bearing): `sidecar/client.ts`'s `createHmac` is the
+Modal OCR sidecar's OWN auth (chounting signs requests to its own endpoint —
+opposite direction, both ends controlled, legitimate). A repo-wide `createHmac`
+sweep would have broken the OCR pipeline; the removal was scoped to `route.ts` +
+test. Same primitive, opposite direction, opposite correctness.
+
+NOTE — status: mailbox→SharePoint is wired + UNIT-PROVEN (typecheck · route test
+13/13 · `test:full` 1796/0/11), live transfer GATED on operator ops + the first
+forwarded email (runbook `mailbox-sharepoint-onboarding.md`). UNIT-PROVEN ≠
+PROVEN. No conventions graduated.
+
+## 2026-06-09 — graphclient-cert-from-env arc (SharePoint-on-Vercel cert prerequisite)
+
+NOTE — chain: the mailbox-sharepoint-live arc shipped UNIT-PROVEN; a de-risk pass
+on its runbook found a CODE prerequisite — graphClient used @azure/identity's
+disk-path ClientCertificateCredential overload (PEM read from
+GRAPH_CLIENT_CERT_PATH on disk), which can't work on Vercel's read-only
+serverless FS. So the SharePoint put AND the pipeline's Stage-1 byte-fetch would
+have failed at first Graph use — the de-risk caught it before any operator
+provisioned a real Azure tenant. Fixed: in-memory { certificate } overload (:51),
+PEM from a base64 env var (GRAPH_CLIENT_CERT_PEM); first graphClient test; both
+runbooks doc-synced. Chain 7dbdb046→749b2f8e→89c50dfa→189b3a2a.
+
+WRONG (candidate, banked below N≥3) — a rename's blast radius needs a REPO-WIDE
+GREP, not a hand-enumerated change-surface table. The spec's §3 table missed the
+e2e RUN_E2E gate's GRAPH_CLIENT_CERT_PATH reference; the grep caught it. Teeth: a
+stale ref there fails NO test (the e2e is skip-gated → a stale var silently keeps
+RUN_E2E false), so neither a targeted run nor test:full would surface it — only
+the grep does. Reinforces the disk-vs-text-grain / header-lags-the-edit class with
+a rename-specific, silent-failure sharpening. Sibling datapoint: the mailbox arc's
+token-scoped grep missing prose comments. Graduate via codify-convention if it
+fires again.
+
+NOTE — provenance routing: §1's exact { certificate } overload was
+version-confirmed (@azure/identity ^4.13.1) but its definitive close was routed to
+the execution typecheck (compile-enforced SDK API), not a contested-source
+verification — the right backstop for a stable API, materially unlike the Postmark
+contract (which warranted primary-source verification because it was contested
+across sources).
+
+NOTE — the Buffer.from(x,'base64') lenience: Node drops non-base64 chars rather
+than throwing, so a fat-fingered value would surface as a cryptic getToken crash.
+readGraphConfig validates the decoded value is PEM-shaped and throws a clear typed
+ServiceError at the config choke point (config-sanity, not key-validity — live
+auth is the discharge).
+
+NOTE — status: sharepoint_drive is now Vercel-deployable (cert-from-env), still
+live-gated on operator ops + the first forwarded email. typecheck · graphClient
+3/3 · test:full 1799/0/11. UNIT-PROVEN ≠ PROVEN. No conventions graduated
+(candidate banked).
+
+## 2026-06-09 — adminclient-s29a-build-repair arc (origin/staging build red: 37 ESLint errors → 0)
+
+NOTE — context: origin/staging's Vercel build failed `turbo run build` at the
+ESLint gate — 37 errors in two classes: `@/db/adminClient` outside `services/` (5
+routes + byteFetch agent stage; ADR-0020/UF-006) and S29a wrap-or-annotate on 26
+service exports (mostly pre-existing `pattern-B` skips line-wrapped, breaking the
+single-physical-line regex). Fixed all 37 at source (23 files, f8c077d3 →
+origin/staging): adminClient reads hoisted into services with inline org-gating;
+annotations restored single-line; `persist` made Pattern-A visible; scoreComposition
+moved `services/→core/`; a pre-existing IDOR closed in passing
+(`vendorService.listVendors` lacked a `caller.org_ids` guard). C1: lint 0 · next
+build 0 · test:full 1799/0/11.
+
+WRONG (candidate, banked below N≥3) — push-readiness runs `typecheck + test:full`
+(+ `agent:validate`) but NOT `next build`/ESLint, so the 37 errors passed the gate
+GREEN and reached origin/staging, breaking the deploy (same `turbo run build`). The
+gate's green is a FALSE green for any ESLint-only / build-time failure class.
+Observation-grain N=1 (N=2 if Wave-6's lint/build-CI-reds-while-test-green counts) —
+below N=3. Destination when graduated: CLAUDE.md push-readiness gate (every
+push-readiness event) — add `pnpm --filter @chounting/web build` to the pre-push
+sequence + Condition 1. Graduate via codify-convention at next fire.
+
+WRONG — the advisor built a staging→main promotion EMERGENCY from a SHA (625c7df) +
+a commit-message phrase in a Vercel log, urging "re-promote main now" — without
+checking the commit's DATE. Grounding dissolved it: 625c7df is the 2026-05-16
+Phase-6 merge, unmoved; staging 468 ahead; the Wave-6 routes generating ~half the 37
+errors absent there. Lesson: verify the load-bearing fact — here, *when* —
+first-hand before acting on an observed artifact's framing. Same verify-from-disk
+discipline that caught the Postmark HMAC + cert-on-Vercel, turned on its author; the
+author recording it is the point.
+
+NOTE — status: repair on origin/staging (f8c077d3); staging build-green read +
+lock-release operator-side. main untouched (staging→main stays a separate V1-scale
+arc). No conventions graduated; gate-gap candidate banked with graduation trigger.

@@ -2055,6 +2055,599 @@ transaction isolation rule.
 
 ---
 
+### INV-RULE-001 — rule_evaluation_log is append-only, user-path (Layer 1a)
+
+**Invariant.** Rows in `rule_evaluation_log` are append-only against
+the **user path**: no `UPDATE` and no `DELETE` through a user-scoped
+(`authenticated`) client, and no user-path `INSERT`. Once
+`ruleEvaluationService` writes an evaluation row via the service-role
+client, the user path cannot modify it. This is the first member of the
+**`INV-RULE-*` domain family** — rule-core invariants, properties of the
+Rule Type Core substrate and its evaluator / gate / canvas consumers
+(ADR-0024 §9). Reserved at ADR-0024 ratification; registered here at the
+migration arc, when the enforcement landed in code (the
+spec-without-enforcement rule).
+
+**Scope — user-path, not all-path (read this before relying on it).**
+INV-RULE-001 is **not** equivalent to INV-AUDIT-002 / INV-LEDGER-003,
+which are *trigger-authoritative* — append-only against every role
+including `service_role`. INV-RULE-001 is enforced by RLS only (ADR-0024
+specified no triggers, no `REVOKE`s), and `service_role` **bypasses RLS**:
+
+- **User path:** append-only, DB-enforced — RLS `USING (false)` on
+  UPDATE/DELETE plus no user-path INSERT policy (default-deny).
+- **Service path:** append-only by **single-writer discipline only**
+  (`ruleEvaluationService` is the sole writer per ADR-0024 Decision 6 and
+  inserts only). The database does **not** stop a `service_role` caller
+  from updating or deleting rows. A future service path that mutated
+  `rule_evaluation_log` would not be caught by the DB — on the service
+  side the guarantee is convention, not constraint.
+
+This is the same shape as INV-RLS-001 (an RLS invariant `service_role`
+bypasses by design) and as the project's single-writer substrate posture
+(`ruleRegistryService` / `ruleTrackRecordService` / `vendorRuleService`
+likewise rely on single-writer discipline + RLS for the user-path
+surface, not trigger-armor).
+
+**Threat model.** Protects the operational evaluation trace against
+user-path tampering; the single-writer discipline protects against
+service-path accidental double-write / overwrite. It deliberately does
+**not** carry the all-path tamper-proofing of INV-AUDIT-002, because
+`rule_evaluation_log` is a high-volume operational log (one row per
+evaluation, win or lose), not the canonical legal audit trail —
+per-row trigger validation would be a material cost at that volume, and
+the trustworthiness bar is below `audit_log`'s.
+
+**Enforcement.** RLS, defined in
+`supabase/migrations/20240164000000_rule_evaluation_log.sql`:
+
+```sql
+ALTER TABLE rule_evaluation_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY rule_evaluation_log_select ON rule_evaluation_log
+  FOR SELECT USING (user_has_org_access(org_id));
+-- no INSERT policy: service-emitted only (audit_log / events precedent;
+-- RLS-enabled-no-policy denies the user path; service_role bypasses).
+CREATE POLICY rule_evaluation_log_no_update ON rule_evaluation_log
+  FOR UPDATE USING (false);
+CREATE POLICY rule_evaluation_log_no_delete ON rule_evaluation_log
+  FOR DELETE USING (false);
+```
+
+The explicit `USING (false)` UPDATE/DELETE policies are functionally
+redundant with default-deny but surface the append-only intent at the
+RLS layer (discoverable from `\d rule_evaluation_log`) and guard against
+a future migration accidentally adding a permissive policy — the same
+rationale INV-AUDIT-002 gives for `audit_log_no_update` /
+`audit_log_no_delete`.
+
+**Scope is the table, not the view.** The invariant is on
+`rule_evaluation_log`. `rule_evaluation_30d_view` is a read-only derived
+view (`security_invoker = true`); its content is append-only by
+derivation from the base table, and it is not itself a write target.
+
+**Future evolution.** If the trustworthiness bar later rises (e.g.,
+evaluation traces become inputs to a regulated decision record),
+INV-RULE-001 can be promoted to trigger-authoritative all-path
+append-only via a follow-on migration + an ADR-0024 amendment, mirroring
+INV-AUDIT-002's trigger + `REVOKE` defense-in-depth. That is a deliberate
+non-decision at Ring 2A-core.
+
+**Annotation site.**
+`supabase/migrations/20240164000000_rule_evaluation_log.sql`
+(`-- INV-RULE-001`), establishing bidirectional reachability with this
+leaf.
+
+---
+
+### INV-RULE-002 — the pure-core rule evaluator is deterministic (Layer 2)
+
+**Invariant.** `evaluate(rules, context)`
+(`apps/web/src/core/rules/evaluator.ts`) is a pure function: identical
+inputs produce a byte-identical `MatchResult` on every call — same
+`winning_rule_id`, same `also_matched_rules` / `almost_match_rules`
+ordering, same `evaluation_trace`. The second member of the
+**`INV-RULE-*` domain family** (ADR-0025). Reserved as a candidate at
+ADR-0024 Decision 9 / ADR-0025; registered here at the Ring 2A-core
+authoring rollout's Commit 1, when the evaluator + its determinism test
+landed (the spec-without-enforcement rule).
+
+**Scope — code property, test-verified (read this before relying on
+it).** Unlike INV-RULE-001 (DB/RLS-enforced, Layer 1a) and most Layer 2
+invariants (structural / runtime-enforced via a guard, type, or export
+contract), determinism is a property *across invocations* rather than
+*within* one. No single-run check can validate it — there is no sentinel
+that rejects a "non-deterministic" evaluation, because non-determinism is
+about identity across runs, not a rule violation in any one run. The
+verification site is the `tests/unit/ruleEvaluator.test.ts` determinism
+block (byte-identical `JSON.stringify` + reorder-invariance). **This is
+the first test-verified INV in the registry**; future test-verified
+invariants follow the same shape — a named property plus a verifying
+test, annotated at the property's code home.
+
+**Threat model.** Protects the §7 purity contract — reproducibility and
+auditability. The same proposal must re-derive the same rule outcome
+across runs, so `rule_evaluation_log` traces are replayable,
+`also_matched` / `almost_match` orderings are stable, and a rule decision
+can be re-derived for audit. Non-determinism would make the evaluation
+log non-reproducible and orderings unstable, undermining the log's
+evidentiary value.
+
+**Enforcement.** Test-verified (byte-identical `JSON.stringify` +
+reorder-invariance). Structurally reinforced by
+`agent-first-import-boundaries` precluding `db/` / `services/` / `agent/`
+imports in `core/`, which removes the most common non-determinism vectors
+(DB reads, network). Clock and RNG (`Date.now()`, `Math.random()`,
+`performance.now()`) are JavaScript globals, **not** import-gated —
+adding one to a predicate evaluator would compile cleanly through the
+import boundary and break only the determinism test, which is therefore
+the load-bearing check.
+
+**Annotation site.** `apps/web/src/core/rules/evaluator.ts`
+(`// INV-RULE-002`), establishing bidirectional reachability with this
+leaf. The reachability diff scans `src/` + `supabase/migrations/` (not
+`tests/`), so the annotation lives at the property's code home; the
+determinism test is the verification.
+
+---
+
+### INV-RULE-003 — rule_evaluation_log has a single writer (Layer 2)
+
+**Invariant.** `ruleEvaluationService.recordEvaluation`
+(`apps/web/src/services/rules/ruleEvaluationService.ts`) is the sole append site
+to `rule_evaluation_log` — no other code inserts rows. The third member of the
+**`INV-RULE-*` domain family** (ADR-0025). Named as the rollout's second candidate
+at ADR-0025 (frontmatter `invariants:` anticipation + the §Status "Amended" note);
+registered here at the Ring 2A-core authoring rollout's Commit 3, when
+`ruleEvaluationService.recordEvaluation` became that sole writer (the
+spec-without-enforcement rule — the enforcement site exists in code now).
+
+**Scope — code property, runtime/structural sub-type (read this before relying on
+it).** INV-RULE-003 establishes the **second Layer-2 enforcement sub-type**. The
+Layer-2 family now spans two:
+
+  - **(a) test-verified** — a named property plus a verifying test; a test failure
+    surfaces a violation. **INV-RULE-002** (evaluator determinism, asserted by
+    `tests/unit/ruleEvaluator.test.ts`) is the exemplar.
+  - **(b) runtime/structural** — the enforcement site is a *code pattern* (a single
+    function owns the write) plus *code-review discipline*; there is no test that
+    asserts "only `recordEvaluation` writes," and no DB constraint binds it.
+    **INV-RULE-003** is the exemplar.
+
+INV-RULE-003 is sub-type **(b)**. **Future Layer-2 INVs should declare which
+sub-type they fall under** — this is the standing taxonomy the registry carries
+forward from here.
+
+Single-writer is **discipline, not DB enforcement** — the same materially-weaker
+shape as INV-RULE-001's service path. INV-RULE-001's RLS makes the log append-only
+against the *user* path (`USING(false)`), but `service_role` bypasses RLS, so any
+service *could* insert into `rule_evaluation_log`; that no service other than
+`ruleEvaluationService.recordEvaluation` does is enforced by the code pattern +
+review, not by the database.
+
+**Threat model.** `rule_evaluation_log` is the source-of-truth evaluation record
+(ADR-0025 §7 / OQ-3a — counters are reconcilable from the log corpus). A second
+writer could append rows that bypass `recordEvaluation`'s row-per-candidate
+expansion + winner-attribute discipline (winner attrs populated only on the winning
+row; `effective_action` / `disposition` set only post-gate), corrupting the log's
+shape, the `rule_evaluation_30d_view` aggregates derived from it, and the
+log-as-source-of-truth reconciliation property. Concentrating the write in one
+service keeps the append shape canonical.
+
+**Enforcement.** Runtime/structural: `recordEvaluation` is the only code that
+inserts into `rule_evaluation_log`; the orchestrator
+(`agent/policies/agent-ladder/ruleEvaluationOrchestrator.ts`) and every other
+caller reach the log *through* it, never inlining an insert. Reinforced by
+`agent-first-import-boundaries` (`'error'`) — only `services/` may write `db/`, so
+the agent layer cannot insert directly — and by the ADR-0025 §6 (OQ-3c) two-method
+split, which keeps the append in `recordEvaluation` rather than `evaluate`. There
+is no runtime sentinel and no test asserting the sole-writer property; **code review
+at the service boundary is the load-bearing check** (the runtime/structural
+sub-type's defining characteristic).
+
+**Annotation site.** `apps/web/src/services/rules/ruleEvaluationService.ts`
+(`// INV-RULE-003` at `recordEvaluation`), establishing bidirectional reachability
+with this leaf. The annotation landed in the Commit 3 feature commit; this leaf +
+the `invariants.md` row + the `control_matrix.md` row land in the registration
+commit — mirroring INV-RULE-002's Commit-1-annotation / registration-commit-docs
+split.
+
+---
+
+### INV-RULE-004 — rule_branches / rule_conditions are logic-frozen (Layer 1a)
+
+**Invariant.** A rule's branch/condition logic is write-once and immutable
+once stored: `rule_branches` and `rule_conditions` admit no `UPDATE` and no
+`TRUNCATE` under **any** caller (including `service_role`), and no user-path
+`DELETE`. Branches/conditions are created once — co-created with the rule in
+the `create_vendor_rule_atomic` transaction (`proposed` state) — and never
+edited in place; amendment is retire-and-create-new (§5.1, no
+`rule_version_id`). The fourth member of the **`INV-RULE-*` domain family**.
+This is the §5.1 logic-freeze: the branch logic is the substrate the
+audit-reproducibility guarantee rests on, so a stored evaluation can always be
+re-derived from the exact branches that produced it. Reserved at ADR-0027
+ratification; registered here at the implementation arc, when the enforcing
+trigger + RLS landed in `20240169` (the spec-without-enforcement rule).
+
+**Scope — HYBRID (read this before relying on it).** INV-RULE-004 is **not**
+uniform across mutation verbs — its scope differs by operation, and this is
+deliberate:
+
+- **UPDATE + TRUNCATE — all-path, trigger-authoritative.** The
+  `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` BEFORE
+  triggers fire for **every** role including `service_role`, plus
+  `REVOKE TRUNCATE`. This is **stronger** than INV-RULE-001's RLS-only
+  user-path append-only — the same all-path shape as INV-AUDIT-002 — and is
+  the belt-and-suspenders the fiduciary-logic stakes justify (the logic *is*
+  the reproducibility substrate).
+- **DELETE — user-path only.** RLS `USING(false)` blocks the user path; there
+  is **no** DELETE trigger. A `service_role` direct DELETE is **not**
+  DB-blocked. This is the **same discipline-not-DB model as INV-RULE-001's
+  service path** (NOT stronger). DELETE is deliberately not trigger-blocked:
+  a DELETE here only legitimately arrives via the `rule_registry`
+  `ON DELETE CASCADE` (whole-rule removal / retire-and-create-new cleanup),
+  and an all-path BEFORE DELETE on a cascade-child of a *deletable* parent
+  would silently reject that cascade — the CA-65 trap (Session 8 C6:
+  append-only DELETE triggers breaking the parent-delete cleanup path). The
+  log cascades away with the rule, so a removed rule leaves no dangling
+  Logic Receipt.
+
+**Residual (named, not hidden).** A service-path **direct** DELETE of a
+single branch/condition row on a *live* (non-`proposed`) rule — not via the
+parent cascade — would remove logic from an active rule and break
+reproducibility, and is **not** DB-blocked. The guarantee on that surface is
+the `ruleBranchService` single-writer contract: never partial-delete branch/
+condition rows on a non-`proposed` rule; whole-rule removal only via the
+`rule_registry` cascade. This is the same discipline-not-DB gap INV-RULE-001
+already carries on its service path (precedented), made explicit here.
+
+**Unconditional (write-once-from-creation).** The trigger does **not** read
+`parent.lifecycle_state` — it blocks UPDATE/TRUNCATE always, not only once the
+rule is past `proposed`. This is sound because branches are INSERT-only via the
+create RPC; approval flips `rule_registry.lifecycle_state`, not branch rows;
+and amendment is retire-and-create-new, never in-place edit — so there is no
+`proposed`-state branch-UPDATE path to preserve. (ADR-0027 Decision 2's
+"once past proposed" wording is a minor inconsistency with Decision 1's
+"write-once at creation"; the trigger realizes Decision 1.)
+
+**Threat model.** Protects §5.1 audit-reproducibility: a rule that has
+evaluated proposals must keep the exact branch logic that produced those
+evaluations, so the `rule_evaluation_log` traces stay re-derivable. The
+all-path UPDATE+TRUNCATE block is the DB-enforced floor; the DELETE
+discipline + the residual contract cover the cascade-removal lifecycle.
+
+**Enforcement.** Column-immutability triggers + RLS + `REVOKE TRUNCATE`,
+defined in
+`supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`:
+
+```sql
+CREATE OR REPLACE FUNCTION reject_rule_branches_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'rule_branches is logic-frozen (INV-RULE-004) — UPDATE and TRUNCATE are forbidden'
+    USING ERRCODE = 'feature_not_supported';
+END; $$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_rule_branches_no_update   BEFORE UPDATE   ON rule_branches   FOR EACH ROW       EXECUTE FUNCTION reject_rule_branches_mutation();
+CREATE TRIGGER trg_rule_branches_no_truncate BEFORE TRUNCATE ON rule_branches   FOR EACH STATEMENT EXECUTE FUNCTION reject_rule_branches_mutation();
+-- (rule_conditions mirrors; both tables also carry RLS UPDATE/DELETE USING(false)
+--  + REVOKE TRUNCATE; no DELETE trigger — see Scope.)
+```
+
+**Annotation site.**
+`supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`
+(`-- INV-RULE-004` / `INV-RULE-004` in the trigger RAISE) +
+`apps/web/src/services/rules/ruleBranchService.ts` (the single-writer contract
+carrying the DELETE residual), establishing bidirectional reachability with
+this leaf.
+
+---
+
+### INV-WORKFLOW-002 — terminal-disposition completeness / no silent drops (Layer 2)
+
+**Invariant.** Every ingested document case the pipeline processes
+advances to a pipeline-terminal disposition: `needs_review` — the
+pipeline's terminal hand-off to the human, NOT a final case state — or a
+terminal case state (`rejected` / `committed`). The pipeline never
+returns null-and-drops a decided case. One property, multiple
+enforcement sites (the INV-1 precedent): the orchestrator's Stage-6.5
+routing block + the park-exit hand-offs (`ingestDocument.ts`), the
+automation chain-advance (`documentCaseService.advanceCaseAutomation`),
+and Subsystem 2's routing (`documentRouterService.resolveCandidates` —
+branch (a) → `matched`; branches (b)/(c) → `needs_review` via
+`enqueueException`). Reserved in the V1 governance plan §4 (the
+`INV-WORKFLOW` reserved block, 001..005 — cited de-tokenized so the
+reachability diff keeps its D6 visibility for the 001 registration);
+registered here at Wave 6 D2.1 T3, when
+the enforcing routing landed (the spec-without-enforcement rule). The
+routing also realizes INV-5's human-review destination (no autonomous
+commit at V1) — INV-5 is cross-referenced, not re-registered; each
+invariant owns one property even when one code change serves two.
+
+**Scope — a prospective process guarantee, not a database-state
+assertion.** The guarantee covers pipeline runs from D2.1 onward: every
+run that reaches the Stage-6.5 decision routes its case to a terminal
+disposition, with the D2.3 sweep (`sweepStrandedCases`,
+`apps/web/src/agent/orchestrator/maintenance/sweepStrandedCases.ts`,
+SHIPPED) as the eventual-consistency backstop.
+It is NOT "no case is ever observed in a non-terminal state": a
+Subsystem-3 re-evaluation (`dispatchTrigger` → `resolveCandidates`
+branch (a)) can transiently leave a case at `matched` with no hand-off —
+sweep-backstopped, not a violation. Dedup short-circuits (Stage 0) are
+a named carve-out: a duplicate document never reaches a content
+decision; its case remains `received`, distinguishable by the
+`dedup_short_circuit` status/trace and the hash match (the original
+case carries the workflow) — the D2.3 sweep classifies these, it does
+not route them (realized: the sweep's B3-D bucket reports
+`dedup_carveout` via the Stage-0 `dedupByHash` pre-check and never
+re-runs them).
+
+**Residual (named, not hidden).** Two classes (a third — the
+attachment-card class — was ELIMINATED at D2.1 T4: grounding showed the
+attach proposal is built-and-discarded at V1, neither persisted nor
+surfaced, i.e. a pending proposal — so the attachment exit takes the
+same `matched→needs_review` hand-off as the park exits, and the
+unknown-type exit routes via `enqueueException('unknown_document_type')`,
+realizing the ADR-0014 §7 contract; every mainline decision route is
+total):
+
+1. **Pre-enforcement parked backlog (transitional) — RETIRED
+   2026-06-04.** Cases stranded before the routing landed —
+   `received`-parked by the Wave -1 bleed-stop, plus any pre-T4
+   attachment/unknown strandings (e.g. at `matched`). Retirement
+   mechanism shipped at D2.3 (`sweepStrandedCases` + operator
+   runner); the one-time backlog-clearing run executed 2026-06-04
+   against the operative (local) environment, operator-acknowledged
+   (run_trace_id `2855c8e3-b3bc-43be-8be9-2ba864c5b9e7`): 76
+   eligible swept to honest dispositions — 11 matched-strandings
+   recovered via the hand-off (durable: post-run dry-run shows B1=0),
+   28 classified as dedup carve-outs (remain `received` by design),
+   28 reported `pipeline_failed`/`transient_exhausted` (local
+   test-fixture docs with no stored bytes; re-eligible and
+   re-reported each run), 9 anomalies reported (3 `no_job_row`
+   early fixtures, 6 suite-seeded open-exception shapes — the
+   EXCEPTION_ALREADY_OPEN anomaly path's first live firing). No
+   pre-enforcement case remains unswept; every remaining
+   non-terminal case sits in a named, reported class. Per-action
+   audit rows are queryable by the run report's per-case trace_ids.
+2. **Strandings.** Pre-decision pipeline failures leave the case at
+   `received` (reported via `status='pipeline_failed'` + failure_class;
+   recoverable by re-run); the post-hoc chain is 3–5 separate RPC
+   transactions, so a mid-chain crash can strand a case at ANY
+   non-terminal state (`received` / `extracting` / `classified` /
+   `matched`) — the orphan domain the D2.3 sweep queries. All reported
+   or queryable; none silent.
+
+**Threat model.** A silent drop — a case the pipeline decided on but
+never routed — is invisible to the human review surface, so the V1
+review-and-post contract fails silently: the document appears
+freshly-arrived forever (the pre-D2.1 state this invariant closes; the
+unmatched-vendor null-and-drop was the charter §2 Inv-7 finding).
+
+**Enforcement.** Layer 2, **runtime/structural sub-type** (the
+INV-RULE-003 shape: code-path pattern + review discipline, with
+test-verified support). The Stage-6.5 routing block + the park-exit
+hand-offs in
+`apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`
+(annotated `INV-WORKFLOW-002`); `advanceCaseAutomation`
+(`documentCaseService.ts`) enforces the automation-owned matrix slice
+app-side and REFUSES `classified→*` (single ownership — Subsystem 2's
+segment); the `enqueue_exception_with_audit` RPC guard (`state IN
+('classified','matched')`) is the substrate-layer enforcer for the
+`needs_review` entry. Test-verified by
+`apps/web/tests/integration/advanceCaseAutomation.integration.test.ts`
+(9 tests: chain-advance, idempotency, hand-off, single-ownership
+refusal, system-actor attribution) + the D2.1 T4 end-to-end routing
+suite (matched→`needs_review`; unmatched→`needs_review` with exception
+row) +
+`apps/web/tests/integration/sweepStrandedCases.integration.test.ts`
+(the D2.3 backstop: bucketing, per-bucket recovery through the
+machinery, EXCEPTION_ALREADY_OPEN anomaly split, dry-run zero-writes).
+
+**Annotation site.** `INV-WORKFLOW-002` at the Stage-6.5 routing block
+in `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`,
+establishing bidirectional reachability with this leaf.
+
+---
+
+### INV-EVIDENCE-001 — canonical evidence object required at commit (Layer 2)
+
+**Invariant.** Every AP posting committed through the review path
+produces exactly one canonical `evidence_objects` row per subject
+(org-scoped; Layer-1 `UNIQUE (org_id, subject_type, subject_id)`,
+constraint `evidence_objects_subject_unique`), carrying the
+successful-commit request's `trace_id` and a descriptive completeness
+status, BEFORE the case reaches `committed`. Named at ADR-0033 D-0033.4
+("every committed AP posting carries a complete evidence bundle on one
+canonical evidence object"), reserved-unregistered at Wave 2 per the
+register-on-enforcement rule (ADR-0021; D-0033.8); registered here at
+Wave 6 D5 T3, when the enforcing producer landed (the
+spec-without-enforcement rule). The registered statement deliberately
+claims only what is enforced: the D-0033.4 "complete evidence bundle"
+aspiration narrows to structural production + uniqueness; completeness
+itself stays **descriptive** at V1 (the design-spec OQ-6 disposition —
+the completeness-enforcement upgrade is a named post-V1 evolution).
+
+**Scope.** The guarantee covers the review path — the sole live commit
+surface at V1 (the approve→post route; the preserved auto-commit
+composite is intentionally unreferenced, eslint-disabled "PRESERVED FOR
+POST-V1"). Particulars, all deliberate:
+
+- **Status mapping:** the transient assembled object's completeness
+  `'complete'` maps to row status `'complete'`; `'partial'` AND
+  `'empty'` collapse to row-grain `'partial'` (the row enum carries no
+  'empty' by design).
+- **Trace anchor:** the row's `trace_id` is the **successful-commit
+  request's** trace (the approval moment). The unique key excludes
+  `trace_id`, so a crash-resume re-persist refreshes it to the resuming
+  request's trace — the original attempt's trace stays recoverable from
+  `audit_log`; the ingest-era traces stay reachable through the
+  assembled facets. `created_by` is INSERT-only (a resume never
+  rewrites the creator).
+- **No backfill:** postings committed before D5 carry no row (the
+  ADR-0033 D-0033.3 historical-bill dodge holds; absence of a row for a
+  pre-D5 commit is expected, not a violation).
+- **Subject vocabulary:** `linked_entity_type` values — `'bill'` (live)
+  and `'payment'` (wired; the record_bill_payment review branch is
+  structurally unreachable at V1 — Tier A never emits `cited_bill_id`).
+
+**Residual (named, not hidden).**
+
+1. **The sequencing half is runtime/structural** (the INV-WORKFLOW-002 /
+   INV-RULE-003 sub-type): nothing at the DB forces
+   persist-before-marking — a future edit that marks `committed`
+   without persisting compiles cleanly and is caught by review + the
+   crash-resume test, not by a DB sentinel. Only the
+   one-object-per-subject half has DB teeth (the Layer-1 UNIQUE).
+2. **Crash-class-X is an operator-visible HOLD, not a committed
+   state.** A recovered JE whose posting entity never landed
+   (`billService.post` writes the JE and the bill in separate,
+   non-atomic statements; on retry the JE dedup fires before the bill
+   insert, so the bill can never be created by re-approving) refuses
+   with the typed, non-retryable `POSTING_RECOVERY_UNREPAIRABLE` (409)
+   and the case holds at `approved` — manual repair. **This closes a
+   gap D3's 23505-recovery ratification silently admitted:** pre-D5,
+   that shape completed to `committed` with a ledger JE and no AP
+   subledger bill. The JE→bill non-atomicity root cause is carried as
+   the post-V1 fix (make the bill commit one transaction).
+3. **DB-grain bypass (the standard partial):** `service_role` writes
+   outside the service path (raw SQL) are not barred; the user path is
+   RLS-denied (no write policy).
+
+**Threat model.** A committed AP posting whose evidence cannot be
+anchored breaks the audit trail at the highest-stakes record — the
+committed ledger write: the reviewer's approval, the source document,
+and the extraction lose their stable, addressable join point, and the
+V2 learning tracks (Track 4 workflow learning; Track 7.4 first-class
+Logic Receipts) read fragments instead of the canonical object the
+glossary promises.
+
+**Enforcement.** Layer 1 + Layer 2 split:
+
+- **Layer 1 (DB teeth):** `evidence_objects_subject_unique` UNIQUE
+  `(org_id, subject_type, subject_id)` (migration `20240177`) — at most
+  one canonical object per subject; the producer upserts on it
+  (idempotent crash-resume).
+- **Layer 2 (runtime/structural):** the persist-before-marking seam in
+  the approve→post route (annotated `INV-EVIDENCE-001`):
+  `evidenceObjectService.persist` (org-scoped subject-ownership guard —
+  foreign ≡ missing, `LINKED_ENTITY_NOT_FOUND` — then assemble, then
+  upsert) runs after the ledger write and before
+  `advanceCaseAutomation('committed')`; a persist failure fails the
+  request with the case held at `approved` (operator-visible,
+  resumable); the ledger write is never rolled back.
+- **Sole-commit-path enumeration (verified at registration HEAD):**
+  `transition()` cannot reach `committed` — `approved→committed` is an
+  automation-only edge (`AUTOMATION_ONLY_TRANSITIONS`; the Layer-3b
+  guard in `documentCaseService.transition` throws `INVALID_TRANSITION`
+  on any automation-only edge at the human boundary), with
+  `TransitionInputSchema` (approved/rejected/proposed only) as
+  belt-and-suspenders; all nine
+  `advanceCaseAutomation` call sites enumerate to
+  classified/needs_review targets except the approve→post route's
+  single `target_state: 'committed'` — which sits downstream of the
+  persist seam; the `update_document_case_state_with_audit` RPC has no
+  callers outside `documentCaseService`; the preserved commit composite
+  is unreferenced.
+- **Test-verified support:**
+  `apps/web/tests/integration/evidenceObjectPersistence.integration.test.ts`
+  (8 tests: producer happy path; the teeth test — injected persist
+  failure → approved-hold + zero rows → resume → one row + committed +
+  one JE total; crash-class-X — 409, approved-hold, JE survival,
+  identical refusal on re-approve; persist-grain cross-org +
+  foreign≡missing negatives; two-user idempotence with INSERT-only
+  `created_by`) +
+  `apps/web/tests/integration/evidenceObjectsConstraints.integration.test.ts`
+  (5 tests: the UNIQUE + the status CHECK).
+
+**Annotation site.** `INV-EVIDENCE-001` at the persist-before-marking
+block in
+`apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts`,
+establishing bidirectional reachability with this leaf.
+
+---
+
+### INV-WORKFLOW-001 — no AI-only paths / producer coverage (Layer 2)
+
+**Invariant.** Every Intent in the code-defined producer registry
+(`apps/web/src/core/intent/producers.ts`) carries at least one non-AI
+producer — no intent type is reachable only through an autonomous
+producer (charter §2 Invariant 3; ADR-0031). At V1, `query` is
+**carved out** by the ratified Q2 scope-out (`V1_TEETH_SCOPE_OUT`),
+visibly and with the re-include trigger named: `QuerySpec` is a
+reserved Phase-2 shape (`intent_model.md:208-213`); at V1 transient
+views ride the Navigation path, which has non-AI producers, so no
+AI-only query path exists; when `QuerySpec` lands and `query`
+separates from `navigation`, it rejoins the teeth and needs its own
+non-AI producer. Named at ADR-0031 D-0031.7, reserved-unregistered at
+Wave 4 (warn-only enforces nothing; register-on-enforcement,
+ADR-0021/D-0031.3); registered here at Wave 6 D6 T3, when the teeth
+landed.
+
+**Enforcement (the headline carries its own hedges — claim only what
+is enforced).** Layer 2, **build-time structural** — a new sub-type in
+this registry (neither runtime nor DB): the producer-coverage check
+(`runCheck` in `producers.ts`; consumed by
+`scripts/check-intent-producers.ts`) exits non-zero on any unscoped
+gap, wired as a blocking job in `.github/workflows/ci.yml` and into
+the root `agent:validate` harness (the Variant-A wiring — the teeth's
+live home under the wave's no-push posture). **Hedges, headline-grade:**
+a red CI run fails the workflow but blocks a merge only where branch
+protection requires the check (operator-grain, not disk-verifiable);
+and the CI job's **first dynamic execution occurs at the wave-close
+push** (CI fires on push/PR; the wave's no-push invariant means the
+job is statically verified until then — the harness wiring is what
+bites during the wave). Test-verified support:
+`apps/web/tests/unit/intentProducers.test.ts` (the executable
+flip-safety proof — live gap set exactly `['query']`, carve-out
+covers it, exit 0; the teeth-bite synthetic — an unscoped gap exits 1;
+the intersection-only carve-out visibility; carve-out integrity —
+`query`'s AI producer stays recorded).
+
+**Scope.** The guarantee is a property of the **declared registry**:
+every registry key has a declared non-AI producer (or a named V1
+carve-out). It is prospective and build-time — enforced on every CI
+run and harness run from D6 onward.
+
+**Residual (named, not hidden).**
+
+1. **The registry is self-declared.** The check verifies that declared
+   producers cover every intent; it does not verify the declarations
+   themselves — a stale or wrong `site:`, or a producer that no longer
+   exists in the product, compiles and passes. Registry honesty is
+   code-review discipline (the INV-RULE-003 residual shape, at build
+   grain).
+2. **CI-blocking ⇔ branch protection.** Merge-blocking depends on the
+   repository's branch-protection settings — operator-owned, not
+   verifiable from the repo tree. Direct pushes to `staging` run CI
+   but are not blocked by a red run.
+3. **The dynamic-execution deferral.** The ci.yml job's first real
+   execution is the wave-close terminal push (the no-push invariant);
+   until then the harness wiring is the live enforcement and the CI
+   job is statically verified. The wave-close checklist carries
+   "confirm the intent-producers job ran green on the push."
+4. **The Q2 carve-out** — `query` is exempt at V1, visibly, with the
+   binding re-include trigger; part of the invariant's honest
+   statement, not a hole in it.
+
+**Threat model.** An AI-only path to an intent — an autonomous
+producer (agent / pipeline) reaching a capability, ultimately the
+ledger, with no human-initiable alternative — is the structural
+complement of ungoverned autonomy: the human cannot do manually what
+the AI can do, so review and fallback both fail structurally
+(ADR-0031's hazard; the ADR-0032 recording-only-autonomy analog).
+
+**Annotation site.** `INV-WORKFLOW-001` in
+`apps/web/src/core/intent/producers.ts` (the file header block) — the
+**grep-visible reachability anchor**: the symmetric diff covers
+`apps/web/src/` + `supabase/migrations/`, so the enforcing mechanism
+(`scripts/check-intent-producers.ts`; the ci.yml job) is
+grep-invisible by location and is cited from the anchor rather than
+grep-counted. The reverse window had been open code-side since Wave 4
+(the registry and the check carried the token, warn-only); this leaf
+closes it.
+
+---
+
 ## Phase 2 Reserved Invariants (stubs — not yet enforced)
 
 The external CTO architecture review (2026-04-21) and the
@@ -3453,6 +4046,116 @@ post, audit row absence on rollback);
 Structured Error Contracts section (the
 `AUDIT_WRITE_FAILED` sentinel and why it is not a
 typed `ServiceError`).
+
+---
+
+### INV-DOC-001 — Evidence completeness for committed bills (Layer 2)
+
+**Invariant.** Every committed bill has at least one
+`source_document_links` row with `linked_entity_type='bill'`,
+`linked_entity_id=<bill_id>`, and `link_role` ∈ `{'primary_invoice',
+'receipt'}` — unless the bill row carries
+`override_evidence_completeness=true`.
+
+**Generalization (ADR-0033).** INV-DOC-001 is the first **bill
+realization** of the reserved, general **INV-EVIDENCE-001**
+(evidence-native: every committed AP posting carries a complete
+evidence bundle on one canonical evidence object). The ADR-0033
+canonical evidence object **reads/assembles** this completeness
+by reference; it does **not** replace this gate. The invariant
+and enforcement stated here are **unchanged**; INV-EVIDENCE-001
+stays reserved-unregistered, gaining teeth at Wave 6.
+
+**Enforcement.** Layer 2 service-layer check at `billService.post()`
+in `src/services/spend/billService.ts`. The service function
+refuses to commit a bill without a `primary_document_id` input
+parameter, except when the `override_evidence_completeness`
+controller flag is set on the bill row. The flag's Layer 1
+substrate ships at Phase 5 migration
+`supabase/migrations/20240138000000_phase5_vendor_prepayment_substrate.sql:172`
+(`override_evidence_completeness boolean NOT NULL DEFAULT false`);
+the Layer 2 enforcement lands at Phase 5.1 chunk 5.1a (this leaf's
+graduation from reserved-candidate per ADR-0011 §15).
+
+The check fires AFTER Zod input validation
+(`PostBillInputSchema.parse()`) and BEFORE the entity preload
+block. If `override_evidence_completeness=false` (default) AND
+`primary_document_id` is absent, the function throws
+`ServiceError('EVIDENCE_INCOMPLETE', ...)` before any database
+mutation. If `primary_document_id` is provided, the function
+inserts the bill row + bill_lines + JE via
+`journalEntryService.post()`, then calls `documentLinkService.create()`
+to insert the `source_document_links` row with
+`link_role='primary_invoice'` in the same transaction window. The
+atomic transaction guarantees that either both the bill and the
+link row commit, or neither does.
+
+**Why Layer 2.** Per ADR-0011 §15: the relationship between
+`bills` and `source_document_links` is many-to-many via the
+polymorphic spine (ADR-0016 §1-§3), and the "at least one primary"
+requirement depends on `link_role` enum membership rather than
+referential integrity. The DB has no foreign key that would
+enforce the rule at Layer 1. The override-via-flag mechanism
+(Layer 1 substrate at migration `20240138000000:172` + Layer 2
+short-circuit) is owned by ADR-0015 §10 per the substrate-now-
+enforcement-later discipline (ADR-0010).
+
+**Interaction with the service layer.** `billService.post()` input
+schema extension at
+`src/shared/schemas/spend/bill.schema.ts:PostBillInputSchema`:
+optional `primary_document_id: string` (UUID) parameter +
+`override_evidence_completeness: boolean` defaulting to `false` at
+the Zod boundary (mirroring the Layer 1 NOT NULL DEFAULT). When
+`primary_document_id` is provided, `billService.post()` invokes
+`documentLinkService.create()` with `linked_entity_type='bill'`,
+`linked_entity_id=<bill_id>`, `link_role='primary_invoice'` (the
+canonical primary-invoice link_role for AP-domain bills per
+ADR-0016 §2:379).
+
+Per ADR-0015 §7 Scenario C, `link_role='receipt'` also satisfies
+the invariant for born-paid bundles (standalone receipt as
+primary evidence). The accepted-set adjudication at Phase 5.1
+scope-lock cycle Round 3 Sub-Q4-b ratified
+`{primary_invoice, receipt}` as the v1 accepted set.
+
+**Service-layer backstop.** None at Phase 5.1. Phase 2+ may add a
+reporting backstop at evidence-completeness audit prompt under
+`docs/07_governance/audits/prompts/` (named-future-trigger).
+
+**Adjacent commit paths.** Per Phase 5.1 scope-lock cycle Round 3
+Sub-Q4-a (per-bill granularity) + Round 4 §3.b.v verify-from-disk:
+enforcement fires at `billService.post()` only. Other bill-touching
+service paths (`billService.approveForPayment()`,
+`billService.recordPayment()` — via `paymentService.record()` per
+chunk 5.1b's partial-extraction disposition — and
+`billService.reverse()`) mutate `bills.lifecycle_state` only and
+do not re-fire INV-DOC-001 (post-time-only enforcement per
+Sub-Q4-c lock).
+
+**Backfill posture.** Per Sub-Q4-d 4-d.γ lock: pre-Phase-5.1
+posted bills without primary attachment get auto-override flag
+flipped at chunk 5.1a migration
+`supabase/migrations/20240156000000_phase_5_1_vendor_credits_substrate.sql`,
+with `bill_evidence_override_applied` audit row insertion per
+backfilled bill. Forward-only enforcement applies to bills posted
+post-Phase-5.1.
+
+**Category A floor test.** Not a Category A floor candidate at
+Phase 5.1. Category A is reserved for Phase 1.1 + Arc A core
+invariants. Phase 5.1 integration test coverage at
+`apps/web/tests/integration/billEvidenceCompleteness.test.ts`
+(3 fixtures: positive / override / failure paths).
+
+**Referenced by:** ADR-0011 §15 (reservation graduation source);
+ADR-0015 §10 (override mechanism owner); ADR-0015 §7 Scenario C
+(born-paid receipt accepted set basis); ADR-0016 §2 (v1-active
+link_role subset + primary_invoice canonical for AP-domain bills);
+ADR-0016 §6 (post-commit immutability and link_status transitions);
+`src/services/spend/billService.ts` (enforcement code site at
+`post()` function);
+`apps/web/tests/integration/billEvidenceCompleteness.test.ts`
+(integration test); `docs/09_briefs/phase-5.1/chunks/2026-05-19-phase-5-1-chunk-5-1a.md`
+(chunk 5.1a brief).
 
 ---
 

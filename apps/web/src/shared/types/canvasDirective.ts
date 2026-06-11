@@ -2,6 +2,8 @@
 // Discriminated union — Bible Section 4b.
 
 import type { ProposedEntryCard } from './proposedEntryCard';
+import type { ProposedAttachmentCard } from '@/shared/schemas/document-platform/proposedAttachmentCard.schema';
+import type { ProposedRuleDraft } from '@/shared/schemas/rules/proposedRuleCard.schema';
 
 export type CanvasDirective =
   // Phase 1.1 — built fully:
@@ -10,6 +12,13 @@ export type CanvasDirective =
   | { type: 'journal_entry_form'; orgId: string; prefill?: Record<string, unknown> }
   | { type: 'journal_entry_list'; orgId: string }
   | { type: 'proposed_entry_card'; card: ProposedEntryCard }
+  // Phase 7 chunk 7.3b — proposed_attachment_card RI-1 strict atomic
+  // 5-surface extension. Sibling to proposed_entry_card; rendered via
+  // ContextualCanvas → ProposedAttachmentCard.
+  | { type: 'proposed_attachment_card'; card: ProposedAttachmentCard }
+  // Ring 2A-authoring (ADR-0026 §3) — rule-draft card; placeholder-rendered at
+  // commit (d), real renderer at commit (e).
+  | { type: 'proposed_rule_card'; card: ProposedRuleDraft }
   | { type: 'ai_action_review_queue'; orgId: string }
   | { type: 'report_pl'; orgId: string; periodId?: string }
   | { type: 'report_trial_balance'; orgId: string; periodId?: string }
@@ -49,13 +58,35 @@ export type CanvasDirective =
   | { type: 'invite_user'; orgId: string }
   | { type: 'welcome' }
 
+  // Phase 6.5 chunk 3 — pending documents queue surface in the
+  // multi-tab canvas (Zone 3). Reached via:
+  //   (a) Pattern γ Rule 1 drop event → new tab focused (chunk 3
+  //       AgentChatPanel chat-input drop → SplitScreenLayout
+  //       handleDropEvent → routeNewTab); ingestBatchId carries
+  //       the just-created batch id so the view focuses on it.
+  //   (b) Pattern γ Rule 3 Zone 1 Billing "Pending Documents" nav
+  //       → routeReplaceActive; no ingestBatchId; view renders
+  //       recent N cards across all batches.
+  | { type: 'pending_documents'; orgId: string; ingestBatchId?: string }
+
+  // Wave 6 D3 T7 — the review inbox (review-track cases: needs_review /
+  // proposed / approved; approve→post + reject + resolve-exception
+  // surfaces). ONE directive at v1: the case detail renders in-view
+  // via ReviewInboxView's selectedCaseId swap; a separate
+  // review_case_detail directive is deferred until cross-tab
+  // deep-linking earns its keep.
+  | { type: 'review_inbox'; orgId: string }
+
   // Phase 2+ stubs — directive type defined now, canvas component is a
   // "Coming Soon" placeholder until the phase that builds it:
   | { type: 'ap_queue'; orgId: string }
   | { type: 'vendor_detail'; vendorId: string; orgId: string }
   | { type: 'bank_reconciliation'; accountId: string }
   | { type: 'ar_aging'; orgId: string }
-  | { type: 'consolidated_dashboard' };
+  | { type: 'consolidated_dashboard' }
+  // Ring 2A-authoring (ADR-0026 §8) — vendor-rules registry canvas (RuleRegistryView,
+  // wired to nav here; the post-approval target of ProposedRuleCard).
+  | { type: 'rule_registry'; orgId: string };
 
 /** Callback type for canvas directive navigation. Used by components
  *  that need to trigger directive changes (e.g., list → detail,

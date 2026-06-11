@@ -1,6 +1,6 @@
 # Control Matrix
 
-Audit-side evidence for the 20 Phase 0-1.1 + Arc A invariants.
+Audit-side evidence for the 28 invariants.
 Maps each INV-ID to its spec definition, its test coverage, and
 the specific mechanism by which it is enforced in code.
 
@@ -39,7 +39,7 @@ clone" discipline established in Phase 1.1 closeout).
 | `tests/integration/serviceMiddlewareAuthorization.test.ts` | INV-AUTH-001 | A mutating service function called with a `ServiceContext` whose caller's role does not permit the action throws `InvariantViolationError('PERMISSION_DENIED')` before any DML is issued. No rows are committed and no audit log row is created — the rejection happens at the middleware pre-flight. |
 | `tests/integration/reversalMirror.test.ts` | INV-REVERSAL-001 (+ service-layer portion of INV-REVERSAL-002) | Three invalid reversals are rejected with the expected `ServiceError` codes (`REVERSAL_NOT_MIRROR`, `REVERSAL_CROSS_ORG`, `REVERSAL_PARTIAL_NOT_SUPPORTED`) without affecting the original entry. A valid reversal posts and the two entries net to zero in a P&L query. |
 
-## The 20 invariants — audit evidence
+## The 28 invariants — audit evidence
 
 Each row below names: the INV-ID, the spec leaf, the test
 coverage (Category A floor / unit / implicit / Phase X
@@ -47,14 +47,14 @@ scheduled), the specific enforcement mechanism, and the
 non-bypassability claim that supports the audit position.
 
 The rows appear in the same order as `invariants.md` and the
-leaf's Summary section: Layer 1 first (14 invariants), then
-Layer 2 (6 invariants).
+leaf's Summary section: Layer 1 first (16 invariants), then
+Layer 2 (12 invariants).
 
-### Layer 1a — Physical Truth, commit-time (14 invariants)
+### Layer 1a — Physical Truth, commit-time (16 invariants)
 
 Per ADR-0008, Layer 1 is split into 1a (commit-time prevention)
-and 1b (scheduled audit detection). All 14 Phase 0-1.1 + Arc A
-invariants below are Layer 1a. The control-foundations set has
+and 1b (scheduled audit detection). All 16 invariants below are
+Layer 1a. The control-foundations set has
 zero Layer 1b members; Phase 2 stubs are recorded in
 `docs/02_specs/ledger_truth_model.md` under "Phase 2 Reserved
 Invariants."
@@ -159,7 +159,21 @@ Invariants."
 - **Non-bypassable from application layer:** the deferred constraint runs at COMMIT regardless of which client (user-scoped or service-role) issued the INSERT. The service layer's Zod refine is a pre-flight ergonomic check, not authoritative enforcement.
 - **Pairing with INV-LEDGER-001:** INV-RECURRING-001 guards the recurring-journal template; INV-LEDGER-001 guards the posted journal entry that results from `approveRun`. Together: a broken template cannot produce unbalanced posted entries because either (a) the template write fails at RECURRING-001's CONSTRAINT TRIGGER, or (b) `approveRun` reads balanced template lines and the resulting `journal_entries` / `journal_lines` INSERT must also balance per LEDGER-001. Registered as a cross-layer pairing in `docs/02_specs/invariants.md`.
 
-### Layer 2 — Operational Truth (6 invariants)
+#### INV-RULE-001 — rule_evaluation_log is append-only, user-path (Layer 1a)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-001`](../02_specs/ledger_truth_model.md#inv-rule-001--rule_evaluation_log-is-append-only-user-path-layer-1a)
+- **Test coverage:** **None at HEAD** — `rule_evaluation_log` has no consumers yet (the services + evaluator are the Ring 2A-authoring arc). The test-update arc (next after this migration) adds an RLS isolation test (cross-org SELECT denied; user-path UPDATE/DELETE denied; no user-path INSERT) and the `security_invoker` behavior test (a non-controller operator querying `rule_evaluation_30d_view` directly gets RLS-filtered rows, not the owner-bypass leak `document_cards_view` carries). Recorded in `docs/09_briefs/post-mvp/2026-05-26-adr-0024-migration-test-staleness.md`.
+- **Code enforcement:** RLS on `rule_evaluation_log` in `supabase/migrations/20240164000000_rule_evaluation_log.sql` — `rule_evaluation_log_no_update` (`FOR UPDATE USING (false)`), `rule_evaluation_log_no_delete` (`FOR DELETE USING (false)`), and no INSERT policy (RLS-enabled default-deny for the user path; `service_role` bypasses). `ruleEvaluationService` (Ring 2A-authoring) is the sole writer and inserts only (ADR-0024 Decision 6).
+- **Non-bypassable from application layer — user path only.** RLS blocks the `authenticated` (user-scoped) path absolutely. It does **not** bind `service_role` (which bypasses RLS); ADR-0024 specified RLS-only (no triggers / `REVOKE`s), so service-path append-only is single-writer discipline, not DB enforcement — materially weaker than INV-AUDIT-002's trigger-authoritative all-path append-only. See the INV-RULE-001 leaf "Scope" + "Threat model" subsections. The view inherits this RLS via `security_invoker = true`.
+
+#### INV-RULE-004 — rule_branches / rule_conditions are logic-frozen (Layer 1a)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-004`](../02_specs/ledger_truth_model.md#inv-rule-004--rule_branches--rule_conditions-are-logic-frozen-layer-1a)
+- **Test coverage:** `apps/web/tests/integration/ruleBranchService.integration.test.ts` — the validation-boundary test hand-inserts a branch + malformed `condition_value` and asserts `buildBranchSource` throws `RULE_BRANCH_ASSEMBLY_FAILED`; the end-to-end test's cleanup exercises the DELETE-cascade path (a `rule_registry` delete cascades through `rule_branches`/`rule_conditions` — the UPDATE+TRUNCATE trigger does not block DELETE). The all-path UPDATE block + the eval-subset/non-empty CHECKs + the cascade behavior were verified at migration-apply time (8 in-transaction probes against local PG, `20240169`).
+- **Code enforcement:** Column-immutability triggers + RLS + `REVOKE TRUNCATE` on `rule_branches`/`rule_conditions` in `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql`: `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` fire `BEFORE UPDATE` (FOR EACH ROW) + `BEFORE TRUNCATE` (FOR EACH STATEMENT) for every role including `service_role`; RLS `USING(false)` on UPDATE/DELETE (user path); `REVOKE TRUNCATE` from PUBLIC/authenticated/anon. There is **no** DELETE trigger (see Non-bypassable). `ruleBranchService` is the single-writer owner (`apps/web/src/services/rules/ruleBranchService.ts`); the physical write is the SECURITY-DEFINER `create_vendor_rule_atomic` RPC.
+- **Non-bypassable from application layer — HYBRID.** UPDATE + TRUNCATE are **all-path** (the trigger fires for `service_role` too — stronger than INV-RULE-001; the INV-AUDIT-002 shape). DELETE is **user-path only** (RLS `USING(false)`); a `service_role` direct DELETE is not DB-blocked — deliberately, so the `rule_registry` `ON DELETE CASCADE` cleanup path works (an all-path BEFORE DELETE on a cascade-child of a deletable parent is the CA-65 trap). The residual — a service-path direct single-row branch/condition DELETE on a *live* rule — is covered by the `ruleBranchService` single-writer contract, not the DB (the same discipline-not-DB gap INV-RULE-001 carries on its service path). See the INV-RULE-004 leaf "Scope" + "Residual".
+
+### Layer 2 — Operational Truth (12 invariants)
 
 #### INV-AUTH-001 — Every mutating service call is authorized
 
@@ -202,6 +216,48 @@ Invariants."
 - **Test coverage:** **Implicit coverage** — every integration test that posts a journal entry implicitly exercises the audit write (if it failed, the entire transaction would roll back via `AUDIT_WRITE_FAILED`, and the integration test's "entry was posted" assertion would fail). Audit-log content assertions are not currently in the integration tests; the obligation to add them is documented in `docs/09_briefs/phase-1.2/obligations.md`.
 - **Code enforcement:** `recordMutation()` in `src/services/audit/recordMutation.ts` is called inside the same database transaction as the mutation it records (Phase 1.1 Simplification 1). Accepts a `SupabaseClient` parameter so the caller passes the same client (and therefore the same transaction) that performed the mutation — guarantees atomic commit. On INSERT failure, throws `Error('[AUDIT_WRITE_FAILED] ...')` which propagates and rolls back the entire transaction. Call site in `journalEntryService.post()` runs after the journal_entries and journal_lines INSERTs but before the function returns — same transaction window.
 - **Non-bypassable from application layer:** the synchronous same-transaction write is the enforcement. If the audit write fails, the data writes also disappear — there is no "data committed but audit missing" failure mode in Phase 1.1. Phase 2 evolution: `recordMutation()` is replaced by an event emission to the `events` table; the `audit_log` becomes a projection updated post-commit by pg-boss. The same-transaction guarantee transfers to the event-write step in Phase 2.
+
+#### INV-DOC-001 — Evidence completeness for committed bills (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-doc-001`](../02_specs/ledger_truth_model.md#inv-doc-001--evidence-completeness-for-committed-bills-layer-2)
+- **Test coverage:** `apps/web/tests/integration/billEvidenceCompleteness.test.ts` (Phase 5.1 chunk 5.1a; 3 fixtures: positive path with `primary_document_id` succeeds + creates `source_document_links` row with `link_role='primary_invoice'`; override path with `override_evidence_completeness=true` succeeds without link row; failure path throws `ServiceError('EVIDENCE_INCOMPLETE', ...)`).
+- **Code enforcement:** TypeScript service function check in `billService.post()` at `src/services/spend/billService.ts`. The check fires AFTER Zod input validation (`PostBillInputSchema.parse()`) and BEFORE the entity preload block. If `override_evidence_completeness=false` AND `primary_document_id` is absent, the function throws `ServiceError('EVIDENCE_INCOMPLETE', ...)` before any database mutation. If `primary_document_id` is provided, the function inserts the bill row + bill_lines + JE via `journalEntryService.post()`, then calls `documentLinkService.create()` to insert the `source_document_links` row with `link_role='primary_invoice'` in the same transaction window (atomic; either both commit or neither).
+- **Non-bypassable from application layer:** No code path other than `billService.post()` creates a bills row — all consumers flow through this service per INV-SERVICE-001 + INV-SERVICE-002. The override flag is the only bypass mechanism; the flag is itself a controller-grade audit event per ADR-0015 §10 (override use cases: controller backfill for pre-Phase-5.1 bills via Sub-Q4-d 4-d.γ migration backfill, audit-trail exception for emergency posting without document). Sub-Q4-b lock admits both `link_role='primary_invoice'` AND `link_role='receipt'` for primary attachment (born-paid Scenario C per ADR-0015 §7).
+
+#### INV-RULE-002 — the pure-core rule evaluator is deterministic (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-002`](../02_specs/ledger_truth_model.md#inv-rule-002--the-pure-core-rule-evaluator-is-deterministic-layer-2)
+- **Test coverage:** `apps/web/tests/unit/ruleEvaluator.test.ts` "determinism" block — `evaluate()` twice on identical inputs yields a byte-identical `MatchResult` (`JSON.stringify` equality), plus reorder-invariance (candidate input order does not change output, via the total 4a–4d conflict-resolution ordering). The verification site (Ring 2A-core authoring Commit 1).
+- **Code enforcement:** Test-verified pure-function property — the **first test-verified INV** in the registry. `evaluate(rules, context)` at `apps/web/src/core/rules/evaluator.ts` is pure (no I/O, no clock, no RNG; total ordering with a UUID tiebreak); there is no runtime sentinel because determinism is a property across invocations, not a single-run rule violation. `agent-first-import-boundaries` (`'error'`) structurally removes the DB/services/agent import vectors in `core/`, but the clock/RNG globals are not import-gated — the determinism test is the load-bearing check.
+- **Non-bypassable from application layer:** N/A — pure function, no service or DB path. Verification is the unit test, not a runtime or DB guard; a future edit introducing non-determinism (e.g., `Math.random()` in a predicate) compiles cleanly through the import boundary and is caught by the determinism test, not by a guard at any call site.
+
+#### INV-RULE-003 — rule_evaluation_log has a single writer (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-rule-003`](../02_specs/ledger_truth_model.md#inv-rule-003--rule_evaluation_log-has-a-single-writer-layer-2)
+- **Test coverage:** No test asserts the sole-writer property itself (runtime/structural sub-type — see Code enforcement). What the tests cover is the append *shape* `recordEvaluation` produces: `apps/web/tests/integration/ruleEvaluationServiceRecordEvaluation.integration.test.ts` (row-per-candidate expansion; winner-attribute columns null on non-winners; zero-candidate → no row) + `ruleEvaluateAndDispatch.integration.test.ts` (the orchestrator reaches the log only through `recordEvaluation`, and only after the gate). These verify the writer behaves correctly, not that it is the only writer.
+- **Code enforcement:** Runtime/structural — `ruleEvaluationService.recordEvaluation` (`apps/web/src/services/rules/ruleEvaluationService.ts`) is the sole `rule_evaluation_log` insert site. The **control is the service pattern (one function owns the write) + code-review discipline**, not a test name and not a DB constraint. `agent-first-import-boundaries` (`'error'`) structurally bars the agent layer from writing `db/` directly; the ADR-0025 §6 (OQ-3c) two-method split keeps the append in `recordEvaluation`. This is the **runtime/structural Layer-2 sub-type**, distinct from INV-RULE-002's test-verified sub-type (the registry's two Layer-2 sub-types; see the leaf "Scope").
+- **Non-bypassable from application layer:** Partial — the same shape as INV-RULE-001's service path. INV-RULE-001's RLS makes the log append-only against the *user* path, but `service_role` bypasses RLS, so a second service *could* insert; single-writer is discipline + review, not a DB guard. A future edit adding a second writer compiles cleanly and is caught by code review at the service boundary, not by a runtime or DB sentinel.
+
+#### INV-WORKFLOW-002 — terminal-disposition completeness / no silent drops (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-workflow-002`](../02_specs/ledger_truth_model.md#inv-workflow-002--terminal-disposition-completeness--no-silent-drops-layer-2)
+- **Test coverage:** `apps/web/tests/integration/advanceCaseAutomation.integration.test.ts` (9 tests — the automation chain-advance with per-hop audit rows; persisted `extracting`; idempotent at/past-target re-runs; the matched→needs_review hand-off as a plain state-transition row; the single-ownership refusal of `classified→*`; system-actor attribution `=== SYSTEM_ACTOR_USER_ID`; the human-boundary regression) + the D2.1 T4 end-to-end routing suite (matched case ends at `needs_review` with the hand-off audit chain; unmatched case ends at `needs_review` with an `unmatched_router_candidate` exception row) + `apps/web/tests/integration/sweepStrandedCases.integration.test.ts` (12 tests — the D2.3 backstop: eligibility/staleness filtering, bucketing order, B1 hand-off with system-actor attribution, B2 re-resolve branches (a)/(b) with real decision artifacts, EXCEPTION_ALREADY_OPEN recovered/anomaly split + loop-safety, B3/B4 DI-seam dispatch + re-eligibility, B3-D dedup carve-out with runner-never-invoked, dry-run zero-writes). The prospective process guarantee itself is runtime/structural (see Code enforcement); the tests verify the routing behaves correctly on each branch, not that no orphan can ever exist (the leaf's named residuals are the explicit non-coverage).
+- **Code enforcement:** Runtime/structural — the orchestrator's Stage-6.5 routing block + park-exit hand-offs (`apps/web/src/agent/orchestrator/extraction/ingestDocument.ts`, annotated `INV-WORKFLOW-002`) route every pipeline decision to a terminal disposition: `advanceCaseAutomation` (`documentCaseService.ts`) owns `received→extracting→classified` + `matched→needs_review` and REFUSES `classified→*` (single ownership); Subsystem 2 (`resolveCandidates`) owns `classified→{matched, needs_review}` with the rich decision-record audit; the `enqueue_exception_with_audit` RPC guard (`state IN ('classified','matched')`) is the substrate-layer enforcer for the `needs_review` entry. The **control is the routing code path (every decision exit routes) + review discipline**, the INV-RULE-003 runtime/structural sub-type.
+- **Non-bypassable from application layer:** Partial — a prospective process guarantee, not a DB sentinel. The DB enforces transition legality (the chunk_8 state CHECK + the enqueue RPC's source-state guard + the head-pointer RPC's `WHERE state='classified'`) but nothing at the DB layer forces a decided case to *be* routed — a future edit that parks without routing compiles cleanly and is caught by review + the D2.3 sweep (`sweepStrandedCases`, `apps/web/src/agent/orchestrator/maintenance/sweepStrandedCases.ts` — SHIPPED at Wave 6 D2.3, operator-run, dry-run default; the eventual-consistency backstop), not by a runtime sentinel. The leaf names two residual classes (pre-enforcement backlog, transitional — RETIRED 2026-06-04 via the backlog-clearing run, run_trace_id `2855c8e3-…`; strandings, sweep-recoverable) plus the Stage-0 dedup carve-out — none silent. (The attachment-card class was eliminated at D2.1 T4: the attachment and unknown exits route like every other decision outcome.)
+
+#### INV-EVIDENCE-001 — canonical evidence object required at commit (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-evidence-001`](../02_specs/ledger_truth_model.md#inv-evidence-001--canonical-evidence-object-required-at-commit-layer-2)
+- **Test coverage:** `apps/web/tests/integration/evidenceObjectPersistence.integration.test.ts` (8 tests — producer happy path: one row, subject/org/trace/status asserted, case committed; **the teeth test**: injected persist failure → 500-class, case HOLDS at `approved`, zero evidence rows, then resume → dup-catch JE recovery + idempotent upsert → one row + committed + one JE total; **crash-class-X**: JE-only recovery → 409 `POSTING_RECOVERY_UNREPAIRABLE`, approved-hold, org-wide evidence-count unchanged, the seeded JE survives by direct read, identical refusal on re-approve; persist-grain cross-org + foreign≡missing negatives → `LINKED_ENTITY_NOT_FOUND` + zero rows; two-user idempotence → one row, trace refreshed, `created_by` INSERT-only) + `apps/web/tests/integration/evidenceObjectsConstraints.integration.test.ts` (5 tests — the Layer-1 half: duplicate triple → 23505 naming `evidence_objects_subject_unique`; status CHECK admits `reserved`/`partial`/`complete`). The sequencing guarantee itself is runtime/structural (see Code enforcement); the tests verify the seam behaves correctly on each branch, not that no future edit can mark `committed` without persisting (the leaf's named residual is the explicit non-coverage).
+- **Code enforcement:** Layer-1 + runtime/structural split. **Layer 1:** `evidence_objects_subject_unique` UNIQUE `(org_id, subject_type, subject_id)` (migration `20240177`) — at most one canonical object per subject, DB-enforced. **Layer 2 (runtime/structural):** the persist-before-marking seam in `apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts` (annotated `INV-EVIDENCE-001`) — `evidenceObjectService.persist` (org-scoped subject-ownership guard via `LINKED_ENTITY_TABLE_MAP` + `.eq('org_id', …)`, foreign ≡ missing; then assemble; then idempotent upsert refreshing status + trace only) runs after the ledger write and before `advanceCaseAutomation('committed')`. The sole-commit-path enumeration at registration HEAD: `transition()` schema-barred from `committed`; nine `advanceCaseAutomation` call sites of which only the approve→post route targets `'committed'`, downstream of the seam; the state RPC has no callers outside `documentCaseService`; the preserved auto-commit composite is unreferenced. The **control is the seam (the one committed-marking path persists first) + review discipline**, the INV-RULE-003/INV-WORKFLOW-002 runtime/structural sub-type.
+- **Non-bypassable from application layer:** Partial — only the uniqueness half has DB teeth. Nothing at the DB forces persist-before-marking: a future edit that marks `committed` without persisting compiles cleanly and is caught by review + the crash-resume test, not by a DB sentinel. The user path is RLS-denied (no write policy on `evidence_objects`); `service_role` writes outside the service path are not barred (the standard partial). The leaf names the residuals explicitly, including crash-class-X (a recovered JE whose posting entity never landed) as a typed, non-retryable, operator-visible HOLD at `approved` — never a committed state — closing the JE/subledger gap D3's 23505-recovery ratification silently admitted.
+
+#### INV-WORKFLOW-001 — no AI-only paths / producer coverage (Layer 2)
+
+- **Spec leaf:** [`ledger_truth_model.md#inv-workflow-001`](../02_specs/ledger_truth_model.md#inv-workflow-001--no-ai-only-paths--producer-coverage-layer-2)
+- **Test coverage:** `apps/web/tests/unit/intentProducers.test.ts` — the Wave-4 registry-shape suite (6 tests: all three intent types present; every producer valid-kinded with provenance; every ledger Mutation non-AI-covered; Navigation non-AI-covered; the gap-finder over a synthetic registry) + the Wave-6 D6 teeth suite (4 tests: **the executable flip-safety proof** — live gap set exactly `['query']`, `V1_TEETH_SCOPE_OUT` covers it, effective gaps empty, exit 0; **the teeth bite** — a synthetic unscoped gap exits 1, the same gap scoped out exits 0 with the carve-out visible at the data grain; the intersection-only `scopedOut` (an inert carve-out claims nothing); carve-out integrity — `query` keeps its AI producer recorded, still no non-AI). The declared-registry honesty itself is review-guarded, not test-verified (see Non-bypassable).
+- **Code enforcement:** **Build-time structural** (a new Layer-2 sub-type: neither runtime nor DB) — `runCheck` (`apps/web/src/core/intent/producers.ts`, pure: gaps / intersection-only scopedOut / effectiveGaps / exitCode) consumed by `scripts/check-intent-producers.ts` (thin print-and-exit wrapper; scoped-out keys print visibly with the Q2 re-include trigger; unscoped gaps print ERROR), wired as the blocking `intent-producers` job in `.github/workflows/ci.yml` (adr-check-isomorphic; zero `github.event.*` context) and into the root `agent:validate` harness (Variant A — the live enforcement under the wave's no-push posture). The **control is the check + its two gate wirings + review discipline**; `producers.ts` is the grep-visible annotation anchor (the mechanism is grep-invisible by location, cited from the anchor).
+- **Non-bypassable from application layer:** Partial — three named hedges, headline-grade in the leaf. (1) The registry is **self-declared**: the check proves declared coverage, not declaration truth — a stale/wrong producer entry compiles and passes; review-guarded. (2) A red CI run fails the workflow but **blocks merge only where branch protection requires the check** — operator-grain repo settings, not verifiable from the tree; direct pushes run CI without being blocked by it. (3) The ci.yml job's **first dynamic execution is the wave-close terminal push** (the no-push invariant); the harness wiring bites in the interim; the wave-close checklist carries the post-push confirmation. Plus the **Q2 `query` carve-out** (visible, re-include trigger binding) as part of the honest statement.
 
 ## Implicit coverage rationale
 
@@ -288,13 +344,18 @@ verified during Waypoint F (commit `65bcfe0`):
 grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u
 
 # Reverse: every annotated INV-ID in code has a corresponding leaf
-grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u
+grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u
 
-# Symmetric difference (must be empty)
+# Symmetric difference (expected: the four named exceptions below, nothing else)
 diff <(grep -oE 'INV-[A-Z]+-[0-9]{3}' docs/02_specs/ledger_truth_model.md | sort -u) \
-     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' src/ supabase/migrations/ | sort -u)
+     <(grep -rho 'INV-[A-Z]\+-[0-9]\+' apps/web/src/ supabase/migrations/ | sort -u)
 ```
 
-Expected: 20 distinct INV-IDs in both directions, empty symmetric
-diff. This is the single command an auditor can run at any future
-point to confirm the doc-to-code reachability has not drifted.
+Expected: 28 registered INV-IDs reached in both directions; the raw
+output carries exactly four named exceptions outside the registered
+set — INV-CHECKPOINT-001 (doc-side; Phase-2 Layer-1b reserved,
+ADR-0008), INV-AGENT-002 (code-side; ADR-0029 reserved), INV-AP-001 /
+INV-AP-002 (code-side; Phase-5 registration gap, carry-forward) — and
+nothing else: symmetric difference empty at the registered-set grain.
+This is the single command an auditor can run at any future point to
+confirm the doc-to-code reachability has not drifted.

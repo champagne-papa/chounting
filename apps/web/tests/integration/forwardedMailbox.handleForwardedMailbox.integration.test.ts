@@ -13,25 +13,41 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
-import { createHmac } from 'node:crypto';
 import { adminClient, SEED } from '../setup/testDb';
 
 vi.mock('@/services/storage/resolver', () => ({
   getStorageProvider: vi.fn(),
 }));
 
+// mailbox-finish (2026-06-07): the webhook now fires ingestDocument
+// synchronously (the Class D T4 invoker wired at the route). Mock it so
+// these integration tests assert ingest-substrate shape without running the
+// real pipeline (Modal OCR + Claude) — and so the happy-path 'received' /
+// 'queued' assertions still hold (the real pipeline would advance the case
+// out of those states). Test #1b below asserts the invoker receives the
+// attachment's source_document_id, not the .eml email_body.
+vi.mock('@/agent/orchestrator/extraction/ingestDocument', () => ({
+  ingestDocument: vi.fn(async () => ({ status: 'committed' })),
+}));
+
 const { POST } = await import('@/app/api/webhooks/postmark-inbound/route');
 const { getStorageProvider } = await import('@/services/storage/resolver');
+const { ingestDocument } = await import(
+  '@/agent/orchestrator/extraction/ingestDocument'
+);
 
 const db = adminClient();
 
 // =====================================================================
-// Test secret: must match the value in .env.local
-// (POSTMARK_INBOUND_WEBHOOK_SECRET). The route reads this from env at
-// module-load time; we cannot override per-test without re-importing,
-// so tests are authored against the .env.local fixture value.
+// Test Basic Auth credentials: the password must match the value in
+// .env.local (POSTMARK_INBOUND_BASIC_AUTH_PASSWORD). The route reads it
+// from env at module-load time; we cannot override per-test without
+// re-importing, so tests are authored against the .env.local fixture
+// value. The username is the route's fixed constant ('postmark').
 // =====================================================================
-const TEST_SECRET = 'local-dev-postmark-inbound-secret-for-chunk-6-3a-tests';
+const TEST_BASIC_AUTH_USERNAME = 'postmark';
+const TEST_BASIC_AUTH_PASSWORD =
+  'local-dev-postmark-inbound-secret-for-chunk-6-3a-tests';
 
 function bindMockPut(): Mock {
   const m: Mock = vi
@@ -82,23 +98,26 @@ function makePayload(opts: {
   return payload;
 }
 
-function signedRequest(args: {
+function authedRequest(args: {
   bodyObj: Record<string, unknown>;
-  secret?: string;
-  signatureOverride?: string | null;
+  // null = omit the Authorization header; string = use it verbatim;
+  // undefined = build a valid `Basic base64(username:password)` header.
+  authOverride?: string | null;
 }): Request {
   const body = JSON.stringify(args.bodyObj);
-  const secret = args.secret ?? TEST_SECRET;
-  const computed = createHmac('sha256', secret).update(body).digest('hex');
   const headers: Record<string, string> = {
     'content-type': 'application/json',
   };
-  if (args.signatureOverride === null) {
-    // explicitly omit
-  } else if (args.signatureOverride !== undefined) {
-    headers['x-postmark-signature'] = args.signatureOverride;
+  if (args.authOverride === null) {
+    // explicitly omit the Authorization header
+  } else if (args.authOverride !== undefined) {
+    headers['authorization'] = args.authOverride;
   } else {
-    headers['x-postmark-signature'] = computed;
+    const credential = Buffer.from(
+      `${TEST_BASIC_AUTH_USERNAME}:${TEST_BASIC_AUTH_PASSWORD}`,
+      'utf8',
+    ).toString('base64');
+    headers['authorization'] = `Basic ${credential}`;
   }
   return new Request('http://test.local/api/webhooks/postmark-inbound', {
     method: 'POST',
@@ -123,6 +142,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
 
   beforeEach(() => {
     bindMockPut();
+    (ingestDocument as Mock).mockClear();
     createdBatchIds = [];
     preExistingMessageIds = [];
   });
@@ -172,7 +192,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
         makeAttachment('invoice-3.pdf', 'pdf-3'),
       ],
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       status: string;
@@ -242,32 +262,136 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(auditRow!.user_id).toBeNull();
   });
 
-  it('Test #2 — HMAC signature failure → 401 + signature_invalid audit; zero ingest rows', async () => {
-    const payload = makePayload({});
-    const res = await POST(
-      signedRequest({
-        bodyObj: payload,
-        signatureOverride: 'a'.repeat(64), // wrong hex of correct length
-      }),
-    );
-    expect(res.status).toBe(401);
+  it('Test #1b — sync pipeline invocation targets the attachment, not the .eml email_body', async () => {
+    // The core mailbox-finish correctness property: a forwarded email with
+    // one invoice attachment must classify the INVOICE, not the .eml body.
+    // resolvePrimaryIngestSource prefers the attachment; the invoker fires
+    // once per case on it.
+    const payload = makePayload({
+      from: 'placeholder-founder@chounting.com',
+      to: 'inbound+holding@inbound.chounting.com',
+      subject: 'Single invoice',
+      attachments: [makeAttachment('the-invoice.pdf', 'pdf-bytes')],
+    });
+    const res = await POST(authedRequest({ bodyObj: payload }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; batch_id: string };
+    expect(body.status).toBe('accepted');
+    createdBatchIds.push(body.batch_id);
 
-    // System-actor audit row with org_id=null + signature_invalid
-    const { data: audits } = await db
-      .from('audit_log')
-      .select('action, org_id')
-      .eq('action', 'forwarded_mailbox.signature_invalid')
-      .is('org_id', null);
-    expect(audits!.length).toBeGreaterThan(0);
+    // Identify email_body (text/plain) vs the attachment source_document.
+    const { data: docs } = await db
+      .from('source_documents')
+      .select('id, mime_type')
+      .eq('ingest_batch_id', body.batch_id);
+    expect(docs).toHaveLength(2);
+    const emailBody = docs!.find((d) => d.mime_type === 'text/plain');
+    const attachment = docs!.find((d) => d.mime_type !== 'text/plain');
+    expect(emailBody).toBeTruthy();
+    expect(attachment).toBeTruthy();
 
-    // Zero new ingest_batches rows (delete-forbidden so we cannot use
-    // exact-count; verify no batch with our message_id exists).
-    const { data: batches } = await db
-      .from('ingest_batches')
-      .select('id')
-      .filter('channel_metadata->>message_id', 'eq', payload.MessageID as string);
-    expect(batches).toHaveLength(0);
+    // Invoked exactly once, on the ATTACHMENT — never the .eml body.
+    expect(ingestDocument as Mock).toHaveBeenCalledTimes(1);
+    const callArg = (ingestDocument as Mock).mock.calls[0][0] as {
+      source_document_id: string;
+    };
+    expect(callArg.source_document_id).toBe(attachment!.id);
+    expect(callArg.source_document_id).not.toBe(emailBody!.id);
   });
+
+  it('Test #1c — sync invoke failure is isolated: webhook still accepted, case stays received (sweep backstop)', async () => {
+    // Best-effort isolation: a pipeline throw must NOT fail the webhook.
+    // The documents are safely ingested, the case stays 'received' (the
+    // sweep's eligible state), and sweepStrandedCases recovers it on its
+    // next run — that received→recovery half is covered by
+    // sweepStrandedCases.integration.test.ts (B3); here we prove the
+    // precondition: a thrown invoke is swallowed and leaves the case
+    // sweep-eligible rather than failing the request or stranding it.
+    (ingestDocument as Mock).mockRejectedValueOnce(
+      new Error('simulated pipeline failure'),
+    );
+    const payload = makePayload({
+      from: 'placeholder-founder@chounting.com',
+      to: 'inbound+holding@inbound.chounting.com',
+      subject: 'Invoice, pipeline will throw',
+      attachments: [makeAttachment('invoice.pdf', 'pdf-bytes')],
+    });
+    const res = await POST(authedRequest({ bodyObj: payload }));
+
+    // Webhook still returns accepted despite the pipeline throw.
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; batch_id: string };
+    expect(body.status).toBe('accepted');
+    createdBatchIds.push(body.batch_id);
+
+    // The invoker was attempted exactly once (and threw — swallowed).
+    expect(ingestDocument as Mock).toHaveBeenCalledTimes(1);
+
+    // The case remains 'received' — sweep-eligible, so the backstop recovers it.
+    const { data: batchRow } = await db
+      .from('ingest_batches')
+      .select('trace_id')
+      .eq('id', body.batch_id)
+      .single();
+    const { data: cases } = await db
+      .from('document_cases')
+      .select('state')
+      .eq('trace_id', batchRow!.trace_id);
+    expect(cases).toHaveLength(1);
+    expect(cases![0].state).toBe('received');
+  });
+
+  // Basic Auth failures — all map to 401 + a uniform auth_invalid audit,
+  // with zero ingest rows. Covers the failure taxonomy: missing header,
+  // malformed (wrong scheme / no space), wrong password, and wrong
+  // username (the operator-config trap — a different username 401s).
+  const validCredential = Buffer.from(
+    `${TEST_BASIC_AUTH_USERNAME}:${TEST_BASIC_AUTH_PASSWORD}`,
+    'utf8',
+  ).toString('base64');
+  const wrongPasswordCredential = Buffer.from(
+    `${TEST_BASIC_AUTH_USERNAME}:wrong-password`,
+    'utf8',
+  ).toString('base64');
+  const wrongUsernameCredential = Buffer.from(
+    `wronguser:${TEST_BASIC_AUTH_PASSWORD}`,
+    'utf8',
+  ).toString('base64');
+
+  it.each([
+    { label: 'missing Authorization header', authOverride: null },
+    { label: 'malformed (wrong scheme)', authOverride: `Bearer ${validCredential}` },
+    { label: 'malformed (no space / not Basic)', authOverride: 'garbage-no-scheme' },
+    { label: 'wrong password', authOverride: `Basic ${wrongPasswordCredential}` },
+    { label: 'wrong username', authOverride: `Basic ${wrongUsernameCredential}` },
+  ])(
+    'Test #2 — Basic Auth failure: $label → 401 + auth_invalid audit; zero ingest rows',
+    async ({ authOverride }) => {
+      const payload = makePayload({});
+      const res = await POST(authedRequest({ bodyObj: payload, authOverride }));
+      expect(res.status).toBe(401);
+
+      // System-actor audit row with org_id=null + auth_invalid
+      const { data: audits } = await db
+        .from('audit_log')
+        .select('action, org_id')
+        .eq('action', 'forwarded_mailbox.auth_invalid')
+        .is('org_id', null);
+      expect(audits!.length).toBeGreaterThan(0);
+
+      // Zero new ingest_batches rows (delete-forbidden so we cannot use
+      // exact-count; verify no batch with our message_id exists).
+      const { data: batches } = await db
+        .from('ingest_batches')
+        .select('id')
+        .filter(
+          'channel_metadata->>message_id',
+          'eq',
+          payload.MessageID as string,
+        );
+      expect(batches).toHaveLength(0);
+    },
+  );
 
   it('Test #3 — malformed Zod payload → 400 + malformed_payload audit', async () => {
     // Missing required From field
@@ -279,7 +403,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
       Attachments: [],
       TextBody: 'body',
     };
-    const res = await POST(signedRequest({ bodyObj: badPayload }));
+    const res = await POST(authedRequest({ bodyObj: badPayload }));
     expect(res.status).toBe(400);
 
     const { data: audits } = await db
@@ -316,7 +440,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     const payload = makePayload({
       from: 'unknown-sender@example.com', // not in allowlist
     });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       status: string;
@@ -359,7 +483,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     // Use a UUID that doesn't match any organization row
     const phantomOrgId = '99999999-9999-9999-9999-999999999999';
     const payload = makePayload({ mailbox_hash: phantomOrgId });
-    const res = await POST(signedRequest({ bodyObj: payload }));
+    const res = await POST(authedRequest({ bodyObj: payload }));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; reason?: string };
     expect(body.status).toBe('rejected');
@@ -383,7 +507,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     });
 
     // First submission — accepted
-    const res1 = await POST(signedRequest({ bodyObj: payload }));
+    const res1 = await POST(authedRequest({ bodyObj: payload }));
     expect(res1.status).toBe(200);
     const body1 = (await res1.json()) as {
       status: string;
@@ -401,7 +525,7 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     expect(countBefore).toBe(1);
 
     // Second submission with same message_id — idempotent
-    const res2 = await POST(signedRequest({ bodyObj: payload }));
+    const res2 = await POST(authedRequest({ bodyObj: payload }));
     expect(res2.status).toBe(200);
     const body2 = (await res2.json()) as {
       status: string;

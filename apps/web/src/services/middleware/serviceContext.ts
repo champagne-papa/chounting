@@ -55,15 +55,59 @@ export interface ServiceContext {
 // null, org_id null) — those bypass SystemActorServiceContext entirely.
 // =====================================================================
 
+// SYSTEM_ACTOR_USER_ID — the seeded service-account auth.users row that
+// system actors attribute ledger writes to (created_by + audit user_id)
+// per ADR-0007 Q78 Path X. System actors bypass authorization at
+// withInvariants (caller.user_id stays null for the auth discriminant) but
+// commit AS this service account, so the NOT-NULL actor column in the
+// commit path (bill_payment_allocations.created_by) is satisfied and audit
+// rows carry a real, joinable identity rather than null. Seeded in
+// scripts/seed-auth-users.ts + src/db/seed/dev.sql — those literals MUST
+// match this constant.
+export const SYSTEM_ACTOR_USER_ID = '00000000-0000-0000-0000-0000000000a1';
+
 export interface SystemActorCaller {
   user_id: null;
   system_actor: string;
+  // system_user_id — the service-account auth.users uuid this system actor
+  // commits as (created_by + audit attribution per ADR-0007 Q78 Path X).
+  // Optional: set by system actors that write created_by-bearing ledger
+  // rows (the pipeline orchestrator); omitted by actors that never do
+  // (the inbound-mailbox webhook).
+  system_user_id?: string;
 }
 
 export interface SystemActorServiceContext {
   trace_id: string;
   caller: SystemActorCaller;
   org_id: string;
+}
+
+/**
+ * Resolves the auth.users id a write should be attributed to (created_by,
+ * audit user_id) for either caller shape. Human callers resolve to
+ * caller.user_id; system actors resolve to caller.system_user_id (the
+ * service account per ADR-0007 Q78 Path X), or null when the actor carries
+ * no service-account identity (e.g. the mailbox webhook, which writes no
+ * created_by-bearing ledger rows).
+ */
+export function actingUserId(
+  ctx: ServiceContext | SystemActorServiceContext,
+): string | null {
+  if (ctx.caller.user_id !== null) return ctx.caller.user_id;
+  return ctx.caller.system_user_id ?? null;
+}
+
+/**
+ * Type guard: is this a system-actor context? Discriminates the
+ * ServiceContext | SystemActorServiceContext union by caller.user_id
+ * (null only for system actors). Narrows to SystemActorServiceContext so
+ * callers can read ctx.org_id + caller.system_user_id.
+ */
+export function isSystemActorContext(
+  ctx: ServiceContext | SystemActorServiceContext,
+): ctx is SystemActorServiceContext {
+  return ctx.caller.user_id === null;
 }
 
 /**

@@ -8,7 +8,7 @@
 // renders, and confirm the vendor-picker → balance flow OR empty-state
 // path if test org has no vendors seeded.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/withDialogAccept';
 import { CONTROLLER_ORG_ID, LOCALE } from './fixtures/auth';
 
 test.describe('VendorBalanceView', () => {

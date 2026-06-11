@@ -1,9 +1,14 @@
 // src/services/document-platform/documentPlatformService.ts
 //
-// INV-SERVICE-001 export contract: createSourceDocument is the
-// canonical writer of source_documents (and the source_document_created
-// audit_log entry). No other service inserts to either table per
-// ADR-0011 §1 entity ownership boundary. Wrapped via withInvariants
+// INV-SERVICE-001 export contract: createSourceDocument is A canonical
+// writer of source_documents via create_source_document_with_audit (and the
+// source_document_created audit_log entry). The ingestion batch path
+// (ingestionService → create_ingest_batch_with_documents_with_audit) is the
+// OTHER document-platform-owned writer; the real boundary is "no direct
+// service-layer .insert() to these tables — all writes go through owned
+// RPCs." Provider selection for BOTH writers resolves through one authority
+// (resolveStorageProvider, Charter B real-flow D-2). Per ADR-0011 §1 entity
+// ownership boundary. Wrapped via withInvariants
 // per Pattern A (export-site wrapping) — the established pattern for
 // services without action-permission variants per journalEntryService
 // list/get precedent.
@@ -87,17 +92,19 @@ import type { ServiceContext } from '@/services/middleware/serviceContext';
 import { withInvariants } from '@/services/middleware/withInvariants';
 import { loggerWith } from '@/shared/logger/pino';
 import { getStorageProvider } from '@/services/storage/resolver';
+import { resolveStorageProvider } from '@/services/storage/resolveStorageProvider';
 import type {
   CreateSourceDocumentInput,
   CreateSourceDocumentResult,
 } from './types';
 
-// v1 system-fixed: every write picks supabase_storage per ADR-0013 §2
-// "v1's selection is mechanical: every write picks supabase_storage".
-// Per-org default (post-v1) lands when the org_settings sub-arc ships
-// per chunk 1 Sub-Q4 a-prime adjudication.
-const V1_STORAGE_PROVIDER = 'supabase_storage' as const;
-
+// Storage provider is resolved PER-ORG (Charter B real-flow D-2): the
+// org_settings sub-arc shipped, so this writer resolves the org's
+// default_storage_provider via resolveStorageProvider and uses it for BOTH
+// the put and the row stamp (put/stamp agree). The former "v1 system-fixed:
+// every write picks supabase_storage" mechanical selection no longer holds —
+// supabase_storage is now only the fallback default (ADR-0013 §2 + the
+// 2026-06-07 universal-default amendment).
 async function createSourceDocumentImpl(
   input: CreateSourceDocumentInput,
   ctx: ServiceContext,
@@ -114,9 +121,12 @@ async function createSourceDocumentImpl(
   // the established journalEntries write-order pattern.
   const source_document_id = crypto.randomUUID();
 
-  // Resolve provider per chunk 4 resolver — v1 returns the supabase
-  // implementation. Reserved providers throw STORAGE_OPERATION_FAILED.
-  const storageProvider = getStorageProvider(V1_STORAGE_PROVIDER);
+  // Charter B real-flow D-2: resolve the org's default provider ONCE via the
+  // single selection authority; use it for the put AND stamp the same value
+  // on the row below (put/stamp agree by construction). Reserved providers
+  // throw STORAGE_OPERATION_FAILED.
+  const storage_provider = await resolveStorageProvider(input.org_id);
+  const storageProvider = getStorageProvider(storage_provider);
 
   log.debug(
     { source_document_id, org_id: input.org_id },
@@ -153,7 +163,7 @@ async function createSourceDocumentImpl(
     id: source_document_id,
     org_id: input.org_id,
     legal_entity_id: input.org_id,
-    storage_provider: V1_STORAGE_PROVIDER,
+    storage_provider,
     original_storage_key: putResult.storage_key,
     original_content_hash: putResult.content_hash,
     original_byte_size: putResult.byte_size,

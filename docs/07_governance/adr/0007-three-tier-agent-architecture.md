@@ -18,6 +18,16 @@ Bundled with ADR-0011 §13 amendment per Stage 4 cross-enum-
 consistency governance triage path (a) election. See sense-
 disambiguation lead-in within §Tier 2 below.
 
+Amended 2026-05-30 (V1 final-system-proposal reconciliation arc) — §Tier 2 Q78
+V1-re-scoping block added. The system-actor auto-commit **authorization model**
+resolved by Q78 (Option A, 2026-05-24) is correct and is preserved verbatim. V1
+gates the **exercise** of auto-commit behind four prerequisites the auto-commit arc
+shipped without — Agent Ladder rung + confidence-to-policy mapping + evaluation
+harness + real coding. Until those land, the A-now hotfix routes matched proposals
+to `document_cases.needs_review`; auto-commit returns per-rule thereafter. Additive
+per ADR-0022; Q78's auth-model resolution unchanged. See the §Tier 2 "V1 re-scoping
+of the Q78 auto-commit exercise" block.
+
 ## Date
 
 2026-05-03
@@ -231,8 +241,180 @@ their own orchestration via LLM coordination.
 5. **Populate existing `ProposedMutation.justification.*` fields.**
    The Logic Receipt (INV-AGENT-002) is produced by Tier 1 as
    today. Per Q30 resolution below, `justification` extends with a
-   `pipeline_trace: PipelineStageRecord[]` field so step-level
-   reproducibility is preserved under Tier 2 pipelines.
+   `pipeline_trace: PipelineStageRecord[]` field (and a parallel
+   `bundle_audit_trace: BundleAuditRecord[]` field per ADR-0012 §6,
+   both codified as `ProposalJustificationSchema` at Phase 8 chunk 9)
+   so step-level reproducibility is preserved under Tier 2 pipelines.
+
+**System-actor service contexts at the invariant boundary (Phase 8
+chunk 10 — PARTIAL).** The document-pipeline orchestrator
+(`ingestDocument.ts`) runs as a *system actor*
+(`SystemActorServiceContext`: `caller.user_id = null`,
+`caller.system_actor = 'pipeline_orchestrator'`), not a verified human
+caller. Chunk 10 widened the **router-path** consumer
+`documentRouterService.completeCandidate` to accept
+`ServiceContext | SystemActorServiceContext` directly, retiring the
+`synthCtxForRouter` shim (extending the N=2 structural-union precedent
+already shipped at `recordMutation.ts:144` + `vendorService.ts:124`).
+This path does not run `withInvariants`, so no authorization semantics
+change. The **commit-path** widening of `withInvariants` itself is
+**deliberately NOT done here**: the surviving `synthCtxForCommit` shim
+downgrades the system-actor context to a synthetic *verified* caller
+whose `user_id` has no membership, so Invariant 4 (role authorization)
+denies — which is currently the de-facto gate preventing the document
+pipeline from auto-committing ledger mutations. **Open question:** does
+a trusted system actor bypass Invariant 4 at `withInvariants`, or must
+every auto-commit path carry an explicit grant? Admitting
+`SystemActorServiceContext` at `withInvariants` is a ledger-authorization
+**policy** decision deferred to a dedicated change with seeded
+auto-commit tests; until then the pipeline does not auto-commit. The
+"system_actor widening at withInvariants" framing is therefore only
+partially discharged at chunk 10. See the friction-journal Phase 8
+chunk 10 entry. **Resolved 2026-05-24 (Option A) — the open question
+above is closed by the auth-model resolution block immediately below;
+the PARTIAL framing is preserved per ADR-0022 additive discipline.**
+
+**Auth-model resolution for system-actor commit paths (ratified
+2026-05-24, Option A — closes Q78).** The chunk 10 PARTIAL open
+question — *does a trusted system actor bypass Invariant 4 at
+`withInvariants`, or must every auto-commit path carry an explicit
+grant?* — is resolved in favor of **bypass (Option A)**, not
+per-action grants. A `SystemActorServiceContext`
+(`caller.user_id = null`, `caller.system_actor` set) is authenticated
+**at the boundary that constructs it** (the route / job-queue / pipeline
+orchestrator), not via role-based grants. `withInvariants` is widened to
+`ServiceContext | SystemActorServiceContext`; the system-actor branch
+**bypasses the identity-coupled invariants** — Invariant 1's `user_id`
+presence check, Invariant 2 (`verified`), and Invariant 4 (role
+authorization via `canUserPerformAction`). Invariant 3 (org consistency)
+already self-skips for system actors (it guards on `caller.org_ids`,
+absent on a system actor); the widened branch may instead assert
+`ctx.org_id === input.org_id` as defense-in-depth. The `trace_id` and
+context-presence checks still run.
+
+*Precedent and trust-boundary discipline.* This extends the N=2
+structural-union type pattern (`recordMutation.ts` + `vendorService.ts`
+accept `ServiceContext | SystemActorServiceContext`), but note those two
+sites perform **no authorization** — they read union-common fields only.
+This resolution is therefore the **first** place a system actor crosses
+an authorization boundary with invariants intentionally bypassed. The
+trust boundary moves to the construction site: a `SystemActorServiceContext`
+must only be constructed where the operation is intrinsically authorized
+by the calling context. New system actors must be scoped narrowly;
+`system_actor = 'pipeline_orchestrator'` is authorized for the document
+pipeline's commit operations (`bill.post`, `payment.record`) by virtue of
+the orchestrator's own route/job-queue authentication, not by a grant
+list.
+
+*Created-by + audit attribution — Path X (ratified 2026-05-24).* The
+payment commit path carries a NOT-NULL actor column
+(`bill_payment_allocations.created_by`); `journal_entries.created_by` and
+`audit_log.user_id` are nullable, and `bills` / `payments` have no
+`created_by` column. So a null-`user_id` system actor cannot complete a
+payment commit (the allocation insert violates NOT NULL) — opening the gate
+is necessary but not sufficient. Resolution: **one seeded service-account
+`auth.users` row** (`SYSTEM_ACTOR_USER_ID`, `system_actor =
+'pipeline_orchestrator'`) with **no memberships or roles** (auth is
+bypassed, so it needs none). System actors carry its uuid as
+`caller.system_user_id`; at the commit gate `withInvariants` bypasses the
+identity invariants and **adapts** the system-actor context to a verified
+`ServiceContext` whose `user_id` is that uuid, so `created_by` **and** audit
+`user_id` resolve to it automatically downstream — **no ledger-service
+changes** (`billService` / `paymentService` / `journalEntryService`
+untouched). So an auto-committed bill/payment
+is attributed to a real, joinable service-account identity — **no
+`audit_log` schema change is required** (the service-account uuid in
+`user_id` is the attribution; this supersedes an earlier draft that
+proposed a nullable `audit_log.system_actor` column). `caller.user_id`
+stays `null` for the authorization discriminant; the service-account uuid
+is used only for attribution, never for authorization.
+
+*Mechanics.* `synthCtxForCommit` (the de-facto gate) is retired;
+`ingestDocument`'s four commit-path `withInvariants` sites pass the
+orchestrator's real `SystemActorServiceContext` directly. With the gate
+open, the document pipeline auto-commits ledger mutations for matched
+candidates; `service-layer.md` Candidate #11 (commit-shim discipline) is
+retired as structurally unnecessary post-widening.
+
+**V1 re-scoping of the Q78 auto-commit exercise (ratified 2026-05-31 by CTO).**
+
+Q78 (Option A, ratified 2026-05-24, immediately above) resolved the
+**authorization model** — a trusted `SystemActorServiceContext` bypasses the
+identity-coupled invariants at `withInvariants` and is attributed to a seeded
+service-account identity (Path X). That resolution is correct and is **preserved
+unchanged.** What Q78 did *not* establish — and what the auto-commit arc
+(edb260f6, 8a6c9bc3) shipped without — is the **governance of the auto-commit
+exercise**: which matched candidates *should* post without a human, under what
+autonomy rung, at what confidence, coded to which account.
+
+**Live posture at HEAD 11633dc6.** `ingestDocument` runs the Ring 2B shadow
+rule/autonomy evaluation (`shadowEvaluateRules`, `ingestDocument.ts:445`), which is
+gated (`RING2B_SHADOW_EVAL`, default off), fail-safe, and explicitly ordered
+*before* the commit so it cannot influence it (A1a). The commit composite
+(`switch (proposal.kind)`, `ingestDocument.ts:482`) then auto-posts every matched
+`proposed_entry_card` / `proposed_mutation_bundle` via
+`withInvariants(billService.post)` / `withInvariants(paymentService.record)`
+(inside `commitProposedEntryCard`, `ingestDocument.ts:551`/`:560`). The de-facto
+gate is therefore *"can a structurally valid bill be assembled?"* — matched vendor
++ amount + date + org defaults — **not** an autonomy decision. Coding is a single
+hardcoded `default_expense_account_id` (`CAD`, `tax=0`); unmatched-vendor invoices
+return `null` and are silently dropped (no review-queue entry).
+
+**Why this re-scopes Q78 without contradicting it (auth model vs. exercise).** Q78
+answered a question in **one dimension** — *may a trusted system actor cross the
+`withInvariants` authorization boundary?* It did **not** answer the question in the
+orthogonal dimension — *should an ungoverned matched candidate auto-post, and under
+what autonomy controls?* Q78 resolved the authorization model; it
+never reached the autonomy-governance question, so it could not have decided it.
+V1 fills that second dimension — rung + confidence + evaluation + real coding — which
+Q78's auth-model resolution neither provided nor displaced.
+
+*(Preempting the supersession reading.)* The deliberate Q78 decision (2026-05-24)
+postdates ADR-0007's calibration deferral. A reader might ask whether Q78 therefore
+*overtook* that deferral. It did not: Q78 is silent on autonomy governance — opening
+the authorization boundary is not a decision that ungoverned candidates should post.
+So there is nothing for Q78 to have overridden in the calibration dimension.
+
+*(Corroboration, referent-independent.)* Independently, ADR-0007 deferred auto-post
+calibration ("to v1.5 or later" in the project's earlier phase-lifecycle numbering —
+Phase 1 / 1.5 / 2 — a different referent from this proposal's "V1" system release;
+the two are not equated here). The auto-commit arc shipped auto-commit **ahead of any such
+calibration milestone under either numbering.** This is corroboration, not the
+load-bearing argument — being pre-Q78, it is consistent with the re-scoping rather
+than dispositive of it; the load-bearing argument is the auth-model/exercise
+separation above. V1 therefore does not introduce a new constraint so much as
+supply the autonomy governance the auto-commit *exercise* always required.
+
+**V1 re-scoping — the four return-prerequisites.** The system-actor auto-commit
+capability returns **per rule** only once all four hold:
+
+1. **Rung.** The matched rule's `rule_autonomy_rung` permits auto-commit, decided
+   by the Autonomy Gate **on the live commit path** (not in shadow).
+2. **Confidence.** A confidence-to-policy mapping routes low-confidence proposals
+   to review (ADR-0002; confidence is a policy input, never surfaced raw).
+3. **Evaluation.** The V1 evaluation harness establishes a published
+   match/extraction precision threshold on a golden set.
+4. **Real coding.** The account is derived from the matched rule's
+   `vendor_rules.default_account_id`, not a hardcoded default.
+
+**Enacting change — the A-now hotfix.** Until the four prerequisites land, the
+`ingestDocument` commit composite does **not** call the post sites for matched
+candidates. It transitions the case to `document_cases.needs_review` (via
+`update_document_case_state_with_audit`), where a human approves and the post fires
+under the human's `ServiceContext` — not the system actor. Unmatched-vendor
+invoices route to the review / exception queue rather than returning `null`. This
+restores human-in-the-loop AP for V1 (the review-and-post posture).
+
+**What this block does NOT change (additive per ADR-0022).** Q78's
+authorization-model resolution — Option A invariant bypass + Path X
+service-account attribution + the `synthCtxForCommit` retirement — is unchanged.
+When auto-commit returns per-rule post-V1, it uses **exactly** the Q78 mechanism:
+the system-actor `withInvariants` bypass and the seeded service-account
+attribution. This block re-scopes *when the capability is exercised*, not *how the
+auth model works*. No invariant is added, removed, or renumbered.
+
+Cross-ref: V1 Final System Proposal (v2); this amendment is ordered as the first
+Wave -1 change, ahead of the A-now hotfix it authorizes.
 
 **Q31 — LLM-planned orchestration prohibition.** Verbatim rule:
 
@@ -488,6 +670,23 @@ flowing through existing handlers. New routing surface: zero.
   Document Platform reframe spec preserves it. Schema extension
   lands with Tier 2's first system (the AP Agent).
 
+  **Amendment (Phase 8 chunk 9, Layer 2 item #B) — RESOLVED in
+  code.** The `justification` field is formally codified as
+  `ProposalJustificationSchema` at
+  `@/shared/schemas/accounting/proposalJustification.schema`,
+  superseding the Phase 7 chunk 7.3b permissive placeholder
+  (`z.record(z.string(), z.unknown()).optional()`) carried on
+  ProposedMutation, ProposedAttachment, ProposedMutationBundle, and
+  ProposedAttachmentCard. The schema carries the `pipeline_trace:
+  PipelineStageRecord[]` field above **plus** a parallel
+  `bundle_audit_trace: BundleAuditRecord[]` field for
+  bundle-composition Logic Receipts per ADR-0012 §6 INV-AGENT-002
+  (`bundle_id`, `composition_at`, `child_proposal_ids`,
+  `invariant_class`). Both traces are required (possibly empty
+  arrays); the remaining Logic-Receipt fields (`user_utterance`,
+  `rule_id`, `input_features`, `historical_match_count`,
+  `confidence_score`, `source_transactions`) are optional.
+
 - **Q31** — LLM-planned orchestration prohibition. Resolution:
   verbatim rule (in the Tier 2 safety-contract subsection above).
   The rule applies to Tier 2 and Tier 2.5 equally.
@@ -507,6 +706,31 @@ flowing through existing handlers. New routing surface: zero.
   per-field matrix lands in `docs/02_specs/agent_architecture_policy.md`
   before v1 ships. Q77 stays open until that matrix ratifies (which
   gates v1 ship, not Phase 1 start).
+- **Q78** — System-actor authorization at `withInvariants` (auto-commit
+  auth model). Resolution (2026-05-24): **Option A** — a trusted system
+  actor (`ctx.caller.user_id === null`, `caller.system_actor` set)
+  bypasses the identity-coupled invariants (Inv 1 `user_id` presence,
+  Inv 2 `verified`, Inv 4 role authorization) at `withInvariants`; the
+  trust boundary is the route/job-queue/orchestrator that constructs the
+  `SystemActorServiceContext`. Auto-committed ledger mutations are
+  attributed to a seeded service-account `auth.users` identity (Path X)
+  via `created_by` + audit `user_id` (resolved by the `withInvariants`
+  service-account adaptation) — satisfying the one NOT-NULL actor column in
+  the commit path (`bill_payment_allocations.created_by`) and preserving
+  audit attribution with no `audit_log` schema change. Retires the `synthCtxForCommit`
+  de-facto gate; closes the Phase 8 chunk 10 PARTIAL open question. See the
+  §Tier 2 auth-model resolution block.
+- **Q78 (V1 re-scoping, ratified 2026-05-31 by CTO).** The Option A authorization-model
+  resolution above is **unchanged**. Q78 resolved *whether* a system actor may
+  commit; it did not resolve *whether* an ungoverned candidate should auto-post —
+  an orthogonal dimension it never reached. V1 supplies that governance: it gates
+  the *exercise* of system-actor auto-commit behind four prerequisites (rung +
+  confidence + evaluation + real coding); the A-now hotfix routes matched proposals
+  to `document_cases.needs_review` until they land; auto-commit returns per-rule
+  thereafter, using the unchanged Q78 mechanism. ADR-0007 independently deferred
+  auto-post calibration ("v1.5 or later" in the project's earlier phase numbering,
+  Phase 1 / 1.5 / 2 — not the proposal's "V1" referent); the auto-commit arc shipped
+  ahead of any such milestone. See the §Tier 2 "V1 re-scoping of the Q78 auto-commit exercise" block.
 
 ## Amendment — Document Platform reframe (2026-05-03)
 

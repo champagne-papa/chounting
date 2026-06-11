@@ -16,7 +16,11 @@
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
         "NEXT_PUBLIC_APP_URL",
         "UPSTASH_REDIS_KV_REST_API_URL",
-        "UPSTASH_REDIS_KV_REST_API_TOKEN"
+        "UPSTASH_REDIS_KV_REST_API_TOKEN",
+        "POSTMARK_INBOUND_BASIC_AUTH_PASSWORD",
+        "GRAPH_TENANT_ID",
+        "GRAPH_CLIENT_ID",
+        "GRAPH_CLIENT_CERT_PEM"
       ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },

@@ -69,6 +69,10 @@ describe('CA-51: i18n locale file parity', () => {
       'proposed_entry.if_rejected.journal_entry',
       'proposed_entry.if_rejected.reversal',
       'proposed_entry.policy.approve_required',
+      'proposed_rule.what_changed.vendor_rule',
+      'proposed_rule.why.from_utterance',
+      'proposed_rule.track_record.new_rule',
+      'proposed_rule.if_rejected.standard',
     ];
     for (const key of required) {
       expect(enKeys.has(key), `en.json missing ${key}`).toBe(true);

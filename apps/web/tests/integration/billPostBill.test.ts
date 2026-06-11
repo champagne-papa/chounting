@@ -140,6 +140,11 @@ describe('billService.post', () => {
       fiscal_period_id: fiscalPeriodId,
       entry_date: '2026-05-10',
       ap_control_account_id: apControlAccountId,
+      // INV-DOC-001 (Phase 5.1 chunk 5.1a) bypass per Sub-Q4-d override-as-
+      // canonical-bypass discipline: test fixtures don't exercise evidence-
+      // completeness enforcement; override flag preserves pre-Phase-5.1
+      // posting semantics. See chunk 5.1a brief Task 7b.
+      override_evidence_completeness: true,
       ...overrides,
     };
   }

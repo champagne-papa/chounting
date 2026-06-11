@@ -58,13 +58,41 @@ next-env.d.ts
 # Both `!.claude/skills/` and `!.claude/skills/**` are required because
 # git can't re-include children of an excluded directory without first
 # re-including the directory itself plus its recursive contents.
+#
+# 2026-05-17 (v2.2 reorg Commit C): re-included .claude/rules/ as
+# load-bearing project infrastructure per v2.2 §6 — path-scoped
+# operational projections of canonical conventions. Rules must fire for
+# every team member's session against the same canonical conventions;
+# machine-local state defeats the routing forcing function. The fallback
+# spec (v2.2 §11) similarly assumes team-shared files. Follows the
+# .claude/skills/ precedent above. See
+# docs/09_briefs/phase-6.5/reorg-proposal-v2.md for the full design.
+#
+# 2026-05-17 (v2.2 reorg Commit E): re-included .claude/agents/ as
+# load-bearing project infrastructure per v2.2 §8 — read-only subagents
+# (ledger-reviewer + migration-reviewer) that review changes against
+# canonical conventions. Subagents are team-shared like skills and rules;
+# machine-local state defeats the review capability. Follows the
+# .claude/skills/ and .claude/rules/ precedents above. See
+# docs/09_briefs/phase-6.5/reorg-proposal-v2.md §8 for the full design.
 .claude/*
 !.claude/settings.json
 !.claude/skills/
 !.claude/skills/**
+!.claude/rules/
+!.claude/rules/**
+!.claude/agents/
+!.claude/agents/**
 
 # playwright e2e — storageState cookies are credentials
 tests/e2e/.auth/
+# …and the apps/web copy: the line above is root-anchored by its
+# mid-path separator and does NOT match apps/web/tests/e2e/.auth/
+# (Arc 2 close, 2026-06-06 — same anchoring class as the /reports/
+# and .claude/* near-misses).
+apps/web/tests/e2e/.auth/
+# WSL/Windows NTFS metadata droppings (Arc 2 close, 2026-06-06)
+*:Zone.Identifier
 # playwright reports / results
 playwright-report/
 test-results/
@@ -78,6 +106,13 @@ test-results/
 
 # Session coordination — lock file is per-session, not tracked
 .coordination/session-lock.json
+
+# Python artifacts for sidecar-ocr/ per Phase 7 chunk 7.1b
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
 
 # Working artifacts directory — verification reports, audit scratch, and
 # other non-canonical outputs from docs / governance arcs. Canonical records
@@ -96,3 +131,12 @@ test-results/
 # orgs/[orgId]/reports/` API routes tree). Catch #23 + #24 logged for
 # D1 closeout friction-journal forward-pointer.
 /reports/
+
+# Ad-hoc diagnostic scripts from arc work (e.g., _tmp_t8_count_check.ts
+# from T8 investigation; _tmp_classify_check.ts from Phase 8 classifier
+# fix). Created during HEAD-pass diagnostics, deleted at arc close per
+# the practice the T8 arc demonstrated; gitignore defense-in-depth
+# prevents accumulation if cleanup is missed. Codified at
+# companion-462ad426 closeout per the class-2 carry-forward closed in
+# this arc.
+apps/web/scripts/_tmp_*.ts

@@ -55,6 +55,12 @@
 // INV-AP-002 Layer 2: each mutation that transitions lifecycle_state
 // validates the current state is in the allowed precondition set;
 // throws on violation.
+// INV-DOC-001 Layer 2 (Phase 5.1 chunk 5.1a): post() requires
+// primary_document_id OR override_evidence_completeness=true; otherwise
+// throws ServiceError('EVIDENCE_INCOMPLETE'). When primary_document_id
+// provided, documentLinkService.create() inserts source_document_links
+// row with link_role='primary_invoice' in the same transaction window.
+// See ledger_truth_model.md leaf + ADR-0011 §15 reservation graduation.
 //
 // ServiceErrorCode usage note: this service uses generic existing
 // codes (POST_FAILED / READ_FAILED / NOT_FOUND) rather than
@@ -73,6 +79,7 @@ import { loggerWith } from '@/shared/logger/pino';
 import { ServiceError } from '@/services/errors/ServiceError';
 import { recordMutation } from '@/services/audit/recordMutation';
 import { dispatchTrigger } from '@/services/document-platform/documentRouterService';
+import { create as createSourceDocumentLink } from '@/services/document-platform/documentLinkService';
 import {
   PostBillInputSchema,
   ApproveBillForPaymentInputSchema,
@@ -275,6 +282,18 @@ async function post(
     throw err;
   }
 
+  // INV-DOC-001 Layer 2: bill commit requires primary_document_id OR
+  // override_evidence_completeness=true (see ledger_truth_model.md leaf
+  // + ADR-0011 §15 reservation graduation). Layer 1 substrate ships at
+  // migration 20240138000000:172 (bills.override_evidence_completeness
+  // boolean NOT NULL DEFAULT false); Layer 2 enforcement lands here.
+  if (!parsed.override_evidence_completeness && !parsed.primary_document_id) {
+    throw new ServiceError(
+      'EVIDENCE_INCOMPLETE',
+      `bill commit requires primary_document_id or override_evidence_completeness=true (INV-DOC-001)`,
+    );
+  }
+
   const log = loggerWith({ trace_id: ctx.trace_id, user_id: ctx.caller.user_id });
   const db = adminClient();
 
@@ -321,6 +340,9 @@ async function post(
       entry_date: parsed.entry_date,
       description: `Bill posting: ${parsed.bill_number ?? parsed.vendor_id}`,
       source: 'manual',
+      // Wave 6 D3 — optional dedup pass-through (idx_je_source_external);
+      // set by the approve→post route (document_case_id), absent otherwise.
+      source_external_id: parsed.source_external_id,
       lines: [...drLines, crLine],
     },
     ctx,
@@ -347,6 +369,10 @@ async function post(
       tax_amount_total: parsed.tax_amount_total,
       lifecycle_state: 'pending_approval', // Shape (i)
       posted_journal_entry_id: journal_entry_id, // Sub-N (b)
+      // INV-DOC-001 Phase 5.1 chunk 5.1a: override flag persisted at Layer 1
+      // substrate (migration 20240138000000:172). Defaults to false at Zod
+      // boundary mirroring Layer 1 NOT NULL DEFAULT.
+      override_evidence_completeness: parsed.override_evidence_completeness,
     })
     .select('bill_id')
     .single();
@@ -370,6 +396,23 @@ async function post(
   const { error: linesErr } = await db.from('bill_lines').insert(billLinesRows);
   if (linesErr) {
     throw new ServiceError('POST_FAILED', `bill_lines insert failed: ${linesErr.message}`);
+  }
+
+  // INV-DOC-001 Layer 2 atomic primary attachment: if primary_document_id
+  // provided, insert source_document_links row in same transaction window
+  // per ADR-0016 §6 (documentLinkService.create() is the canonical
+  // attachment-creation surface) + ADR-0011 §15 (canonical primary_invoice
+  // link_role for AP-domain bills per ADR-0016 §2:379).
+  if (parsed.primary_document_id) {
+    await createSourceDocumentLink(
+      {
+        source_document_id: parsed.primary_document_id,
+        linked_entity_type: 'bill',
+        linked_entity_id: insertedBill.bill_id,
+        link_role: 'primary_invoice',
+      },
+      ctx,
+    );
   }
 
   // Bill-grain audit emission (Sub-J: sequential per B5-1 precedent;
@@ -930,17 +973,55 @@ async function reverse(
   };
 }
 
+// Recovery read (Wave 6 D-4 dup-catch): resolve the posted bill_id by
+// its posted_journal_entry_id when the bill insert is being recovered
+// after a DUPLICATE_SOURCE_EXTERNAL_ID JE dup-catch. Hoisted from the
+// approve-post route (ADR-0020; adminClient is services-only). Read-only;
+// org access is enforced by an inline ctx.caller.org_ids.includes guard.
+// Error code + message are byte-identical to the pre-hoist route lookup.
+async function getRecoveryBillIdByJournalEntry(
+  input: { org_id: string; posted_journal_entry_id: string },
+  ctx: ServiceContext,
+): Promise<string> {
+  if (!ctx.caller.org_ids.includes(input.org_id)) {
+    throw new ServiceError(
+      'ORG_ACCESS_DENIED',
+      `caller lacks access to org ${input.org_id}`,
+    );
+  }
+  const db = adminClient();
+  const { data: billRow, error: billErr } = await db
+    .from('bills')
+    .select('bill_id')
+    .eq('org_id', input.org_id)
+    .eq('posted_journal_entry_id', input.posted_journal_entry_id)
+    .single();
+  if (billErr || !billRow) {
+    throw new ServiceError(
+      'POSTING_RECOVERY_UNREPAIRABLE',
+      `recovered JE ${input.posted_journal_entry_id} has no bill row (crash-class-X: ` +
+        `the bill insert never landed and retry cannot create it — ` +
+        `the JE dedup fires first). Manual repair required; ` +
+        `re-approving will not resolve this.${billErr ? ` (${billErr.message})` : ''}`,
+    );
+  }
+  return billRow.bill_id as string;
+}
+
 // ---------------------------------------------------------------------
 // Service object export (Pattern B: route handlers wrap each method
 // via withInvariants(action: 'bill.<verb>') at call site)
 // ---------------------------------------------------------------------
 
 export const billService = {
-  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via
-  // withInvariants(action: 'bill.post' | 'bill.approve' |
-  // 'bill.record_payment' | 'bill.reverse'))
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.post'))
   post,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.approve'))
   approveForPayment,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.record_payment'))
   recordPayment,
+  // withInvariants: skip-org-check (pattern-B: route-handler-wrapped via withInvariants(action: 'bill.reverse'))
   reverse,
+  // withInvariants: skip-org-check (pattern-G3: read; org access enforced by an inline caller.org_ids.includes(org_id) guard in the getRecoveryBillIdByJournalEntry() body)
+  getRecoveryBillIdByJournalEntry,
 };

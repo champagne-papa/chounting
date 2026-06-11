@@ -1,4 +1,325 @@
-# Where I am as of 2026-05-01 (v0.1.0-mvp + S33 + Q34 promoted to main; chounting.chou.ca serving real app from `9f0ebb3`; production-environment-config gap surfaced post-merge and resolved; Phase 1.2 closed 2026-04-26 via C12, Phase 2 named workstreams open; Arc A Phase 0-1.1 Control Foundations shipped 2026-04-24; clean-baseline full-suite 598/598 under `pnpm db:reset:clean`, shared-DB pollution surface expanded with new 5-test cluster sibling to Arc A item 27)
+# Where I am — see the latest dated section below
+
+> **How to read this doc** (header refreshed 2026-06-07, post-V1
+> doc-refresh arc). Dated sections, newest first; the top section is
+> current, everything below is historical record — correct
+> as-of-its-date and preserved per the additive-correction discipline
+> (date-stamped supersession notes, never silent rewrites). Branch
+> and origin refs in any section are point-in-time snapshots:
+> cross-reference `git log` at read time rather than trusting a SHA
+> here as live (this doc's own 2026-04-22 push-decision rule,
+> generalized).
+
+## SharePoint-on-Vercel cert-from-env (graphClient) — 2026-06-09 (UNIT-PROVEN, live Graph auth gated; banked local on `staging`)
+
+A small code arc — the gating prerequisite for the mailbox→SharePoint live
+discharge on Vercel — surfaced by a de-risk pass on the mailbox-sharepoint-live
+runbook. `graphClient` used `@azure/identity`'s **disk-path**
+`ClientCertificateCredential` overload (PEM read from `GRAPH_CLIENT_CERT_PATH` on
+disk), which can't work on Vercel's read-only serverless filesystem — so the
+SharePoint `put` AND the pipeline's Stage-1 byte-fetch would have failed at first
+Graph use.
+
+- **Fixed:** the in-memory `{ certificate }` overload (`@azure/identity@4.13.1`
+  `:51`), PEM from a **base64** env var; atomic rename `GRAPH_CLIENT_CERT_PATH` →
+  `GRAPH_CLIENT_CERT_PEM` across `env.ts`, `graphClient.ts`, `.env.example`, **and
+  the e2e `RUN_E2E` gate** (a change-surface site the spec's hand table missed —
+  the repo-wide grep caught it; a stale ref there fails no test, since the e2e is
+  skip-gated). First graphClient test (`readGraphConfig`: missing / valid /
+  malformed-with-typed-error); both SharePoint runbooks doc-synced; the PEM (a
+  private key) marked **Sensitive**. Commit `189b3a2a` (charter `7dbdb046` → spec
+  `749b2f8e` → plan `89c50dfa`).
+- **Status:** `sharepoint_drive` is now **Vercel-deployable** (cert-from-env),
+  still **live-gated** on operator ops (Azure `Sites.Selected` + cert +
+  `GRAPH_CLIENT_CERT_PEM` in Vercel + per-site grant) + the first forwarded email.
+  typecheck · graphClient 3/3 · `test:full` 1799/0/11. UNIT-PROVEN ≠ PROVEN.
+- **Push precondition:** `GRAPH_CLIENT_CERT_PEM` joins the Vercel-var list, but
+  it's **optional-at-boot** → it won't fatal the deploy (SharePoint stays inert
+  until set), unlike the Postmark `REQUIRED_SERVER` var.
+
+Full record: `retrospectives/graphclient-cert-from-env-retrospective.md` +
+friction-journal 2026-06-09. Push (`42fa8277..HEAD`) + lock-release Phil's.
+
+## Mailbox → SharePoint live (auth-model fix) — 2026-06-09 (UNIT-PROVEN, live transfer gated; banked local on `staging`)
+
+A code arc opened from a grounding finding: the forwarded-mailbox Postmark
+webhook required an `X-Postmark-Signature` HMAC that **Postmark never sends**
+(its inbound security is HTTP Basic Auth + IP allowlist). Every real delivery
+401'd — the mailbox channel had never received live mail. The bug shipped
+because the route's only test self-minted the HMAC the handler expected,
+validating a fiction.
+
+- **Phase 1 (code) — DONE.** Replaced the HMAC check with HTTP Basic Auth
+  (constant-time, length-guarded; all failure paths → 401 + `auth_invalid`);
+  atomic env rename `POSTMARK_INBOUND_WEBHOOK_SECRET` →
+  `POSTMARK_INBOUND_BASIC_AUTH_PASSWORD`; IP allowlist moved to the Vercel
+  Firewall (not code — `middleware.ts` excludes `/api`); route test rewritten to
+  the documented Basic Auth contract; false HMAC comments corrected. Two green
+  commits (`8ebfb0cc` rename | `1f461e0d` Basic Auth) + comment follow-up
+  `a463c73e`. `sidecar/client.ts` (Modal OCR's own HMAC) untouched.
+- **Phase 2 (runbook) — DONE.** Combined mailbox→SharePoint onboarding runbook
+  (`docs/09_briefs/post-mvp/runbooks/mailbox-sharepoint-onboarding.md`, `4f67edd8`):
+  SharePoint ops + org provisioning (cross-refs the SharePoint runbook) →
+  Postmark account/stream + Basic Auth (username `postmark` exactly; password in
+  Vercel + the webhook URL) → combined live discharge.
+- **Status: wired + UNIT-PROVEN, live transfer GATED.** typecheck · route test
+  13/13 · `test:full` 1796/0/11. The live proof is the **first forwarded email**
+  to a SharePoint-provisioned org (`storage_provider='sharepoint_drive'` + bytes
+  in the customer's SharePoint) — gated on operator ops no agent can perform
+  (Azure `Sites.Selected` + cert + `GRAPH_*` + per-site grant + org provisioning
+  + Postmark Basic Auth). **UNIT-PROVEN ≠ PROVEN.**
+- **Carries:** the multi-attachment picking gap (banked); deploy-ordering (the
+  renamed boot-required var must be in Vercel before/with deploy) +
+  username-exactness, both in the runbook flags.
+
+Full record: `retrospectives/mailbox-sharepoint-live-retrospective.md` +
+friction-journal 2026-06-09. Push (`42fa8277..HEAD`) + lock-release pending
+(Phil's).
+
+## Post-V1 AP-ingest deepening — 2026-06-07 (in progress; origin/staging at `66efcc59`)
+
+The post-V1 work after the doc-refresh (below). Direction: deepen AP
+ingest — finish the mailbox channel, then add SharePoint storage.
+Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
+
+- **mailbox-finish — SHIPPED** (Charter A of AP-ingest). Forwarded-
+  mailbox documents now process synchronously on webhook arrival
+  instead of waiting for the operator-CLI sweep (sync `IngestInvoker`
+  wired; sweep kept as backstop). Design catch: a shared
+  attachment-preferring resolver (`resolvePrimaryIngestSource`) so the
+  invoice — not the `.eml` body — gets classified for the 1+N mailbox
+  case. Banked **prioritized** follow-up: multi-attachment picking gap.
+- **ADR-0013 §13 amendment — RATIFIED.** Universal-default SharePoint
+  (Option A): `sharepoint_drive` is the default provider for
+  M365-equipped orgs, `supabase_storage` the fallback; the bytes-vs-
+  meaning "exact and non-negotiable" invariant + "not the only
+  provider" preserved. Append-only per ADR-0022 §2. This is the gate
+  that unblocked Charter B.
+- **Charter B (a) `sharepointDriveProvider` — CLOSED.** The SharePoint
+  storage provider: **implemented and admitted, NOT YET REACHABLE.**
+  Six `StorageProvider` methods (put-then-re-read SHA-256 §9 discharge;
+  reads; verifyIntegrity), app-only `Sites.Selected` cert auth, Graph
+  failure classification, the `storage_provider` CHECK broadened to
+  admit `sharepoint_drive`, resolver activated. Unit-proven (mocked
+  io/resolver/rows + migration apply + activation test), **not** proven
+  live: nothing reaches it in production, held by two still-true gates —
+  the source_documents write value is hardcoded `supabase_storage`
+  (`ingestionService`) and Graph is unconfigured (`GRAPH_*` unset). Full
+  record + commit ledger: friction-journal 2026-06-07 Charter B (a)
+  closeout; design/plan at `docs/09_briefs/post-mvp/`.
+  - **"Charter B (a) ✓" must carry "implemented + admitted, not yet
+    reachable"** — it was not live at (a) close. (The real-flow arc
+    below has since made it reachable — unit-proven, live transfer
+    gated.)
+
+- **Charter B real-flow — CLOSED (UNIT-PROVEN, live transfer gated).**
+  The reachability arc: the selection seam is now dynamic end-to-end —
+  ingest resolves the org's `default_storage_provider`
+  (`resolveStorageProvider`) and stamps it; fetch dispatches on the
+  row's provider (`byteFetch`). `sharepoint_drive` is REACHABLE in
+  production in principle — but no live SharePoint Graph transfer has
+  occurred; the gated harness (`RUN_SHAREPOINT_E2E`) throws until
+  implemented against a real tenant, so nothing false-greens as
+  proven-live. Carries: (a) Layer-2 Zod admit-set DISCHARGED; (b)
+  `provider_unavailable` — honest classification (the D-5 two-layer wire
+  contract) + reserved `exception_reason` value landed, but the
+  exception-queue ROUTING surface deferred-with-consumer to Phase-7
+  (decision #2 = option 1; the v1 surface is near-vestigial); (c)
+  Task-8 ops — runbook + gated harness landed, Azure registration +
+  live run gated. 16 commits `1dc71bc9..aed41979` (local on `staging`;
+  push pending the three-condition gate). Full record: friction-journal
+  2026-06-08 Charter B real-flow closeout + retrospective at
+  `docs/07_governance/retrospectives/charter-b-real-flow-retrospective.md`.
+  - **"Charter B real-flow ✓" must carry "reachable, unit-proven, live
+    transfer gated"** — it is not yet live.
+
+- **Still-queued carries** (not part of the real-flow arc): the mailbox
+  multi-attachment picking gap; the five V1 governance one-offs
+  (push-readiness escape-clause, test-account-namespace check,
+  branch-protection, INV-AP-001/002 severity, Q2 re-include);
+  `folder-structure.md` / `monorepo.md` refreshes. From the real-flow
+  arc: the Phase-7 `provider_unavailable` routing surface + enqueue
+  coupling-wall design. **The live SharePoint e2e is now READY, not
+  PROVEN:** the gated harness body landed (Charter B PROVEN-LIVE arc,
+  `77e4b520`) — the live proof is one `RUN_SHAREPOINT_E2E=1` away — but
+  PROVEN-LIVE still requires operator runbook ops (Azure `Sites.Selected`
+  + cert + per-site grant + an org pointed at `sharepoint_drive`) + the
+  live green run, which no agent can perform. `sharepoint_drive` status:
+  **reachable, unit-proven, harness-ready, live transfer gated** —
+  "carry-forward #2 done" is NOT "SharePoint proven live."
+
+## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
+
+After the Wave-6 terminal push (`459b172d`), 25 commits landed
+through `5ed6a3f1` across four push events (`542fc58f` Wave-6-close
+doc update; `3e51389a` mid-Arc-1; `b8ddb087` Arc-1 close;
+`5ed6a3f1` three-arc terminal stack — per the local origin-reflog
+record). The chapter closed the import-boundary debt the Wave-6
+close report named and hardened the session tooling:
+
+- **Arc 1 — agent→`adminClient` record correction + Class A fix**
+  (`9a6398b7..b8ddb087`): the Wave-6 coda's CI-red claim split by
+  grain (job-grain TRUE / violation-grain FALSE — the in-place
+  correction in the Wave-6 section below); `reviewPreview` +
+  `sweepStrandedCases` reads hoisted to services; claim-grain guard
+  codified at N=2 split-trigger.
+- **cwd-drift pre-commit guard** (design `9017a736` → implementation
+  `66cb8c9b` → codified `dee3b5ce`): lock-gated `GIT_PREFIX` hard
+  block; commit from repo root with root-relative pathspecs.
+- **Arc 2 — Class B hoists** (`e9c3d03d..de395614`): src/agent-grain
+  adminClient reads/writes hoisted 7→0; ADR-0036 Decision-10 parked
+  draft tracked at `9b16a08a`; `.auth/` gitignore anchoring.
+- **Class D** (`b4ae622d..f6f4d93e`): required `IngestInvoker` param
+  spine inversion (services→agent 1→0 — CLASS D CLEAR at
+  `90f64a38`); two Arc-2-ledgered org-scope read gaps closed with
+  bidirectional tests (`89da445e`). Test baseline at `f6f4d93e`:
+  **1760 passed / 0 failed / 10 skipped** (`pnpm test:full`);
+  commits since are docs-only, so the baseline carries.
+- **gitignore-anchoring class banked at N=3** with written
+  graduation trigger (`5ed6a3f1`): next fire or first escape routes
+  through codify-convention, CI-lint form.
+- **Post-V1 doc-refresh arc (this arc):** T1 two-doc disposition
+  (`ed1a5790` — Phase 6.5 retrospective drafting plan tracked with
+  executed-plan note; Session-14 substrate discarded per its
+  self-declared disposability); this CURRENT_STATE refresh;
+  `system_overview.md` full-body rewrite; cross-reference sweep.
+  Chartered at V1 Wave-0 retrospective §5, re-named at Wave-6 close.
+
+**Live posture (grounded from code at this refresh):** the V1 wedge
+is live end-to-end — document pipeline parks matched proposals at
+`status='parked_unposted'` and advances the case to `needs_review`
+(the Wave-6 D2.1 T3 matched→needs_review hand-off); humans
+approve→post from the review inbox; ungoverned auto-commit stays
+disabled (ADR-0007 §Tier 2 Q78 V1 re-scoping, amended 2026-05-30);
+governed per-rule re-wire is post-V1. Invariants: **28 (16 L1a +
+12 L2)** per `docs/02_specs/invariants.md`.
+
+**Still queued** (named, not absorbed, per the Wave-6 retro §5 /
+close-report §6 queue): push-readiness escape-clause
+generalization; test-account-namespace write-time check;
+branch-protection disposition; INV-AP-001/002 severity; Q2 `query`
+re-include trigger. Decision 10 unparks at market strategy;
+ADR-0036 stays parked (draft tracked).
+
+## V1 Wave 6 — AP Review — CLOSED 2026-06-06
+
+The final build wave (waves 1–6 ran 2026-06-01 → 2026-06-06 atop Wave 0;
+Wave 5 closed at `e571ceb5`). Nine deliverables (D1, D2.1, D2.3, D3, D4,
+D5, D6, D7, D8) banked-local under the `wave-6-ap-review` session lock and
+pushed as one coherent wave at the D8 terminal ceremony:
+`e571ceb5..83339a7c` (63 commits, Phil's hand) + coda `459b172d`. Lock
+released via `session-end.sh` as the ceremony's last act. Full
+retrospective: `docs/07_governance/retrospectives/v1-wave-6-retrospective.md`;
+D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
+
+- **The wedge is live end-to-end:** review inbox + human approve→post
+  (D3) with real coding (D4), evidence-object persistence (D5), live
+  routing + no-silent-drops (D2.1/D2.3), and the row-delta proof (D7) —
+  founder-screenshot-gated (D8 §4, GATE PASSED with a live lifecycle
+  trace).
+- **Governance reconciled:** invariants 25→28 (16 L1a + 12 L2) across
+  all six live snapshot sites with the named-exception reachability
+  framing (the raw diff carries exactly four documented exceptions —
+  none silent); three Wave-6 INV registrations (INV-WORKFLOW-002,
+  INV-EVIDENCE-001, INV-WORKFLOW-001) compounded at D8.
+- **CI teeth live:** the `intent-producers` job (INV-WORKFLOW-001) green
+  on its **first dynamic execution** at the terminal push. Pre-existing
+  `lint`/`build` reds verified not-wave-introduced and named for the
+  queue (agent→`adminClient` import-boundary cleanup). *(Correction
+  2026-06-06, cleanup-arc kickoff: true at job grain; at violation
+  grain two of the nine errors ARE wave-introduced —
+  `reviewPreview.ts` D3 + `sweepStrandedCases.ts` D2.3, a shipped
+  regression, now Arc-1 scope — see the D8 close report §6
+  correction. Anchor, second pass: "the nine" = `src/agent` grain;
+  the full CI red is 14 in three classes, the D3 route pair
+  documented at D3 close §2 — Arc-1 friction-journal record note.)*
+  Branch protection
+  currently requires no checks (`main`; `staging` unprotected) — teeth
+  advisory; disposition is Phil's.
+- **Two codifications:** `*TierA` additive-named-export (N=3 →
+  `conventions/testing.md`) and commit-shell hygiene under a session
+  lock (N≥3 on operator-ratified testimony, split recorded →
+  `conventions/code.md`).
+- **Push-readiness gate earned its keep:** caught its own diff-empty
+  prediction (→ named-exception reconcile), its own shot-5 view spec
+  (→ Pending Approvals), and a real test-only regression (D4
+  T-namespace violation, fixed at source) — none forced to look right.
+- **Next:** the queued carry-forwards (retro §5 + close report §6 coda):
+  agent→`adminClient` cleanup; push-readiness escape-clause
+  generalization; cwd-drift pre-commit guard; test-account-namespace
+  write-time check; branch-protection disposition; INV-AP-001/002
+  severity; Q2 `query` re-include trigger. Decision 10 still unparks at
+  market strategy; the post-V1 doc-refresh arc (this doc's body +
+  `system_overview`) remains deferred. *(Supersession note
+  2026-06-07, doc-refresh arc: of this queue, agent→`adminClient`
+  cleanup and the cwd-drift pre-commit guard shipped in the
+  post-Wave-6 boundary-cleanup chapter — see the top section — and
+  the doc-refresh arc is no longer deferred; it is the arc that
+  wrote this note. The other five items remain queued.)*
+
+## V1 Wave 0 governance arc — CLOSED 2026-06-01
+
+The V1 Final System Proposal reconciliation + Wave 0. "V1" = the AP
+review-and-post wedge on the controlled stack (build waves 1–6 ahead).
+Eight feature commits banked-local on `staging` (`11633dc6..031ce5ca`),
+plus this Wave-0 closeout commit; push pending a separate terminal go.
+Full retrospective:
+`docs/07_governance/retrospectives/v1-wave-0-retrospective.md`.
+
+- **Wave -1 safety:** ADR-0007 Q78 V1-rescoping amendment (`7cb68895`) +
+  A-now bleed-stop (`de607fdb`) — the document pipeline's ungoverned
+  auto-commit was disabled; matched proposals park in `received` (no
+  ledger write); commit machinery preserved for the post-V1 governed
+  re-wire. (Severity: the vendor_invoice→bill path was already
+  structurally unreachable via a matcher gap, so the live exposure was
+  narrower than first stated.)
+- **Wave 0:** Decisions 1–9 ratified (`31ba9796`); ADR-0029 (single
+  `rule_autonomy_rung`, `6af5d776`) + ADR-0030 (decision-module
+  composition + Decision 11 = i′, `dcb6ab6c`) ratified; **Decision 10
+  (first-class jurisdictions) deferred by design** (internal-use-only;
+  unparks at market strategy; ADR-0036 parked); glossary +
+  system_overview reconciled.
+- **Push-readiness gate:** C1 (test-suite) green after a test-only
+  remediation (`031ce5ca`, classifier assertions committed→parked_unposted);
+  C2 (doc-sync) clean w.r.t. the arc (surfaced only pre-existing
+  reachability drift, carried forward); C3 (governance closeout) = this
+  retrospective + codifications (extend prediction-grounding; new
+  decision-hole + gate-precedence; ADR-lifecycle DISMISS) + this reconcile.
+- **Next:** V1 build waves 1–6 per the charter
+  (`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`); Decision 10
+  unparks at market strategy; a full state-narrative refresh (this doc +
+  system_overview body) is a deferred post-V1 doc arc (retrospective §5).
+
+## The May run — compressed bridge, 2026-05-05 → 2026-06-01 (added 2026-06-07)
+
+> Added at the post-V1 doc-refresh arc to close this doc's narrative
+> gap: nothing was recorded here between the 2026-05-05 substrate
+> ratification (below) and V1 Wave 0 (above). The canonical detail
+> lives in the named retrospectives/ADRs; this table is the map, not
+> the history. Close dates grounded from the artifacts' own headers
+> and `git log` at write time.
+
+| Arc | Closed | Canonical record |
+|---|---|---|
+| Phase 5 — Spend Initiative (manual AP foundation, 9 chunks) | 2026-05-12 | `retrospectives/phase-5-retrospective.md` |
+| Phase 2 — Document Platform substrate spine (6 chunks) | 2026-05-13 | `retrospectives/phase-2-retrospective.md` |
+| Phase 4 — Document Relationship Router (3 subsystems) | 2026-05-14 | `retrospectives/phase-4-retrospective.md` |
+| Phase 3 — scope absorbed by Phase 2 chunk 5 (`source_document_links`); closeout-verify only, no separate arc | 2026-05-15 | friction-journal 2026-05-15 entry |
+| Phase 6 — Ingestion (batches/jobs substrate, drag-drop + channels, cards UI) | 2026-05-16 | `retrospectives/phase-6-retrospective.md` |
+| Phase 6.5 — Bridge shell consolidation (three-zone shell, multi-tab canvas, chat drag-drop) | 2026-05-17 | `retrospectives/phase-6-5-retrospective.md` |
+| v2.2 docs reorg — CLAUDE.md slimmed to the pointer layer; skills + path-scoped-rules pilot | 2026-05-17 | final commit `62649449` |
+| Phase 6.5 codification arc sequence (eight-arc recursion) | 2026-05-18 | `retrospectives/phase-6-5-codification-arc-sequence-retrospective.md` |
+| Phase 5.1 — paymentService + INV-DOC-001 + vendor_credits β (3 chunks) | 2026-05-19 | `retrospectives/phase-5-1-retrospective.md` |
+| Phase 7 — Tier 2 document pipeline orchestrator (Stages 0–7) | 2026-05-20 | `retrospectives/phase-7-retrospective.md` |
+| Phase 8 — per-feature scoring + reconciliation orchestrator (10 chunks + dedicated classifier-fix chunk) | 2026-05-24 | `retrospectives/phase-8-retrospective.md` |
+| Auto-commit arc — ADR-0007 Q78 Option A (governed auto-commit; disabled again at Wave -1 — see the Wave 0 section above) | 2026-05-24 | ADR-0007 §Tier 2 |
+| Ring 1 + Ring 2A-core — rule-type core substrate; evaluator / agent-ladder gate / evaluation log | 2026-05-26 | ADR-0023 + ADR-0024 |
+| Hygiene-post-ring2a-core arc (ratified-contract-scope codified) | 2026-05-27 | `conventions/ratified-contract-scope.md` |
+| Ring 2B — shadow rule evaluation, A1a substrate-only | 2026-05-30 | `retrospectives/ring-2b-implementation-retrospective.md` |
+
+The run hands off to the V1 charter
+(`docs/09_briefs/v1/plans/2026-05-31-v1-governance-plan.md`,
+2026-05-31) and Wave 0 — the next dated section above.
 
 ## Architecture substrate ratified — 2026-05-05
 
@@ -1045,6 +1366,13 @@ camelCase API boundary with snake_case DB mapping; null
 behavior changes, user/invite system, UI work,
 `organizations.industry` legacy enum column drop, NAICS code
 population, onboarding state machine.
+
+> **[As-of marker: Phase 1.1 vintage — historical record (marker
+> added 2026-06-07)]** — the four sections below ("Phase 1.1 is
+> functionally complete" through "Remaining sessions") narrate the
+> Phase-1.1 close in present-tense voice. Preserved as written; the
+> two "remaining sessions" they name happened long ago. For current
+> state, see the top dated section.
 
 ## Phase 1.1 is functionally complete.
 

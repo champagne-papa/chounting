@@ -79,10 +79,14 @@ describe('withRetry', () => {
     expect(op).toHaveBeenCalledTimes(1);
   });
 
-  it('throws STORAGE_OPERATION_FAILED catchall on provider_unavailable (401/403) without retrying', async () => {
+  it('throws STORAGE_PROVIDER_UNAVAILABLE on provider_unavailable (401/403) without retrying (D-5 wire contract)', async () => {
+    // Charter B real-flow D-5 edit (a): provider_unavailable now propagates the
+    // TYPED STORAGE_PROVIDER_UNAVAILABLE (was flattened to the
+    // STORAGE_OPERATION_FAILED catchall) so byteFetch can map it to
+    // PIPELINE_UNAVAILABLE. Still no retry (401/403 won't recover).
     const op = vi.fn().mockRejectedValue({ status: 401 });
     await expect(withRetry(op)).rejects.toMatchObject({
-      code: 'STORAGE_OPERATION_FAILED',
+      code: 'STORAGE_PROVIDER_UNAVAILABLE',
     });
     expect(op).toHaveBeenCalledTimes(1);
   });

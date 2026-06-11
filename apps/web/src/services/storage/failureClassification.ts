@@ -9,14 +9,43 @@
 //                                (STORAGE_KEY_MALFORMED or
 //                                INTEGRITY_VERIFY_FAILED per §7
 //                                verbatim)
-//   - provider_unavailable     — reserved per §7; v1 supabase_storage
-//                                does not trigger this category
-//                                (platform's own RLS-scoped storage).
-//                                Post-v1 reserved-provider activation
-//                                routes here with the
-//                                `resolve_provider_unavailable`
-//                                exception-queue action per ADR-0010
-//                                discipline.
+//   - provider_unavailable     — v1 supabase_storage does not trigger
+//                                this category (platform's own RLS-scoped
+//                                storage). sharepoint_drive IS the first
+//                                provider that classifies into it
+//                                (Charter B (a) Task 4: Graph 401/403/404
+//                                → provider_unavailable).
+//
+// CALLER-SIDE ROUTING (exception-queue enqueue) IS DEFERRED to Phase-7
+// (the job-runner + recovery substrate). The Charter B real-flow arc made
+// the provider reachable and landed honest classification (the D-5 wire
+// contract lives at retry.ts/byteFetch.ts) but deliberately did NOT build
+// the routing surface (decision #2 = option 1). Two substrate gaps make
+// routing net-new design, not a drop-in (verified on disk vs 20240148):
+//   (1) No provider_unavailable-class exception_reason exists (the enum
+//       carries manual_route / low_confidence_classification /
+//       unknown_document_type / unmatched_router_candidate /
+//       multi_candidate_ambiguity / invariant_violation [v1-active] +
+//       wrong_entity_exception / drift_detected [reserved]). Routing
+//       needs a new value (ALTER TYPE ADD VALUE +
+//       exception_reason_chunk_6_active → _chunk_7_active broaden).
+//   (2) The existing enqueue_exception_with_audit RPC atomically
+//       transitions the document_case classified|matched → needs_review
+//       and raises check_violation otherwise — it is purpose-built for
+//       the classification/matching pipeline's needs_review entry. A
+//       storage-read failure (fetch/verifyIntegrity at arbitrary
+//       lifecycle points) will generally NOT satisfy that state
+//       coupling, so routing needs a distinct enqueue path or a
+//       documented state-coupling exemption — a design decision, not
+//       just an enum add.
+// (NOTE: an earlier draft of this comment named a `resolve_provider_
+// unavailable` resolution_action — that value exists nowhere in
+// substrate; it was a text-grain name only, removed to avoid implying
+// an admission that does not exist. resolution_action is the
+// human-resolution side anyway; enqueue keys on exception_reason.)
+// The classifier classifying provider_unavailable (below) is harmless
+// and correct — it is the half that belongs with the provider; only the
+// routing + its substrate defer.
 //
 // Unclassifiable errors return null. Callers (withRetry) treat null
 // as fail-fast with STORAGE_OPERATION_FAILED catchall, preserving the
@@ -82,9 +111,48 @@ export function classifyStorageFailure(
   // since storage SDKs and fetch errors carry varied surface fields.
   const e = err as {
     status?: number;
+    statusCode?: number;
     code?: string;
     name?: string;
   };
+
+  // Microsoft Graph error shape (GraphError): carries `statusCode`
+  // (number) — distinct from the supabase `status` field below, so the
+  // two providers never collide in this context-free classifier. Graph
+  // is the first provider to actually exercise provider_unavailable.
+  // (Charter B (a) Task 4; spec §4.)
+  if (typeof e.statusCode === 'number') {
+    // 5xx (incl. 507 Insufficient Storage) → transient.
+    if (e.statusCode >= 500 && e.statusCode < 600) {
+      return { kind: 'transient' };
+    }
+    // Throttling (429, Retry-After), request timeout (408), and Locked
+    // (423, e.g. file checked out / transient lock) → transient.
+    if (e.statusCode === 429 || e.statusCode === 408 || e.statusCode === 423) {
+      return { kind: 'transient' };
+    }
+    // Auth revoked / consent removed → provider_unavailable.
+    if (e.statusCode === 401 || e.statusCode === 403) {
+      return { kind: 'provider_unavailable' };
+    }
+    // 404 → provider_unavailable (Step 2a decision (a)). The classifier
+    // is context-free: it cannot know whether a 404 is a file deleted
+    // out-of-band (genuine provider_unavailable) vs a malformed/
+    // never-existed key. v1 CLASSIFIES all Graph 404 as provider_unavailable
+    // (the safe direction for a storage-backed accounting document; malformed-
+    // key 404s classify there too). NOTE (Charter B real-flow / decision #2):
+    // the exception-queue ROUTING surface is deferred to Phase-7 — today
+    // provider_unavailable surfaces as PIPELINE_UNAVAILABLE (the D-5 wire
+    // contract), NOT an enqueue. The future exception-queue handler is what
+    // distinguishes file-deleted vs malformed-key at resolution.
+    if (e.statusCode === 404) {
+      return { kind: 'provider_unavailable' };
+    }
+    // Other 4xx → permanent_malformed.
+    if (e.statusCode >= 400 && e.statusCode < 500) {
+      return { kind: 'permanent_malformed', code: 'STORAGE_KEY_MALFORMED' };
+    }
+  }
 
   // HTTP status code patterns (StorageApiError, fetch Response errors).
   if (typeof e.status === 'number') {
