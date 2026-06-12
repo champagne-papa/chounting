@@ -119,9 +119,18 @@ export async function resolvePrimaryIngestSource(
     return jobRows[0].source_document_id;
   }
 
-  // Multi-job case (forwarded mailbox): prefer an attachment over the
-  // email_body. email_body is the only role written at ingest, so a single
-  // role='email_body' row identifies the .eml body source_document.
+  // Multi-job case (forwarded mailbox): pick the primary INGEST DOCUMENT.
+  // (1) Exclude the .eml email_body (role='email_body' — the only role
+  // written at ingest) so we classify the invoice, not the email. (2) Among
+  // the remaining attachments, prefer a real document over an inline/
+  // signature image: Outlook auto-appends a byte-identical signature image
+  // (image/*) to every forwarded email, so picking it dedup-skips the real
+  // invoice (incident 2026-06-11). mime_type is the persisted discriminator
+  // (source_documents.mime_type, set at ingest from Postmark ContentType);
+  // the raw inline marker (ContentID) is neither in the Postmark schema nor
+  // persisted, so mime_type is the soundest available signal. Falls back to
+  // the oldest attachment when all are images (a photographed receipt), so
+  // image-only invoices still process.
   const { data: emailBody, error: bodyErr } = await db
     .from('document_case_sources')
     .select('source_document_id')
@@ -136,10 +145,41 @@ export async function resolvePrimaryIngestSource(
   }
   const emailBodyId =
     (emailBody?.source_document_id as string | undefined) ?? null;
-  const attachment = jobRows.find(
+  // Attachments = non-email-body jobs, preserving oldest-first order.
+  const attachmentRows = jobRows.filter(
     (j) => j.source_document_id !== emailBodyId,
   );
-  return attachment?.source_document_id ?? jobRows[0].source_document_id;
+  if (attachmentRows.length === 0) {
+    // Only the email body carries a job row — preserve the prior contract
+    // (oldest job). Should not occur for a real mailbox case.
+    return jobRows[0].source_document_id;
+  }
+  if (attachmentRows.length === 1) {
+    return attachmentRows[0].source_document_id;
+  }
+
+  // >=2 attachments: prefer the oldest non-image over an image (signature).
+  const attachmentIds = attachmentRows.map((j) => j.source_document_id);
+  const { data: docs, error: docErr } = await db
+    .from('source_documents')
+    .select('id, mime_type')
+    .in('id', attachmentIds);
+  if (docErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `[resolvePrimaryIngestSource] source_documents mime read failed for case ${document_case_id}: ${docErr.message}`,
+    );
+  }
+  const mimeById = new Map<string, string>(
+    (docs ?? []).map((d) => [
+      d.id as string,
+      ((d.mime_type as string | null) ?? '').toLowerCase(),
+    ]),
+  );
+  const nonImage = attachmentRows.find(
+    (j) => !(mimeById.get(j.source_document_id) ?? '').startsWith('image/'),
+  );
+  return (nonImage ?? attachmentRows[0]).source_document_id;
 }
 
 /** B2 bucket predicate: does the case carry any relationship candidate? */
