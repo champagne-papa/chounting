@@ -126,12 +126,16 @@ function authedRequest(args: {
   });
 }
 
-function makeAttachment(name: string, content = 'pdf bytes'): PostmarkAttachment {
+function makeAttachment(
+  name: string,
+  content = 'pdf bytes',
+  contentType = 'application/pdf',
+): PostmarkAttachment {
   const b64 = Buffer.from(content, 'utf8').toString('base64');
   return {
     Name: name,
     Content: b64,
-    ContentType: 'application/pdf',
+    ContentType: contentType,
     ContentLength: content.length,
   };
 }
@@ -297,6 +301,48 @@ describe('Postmark inbound webhook (handleForwardedMailbox end-to-end)', () => {
     };
     expect(callArg.source_document_id).toBe(attachment!.id);
     expect(callArg.source_document_id).not.toBe(emailBody!.id);
+  });
+
+  it('Test #1d — two attachments (signature image + invoice PDF): the sync invoke targets the PDF, not the image (signature-hijack fix)', async () => {
+    // Outlook auto-appends a signature image to every forwarded email. With
+    // two attachments (image/* signature + application/pdf invoice),
+    // resolvePrimaryIngestSource must pick the INVOICE — picking the
+    // byte-identical signature image would dedup-skip the real document
+    // (incident 2026-06-11). Attachment order is intentionally image-first
+    // to defeat the prior arbitrary "first non-body" pick.
+    const payload = makePayload({
+      from: 'placeholder-founder@chounting.com',
+      to: 'inbound+holding@inbound.chounting.com',
+      subject: 'Invoice with signature image',
+      attachments: [
+        makeAttachment('Outlook-signature.png', 'png-bytes', 'image/png'),
+        makeAttachment('the-invoice.pdf', 'pdf-bytes', 'application/pdf'),
+      ],
+    });
+    const res = await POST(authedRequest({ bodyObj: payload }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { status: string; batch_id: string };
+    expect(body.status).toBe('accepted');
+    createdBatchIds.push(body.batch_id);
+
+    const { data: docs } = await db
+      .from('source_documents')
+      .select('id, mime_type')
+      .eq('ingest_batch_id', body.batch_id);
+    // 3 source_documents: 1 email_body (text/plain) + 2 attachments.
+    expect(docs).toHaveLength(3);
+    const pdf = docs!.find((d) => d.mime_type === 'application/pdf');
+    const png = docs!.find((d) => d.mime_type === 'image/png');
+    expect(pdf).toBeTruthy();
+    expect(png).toBeTruthy();
+
+    // Invoked exactly once, on the PDF invoice — never the signature image.
+    expect(ingestDocument as Mock).toHaveBeenCalledTimes(1);
+    const callArg = (ingestDocument as Mock).mock.calls[0][0] as {
+      source_document_id: string;
+    };
+    expect(callArg.source_document_id).toBe(pdf!.id);
+    expect(callArg.source_document_id).not.toBe(png!.id);
   });
 
   it('Test #1c — sync invoke failure is isolated: webhook still accepted, case stays received (sweep backstop)', async () => {

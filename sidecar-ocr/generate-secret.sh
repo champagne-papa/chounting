@@ -7,7 +7,9 @@
 # Usage:
 #   bash generate-secret.sh           # prints secret to stdout
 #   SECRET=$(bash generate-secret.sh)
-#   modal secret create modal-ocr-hmac-secret value="$SECRET"
+#   modal secret create modal-ocr-hmac-secret MODAL_OCR_HMAC_SECRET="$SECRET"
+#     ^ KEY must be MODAL_OCR_HMAC_SECRET (the container env-var name read at
+#       main.py:81), NOT value= — a mismatched KEY → 503 at runtime.
 #   echo "MODAL_OCR_HMAC_SECRET=$SECRET" >> apps/web/.env.local
 #
 # Per ADR-0014 §3 v1 manual rotation; runbook in README.md §"Secret

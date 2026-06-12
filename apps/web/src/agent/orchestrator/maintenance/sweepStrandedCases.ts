@@ -95,6 +95,15 @@ export interface SweepInput {
   document_case_ids?: string[];
   /** false (default) = dry-run: bucket + report, ZERO writes. */
   execute?: boolean;
+  /**
+   * Cap on B3 full re-runs (the OCR/Claude spend) per execute run. When
+   * reached, further B3-eligible cases are reported 'b3_cap_skipped'
+   * (re-eligible next run) instead of re-run, so a scheduled run can't
+   * spike spend on a large backlog. undefined = no cap (CLI/operator
+   * default). Dry-run is unaffected (it never re-runs); the read-only
+   * B3-D dedup pre-check is never capped (no spend).
+   */
+  max_b3_reruns?: number;
 }
 
 export type SweepBucket = 'B1' | 'B2' | 'B3-D' | 'B3' | 'B4' | 'anomaly';
@@ -123,6 +132,9 @@ export type SweepOutcome =
   | 'rerun_recovered'
   /** B4: re-run returned pipeline_failed; re-eligible next run. */
   | 'pipeline_failed'
+  /** B3 cap reached this run: the re-run (OCR/Claude spend) was skipped;
+   *  the case stays re-eligible for the next run. Bounds scheduled spend. */
+  | 'b3_cap_skipped'
   /** Anomaly: case has no document_jobs row — no source document to
    *  dedup-check or re-run. Reported for operator eyes. */
   | 'no_job_row'
@@ -148,6 +160,9 @@ export interface SweepReport {
   dry_run: boolean;
   eligible_count: number;
   counts: Record<SweepBucket, number>;
+  /** Actual B3 full re-runs performed this run (the OCR/Claude spend) —
+   *  distinct from counts.B3, which also includes capped/dry-run cases. */
+  b3_reruns_executed: number;
   cases: SweepCaseOutcome[];
 }
 
@@ -161,6 +176,13 @@ interface EligibleCaseRow {
   org_id: string;
   state: string;
   created_at: string;
+}
+
+/** Mutable per-run B3 re-run budget (the OCR/Claude spend ceiling) threaded
+ *  through sweepOneCase. undefined max = uncapped. */
+interface B3Budget {
+  used: number;
+  max?: number;
 }
 
 function caseCtx(org_id: string): SystemActorServiceContext {
@@ -207,20 +229,28 @@ export async function sweepStrandedCases(
     dry_run,
     eligible_count: eligible?.length ?? 0,
     counts: { B1: 0, B2: 0, 'B3-D': 0, B3: 0, B4: 0, anomaly: 0 },
+    b3_reruns_executed: 0,
     cases: [],
   };
 
+  // Per-run B3 re-run budget — the OCR/Claude spend ceiling. undefined max
+  // = uncapped (CLI/operator default); the scheduled caller passes a cap so
+  // a large backlog drains in bounded increments instead of spiking spend.
+  const b3Budget: B3Budget = { used: 0, max: input.max_b3_reruns };
+
   // Sequential, oldest-first (race-surface minimization; v1 scale).
   for (const row of (eligible ?? []) as EligibleCaseRow[]) {
-    const outcome = await sweepOneCase(row, dry_run, runIngest, log);
+    const outcome = await sweepOneCase(row, dry_run, runIngest, log, b3Budget);
     report.counts[outcome.bucket] += 1;
     report.cases.push(outcome);
   }
+  report.b3_reruns_executed = b3Budget.used;
 
   log.info(
     {
       eligible: report.eligible_count,
       dry_run,
+      b3_reruns_executed: report.b3_reruns_executed,
       ...report.counts,
     },
     'sweepStrandedCases complete',
@@ -233,6 +263,7 @@ async function sweepOneCase(
   dry_run: boolean,
   runIngest: (input: IngestDocumentInput) => Promise<IngestDocumentOutput>,
   log: ReturnType<typeof loggerWith>,
+  b3Budget: B3Budget,
 ): Promise<SweepCaseOutcome> {
   const ctx = caseCtx(row.org_id);
   let source_document_id: string | null = null;
@@ -295,10 +326,19 @@ async function sweepOneCase(
       };
     }
 
-    // ----- B3 — full re-run -----
+    // ----- B3 — full re-run (capped: this IS the OCR/Claude spend) -----
     if (dry_run) {
       return { ...base(), bucket: 'B3', outcome: 'bucketed_dry_run' };
     }
+    if (b3Budget.max !== undefined && b3Budget.used >= b3Budget.max) {
+      // Per-run B3 cap reached: skip the re-run (no spend) and leave the
+      // case re-eligible for the next run, so a large backlog drains in
+      // bounded increments. The read-only B3-D dedup pre-check above already
+      // ran (no spend), so genuine content-dups are still carved out rather
+      // than capped.
+      return { ...base(), bucket: 'B3', outcome: 'b3_cap_skipped' };
+    }
+    b3Budget.used += 1;
     const out = await runIngest({
       org_id: row.org_id,
       source_document_id,

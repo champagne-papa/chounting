@@ -67,9 +67,8 @@ deletion criterion.
 
 ## 05_operations — runbooks
 
-Folder ships empty in Phase 1.1. First candidate is a Phase 1.3
-deployment runbook or backup procedure. See the folder README
-for the deletion criterion.
+- `prod-readiness-checklist.md` — the "green in code, must be separately wired in the prod project" checklist: lazy env vars, unscheduled crons, undeployed external services (Modal sidecar, Graph), provisioned buckets, DB extensions, and the env-change-needs-redeploy trap. Codified 2026-06-11 from the forwarded-mailbox→prod arc (frozen build + unscheduled sweep + unconfigured Modal, all green-in-code).
+- `audit_verification.md` — audit-log verification procedure.
 
 ## 06_audit — invariant evidence
 

@@ -18,7 +18,7 @@
 //
 // Per-stage wall-clock budget: ~30s per ADR-0014 §12.1 amendment
 // 2026-05-20 (Stage 2 exception per Modal cold-start substrate;
-// see ADR-0014 §12.1). Composes with 10s per-request timeout in
+// see ADR-0014 §12.1). Composes with 60s per-request timeout in
 // invokeSidecar + up to 3 retries with exponential backoff.
 
 import { insertOcrArtifactChain } from '@/services/document-platform/extractionArtifactWriteService';

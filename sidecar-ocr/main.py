@@ -41,6 +41,26 @@ image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements.txt")
     .apt_install("libgl1", "libglib2.0-0")
+    # Bake the PP-OCRv4 model weights into the image at BUILD time so the
+    # FIRST (cold) request does not pay the ~50s runtime download.
+    #
+    # Incident 2026-06-11: PaddleOCR lazily downloads its det/rec/cls weights
+    # on first construction. In production that download ran INSIDE the first
+    # OCR request (~50s of bcebos.com `.tar` fetches), pushing the synchronous
+    # webhook -> OCR -> classify chain past its function time budget so the
+    # document_case stalled at `received` after classify. Warm runs are ~5s.
+    #
+    # Path resolution: PaddleOCR 2.7.x caches weights under
+    # `~/.paddleocr/whl/{det,rec,cls}/...`. Modal builds AND runs debian_slim
+    # as root (HOME=/root) in both this build step and the runtime container,
+    # so weights downloaded here to /root/.paddleocr are found at runtime with
+    # no re-download. The warm-up MUST mirror the runtime constructor args
+    # (use_angle_cls=True, lang='en' in run_ocr) so the SAME three model sets
+    # (en det + en rec + cls) are cached.
+    .run_commands(
+        "python -c \"from paddleocr import PaddleOCR; "
+        "PaddleOCR(use_angle_cls=True, lang='en')\""
+    )
     # Phase 7 v1 close demo fix-forward (2026-05-20; chunk-7.1b-impl-grade
     # local-deploy-substrate-gap N=5): Modal copies only the file
     # containing @app decorators by default; sibling middleware/ + schemas/
