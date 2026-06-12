@@ -599,4 +599,50 @@ describe('sweepStrandedCases — B3 re-run dispatch, B4 failure, B3-D carve-out'
     expect(c).toMatchObject({ bucket: 'B3-D', outcome: 'dedup_carveout' });
     expect(await caseState(dup.caseId)).toBe('received');
   });
+
+  it('B3 cap: max_b3_reruns bounds re-runs; the excess B3 case is b3_cap_skipped and stays re-eligible', async () => {
+    const a = await seedStrandedCase(crypto.randomUUID()); // received, candidate-less, unique hash → B3
+    const b = await seedStrandedCase(crypto.randomUUID()); // ditto → B3
+
+    let runs = 0;
+    const report = await sweepStrandedCases(
+      {
+        document_case_ids: [a.caseId, b.caseId],
+        staleness_minutes: 0,
+        execute: true,
+        max_b3_reruns: 1,
+      },
+      {
+        runIngest: async (): Promise<IngestDocumentOutput> => {
+          runs += 1;
+          return {
+            status: 'parked_unposted',
+            pipeline_trace: [],
+            proposal_id: null,
+            failure_class: null,
+          };
+        },
+      },
+    );
+
+    // Exactly ONE actual re-run (the spend); the second B3 case is capped.
+    expect(runs).toBe(1);
+    expect(report.b3_reruns_executed).toBe(1);
+
+    const outcomes = [a.caseId, b.caseId]
+      .map((id) => report.cases.find((x) => x.document_case_id === id)!.outcome)
+      .sort();
+    expect(outcomes).toEqual(['b3_cap_skipped', 'rerun_recovered']);
+
+    // The capped case stays re-eligible: a follow-up dry-run still buckets it B3.
+    const capped = report.cases.find((x) => x.outcome === 'b3_cap_skipped')!;
+    const followup = await sweepStrandedCases({
+      document_case_ids: [capped.document_case_id],
+      staleness_minutes: 0,
+    });
+    expect(followup.cases[0]).toMatchObject({
+      bucket: 'B3',
+      outcome: 'bucketed_dry_run',
+    });
+  });
 });
