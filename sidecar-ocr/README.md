@@ -49,6 +49,31 @@ bash deploy.sh
 This invokes `modal deploy main.py`. Modal prints the deployed endpoint
 URL (e.g., `https://<workspace>--chounting-ocr-sidecar-run-ocr.modal.run`).
 
+Deploys are a Modal image **cache-hit** (~2s); the image is never rebuilt on
+routine deploys.
+
+### Populate model weights (one-time per Modal environment) — REQUIRED
+
+The PaddleOCR PP-OCRv4 weights are deliberately **not** baked into the image:
+baking required an image change that forced a rebuild on the heavy
+`paddlepaddle` base, which hung deploys indefinitely (incident 2026-06-12; see
+the `main.py` image-block header). Instead the weights live in a Modal Volume
+(`paddleocr-models`), which must be populated **once per Modal environment**:
+
+```bash
+cd sidecar-ocr
+modal run main.py::populate_models
+```
+
+This downloads the three weight archives into the Volume at runtime (~1 min,
+`urllib`+`tarfile` — never at image build). The Volume persists account-wide,
+so it is **not** needed on routine redeploys — only on a fresh Modal
+account/environment, or after the Volume is deleted. If skipped, `run_ocr`
+fails loud with **HTTP 503 "weights missing from Volume"** rather than silently
+re-downloading weights on every cold start. With a populated Volume, cold OCR
+is ~10-13s (container spin + paddle import + engine construction; **zero
+download**) and warm OCR ~1.5-2s.
+
 ### Wire endpoint into Next.js
 
 Append the deployed endpoint URL to `apps/web/.env.local`:

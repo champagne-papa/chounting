@@ -42,3 +42,8 @@ modal deploy main.py
 echo ""
 echo "Deployment complete. Copy the printed URL into apps/web/.env.local:"
 echo "  MODAL_OCR_SIDECAR_URL=<url>"
+echo ""
+echo "FRESH MODAL ENVIRONMENT ONLY — populate the model-weights Volume once:"
+echo "  modal run main.py::populate_models"
+echo "(Skip on routine redeploys; the paddleocr-models Volume persists. An empty"
+echo " Volume makes run_ocr return HTTP 503 'weights missing from Volume'.)"

@@ -37,30 +37,50 @@ from schemas.extraction import OCRRequest, OCRResponse, DocumentArtifact
 
 app = modal.App("chounting-ocr-sidecar")
 
+# PaddleOCR PP-OCRv4 weights live in a Modal Volume, populated ONCE by
+# populate_models() and mounted read-write at /root/.paddleocr on run_ocr.
+#
+# Why a Volume, not baking weights into the image (incident 2026-06-12):
+# baking added `curl` to apt_install + a `run_commands` layer, invalidating the
+# image's apt layer. Modal then had to REBUILD that layer on top of the heavy
+# cached paddlepaddle pip base, and materializing that multi-GB base for the
+# rebuild HANGS indefinitely (>=10 min, no build stream). Proven by throwaway
+# probes 2026-06-12: the identical image MINUS the pip layer deployed in 77s;
+# WITH it, hung. The pip/apt image had been frozen + cache-hit since 2026-05-20,
+# so the bake branch was the first real rebuild in ~3 weeks and exposed this.
+# A Volume stops touching the image: it reverts to the 2026-05-20 cached
+# definition (instant deploys) and weights arrive at runtime via the mount, so
+# the first (cold) request pays no ~50s bcebos download. populate_models uses
+# Python stdlib (urllib+tarfile) at RUNTIME, never at build, so the build is
+# never re-triggered.
+models_volume = modal.Volume.from_name("paddleocr-models", create_if_missing=True)
+
+PADDLE_HOME = "/root/.paddleocr"
+
+# (url, extract_dir): extract_dir is the model_dir PARENT; each tar contains a
+# <model-name>/ leaf, so files land at <extract_dir>/<model-name>/inference.*,
+# the EXACT paths PaddleOCR(use_angle_cls=True, lang='en') reads at runtime
+# (reconciled against the runtime Namespace model_dirs: det PP-OCRv3-en,
+# rec PP-OCRv4-en, cls mobile-v2.0). Coupled to pinned paddleocr >=2.7,<3.0.
+_MODEL_SPECS = [
+    (
+        "https://paddleocr.bj.bcebos.com/PP-OCRv3/english/en_PP-OCRv3_det_infer.tar",
+        f"{PADDLE_HOME}/whl/det/en",
+    ),
+    (
+        "https://paddleocr.bj.bcebos.com/PP-OCRv4/english/en_PP-OCRv4_rec_infer.tar",
+        f"{PADDLE_HOME}/whl/rec/en",
+    ),
+    (
+        "https://paddleocr.bj.bcebos.com/dygraph_v2.0/ch/ch_ppocr_mobile_v2.0_cls_infer.tar",
+        f"{PADDLE_HOME}/whl/cls",
+    ),
+]
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install_from_requirements("requirements.txt")
     .apt_install("libgl1", "libglib2.0-0")
-    # Bake the PP-OCRv4 model weights into the image at BUILD time so the
-    # FIRST (cold) request does not pay the ~50s runtime download.
-    #
-    # Incident 2026-06-11: PaddleOCR lazily downloads its det/rec/cls weights
-    # on first construction. In production that download ran INSIDE the first
-    # OCR request (~50s of bcebos.com `.tar` fetches), pushing the synchronous
-    # webhook -> OCR -> classify chain past its function time budget so the
-    # document_case stalled at `received` after classify. Warm runs are ~5s.
-    #
-    # Path resolution: PaddleOCR 2.7.x caches weights under
-    # `~/.paddleocr/whl/{det,rec,cls}/...`. Modal builds AND runs debian_slim
-    # as root (HOME=/root) in both this build step and the runtime container,
-    # so weights downloaded here to /root/.paddleocr are found at runtime with
-    # no re-download. The warm-up MUST mirror the runtime constructor args
-    # (use_angle_cls=True, lang='en' in run_ocr) so the SAME three model sets
-    # (en det + en rec + cls) are cached.
-    .run_commands(
-        "python -c \"from paddleocr import PaddleOCR; "
-        "PaddleOCR(use_angle_cls=True, lang='en')\""
-    )
     # Phase 7 v1 close demo fix-forward (2026-05-20; chunk-7.1b-impl-grade
     # local-deploy-substrate-gap N=5): Modal copies only the file
     # containing @app decorators by default; sibling middleware/ + schemas/
@@ -87,7 +107,43 @@ def _canonical_signing_body(payload: dict) -> bytes:
     )
 
 
-@app.function(image=image, secrets=[modal.Secret.from_name("modal-ocr-hmac-secret")])
+@app.function(image=image, volumes={PADDLE_HOME: models_volume}, timeout=900)
+def populate_models() -> str:
+    """One-time Volume populate. Run once via:
+
+        cd sidecar-ocr && modal run main.py::populate_models
+
+    Downloads the three PP-OCRv4 weight archives with Python stdlib
+    (urllib+tarfile) at RUNTIME — never at image build, so it cannot
+    re-trigger the paddle-base rebuild hang. Extracts each into its
+    reconciled model_dir parent and commits the Volume so run_ocr sees the
+    weights at the mounted PADDLE_HOME. Idempotent.
+    """
+    import urllib.request
+    import tarfile
+    import glob
+
+    for url, extract_dir in _MODEL_SPECS:
+        os.makedirs(extract_dir, exist_ok=True)
+        tar_path = os.path.join(extract_dir, os.path.basename(url))
+        urllib.request.urlretrieve(url, tar_path)
+        with tarfile.open(tar_path) as tar:
+            tar.extractall(extract_dir)
+        os.remove(tar_path)
+
+    found = sorted(
+        glob.glob(f"{PADDLE_HOME}/whl/**/inference.pdmodel", recursive=True)
+    )
+    models_volume.commit()
+    print(f"[populate] committed {len(found)} model dirs: {found}", flush=True)
+    return f"populated {len(found)} model dirs: {found}"
+
+
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("modal-ocr-hmac-secret")],
+    volumes={PADDLE_HOME: models_volume},
+)
 @modal.fastapi_endpoint(method="POST")
 def run_ocr(request: dict) -> dict:
     """OCR endpoint per ADR-0014 §3 topology contract.
@@ -122,6 +178,29 @@ def run_ocr(request: dict) -> dict:
         ) from parse_err
 
     started_at = _isoformat_now()
+
+    # Fail loud if the Volume wasn't populated, rather than letting PaddleOCR
+    # silently re-download weights at runtime (the ~70s cold-start stall this
+    # design eliminates). Durable runtime form of the build-time `test -f` gate:
+    # an unpopulated Volume returns HTTP 503 pointing at populate_models instead
+    # of regressing to per-cold-start downloads.
+    _missing = [
+        d
+        for d in (
+            f"{PADDLE_HOME}/whl/det/en/en_PP-OCRv3_det_infer/inference.pdmodel",
+            f"{PADDLE_HOME}/whl/rec/en/en_PP-OCRv4_rec_infer/inference.pdmodel",
+            f"{PADDLE_HOME}/whl/cls/ch_ppocr_mobile_v2.0_cls_infer/inference.pdmodel",
+        )
+        if not os.path.exists(d)
+    ]
+    if _missing:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"PaddleOCR weights missing from Volume ({len(_missing)}/3 model "
+                "dirs). Run: cd sidecar-ocr && modal run main.py::populate_models"
+            ),
+        )
 
     # PaddleOCR inference. Lazy-import to keep cold-start lean.
     import base64
