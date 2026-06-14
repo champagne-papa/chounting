@@ -71,19 +71,22 @@ integration); no separate push event.
   are **burned for production** (never promote them), and real creds must be
   provisioned fresh at go-live. Re-verify "still test-only?" before go-live.
   Full note: prod-readiness "Open security deferrals."
+- **Dev-seed passwords in a public repo** (`seed-auth-users.ts`, 4 `DevSeed!…`
+  values): **no live exposure** — the `@thebridge.local` accounts are absent from
+  the prod-shared DB (verified 2026-06-14); local-dev only. Guard: never seed it
+  against prod; env-drive/randomize before any non-local use. Full note:
+  prod-readiness "Open security deferrals."
 - **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
   disposition if a clean count is ever wanted.
-- **Governance-docs reconciliation (`apply-substrate-release`):** the
-  workstream's 3 governance docs were rescued to
-  `origin/governance/apply-substrate-release-snapshot-2026-06-14`
-  (`66b39750`) before `staging` was reset to the milestone (`b68bb3f3`) on
-  2026-06-14 — **preserved, not merged.** They edit `friction-journal.md` +
-  `CURRENT_STATE.md`, which this session also edited on `main`, so
-  integrating them is a **manual merge** (a cherry-pick onto `main`
-  conflicted on exactly those two files). The snapshot branch is their home
-  until reconciled; the 4 superseded OCR-bake commits dropped from
-  `staging` are recoverable from the same snapshot + local backup
-  `backup/staging-local-pre-reset-2026-06-14`.
+- **Governance-docs reconciliation (`apply-substrate-release`) — DONE
+  2026-06-14:** the workstream's 3 governance docs (the 2026-06-09 "Track A
+  Step 4 HALTED" friction-journal + CURRENT_STATE entries and the new
+  `post-mvp/staging-to-main-substrate-release-notes.md`) were **reconciled
+  onto `main`** (`ec001ee5`) with a dated live supersession — the substrate
+  the notes called "absent" is now applied (prod at migration
+  `20240180000000`). The rescue snapshot
+  (`origin/governance/apply-substrate-release-snapshot-2026-06-14`) and the
+  local backup were **retired** once the content was confirmed on `main`.
 
 Session ops: coordination lock released; diag Modal apps
 (`chounting-deploy-diag`/`-bake-diag`) stopped; scratch files cleaned.

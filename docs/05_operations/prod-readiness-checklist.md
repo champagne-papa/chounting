@@ -186,6 +186,16 @@ wraps — written here so "deferred" stays **deferred-and-tracked**:
   match, §4) + redeploy + sidecar re-deploy.
 - Owner: Phil. Status 2026-06-14: deferred by decision, exposure noted.
 
+**Dev-seed passwords (2026-06-14, grounded).** `apps/web/scripts/seed-auth-users.ts`
+is tracked in this **public** repo and hardcodes 4 dev-account passwords (`DevSeed!…`
+for `@thebridge.local` accounts). **No live exposure today:** those accounts are
+**absent from the prod-shared DB** (`ollyqiiwdvbpbngqgjqk`, verified 2026-06-14) — the
+seed is local-dev only. **Guard for go-live:** never run `seed-auth-users.ts` against
+the prod / real DB, and replace the hardcoded passwords with env-driven or random
+values before any non-local use — otherwise the public values become working logins.
+Re-verify: `select id from auth.users where email like '%@thebridge.local'` is empty on
+prod.
+
 ## Quick verification commands
 
 | Check | How |
