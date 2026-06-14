@@ -83,6 +83,88 @@ integration); no separate push event.
 Session ops: coordination lock released; diag Modal apps
 (`chounting-deploy-diag`/`-bake-diag`) stopped; scratch files cleaned.
 
+## Track A Step 4 HALTED — prod-shared DB lacks the document-platform substrate; org_settings write deferred to a staging→main release — 2026-06-09 (reads-only; no write, no schema change)
+
+Track A "Step 4" (provision the staging org's `org_settings` row to point it
+at `sharepoint_drive` — framed as a one-row DATA write, explicitly "no
+migration, no schema change") was **HALTED at the pre-write verification
+gate.** The write target table does not exist on the database the deploys
+actually read.
+
+- **Target DB confirmed = `ollyqiiwdvbpbngqgjqk`** ("CHOUnting", FREE / NANO,
+  ca-central-1). Staging reads it (pulled `apps/web/.env.staging`
+  `NEXT_PUBLIC_SUPABASE_URL`); production (`chounting.chou.ca` bundle) reads
+  the **same** ref → single shared project, a **prod-shared DB**
+  (corroborates the 2026-05-01 "single Supabase project … shared with
+  staging" note). The `.mcp.json` pin `rkriihsmxbuwzzbgqekb` is **neither**
+  staging nor prod — not even present in the authorized Supabase org — a
+  wrong-DB trap, caught by cross-checking the pin against the live deploy
+  rather than trusting it.
+- **`org_settings` is absent on the remote** (checked all schemas; of the
+  document-platform / AP tables only `vendor_rules` exists). Remote
+  last-applied migration = `20240132000000_add_recurring_journal_permissions`.
+  The document-platform → Charter-B substrate (`org_settings` @ `20240158`,
+  storage columns @ `20240179`; ~47 migrations) was **only ever applied to
+  local dev** — `db:migrate` is `supabase migration up --local`; CI has no
+  `db push` / `link`. Nothing migrated the remote forward.
+- **Decision (Option 1):** Track A closes at **Steps 1–3** (SharePoint auth +
+  the per-site grant). Step 4's row write is **deferred to a separately-scoped
+  `staging→main` production release** — not bundled into Track A. That release
+  is not a clean forward-push: the remote is not a clean prefix at `20240132`
+  (`vendor_rules` present, `org_settings` absent), so it needs a
+  **migration-state audit** (remote objects vs migration-history) before any
+  `db push`, a **manual `pg_dump` backup** (Free tier ⇒ no PITR), and a
+  **main-compatibility check** — the forward set runs through Wave-6 and
+  alters shared objects (`write_journal_entry_atomic` RPC, `document_cases`
+  CHECK, `storage_provider` enum) the currently-live prod app (`main`, ~468
+  commits behind) depends on.
+- **Reconciliation flag (additive, not a supersession):** this sits in tension
+  with the "V1 live end-to-end" framing in the sections below. Whether those
+  describe local-dev / demo behavior vs. the deployed environment is part of
+  the deferred release-scoping, **not resolved here** — flagged so the next
+  opener checks it rather than assuming prod carries the V1 substrate.
+
+Full record + the verify-on-target lesson: friction-journal 2026-06-09 "Track A
+Step 4 HALTED" entry. The broad account-level Supabase OAuth token (granted for
+the read-only verification) to be revoked operator-side.
+
+**Correction — 2026-06-09 (same-day, post-DDL-map-pass):** the "`vendor_rules`
+present / `org_settings` absent ⇒ out-of-order anomaly ⇒ not a clean prefix ⇒
+migration-state-audit-not-blind-push" reasoning above is **superseded — a misread.**
+`vendor_rules` is an **initial-schema** table
+(`20240101000000_initial_schema.sql:347`, ≤`20240132`; verified first-hand, no later
+recreate), not a later-era object — its presence is exactly what a clean `20240132`
+prefix looks like. Every probed datapoint is consistent with a clean prefix
+(vendor_rules@101 present ✓; the >132 document-platform tables absent ✓), so the
+**leading picture is a clean ordered forward-apply** of `20240133→20240180`, not a
+reconciliation project. **Unchanged:** the `{133,138,139,156}` live-prod hazards
+(initial-schema tables prod writes today), the main-compat question, and the
+prod-shared blast radius. **Still owed (token-gated):** the live full inventory
+remains the authority on "fully clean" — the remaining test is whether the >132 rule
+substrate (`rule_track_records`@`20240163`, `rule_evaluation_log`@`20240164`) is
+absent on the remote. Full record: friction-journal 2026-06-09 correction.
+
+**Hazard-set update (2026-06-09, post-full-DDL-classification):** the live-prod
+hazard set is now complete at `{133, 138, 139, 156, 158, 163}` (six — `158` AFTER
+INSERT trigger on `organizations` + `163` `vendor_rules` reshape added to the earlier
+four; each membership verified first-hand against the migration DDL). `163` is the
+sharpest (data-driven apply-failure, checkable read-only pre-apply); `133` changes
+the live posting path (BEFORE INSERT period-range trigger). Full per-hazard
+decomposition + read-only pre-apply checks + the refined clean-prefix test:
+`docs/09_briefs/post-mvp/staging-to-main-substrate-release-notes.md`.
+
+**Supersession — 2026-06-14 (grounded, live):** the deferred release described above HAS
+SINCE BEEN APPLIED. Prod (`ollyqiiwdvbpbngqgjqk`) is now at migration `20240180000000`
+(80 applied vs the `20240132` recorded here); `org_settings`@158, `document_cases`@143,
+`source_documents`@135, `rule_track_records`@163 and `rule_evaluation_log`@164 are all
+PRESENT (verified live). This session ran the V1 pipeline end-to-end on prod (OCR +
+classify + the stranded-case sweep recovering real `document_cases`), so the "prod lacks
+the document-platform substrate / V1-live framing in tension" flag above is RESOLVED: prod
+carries the substrate. The deferred `org_settings` row-write is now an ordinary data op
+against an existing table (table absence was the blocker; it's gone). Re-verify with
+`select to_regclass('public.org_settings')` + `max(version) from
+supabase_migrations.schema_migrations` if in doubt.
+
 ## SharePoint-on-Vercel cert-from-env (graphClient) — 2026-06-09 (UNIT-PROVEN, live Graph auth gated; banked local on `staging`)
 
 A small code arc — the gating prerequisite for the mailbox→SharePoint live

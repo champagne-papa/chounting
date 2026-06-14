@@ -18873,6 +18873,111 @@ NOTE — status: repair on origin/staging (f8c077d3); staging build-green read +
 lock-release operator-side. main untouched (staging→main stays a separate V1-scale
 arc). No conventions graduated; gate-gap candidate banked with graduation trigger.
 
+## 2026-06-09 — Track A Step 4 HALTED: org_settings absent on the remote prod-shared DB; Step 4 deferred to a staging→main release
+
+NOTE — context: "Track A Step 4" arrived framed as a one-row DATA write (point
+the staging org's `org_settings` row at `sharepoint_drive`), explicitly "DO NOT
+add a migration, DO NOT alter schema" — schema facts "verified on disk this
+session." The task's two pre-write confirmations (which DB? which org?) were run
+read-only before any write — and the first one stopped the arc.
+
+WRONG — the write target table `org_settings` does NOT exist on the database the
+deploys actually read. Confirmed live: `ollyqiiwdvbpbngqgjqk` ("CHOUnting", FREE /
+NANO) is at last-applied migration `20240132000000_add_recurring_journal_permissions`;
+`org_settings` (created @ `20240158`) and its storage columns (@ `20240179`) are
+absent (checked all schemas — only `vendor_rules` of the document-platform / AP
+tables exists). The document-platform → Charter-B substrate (`20240133→20240180`,
+~47 migrations) was only ever applied to LOCAL dev: `db:migrate` =
+`supabase migration up --local`; CI has no `db push` / `link`. So "Step 4 =
+one-row write" is actually "Step 4 = a staging→main PRODUCTION release." HALTED;
+no write, no schema change.
+
+WRONG / banked candidate (below N≥3), stated first because it's the generalizable
+trap: **"verified on disk" is not "verified on the deployment target."** A
+migration authored, locally-applied, and exercised by a local-DB integration test
+says nothing about the remote — they are two separate verifications, and only the
+remote one gates a write against the remote. Corollaries, both earned this session:
+(a) `vercel env pull` blanks Sensitive values — a pulled env file proves the URL,
+NEVER the credential (SERVICE_ROLE / GRAPH_* came back empty); (b) the env file's
+ref proves what a deploy READS, not what schema that DB HAS. Sibling to the
+verify-from-disk / disk-vs-text-grain family but a distinct axis
+(local-vs-remote-target). Graduate via codify-convention if it fires again.
+
+WRONG — the `.mcp.json` pin (`rkriihsmxbuwzzbgqekb`) is a wrong-DB trap: neither
+staging nor prod, and not even present in the authorized Supabase org
+(`list_projects` returned exactly one project, `ollyqiiwdvbpbngqgjqk`). Trusting it
+would have written to the wrong project → the row never reaches the deploys'
+queries → silent `supabase_storage` fallback, no error (exactly the failure the
+task warned of). Caught only by cross-checking the pin against the live staging
+deploy's `NEXT_PUBLIC_SUPABASE_URL` (pulled `.env.staging`) + the live prod bundle.
+Banked: a pinned MCP `project_ref` is not evidence of the deployment target's DB.
+
+NOTE — accuracy nuance for the deferred release: the remote is NOT a clean prefix
+at `20240132` (`vendor_rules`, a later-era table, is present while the earlier
+`org_settings` is absent). So the substrate deployment needs a migration-state
+RECONCILIATION (remote objects vs the migration-history table) before any
+`supabase db push` — a blind push would hit existing / missing objects and
+half-break prod. And the forward set runs through Wave-6, altering shared objects
+(`write_journal_entry_atomic` RPC, `document_cases` CHECK broadenings,
+`storage_provider` enum) the currently-live prod app (`main`, ~468 commits behind)
+depends on → an additive-compatibility check + a manual `pg_dump` (Free tier, no
+PITR) are preconditions, not nice-to-haves.
+
+NOTE — process (verify-from-disk turned on its author, again): the open release
+decision was momentarily narrated as already-made ("you're choosing the prod-shared
+DB and the release that comes with it") and corrected — the gap between "treated as
+decided" and "actually decided" is where a prod DB gets broken on the strength of a
+sentence nobody ratified. Same family as this arc's sibling entries (the Postmark
+HMAC, the cert-on-Vercel, the staging→main date miss); recording it is the point.
+
+NOTE — decision + status: Option 1 — Track A closes at Steps 1–3 (SharePoint auth +
+per-site grant); Step 4's row write deferred to a separately-scoped `staging→main`
+release. Reads only this session — no DB write, no schema change. The broad
+account-level Supabase OAuth token (`secrets:read` + account-wide `*:write`, granted
+for the read-only verification) to be revoked operator-side. No conventions
+graduated (verify-on-target + MCP-pin-not-evidence candidates banked).
+
+WRONG (same-day correction, 2026-06-09 post-DDL-map-pass) — the "vendor_rules (a
+later-era table) present while org_settings absent ⇒ NOT a clean prefix ⇒
+reconciliation-not-push" claim above is itself a misread: the arc's own
+verify-the-source lesson turned on the author. `vendor_rules` is created in the
+INITIAL schema (`20240101000000_initial_schema.sql:347`, ≤`20240132`) [disk,
+first-hand]; no later DROP/recreate — the `20240163`+ rule migrations EXTEND the
+base table, they don't create it. We inferred "later-era" from the rule-named
+migrations instead of reading the CREATE site (the exact failure this entry
+catalogues). So vendor_rules present on the remote is precisely what a clean
+`20240132` prefix looks like, NOT an anomaly — every probed datapoint now agrees
+(vendor_rules@101 present ✓; source_documents@135 / document_cases@143 /
+ingest_batches+document_jobs@152 / org_settings@158 all >132 and absent ✓). Leading
+picture flips to a CLEAN ORDERED FORWARD-APPLY of `20240133→20240180`, not an
+out-of-order reconciliation. UNCHANGED: the `{133,138,139,156}` live-prod hazards
+(initial-schema tables), main-compat, prod-shared blast radius. STILL OWED
+(token-gated): the live full inventory is the authority on "fully clean" — the
+remaining test is whether the >132 rule substrate (`rule_track_records`@163,
+`rule_evaluation_log`@164) is ABSENT on the remote (present ⇒ real out-of-order).
+
+NOTE (2026-06-09, post-full-DDL-classification) — the live-prod hazard set is
+complete at `{133,138,139,156,158,163}` (full 48-migration DDL pass; +`158`
+`organizations` AFTER INSERT trigger, +`163` `vendor_rules` reshape — column/type
+drop + dup-preflight RAISE + FK, the sharpest). `163` served-code-checked safe vs
+prod's `origin/main = 625c7df3` (autonomy_tier read only in generated types, no
+runtime read); its real risk is apply-time (dup-preflight aborts on duplicate
+`(org_id,vendor_id)` vendor_rules rows). `133` confirmed to change the live posting
+path (BEFORE INSERT period-range trigger, not just immutability). Each hazard's
+membership verified first-hand against the migration DDL + the ≤132 boundary —
+verify-the-source applied before encoding. Full map:
+`docs/09_briefs/post-mvp/staging-to-main-substrate-release-notes.md`.
+
+SUPERSESSION — 2026-06-14: the deferred staging→main substrate release HAS SINCE BEEN
+APPLIED. The prod-shared DB (`ollyqiiwdvbpbngqgjqk`) is now at migration `20240180000000`
+(80 applied, up from the `20240132` recorded above); `org_settings`@158 (the deferred
+write target), `document_cases`@143, `rule_track_records`@163 and `rule_evaluation_log`@164
+are ALL PRESENT — verified live this session, which also ran the V1 pipeline end-to-end on
+prod (the stranded-case sweep recovered real `document_cases`). So this entry's
+`org_settings`/substrate-absent findings and the "still owed" rule-substrate question are
+HISTORICAL — answer: present and forward-applied. The release happened between 2026-06-09
+and 2026-06-14.
+
 ## 2026-06-14 — prod cron-auth fix (CRON_SECRET) + stranded-sweep recovery proven; Tier-C robustness banked
 
 NOTE — status: the hourly stranded-case sweep cron 401'd on every fire —
