@@ -164,6 +164,17 @@ stand-up pass."
 
 ## Open security deferrals (tracked, not done)
 
+**Update 2026-06-14 — closed-CONDITIONALLY, NOT done.** The POSTMARK + MODAL
+HMAC secrets exposed this session are **test / non-production credentials**
+against an environment **handling no real sensitive data yet** — so no rotation
+is owed *while that holds*. This is **not** "secrets are fine"; it's "there's
+nothing real behind them yet." The moment real data or real credentials flow
+(go-live), they must be provisioned **fresh and rotated**, and **these specific
+exposed values must never become production credentials — they are burned**
+(they've lived in session/CI history). **Re-verify before go-live: are the
+POSTMARK/MODAL secrets still test-only?** The note below is retained as go-live
+checklist context.
+
 Live-traffic-exposed secrets parked by operator decision until testing
 wraps — written here so "deferred" stays **deferred-and-tracked**:
 

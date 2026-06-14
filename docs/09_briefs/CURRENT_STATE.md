@@ -65,7 +65,12 @@ integration); no separate push event.
   filter** + the `role=null` source-registration oddity.
 - **Open security deferrals** (Phil, exposure noted, prod-readiness):
   rotate `POSTMARK_INBOUND_BASIC_AUTH_PASSWORD` + `MODAL_OCR_HMAC_SECRET`
-  before go-live.
+  before go-live. **Update 2026-06-14 — closed-conditionally, NOT done:**
+  these are **test / non-production** creds against an environment with **no
+  real data yet**, so no rotation is owed while that holds; the exposed values
+  are **burned for production** (never promote them), and real creds must be
+  provisioned fresh at go-live. Re-verify "still test-only?" before go-live.
+  Full note: prod-readiness "Open security deferrals."
 - **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
   disposition if a clean count is ever wanted.
 - **Governance-docs reconciliation (`apply-substrate-release`):** the
