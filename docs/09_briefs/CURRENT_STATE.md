@@ -78,6 +78,20 @@ integration); no separate push event.
     ('176ac24c-6ad2-4145-8ad6-fdb98053ea3a',
     '3433cfe3-250e-4adc-ba7b-e803c9e6f334') order by created_at;`
     (prod `ollyqiiwdvbpbngqgjqk`).
+  - **Board-#3/(A) repro query (grounded 2026-06-14):** the genuine
+    classify-unknown signal is `exception_reason='unknown_document_type'`,
+    enqueued at the **Stage-3 classify short-circuit** (`ingestDocument`,
+    `documentType==='unknown'` in-memory, before extraction) — a *different
+    pipeline stage* from `unmatched_router_candidate` (Stage-6.5 routing,
+    `resolveCandidates` N=0, the `176ac24c` class). That stage split is why
+    `exception_reason` discriminates (A) from (B) where `document_type`
+    (every case `unknown`, per the persist-gap item below) cannot. Prod has
+    **0** `unknown_document_type` entries; all 4 `exception_queue_entries` are
+    `unmatched_router_candidate`, and the other 9 cases never reached
+    classification (received-floor dups). → **(A) has zero prod instances so
+    far → repro-or-drop**, not just "unconfirmed." Re-verify: `select
+    exception_reason, count(*) from exception_queue_entries group by 1;`
+    (prod `ollyqiiwdvbpbngqgjqk`).
 - **Multi-invoice modeling defect** — open; the deliberate data-model arc.
 - **`.eml` review-detail filter — SHIPPED 2026-06-14:** `reviewPreviewReadService`
   routes the review source pick via `resolvePrimaryIngestSource` (excludes the
