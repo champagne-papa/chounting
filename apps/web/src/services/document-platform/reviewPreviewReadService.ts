@@ -18,6 +18,7 @@
 
 import { adminClient } from '@/db/adminClient';
 import { ServiceError } from '@/services/errors/ServiceError';
+import { resolvePrimaryIngestSource } from './strandedCaseReadService';
 
 export interface ReviewPreviewReadInput {
   org_id: string;
@@ -27,7 +28,8 @@ export interface ReviewPreviewReadInput {
 export interface ReviewPreviewRows {
   /** The org-verified root row — every other read derived from it. */
   caseRow: Record<string, unknown>;
-  /** Oldest job's source document (reverse join), or null. */
+  /** The case's primary ingest source document
+   *  (resolvePrimaryIngestSource — excludes the .eml email_body), or null. */
   sourceDocumentId: string | null;
   /** Persisted candidates VERBATIM, confidence-desc. */
   candRows: Array<Record<string, unknown>>;
@@ -71,21 +73,16 @@ export async function loadReviewPreviewRows(
     );
   }
 
-  // Reverse join: the case's own source document (oldest job wins).
-  const { data: job, error: jobErr } = await db
-    .from('document_jobs')
-    .select('source_document_id')
-    .eq('document_case_id', caseRow.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (jobErr) {
-    throw new ServiceError(
-      'READ_FAILED',
-      `[reviewPreview] document_jobs read failed: ${jobErr.message}`,
-    );
-  }
-  const sourceDocumentId = (job?.source_document_id as string) ?? null;
+  // The case's primary ingest document — via the SAME picker the pipeline used
+  // to classify/extract: resolvePrimaryIngestSource excludes the .eml
+  // email_body and prefers a real attachment over an inline signature image
+  // (shared with handleForwardedMailbox + the stranded-case sweep). Review
+  // detail therefore shows exactly the classified document, not the email
+  // wrapper. Single-source cases are unchanged (0 jobs → null; 1 job → that
+  // job); only multi-source mailbox cases differ from the prior oldest-wins.
+  const sourceDocumentId = await resolvePrimaryIngestSource(
+    caseRow.id as string,
+  );
 
   // Persisted candidates VERBATIM — the recorded routing decision.
   const { data: candRows, error: candErr } = await db

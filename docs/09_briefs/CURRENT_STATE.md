@@ -61,8 +61,15 @@ integration); no separate push event.
   correctly, arguing against it); (B) `aiFallbackExtractor` extract
   array-vs-object → Zod rejects, degrades gracefully — now **N=2**
   (2026-05-23, then `176ac24c` 2026-06-14).
-- **Multi-invoice modeling defect**; **`.eml` `role='email_body'` review
-  filter** + the `role=null` source-registration oddity.
+- **Multi-invoice modeling defect** — open; the deliberate data-model arc.
+- **`.eml` review-detail filter — SHIPPED 2026-06-14:** `reviewPreviewReadService`
+  routes the review source pick via `resolvePrimaryIngestSource` (excludes the
+  `.eml` `email_body`, prefers a real attachment), so review-detail shows the
+  invoice, not the email wrapper. Single-source cases unchanged. Regression:
+  `tests/integration/reviewPreview.emailBodyFilter.integration.test.ts`.
+  Re-verify: `grep resolvePrimaryIngestSource
+  apps/web/src/services/document-platform/reviewPreviewReadService.ts`. (The
+  `role=null` / attachment-role gap is tracked separately above.)
 - **Open security deferrals** (Phil, exposure noted, prod-readiness):
   rotate `POSTMARK_INBOUND_BASIC_AUTH_PASSWORD` + `MODAL_OCR_HMAC_SECRET`
   before go-live. **Update 2026-06-14 — closed-conditionally, NOT done:**
