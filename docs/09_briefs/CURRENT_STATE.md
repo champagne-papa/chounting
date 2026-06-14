@@ -298,6 +298,17 @@ D8 close report: `docs/09_briefs/v1/plans/2026-06-05-wave-6-d8-close-report.md`.
   Branch protection
   currently requires no checks (`main`; `staging` unprotected) — teeth
   advisory; disposition is Phil's.
+  *(Correction 2026-06-14, grounded against the live config via
+  `gh api .../branches/main/protection`: "no checks" still holds in the
+  narrow sense — there are **no required status checks** — but the line was
+  incomplete. `main` now carries a classic **require-PR** rule
+  (`required_pull_request_reviews`, 0 required approvals,
+  `enforce_admins: false` → admins exempt). This session's docs push
+  (`f7869b3e`) fast-forwarded **directly** to `main`, **bypassing** that
+  require-PR rule via admin exemption — not via a PR; GitHub reported
+  "Bypassed rule violations." Open process question for Phil: route future
+  `main` pushes through a PR, or keep the admin-bypass direct-push pattern.
+  As-of-2026-06-14 claim — re-check the API if protection changes.)*
 - **Two codifications:** `*TierA` additive-named-export (N=3 →
   `conventions/testing.md`) and commit-shell hygiene under a session
   lock (N≥3 on operator-ratified testimony, split recorded →
