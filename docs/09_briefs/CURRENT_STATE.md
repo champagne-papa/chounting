@@ -61,6 +61,23 @@ integration); no separate push event.
   correctly, arguing against it); (B) `aiFallbackExtractor` extract
   array-vs-object → Zod rejects, degrades gracefully — now **N=2**
   (2026-05-23, then `176ac24c` 2026-06-14).
+  - **`176ac24c` ground-checked vs prod+code 2026-06-14 (read-only):** a
+    **board-#2 (B)** datapoint, **NOT (A) classify-unknown** — classification
+    correctly routed the **PDF** (`3433cfe3…`, `Amazon_…_$41.39_Invoice.pdf`)
+    to `vendor_invoice` (the `extract_fields` audit carries
+    `document_type='vendor_invoice'` on the PDF, never the `.eml` body; traces
+    `72d2b7e1` ingest / `f576ba77` sweep-recovery), then the AI-fallback
+    extraction failed Zod. This session's `.eml` review-detail fix is
+    **display-only** and unrelated to this extraction datapoint. The case's
+    `document_type='unknown'` is the never-persisted column default (see the
+    `document_type`-persist latent item below), NOT a router/relabel artifact.
+    `zod_error_count=1` confirms only "not a valid `vendor_invoice` object" —
+    array-vs-other-shape and #2-vs-#4 (1- vs N-element) are **undecidable** from
+    the trail (raw model output uncaptured; filename hints single-invoice).
+    Re-verify: `select before_state from audit_log where entity_id in
+    ('176ac24c-6ad2-4145-8ad6-fdb98053ea3a',
+    '3433cfe3-250e-4adc-ba7b-e803c9e6f334') order by created_at;`
+    (prod `ollyqiiwdvbpbngqgjqk`).
 - **Multi-invoice modeling defect** — open; the deliberate data-model arc.
 - **`.eml` review-detail filter — SHIPPED 2026-06-14:** `reviewPreviewReadService`
   routes the review source pick via `resolvePrimaryIngestSource` (excludes the
@@ -90,6 +107,28 @@ integration); no separate push event.
   indefinitely (only the email body gets `role='email_body'`). Makes the .eml
   review-filter cleaner (attachments are reliably null) but the attachment-role
   write itself is an open gap.
+- **`document_cases.document_type` / `classification_confidence` never persisted
+  post-ingest** (latent, design-intent-unbuilt — sibling to the attachment-role
+  gap above): production ingest INSERTs `document_type='unknown'`
+  (`ingestionService`, both paths); `create_document_case_with_audit`
+  (`20240143`) inserts whatever type it is handed (tests seed `vendor_invoice`),
+  but **no post-INSERT UPDATE of `document_type` exists** — the state-transition
+  RPC `update_document_case_state_with_audit` (`20240144`) sets `state` only;
+  `documentRouterService` (`resolveCandidates` / `completeCandidate`) only
+  **reads** `document_type`; the orchestrator (`ingestDocument.ts`) carries the
+  classified type in-memory / in `pipeline_trace` hashes only. So the column
+  reads `unknown` for **every** case regardless of classification (prod: 13/13
+  `unknown`, 0/13 `classification_confidence`), and the review reads
+  (`reviewCasesListReadService`, `reviewPreview` map `caseRow.document_type`)
+  surface it. The Phase-7 persist the ingest / `20240143` comments describe is
+  **unbuilt** (same class as the attachment-role gap). **Implication: a
+  review-inbox `unknown` is NOT by itself a classifier miss — the standing
+  confounder for board #3 / Tier-C item (A).** Re-verify (code):
+  `rg -n "document_type" supabase/migrations/ | rg -i "update|set "` shows no
+  `SET document_type`; `rg -rn "document_type:" apps/web/src` shows only
+  INSERT / in-memory / read sites. Re-verify (prod): `select document_type,
+  count(*), count(classification_confidence) from document_cases group by 1;`
+  (prod `ollyqiiwdvbpbngqgjqk`) → all `unknown` / 0.
 - **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
   disposition if a clean count is ever wanted.
 - **Governance-docs reconciliation (`apply-substrate-release`) — DONE
