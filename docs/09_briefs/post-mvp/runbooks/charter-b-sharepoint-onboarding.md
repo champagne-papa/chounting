@@ -73,6 +73,35 @@ org's storage columns. There is no auto-detection in v1. Set, for the org's
 - `sharepoint_site_id` and `sharepoint_drive_id` (the site/drive
   `orgDriveResolver` reads — it returns "not provisioned" until both are set).
 
+**Obtaining the IDs** (no auto-provisioning write-path in v1 — looked up once,
+by hand, per site, with the app credential from steps 1-3; confirm the exact
+endpoint shapes in Graph Explorer for your tenant):
+
+- **Site ID** — `GET https://graph.microsoft.com/v1.0/sites/{hostname}:/{server-relative-path}`
+  (e.g. `…/sites/contoso.sharepoint.com:/sites/Accounting`) → the `id` field
+  (form `{hostname},{siteCollectionGuid},{webGuid}`).
+- **Drive ID** — `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives` →
+  the target document library's `id`. This is the **document-library container**
+  `orgDriveResolver` returns as `driveId` and the provider addresses for every op
+  (`io.uploadSmall({ driveId, … })`, `downloadBytes(driveId, …)`). It is **not**
+  the per-file `storage_key` — that's the **driveItem id**, recorded on each
+  `source_documents` row by the provider at put-time.
+- Then the data write (operator, prod DB):
+
+  ```sql
+  UPDATE org_settings
+     SET default_storage_provider = 'sharepoint_drive',
+         sharepoint_site_id = '<site id>',
+         sharepoint_drive_id = '<drive id>'
+   WHERE org_id = '<org>';
+  ```
+
+**Done is not "the resolver stops throwing"** (necessary, not sufficient). The
+org is provisioned-and-proven only when **Step 5's live e2e is green**: bytes
+actually land in the library AND the put-then-re-read SHA-256 round-trips
+(`uploadSmall` → `downloadBytes` → content_hash match — the §9 integrity
+discharge). "Resolver resolved the drive" ≠ "bytes written + integrity-verified."
+
 Until this step, the org keeps the `supabase_storage` fallback default; this
 set is the named gated-ops step (sibling to the Postmark allowlist).
 
