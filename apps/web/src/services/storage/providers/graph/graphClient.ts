@@ -12,13 +12,14 @@
 //
 // Configuration is OPTIONAL at boot: GRAPH_TENANT_ID / GRAPH_CLIENT_ID
 // / GRAPH_CLIENT_CERT_PEM are NOT in env.ts REQUIRED_SERVER, because
-// the sharepoint_drive provider is inert until the resolver activates
-// it (plan Task 6) and real auth is gated on the Azure app
-// registration (plan Task 8). Boot-requiring these would fatally crash
-// the live app before SharePoint is activated. Instead they are read
-// here, at client-construction time, and a missing one throws a typed
-// ServiceError — which can only fire once a caller actually reaches the
-// (post-activation) provider.
+// real SharePoint auth is gated on the (still-pending) Azure app
+// registration + per-site grant. The provider is wired and active
+// (services/storage/resolver.ts) and the org_settings columns are defined
+// (migration 20240179) — only the Azure side + per-org value population
+// remain. Boot-requiring these would fatally crash the live app before
+// SharePoint is configured. Instead they are read here, at
+// client-construction time, and a missing one throws a typed ServiceError
+// — which can only fire once a caller actually reaches the provider.
 //
 // Per ADR-0020 authority gradient: Layer 2 (services) data-access
 // infrastructure. Allowed imports: shared, services (same-layer), db.

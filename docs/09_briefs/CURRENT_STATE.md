@@ -76,6 +76,13 @@ integration); no separate push event.
   the prod-shared DB (verified 2026-06-14); local-dev only. Guard: never seed it
   against prod; env-drive/randomize before any non-local use. Full note:
   prod-readiness "Open security deferrals."
+- **Attachment `document_case_sources` roles are never written** (latent):
+  `attachDocumentCaseSource()` exists but has **zero orchestrator call sites**
+  (tests only) — the "Phase 7 writes attachment roles post-classification" the
+  ingest comments imply is **unbuilt**. Mailbox attachments stay role-less
+  indefinitely (only the email body gets `role='email_body'`). Makes the .eml
+  review-filter cleaner (attachments are reliably null) but the attachment-role
+  write itself is an open gap.
 - **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
   disposition if a clean count is ever wanted.
 - **Governance-docs reconciliation (`apply-substrate-release`) — DONE

@@ -3,17 +3,19 @@
 // Resolves an org's SharePoint site + drive for the sharepoint_drive
 // provider (spec D-B3: per-org site/drive lives in org_settings).
 //
-// FORWARD-COLUMN read (plan Task 2 / Q2): the org_settings columns this
-// reads — `sharepoint_site_id`, `sharepoint_drive_id` — do NOT exist on
-// disk yet. They are added by the deferred org_settings slice (plan
-// Task 8), the runtime precondition for go-live. This resolver names
-// the contract that slice must satisfy. It reads via `.select('*')` +
-// an optional-field cast so it (a) typechecks today against the current
-// db/types.ts, (b) returns a clean "not provisioned" ServiceError today
-// (the fields are undefined), and (c) activates automatically once the
-// slice adds the columns (the fields become populated). No path reaches
-// this resolver until the provider is activated in the resolver
-// (plan Task 6), which is itself gated on the slice.
+// Reads the per-org SharePoint site/drive from org_settings (spec D-B3).
+// The columns `sharepoint_site_id` / `sharepoint_drive_id` are DEFINED by
+// migration 20240179000000_charter_b_org_settings_storage_slice.sql (which
+// also added default_storage_provider) and typed in db/types.ts — they are
+// NOT forward-columns. (Re-verify presence in any given environment:
+// `select column_name from information_schema.columns where
+// table_name='org_settings'`.) The sharepoint_drive provider is wired and
+// active too (services/storage/resolver.ts). So the remaining runtime gate
+// is VALUE POPULATION, not column existence or activation: this resolver
+// returns a clean "not provisioned" ServiceError when the columns are NULL
+// for the org, and resolves once they're populated (the per-org
+// provisioning write + Azure app registration). Reads via `.select('*')`
+// + an optional-field cast (predates the column landing; harmless).
 //
 // Per ADR-0020: Layer 2 data-access; reads via adminClient (providers
 // are data-access-layer per ADR-0013 §1, like supabaseStorageProvider).
@@ -26,10 +28,10 @@ export interface OrgDrive {
   driveId: string;
 }
 
-// The forward-column shape the org_settings slice (Task 8) must provide.
-// Cast onto the `.select('*')` row, which today carries only the 11
-// shipped columns (migration 20240158) — so these read as undefined
-// until the slice lands.
+// Local cast for the two SharePoint columns on the `.select('*')` row.
+// Both are defined by migration 20240179000000 (org_settings also gained
+// default_storage_provider); they read as the stored value, or null for an
+// org that hasn't been provisioned yet.
 interface OrgSettingsSharepointColumns {
   sharepoint_site_id?: string | null;
   sharepoint_drive_id?: string | null;
@@ -58,9 +60,10 @@ export async function resolveOrgDrive(org_id: string): Promise<OrgDrive> {
   if (!siteId || !driveId) {
     throw new ServiceError(
       'STORAGE_OPERATION_FAILED',
-      `SharePoint site/drive not provisioned for org ${org_id}. The ` +
-        'org_settings.sharepoint_site_id / sharepoint_drive_id columns ' +
-        'land with the deferred org_settings slice (plan Task 8).',
+      `SharePoint site/drive not provisioned for org ${org_id}: ` +
+        'org_settings.sharepoint_site_id / sharepoint_drive_id are null. ' +
+        'Populate them (the per-org provisioning write) and complete the ' +
+        'Azure app registration before go-live.',
       { stage: 'org_drive_resolve', org_id },
     );
   }

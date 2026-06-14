@@ -97,8 +97,9 @@ export function createSharepointDriveProvider(
         org_id: input.org_id,
       });
 
-      // Resolve the org's SharePoint site/drive (org_settings; Task 8
-      // precondition — throws "not provisioned" until the slice lands).
+      // Resolve the org's SharePoint site/drive (org_settings columns,
+      // defined by migration 20240179). Throws "not provisioned" when the
+      // org's site/drive VALUES are null — not because the columns are absent.
       const { driveId } = await resolveOrgDrive(input.org_id);
 
       const fileName = sanitizeFilename(input.original_filename);

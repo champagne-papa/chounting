@@ -69,11 +69,12 @@ export const env = {
   POSTMARK_INBOUND_BASIC_AUTH_PASSWORD: process.env.POSTMARK_INBOUND_BASIC_AUTH_PASSWORD!,
   // Charter B (a) sharepoint_drive provider — app-only Graph auth
   // (client certificate). OPTIONAL at boot (no `!`, not in
-  // REQUIRED_SERVER): the provider is inert until the resolver
-  // activates it (plan Task 6) and real auth is gated on the Azure app
-  // registration (plan Task 8). graphClient.ts reads these lazily and
-  // throws a typed ServiceError if absent when the provider is actually
-  // used — so a missing value can't fatal-boot the live app.
+  // REQUIRED_SERVER): real SharePoint auth is gated on the (still-pending)
+  // Azure app registration. The provider is wired/active and the
+  // org_settings columns are defined (migration 20240179); only the Azure
+  // side + per-org value population remain. graphClient.ts reads these
+  // lazily and throws a typed ServiceError if absent when the provider is
+  // actually used — so a missing value can't fatal-boot the live app.
   // GRAPH_CLIENT_CERT_PEM is the base64-encoded PEM contents (NOT a
   // filesystem path — Vercel's FS is read-only); it is a PRIVATE KEY, so
   // set it Sensitive in Vercel and never log it.
