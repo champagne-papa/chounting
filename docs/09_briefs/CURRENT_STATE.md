@@ -68,6 +68,17 @@ integration); no separate push event.
   before go-live.
 - **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
   disposition if a clean count is ever wanted.
+- **Governance-docs reconciliation (`apply-substrate-release`):** the
+  workstream's 3 governance docs were rescued to
+  `origin/governance/apply-substrate-release-snapshot-2026-06-14`
+  (`66b39750`) before `staging` was reset to the milestone (`b68bb3f3`) on
+  2026-06-14 — **preserved, not merged.** They edit `friction-journal.md` +
+  `CURRENT_STATE.md`, which this session also edited on `main`, so
+  integrating them is a **manual merge** (a cherry-pick onto `main`
+  conflicted on exactly those two files). The snapshot branch is their home
+  until reconciled; the 4 superseded OCR-bake commits dropped from
+  `staging` are recoverable from the same snapshot + local backup
+  `backup/staging-local-pre-reset-2026-06-14`.
 
 Session ops: coordination lock released; diag Modal apps
 (`chounting-deploy-diag`/`-bake-diag`) stopped; scratch files cleaned.
