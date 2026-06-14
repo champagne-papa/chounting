@@ -10,6 +10,68 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## V1 backstop hardening — prod cron-auth + OCR cold-start + deep-stall chain — 2026-06-14 (cron auth PROVEN LIVE; backlog recovery proven on real cases, goal not fully met)
+
+A production-firefighting arc closing the gaps that kept the live V1
+pipeline from advancing forwarded-mailbox documents. Five layers, each
+**observed not inferred**, ending at an authenticated hourly sweep
+recovering real cases. Prod-config + doc writes (prod serves via git
+integration); no separate push event.
+
+- **OCR cold-start (①) — fixed + proven** (`c0efb9c6`): PaddleOCR weights
+  on a Modal Volume; cold OCR ~40s, zero runtime download (was ~50-70s,
+  blowing the synchronous webhook budget → cases stranded at `received`).
+- **Deep stall — missing prod `auth.users` seed.** Service-account writes
+  (`SYSTEM_ACTOR_USER_ID`, `…00a1` / `pipeline@chou.ca`) FK-violated; row
+  seeded via GoTrue admin API, FK confirmed by the named constraint in
+  prod logs. **Prod state outside git** — prod-readiness §9; a fresh env
+  still needs it seeded.
+- **Prod freeze — 40-day stale build:** `main` had ERROR'd on every deploy
+  (a missing `eslint-disable` the sweep route needed); fixed, `main` green,
+  serving SHA flipped to `c0efb9c6`.
+- **Cron auth — the last break, fixed + PROVEN LIVE.** The hourly sweep
+  cron was registered and firing but **401'd every run** — `CRON_SECRET`
+  was never set in Vercel Production (Vercel injects the cron bearer only
+  when the var exists; route fails closed). Caught at the 01:00Z fire;
+  secret set + redeploy; **02:00Z fire = 200 + clean `SweepReport`**
+  (again at 03:00Z). Verification note: registered crons live in raw
+  `v13/deployments/{id}.crons` — MCP `get_deployment` curates it out, CLI
+  `inspect` doesn't render it.
+- **Both advance-paths now observed on real cases:** fresh ingest (earlier)
+  and **recovery** (the 02:00Z sweep re-ran B3 on the recoverable docs).
+
+**Honest boundaries (do not round up):**
+- **Recovered 3, not "drained to ~2".** Of 12 stranded `received`: **3
+  recoverable** advanced; **9 are `B3-D` content-duplicates** carved out
+  read-only ($0, not re-run — the `.eml`/signature-dup class). `received`
+  floors at 9 by design (prod-readiness §5 caveat). "Drain-to-2" was the
+  wrong model; the source bucket logic is the right one.
+- **The 3 recovered as `unmatched_router_candidate` → `needs_review`, NOT
+  as auto-proposed bills.** Classified `vendor_invoice`, no vendor match,
+  routed to the human review inbox — correct V1 behavior. **"A review item
+  rendered" is met; "an auto-extracted proposal card" is not** — that
+  awaits the Tier-C work below. Recovery path **proven**; goal **not fully
+  met**.
+
+**Still open / tracked:**
+- **Tier-C robustness** (friction-journal 2026-06-14): (A) classifier
+  *suspected* to return `unknown` on legible invoices — **unconfirmed,
+  needs verbatim repro** (the stranded-docs evidence is confounded by the
+  FK stall; the 3 observed classify runs returned `vendor_invoice`
+  correctly, arguing against it); (B) `aiFallbackExtractor` extract
+  array-vs-object → Zod rejects, degrades gracefully — now **N=2**
+  (2026-05-23, then `176ac24c` 2026-06-14).
+- **Multi-invoice modeling defect**; **`.eml` `role='email_body'` review
+  filter** + the `role=null` source-registration oddity.
+- **Open security deferrals** (Phil, exposure noted, prod-readiness):
+  rotate `POSTMARK_INBOUND_BASIC_AUTH_PASSWORD` + `MODAL_OCR_HMAC_SECRET`
+  before go-live.
+- **Cosmetic:** the 9-dupe `received` floor → eventual terminal `duplicate`
+  disposition if a clean count is ever wanted.
+
+Session ops: coordination lock released; diag Modal apps
+(`chounting-deploy-diag`/`-bake-diag`) stopped; scratch files cleaned.
+
 ## SharePoint-on-Vercel cert-from-env (graphClient) — 2026-06-09 (UNIT-PROVEN, live Graph auth gated; banked local on `staging`)
 
 A small code arc — the gating prerequisite for the mailbox→SharePoint live

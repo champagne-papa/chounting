@@ -15984,6 +15984,11 @@ stage set, or trim the runtime trace to match the spec.
 
 ## 2026-05-23 — Tier C payment-confirmation extract returns a top-level array; Zod gate rejects, pipeline degrades gracefully
 
+> 2026-06-14: **second prod observation (N=2)** — `aiFallbackExtractor`
+> again returned array-vs-object on case `176ac24c` during the live
+> stranded-case sweep; it degraded-and-advanced to `needs_review`. See the
+> 2026-06-14 entry ("prod cron-auth fix … Tier-C robustness banked").
+
 The first live exercise of Tier C (Phase 8 §3 closeout —
 `docs/09_briefs/phase-8/2026-05-23-tier-c-empirical-exercise.md`) ran the 3
 Session-72 abstaining docs through full `ingestDocument` with real
@@ -18867,3 +18872,68 @@ author recording it is the point.
 NOTE — status: repair on origin/staging (f8c077d3); staging build-green read +
 lock-release operator-side. main untouched (staging→main stays a separate V1-scale
 arc). No conventions graduated; gate-gap candidate banked with graduation trigger.
+
+## 2026-06-14 — prod cron-auth fix (CRON_SECRET) + stranded-sweep recovery proven; Tier-C robustness banked
+
+NOTE — status: the hourly stranded-case sweep cron 401'd on every fire —
+`CRON_SECRET` was never set in Vercel Production (Vercel injects
+`Authorization: Bearer ${CRON_SECRET}` only when the var exists; route fails
+closed). Set `CRON_SECRET` (Production, encrypted) + redeploy → **02:00Z fire
+200 + clean `SweepReport`** (report `b3_reruns_executed:3` matched exactly 3
+DB transitions — `63f082f2`/`6b25284d`/`176ac24c` received→needs_review),
+confirmed again 03:00Z. prod-readiness §3/§5 updated (the §5 "no cron today"
+claim was stale-false post-`5683ec36`); §9 service-account seed + "Open
+security deferrals" added. Prod-config + doc writes; no push.
+
+WRONG-MODEL, CORRECTED-AGAINST-SOURCE (banked, observation-grain N=1) — the
+pre-fire forecast was "the sweep drains ~10, received → ~2." Reality: 3
+recovered + **9 `B3-D` content-dup carve-outs** (read-only, $0, not re-run).
+The discriminator was read from source
+(`sweepStrandedCases.ts:128/313/358`, `dedup_carveout`), not rationalized
+into the forecast's shape. Lesson: when a forecast and the source bucket
+logic disagree and the source is what ran, trust the source; explain the
+surprise, don't tidy it. 03:00Z steady-state (`eligible:9, B3:0, B3-D:9, $0`)
+proved stable-not-stuck. Fix-shape if a clean count is wanted: terminal
+`duplicate` disposition for B3-D (cosmetic, carry).
+
+WRONG-then-RIGHT, verification path (banked, observation-grain N=1) — the
+convenient tools LIED BY OMISSION about cron registration: MCP
+`get_deployment` returns a curated object with no `crons` field; CLI
+`vercel inspect` (54.10.3) renders no Crons section — both read as silent
+false-negatives. Authoritative source: raw `GET v13/deployments/{id}.crons`
+(needs the freshly-refreshed CLI OAuth token; a stale read returns
+`invalidToken`, SAML team). Same verify-the-actual-artifact discipline as the
+Postmark-HMAC and cert-on-Vercel catches.
+
+CARRY-FORWARD — Tier-C robustness (two linked issues; canonical tracker =
+this journal, GH issues not in use):
+- **Issue A — classifier SUSPECTED to return `unknown` on legible invoices —
+  UNCONFIRMED; needs verbatim repro.** Recorded as a suspicion, not a
+  confirmed bug. Origin: the earlier Figma-invoice suspicion (reasoned
+  by-elimination from an absent classify audit — the weaker evidence kind,
+  never verbatim-confirmed). **The 12-stranded-docs-`unknown` observation
+  does NOT support it** — those cases were FK-stalled *before* classify ran,
+  so `unknown` is their pre-classification default, not a classify failure
+  (confounded). And the only live Tier-C classify runs we DID observe — the
+  3 that recovered at 02:00Z — returned `vendor_invoice` *correctly*, which
+  argues against the bug. So this may not be real. Next step before any fix:
+  get a verbatim repro of a legible invoice classifying `unknown`. Do not
+  chase as a confirmed bug.
+- **Issue B — `aiFallbackExtractor` extract returns a top-level array vs the
+  object the Zod schema expects → rejected, degrades gracefully.** ALREADY
+  TRACKED 2026-05-23 (~L15985, first Tier-C live exercise) at N=1; **today is
+  the 2nd prod observation (N=2)** — `176ac24c` at 02:00Z logged
+  `aiFallbackExtractor: Zod validation failed — Expected object, received
+  array` (level 40) yet the case still advanced to `needs_review`. **The
+  degrade-and-advance path is the positive finding** — the robustness
+  behavior feared missing during the stall diagnosis, observed working in
+  prod. Fix shape (deferred): tolerate/unwrap single-element arrays at the
+  extract Zod boundary + reinforce the prompt. A and B are the same family
+  (Tier-C output-shape vs Zod) — link in any future brief.
+
+NOTE — session ops: coordination lock (`apply-substrate-release`) released
+via `session-end.sh`; diag Modal apps `chounting-deploy-diag` +
+`chounting-bake-diag` stopped (`chounting-ocr-sidecar` left live); scratch
+`.coordination/_wsl_writetest.txt` removed; empty untracked `message_id` left
+(unknown origin). Parked-and-now-tracked: secrets rotation (POSTMARK + MODAL
+HMAC) → prod-readiness "Open security deferrals."

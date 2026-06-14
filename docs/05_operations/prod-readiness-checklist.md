@@ -72,6 +72,13 @@ stand-up pass."
   - `GRAPH_TENANT_ID` / `GRAPH_CLIENT_ID` / `GRAPH_CLIENT_CERT_PEM` —
     SharePoint storage provider (only when an org uses `sharepoint_drive`).
   - `RING2B_SHADOW_EVAL` — safe default-off flag (no action needed).
+  - `CRON_SECRET` — the hourly stranded-case sweep cron route
+    (`/api/cron/sweep-stranded-cases`). Vercel injects
+    `Authorization: Bearer ${CRON_SECRET}` into cron calls **only when this
+    var is set**; the route fails **closed** (401) when it's unset or
+    mismatched. **Set in Production 2026-06-14** — it was missing, so every
+    fire 401'd and the sweep never ran. Verify it's present, not just that
+    the route exists.
 - Verify: Vercel → Settings → Environment Variables (Production scope).
 
 ### 4. External services are deployed AND reachable AND secret-matched
@@ -88,17 +95,35 @@ stand-up pass."
   on retry — that's not a config error.
 
 ### 5. Schedulers / crons are wired
-- Background functions that expect to be invoked on a schedule. **There
-  is no `vercel.json`/`crons` and no `/api/cron/*` route today**, and
-  `pg_cron`/`pg_net` are not installed — so nothing scheduled runs.
-  - **`sweepStrandedCases`** (stranded-case backstop): needs an authed
-    cron route (`CRON_SECRET`) + `vercel.json` cron. Build it **after**
-    OCR works (else B3 re-runs loop on `PIPELINE_UNAVAILABLE`, paid).
+- Background functions invoked on a schedule.
+  - **`sweepStrandedCases`** (stranded-case backstop) — **WIRED; auth
+    proven at the 2026-06-14 02:00Z & 03:00Z fires** (200 + clean
+    `SweepReport`), on the deployment serving `c0efb9c6` with `CRON_SECRET`
+    set. Hourly Vercel Cron (`apps/web/vercel.json`, `0 * * * *`) → authed
+    route `/api/cron/sweep-stranded-cases`
+    (`Authorization: Bearer ${CRON_SECRET}`, fails closed). It was missing
+    `CRON_SECRET` at first wiring, so the cron registered and fired but
+    **401'd every run** until the secret was set + redeployed. *This claim
+    is anchored to that commit/date — if rolled back, or `CRON_SECRET` is
+    rotated-without-redeploy, re-verify (don't trust this line): pull
+    `v13/deployments/{id}.crons` for registration + a recent fire's status
+    for auth.*
+    - **Operational monitoring caveat — READ before investigating "N stuck
+      at received":** for an org carrying content-duplicate documents the
+      `received` count does **not** drain to 0. The sweep buckets genuine
+      content-dupes (Outlook signature images, `.eml` bodies) as **`B3-D`
+      (dedup carve-out)** — recognized read-only, **0 spend**, deliberately
+      **not** re-run. As of 2026-06-14 this org floors at **9** such dupes.
+      The health signal is **new `received` cases accumulating *above* the
+      floor**, not the absolute number. Confirm against the `SweepReport`
+      `B3-D` bucket before investigating.
   - **Recurring journals**: operator-driven via API routes at v1; the
     auto-scheduler is a deliberate **Phase-2** deferral — *not* a gap.
   - **GC** (`org_settings.gc_cadence` / `gc_threshold_hours`): config
     columns exist but no runner is wired — reserved substrate; orphan
     blobs require **manual** GC until a scheduled runner ships.
+- `pg_cron`/`pg_net` remain **not installed** — in-DB scheduling is
+  unavailable; scheduling is Vercel-cron-driven.
 
 ### 6. Storage buckets are provisioned
 - The code writes to the **`documents`** bucket (the only one in use).
@@ -115,6 +140,40 @@ stand-up pass."
   deployment until a redeploy. Always: set value → redeploy → verify.
 - *Seen this session:* the POSTMARK secret rotation did not take effect
   until redeploy; an env-only change is silently inert otherwise.
+
+### 9. Service-account identity rows are seeded (the FK-stall trap)
+- The pipeline's automated (non-human) writes attribute to a
+  **service-account user** — `pipeline@chou.ca`, id
+  `00000000-0000-0000-0000-0000000000a1`, exported as the constant
+  `SYSTEM_ACTOR_USER_ID` in
+  `apps/web/src/services/middleware/serviceContext.ts`. That row must exist
+  in **`auth.users`** or the first automated write hits a **foreign-key
+  violation** and the case stalls — the 2026-06-13 deep-stall root cause
+  (six layers down: a missing prod `auth.users` seed row).
+- **This is prod state that lives OUTSIDE git.** It was seeded via the
+  GoTrue admin API; `apps/web/scripts/seed-pipeline-service-account.ts` is
+  the seeding script and is currently **untracked**. A fresh environment
+  (or a DB reset) will **not** have the row and will hit the identical FK
+  stall until it's seeded — same class as the cron-config and
+  Modal-Volume-populate gaps.
+- Verify (don't trust this doc — check the environment):
+  `select id from auth.users where id =
+  '00000000-0000-0000-0000-0000000000a1';` returns the row → seeded; empty
+  → run the seed script against that environment. (Prod: present since
+  2026-06-13, `pipeline@chou.ca`.)
+
+## Open security deferrals (tracked, not done)
+
+Live-traffic-exposed secrets parked by operator decision until testing
+wraps — written here so "deferred" stays **deferred-and-tracked**:
+
+- **`POSTMARK_INBOUND_BASIC_AUTH_PASSWORD` rotation** — inbound-mailbox
+  Basic Auth password, used during live testing; rotate before go-live
+  (env change → redeploy to take effect, §8).
+- **`MODAL_OCR_HMAC_SECRET` rotation** — OCR sidecar shared HMAC, likewise
+  exposed; rotate on **both** the Vercel side and the Modal side (they must
+  match, §4) + redeploy + sidecar re-deploy.
+- Owner: Phil. Status 2026-06-14: deferred by decision, exposure noted.
 
 ## Quick verification commands
 
