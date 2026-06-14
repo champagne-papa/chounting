@@ -21,6 +21,20 @@
 
 import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
+// App-entry -> agent exemption: a sanctioned composition-root import, NOT a
+// suppressed violation. sweepStrandedCases is FORCED into the agent layer — it
+// imports ingestDocument (agent/orchestrator), which services/ may not import
+// (ADR-0020 App. A; the module's own placement header), so no services/
+// relocation exists. This cron route is the composition root that invokes it,
+// the same category as the postmark-inbound route — whose ingestDocument import
+// carries the IDENTICAL disable EVEN WITH its IngestInvoker (Class D T4)
+// inversion: the inversion keeps the SERVICE free of agent imports, but the
+// composition-root route still imports the concrete agent fn. An injection seam
+// here would re-add this exact disable plus a no-op service — it buys nothing.
+// The disable was simply omitted when this route shipped, leaving
+// architecture/agent-first-import-boundaries (error) failing the build (the
+// freeze that stranded #2 #3 + the cron at 68ee658f); restored.
+// eslint-disable-next-line architecture/agent-first-import-boundaries
 import { sweepStrandedCases } from '@/agent/orchestrator/maintenance/sweepStrandedCases';
 import { loggerWith } from '@/shared/logger/pino';
 
