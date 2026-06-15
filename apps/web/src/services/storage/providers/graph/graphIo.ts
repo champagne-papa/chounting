@@ -57,8 +57,21 @@ export interface GraphIo {
 // large path's missing drive addressing was the bug this guards against.
 function itemStemPath(driveId: string, parentPath: string, fileName: string): string {
   const cleanParent = parentPath.replace(/^\/+|\/+$/g, '');
-  const prefix = cleanParent.length > 0 ? `${cleanParent}/` : '';
-  return `/drives/${driveId}/root:/${prefix}${fileName}`;
+  // client.api() does NO path encoding (GraphRequest.parsePath / buildFullUrl /
+  // urlJoin are pure string ops), so URL-significant chars in the
+  // user-controlled segments must be percent-encoded HERE: a raw '#' truncates
+  // the path at fetch (fragment delimiter) and '%' is a malformed escape.
+  // Encode per-SEGMENT (split on '/', encodeURIComponent each, rejoin) so the
+  // '/' separators stay literal; keep /drives/{driveId}/root:/ and the
+  // ':/<verb>' suffix structural — driveId is a Graph id (used raw everywhere),
+  // and the ':' delimiters must NOT become %3A. Mirrors the SDK's own
+  // constructCreateSessionUrl.
+  const rel = cleanParent.length > 0 ? `${cleanParent}/${fileName}` : fileName;
+  const encoded = rel
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+  return `/drives/${driveId}/root:/${encoded}`;
 }
 
 // Graph addressing for content PUT by path under a drive root (simple upload).

@@ -134,13 +134,16 @@ round-tripping (the §9 integrity discharge). Until then the arc's status is
   case was added to `sharepointDriveRealFlow.e2e`, so the large path is **proven
   only at that >4 MiB live run**. Re-verify: `rg -n "uploadSessionURL|itemStemPath"
   apps/web/src/services/storage/providers/graph/graphIo.ts`.
-- **Filename URL-encode gap — SEPARATE, suspected.** **Confirmed:**
-  `sanitizeFilename` leaves `#`/`%`/`(`/`)` intact and the path helpers
-  interpolate the filename **raw**; the SDK's own default path
-  `encodeURIComponent`s each segment. **Inference (NOT yet read):** that the SDK
-  bothers to encode is strong evidence `client.api(path)` does not auto-encode —
-  so `Invoice #5.pdf` would reach Graph with a raw `#` (both upload paths) and
-  break. **Open verification:** read the SDK `RequestBuilder` to confirm
-  `client.api` doesn't encode; if confirmed, encode-or-strip once in
-  `itemStemPath` (one place ⇒ keeps small/large parity). Its own item — NOT
-  folded into the drive-addressing fix.
+- **Filename URL-encode gap — CONFIRMED, then FIXED (`graphIo.ts`).**
+  `sanitizeFilename` leaves `#`/`%`/`(`/`)` intact, and the Graph client does
+  **no** path encoding (verified first-hand: `GraphRequest.parsePath` stores the
+  path raw — never splits on `#`; `buildFullUrl`/`urlJoin` only trim slashes; the
+  raw URL goes to `fetch`, where `#` truncates at the fragment delimiter,
+  dropping the rest of the filename + the `:/<verb>`). So a routine
+  `Invoice #5.pdf` broke the upload on **both** paths. Fix (one place):
+  `itemStemPath` now percent-encodes the user-controlled segments per-segment
+  (`split('/').map(encodeURIComponent).join('/')`), keeping
+  `/drives/{driveId}/root:/` and the `:/<verb>` delimiters literal (mirrors the
+  SDK's own `constructCreateSessionUrl`; shared stem ⇒ small/large parity).
+  Re-verify: `rg -n "encodeURIComponent"
+  apps/web/src/services/storage/providers/graph/graphIo.ts`.

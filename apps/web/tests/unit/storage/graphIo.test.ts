@@ -12,11 +12,11 @@
 // addressing and the small/large parity so the two paths can't diverge
 // again.
 //
-// NB: the awkward-filename case asserts ONLY the parity invariant (the
-// two stems are identical), NOT a literal raw-'#' URL — '#'/'%' survive
-// sanitizeFilename and reach these helpers raw; correct URL-encoding of
-// those is a SEPARATE concern (tracked), so this test must not codify
-// raw-'#' as the intended contract.
+// URL-significant chars: client.api() does NO path encoding, so itemStemPath
+// percent-encodes the user-controlled segments (filename + parentPath
+// segments), keeping the structural '/drives/{driveId}/root:/' and ':/<verb>'
+// delimiters literal. The encode tests below fence both ends — '#' must encode
+// to '%23', and the ':' delimiters must NOT become '%3A'.
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -45,9 +45,9 @@ describe('graphIo Graph addressing — drive-addressed, small/large parity', () 
 
   it('parity: small and large resolve to the identical stem for the same input (incl. awkward filename), differing only in the trailing verb', () => {
     const stem = (u: string) => u.replace(/:\/(content|createUploadSession)$/, '');
-    // The helpers receive the already-sanitized filename; '#' survives
-    // sanitizeFilename (space → '_'), so this exercises the raw-special
-    // case for PARITY only.
+    // Special-char filename exercises PARITY (both helpers encode it
+    // identically via the shared stem); encoding correctness is asserted
+    // separately below.
     for (const fileName of ['invoice.pdf', 'Invoice_#5_(Jan).pdf']) {
       const content = itemContentPath(driveId, parentPath, fileName);
       const session = itemUploadSessionPath(driveId, parentPath, fileName);
@@ -55,5 +55,28 @@ describe('graphIo Graph addressing — drive-addressed, small/large parity', () 
       expect(session.endsWith(':/createUploadSession')).toBe(true);
       expect(stem(content)).toBe(stem(session)); // no divergence
     }
+  });
+
+  it('percent-encodes URL-significant chars in the filename segment (# → %23), keeping root:/ and the verb delimiters literal', () => {
+    const content = itemContentPath(driveId, parentPath, 'Invoice_#5_(Jan).pdf');
+    const session = itemUploadSessionPath(driveId, parentPath, 'Invoice_#5_(Jan).pdf');
+    // '#' encoded — a raw '#' would truncate the path at fetch (client.api
+    // does no path encoding); '(' ')' are left literal (not URL delimiters).
+    expect(content).toContain('Invoice_%235_(Jan).pdf');
+    expect(content).not.toContain('#');
+    // Structural delimiters MUST survive — the encode must not escape ':' to
+    // %3A (that would corrupt root:/ … :/content into root%3A…).
+    expect(content).toContain('/drives/drive-1/root:/');
+    expect(content).not.toContain('root%3A');
+    expect(content.endsWith(':/content')).toBe(true);
+    expect(session.endsWith(':/createUploadSession')).toBe(true);
+  });
+
+  it('percent-encodes URL-significant chars in a parentPath segment too, keeping the / separators literal', () => {
+    const url = itemUploadSessionPath(driveId, 'sources/sd #2', 'invoice.pdf');
+    expect(url).toBe(
+      '/drives/drive-1/root:/sources/sd%20%232/invoice.pdf:/createUploadSession',
+    );
+    expect(url).not.toContain('#');
   });
 });
