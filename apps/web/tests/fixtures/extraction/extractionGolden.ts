@@ -42,6 +42,20 @@ export const EXTRACTION_GROUND_TRUTH: Record<string, GroundTruth> = {
     accounting_date: '31/10/25', // Invoice Date :
     due_date: '15/11/25', // Due Date :
   },
+  // amazon_invoice — BOARD-#4 (multi-invoice) RECONCILIATION. This doc's OCR
+  // concatenates THREE sub-invoices: CA10ABCD2E30 $14.55 · CA20EFGH4J50 $11.19
+  // · CA30KLMN6P70 $15.65 (these are the SANITIZED corpus invoice numbers; the
+  // prod row source_document 3433cfe3 carries the real CA56SWET7X6I /
+  // CA542WJGEUEI / CA5KJ23M1ZFI per the CURRENT_STATE 176ac24c forensic — same
+  // doc, same amounts, only the sanitized refs differ by rule). Tier-A baseline:
+  // RETAINED, scored first-sub-invoice — a legitimate Tier-A datapoint (what the
+  // deterministic extractor yields on concatenated OCR) and part of
+  // BASELINE_TALLY's vendor_invoice trulyPresent. Tier-C #2/#4 multi-invoice
+  // model: DEFERRED to board-#4 (single-object GroundTruth cannot represent N=3;
+  // the multi-invoice GT shape + prod-fetch/PII sign-off ship with #4, on Phil's
+  // architecture call). Do NOT remove this entry to "defer amazon" — that drops
+  // vendor_invoice trulyPresent 16→13 and fails the frozen ratchet. Re-label +
+  // re-freeze BASELINE_TALLY only when board-#4 opens.
   amazon_invoice: {
     amount: 14.55, // first sub-invoice "Total payable / Total a payer: $14.55"
     // currency omitted — "CA" is the country token, not a currency code
