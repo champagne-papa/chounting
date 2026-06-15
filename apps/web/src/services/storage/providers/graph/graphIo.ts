@@ -51,11 +51,27 @@ export interface GraphIo {
   deleteItem(driveId: string, itemId: string): Promise<void>;
 }
 
-function itemContentPath(driveId: string, parentPath: string, fileName: string): string {
-  // Graph addressing for content PUT by path under a drive root.
+// Shared drive-addressed stem: /drives/{driveId}/root:/{parentPath}/{fileName}.
+// Both upload paths build from this so the simple (:/content) and large
+// (:/createUploadSession) verbs cannot drift onto different drives — the
+// large path's missing drive addressing was the bug this guards against.
+function itemStemPath(driveId: string, parentPath: string, fileName: string): string {
   const cleanParent = parentPath.replace(/^\/+|\/+$/g, '');
   const prefix = cleanParent.length > 0 ? `${cleanParent}/` : '';
-  return `/drives/${driveId}/root:/${prefix}${fileName}:/content`;
+  return `/drives/${driveId}/root:/${prefix}${fileName}`;
+}
+
+// Graph addressing for content PUT by path under a drive root (simple upload).
+export function itemContentPath(driveId: string, parentPath: string, fileName: string): string {
+  return `${itemStemPath(driveId, parentPath, fileName)}:/content`;
+}
+
+// Graph addressing for createUploadSession by path under a drive root (large
+// upload). Passed to OneDriveLargeFileUploadTask as `uploadSessionURL` to
+// OVERRIDE the SDK's /me/drive default, which is invalid under the app-only
+// Sites.Selected auth this provider uses.
+export function itemUploadSessionPath(driveId: string, parentPath: string, fileName: string): string {
+  return `${itemStemPath(driveId, parentPath, fileName)}:/createUploadSession`;
 }
 
 // Real SDK-backed GraphIo. Exercised by the gated real-M365 e2e only.
@@ -89,17 +105,22 @@ export function createRealGraphIo(): GraphIo {
 
   async uploadLarge(input: GraphUploadInput): Promise<string> {
     const client = getGraphClient();
-    const cleanParent = input.parentPath.replace(/^\/+|\/+$/g, '');
     const result = await withRetry(async () => {
-      const task = await OneDriveLargeFileUploadTask.create(
-        client,
-        input.bytes,
-        {
-          fileName: input.fileName,
-          path: cleanParent.length > 0 ? `/${cleanParent}` : undefined,
-          // rangeSize left to SDK default; tuned at e2e if needed.
-        },
-      );
+      const task = await OneDriveLargeFileUploadTask.create(client, input.bytes, {
+        fileName: input.fileName,
+        // Override the SDK's /me/drive default (constructCreateSessionUrl)
+        // with explicit org-drive addressing — app-only Sites.Selected has no
+        // /me. The SDK consumes uploadSessionURL verbatim
+        // (LargeFileUploadTask.createUploadSession → client.api(requestUrl));
+        // fileName is still used as the created item's name in the session
+        // payload. Shares itemStemPath with uploadSmall → small/large parity.
+        uploadSessionURL: itemUploadSessionPath(
+          input.driveId,
+          input.parentPath,
+          input.fileName,
+        ),
+        // rangeSize left to SDK default; tuned at e2e if needed.
+      });
       return task.upload();
     });
     const id = (result.responseBody as { id?: string } | null)?.id;

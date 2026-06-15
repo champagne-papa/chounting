@@ -124,5 +124,69 @@ describe.skipIf(!RUN_E2E)(
       },
       GRAPH_TIMEOUT_MS,
     );
+
+    it(
+      'large (> 4 MiB) ingest routes through uploadLarge and round-trips byte-faithfully',
+      async () => {
+        const db = adminClient();
+        const humanCtx = makeTestContext({ org_ids: [E2E_ORG_ID] });
+        const log = loggerWith({ trace_id: humanCtx.trace_id });
+
+        // > 4 MiB → put() routes to uploadLarge, which must address the ORG
+        // drive via uploadSessionURL (not the SDK's /me/drive default). This
+        // is the case that actually exercises that fix; the small-doc test
+        // above only hits uploadSmall. Deterministic non-uniform fill so the
+        // round-trip hash is meaningful.
+        const bigBytes = new Uint8Array(4 * 1024 * 1024 + 1);
+        for (let i = 0; i < bigBytes.length; i++) bigBytes[i] = i % 251;
+
+        const { ingest_batch_id } = await createIngestBatchForTest(E2E_ORG_ID);
+        const created = await documentPlatformService.createSourceDocument(
+          {
+            bytes: bigBytes,
+            mime_type: 'application/pdf',
+            org_id: E2E_ORG_ID,
+            original_filename: 'charter-b-large.pdf',
+            ingest_channel: 'direct_upload',
+            ingest_batch_id,
+            received_at: new Date().toISOString(),
+            created_by: SYSTEM_ACTOR_USER_ID,
+          },
+          humanCtx,
+        );
+        expect(created.provider).toBe('sharepoint_drive'); // put dispatched to Graph (large path)
+
+        const systemCtx: SystemActorServiceContext = {
+          trace_id: humanCtx.trace_id,
+          caller: {
+            user_id: null,
+            system_actor: 'pipeline_orchestrator',
+            system_user_id: SYSTEM_ACTOR_USER_ID,
+          },
+          org_id: E2E_ORG_ID,
+        };
+        const fetched = await byteFetch({
+          source_document_id: created.id,
+          ctx: systemCtx,
+        });
+
+        // Byte-faithful round-trip through the large-upload path (recompute,
+        // not the row's stored hash) — proves uploadLarge landed the bytes in
+        // the org drive and they read back intact.
+        expect(fetched.result.provider).toBe('sharepoint_drive');
+        expect(computeHash(fetched.result.bytes)).toBe(created.content_hash);
+
+        try {
+          await getStorageProvider('sharepoint_drive').delete(created.id, systemCtx);
+        } catch (err) {
+          log.error(
+            { err, source_document_id: created.id },
+            'PROVEN-LIVE large cleanup: sharepoint delete FAILED (non-fatal; proof already passed)',
+          );
+        }
+        await db.from('audit_log').delete().eq('trace_id', humanCtx.trace_id);
+      },
+      GRAPH_TIMEOUT_MS,
+    );
   },
 );

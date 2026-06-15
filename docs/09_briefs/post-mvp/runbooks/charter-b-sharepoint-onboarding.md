@@ -121,3 +121,26 @@ document ingested (bytes land in SharePoint, row stamped `sharepoint_drive`)
 and fetched back through the provider (dispatch-on-row), with the content_hash
 round-tripping (the §9 integrity discharge). Until then the arc's status is
 **reachable in principle, live transfer gated**.
+
+### Go-live correctness flags (grounding pass, 2026-06-14)
+
+- **`uploadLarge` drive-addressing — FIXED (`graphIo.ts`).** The >4 MiB upload
+  path passed no `uploadSessionURL` to `OneDriveLargeFileUploadTask.create`, so
+  the SDK fell through to its `/me/drive` default (`constructCreateSessionUrl`)
+  — invalid under app-only `Sites.Selected` (no `/me`). It now sets
+  `uploadSessionURL = itemUploadSessionPath(driveId, …)`, sharing `itemStemPath`
+  with `uploadSmall` so both address `/drives/{driveId}/root:/…` (small/large
+  parity). **The small-doc e2e only exercises `uploadSmall`** — a **>4 MiB**
+  case was added to `sharepointDriveRealFlow.e2e`, so the large path is **proven
+  only at that >4 MiB live run**. Re-verify: `rg -n "uploadSessionURL|itemStemPath"
+  apps/web/src/services/storage/providers/graph/graphIo.ts`.
+- **Filename URL-encode gap — SEPARATE, suspected.** **Confirmed:**
+  `sanitizeFilename` leaves `#`/`%`/`(`/`)` intact and the path helpers
+  interpolate the filename **raw**; the SDK's own default path
+  `encodeURIComponent`s each segment. **Inference (NOT yet read):** that the SDK
+  bothers to encode is strong evidence `client.api(path)` does not auto-encode —
+  so `Invoice #5.pdf` would reach Graph with a raw `#` (both upload paths) and
+  break. **Open verification:** read the SDK `RequestBuilder` to confirm
+  `client.api` doesn't encode; if confirmed, encode-or-strip once in
+  `itemStemPath` (one place ⇒ keeps small/large parity). Its own item — NOT
+  folded into the drive-addressing fix.

@@ -10,6 +10,37 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## SharePoint go-live grounding — `uploadLarge` drive-addressing fix — 2026-06-14 (UNIT-PROVEN, large-path live-gated; in this change, push + live e2e pending)
+
+Opening board #1 (SharePoint go-live) with read-only grounding surfaced — and
+TDD-fixed — a latent go-live bug in the large-file upload path. The code is
+landed + deployed + unit-proven; go-live stays operator-gated (Azure ops + the
+per-org `org_settings` write + the live e2e), unchanged.
+
+- **`uploadLarge` addressed `/me/drive`, not the org drive — FIXED.**
+  `graphIo.ts` `uploadLarge` passed no `uploadSessionURL` to
+  `OneDriveLargeFileUploadTask.create`, so the SDK defaulted to
+  `/me/drive/root:…:/createUploadSession` (`constructCreateSessionUrl`) —
+  invalid under app-only `Sites.Selected` (no `/me`). So **>4 MiB documents
+  could not store to SharePoint** (`uploadSmall`, ≤4 MiB, was correct). Fix:
+  `uploadSessionURL = itemUploadSessionPath(driveId, …)`, sharing `itemStemPath`
+  with `uploadSmall` → both address `/drives/{driveId}/root:/…` (structural
+  parity). SDK contract verified first-hand against
+  `@microsoft/microsoft-graph-client@3.0.7` (`uploadSessionURL` consumed
+  verbatim via `client.api(requestUrl)`; default is `/me/drive`). Tests:
+  pure-helper parity (clean + awkward-`#` parity invariant) + a mock-SDK wiring
+  guard + a **>4 MiB** e2e case (`sharepointDriveRealFlow.e2e`; the small-doc
+  case only hits `uploadSmall`). 15/15 storage unit green; typecheck + lint
+  clean. **Large path PROVEN only at the >4 MiB live e2e** (gated). Re-verify:
+  `rg -n "uploadSessionURL" apps/web/src/services/storage/providers/graph/graphIo.ts`.
+- **SEPARATE (suspected):** `sanitizeFilename` (`sharepointDriveProvider.ts`)
+  leaves `#`/`%`/`(`/`)` intact and the path helpers interpolate raw
+  (confirmed); the Graph SDK default `encodeURIComponent`s each segment ⇒
+  `client.api()` *likely* doesn't auto-encode ⇒ such filenames would reach Graph
+  with a raw `#` and break (both paths). **Open: read the SDK `RequestBuilder`
+  to confirm**, then encode-or-strip once in `itemStemPath`. Its own item, not
+  folded in.
+
 ## V1 backstop hardening — prod cron-auth + OCR cold-start + deep-stall chain — 2026-06-14 (cron auth PROVEN LIVE; backlog recovery proven on real cases, goal not fully met)
 
 A production-firefighting arc closing the gaps that kept the live V1
