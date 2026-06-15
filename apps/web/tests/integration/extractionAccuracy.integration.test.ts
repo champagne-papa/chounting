@@ -54,11 +54,11 @@ import {
 } from '../fixtures/extraction/extractionGolden';
 import {
   SCORED_FIELDS,
-  scoreExtraction,
   aggregate,
   coverage,
   correctness,
-  ocrTextFromLines,
+  runExtractionEval,
+  type ExtractionFn,
   type DocumentType,
   type DocScore,
   type AggregateTally,
@@ -70,7 +70,7 @@ const TYPES: DocumentType[] = [
   'payment_confirmation',
 ];
 
-function tierAFor(type: DocumentType, ocrText: string): Record<string, unknown> {
+const tierAExtractor: ExtractionFn = (ocrText, type) => {
   switch (type) {
     case 'vendor_invoice':
       return extractVendorInvoiceFieldsTierA(ocrText) as Record<string, unknown>;
@@ -82,23 +82,17 @@ function tierAFor(type: DocumentType, ocrText: string): Record<string, unknown> 
         unknown
       >;
   }
-}
+};
 
-// Score the whole corpus once; group doc scores by type.
+// Score the whole corpus once; group doc scores by type. Delegates to the pure
+// runExtractionEval — the baseline is now scored by the same parameterized
+// runner a future structured-output extractor will use (diff the aggregates).
 function scoreCorpus(): Record<DocumentType, DocScore[]> {
-  const byType: Record<DocumentType, DocScore[]> = {
-    vendor_invoice: [],
-    receipt: [],
-    payment_confirmation: [],
-  };
-  for (const f of REAL_OCR_CORPUS) {
-    const type = f.expectedType as DocumentType;
-    const ocrText = ocrTextFromLines(f.lines);
-    const extracted = tierAFor(type, ocrText);
-    const truth = EXTRACTION_GROUND_TRUTH[f.label] ?? {};
-    byType[type].push(scoreExtraction(extracted, truth, SCORED_FIELDS[type]));
-  }
-  return byType;
+  return runExtractionEval(
+    tierAExtractor,
+    REAL_OCR_CORPUS,
+    (label) => EXTRACTION_GROUND_TRUTH[label] ?? {},
+  );
 }
 
 describe('Wave 5 D1 — no-AI Tier-A extraction accuracy harness', () => {
