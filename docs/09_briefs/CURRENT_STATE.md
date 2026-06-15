@@ -119,6 +119,16 @@ integration); no separate push event.
     ('176ac24c-6ad2-4145-8ad6-fdb98053ea3a',
     '3433cfe3-250e-4adc-ba7b-e803c9e6f334') order by created_at;`
     (prod `ollyqiiwdvbpbngqgjqk`).
+    **Superseded 2026-06-14 (eval-harness grounding):** the "filename hints
+    single-invoice" / "1- vs N-element undecidable" above is **RESOLVED** — prod
+    OCR (`document_artifacts.lines`, `3433cfe3`) shows 176ac24c is a **3-invoice**
+    PDF (`CA56SWET7X6I` $14.55 / `CA542WJGEUEI` $11.19 / `CA5KJ23M1ZFI` $15.65;
+    `$41.39` = the **sum**; filename = first invoice# + sum). It is a **board-#4
+    multi-invoice** case (N=3); the array-failure was a 3-element array. The
+    (B)-not-(A) verdict holds; only the single-invoice sub-claim was wrong.
+    Re-verify: `select lines from document_artifacts where source_document_id =
+    '3433cfe3-250e-4adc-ba7b-e803c9e6f334';` (prod `ollyqiiwdvbpbngqgjqk`) — the
+    three sub-invoice numbers + amounts above read directly from that row.
   - **Board-#3/(A) repro query (grounded 2026-06-14):** the genuine
     classify-unknown signal is `exception_reason='unknown_document_type'`,
     enqueued at the **Stage-3 classify short-circuit** (`ingestDocument`,
