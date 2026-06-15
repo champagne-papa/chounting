@@ -19042,3 +19042,37 @@ via `session-end.sh`; diag Modal apps `chounting-deploy-diag` +
 `.coordination/_wsl_writetest.txt` removed; empty untracked `message_id` left
 (unknown origin). Parked-and-now-tracked: secrets rotation (POSTMARK + MODAL
 HMAC) → prod-readiness "Open security deferrals."
+
+WRONG (2026-06-15, Tier-C eval/repro-harness buildable-now arc) — the
+brainstormed design doc (`post-mvp/2026-06-14-tier-c-eval-harness-design.md`)
+asserted the system lacked "an honest accuracy metric it does not have today"
+and framed the scored-eval set as greenfield save a thin runner + a new
+`expectedExtraction?` fixture field. Plan-authoring verify-from-disk found 3 of
+the 5 named buildable-now items ALREADY SHIPPED under Wave 5 D1: the per-doc
+ground-truth labels live in `EXTRACTION_GROUND_TRUTH` (`extractionGolden.ts`,
+label-from-source + anti-circular), the deterministic Tier-A baseline metric is
+CI-runnable (`extractionAccuracy.integration.test.ts` + frozen `BASELINE_TALLY`,
+2026-06-02), and the three clean single-invoice docs are already labeled. Only
+`runExtractionEval` (extractor-parameterized) + the #3 repro-runner were
+genuinely new; the proposed `expectedExtraction?`-on-fixture would have been a
+SECOND ground-truth home prone to drift. Caught at plan-authoring, not impl —
+the design doc was reconciled (§1/§2.1/§2.2/§2.3/§4/§7) before any code, and the
+baseline harness was refactored onto the new runner behavior-preservingly
+(`BASELINE_TALLY` byte-identical). Same verify-the-actual-artifact discipline as
+the cron-registration and Postmark-HMAC catches: verifying a cited artifact (the
+scorer) is NOT the same as grounding the claim it supports (that nothing
+consumes it) — the latter needed a consumer-search. Recurrence of the already-
+codified verify-from-disk / drift-discipline-prophylactic pattern (N=1 new
+instance, not a new convention).
+
+NOTE (2026-06-15) — the board-#3 classify-unknown repro-runner shipped this arc
+(`classifyUnknownRepro.ts` pure logic + gated
+`classifyUnknownRepro.integration.test.ts`) is the verbatim-repro mechanism the
+**Issue A** carry-forward above calls for ("get a verbatim repro of a legible
+invoice classifying `unknown`"): it tallies `exception_reason`, selects
+`unknown_document_type` rows, and re-runs the real classifier repro-or-drop
+(still-`unknown` → repro / keep; real type → drop). Grounded 2026-06-14: 0 such
+prod rows (all 4 are `unmatched_router_candidate`), so the repro set is empty
+today — consistent with Issue A's "may not be real." When a row appears, this
+runner (gated `RUN_CLASSIFY_UNKNOWN_REPRO=1` + `ANTHROPIC_API_KEY`) is the
+repro-or-drop tool. Issue B (Tier-C extract array-vs-Zod) is untouched here.
