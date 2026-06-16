@@ -1,0 +1,266 @@
+{
+  "4d775b99495f6686d3cd7c5ed3b78b219fa73f2b57689762a9c69dd192bb7e78": {
+    "label": "demo_figma_invoice",
+    "expectedType": "vendor_invoice",
+    "freetext": {
+      "raw": "```json\n{\n  \"amount\": 282.24,\n  \"currency\": \"CAD\",\n  \"vendor_name\": \"Figma, Inc.\",\n  \"vendor_invoice_number\": \"1ABCD23M-0001\",\n  \"accounting_date\": \"2025-11-18\",\n  \"due_date\": \"2025-11-18\",\n  \"tax_amount\": 30.24,\n  \"line_items\": [\n    {\n      \"description\": \"Professional Dev seats (annual) Nov 18, 2025 - Nov 18, 2026\",\n      \"amount\": 0.00\n    },\n    {\n      \"description\": \"Professional Full seats (annual) Nov18,2025-Nov 18,2026\",\n      \"amount\": 252.00\n    },\n    {\n      \"description\": \"Professional Collab seats (annual) Nov 18, 2025 - Nov 18, 2026\",\n      \"amount\": 0.00\n    }\n  ]\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 720,
+        "output_tokens": 247
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"amount\": 282.24, \"currency\": \"CAD\", \"vendor_name\": \"Figma, Inc.\", \"vendor_id\": null, \"vendor_invoice_number\": \"1ABCD23M-0001\", \"accounting_date\": \"2025-11-18\", \"account_code\": null, \"tax_code_id\": null, \"due_date\": \"2025-11-18\", \"tax_amount\": 30.24}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1237,
+        "output_tokens": 107
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "cba0b9c39258b3cfdf7e739b0b48f68df76c1d970f57a5d26c5a5ce553f60a0c": {
+    "label": "demo_figma_receipt",
+    "expectedType": "receipt",
+    "freetext": {
+      "raw": "```json\n{\n  \"merchant_text\": \"Figma Canada\",\n  \"date\": \"2025-11-18\",\n  \"subtotal\": 252.00,\n  \"total\": 282.24,\n  \"tax_amount\": 30.24,\n  \"currency\": \"CAD\",\n  \"payment_method\": \"credit_card\",\n  \"last_4\": \"0001\",\n  \"merchant_identifier\": \"100000000RT9999\",\n  \"transaction_reference\": \"1ABCD23M-0001\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 689,
+        "output_tokens": 135
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"merchant_text\":\"Figma, Inc.\",\"date\":\"2025-11-18\",\"subtotal\":252.00,\"total\":282.24,\"currency\":\"CAD\",\"payment_method\":\"credit_card\",\"last_4\":\"0001\",\"merchant_identifier\":\"100000000RT9999\",\"auth_ref\":null,\"transaction_reference\":\"1ABCD23M-0001\",\"tax_amount\":30.24}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1266,
+        "output_tokens": 102
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "6f0a3bcdac4ba384e14b11a4e5c427cb25c6496ef12465205f2fe92ade5f382f": {
+    "label": "demo_zoho_payment",
+    "expectedType": "payment_confirmation",
+    "freetext": {
+      "raw": "{\n  \"vendor_text\": \"Figma Inc.\",\n  \"payment_date\": \"2025-11-19\",\n  \"payment_amount\": 282.24,\n  \"currency\": \"CAD\",\n  \"payment_method\": \"cash\",\n  \"payment_reference\": \"500\",\n  \"cited_invoice_number\": \"1ABCD23M0001\"\n}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 417,
+        "output_tokens": 94
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"vendor_text\":\"Figma Inc.\",\"payment_date\":\"2025-11-19\",\"payment_amount\":282.24,\"currency\":\"USD\",\"payment_method\":\"cash\",\"payment_reference\":\"500\",\"auth_ref\":null,\"transaction_id\":null,\"cited_invoice_number\":\"1ABCD23M0001\",\"cited_bill_id\":null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 983,
+        "output_tokens": 90
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "483534aa736f991ffb7c1380d64018e62032790735982b56b92cb837ac049713": {
+    "label": "mattjanzen_invoice",
+    "expectedType": "vendor_invoice",
+    "freetext": {
+      "raw": "```json\n{\n  \"amount\": 1433.25,\n  \"currency\": \"CAD\",\n  \"vendor_name\": \"Avery Strength & Conditioning\",\n  \"vendor_invoice_number\": \"INV-000778\",\n  \"accounting_date\": \"2025-10-31\",\n  \"due_date\": \"2025-11-15\",\n  \"tax_amount\": 68.25,\n  \"line_items\": [\n    {\n      \"description\": \"Training Session - One on on kinesiology\",\n      \"amount\": 1433.25\n    }\n  ]\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 609,
+        "output_tokens": 149
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"amount\":1433.25,\"currency\":\"CAD\",\"vendor_name\":\"Avery Strength & Conditioning\",\"vendor_id\":null,\"vendor_invoice_number\":\"INV-000778\",\"accounting_date\":\"2025-10-31\",\"account_code\":null,\"tax_code_id\":null,\"due_date\":\"2025-11-15\",\"tax_amount\":68.25}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1126,
+        "output_tokens": 91
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "ab054b79caccbe83dce7bf7e41309e70823798eaf76fedba63dd90eb8a27a4e3": {
+    "label": "amazon_invoice",
+    "expectedType": "vendor_invoice",
+    "freetext": {
+      "raw": "```json\n[\n  {\n    \"amount\": 14.55,\n    \"currency\": \"CAD\",\n    \"vendor_name\": \"GLOBAL CRAFT TRADING SUPPLY CO,.LTD\",\n    \"vendor_invoice_number\": \"CA10ABCD2E30\",\n    \"accounting_date\": \"2025-12-05\",\n    \"tax_amount\": 1.56,\n    \"line_items\": [\n      {\n        \"description\": \"Chinese Blank Xuan Paper Raw, Calligraphy Brush Ink Writing Sumi Rice Paper without Grids, White Sheng Xuan Paper for Beginner & Intermediate Practice. Painting Techniques (30Pcs)\",\n        \"amount\": 12.99\n      }\n    ]\n  },\n  {\n    \"amount\": 11.19,\n    \"currency\": \"CAD\",\n    \"vendor_name\": \"EASTGATE IMPORT TRADING GROUP\",\n    \"vendor_invoice_number\": \"CA20EFGH4J50\",\n    \"accounting_date\": \"2025-12-05\",\n    \"tax_amount\": 1.20,\n    \"line_items\": [\n      {\n        \"description\": \"3 Sizes Chinese Calligraphy Brush Set, Kanji Sumi Drawing Brush with Resin Handle, Professional Traditional Chinese Painting Brush for Beginners Students\",\n        \"amount\": 9.99\n      }\n    ]\n  },\n  {\n    \"amount\": 15.65,\n    \"currency\": \"CAD\",\n    \"vendor_name\": \"Maple Co., Ltd.\",\n    \"vendor_invoice_number\": \"CA30KLMN6P70\",\n    \"accounting_date\": \"2025-12-05\",\n    \"tax_amount\": 1.68,\n    \"line_items\": [\n      {\n        \"description\": \"Moon Palace Sumi Ink 180ml\",\n        \"amount\": 13.97\n      }\n    ]\n  }\n]\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 3439,
+        "output_tokens": 483
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"amount\": null, \"currency\": null, \"vendor_name\": null, \"vendor_id\": null, \"vendor_invoice_number\": null, \"accounting_date\": null, \"account_code\": null, \"tax_code_id\": null, \"due_date\": null, \"tax_amount\": null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 3956,
+        "output_tokens": 73
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "4a0051991f6973af96e23c531ba3574c29371293a6e6ced206d668b78fbf35f5": {
+    "label": "adobe_invoice",
+    "expectedType": "vendor_invoice",
+    "freetext": {
+      "raw": "```json\n{\n  \"amount\": 146.71,\n  \"currency\": \"CAD\",\n  \"vendor_name\": \"Adobe Inc.\",\n  \"vendor_invoice_number\": \"1000000002\",\n  \"accounting_date\": \"2025-12-02\",\n  \"tax_amount\": 15.72,\n  \"line_items\": [\n    {\n      \"description\": \"Creative Cloud Pro\",\n      \"amount\": 130.99\n    }\n  ]\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 652,
+        "output_tokens": 119
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"amount\": 146.71, \"currency\": \"CAD\", \"vendor_name\": \"Adobe Inc.\", \"vendor_id\": null, \"vendor_invoice_number\": \"1000000002\", \"accounting_date\": \"2025-12-02\", \"account_code\": null, \"tax_code_id\": null, \"due_date\": null, \"tax_amount\": 15.72}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1169,
+        "output_tokens": 93
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "68eed13636292ba32233476e46b969684bfae2aecf13c69165e096c95d1723d4": {
+    "label": "delara_receipt",
+    "expectedType": "receipt",
+    "freetext": {
+      "raw": "```json\n{\n  \"merchant_text\": \"Mirador Restaurant\",\n  \"date\": \"2026-03-04\",\n  \"subtotal\": 257.00,\n  \"total\": 321.25,\n  \"tax_amount\": 12.85,\n  \"currency\": \"CAD\",\n  \"payment_method\": \"credit_card\",\n  \"last_4\": \"XXXX\",\n  \"auth_ref\": \"100200\",\n  \"transaction_reference\": \"AB12CD34EF56\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1052,
+        "output_tokens": 130
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"merchant_text\":\"Mirador Restaurant\",\"date\":\"2026-03-04\",\"subtotal\":257.00,\"total\":321.25,\"currency\":\"CAD\",\"payment_method\":\"credit_card\",\"last_4\":null,\"merchant_identifier\":\"pst#10000000\",\"auth_ref\":\"100200\",\"transaction_reference\":\"AB12CD34EF56\",\"tax_amount\":12.85}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1629,
+        "output_tokens": 98
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "1d3995dfd8f80e5a6342f9e1463c3042b08683ddeeb5fd6abf335b24fee0e9e5": {
+    "label": "bestbuy_receipt",
+    "expectedType": "receipt",
+    "freetext": {
+      "raw": "```json\n{\n  \"merchant_text\": \"BEST BUY MARKETPLACE\",\n  \"date\": \"2025-12-08\",\n  \"subtotal\": 111.74,\n  \"total\": 125.15,\n  \"tax_amount\": 13.41,\n  \"currency\": \"CAD\",\n  \"payment_method\": \"credit_card\",\n  \"last_4\": \"0001\",\n  \"merchant_identifier\": \"10000 0002 RT001\",\n  \"auth_ref\": \"100100\",\n  \"transaction_reference\": \"100000000\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 854,
+        "output_tokens": 145
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"merchant_text\":\"BEST BUY MARKETPLACE\",\"date\":\"2025-12-08\",\"subtotal\":111.74,\"total\":125.15,\"currency\":\"CAD\",\"payment_method\":\"credit_card\",\"last_4\":\"0001\",\"merchant_identifier\":\"10000 0002 RT001\",\"auth_ref\":\"100100\",\"transaction_reference\":\"100000000\",\"tax_amount\":13.41}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1431,
+        "output_tokens": 100
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "05e2a6f10a7f129b2a1d2464efd4f00413f6f3938588de65acb728c5ba8f74c7": {
+    "label": "mattjanzen_receipt",
+    "expectedType": "receipt",
+    "freetext": {
+      "raw": "```json\n{\n  \"merchant_text\": \"Avery Strength & Conditioning\",\n  \"date\": \"2025-11-14\",\n  \"total\": 1433.25,\n  \"currency\": \"CAD\",\n  \"payment_method\": \"wire\",\n  \"merchant_identifier\": \"GST# 100000001 RT0001\",\n  \"transaction_reference\": \"INV-000778\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 404,
+        "output_tokens": 105
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"merchant_text\":\"JORDAN AVERY STRENGTH & CONDITIONING COACH\",\"date\":\"2025-11-14\",\"subtotal\":null,\"total\":1433.25,\"currency\":\"CAD\",\"payment_method\":\"wire\",\"last_4\":null,\"merchant_identifier\":\"GST# 100000001 RT0001\",\"auth_ref\":null,\"transaction_reference\":\"INV-000778\",\"tax_amount\":null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 981,
+        "output_tokens": 103
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "f07bb2a7a20d7bacf210dbbddbd35b383e06d74aae7d5ff3839808d9584f19af": {
+    "label": "mattjanzen_payment",
+    "expectedType": "payment_confirmation",
+    "freetext": {
+      "raw": "```json\n{\n  \"payment_date\": \"2025-11-14\",\n  \"currency\": \"CAD\",\n  \"payment_method\": \"eft\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 579,
+        "output_tokens": 46
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\": null, \"vendor_text\": null, \"payment_date\": \"2025-11-14\", \"payment_amount\": null, \"currency\": \"CAD\", \"payment_method\": \"eft\", \"payment_reference\": null, \"auth_ref\": null, \"transaction_id\": null, \"cited_invoice_number\": null, \"cited_bill_id\": null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 1145,
+        "output_tokens": 92
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "b186f4686396e50e9b21b40fac5bd222021e1ce1b22cc4649efa1779a5aba4aa": {
+    "label": "synthetic_no_cited_payment",
+    "expectedType": "payment_confirmation",
+    "freetext": {
+      "raw": "{\n  \"vendor_text\": \"Figma, Inc.\",\n  \"payment_date\": \"2025-11-18\",\n  \"payment_amount\": 282.24,\n  \"currency\": \"USD\",\n  \"payment_method\": \"eft\"\n}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 317,
+        "output_tokens": 66
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\": null, \"vendor_text\": \"Figma, Inc.\", \"payment_date\": \"2025-11-18\", \"payment_amount\": 282.24, \"currency\": \"USD\", \"payment_method\": \"eft\", \"payment_reference\": null, \"auth_ref\": null, \"transaction_id\": null, \"cited_invoice_number\": null, \"cited_bill_id\": null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 883,
+        "output_tokens": 99
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  },
+  "36fcb1d4d88b0a28916c2012621dcbdb0009e4f10a7ec37885eed63e59ade84c": {
+    "label": "synthetic_born_paid",
+    "expectedType": "payment_confirmation",
+    "freetext": {
+      "raw": "```json\n{\n  \"vendor_text\": \"Figma, Inc.\",\n  \"payment_date\": \"2025-11-18\",\n  \"payment_amount\": 282.24,\n  \"currency\": \"USD\",\n  \"payment_method\": \"eft\",\n  \"cited_invoice_number\": \"1ABCD23M-0002\"\n}\n```",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 364,
+        "output_tokens": 91
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    },
+    "structured": {
+      "raw": "{\"vendor_id\":null,\"vendor_text\":\"Figma, Inc.\",\"payment_date\":\"2025-11-18\",\"payment_amount\":282.24,\"currency\":\"USD\",\"payment_method\":\"eft\",\"payment_reference\":null,\"auth_ref\":null,\"transaction_id\":null,\"cited_invoice_number\":\"1ABCD23M-0002\",\"cited_bill_id\":null}",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 930,
+        "output_tokens": 93
+      },
+      "stamp": "captured-sample · 2026-06-16 · claude-sonnet-4-5"
+    }
+  }
+}
