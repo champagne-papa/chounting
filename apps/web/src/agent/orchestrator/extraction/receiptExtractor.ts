@@ -80,7 +80,7 @@ function tryExtractTierA(ocrText: string): Partial<ReceiptExtraction> {
   return fields;
 }
 
-const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a receipt.
+export const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a receipt.
 
 Return a single JSON object matching this schema (all fields OPTIONAL — omit fields you cannot extract with confidence):
 
