@@ -1237,6 +1237,100 @@ export type Database = {
           },
         ]
       }
+      extracted_invoices: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_case_id: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          extracted_fields: Json
+          extraction_run_id: string | null
+          id: string
+          idempotency_key: string | null
+          ordinal: number
+          post_status: Database["public"]["Enums"]["extracted_invoice_post_status"]
+          posted_bill_id: string | null
+          region_ref: Json | null
+          source_document_id: string
+          trace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_case_id: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          extracted_fields: Json
+          extraction_run_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          ordinal: number
+          post_status?: Database["public"]["Enums"]["extracted_invoice_post_status"]
+          posted_bill_id?: string | null
+          region_ref?: Json | null
+          source_document_id: string
+          trace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_case_id?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          extracted_fields?: Json
+          extraction_run_id?: string | null
+          id?: string
+          idempotency_key?: string | null
+          ordinal?: number
+          post_status?: Database["public"]["Enums"]["extracted_invoice_post_status"]
+          posted_bill_id?: string | null
+          region_ref?: Json | null
+          source_document_id?: string
+          trace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_invoices_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "extracted_invoices_document_case_id_fkey"
+            columns: ["document_case_id"]
+            isOneToOne: false
+            referencedRelation: "document_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_invoices_extraction_run_id_fkey"
+            columns: ["extraction_run_id"]
+            isOneToOne: false
+            referencedRelation: "extraction_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_invoices_posted_bill_id_fkey"
+            columns: ["posted_bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["bill_id"]
+          },
+          {
+            foreignKeyName: "extracted_invoices_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document_cards_view"
+            referencedColumns: ["source_document_id"]
+          },
+          {
+            foreignKeyName: "extracted_invoices_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "source_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extraction_runs: {
         Row: {
           created_at: string
@@ -3681,6 +3775,10 @@ export type Database = {
         Args: { p_audit: Json; p_case: Json }
         Returns: string
       }
+      create_extracted_invoice_with_audit: {
+        Args: { p_audit: Json; p_invoice: Json }
+        Returns: string
+      }
       create_ingest_batch_for_test: {
         Args: {
           p_channel_metadata?: Json
@@ -3798,6 +3896,29 @@ export type Database = {
           p_audit_decision: Json
           p_audit_mutation: Json
           p_decision: Json
+        }
+        Returns: string
+      }
+      test_post_balanced_entry: {
+        Args: {
+          p_amount: number
+          p_credit_account: string
+          p_debit_account: string
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
+        }
+        Returns: string
+      }
+      test_post_unbalanced_entry: {
+        Args: {
+          p_credit_account: string
+          p_credit_amount: number
+          p_debit_account: string
+          p_debit_amount: number
+          p_entry_date?: string
+          p_org_id: string
+          p_period_id: string
         }
         Returns: string
       }
@@ -3941,6 +4062,7 @@ export type Database = {
         | "bundle_partial_commit_reconciliation_pending"
         | "provider_unavailable"
       exception_status: "open" | "resolved" | "cancelled"
+      extracted_invoice_post_status: "pending" | "posted" | "unrepairable"
       ingest_channel:
         | "drag_drop_pdf"
         | "forwarded_mailbox"
@@ -4393,6 +4515,7 @@ export const Constants = {
         "provider_unavailable",
       ],
       exception_status: ["open", "resolved", "cancelled"],
+      extracted_invoice_post_status: ["pending", "posted", "unrepairable"],
       ingest_channel: [
         "drag_drop_pdf",
         "forwarded_mailbox",
