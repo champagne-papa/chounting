@@ -45,6 +45,24 @@ seam and fanned from there.
 
 ### 1.4.2 SUB-DECISION (Phil) — where does N come from?
 
+> **⚠ REVERSED 2026-07-10 → N-2 (AI-multi-extract). The N-1 lock below is
+> SUPERSEDED.** T2b grounding found deterministic region-grouping **infeasible** on
+> the real artifact (`document_artifacts.pages = {count:6}`, no per-line page
+> attribution; per-page-reset coordinates), so N-1's provenance edge — the reason
+> it beat N-2 here — rested on a capability the OCR does not provide. The real
+> choice became *"N-2 (invoice_number+fields provenance), or no multi-invoice split
+> at all."* Phil accepted N-2. **Recorded cost (accurate):** provenance degrades
+> from deterministic **region-anchor** → **AI-derived soft locator** (the line-span
+> the AI drew each invoice from, persisted in `α.region_ref` as `{kind:'ai_soft'}`)
+> — NOT "provenance lost." Also: the multi-invoice extraction is **free-text→parse**
+> (board-2 proved structured output collapses on the N-element array), and a
+> **deterministic arithmetic reconciliation gate** (Σ invoice amounts = doc total,
+> else degrade to N=1) guards the split. This also **deletes the risky T2c
+> per-region mainline refactor** (single-invoice path untouched; multi-invoice = one
+> AI call → N α). Full rationale + design:
+> **`2026-07-10-board-4-slice-2-t2b-ai-segmentation-design.md`**. Recorded additively
+> per ADR-0022; the N-1 text below is preserved as the superseded decision.
+
 Two viable shapes; they differ in cost **and** in how much they honor the
 provenance reason α was locked. **Surfaced, not pre-decided.**
 
