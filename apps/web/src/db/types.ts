@@ -3879,6 +3879,10 @@ export type Database = {
           debit_total_cad: number
         }[]
       }
+      post_extracted_invoice_with_audit: {
+        Args: { p_audit: Json; p_post: Json }
+        Returns: string
+      }
       record_router_decision: {
         Args: { p_audit: Json; p_decision: Json }
         Returns: string

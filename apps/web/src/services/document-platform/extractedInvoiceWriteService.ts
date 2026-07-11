@@ -28,6 +28,8 @@ import type { Json } from '@/db/types';
 const SYSTEM_CREATED_BY = 'pipeline_orchestrator';
 const AUDIT_ACTION = 'extracted_invoice_created';
 const AUDIT_ENTITY_TYPE = 'extracted_invoice';
+// Board #4 T3 — the post-phase α write (posted_bill_id/post_status/idempotency_key).
+const POST_AUDIT_ACTION = 'extracted_invoice_posted';
 
 export interface CreateExtractedInvoiceInput {
   document_case_id: string;
@@ -116,4 +118,69 @@ export async function createExtractedInvoice(
   }
 
   return id;
+}
+
+// Board #4 slice-2 T3 — the post-phase α write (the first UPDATE path for
+// extracted_invoices; T2a above was create-only). Sets posted_bill_id +
+// post_status='posted' + the resolved per-invoice idempotency_key, write-once,
+// via post_extracted_invoice_with_audit (migration 20240184000000) so the
+// paired audit lands in one transaction (org derived from the parent case).
+//
+// Write-once + coherence live in the T1 substrate triggers/CHECK, not here: a
+// SAME-value re-post no-ops (the recovery-safe re-approval of an already-posted
+// α), a DIFFERENT-bill re-post is rejected by the immutability trigger
+// (feature_not_supported → mapped to INVALID_TRANSITION below). Attribution is
+// the HUMAN reviewer (posted_by) — honest causality, same as the JE created_by
+// and the committed marking on the approve-post route.
+export interface PostExtractedInvoiceInput {
+  extracted_invoice_id: string;
+  /** The bill this α became (billService.post result). WRITE-ONCE. */
+  posted_bill_id: string;
+  /** The resolved per-invoice dedup key
+   *  (`${caseId}:bill:${vendor_invoice_number-if-unique else ordinal}`,
+   *  build-spec §1.5.2). WRITE-ONCE — persisted, never recomputed. */
+  idempotency_key: string;
+  trace_id: string;
+  /** The reviewer whose approval caused the post (audit attribution). */
+  posted_by: string;
+}
+
+export async function postExtractedInvoice(
+  input: PostExtractedInvoiceInput,
+): Promise<string> {
+  const db = adminClient();
+  const { data, error } = await db.rpc('post_extracted_invoice_with_audit', {
+    p_post: {
+      id: input.extracted_invoice_id,
+      posted_bill_id: input.posted_bill_id,
+      idempotency_key: input.idempotency_key,
+    },
+    p_audit: {
+      user_id: input.posted_by,
+      trace_id: input.trace_id,
+      action: POST_AUDIT_ACTION,
+      entity_type: AUDIT_ENTITY_TYPE,
+      tool_name: null,
+      idempotency_key: '',
+      reason: null,
+    },
+  });
+
+  if (error) {
+    // feature_not_supported (0A000) from the immutability trigger = a
+    // write-once violation (re-post to a DIFFERENT bill, or re-key a resolved
+    // key). Recovery-safe same-value re-posts do NOT reach here.
+    if (error.code === '0A000') {
+      throw new ServiceError(
+        'INVALID_TRANSITION',
+        `postExtractedInvoice write-once violation for extracted_invoice ${input.extracted_invoice_id}: ${error.message}`,
+      );
+    }
+    throw new ServiceError(
+      'POST_FAILED',
+      `postExtractedInvoice failed for extracted_invoice ${input.extracted_invoice_id}: ${error.message}`,
+    );
+  }
+
+  return data as string;
 }
