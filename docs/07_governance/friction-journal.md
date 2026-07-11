@@ -19076,3 +19076,71 @@ prod rows (all 4 are `unmatched_router_candidate`), so the repro set is empty
 today — consistent with Issue A's "may not be real." When a row appears, this
 runner (gated `RUN_CLASSIFY_UNKNOWN_REPRO=1` + `ANTHROPIC_API_KEY`) is the
 repro-or-drop tool. Issue B (Tier-C extract array-vs-Zod) is untouched here.
+
+## 2026-07-11 — board #4 slice-2 T2c grounding catch (report-before-wiring gate held; a direct-advance wire would have thrown INVALID_TRANSITION at runtime)
+
+CATCH (grounding-before-building, observation-grain N=+1 of the already-codified
+verify-from-disk / report-before-mainline-touch discipline; NOT a new convention)
+— T2c wires the multi-invoice branch into `ingestDocument.ts` (the LIVE pipeline,
+Stage 2.5, between OCR and classify). Per the handoff's report-before-wiring gate,
+STEP 1 grounded the enqueue-exception transition + state-coupling FIRST-HAND and
+HELD for the operator's go before any mainline byte was touched. The grounding
+caught a design error the convenient wire would have shipped: parking a
+pre-classify case at `needs_review` CANNOT be a direct
+`advanceCaseAutomation('needs_review')`. The automation-owned matrix slice
+(`documentCaseService.ts:273-279`, `AUTOMATION_ADVANCE_EDGES`) DELIBERATELY OMITS
+`classified→{matched,needs_review}` — that segment is Subsystem-2-owned, and the
+function throws INVALID_TRANSITION on a classified-source advance
+(`documentCaseService.ts:381-392`). The legal path is the two-step:
+`advanceCaseAutomation('classified')` (the owned received→extracting→classified
+chain) THEN `enqueueException('multi_invoice')`, whose RPC does the
+`classified→needs_review` hop internally under `UPDATE ... WHERE state IN
+('classified','matched')` + `IF NOT FOUND RAISE check_violation`
+(`supabase/migrations/20240148000000_exception_queue_substrate.sql:402-410`). A
+direct-advance wire would have thrown at runtime; the grounding dissolved it at
+the report gate, before the touch.
+
+HONEST PROVENANCE (the instructive half) — the error caught was the ADVISOR's OWN
+lean: a direct `classified→needs_review` advance the advisor had proposed two
+turns before STEP 1. The transition-matrix grounding is what corrected it — not a
+builder error the verifier caught, but the reverse. That is the lesson worth
+banking: the report-before-mainline discipline catches the VERIFIER's errors too,
+not only the builder's, which is exactly why a load-bearing routing claim gets
+grounded first-hand against the bytes rather than inheriting even a trusted peer's
+lean. The handoff had already banked it as precedent ("grounding the transition
+matrix already caught a bug"); this session re-confirmed it first-hand rather than
+inheriting the claim.
+
+BONUS (de-risk, same grounding pass) — reading the insertion neighborhood
+surfaced a structurally-identical SHIPPED precedent: the `documentType==='unknown'`
+short-circuit (just below the new T2c branch in `ingestDocument.ts` — cited by
+symbol because the T2c insertion shifts its line numbers; the `if` sits at `:349`
+as of `d687243f`, was `:223` pre-wire) is the same
+`lookupDocumentCaseId → advanceCaseAutomation('classified') → enqueueException →
+EXCEPTION_ALREADY_OPEN-tolerant catch → return parked_unposted` skeleton. T2c is
+that skeleton + 4 named diffs (fires pre-Stage-3, gated on `looksMultiInvoice`,
+loops `createExtractedInvoice`, degrades by falling through). The risky part — the
+routing-and-park sequence — was a COPY of a proven path, not novel code, which is
+what made the mainline touch low-risk. Same "find the shipped precedent before
+writing new mainline" value the arc keeps rewarding.
+
+NOTE (surface-don't-guess, same arc) — the N=1-within-`{valid:true}` case (trigger
+over-fires on 2 tokens, the AI resolves them to 1 reconciling invoice) was SURFACED
+to the operator as a decision, not silently wired: the handoff pseudocode parked
+ANY `{valid:true}`, but that collided with the schema's "1-element degrades to the
+single path" intent. Operator chose fall-through (the `invoices.length > 1` guard);
+the schema comment (`multiInvoiceExtractionSchema.ts`) was reconciled to
+bidirectionally link the wire, and a discriminating 4th integration test pins it
+(fails under the rejected park-any-valid behavior, and asserts the multi-extract
+call actually fired so it is not a vacuous pass). Same "stop, surface, explain"
+shape as the prediction-grounding convention.
+
+Shipped `d687243f` (local on `feat/board-4-slice-2`, banked for the slice/retro
+push per the push-terminal-close timing rule). 5 files; 4 observable-state
+integration tests; typecheck green; 13/13 (4 T2c + 9 sibling orchestrator, no
+regression); `agent:validate` 26/26 floor. A recorded standing gate rode out with
+it: **T2c must NOT reach prod without T2.5** — `buildReviewPreview`
+(`reviewPreview.ts:266`) Tier-A re-extracts and never reads α, so a multi-invoice
+case in the T2c→T2.5 window renders a misleading merged single card
+(auto-commit-disabled means it can't post, but a human could act on the wrong
+card). Grounded first-hand; recorded in the T2b design §6.1.
