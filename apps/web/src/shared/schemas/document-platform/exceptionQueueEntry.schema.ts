@@ -71,6 +71,12 @@ export const ExceptionReasonSchema = z.enum([
   'invariant_violation',
   'ai_fallback_validation_failed',
   'bundle_partial_commit_reconciliation_pending',
+  // Board #4 (9th value): the accurate reason for a multi-invoice case
+  // routed to needs_review — NOT the misleading 'unmatched_router_candidate'
+  // (a multi-invoice case is N invoices, not unmatched). Layer-1 CHECK
+  // exception_reason_chunk_9_active (migrations 20240182 ADD VALUE +
+  // 20240183 CHECK broaden).
+  'multi_invoice',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 

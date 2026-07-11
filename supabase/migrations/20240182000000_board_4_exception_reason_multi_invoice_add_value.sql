@@ -1,0 +1,25 @@
+-- ============================================================
+-- Board #4 slice-2 — exception_reason ENUM ADD VALUE 'multi_invoice'
+-- ============================================================
+-- Board #4 (multi-invoice modeling): a genuine multi-invoice document
+-- (one PDF, N invoices) routed to needs_review must carry an ACCURATE
+-- exception reason in the case's durable audit / exception history —
+-- 'multi_invoice', NOT the misleading 'unmatched_router_candidate' (a
+-- multi-invoice case is not unmatched; it is N invoices). This keeps a
+-- multi-invoice case a first-class, correctly-described entity in the
+-- record — the provenance story the α-entity arc protects. Consumed by
+-- the board #4 T2c thin branch (multi-invoice split → enqueue under this
+-- reason → needs_review).
+--
+-- SPLIT per the Postgres ALTER TYPE ADD VALUE same-transaction restriction
+-- (a CHECK cannot reference the new value in the same transaction; the
+-- 20240160 / 20240161 precedent split them for exactly this reason). This
+-- migration ADDs the value ONLY; the Layer-1 CHECK broaden
+-- (exception_reason_chunk_8_active → chunk_9_active) lands in the NEXT
+-- migration (20240183, a separate transaction), which references the value
+-- safely because this transaction has committed before it runs.
+--
+-- ADR-0010 admit framework + ADR-0022 additive provenance-preserving.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'multi_invoice';

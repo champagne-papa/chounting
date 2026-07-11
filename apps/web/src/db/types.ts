@@ -4061,6 +4061,7 @@ export type Database = {
         | "ai_fallback_validation_failed"
         | "bundle_partial_commit_reconciliation_pending"
         | "provider_unavailable"
+        | "multi_invoice"
       exception_status: "open" | "resolved" | "cancelled"
       extracted_invoice_post_status: "pending" | "posted" | "unrepairable"
       ingest_channel:
@@ -4513,6 +4514,7 @@ export const Constants = {
         "ai_fallback_validation_failed",
         "bundle_partial_commit_reconciliation_pending",
         "provider_unavailable",
+        "multi_invoice",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       extracted_invoice_post_status: ["pending", "posted", "unrepairable"],

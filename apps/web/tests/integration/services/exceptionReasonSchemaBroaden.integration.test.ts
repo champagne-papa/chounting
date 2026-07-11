@@ -65,7 +65,7 @@ describe('exception_reason chunk 7 broaden — Layer 1 DB CHECK (Axes 2 + 4)', (
     await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
   });
 
-  it('admits bundle_partial_commit_reconciliation_pending at chunk_8_active CHECK (direct INSERT)', async () => {
+  it('admits bundle_partial_commit_reconciliation_pending at chunk_9_active CHECK (direct INSERT)', async () => {
     const caseId = await buildClassifiedCase(SEED.ORG_HOLDING, ctx);
     const { error } = await db.from('exception_queue_entries').insert({
       org_id: SEED.ORG_HOLDING,
@@ -88,5 +88,34 @@ describe('exception_reason chunk 7 broaden — Layer 1 DB CHECK (Axes 2 + 4)', (
     });
     expect(error).not.toBeNull();
     expect(error!.message).toMatch(/exception_reason_chunk_\d+_active/);
+  });
+});
+
+// Board #4 — multi_invoice broaden (migrations 20240182 ADD VALUE +
+// 20240183 CHECK chunk_8_active → chunk_9_active). Symmetric defense-in-depth
+// mirroring the chunk-7 broaden: Layer 2 (Zod) + Layer 1 (DB CHECK) admit the
+// new value; the reject path is covered by the chunk_N regex test above.
+describe('exception_reason board #4 broaden — multi_invoice (chunk_9_active)', () => {
+  const db = adminClient();
+  const ctx: ServiceContext = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+
+  afterAll(async () => {
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('admits multi_invoice at Layer 2 (Zod ExceptionReasonSchema)', () => {
+    expect(ExceptionReasonSchema.parse('multi_invoice')).toBe('multi_invoice');
+  });
+
+  it('admits multi_invoice at Layer 1 chunk_9_active CHECK (direct INSERT)', async () => {
+    const caseId = await buildClassifiedCase(SEED.ORG_HOLDING, ctx);
+    const { error } = await db.from('exception_queue_entries').insert({
+      org_id: SEED.ORG_HOLDING,
+      document_case_id: caseId,
+      exception_reason: 'multi_invoice',
+      trace_id: ctx.trace_id,
+      created_by: ctx.caller.user_id,
+    });
+    expect(error).toBeNull();
   });
 });
