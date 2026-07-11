@@ -155,8 +155,12 @@ invoice fails the sum and degrades. The gate is the primary confidence signal;
   multi-invoice trigger (D-1): call T2b; on success loop `createExtractedInvoice`
   (T2a) per returned invoice → N pending α; on degrade → N=1 existing path. **No
   per-region classify/extract loop; the single-invoice mainline is untouched.**
-- **Unchanged:** T2.5 (review reads α → N cards + α-absent fallback), T3 (post
-  loop), T4 (aggregate marking), T5/T6, T7.
+- **Unchanged (scope-level):** T2.5 (review reads α → N cards + α-absent fallback),
+  T3 (post loop), T4 (aggregate marking), T5/T6, T7. **Caveat (2026-07-11):** the
+  *scope* of T2.5 is unchanged, but this reversal changed the **character** of its
+  α-absent fallback — it is now the **permanent** single-invoice path (single-invoice
+  writes no α), not the temporary drain the middle-design §3 framed. See §6.2 and
+  the middle-design §3 supersession (Reading A ratified).
 
 ### 6.1 T2c SHIPPED (this session) + HARD DEPLOY GATE — T2c must NOT reach prod without T2.5
 
@@ -187,6 +191,37 @@ split degrades to the single path rather than mis-posting) rests PARTLY on the
 Wave -1 auto-commit being DISABLED. The wiring parks; it does not itself assert
 auto-commit is off. This guarantee MUST be re-verified when governed auto-commit
 returns post-V1.
+
+### 6.2 T2.5 SHIPPED (Reading A) — the deploy gate is now satisfiable
+
+Built 2026-07-11 under **Reading A** (ratified by Phil; see the middle-design §3
+supersession). `buildReviewPreview` now reads the case's α rows and, **when α are
+present (multi-invoice case)**, builds **N cards** — one per α, from
+`α.extracted_fields` (the verbatim pipeline extraction — no re-extraction) + a pure
+per-α `matchVendor` + `buildProposal`. **When α are absent** (single-invoice — the
+majority, which write no α — and any pre-T2c case), it uses the existing Tier-A
+rebuild: the **permanent** α-absent fallback (§6.2 caveat above), byte-for-byte the
+prior behavior.
+
+The N-card case is **not postable via the single-bill approve-post path**:
+case-level `postable=false` with reason `multi_invoice_post_deferred` (per-invoice
+posting is **T3**'s N-bill loop). So T2.5 closes the gate on *both* halves the §6.1
+gate named — the human sees N honest cards **and** cannot approve-post the wrong
+single bill. (§6.1's `reviewPreview.ts:266-267`/`:315` line refs describe the
+**pre-T2.5** code; the Tier-A rebuild still exists as the fallback but at shifted
+lines.)
+
+Sites touched: `reviewPreviewReadService.ts` (the first α read — `ORDER BY ordinal`,
+org-safe via the verified parent case), `reviewPreview.ts` (the N-card branch +
+`ReviewInvoiceCard` + the `invoices` field + `multi_invoice_post_deferred` reason),
+`ReviewCaseDetailView.tsx` (the N-card render). Inbox stays case-grained (the light
+"N invoices" badge is optional and deferred — not required to close the gate).
+Observable-state tests in `reviewPreviewMultiInvoice.integration.test.ts`.
+
+**Deploy note:** with T2.5 shipped, the §6.1 HARD DEPLOY GATE is *satisfiable* —
+T2c+T2.5 may deploy together. (T3 still owes the N-bill post loop; until then a
+multi-invoice case is review-visible as N cards but parks unposted, which is the
+correct interim.)
 
 ## 7. Impl-onset items (confirm first-hand before building)
 

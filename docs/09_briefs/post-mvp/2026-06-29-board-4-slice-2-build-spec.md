@@ -157,12 +157,16 @@ committed-marking + per-bill evidence-object persistence; the atomicity posture
 > **three** N-sites: per-region pipeline (T2), `buildReviewPreview` reads α (NEW
 > **T2.5**), approve-post loops α (T3). Recorded additively, not rewritten. Full
 > design + the revised task order: **`2026-07-01-board-4-slice-2-middle-design.md`**.
-> Also recorded there: **one-path (α always) LOCKED (Phil 2026-07-01)**; the inbox
-> stays **case-grained** (N cards are a detail-level concern); the one-path cutover
-> needs an **α-absent re-extract fallback** for in-flight review-queue cases
-> (deploy-safety, grounded — prod has `needs_review` cases with no α); **T1 stands
-> unchanged** (no vendor column); per-α Stage-6 candidate matching **deferred
-> post-v1**. The §1.5.2/§1.5.3 idempotency + atomicity locks below are **unaffected**
+> Also recorded there: **one-path (α always) LOCKED (Phil 2026-07-01)**
+> — **⚠ SUPERSEDED 2026-07-11 → TWO paths (α only for multi-invoice)**; the T2b
+> reversal (2026-07-10) gated segmentation behind `looksMultiInvoice`, so
+> single-invoice writes no α (Reading A ratified; see middle-design §3
+> supersession). The **α-absent re-extract fallback below is therefore PERMANENT**
+> (the single-invoice path), **not** a "cutover" that drains — the "in-flight
+> review-queue" framing is superseded; the fallback is the standing single-invoice
+> path. The inbox stays **case-grained** (N cards are a detail-level concern);
+> **T1 stands unchanged** (no vendor column); per-α Stage-6 candidate matching
+> **deferred post-v1**. The §1.5.2/§1.5.3 idempotency + atomicity locks below are **unaffected**
 > — they govern the post loop, which still holds.
 >
 > Drafted against N-1. Two postures **LOCKED by Phil (2026-07-01)**, each resting

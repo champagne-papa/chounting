@@ -57,6 +57,31 @@ extraction) eliminates that. So reversing rebuild-not-persist is a single-invoic
 
 ## 3. DECISION — one path (α always), not two — LOCKED (Phil, 2026-07-01)
 
+> **⚠ SUPERSEDED 2026-07-11 → TWO paths (α only for multi-invoice). The premise
+> below is dead in the shipped pipeline.** This decision rests on "Segmentation
+> always runs (you can't know N before segmenting)." The **T2b reversal
+> (2026-07-10, `t2b-design.md §3`, accepted by Phil)** falsified that premise:
+> segmentation is now AI-multi-extract **gated behind `looksMultiInvoice`** — a
+> cheap pre-segmentation read of "probably N=1" — so the single-invoice path is
+> **untouched and writes NO α** (grounded first-hand at `ingestDocument.ts` Stage
+> 2.5: the sole α write is triple-nested inside `looksMultiInvoice` **and**
+> `invoices.length > 1`). Consequences that were **recorded on the segmentation
+> axis but never propagated here** (the doc captured half of one decision):
+> - **one path → TWO paths.** α is written only for reconciled N≥2 splits; every
+>   single-invoice doc (the majority) writes no α. The "two paths" this section
+>   explicitly *rejected* is the shipped reality.
+> - **the α-absent fallback is PERMANENT, not a temporary drain.** It is the
+>   single-invoice path, not a cutover queue that "retires once the pre-board-#4
+>   review queue drains." The drain-and-retire framing below is void.
+> - **Reading A ratified (Phil 2026-07-11):** T2.5 is additive — `buildReviewPreview`
+>   reads α → N cards *when α present*, else today's Tier-A rebuild (permanent).
+>   Single-invoice review is byte-for-byte untouched; the single-invoice
+>   Tier-C→`NOT_POSTABLE` residual the "α always" bonus would have closed survives
+>   as a **named post-v1 carry-forward**.
+>
+> The original §3 text is preserved below (provenance, not rewritten). It is the
+> N-1-era reasoning; read it as history, not as the governing decision.
+
 **Segmentation always runs** (you can't know N before segmenting), so the pipeline
 **always writes α** (N≥1). Therefore review + approve-post **always read α** — one
 code path, N=1 is just one α.

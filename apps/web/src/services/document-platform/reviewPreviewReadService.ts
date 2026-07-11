@@ -42,6 +42,11 @@ export interface ReviewPreviewRows {
   /** Posted-JE probe by the per-child dedup triples
    *  (`${caseId}:bill` / `${caseId}:payment`) — multi-JE-aware. */
   jeRows: Array<Record<string, unknown>>;
+  /** Board #4 T2.5 — the case's persisted per-invoice α rows
+   *  (`extracted_invoices`), ordered by ordinal. Present only for
+   *  multi-invoice cases (T2c writes N≥2 α; single-invoice writes none).
+   *  Empty array drives the α-absent Tier-A re-extract fallback. */
+  alphaRows: Array<Record<string, unknown>>;
 }
 
 export async function loadReviewPreviewRows(
@@ -95,6 +100,26 @@ export async function loadReviewPreviewRows(
     throw new ServiceError(
       'READ_FAILED',
       `[reviewPreview] candidates read failed: ${candErr.message}`,
+    );
+  }
+
+  // Board #4 T2.5 — the case's persisted per-invoice α rows, ordered by the
+  // natural key (ordinal). Present only for multi-invoice cases (T2c writes
+  // N≥2 α; single-invoice writes none). extracted_invoices has NO own org_id
+  // column (RLS through-parent document_cases.org_id); org-safe here because
+  // document_case_id derives from the org-verified caseRow above — the IDOR
+  // root sequencing is preserved. Empty → the α-absent Tier-A fallback.
+  const { data: alphaRows, error: alphaErr } = await db
+    .from('extracted_invoices')
+    .select(
+      'id, ordinal, document_type, extracted_fields, region_ref, post_status, posted_bill_id',
+    )
+    .eq('document_case_id', caseRow.id)
+    .order('ordinal', { ascending: true });
+  if (alphaErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `[reviewPreview] extracted_invoices read failed: ${alphaErr.message}`,
     );
   }
 
@@ -172,5 +197,6 @@ export async function loadReviewPreviewRows(
     sourceDocRow,
     artifactRow,
     jeRows: jeRows ?? [],
+    alphaRows: alphaRows ?? [],
   };
 }

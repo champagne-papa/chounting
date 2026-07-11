@@ -62,6 +62,19 @@ interface PreviewPayload {
   vendor_match: { vendor_id: string | null; match_type: string } | null;
   postable: boolean;
   not_postable_reason: string | null;
+  // Board #4 T2.5 — per-invoice α cards for a multi-invoice case; null for
+  // single-invoice / α-absent cases (which render the single card above).
+  invoices: Array<{
+    ordinal: number;
+    document_type: string;
+    extracted_fields: Record<string, unknown>;
+    vendor_match: { vendor_id: string | null; match_type: string } | null;
+    proposal: { kind: string } | null;
+    postable: boolean;
+    not_postable_reason: string | null;
+    post_status: string;
+    posted_bill_id: string | null;
+  }> | null;
   posted_journal_entries: Array<{
     journal_entry_id: string;
     entry_number: number;
@@ -248,33 +261,95 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         </div>
       ) : null}
 
-      <h3 className="mt-4 font-medium">
-        Rebuilt proposal{' '}
-        <span className="text-sm font-normal text-neutral-500">
-          {preview.proposal ? preview.proposal.kind : 'none'}
-        </span>
-      </h3>
-      <table className="mt-2 w-full text-sm">
-        <tbody>
-          {fields.length === 0 ? (
-            <tr>
-              <td className="py-1 text-neutral-500">No extracted fields</td>
-            </tr>
-          ) : (
-            fields.map(([k, v]) => (
-              <tr key={k} className="border-t">
-                <td className="py-1 pr-4 font-mono text-neutral-600">{k}</td>
-                <td className="py-1">{String(v)}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-      {preview.vendor_match ? (
-        <p className="mt-1 text-sm text-neutral-600">
-          Vendor match: {preview.vendor_match.match_type}
-        </p>
-      ) : null}
+      {preview.invoices ? (
+        // Board #4 T2.5 — multi-invoice case: one card per α row. Per-invoice
+        // posting is deferred to T3 (the case-level Approve & Post is gated
+        // off via preview.postable below); these cards are the honest N-card
+        // view that replaces the pre-T2.5 misleading single merged card.
+        <>
+          <h3 className="mt-4 font-medium">
+            Invoices{' '}
+            <span
+              data-testid="invoice-count"
+              className="text-sm font-normal text-neutral-500"
+            >
+              ({preview.invoices.length} — per-invoice posting available after T3)
+            </span>
+          </h3>
+          {preview.invoices.map((inv) => (
+            <div
+              key={inv.ordinal}
+              data-testid="invoice-card"
+              className="mt-3 rounded border border-neutral-200 p-3"
+            >
+              <h4 className="font-medium">
+                Invoice {inv.ordinal}{' '}
+                <span className="text-sm font-normal text-neutral-500">
+                  {inv.proposal ? inv.proposal.kind : 'none'} ·{' '}
+                  {inv.postable
+                    ? 'postable'
+                    : `not postable (${inv.not_postable_reason ?? '—'})`}
+                </span>
+              </h4>
+              <table className="mt-2 w-full text-sm">
+                <tbody>
+                  {Object.entries(inv.extracted_fields).length === 0 ? (
+                    <tr>
+                      <td className="py-1 text-neutral-500">
+                        No extracted fields
+                      </td>
+                    </tr>
+                  ) : (
+                    Object.entries(inv.extracted_fields).map(([k, v]) => (
+                      <tr key={k} className="border-t">
+                        <td className="py-1 pr-4 font-mono text-neutral-600">
+                          {k}
+                        </td>
+                        <td className="py-1">{String(v)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {inv.vendor_match ? (
+                <p className="mt-1 text-sm text-neutral-600">
+                  Vendor match: {inv.vendor_match.match_type}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          <h3 className="mt-4 font-medium">
+            Rebuilt proposal{' '}
+            <span className="text-sm font-normal text-neutral-500">
+              {preview.proposal ? preview.proposal.kind : 'none'}
+            </span>
+          </h3>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {fields.length === 0 ? (
+                <tr>
+                  <td className="py-1 text-neutral-500">No extracted fields</td>
+                </tr>
+              ) : (
+                fields.map(([k, v]) => (
+                  <tr key={k} className="border-t">
+                    <td className="py-1 pr-4 font-mono text-neutral-600">{k}</td>
+                    <td className="py-1">{String(v)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          {preview.vendor_match ? (
+            <p className="mt-1 text-sm text-neutral-600">
+              Vendor match: {preview.vendor_match.match_type}
+            </p>
+          ) : null}
+        </>
+      )}
 
       {preview.candidates.length > 0 ? (
         <>
