@@ -223,6 +223,43 @@ T2c+T2.5 may deploy together. (T3 still owes the N-bill post loop; until then a
 multi-invoice case is review-visible as N cards but parks unposted, which is the
 correct interim.)
 
+### 6.3 T3 SHIPPED (3a substrate + 3b route fan) — multi-invoice cases now POST
+
+Built 2026-07-11 in two commits (the split: substrate proven in isolation first).
+The approve-post route now fans a multi-invoice case's N α through the SAME
+`buildPostBillInput → billService.post` the single path uses:
+
+- **3a substrate (`post_extracted_invoice_with_audit` RPC + `postExtractedInvoice`):**
+  the first α UPDATE path — sets `posted_bill_id` + `post_status='posted'` +
+  `idempotency_key` write-once, audit-paired. Verified in isolation (both
+  write-once guards + recovery-safe same-bill no-op).
+- **3b route N-branch:** per α, re-keyed `${caseId}:bill:${vendor_invoice_number
+  -if-unique-in-case else ordinal}` (§1.5.2), **per-invoice-independent**
+  (§1.5.3), dup-catch recovery per α, evidence-persist-before-α-marking, writes
+  `α.posted_bill_id`.
+- **Coupling 1 (committed re-grain, T4-for-the-multi-branch folded in):** the
+  case advances `committed` IFF every α carries `posted_bill_id`, else holds at
+  `approved` — operator-visible, resumable (re-approval skips already-posted α,
+  no double-write, no write-once trip; proven in
+  `reviewApprovePostMultiInvoice` test 2).
+- **Coupling 2 (probe re-key):** the posted-JE probe in `reviewPreviewReadService`
+  moved from exact-match `.in([...])` to prefix `${caseId}:%`, so the
+  per-invoice keys are visible at read-back (write key + read probe move
+  together).
+- **Coupling 3 (key persistence, T5 folded in):** the resolved per-invoice key
+  is persisted write-once on the α by 3a — never recomputed.
+
+**Postability flip:** the T2.5 `multi_invoice_post_deferred` case-level gate is
+SUPERSEDED — a multi-invoice case is now postable if any α is per-card postable
+(the case-level Approve & Post drives the loop). The value is retained in the
+type for historical payloads but no longer produced.
+
+**Still deferred:** T4 aggregate committed-marking as its own concern is
+subsumed for the multi branch (the single path keeps its unconditional mark); T5
+persisted key is subsumed; T6 (G3 stuck-invoice affordance — an α that stays
+`unposted` because its fields/vendor never resolve); T7 tests. The Tier-C
+single-invoice residual (the named Reading-A cost) is unchanged.
+
 ## 7. Impl-onset items (confirm first-hand before building)
 
 1. The exact multi-invoice trigger signal (D-1) — where the current array/Zod-reject

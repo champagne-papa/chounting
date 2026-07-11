@@ -155,6 +155,7 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         error?: string;
         reason?: string;
         status?: string;
+        case_state?: string;
       };
       if (!res.ok) {
         setState({
@@ -166,7 +167,16 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         });
         return;
       }
-      setState({ kind: 'done', message: doneMessage });
+      // Board #4 T3 (3b): a multi-invoice approve-post can partially post
+      // (case holds at 'approved' with some α still unposted) — derive an
+      // HONEST message from the response rather than always claiming committed.
+      const doneMsg =
+        segment === 'approve-post' && resBody.case_state
+          ? resBody.status === 'partially_posted'
+            ? 'Some invoices posted; the case is held at approved — the rest still need attention (resolve or re-approve).'
+            : `Posted and committed (${resBody.status ?? 'posted'}).`
+          : doneMessage;
+      setState({ kind: 'done', message: doneMsg });
     } catch {
       setState({ kind: 'error', message: 'network error' });
     }

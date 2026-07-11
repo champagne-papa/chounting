@@ -70,6 +70,9 @@ export interface ReviewPreviewCaseSummary {
  *  per-invoice ADVISORY only — the case-level Approve & Post is deferred to
  *  T3 (the N-bill loop); see ReviewPreview.postable. */
 export interface ReviewInvoiceCard {
+  /** The α (extracted_invoices) row id — the T3 approve-post loop's write
+   *  target for postExtractedInvoice (posted_bill_id/post_status/key). */
+  id: string;
   ordinal: number;
   document_type: string;
   extracted_fields: Record<string, unknown>;
@@ -115,10 +118,11 @@ export interface ReviewPreview {
     | 'bundle_requires_manual_entry'
     | 'no_proposal'
     | 'missing_required_fields'
-    // Board #4 T2.5 — case-level: a multi-invoice case (N≥2 α rows) is not
-    // postable via the single-bill approve-post path; per-invoice posting is
-    // deferred to T3 (the N-bill loop). The N cards render (with per-card
-    // advisory postability) but the case-level Approve & Post is gated off.
+    // Board #4 T2.5 — case-level multi-invoice deferral. SUPERSEDED 2026-07-11
+    // by T3 (3b): the N-bill loop now exists, so a multi-invoice case is
+    // postable-via-loop and this value is NO LONGER PRODUCED (the multi branch
+    // aggregates per-card postability). Kept in the type for historical
+    // audit_log/response payloads; safe to retire once none remain.
     | 'multi_invoice_post_deferred'
     | null;
   /** Board #4 T2.5 — the per-invoice α cards for a multi-invoice case (N≥2 α
@@ -331,6 +335,7 @@ export async function buildReviewPreview(
           : null;
       const aVerdict = postability(aProposal, aFields, aVendorMatch);
       invoices.push({
+        id: a.id as string,
         ordinal: a.ordinal as number,
         document_type: aDocType,
         extracted_fields: aFields,
@@ -350,16 +355,26 @@ export async function buildReviewPreview(
       },
       'reviewPreview — multi-invoice α read (N cards)',
     );
+    // Board #4 T3 (3b): the case-level Approve & Post now DRIVES the N-branch
+    // post loop (was T2.5's deferred gate, multi_invoice_post_deferred). The
+    // case is postable if any α can post (per-card postable — required fields +
+    // a vendor match) OR any α is already posted while the case has not reached
+    // committed (crash-recovery of the aggregate committed marking). The route
+    // posts the postable α per-invoice-independently and advances committed iff
+    // all α carry posted_bill_id.
+    const anyPostable = invoices.some(
+      (i) => i.postable || i.post_status === 'posted',
+    );
     return {
       ...base,
       invoices,
       // Case-level single-card fields are inert for a multi-invoice case — the
-      // N cards live in `invoices`; posting is deferred to T3.
+      // N cards live in `invoices`.
       proposal: null,
       extracted_fields: {},
       vendor_match: null,
-      postable: false,
-      not_postable_reason: 'multi_invoice_post_deferred',
+      postable: anyPostable,
+      not_postable_reason: anyPostable ? null : 'missing_required_fields',
     };
   }
 

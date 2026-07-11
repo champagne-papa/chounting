@@ -157,7 +157,7 @@ async function seedTierAArtifact(sourceDocId: string): Promise<void> {
 describe('Board #4 slice-2 T2.5 — buildReviewPreview reads α → N cards (Reading A)', () => {
   const orgId = SEED.ORG_HOLDING;
 
-  it('α present (N=2): returns N per-invoice cards (ordinal 1..N, per-α fields, money-normalized); case-level posting deferred to T3', async () => {
+  it('α present (N=2): returns N per-invoice cards (ordinal 1..N, per-α fields, money-normalized); no-vendor case is not postable (missing_required_fields)', async () => {
     const ctx = makeTestContext({ org_ids: [orgId] });
     const { sourceDocId, caseId } = await seedCase(orgId, 'vendor_invoice');
 
@@ -222,9 +222,14 @@ describe('Board #4 slice-2 T2.5 — buildReviewPreview reads α → N cards (Rea
     expect(preview.invoices![0].extracted_fields.amount).toBe('100.00');
     expect(preview.invoices![1].extracted_fields.amount).toBe('50.00');
 
-    // Case-level single-card path is gated off — posting is T3's N-bill loop.
+    // Case-level: no vendor seeded → no α is per-card postable → the case is
+    // not postable, reason missing_required_fields. (T3 3b aggregates per-card
+    // postability; the T2.5 multi_invoice_post_deferred gate is superseded now
+    // that the N-bill loop exists — a matched-vendor multi case IS postable,
+    // proven in reviewApprovePostMultiInvoice.) proposal stays null — the N
+    // cards live in `invoices`.
     expect(preview.postable).toBe(false);
-    expect(preview.not_postable_reason).toBe('multi_invoice_post_deferred');
+    expect(preview.not_postable_reason).toBe('missing_required_fields');
     expect(preview.proposal).toBeNull();
   });
 

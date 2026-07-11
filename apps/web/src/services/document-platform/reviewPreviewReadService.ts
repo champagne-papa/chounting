@@ -172,16 +172,20 @@ export async function loadReviewPreviewRows(
     artifactRow = art ?? null;
   }
 
-  // Posted-JE probe by the PER-CHILD dedup triples (T6 ruling: uniform
-  // suffixing). Exact-match .in() on the known child keys — multi-JE-
-  // aware so a two-child bundle's recovery lookup sees both rows.
-  const childKeys = [`${caseRow.id}:bill`, `${caseRow.id}:payment`];
+  // Posted-JE probe. Board #4 T3: PREFIX-match the case's child-key namespace
+  // `${caseId}:%` instead of exact-match on the two single-invoice keys. It
+  // catches the single-invoice keys (`${caseId}:bill` / `${caseId}:payment`)
+  // AND the T3 per-invoice keys (`${caseId}:bill:${suffix}`), so a
+  // multi-invoice case's recovery lookup + operator-visible JE list see all N
+  // children — the exact-match .in() was blind to the per-ordinal suffix (the
+  // read-side half of the re-key; write key + read probe move together). The
+  // caseId is a uuid, so the `${caseId}:` prefix is collision-safe across cases.
   const { data: jeRows, error: jeErr } = await db
     .from('journal_entries')
     .select('journal_entry_id, entry_number, source_external_id')
     .eq('org_id', caseRow.org_id)
     .eq('source_system', 'manual')
-    .in('source_external_id', childKeys);
+    .like('source_external_id', `${caseRow.id}:%`);
   if (jeErr) {
     throw new ServiceError(
       'READ_FAILED',
