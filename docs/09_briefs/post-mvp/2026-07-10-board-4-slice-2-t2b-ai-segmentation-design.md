@@ -158,6 +158,36 @@ invoice fails the sum and degrades. The gate is the primary confidence signal;
 - **Unchanged:** T2.5 (review reads α → N cards + α-absent fallback), T3 (post
   loop), T4 (aggregate marking), T5/T6, T7.
 
+### 6.1 T2c SHIPPED (this session) + HARD DEPLOY GATE — T2c must NOT reach prod without T2.5
+
+T2c is wired into `ingestDocument.ts` (Stage 2.5, between OCR and classify) and is
+locally green: 3 observable-state integration tests
+(`multiInvoicePipelineWiring.integration.test.ts` — valid N-split, reconciliation-
+degrade clean fall-through, single-invoice no-regression), typecheck clean, sibling
+orchestrator test 9/9 unregressed. It is **local-testable now** but carries a
+deploy-sequencing gate.
+
+**GATE (with teeth): T2c must NOT be deployed to prod ahead of T2.5.** Grounded
+first-hand at `reviewPreview.ts:266-267` + `:315`: `buildReviewPreview` rebuilds the
+review card by **Stage-4 Tier-A re-extraction over the persisted artifact**
+(`extractOcrText(artifact)` → Tier A) and **never reads the α
+(`extracted_invoices`) rows**. So in the T2c→T2.5 window a multi-invoice case — now
+parked at `needs_review` with N α rows written — would, when a human opens it in
+review, render a SINGLE Tier-A card re-extracted over the *whole* multi-invoice OCR
+text: a merged/garbled card a human could act on (approve-post the wrong single
+bill). That is worse than pre-T2c (the doc would have flowed the single path). T2.5
+(review reads α → N cards; α-absent Tier-A fallback for pre-T2c cases) closes it.
+
+Not a build blocker — a deploy-order constraint. Until T2.5 ships, T2c stays behind
+the deploy line (feature-flag or unmerged-to-prod), even though it is correct and
+tested locally.
+
+**Safety re-verify note:** the T2c false-negative guarantee (a missed/garbled
+split degrades to the single path rather than mis-posting) rests PARTLY on the
+Wave -1 auto-commit being DISABLED. The wiring parks; it does not itself assert
+auto-commit is off. This guarantee MUST be re-verified when governed auto-commit
+returns post-V1.
+
 ## 7. Impl-onset items (confirm first-hand before building)
 
 1. The exact multi-invoice trigger signal (D-1) — where the current array/Zod-reject

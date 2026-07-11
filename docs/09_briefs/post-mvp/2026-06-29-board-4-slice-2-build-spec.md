@@ -115,7 +115,7 @@ extraction + the bill it becomes. Follows the Phase-2 chunk substrate pattern
 | `document_type` | document_type NOT NULL | **per-invoice** type — subsumes the §10.2 single-`document_type` gap for the multi-invoice case |
 | `extracted_fields` | jsonb NOT NULL | the per-invoice `VendorInvoiceExtraction` payload |
 | `extraction_run_id` | uuid NULL → `extraction_runs` | provenance to the OCR/extraction pass (N-1) |
-| `region_ref` | jsonb NULL | the segment's bbox/line-range (N-1 provenance; NULL under N-2) |
+| `region_ref` | jsonb NULL | AI soft-locator `{kind:'ai_soft', source_locator}` under N-2 — `source_locator` is the invoice-number string / short line span the AI drew this invoice from (was "N-1 bbox/line-range; NULL under N-2" pre-reversal; superseded 2026-07-10 by the N-2 reversal + T2c wire) |
 | `posted_bill_id` | uuid NULL → `bills` | the bill this invoice became (NULL pre-post) — the auditable case↔bill link γ lacked |
 | `trace_id`, `created_by`, `created_at` | | per the chunk pattern |
 

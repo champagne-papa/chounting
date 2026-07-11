@@ -29,8 +29,10 @@ export const MultiInvoiceItemSchema = VendorInvoiceExtractionSchema.extend({
 export type MultiInvoiceItem = z.infer<typeof MultiInvoiceItemSchema>;
 
 export const MultiInvoiceExtractionSchema = z.object({
-  // At least one invoice; a 1-element array is the N=1 case (degrades to the
-  // single-invoice path downstream).
+  // At least one invoice. A 1-element array is the N=1 case: the T2c wire treats
+  // it as the trigger over-firing and falls through to the single-invoice path
+  // (ingestDocument.ts Stage 2.5 parks only invoices.length > 1; the reconciled
+  // single extraction is discarded and re-derived by the single path).
   invoices: z.array(MultiInvoiceItemSchema).min(1),
   // The document's stated total — the reconciliation-gate reference. Σ of the
   // invoices' amounts must equal this (within a cent) or the split is not

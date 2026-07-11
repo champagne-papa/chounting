@@ -47,7 +47,12 @@ import { dedupByHash } from './stages/dedupByHash';
 import { byteFetch } from './stages/byteFetch';
 import { runOCR } from './stages/runOCR';
 import { classifyDocumentType } from './classifier';
+import { extractOcrText } from './classifier/extractOcrText';
 import { extractFields } from './extractFields';
+import {
+  looksMultiInvoice,
+  runAiMultiExtract,
+} from './multiInvoiceExtractor';
 import { buildProposal } from './stages/proposalBuilder';
 import { shadowEvaluateRules } from './stages/shadowRuleEvaluation';
 import { recordAutonomyGateAttempt } from './stages/recordAutonomyGate';
@@ -65,6 +70,7 @@ import {
   lookupPaymentCommitDefaults,
 } from '@/services/document-platform/commitDefaultsReadService';
 import { lookupDocumentCaseId } from '@/services/document-platform/extractionReadService';
+import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
 import { resolveRuleDefaultAccount } from '@/services/rules/ruleOutcomeReadService';
 import { loggerWith } from '@/shared/logger/pino';
 import { withInvariants } from '@/services/middleware/withInvariants';
@@ -179,6 +185,126 @@ export async function ingestDocument(
     };
   }
   pipeline_trace.push(ocrResult.trace_record);
+
+  // Stage 2.5 — multi-invoice segmentation (board #4 slice-2 T2c). Between OCR
+  // and classify: if the OCR text looks like it holds more than one invoice
+  // (permissive over-detect per T2b D-1 — a false positive degrades safely to
+  // the single path), attempt an AI multi-extract. On a clean, arithmetically
+  // reconciled split of TWO OR MORE invoices ({valid:true}, N≥2), write one
+  // PENDING extracted_invoices (α) row per invoice and PARK the case at
+  // needs_review (reason 'multi_invoice') for human review; Stages 3-7 are
+  // skipped (no classify/extract/match/propose on a multi-invoice document —
+  // per-invoice bills are a later task, T3).
+  //
+  // FALL THROUGH to the existing single-invoice path (Stages 3-7) UNTOUCHED on
+  // EITHER a degrade ({valid:false} — budget/invocation/parse/Zod/reconciliation)
+  // OR a {valid:true} result the AI resolved to a single invoice (the trigger
+  // over-fired). In both cases nothing is written and the case stays at
+  // 'received' — exactly the state Stage 3 expects on entry. This is the D (N=1
+  // degrade) fallback, and the false-negative safety: a missed/garbled split
+  // degrades to the normal path rather than mis-posting. That last guarantee
+  // rests PARTLY on the Wave -1 auto-commit being DISABLED (the reconciliation
+  // gate is the model-independent half; the disabled commit is the bleed-stop).
+  // This branch parks; it does not itself assert auto-commit is off — the
+  // guarantee MUST be re-verified when governed auto-commit returns post-V1.
+  //
+  // Routing (grounded STEP 1): the case is at 'received' here. enqueueException's
+  // RPC requires the case at classified|matched, and advanceCaseAutomation
+  // REFUSES a direct classified→needs_review advance (that segment is
+  // Subsystem-2-owned). So parking is the two-step
+  // advanceCaseAutomation('classified') → enqueueException, identical to the
+  // shipped documentType==='unknown' short-circuit below.
+  const ocrText = extractOcrText(ocrResult.artifact);
+  if (looksMultiInvoice(ocrText)) {
+    const multi = await runAiMultiExtract(
+      {
+        ocrText,
+        source_document_id: input.source_document_id,
+        trace_id: input.trace_id,
+      },
+      ctx,
+    );
+    // N≥2 only. A reconciling 1-invoice result means the trigger over-fired
+    // (looksMultiInvoice needs 2+ tokens, but the AI resolved them to a single
+    // invoice) — that is NOT a multi-invoice case, so it falls through to the
+    // single path rather than parking a lone α under the 'multi_invoice' reason
+    // (audit accuracy) and rather than skipping the richer classify→extract→
+    // match→propose the reviewer benefits from. The reconciled 1-invoice
+    // extraction is intentionally DISCARDED and re-derived by Stage 4 — the
+    // single path is authoritative for single-invoice docs; this drop is
+    // deliberate, not an oversight.
+    if (multi.valid && multi.extraction.invoices.length > 1) {
+      const multiCaseId = await lookupDocumentCaseId(
+        input.org_id,
+        input.source_document_id,
+      );
+      if (multiCaseId) {
+        try {
+          // One PENDING α per invoice, ordinal 1..N over the AI array order,
+          // BEFORE advancing/parking. source_locator is stored twice by design:
+          // region_ref is the typed soft-provenance the review/audit path reads
+          // ({kind:'ai_soft', source_locator}); extracted_fields is the verbatim
+          // AI payload. Do NOT dedupe — the two consumers differ.
+          for (const [i, inv] of multi.extraction.invoices.entries()) {
+            await createExtractedInvoice({
+              document_case_id: multiCaseId,
+              source_document_id: input.source_document_id,
+              ordinal: i + 1,
+              document_type: 'vendor_invoice',
+              extracted_fields: inv,
+              region_ref: {
+                kind: 'ai_soft',
+                source_locator: inv.source_locator,
+              },
+              trace_id: input.trace_id,
+            });
+          }
+          // Two-step park: received→classified (owned automation chain), then
+          // enqueue does the classified→needs_review hop the matrix refuses to
+          // let advanceCaseAutomation do directly.
+          await advanceCaseAutomation(
+            { document_case_id: multiCaseId, target_state: 'classified' },
+            ctx,
+          );
+          await enqueueException(
+            {
+              document_case_id: multiCaseId,
+              trace_id: input.trace_id,
+              exception_reason: 'multi_invoice',
+            },
+            ctx,
+          );
+        } catch (err) {
+          // EXCEPTION_ALREADY_OPEN mirrors the unknown short-circuit's re-run
+          // tolerance (one open exception per case). NOTE: unlike that path, the
+          // α writes above are NOT re-run idempotent — a reprocess with fresh
+          // bytes that dodged Stage-0 dedup would hit the (document_case_id,
+          // ordinal) UNIQUE as POST_FAILED → pipeline_failed here. Identical-byte
+          // re-ingestion short-circuits upstream at Stage 0, so this is off the
+          // normal path (known residual; recorded in the T2c design doc).
+          if (
+            !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+          ) {
+            return {
+              status: 'pipeline_failed',
+              pipeline_trace,
+              proposal_id: null,
+              failure_class: classifyFailure(err),
+            };
+          }
+        }
+      }
+      return {
+        status: 'parked_unposted',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: null,
+      };
+    }
+    // {valid:false} degrade, OR {valid:true} with a single invoice (trigger
+    // over-fire), → fall through to Stage 3 (single path). No α written, case
+    // untouched at 'received'; the single path re-derives the extraction.
+  }
 
   // Stage 3 — classify (active at chunk 7.2 per ADR-0014 §7).
   // Invokes Tier A rule-based classifier, falls through to Tier C
