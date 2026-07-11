@@ -272,10 +272,11 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
       ) : null}
 
       {preview.invoices ? (
-        // Board #4 T2.5 — multi-invoice case: one card per α row. Per-invoice
-        // posting is deferred to T3 (the case-level Approve & Post is gated
-        // off via preview.postable below); these cards are the honest N-card
-        // view that replaces the pre-T2.5 misleading single merged card.
+        // Board #4 T2.5 — multi-invoice case: one card per α row (the honest
+        // N-card view that replaced the pre-T2.5 merged single card). Post-T3
+        // (3b): the case-level Approve & Post below DRIVES the N-bill loop when
+        // any α is postable (preview.postable), so these are no longer
+        // display-only.
         <>
           <h3 className="mt-4 font-medium">
             Invoices{' '}
@@ -283,7 +284,7 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
               data-testid="invoice-count"
               className="text-sm font-normal text-neutral-500"
             >
-              ({preview.invoices.length} — per-invoice posting available after T3)
+              ({preview.invoices.length} invoices — each posts as its own bill on approve)
             </span>
           </h3>
           {preview.invoices.map((inv) => (
