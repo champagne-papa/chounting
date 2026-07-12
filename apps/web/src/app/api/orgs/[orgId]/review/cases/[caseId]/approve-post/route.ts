@@ -438,9 +438,10 @@ async function postMultiInvoiceCase(
       }
     }
 
-    // Persist-before-marking (INV-EVIDENCE-001), then write the α's
-    // posted_bill_id + status + resolved key (3a substrate; write-once — a
-    // same-bill re-post no-ops on recovery).
+    // INV-EVIDENCE-001 — persist-before-marking at the multi-branch (the
+    // SECOND committed-marking site; the single-invoice path holds the first).
+    // Then write the α's posted_bill_id + status + resolved key (3a substrate;
+    // write-once — a same-bill re-post no-ops on recovery).
     await evidenceObjectService.persist(
       { subject_type: 'bill', subject_id: billId, org_id: orgId },
       ctx,
@@ -456,7 +457,10 @@ async function postMultiInvoiceCase(
     posted.push({ ordinal: inv.ordinal, bill_id: billId, recovered });
   }
 
-  // Aggregate committed marking (§1.5.3): committed IFF every α is posted.
+  // INV-WORKFLOW-003 — aggregate committed marking (§1.5.3), safety direction:
+  // advance `committed` ONLY when every α is posted (committed ⇒ all-α-posted);
+  // a partial post holds at `approved`. The reverse is not guaranteed — a crash
+  // here leaves all-posted-but-not-committed until re-approval (see the leaf).
   if (unposted.length === 0) {
     await advanceCaseAutomation(
       { document_case_id: caseId, target_state: 'committed' },
