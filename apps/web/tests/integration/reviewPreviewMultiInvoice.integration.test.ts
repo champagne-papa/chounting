@@ -22,7 +22,11 @@ import crypto from 'crypto';
 import { adminClient, SEED } from '../setup/testDb';
 import { makeTestContext } from '../setup/makeTestContext';
 import { buildReviewPreview } from '@/agent/orchestrator/extraction/reviewPreview';
-import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
+import {
+  createExtractedInvoice,
+  postExtractedInvoice,
+  markExtractedInvoiceUnrepairable,
+} from '@/services/document-platform/extractedInvoiceWriteService';
 
 const db = adminClient();
 
@@ -250,5 +254,119 @@ describe('Board #4 slice-2 T2.5 — buildReviewPreview reads α → N cards (Rea
     // proposal — byte-for-byte the prior single-invoice behavior.
     expect(Object.keys(preview.extracted_fields).length).toBeGreaterThan(0);
     expect(preview.proposal).not.toBeNull();
+  });
+
+  it('T6b-2 guarded anyPostable: [posted, unrepairable] → NOT postable, reason unrepairable_present', async () => {
+    const ctx = makeTestContext({ org_ids: [orgId] });
+    const { sourceDocId, caseId } = await seedCase(orgId, 'vendor_invoice');
+    const vendorId = crypto.randomUUID();
+    const { error: vErr } = await db.from('vendors').insert({
+      vendor_id: vendorId,
+      org_id: orgId,
+      name: `T6b2 Vendor ${crypto.randomUUID().slice(0, 8)}`,
+    });
+    if (vErr) throw new Error(`vendor seed failed: ${vErr.message}`);
+    // α1 → posted (with a bill); α2 → unrepairable.
+    const a1 = await createExtractedInvoice({
+      document_case_id: caseId,
+      source_document_id: sourceDocId,
+      ordinal: 1,
+      document_type: 'vendor_invoice',
+      extracted_fields: { amount: 100, currency: 'CAD', vendor_invoice_number: 'INVP1' },
+      trace_id: ctx.trace_id,
+    });
+    const a2 = await createExtractedInvoice({
+      document_case_id: caseId,
+      source_document_id: sourceDocId,
+      ordinal: 2,
+      document_type: 'vendor_invoice',
+      extracted_fields: { amount: 50, currency: 'CAD', vendor_invoice_number: 'INVU2' },
+      trace_id: ctx.trace_id,
+    });
+    const billId = crypto.randomUUID();
+    const { error: bErr } = await db.from('bills').insert({
+      bill_id: billId,
+      org_id: orgId,
+      vendor_id: vendorId,
+      issue_date: '2026-01-15',
+    });
+    if (bErr) throw new Error(`bill seed failed: ${bErr.message}`);
+    await postExtractedInvoice({
+      extracted_invoice_id: a1,
+      posted_bill_id: billId,
+      idempotency_key: `${caseId}:bill:INVP1`,
+      trace_id: ctx.trace_id,
+      posted_by: ctx.caller.user_id,
+    });
+    await markExtractedInvoiceUnrepairable({
+      extracted_invoice_id: a2,
+      trace_id: ctx.trace_id,
+      marked_by: ctx.caller.user_id,
+    });
+
+    const preview = await buildReviewPreview(
+      { org_id: orgId, document_case_id: caseId, trace_id: ctx.trace_id },
+      ctx,
+    );
+    // The 'posted' disjunct is guarded by !hasUnrepairable, so a case that is
+    // [posted, unrepairable] with nothing pending-postable is NOT postable — it
+    // can never commit while the stuck α exists (watch-item #2, case-grain).
+    expect(preview.postable).toBe(false);
+    expect(preview.not_postable_reason).toBe('unrepairable_present');
+    const status = Object.fromEntries(
+      preview.invoices!.map((i) => [i.ordinal, i.post_status]),
+    );
+    expect(status[1]).toBe('posted');
+    expect(status[2]).toBe('unrepairable');
+  });
+
+  it('T6b-2 guarded anyPostable: [pending-postable, unrepairable] → STILL postable (post the pending α)', async () => {
+    const ctx = makeTestContext({ org_ids: [orgId] });
+    const { sourceDocId, caseId } = await seedCase(orgId, 'vendor_invoice');
+    const vendorName = `T6b2 Mixed Vendor ${crypto.randomUUID().slice(0, 8)}`;
+    const { error: vErr } = await db.from('vendors').insert({
+      vendor_id: crypto.randomUUID(),
+      org_id: orgId,
+      name: vendorName,
+    });
+    if (vErr) throw new Error(`vendor seed failed: ${vErr.message}`);
+    // α1 → pending-postable (matched vendor + required fields); α2 → unrepairable.
+    await createExtractedInvoice({
+      document_case_id: caseId,
+      source_document_id: sourceDocId,
+      ordinal: 1,
+      document_type: 'vendor_invoice',
+      extracted_fields: {
+        amount: 100,
+        currency: 'CAD',
+        vendor_name: vendorName,
+        vendor_invoice_number: 'INVM1',
+        accounting_date: '2026-06-04',
+      },
+      region_ref: { kind: 'ai_soft', source_locator: 'INVM1' },
+      trace_id: ctx.trace_id,
+    });
+    const a2 = await createExtractedInvoice({
+      document_case_id: caseId,
+      source_document_id: sourceDocId,
+      ordinal: 2,
+      document_type: 'vendor_invoice',
+      extracted_fields: { amount: 50, currency: 'CAD', vendor_invoice_number: 'INVM2' },
+      trace_id: ctx.trace_id,
+    });
+    await markExtractedInvoiceUnrepairable({
+      extracted_invoice_id: a2,
+      trace_id: ctx.trace_id,
+      marked_by: ctx.caller.user_id,
+    });
+
+    const preview = await buildReviewPreview(
+      { org_id: orgId, document_case_id: caseId, trace_id: ctx.trace_id },
+      ctx,
+    );
+    // α1 is pending-postable (first disjunct, NOT guarded by hasUnrepairable) →
+    // the case is still postable: real work the operator can do. The guard closes
+    // the futile [posted, unrepairable] button WITHOUT collapsing the mixed case.
+    expect(preview.postable).toBe(true);
   });
 });

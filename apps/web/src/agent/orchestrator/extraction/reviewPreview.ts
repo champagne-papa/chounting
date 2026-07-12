@@ -118,6 +118,10 @@ export interface ReviewPreview {
     | 'bundle_requires_manual_entry'
     | 'no_proposal'
     | 'missing_required_fields'
+    // Board #4 T6b-2 — the case holds a G3 'unrepairable' α (JE landed, bill
+    // didn't); it can never reach committed, so it presents as manual-repair,
+    // not a retryable "Approve & Post" (§1.6 watch-item #2).
+    | 'unrepairable_present'
     // Board #4 T2.5 — case-level multi-invoice deferral. SUPERSEDED 2026-07-11
     // by T3 (3b): the N-bill loop now exists, so a multi-invoice case is
     // postable-via-loop and this value is NO LONGER PRODUCED (the multi branch
@@ -362,8 +366,20 @@ export async function buildReviewPreview(
     // committed (crash-recovery of the aggregate committed marking). The route
     // posts the postable α per-invoice-independently and advances committed iff
     // all α carry posted_bill_id.
+    // Board #4 T6b-2: a G3 'unrepairable' α can NEVER post, and a case holding
+    // one can never reach committed. Exclude it from postable via its own verdict
+    // AND guard the 'posted' disjunct with !hasUnrepairable — so a permanently-
+    // uncommittable [posted, unrepairable] case presents as manual-repair, not an
+    // unwinnable "Approve & Post" (§1.6 watch-item #2), while a pending-postable α
+    // in a mixed case still shows the button (real work the operator can do).
+    // hasUnrepairable is hoisted (one scan) — NOT inlined into the some() below.
+    const hasUnrepairable = invoices.some(
+      (i) => i.post_status === 'unrepairable',
+    );
     const anyPostable = invoices.some(
-      (i) => i.postable || i.post_status === 'posted',
+      (i) =>
+        (i.postable && i.post_status !== 'unrepairable') ||
+        (i.post_status === 'posted' && !hasUnrepairable),
     );
     return {
       ...base,
@@ -374,7 +390,11 @@ export async function buildReviewPreview(
       extracted_fields: {},
       vendor_match: null,
       postable: anyPostable,
-      not_postable_reason: anyPostable ? null : 'missing_required_fields',
+      not_postable_reason: anyPostable
+        ? null
+        : hasUnrepairable
+          ? 'unrepairable_present'
+          : 'missing_required_fields',
     };
   }
 

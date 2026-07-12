@@ -297,11 +297,26 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
                 Invoice {inv.ordinal}{' '}
                 <span className="text-sm font-normal text-neutral-500">
                   {inv.proposal ? inv.proposal.kind : 'none'} ·{' '}
-                  {inv.postable
-                    ? 'postable'
-                    : `not postable (${inv.not_postable_reason ?? '—'})`}
+                  {inv.post_status === 'unrepairable'
+                    ? 'manual repair required'
+                    : inv.postable
+                      ? 'postable'
+                      : `not postable (${inv.not_postable_reason ?? '—'})`}
                 </span>
               </h4>
+              {/* Board #4 T6b-2 — G3 manual-repair affordance (inert, NOT a
+                  retry: build-spec §1.6 watch-item #2). Shown only for an α whose
+                  bill failed to post and cannot be auto-repaired. */}
+              {inv.post_status === 'unrepairable' ? (
+                <p
+                  data-testid="unrepairable-affordance"
+                  className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800"
+                >
+                  Manual repair required — this invoice&apos;s bill did not post,
+                  and re-approving will not resolve it. It needs manual handling
+                  and doesn&apos;t block the other invoices.
+                </p>
+              ) : null}
               <table className="mt-2 w-full text-sm">
                 <tbody>
                   {Object.entries(inv.extracted_fields).length === 0 ? (
@@ -390,6 +405,15 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
           >
             Approve &amp; Post
           </button>
+        ) : preview.not_postable_reason === 'unrepairable_present' ? (
+          <div
+            data-testid="unrepairable-case-banner"
+            className="rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800"
+          >
+            This case can&apos;t be posted — one or more invoices failed to post
+            and need manual repair (re-approving won&apos;t resolve them). The
+            flagged invoices above require manual handling.
+          </div>
         ) : (
           <div
             data-testid="not-postable-banner"
