@@ -51,7 +51,10 @@ import {
   advanceCaseAutomation,
 } from '@/services/document-platform/documentCaseService';
 import { evidenceObjectService } from '@/services/evidence/evidenceObjectService';
-import { postExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
+import {
+  postExtractedInvoice,
+  markExtractedInvoiceUnrepairable,
+} from '@/services/document-platform/extractedInvoiceWriteService';
 // Agent-entry surface (the api/agent/message/route.ts:16 precedent):
 // the approve→post route drives the orchestrator-layer rebuild +
 // builders, the designated entry-point shape, exempted explicitly.
@@ -392,6 +395,14 @@ async function postMultiInvoiceCase(
       });
       continue;
     }
+    // G3 crash-class (T6b): an α already marked 'unrepairable' is NOT retryable
+    // (build-spec §1.6 watch-item #2) — route it straight to unposted, never
+    // re-attempt. The case holds at approved with the stuck α flagged; it can
+    // never reach committed while this α lacks a posted_bill_id (INV-WORKFLOW-003).
+    if (inv.post_status === 'unrepairable') {
+      unposted.push({ ordinal: inv.ordinal, reason: 'unrepairable' });
+      continue;
+    }
     // Must be a post_bill card the builder can satisfy; else leave it pending
     // (per-invoice-independent — one unpostable α does not fail the others).
     const card = inv.proposal
@@ -428,11 +439,33 @@ async function postMultiInvoiceCase(
           { org_id: orgId, source_external_id: childKey },
           ctx,
         );
-        billId = await billService.getRecoveryBillIdByJournalEntry(
-          { org_id: orgId, posted_journal_entry_id: jeId },
-          ctx,
-        );
-        recovered = true;
+        try {
+          billId = await billService.getRecoveryBillIdByJournalEntry(
+            { org_id: orgId, posted_journal_entry_id: jeId },
+            ctx,
+          );
+          recovered = true;
+        } catch (recoveryErr) {
+          // G3 crash-class-X (T6b): the JE landed but its bill never did, so
+          // recovery cannot resolve a bill_id — POSTING_RECOVERY_UNREPAIRABLE.
+          // Mark this α 'unrepairable' (T6a substrate) and route it to unposted;
+          // do NOT re-throw — siblings still post, the case holds at approved
+          // with the stuck α flagged (§1.5.3 per-invoice-independence; §1.6
+          // watch-item #2 — a distinct manual-repair state, not a retry loop).
+          if (
+            recoveryErr instanceof ServiceError &&
+            recoveryErr.code === 'POSTING_RECOVERY_UNREPAIRABLE'
+          ) {
+            await markExtractedInvoiceUnrepairable({
+              extracted_invoice_id: inv.id,
+              trace_id: ctx.trace_id,
+              marked_by: ctx.caller.user_id,
+            });
+            unposted.push({ ordinal: inv.ordinal, reason: 'unrepairable' });
+            continue;
+          }
+          throw recoveryErr;
+        }
       } else {
         throw err;
       }
