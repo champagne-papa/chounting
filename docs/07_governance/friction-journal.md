@@ -19144,3 +19144,70 @@ it: **T2c must NOT reach prod without T2.5** — `buildReviewPreview`
 case in the T2c→T2.5 window renders a misleading merged single card
 (auto-commit-disabled means it can't post, but a human could act on the wrong
 card). Grounded first-hand; recorded in the T2b design §6.1.
+
+## 2026-07-11 — board #4 slice-2 T5 verify-and-close (subsumed into T3; deterministic-recompute + write-once persist realizes "persisted, not recomputed")
+
+CLOSE (verify-and-close, not a build) — T5 ("persisted per-α idempotency key",
+middle-design §5) shipped inside T3: 3a (`d881243c`, `post_extracted_invoice_with_audit`
+RPC + `postExtractedInvoice`) persists the key write-once under the T1 write-once
+trigger (`20240181000000:184-188`, AP-3); 3b (`9597dc45`, `postMultiInvoiceCase`)
+computes it via `childKeyFor` and passes it as both the JE `source_external_id` and the
+α `idempotency_key`. Verified FIRST-HAND this session against the bytes
+(`route.ts:365-455`; `extractedInvoiceWriteService.ts:135-186`; migrations 20240181 +
+20240184); the "subsumed" conclusion was re-derived, not inherited.
+
+KEY SHAPE MATCHES §1.5.2 — `childKeyFor` (route.ts:365-379) produces
+`${caseId}:bill:${suffix}`, `suffix = vendor_invoice_number` when present-and-unique
+over a count of the fixed α set, else `String(ordinal)` — exactly the §1.5.2 LOCKED
+shape. Its inputs (`caseId`, `extracted_fields.vendor_invoice_number`, `ordinal`) are
+all immutable anchors per the T1 immutability trigger (`20240181000000:166-179`), and
+the α set is fixed (no re-segmentation on the post/recovery path). So `childKeyFor` is
+DETERMINISTIC: first-post and crash-recovery compute byte-identical keys.
+
+THE CHICKEN-AND-EGG IS DECISIVE — the key is needed at
+`billService.post({source_external_id: childKey})` (route.ts:418) BEFORE it is persisted
+at the α-write (route.ts:449). At first post `α.idempotency_key` is NULL; on
+crash-recovery (bill posted, α-write crashed) the α is still `pending` and the key still
+NULL. So "read the persisted key at the post that needs it" is STRUCTURALLY IMPOSSIBLE
+on both paths — deterministic recompute is not a shortcut, it is the only realizable
+design, safe precisely because it is deterministic. An already-posted α short-circuits
+(route.ts:387, `post_status==='posted' → continue`) and never re-derives the key.
+
+DOC-PHRASING RECONCILIATION (the reason this close-record exists) — two design phrasings
+read as a read-back the code does not do; a future reader of the code (which recomputes
+at the post site) must not think it violates the design:
+- middle-design §2 (line 55): "per-invoice key from `α.idempotency_key`, T5" — impossible
+  at first-post (key NULL) and unnecessary on re-visit (posted-α short-circuit).
+- build-spec §1.6 watch-item #1 (lines 293-296): "decide each α's key at first post and
+  store it on the α row … persisted, not recomputed." The "decide at first post and
+  store" half is implemented verbatim; "not recomputed" holds literally only for the
+  posted-α short-circuit; the transient pre-persist derivation DOES recompute —
+  deterministically.
+SHIPPED GUARANTEE, stated precisely: `childKeyFor` deterministically recomputes over
+write-once α fields, and `postExtractedInvoice` persists the result write-once (AP-3).
+Recompute and persisted value provably agree; the persisted copy can never silently
+diverge. This MEETS §1.6's real concern — "re-run dedup (§1.5.2) and crash-class recovery
+(§1.5.3/G3) can never disagree about an invoice's key" — by determinism + write-once, not
+by read-back.
+
+NO NEW OBLIGATION — write-once persistence is already tested (3a: same-key no-op /
+different-key reject). The one untested property — that a crash-recovery recompute is
+byte-identical to first-post's — is the ALREADY-NAMED crash-window composition-test gap
+(bill-posted-but-α-write-crashed; proven in halves, not composed end-to-end), an
+accepted-and-named carry-forward, not a new T5 obligation.
+
+RESIDUAL CARRIED FORWARD — B3 re-segmentation ordinal-drift (§1.5.2 lines 234-237;
+watch-item #1) stays tracked-not-solved. It is orthogonal to persist-timing: the floated
+"persist-at-segmentation so it's readable at post" alternative would contradict §1.6's
+"decide at first post" AND would not close B3 (re-segmentation mints new α with new keys
+regardless). So its absence is not a remnant — T5 is fully subsumed.
+
+LANE — code claims first-hand (WSL, this session); advisor independently affirmed the
+grounding from the T3/T4 passes (re-affirmed this pass) + widened the honesty flag to
+cover §1.6 (Phil relayed); the close decision Phil's; committed on Phil's word. Not a
+codification (narrative close-record; `codify-convention` not triggered). No runtime
+code; no invariants/control_matrix/ledger touch (T5 registered no INV-* row), so the
+bidirectional reachability diff is not in blast radius.
+
+Recorded on `feat/board-4-slice-2` (local, banked for the slice/retro push per the
+push-terminal-close timing rule); this close-record is the commit.

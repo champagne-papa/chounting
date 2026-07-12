@@ -55,6 +55,12 @@ extraction) eliminates that. So reversing rebuild-not-persist is a single-invoic
   (per-invoice key from `α.idempotency_key`, T5) → N bills; aggregate
   committed-marking (T4).
 
+  *Shipped realization (T5 close, 2026-07-11):* the per-invoice key is not read back
+  from `α.idempotency_key` at the post — at first-post/crash-recovery that column is
+  NULL (chicken-and-egg). `childKeyFor` deterministically recomputes it (over write-once
+  α fields) and `postExtractedInvoice` persists it write-once. See friction-journal
+  2026-07-11.
+
 ## 3. DECISION — one path (α always), not two — LOCKED (Phil, 2026-07-01)
 
 > **⚠ SUPERSEDED 2026-07-11 → TWO paths (α only for multi-invoice). The premise
@@ -139,7 +145,7 @@ code path, N=1 is just one α.
    listing fan. The reversal concentrates in `buildReviewPreview`.
 4. **T3** approve-post loops N α → N bills (persisted per-α key).
 5. **T4** aggregate committed-marking (case→committed iff all α posted).
-6. **T5** persisted per-α idempotency key. **T6** G3 stuck-invoice affordance.
+6. **T5** persisted per-α idempotency key — **DONE (subsumed into T3 `d881243c`+`9597dc45`; see friction-journal 2026-07-11)**. **T6** G3 stuck-invoice affordance.
 7. **T7** tests — incl. the one-path N=1-no-regression (read-α ≡ today on Tier-A;
    ≥ today on Tier-C) + N=3 deterministic-ordinal + unknown-per-α + partial-post.
 

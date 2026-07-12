@@ -294,6 +294,14 @@ committed-marking re-grain; the per-invoice key). Awaits Phil's two locks above.
    store it on the α row** (the entity holds it, same as `ordinal`), so re-run
    dedup (§1.5.2) and crash-class recovery (§1.5.3/G3) can never disagree about an
    invoice's key. The key is **persisted, not recomputed.**
+
+   *Shipped realization (T5 close, 2026-07-11):* implemented as "decide each α's key
+   at first post and store it write-once" — verbatim. "Not recomputed" holds literally
+   for the already-posted-α short-circuit; the transient pre-persist derivation at
+   first-post/crash-recovery *does* recompute, but deterministically (over write-once α
+   fields), so recompute and the persisted value provably agree. `α.idempotency_key` is
+   NULL at the post that needs the key (chicken-and-egg), so read-back is structurally
+   impossible there. See friction-journal 2026-07-11.
 2. **The G3 stuck-invoice needs a distinct "manual repair" affordance, not a
    "retry."** A `POSTING_RECOVERY_UNREPAIRABLE` α **cannot** be re-approved (by the
    error's own words), so "case stays in review with the unposted α flagged" must
