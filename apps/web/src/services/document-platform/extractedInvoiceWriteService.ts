@@ -30,6 +30,8 @@ const AUDIT_ACTION = 'extracted_invoice_created';
 const AUDIT_ENTITY_TYPE = 'extracted_invoice';
 // Board #4 T3 — the post-phase α write (posted_bill_id/post_status/idempotency_key).
 const POST_AUDIT_ACTION = 'extracted_invoice_posted';
+// Board #4 T6a — the G3 crash-class mark (post_status='unrepairable', no bill).
+const UNREPAIRABLE_AUDIT_ACTION = 'extracted_invoice_unrepairable';
 
 export interface CreateExtractedInvoiceInput {
   document_case_id: string;
@@ -179,6 +181,73 @@ export async function postExtractedInvoice(
     throw new ServiceError(
       'POST_FAILED',
       `postExtractedInvoice failed for extracted_invoice ${input.extracted_invoice_id}: ${error.message}`,
+    );
+  }
+
+  return data as string;
+}
+
+// Board #4 slice-2 T6a — the G3 crash-class mark (the second UPDATE path for
+// extracted_invoices, after T3's post write). Sets post_status='unrepairable'
+// ONLY — posted_bill_id and idempotency_key are left untouched — via
+// mark_extracted_invoice_unrepairable_with_audit (migration 20240185000000), so
+// the paired audit lands in one transaction (org derived from the parent case).
+//
+// The CHECK does the work, not this service (T6a brief §2): a pending α
+// (bill NULL) succeeds; a POSTED α (bill non-NULL) is rejected by the CHECK
+// (23514 — NOT the write-once trigger's 0A000, because the UPDATE doesn't touch
+// the bill, so the trigger passes and the CHECK is what fails) → mapped to
+// INVALID_TRANSITION below, a NEW mapping 3a does not carry; a same-value
+// re-mark no-ops. Attribution is the HUMAN reviewer whose approval surfaced the
+// crash-class (marked_by) — honest causality, same as postExtractedInvoice.
+//
+// Called by the T6b route loop (the ~:431 recovery-sub-call catch); NOT wired
+// here — this is the substrate write path, proven in isolation.
+export interface MarkExtractedInvoiceUnrepairableInput {
+  extracted_invoice_id: string;
+  trace_id: string;
+  /** The reviewer whose approval surfaced the crash-class (audit attribution). */
+  marked_by: string;
+}
+
+export async function markExtractedInvoiceUnrepairable(
+  input: MarkExtractedInvoiceUnrepairableInput,
+): Promise<string> {
+  const db = adminClient();
+  const { data, error } = await db.rpc(
+    'mark_extracted_invoice_unrepairable_with_audit',
+    {
+      p_post: {
+        id: input.extracted_invoice_id,
+      },
+      p_audit: {
+        user_id: input.marked_by,
+        trace_id: input.trace_id,
+        action: UNREPAIRABLE_AUDIT_ACTION,
+        entity_type: AUDIT_ENTITY_TYPE,
+        tool_name: null,
+        idempotency_key: '',
+        reason: null,
+      },
+    },
+  );
+
+  if (error) {
+    // check_violation (23514) from the T1 CHECK = marking a POSTED α
+    // unrepairable (its bill is non-NULL, so post_status='unrepairable' trips
+    // (post_status='posted') = (posted_bill_id IS NOT NULL)). This is the NEW
+    // mapping 3a does not carry — a posted α can never be silently reclassified
+    // as a crash-failure. 0A000 is a defensive guard for a write-once violation
+    // (not expected here: T6a touches no write-once column).
+    if (error.code === '23514' || error.code === '0A000') {
+      throw new ServiceError(
+        'INVALID_TRANSITION',
+        `markExtractedInvoiceUnrepairable rejected for extracted_invoice ${input.extracted_invoice_id}: ${error.message}`,
+      );
+    }
+    throw new ServiceError(
+      'POST_FAILED',
+      `markExtractedInvoiceUnrepairable failed for extracted_invoice ${input.extracted_invoice_id}: ${error.message}`,
     );
   }
 

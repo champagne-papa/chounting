@@ -3879,6 +3879,10 @@ export type Database = {
           debit_total_cad: number
         }[]
       }
+      mark_extracted_invoice_unrepairable_with_audit: {
+        Args: { p_audit: Json; p_post: Json }
+        Returns: string
+      }
       post_extracted_invoice_with_audit: {
         Args: { p_audit: Json; p_post: Json }
         Returns: string
