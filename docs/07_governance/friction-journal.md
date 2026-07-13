@@ -19211,3 +19211,76 @@ bidirectional reachability diff is not in blast radius.
 
 Recorded on `feat/board-4-slice-2` (local, banked for the slice/retro push per the
 push-terminal-close timing rule); this close-record is the commit.
+
+## 2026-07-12 — board #4 slice-2 T6 arc + slice close (G3 stuck-invoice affordance; narrative close, no codification)
+
+CLOSE (retrospective-drafting narrative; NOT a codification — `codify-convention` not
+triggered, no N≥3 graduation this arc, confirmed by the friction-pattern-detector over
+the 20-commit window plus both prior slice-2 entries' own self-declarations). T6 shipped
+the G3 stuck-invoice affordance end to end: T6a (`4fb6c518`) the `unrepairable`
+write-path substrate (RPC `mark_extracted_invoice_unrepairable_with_audit`, migration
+`20240185` + service + behavioral test); T6b-1 (`435a75f2`) the route mechanism (catch at
+the recovery sub-call → mark → route-to-unposted → continue, plus the top-of-loop skip,
+plus the crash-class-X integration test); T6b-2 (`e8711ad4`) the display (guarded
+`anyPostable` + honest `not_postable_reason='unrepairable_present'` + the per-card
+manual-repair affordance + tests). The `post_status='unrepairable'` coupling — flagged at
+the T6 onset (the reserved enum with no writer) — is CLOSED: writer + route wiring + UI,
+all three grounded first-hand, and the crash-class-X test proves the case can never reach
+committed while an `'unrepairable'` α exists (INV-WORKFLOW-003 holds).
+
+PATTERN BANKED (new articulation, N=1 — NOT codify-ready; banked as a reusable
+discriminator) — **fail-loud on a gating mutation.** In `postMultiInvoiceCase` the
+`markExtractedInvoiceUnrepairable` call is deliberately UNWRAPPED: if it throws (a genuine
+infra failure — the CHECK's 23514 posted-α reject cannot fire on a pending crash-class α),
+it fails loud rather than routing a not-actually-marked α to `unposted`. The discriminator
+is sharper than "handle errors": *a write that gates subsequent read-back or skip logic
+must not swallow its errors* — because the failure mode isn't "the write failed," it's
+"the response claims a state the DB doesn't hold, and the downstream skip keys on the
+persisted `post_status`." Wrapping it would desync the response from the DB and silently
+break the top-of-loop skip contract on the next re-approval. Likely to recur at other
+crash-class / skip-contract write sites; banked so the next such site inherits the
+reasoning.
+
+WATCH-ITEM (N=2, NOT codified — a third fire crosses N=3 and routes through
+`codify-convention` then) — **earlier-phase artifact left stale by a later chunk's
+behavior change.** Two named in-window fires, recorded so the eventual N=3 decision is a
+count, not a re-litigation of whether they counted:
+  (1) `7da4469b` (T2.5 review-copy fix) — the T2.5-era badge/comment strings in
+      `ReviewCaseDetailView.tsx` went self-contradictory after T3's postability flip
+      (`9597dc45`), fixed post-hoc (UI-copy-vs-code sub-shape).
+  (2) The T5 close's DOC-PHRASING RECONCILIATION (this journal, the T5 entry above) —
+      middle-design §2 "per-invoice key from `α.idempotency_key`" + build-spec §1.6 "not
+      recomputed" read as a read-back the shipped code does not do, reconciled in-place
+      without a code change (spec-vs-code sub-shape).
+Same shape both times: a change updated the behavior and left adjacent explanatory text
+describing the old behavior. A third fire (either sub-shape) graduates.
+
+KNOWN-ADJACENT, NOT A DEFECT (T1.5 loop-close — the `e8711ad4` commit message self-flagged
+this as a retro candidate; closing it here) — `ReviewCaseDetailView.test.tsx` **test 1**
+("postable preview … click POSTs approve-post and shows done") fails on the async
+post-click `getByRole('status')` "Posted and committed." assertion. It is **pre-existing**:
+it fails identically on the clean committed `435a75f2` with none of the T6b-2 changes
+present (verified by stash-and-run: stash the three T6b-2 source/test files → `vitest run`
+the component file → the same 1 failure → stash pop). T6b-2 neither caused nor fixes it; it
+was kept out of every green claim. Carried forward as a friction-journal/retro item, not a
+slice-2 defect.
+
+REINFORCEMENTS (no new codification — cited as evidence of already-mature disciplines, not
+re-codified): the reciprocal executor↔advisor correction rhythm fired repeatedly across
+the arc — the executor grounding the crash-class origin corrected both sides' "else-throw"
+mislocation; the advisor's `anyPostable`-edge catch was refined by the executor to the
+guarded `!hasUnrepairable` form; the ahead-count slip and the "iff"-over-registration were
+owned in both directions — a further evidence instance of the bilateral advisor-grain in
+`projection-from-model.md`. And the report-before-mainline-touch / hold-for-go discipline
+held every chunk (grounding reported before any mainline byte; commits and the local
+migration-apply on the operator's explicit per-act word; the push held entirely separate) —
+a further sub-grain of `scope-lock.md`'s verify-from-disk-at-non-standard-grain. Neither is
+re-codified; both are noted as evidence.
+
+LANE — the arc's code/route/UI claims are WSL first-hand (verified against disk each
+chunk); the advisor independently grounded each surface (substrate, route, render, test
+assertions) and owns the C2 doc-sync reachability confirmation across the three surfaces;
+the codification-none verdict is corroborated by both slice-2 entries' self-declarations
+plus the friction-pattern-detector; commits landed on the operator's explicit word. Not a
+codification. Recorded on `feat/board-4-slice-2` (local, banked for the
+slice/retrospective-close push — the push is the operator's separate act).
