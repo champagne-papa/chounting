@@ -19284,3 +19284,90 @@ the codification-none verdict is corroborated by both slice-2 entries' self-decl
 plus the friction-pattern-detector; commits landed on the operator's explicit word. Not a
 codification. Recorded on `feat/board-4-slice-2` (local, banked for the
 slice/retrospective-close push — the push is the operator's separate act).
+
+[2026-07-15] [WRONG] Vendor-invoice candidate scoring silently collapsed to
+vendor-match alone — an extractor↔matcher field-name mismatch zeroes 3 of the 5
+scoring axes. Discovered during Fork C (board #4 spine) chunk-1 onset grounding;
+ANTI-SCOPE to Fork C — flagged, not fixed. Disposition is the operator's to place.
+
+THE BUG (grounded end-to-end at `2f70a040`). The vendor-invoice extractor writes
+`amount` / `accounting_date` / `vendor_invoice_number`
+(`shared/schemas/extraction/vendorInvoiceExtractionSchema.ts`). `completeCandidate`'s
+bill-scoring reads `parsed.extracted_fields.invoice_amount` / `.invoice_date` /
+`.invoice_number` (`services/document-platform/documentRouterService.ts:933/937/941`)
+— three names the extractor never writes. There is NO remap between them: Stage-6
+passes `extracted_fields: extracted.fields` verbatim
+(`agent/orchestrator/extraction/ingestDocument.ts:489`) and
+`CompleteCandidateInputSchema.extracted_fields` is a passthrough `z.record(z.unknown())`
+(`shared/schemas/document-platform/documentRelationshipCandidate.schema.ts:155`). So all
+three reads return `undefined`. The compute helpers degrade to null on absent input
+rather than throwing (`computeAmountFeatures` / `computeDateFeatures` /
+`computeStringMatchFeature`, `documentRouterService.ts:704-755`) — nothing errors; the
+axes just go dark.
+
+THE ARITHMETIC. `normalizeFeature` normalizes the one live axis `vendor_match` by a
+CLAMP (`Math.max(0, Math.min(1, vendor_match_confidence))`,
+`core/document-platform/scoreComposition.ts:83`), but the four boolean axes
+(amount / date / reference / payment_method) by `=== true ? 1 : 0` (`:84-91`) — so an
+absent/null input on any of those four normalizes to 0 (not to "excluded").
+`composeScore` is a straight weighted sum with NO renormalization over live axes
+(`:123-135`). vendor_invoice weights are `{vendor_match: 0.3, amount_match: 0.3,
+date_proximity: 0.15, reference_alignment: 0.25, payment_method_consistency: 0}`
+(`V1_PROVISIONAL_WEIGHTS`, `:37-40`). With amount/date/reference dead,
+`aggregate_score = 0.3 × vendor_match_confidence`, ceiling 0.3 — 70% of the
+vendor-invoice scoring weight is structurally zero on the mainline path.
+
+THE ROUTING CONSEQUENCE. `resolveCandidates`: `N===0 → branch c`; `N===1 → branch a`
+(winner elected, NO score threshold); `N≥2 → margin ≥ 0.05 ? a : b`. So (1) a vendor
+with exactly one open bill auto-matches → head-pointer-set → `matched` on vendor
+identity ALONE, with no check that the amount, date, or invoice number resemble the
+bill; (2) any vendor with ≥2 open bills — the only live axis, `vendor_match_confidence`,
+is per-document not per-bill, so every candidate ties, `top − runner_up = 0 < 0.05`, and
+every such case routes to branch (b) / exception queue. Branch-(a)-via-margin is
+unreachable — not by the design property the code comment claims, but because the
+differentiating axes are dead.
+
+THE STALE-COMMENT TELL. `AMBIGUITY_MARGIN_V1_PROVISIONAL` says branch-(a)-via-margin is
+unreachable "at v1 under single-feature scoring" and "activates when chunks-3+ ship
+multi-feature scoring." Chunk 3 SHIPPED multi-feature scoring (`composeScore` is right
+there) — the promised activation silently did not fire, because three of five axes read
+absent keys. The comment is both stale (describes a chunk-1 condition that was supposed
+to end) and a symptom (the bug is why it didn't). Its stated mechanism (`confidence_score
+= vendor_match.confidence`) is also now arithmetically inaccurate — post-chunk-3 it is
+`0.3 × vendor_match.confidence`; same tie-at-every-candidate outcome, so the conclusion
+survived by coincidence.
+
+BLAST RADIUS (bounded today; sharper tomorrow). The Wave -1 A-now bleed-stop disables
+auto-commit — `matched` cases PARK to `needs_review`, no ledger write. That mitigation is
+very likely what has kept this invisible: a human sees every matched case regardless of
+how it scored. So today's exposure is wasted differentiation (N≥2 always to a human) + an
+unchecked N=1 auto-match that a human still reviews — NOT a wrong post. BUT it makes the
+field-name fix a PRE-CONDITION on governed auto-commit returning post-V1 (ADR-0007 §Tier 2
+"V1 re-scoping of the Q78 auto-commit exercise", ratified 2026-05-31 by CTO): the bleed-stop is
+currently the only thing between this bug and a confident wrong post on vendor identity
+alone. Sharper still — the fix is a pre-condition on prerequisite #3 SPECIFICALLY (ADR-0007
+§Tier 2 four return-prerequisites, `:388,395-396`: the V1 evaluation harness establishes a
+published match/extraction precision threshold on a golden set). Measuring the matcher
+before the fix would calibrate that threshold against vendor-identity-only scoring, baking
+the defect into the golden-set baseline — so the framing is fix-before-MEASURING, not merely
+fix-before-re-enabling.
+
+SCOPE / lane. Anti-scope for Fork C: the semantic-duplicate handler sidesteps this by
+construction — it keys its own lookup on `extracted.fields.vendor_invoice_number` (the
+field that actually lands in `bills.bill_number` via `buildPostBillInput`,
+`ingestDocument.ts:1036`) against `bills` directly, and never reads the matcher's axes.
+Grounded FIRST-HAND independently by both lanes: WSL traced extractor→schema→normalize→
+composeScore; the advisor independently read the Stage-6 passthrough call-site and the
+`resolveCandidates` branch logic. One absence-check remains OPEN in WSL's lane: whether any
+consumer OTHER than the parked `needs_review` path reads `matched` / the head-pointer (if
+one does, the "bounded today" framing narrows).
+
+DISPOSITION (pending — the operator's to place). Its own investigation, not a Fork C task.
+Territory: ADR-0018 (routing/margin) + ADR-0019 (score calibration). Urgent framing
+(advisor lean, endorsed): less "calibration is off," more "a pre-condition on governed
+auto-commit re-enablement." NOT a codification — a discovered-defect record, not a
+convention graduating at observation-grain N≥3, so `codify-convention` is correctly not
+invoked. Recorded on `docs/scoring-bug` — a standalone branch off `origin/main`,
+deliberately NOT the Fork C feature branch: the finding outlives Fork C and its disposition
+(ADR-0018 / ADR-0019) is not a Fork C task. Committed on the operator's explicit word, per
+the report-before-mainline-touch / hold-for-go discipline held across this arc.
