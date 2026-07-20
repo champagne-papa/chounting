@@ -119,3 +119,35 @@ describe('exception_reason board #4 broaden — multi_invoice (chunk_9_active)',
     expect(error).toBeNull();
   });
 });
+
+// Board #4 Fork C — duplicate_invoice_suspected broaden (migrations 20240186 ADD
+// VALUE + 20240187 CHECK chunk_9_active → chunk_10_active). Symmetric
+// defense-in-depth mirroring the multi_invoice broaden: Layer 2 (Zod) + Layer 1
+// (DB CHECK) admit the 10th v1-active value; the reject path is covered by the
+// chunk_N regex test above.
+describe('exception_reason board #4 Fork C broaden — duplicate_invoice_suspected (chunk_10_active)', () => {
+  const db = adminClient();
+  const ctx: ServiceContext = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+
+  afterAll(async () => {
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('admits duplicate_invoice_suspected at Layer 2 (Zod ExceptionReasonSchema)', () => {
+    expect(ExceptionReasonSchema.parse('duplicate_invoice_suspected')).toBe(
+      'duplicate_invoice_suspected',
+    );
+  });
+
+  it('admits duplicate_invoice_suspected at Layer 1 chunk_10_active CHECK (direct INSERT)', async () => {
+    const caseId = await buildClassifiedCase(SEED.ORG_HOLDING, ctx);
+    const { error } = await db.from('exception_queue_entries').insert({
+      org_id: SEED.ORG_HOLDING,
+      document_case_id: caseId,
+      exception_reason: 'duplicate_invoice_suspected',
+      trace_id: ctx.trace_id,
+      created_by: ctx.caller.user_id,
+    });
+    expect(error).toBeNull();
+  });
+});

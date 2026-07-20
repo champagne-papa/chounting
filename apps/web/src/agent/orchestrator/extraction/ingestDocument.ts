@@ -69,7 +69,10 @@ import {
   lookupBillCommitDefaults,
   lookupPaymentCommitDefaults,
 } from '@/services/document-platform/commitDefaultsReadService';
-import { lookupDocumentCaseId } from '@/services/document-platform/extractionReadService';
+import {
+  lookupDocumentCaseId,
+  findLiveBillByVendorAndNumber,
+} from '@/services/document-platform/extractionReadService';
 import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
 import { resolveRuleDefaultAccount } from '@/services/rules/ruleOutcomeReadService';
 import { loggerWith } from '@/shared/logger/pino';
@@ -460,6 +463,90 @@ export async function ingestDocument(
   // documentRouterService.completeCandidate consumer interface per Phase 4
   // chunk 1 substrate (Subsystem 1 Ledger-State Candidate Completion).
   const documentCaseId = await lookupDocumentCaseId(input.org_id, input.source_document_id);
+
+  // Board #4 Fork C handler #1 — semantic-duplicate detection. Between Stage 5
+  // (vendor resolved) and Stage 6 (matcher): if the extracted invoice already
+  // exists as a LIVE bill for the matched vendor — a re-book of an
+  // already-booked invoice that Stage-0 dedupByHash (byte-identity) misses —
+  // route to a human under 'duplicate_invoice_suspected' and SKIP Stages 6-7.
+  // Fires EVEN under confident extraction: the danger is orthogonal to extraction
+  // confidence (that is the handler's whole point). Guard: only vendor_invoice
+  // docs, only when the vendor matched (an unmatched vendor already routes to
+  // needs_review via router branch c), and only when an invoice number was
+  // extracted (a null number can't be a keyed duplicate).
+  //
+  // Two-step park (received→classified, then enqueue does classified→needs_review)
+  // mirrors the multi_invoice / unknown_document_type short-circuits: the case is
+  // at 'received' here (Stage 6.5 owns the classified advance), enqueueException's
+  // RPC requires classified|matched, and a direct classified→needs_review advance
+  // is refused (Subsystem-2-owned). BOTH steps are reprocess-safe: on a re-run
+  // (the different-bytes semantic duplicate that dodges Stage-0 dedup — this
+  // handler's raison d'être) the case is already at needs_review, so
+  // advanceCaseAutomation('classified') is an idempotent no-op (at/past target
+  // per PIPELINE_ORDER, documentCaseService.ts:361 — it does NOT attempt, and get
+  // refused for, a needs_review→classified back-advance), and the re-enqueue
+  // throws EXCEPTION_ALREADY_OPEN (one open exception per case), caught below.
+  // Unlike multi_invoice this handler writes NOTHING before the enqueue (no
+  // α-UNIQUE reprocess residual), so a reprocessed duplicate re-parks cleanly
+  // rather than stranding to pipeline_failed. (Proven: semanticDuplicatePipeline
+  // Wiring reprocess case.)
+  //
+  // This branch PARKS; it does not assert auto-commit is off. The never-mis-post
+  // guarantee rests partly on the Wave -1 bleed-stop being disabled and MUST be
+  // re-verified when governed auto-commit returns post-V1 (ADR-0007 §Tier 2 Q78).
+  const rawInvoiceNumber = (
+    extracted.fields as { vendor_invoice_number?: unknown }
+  ).vendor_invoice_number;
+  const extractedInvoiceNumber =
+    typeof rawInvoiceNumber === 'string' && rawInvoiceNumber.length > 0
+      ? rawInvoiceNumber
+      : null;
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    vendorMatch.vendor_id &&
+    extractedInvoiceNumber
+  ) {
+    const dup = await findLiveBillByVendorAndNumber({
+      org_id: input.org_id,
+      vendor_id: vendorMatch.vendor_id,
+      bill_number: extractedInvoiceNumber,
+    });
+    if (dup.matched_bill_id) {
+      try {
+        await advanceCaseAutomation(
+          { document_case_id: documentCaseId, target_state: 'classified' },
+          ctx,
+        );
+        await enqueueException(
+          {
+            document_case_id: documentCaseId,
+            source_document_id: input.source_document_id,
+            trace_id: input.trace_id,
+            exception_reason: 'duplicate_invoice_suspected',
+          },
+          ctx,
+        );
+      } catch (err) {
+        if (
+          !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+        ) {
+          return {
+            status: 'pipeline_failed',
+            pipeline_trace,
+            proposal_id: null,
+            failure_class: classifyFailure(err),
+          };
+        }
+      }
+      return {
+        status: 'parked_unposted',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: null,
+      };
+    }
+  }
 
   // Stage 6 — match_against_existing_state per ADR-0014 §1 canonical
   // (brief Task 7.3a.5 brief-named "Stage 5 relationship-candidate";

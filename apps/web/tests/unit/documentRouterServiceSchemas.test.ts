@@ -154,6 +154,10 @@ describe('ExceptionReasonSchema — cross-schema-import sanity (chunk-6 home)', 
     expect(ExceptionReasonSchema.safeParse('multi_candidate_ambiguity').success).toBe(true);
     expect(ExceptionReasonSchema.safeParse('unmatched_router_candidate').success).toBe(true);
   });
+
+  it('accepts duplicate_invoice_suspected (board #4 Fork C handler #1 — 10th v1-active)', () => {
+    expect(ExceptionReasonSchema.safeParse('duplicate_invoice_suspected').success).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------

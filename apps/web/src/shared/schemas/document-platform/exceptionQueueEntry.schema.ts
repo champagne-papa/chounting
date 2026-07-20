@@ -34,7 +34,7 @@ export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
 export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
-// 8 v1-active exception_reason values. Each has a named v1 consumer
+// 10 v1-active exception_reason values. Each has a named v1 consumer
 // in a ratified ADR. Reserved 2 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
 // §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
@@ -62,6 +62,15 @@ export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 // pending' graduates to v1-active (8th value). Named v1 consumer:
 // postV1ReconciliationOrchestrator (Stage 7 Bundle partial-commit
 // reconciliation path).
+//
+// Board #4 slice-2 addendum: 'multi_invoice' graduates to v1-active
+// (9th value). Named v1 consumer: the T2c multi-invoice split branch
+// (migrations 20240182 ADD VALUE + 20240183 chunk_9_active CHECK).
+//
+// Board #4 Fork C addendum: 'duplicate_invoice_suspected' graduates to
+// v1-active (10th value). Named v1 consumer: the semantic-duplicate
+// handler #1 (migrations 20240186 ADD VALUE + 20240187 chunk_10_active
+// CHECK).
 export const ExceptionReasonSchema = z.enum([
   'manual_route',
   'low_confidence_classification',
@@ -77,6 +86,13 @@ export const ExceptionReasonSchema = z.enum([
   // exception_reason_chunk_9_active (migrations 20240182 ADD VALUE +
   // 20240183 CHECK broaden).
   'multi_invoice',
+  // Board #4 Fork C handler #1 (10th value): a SEMANTIC duplicate — a
+  // re-book of an already-booked invoice (same (vendor_id, bill_number)
+  // as a live bill) that Stage-0 dedupByHash (byte-identity) misses. NOT
+  // 'unmatched_router_candidate' (this IS matched, to an existing bill).
+  // Layer-1 CHECK exception_reason_chunk_10_active (migrations 20240186
+  // ADD VALUE + 20240187 CHECK broaden).
+  'duplicate_invoice_suspected',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 

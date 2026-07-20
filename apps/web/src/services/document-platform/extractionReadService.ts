@@ -110,6 +110,66 @@ export async function findPriorSourceDocumentByHash(
   };
 }
 
+export interface LiveBillByVendorAndNumberInput {
+  org_id: string;
+  vendor_id: string;
+  bill_number: string;
+}
+
+export interface LiveBillByVendorAndNumberResult {
+  /**
+   * First LIVE bill (lifecycle_state NOT IN 'voided'/'cancelled') with the same
+   * (org, vendor_id, bill_number), or null. A non-null value is the
+   * semantic-duplicate signal: an already-booked invoice re-arriving.
+   */
+  matched_bill_id: string | null;
+}
+
+/**
+ * Board #4 Fork C handler #1 (semantic-duplicate) detection read.
+ *
+ * Finds a LIVE bill with the same (org, vendor_id, bill_number) as an incoming
+ * invoice — the re-book of an already-booked invoice that Stage-0 dedupByHash
+ * (byte-identity) misses. "Live" = lifecycle_state NOT IN ('voided','cancelled')
+ * — DELIBERATELY broader than loadOpenBillsForVendor's {approved_for_payment,
+ * partially_paid} filter: a fully_paid bill is the worst double-pay case and
+ * must count; a voided/cancelled bill is a legitimate re-book target and must
+ * not. Keyed on the extracted vendor_invoice_number ↔ bills.bill_number (the
+ * field buildPostBillInput writes), NOT the matcher's dead invoice_number read.
+ */
+export async function findLiveBillByVendorAndNumber(
+  input: LiveBillByVendorAndNumberInput,
+): Promise<LiveBillByVendorAndNumberResult> {
+  const db = adminClient();
+
+  const { data, error } = await db
+    .from('bills')
+    .select('bill_id')
+    .eq('org_id', input.org_id)
+    .eq('vendor_id', input.vendor_id)
+    .eq('bill_number', input.bill_number)
+    // NOT IN (...) is sound ONLY because lifecycle_state is NOT NULL (20240138
+    // DEFAULT 'draft'): a NULL would make NOT(... IN ...) evaluate to NULL — not
+    // true — silently excluding the row → a MISSED duplicate (the unsafe
+    // false-negative direction). Protected by the NOT NULL column, not by this
+    // query. Coverage is by exclusion, so a future lifecycle state defaults to
+    // INCLUDED (flag-to-human) — the safe direction.
+    .not('lifecycle_state', 'in', '("voided","cancelled")')
+    .order('created_at', { ascending: true })
+    .limit(1);
+
+  if (error) {
+    throw new ServiceError(
+      'PIPELINE_TRANSIENT_EXHAUSTED',
+      `[semantic-duplicate] live-bill dedup query failed: ${error.message}`,
+    );
+  }
+
+  return {
+    matched_bill_id: data && data.length > 0 ? data[0].bill_id : null,
+  };
+}
+
 /**
  * Look up document_case_id from document_jobs table via org_id +
  * source_document_id. Returns null if no matching job exists

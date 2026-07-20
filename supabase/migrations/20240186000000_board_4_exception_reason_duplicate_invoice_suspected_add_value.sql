@@ -1,0 +1,24 @@
+-- ============================================================
+-- Board #4 Fork C (spine) — exception_reason ENUM ADD VALUE
+-- 'duplicate_invoice_suspected'
+-- ============================================================
+-- Fork C dangerous-when-uncertain handler #1 (semantic duplicate): an
+-- incoming vendor invoice whose (vendor_id, bill_number) already exists
+-- as a live bill — a re-book of an already-booked invoice that Stage-0
+-- dedupByHash (byte-identity) is blind to — routes to needs_review under
+-- this ACCURATE reason. Distinct from 'unmatched_router_candidate' (this
+-- is matched-to-an-existing-bill, not unmatched) and from 'multi_invoice'.
+-- The human resolves via the existing 'mark_duplicate' resolution_action.
+--
+-- SPLIT per the Postgres ALTER TYPE ADD VALUE same-transaction restriction
+-- (a CHECK cannot reference the new value in the same transaction; the
+-- 20240182 / 20240183 multi_invoice precedent split them for exactly this
+-- reason). This migration ADDs the value ONLY; the Layer-1 CHECK broaden
+-- (exception_reason_chunk_9_active → chunk_10_active) lands in the NEXT
+-- migration (20240187, a separate transaction), which references the value
+-- safely because this transaction has committed before it runs.
+--
+-- ADR-0010 admit framework + ADR-0022 additive provenance-preserving.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'duplicate_invoice_suspected';

@@ -4070,6 +4070,7 @@ export type Database = {
         | "bundle_partial_commit_reconciliation_pending"
         | "provider_unavailable"
         | "multi_invoice"
+        | "duplicate_invoice_suspected"
       exception_status: "open" | "resolved" | "cancelled"
       extracted_invoice_post_status: "pending" | "posted" | "unrepairable"
       ingest_channel:
@@ -4523,6 +4524,7 @@ export const Constants = {
         "bundle_partial_commit_reconciliation_pending",
         "provider_unavailable",
         "multi_invoice",
+        "duplicate_invoice_suspected",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       extracted_invoice_post_status: ["pending", "posted", "unrepairable"],
