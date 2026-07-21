@@ -34,7 +34,7 @@ export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
 export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
-// 11 v1-active exception_reason values. Each has a named v1 consumer
+// 12 v1-active exception_reason values. Each has a named v1 consumer
 // in a ratified ADR. Reserved 2 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
 // §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
@@ -76,6 +76,11 @@ export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 // v1-active (11th value). Named v1 consumer: the bank-detail / remittance
 // presence tripwire, handler #2 (migrations 20240188 ADD VALUE + 20240189
 // chunk_11_active CHECK).
+//
+// Board #4 Fork C addendum: 'statement_not_invoice_suspected' graduates to
+// v1-active (12th value). Named v1 consumer: the statement-vs-invoice presence
+// tripwire, handler #3 (migrations 20240190 ADD VALUE + 20240191
+// chunk_12_active CHECK).
 export const ExceptionReasonSchema = z.enum([
   'manual_route',
   'low_confidence_classification',
@@ -106,6 +111,14 @@ export const ExceptionReasonSchema = z.enum([
   // fields; does not discharge the Tier-1 Q28 3(e) control). Layer-1 CHECK
   // exception_reason_chunk_11_active (migrations 20240188 + 20240189).
   'bank_detail_change_suspected',
+  // Board #4 Fork C handler #3 (12th value): a statement-vs-invoice PRESENCE
+  // tripwire — a document that classifies as vendor_invoice (Tier A matches
+  // /\bstatement\b/ as an invoice header, vendorInvoiceRules.ts:38) but reads
+  // as a STATEMENT (balance-forward summary of already-invoiced charges, not a
+  // single bookable invoice). Presence-AND-weak-invoice-signal on the doc's OWN
+  // OCR; Tier-2-clean (ADR-0007 §Tier 2 read boundary). Layer-1 CHECK
+  // exception_reason_chunk_12_active (migrations 20240190 + 20240191).
+  'statement_not_invoice_suspected',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 

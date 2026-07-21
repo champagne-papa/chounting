@@ -74,6 +74,7 @@ import {
   findLiveBillByVendorAndNumber,
 } from '@/services/document-platform/extractionReadService';
 import { looksLikeBankDetailPresent } from './bankDetailScan';
+import { looksLikeStatementNotInvoice } from './statementScan';
 import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
 import { resolveRuleDefaultAccount } from '@/services/rules/ruleOutcomeReadService';
 import { loggerWith } from '@/shared/logger/pino';
@@ -513,6 +514,85 @@ export async function ingestDocument(
           source_document_id: input.source_document_id,
           trace_id: input.trace_id,
           exception_reason: 'bank_detail_change_suspected',
+        },
+        ctx,
+      );
+    } catch (err) {
+      if (
+        !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+      ) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
+    return {
+      status: 'parked_unposted',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: null,
+    };
+  }
+
+  // Board #4 Fork C handler #3 — statement-vs-invoice presence tripwire. Placed
+  // AFTER the bank-detail handler (fraud-first precedence: coordinates-present is
+  // the more dangerous signal) and BEFORE the semantic-dup handler (a statement
+  // must not be dup-checked as a bookable bill at all). Fires when the document
+  // classifies as vendor_invoice but reads as a STATEMENT — a summary of
+  // already-invoiced charges / balance-forward that must not be booked as a single
+  // new bill.
+  //
+  // WHY REACHABLE (grounded first-hand): the Tier A vendor_invoice classifier
+  // matches /\bstatement\b/ as a positive header pattern (vendorInvoiceRules.ts:38,
+  // "matches Invoice/Bill/Statement headers"), so a vendor statement classifies as
+  // vendor_invoice and arrives here; this tripwire routes it to a human under
+  // 'statement_not_invoice_suspected'.
+  //
+  // DETECT-AND-ROUTE only (ADR-0007 §Tier 2 read boundary): scans the document's
+  // OWN OCR text (the function-scope `ocrText`) via looksLikeStatementNotInvoice
+  // (presence-AND-weak-invoice-signal — a statement-exclusive marker present AND no
+  // strong single-invoice identity). It reads NO vendor-master field, extracts /
+  // persists nothing, and does NOT read the matcher's composed score (the logged
+  // vendor-only scoring bug would make it meaningless). Guard: vendor_invoice only.
+  //
+  // COVERAGE BOUNDARY (documented): gated on the vendor_invoice label, so it
+  // catches only statements that landed on that label. A statement misclassified
+  // as receipt/payment_confirmation (Tier A non-invoice-outranks-invoice
+  // precedence) sails past — acceptable, those labels do not book into AP.
+  //
+  // PRECEDENCE (three-wide, compounding drop): bank-detail → statement → dup. Each
+  // RETURNS on trip and one-open-exception-per-case holds, so a document that trips
+  // more than one parks under the FIRST-placed handler only (statement + bank-detail
+  // → bank_detail_change_suspected; statement + dup → statement_not_invoice_suspected).
+  // Dropped signals are not separately recorded — accept-for-v1 (fraud-first triage);
+  // a secondary non-exception audit note is a scoped follow-up (product-call, mirrors
+  // the both-trip ratification).
+  //
+  // Two-step park (received→classified, then enqueue does classified→needs_review)
+  // + EXCEPTION_ALREADY_OPEN catch mirror the other short-circuits; reprocess-safe
+  // (advanceCaseAutomation no-ops at/past target; the re-enqueue is caught). Writes
+  // NOTHING before the enqueue → clean idempotent re-park. Parks; does not assert
+  // auto-commit is off (Wave -1 safety; re-verify when governed auto-commit returns,
+  // ADR-0007 §Tier 2 Q78).
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    looksLikeStatementNotInvoice(ocrText)
+  ) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'classified' },
+        ctx,
+      );
+      await enqueueException(
+        {
+          document_case_id: documentCaseId,
+          source_document_id: input.source_document_id,
+          trace_id: input.trace_id,
+          exception_reason: 'statement_not_invoice_suspected',
         },
         ctx,
       );
