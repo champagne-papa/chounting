@@ -34,7 +34,7 @@ export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
 export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
-// 10 v1-active exception_reason values. Each has a named v1 consumer
+// 11 v1-active exception_reason values. Each has a named v1 consumer
 // in a ratified ADR. Reserved 2 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
 // §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
@@ -71,6 +71,11 @@ export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 // v1-active (10th value). Named v1 consumer: the semantic-duplicate
 // handler #1 (migrations 20240186 ADD VALUE + 20240187 chunk_10_active
 // CHECK).
+//
+// Board #4 Fork C addendum: 'bank_detail_change_suspected' graduates to
+// v1-active (11th value). Named v1 consumer: the bank-detail / remittance
+// presence tripwire, handler #2 (migrations 20240188 ADD VALUE + 20240189
+// chunk_11_active CHECK).
 export const ExceptionReasonSchema = z.enum([
   'manual_route',
   'low_confidence_classification',
@@ -93,6 +98,14 @@ export const ExceptionReasonSchema = z.enum([
   // Layer-1 CHECK exception_reason_chunk_10_active (migrations 20240186
   // ADD VALUE + 20240187 CHECK broaden).
   'duplicate_invoice_suspected',
+  // Board #4 Fork C handler #2 (11th value): a bank-detail / remittance
+  // PRESENCE tripwire — a vendor invoice whose OCR carries payment-coordinate-
+  // shaped content (account/routing/IBAN/SWIFT/wire/ACH/remit-to). Detect-and-
+  // route ONLY (ADR-0007 §Tier 2 read boundary): grounds PRESENCE, not a proven
+  // change (no vendor bank-detail baseline; does not read vendor-master control
+  // fields; does not discharge the Tier-1 Q28 3(e) control). Layer-1 CHECK
+  // exception_reason_chunk_11_active (migrations 20240188 + 20240189).
+  'bank_detail_change_suspected',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 

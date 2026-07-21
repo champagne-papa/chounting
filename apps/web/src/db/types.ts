@@ -4071,6 +4071,7 @@ export type Database = {
         | "provider_unavailable"
         | "multi_invoice"
         | "duplicate_invoice_suspected"
+        | "bank_detail_change_suspected"
       exception_status: "open" | "resolved" | "cancelled"
       extracted_invoice_post_status: "pending" | "posted" | "unrepairable"
       ingest_channel:
@@ -4525,6 +4526,7 @@ export const Constants = {
         "provider_unavailable",
         "multi_invoice",
         "duplicate_invoice_suspected",
+        "bank_detail_change_suspected",
       ],
       exception_status: ["open", "resolved", "cancelled"],
       extracted_invoice_post_status: ["pending", "posted", "unrepairable"],

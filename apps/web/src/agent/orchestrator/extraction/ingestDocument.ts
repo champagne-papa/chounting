@@ -73,6 +73,7 @@ import {
   lookupDocumentCaseId,
   findLiveBillByVendorAndNumber,
 } from '@/services/document-platform/extractionReadService';
+import { looksLikeBankDetailPresent } from './bankDetailScan';
 import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
 import { resolveRuleDefaultAccount } from '@/services/rules/ruleOutcomeReadService';
 import { loggerWith } from '@/shared/logger/pino';
@@ -463,6 +464,77 @@ export async function ingestDocument(
   // documentRouterService.completeCandidate consumer interface per Phase 4
   // chunk 1 substrate (Subsystem 1 Ledger-State Candidate Completion).
   const documentCaseId = await lookupDocumentCaseId(input.org_id, input.source_document_id);
+
+  // Board #4 Fork C handler #2 — bank-detail / remittance PRESENCE tripwire.
+  // Placed BEFORE the semantic-dup handler (below): both fire post-Stage-5 on
+  // vendor_invoice and each RETURNS on trip, so only the first-placed one fires
+  // on a document that trips both — a suspected payment redirect is the more
+  // dangerous signal to surface, so it wins (and the cheap OCR scan runs before
+  // the semantic-dup DB read).
+  //
+  // DELIBERATE PREEMPTION (documented design consequence): because this branch
+  // returns, it preempts BOTH downstream routes for a vendor invoice carrying
+  // coordinates — the semantic-dup check (a re-book that ALSO carries
+  // coordinates parks as bank_detail_change_suspected ONLY; the duplicate signal
+  // is not separately recorded, one open exception per case) AND the
+  // unmatched_router_candidate route (an unmatched vendor whose invoice carries
+  // coordinates parks here, not at branch c). Both are intended: coordinates-
+  // present is the more dangerous signal to surface, and either reason routes to
+  // the same human, who sees the full document. Whether the queue should
+  // distinguish "coordinates present" from "coordinates present AND a known
+  // duplicate" is a product judgment (fraud-first triage at v1).
+  //
+  // DETECT-AND-ROUTE only (ADR-0007 §Tier 2 read
+  // boundary): scans the document's OWN OCR text (the function-scope `ocrText` —
+  // the full artifact, the same string the multi-invoice scan uses) for
+  // payment-coordinate-shaped content and routes to a human. It reads NO
+  // vendor-master control field, extracts/persists NO coordinates (the enqueue
+  // carries reason + case + trace only), classifies no fraud, and does NOT
+  // discharge the Tier-1 Q28 3(e) bank-detail-change control — a coarse upstream
+  // tripwire that grounds PRESENCE, not a proven change (no vendor bank-detail
+  // baseline exists at Tier 2). Guard: vendor_invoice only. Two-step park +
+  // EXCEPTION_ALREADY_OPEN catch mirror the other short-circuits; reprocess-safe
+  // for the same reason (advanceCaseAutomation no-ops at/past target; the
+  // re-enqueue is caught). Parks; does not assert auto-commit is off (Wave -1
+  // safety note; re-verify when governed auto-commit returns, ADR-0007 §Tier 2 Q78).
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    looksLikeBankDetailPresent(ocrText)
+  ) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'classified' },
+        ctx,
+      );
+      await enqueueException(
+        {
+          document_case_id: documentCaseId,
+          source_document_id: input.source_document_id,
+          trace_id: input.trace_id,
+          exception_reason: 'bank_detail_change_suspected',
+        },
+        ctx,
+      );
+    } catch (err) {
+      if (
+        !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+      ) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
+    return {
+      status: 'parked_unposted',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: null,
+    };
+  }
 
   // Board #4 Fork C handler #1 — semantic-duplicate detection. Between Stage 5
   // (vendor resolved) and Stage 6 (matcher): if the extracted invoice already

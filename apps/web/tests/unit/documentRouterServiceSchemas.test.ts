@@ -158,6 +158,10 @@ describe('ExceptionReasonSchema — cross-schema-import sanity (chunk-6 home)', 
   it('accepts duplicate_invoice_suspected (board #4 Fork C handler #1 — 10th v1-active)', () => {
     expect(ExceptionReasonSchema.safeParse('duplicate_invoice_suspected').success).toBe(true);
   });
+
+  it('accepts bank_detail_change_suspected (board #4 Fork C handler #2 — 11th v1-active)', () => {
+    expect(ExceptionReasonSchema.safeParse('bank_detail_change_suspected').success).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------

@@ -151,3 +151,34 @@ describe('exception_reason board #4 Fork C broaden — duplicate_invoice_suspect
     expect(error).toBeNull();
   });
 });
+
+// Board #4 Fork C — bank_detail_change_suspected broaden (migrations 20240188 ADD
+// VALUE + 20240189 CHECK chunk_10_active → chunk_11_active). Symmetric
+// defense-in-depth: Layer 2 (Zod) + Layer 1 (DB CHECK) admit the 11th v1-active
+// value; the reject path is covered by the chunk_N regex test above.
+describe('exception_reason board #4 Fork C broaden — bank_detail_change_suspected (chunk_11_active)', () => {
+  const db = adminClient();
+  const ctx: ServiceContext = makeTestContext({ org_ids: [SEED.ORG_HOLDING] });
+
+  afterAll(async () => {
+    await db.from('audit_log').delete().eq('trace_id', ctx.trace_id);
+  });
+
+  it('admits bank_detail_change_suspected at Layer 2 (Zod ExceptionReasonSchema)', () => {
+    expect(ExceptionReasonSchema.parse('bank_detail_change_suspected')).toBe(
+      'bank_detail_change_suspected',
+    );
+  });
+
+  it('admits bank_detail_change_suspected at Layer 1 chunk_11_active CHECK (direct INSERT)', async () => {
+    const caseId = await buildClassifiedCase(SEED.ORG_HOLDING, ctx);
+    const { error } = await db.from('exception_queue_entries').insert({
+      org_id: SEED.ORG_HOLDING,
+      document_case_id: caseId,
+      exception_reason: 'bank_detail_change_suspected',
+      trace_id: ctx.trace_id,
+      created_by: ctx.caller.user_id,
+    });
+    expect(error).toBeNull();
+  });
+});
