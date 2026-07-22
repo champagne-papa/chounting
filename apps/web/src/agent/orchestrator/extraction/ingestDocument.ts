@@ -679,11 +679,28 @@ export async function ingestDocument(
     vendorMatch.vendor_id &&
     extractedInvoiceNumber
   ) {
-    const dup = await findLiveBillByVendorAndNumber({
-      org_id: input.org_id,
-      vendor_id: vendorMatch.vendor_id,
-      bill_number: extractedInvoiceNumber,
-    });
+    let dup;
+    try {
+      dup = await findLiveBillByVendorAndNumber({
+        org_id: input.org_id,
+        vendor_id: vendorMatch.vendor_id,
+        bill_number: extractedInvoiceNumber,
+      });
+    } catch (err) {
+      // Fix wave finding #1: findLiveBillByVendorAndNumber throws ServiceError
+      // ('PIPELINE_TRANSIENT_EXHAUSTED') on a query error. Without this wrap the
+      // throw escaped ingestDocument's structured-result contract entirely (no
+      // pipeline_failed return, pipeline_trace lost, classifyFailure mapping
+      // dead). Abort to pipeline_failed rather than falling through to Stage 6 —
+      // a transient error must not risk mis-attaching a real duplicate on
+      // incomplete provenance.
+      return {
+        status: 'pipeline_failed',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: classifyFailure(err),
+      };
+    }
     // Provenance gate (design §4.1): fire ONLY when the matched live bill is
     // itself document-sourced (a live primary_invoice link). A matching bill with
     // no live link is manual/PO/override/voided origin → the incoming invoice is a

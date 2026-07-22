@@ -33,6 +33,7 @@ import type { Mock } from 'vitest';
 import { adminClient, SEED } from '../setup/testDb';
 import { createMockInvokeSidecar } from '../fixtures/sidecar/mockSidecar';
 import { __resetSegmentationBudgetForTests } from '@/agent/orchestrator/extraction/multiInvoiceExtractor';
+import { ServiceError } from '@/services/errors/ServiceError';
 
 vi.mock('@/services/storage/resolver', () => ({
   getStorageProvider: vi.fn(),
@@ -42,12 +43,31 @@ vi.mock('@/agent/orchestrator/extraction/sidecar/client', () => ({
   invokeSidecar: vi.fn(),
 }));
 
+// Fix wave finding #1: delegating partial mock — findLiveBillByVendorAndNumber
+// is wrapped in a vi.fn() so ONE test can force it to reject (transient DB
+// error), while every other test in this file (and the other passing tests
+// below) falls through to the REAL implementation via vi.fn(actual.fn)'s
+// default call-through behavior. Do not replace the whole module: the other
+// tests rely on the real query.
+vi.mock('@/services/document-platform/extractionReadService', async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import('@/services/document-platform/extractionReadService')
+  >();
+  return {
+    ...actual,
+    findLiveBillByVendorAndNumber: vi.fn(actual.findLiveBillByVendorAndNumber),
+  };
+});
+
 const { ingestDocument } = await import(
   '@/agent/orchestrator/extraction/ingestDocument'
 );
 const { getStorageProvider } = await import('@/services/storage/resolver');
 const { invokeSidecar } = await import(
   '@/agent/orchestrator/extraction/sidecar/client'
+);
+const { findLiveBillByVendorAndNumber } = await import(
+  '@/services/document-platform/extractionReadService'
 );
 
 const db = adminClient();
@@ -305,7 +325,6 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
     const billId = await seedBill(vendorId, 'approved_for_payment');
     billIds.push(billId);
     // NO seedPrimaryInvoiceLink → the bill reads as manual → dup must defer.
-    void sourceDocId;
 
     const result = await ingestDocument({ org_id: SEED.ORG_HOLDING, source_document_id: sourceDocId, trace_id });
     expect(result.failure_class).toBeNull();
@@ -461,5 +480,35 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
     // kept the handler silent.
     const stages = result.pipeline_trace.map((r) => r.stage_name);
     expect(stages).toContain('match_against_existing_state');
+  });
+
+  it('fix-wave finding #1 — a transient DB error inside the dup handler read wraps into pipeline_failed instead of escaping the structured-result contract', async () => {
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    // Reuse the confident single-invoice fixture + seeded vendor (beforeEach)
+    // so the guard triple (vendor_invoice classification, vendor match,
+    // extracted invoice number) passes and the pipeline REACHES the dup
+    // handler's findLiveBillByVendorAndNumber call. No bill needs to be
+    // seeded — the mock intercepts the call unconditionally for this one
+    // invocation, regardless of what the query would otherwise return.
+    const { sourceDocId } = await seedSourceDocument({ trace_id });
+
+    vi.mocked(findLiveBillByVendorAndNumber).mockRejectedValueOnce(
+      new ServiceError('PIPELINE_TRANSIENT_EXHAUSTED', '[test] transient'),
+    );
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+
+    // All three together — the gate for this fix (a test only checking one
+    // or two of these would pass on a lesser fix, e.g. a bare try/catch that
+    // swallows the error without classifying it, or a status flip with the
+    // trace dropped).
+    expect(result.status).toBe('pipeline_failed');
+    expect(result.failure_class).toBe('transient_exhausted');
+    expect(result.pipeline_trace.length).toBeGreaterThan(0);
   });
 });

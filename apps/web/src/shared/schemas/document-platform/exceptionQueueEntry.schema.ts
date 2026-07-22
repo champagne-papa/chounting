@@ -35,9 +35,11 @@ export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
 // 12 v1-active exception_reason values. Each has a named v1 consumer
-// in a ratified ADR. Reserved 2 values (wrong_entity_exception per
+// in a ratified ADR. Reserved 3 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
-// §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
+// §5-§6 supabase_storage-v1-exempt; provider_unavailable per Charter B
+// D-5, migration 20240180, reserved NOT-active pending the Phase-7
+// routing surface) stay in DB ENUM.
 //
 // 5 candidate values were considered at scope-lock and OMITTED
 // entirely (NOT in enum, NOT reserved, NOT in any future migration

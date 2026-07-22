@@ -145,6 +145,14 @@ export interface LiveBillByVendorAndNumberResult {
  * must count; a voided/cancelled bill is a legitimate re-book target and must
  * not. Keyed on the extracted vendor_invoice_number ↔ bills.bill_number (the
  * field buildPostBillInput writes), NOT the matcher's dead invoice_number read.
+ *
+ * Note (fix-wave finding #4): `created_at ASC LIMIT 1` means "first live
+ * match" is judged against the OLDEST live bill. If two live bills ever share
+ * (org, vendor_id, bill_number) — a duplicate-live-bill anomaly the schema
+ * does not itself prevent — provenance is read off that oldest row, not the
+ * newest. The outcome is the safe direction either way: defer → the incoming
+ * invoice attaches (Stage 6); fire → it parks for human review at
+ * needs_review. No mis-post results from picking the wrong one of the two.
  */
 export async function findLiveBillByVendorAndNumber(
   input: LiveBillByVendorAndNumberInput,
