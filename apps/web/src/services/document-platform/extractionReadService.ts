@@ -119,10 +119,19 @@ export interface LiveBillByVendorAndNumberInput {
 export interface LiveBillByVendorAndNumberResult {
   /**
    * First LIVE bill (lifecycle_state NOT IN 'voided'/'cancelled') with the same
-   * (org, vendor_id, bill_number), or null. A non-null value is the
-   * semantic-duplicate signal: an already-booked invoice re-arriving.
+   * (org, vendor_id, bill_number), or null.
    */
   matched_bill_id: string | null;
+  /**
+   * True iff matched_bill_id is non-null AND that bill carries a LIVE
+   * (link_status='created') primary_invoice source_document_links row — i.e. it
+   * was document-sourced. The dup handler fires ONLY when both are true: a
+   * matching document-sourced bill is a re-book; a matching bill with no live
+   * primary_invoice link is manual/PO/override/voided origin, so the incoming
+   * invoice is a legitimate first-arrival attachment (defer to Stage 6). See
+   * 2026-07-22-board-4-fork-c-attachment-seam-design.md §3-§4.
+   */
+  is_document_sourced: boolean;
 }
 
 /**
@@ -165,8 +174,36 @@ export async function findLiveBillByVendorAndNumber(
     );
   }
 
+  const matched_bill_id = data && data.length > 0 ? data[0].bill_id : null;
+
+  if (!matched_bill_id) {
+    return { matched_bill_id: null, is_document_sourced: false };
+  }
+
+  // Provenance discriminator (design §3): the matched bill is document-sourced iff
+  // it carries a LIVE (link_status='created') primary_invoice link. link_status=
+  // 'created' is load-bearing — a voided bill retains a link_status='reversed'
+  // primary_invoice row (links are reversed, never deleted; 20240147), which must
+  // NOT count. Lands on source_document_links_entity_status_idx.
+  const { data: linkRows, error: linkError } = await db
+    .from('source_document_links')
+    .select('id')
+    .eq('linked_entity_type', 'bill')
+    .eq('linked_entity_id', matched_bill_id)
+    .eq('link_role', 'primary_invoice')
+    .eq('link_status', 'created')
+    .limit(1);
+
+  if (linkError) {
+    throw new ServiceError(
+      'PIPELINE_TRANSIENT_EXHAUSTED',
+      `[semantic-duplicate] provenance-link query failed: ${linkError.message}`,
+    );
+  }
+
   return {
-    matched_bill_id: data && data.length > 0 ? data[0].bill_id : null,
+    matched_bill_id,
+    is_document_sourced: !!(linkRows && linkRows.length > 0),
   };
 }
 
