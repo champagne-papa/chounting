@@ -618,14 +618,20 @@ export async function ingestDocument(
 
   // Board #4 Fork C handler #1 — semantic-duplicate detection. Between Stage 5
   // (vendor resolved) and Stage 6 (matcher): if the extracted invoice already
-  // exists as a LIVE bill for the matched vendor — a re-book of an
-  // already-booked invoice that Stage-0 dedupByHash (byte-identity) misses —
-  // route to a human under 'duplicate_invoice_suspected' and SKIP Stages 6-7.
-  // Fires EVEN under confident extraction: the danger is orthogonal to extraction
-  // confidence (that is the handler's whole point). Guard: only vendor_invoice
-  // docs, only when the vendor matched (an unmatched vendor already routes to
-  // needs_review via router branch c), and only when an invoice number was
-  // extracted (a null number can't be a keyed duplicate).
+  // exists as a LIVE, DOCUMENT-SOURCED bill for the matched vendor — a re-book
+  // of an already-booked invoice that Stage-0 dedupByHash (byte-identity)
+  // misses — route to a human under 'duplicate_invoice_suspected' and SKIP
+  // Stages 6-7. Fires EVEN under confident extraction: the danger is orthogonal
+  // to extraction confidence (that is the handler's whole point). Guard: only
+  // vendor_invoice docs, only when the vendor matched (an unmatched vendor
+  // already routes to needs_review via router branch c), only when an invoice
+  // number was extracted (a null number can't be a keyed duplicate), AND only
+  // when the matched bill itself is document-sourced (a live primary_invoice
+  // link) — see the provenance-gate comment at the `if (dup...)` check below.
+  // A matching bill with no live link is manual/PO/override/voided origin, so
+  // the incoming invoice is a legitimate first-arrival attachment that must
+  // fall through to Stage 6 (INV-WORKFLOW-002 ATTACHMENT EXIT), not park as a
+  // false-positive duplicate.
   //
   // Two-step park (received→classified, then enqueue does classified→needs_review)
   // mirrors the multi_invoice / unknown_document_type short-circuits: the case is
@@ -664,7 +670,12 @@ export async function ingestDocument(
       vendor_id: vendorMatch.vendor_id,
       bill_number: extractedInvoiceNumber,
     });
-    if (dup.matched_bill_id) {
+    // Provenance gate (design §4.1): fire ONLY when the matched live bill is
+    // itself document-sourced (a live primary_invoice link). A matching bill with
+    // no live link is manual/PO/override/voided origin → the incoming invoice is a
+    // legitimate first-arrival attachment → fall through to Stage 6 (INV-WORKFLOW-002
+    // ATTACHMENT EXIT). Distinguishes re-book (fire) from attachment (defer).
+    if (dup.matched_bill_id && dup.is_document_sourced) {
       try {
         await advanceCaseAutomation(
           { document_case_id: documentCaseId, target_state: 'classified' },

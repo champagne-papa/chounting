@@ -207,8 +207,35 @@ async function seedBill(
   return bill_id;
 }
 
+// Seed a LIVE (created) primary_invoice link on a bill via the REAL RPC — the
+// same write path billService.post uses (write-path fidelity). Makes the bill
+// read as document-sourced → the dup handler's provenance gate fires. See design §8.1.
+async function seedPrimaryInvoiceLink(
+  sourceDocId: string,
+  billId: string,
+  trace_id: string,
+): Promise<void> {
+  const { error } = await db.rpc('create_source_document_link_with_audit', {
+    p_link: {
+      id: crypto.randomUUID(),
+      source_document_id: sourceDocId,
+      linked_entity_type: 'bill',
+      linked_entity_id: billId,
+      link_role: 'primary_invoice',
+      trace_id,
+      created_by: SEED.USER_CONTROLLER,
+    },
+    p_audit: {
+      user_id: SEED.USER_CONTROLLER, trace_id,
+      action: 'source_document_link_created', entity_type: 'source_document_link', tool_name: null,
+    },
+  });
+  if (error) throw new Error(`link seed failed: ${error.message}`);
+}
+
 describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocument', () => {
   const traceIds: string[] = [];
+  const billIds: string[] = [];
   let vendorId: string;
 
   beforeEach(async () => {
@@ -222,6 +249,10 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
   });
 
   afterEach(async () => {
+    for (const b of billIds) {
+      await db.from('source_document_links').delete().eq('linked_entity_id', b);
+    }
+    billIds.length = 0;
     await db.from('bills').delete().eq('vendor_id', vendorId);
     await db.from('vendors').delete().eq('vendor_id', vendorId);
     for (const tid of traceIds) {
@@ -230,13 +261,15 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
     traceIds.length = 0;
   });
 
-  it('confident extraction + a live (fully_paid) bill with the same (vendor, number) → parks at needs_review with reason duplicate_invoice_suspected, short-circuiting before the matcher', async () => {
+  it('confident extraction + a live DOCUMENT-SOURCED bill (primary_invoice link) with the same (vendor, number) → parks at needs_review with duplicate_invoice_suspected, short-circuiting before the matcher', async () => {
     const trace_id = crypto.randomUUID();
     traceIds.push(trace_id);
     const { sourceDocId, caseId } = await seedSourceDocument({ trace_id });
     // fully_paid: invisible to loadOpenBillsForVendor — proves the handler
     // catches a duplicate the existing matcher structurally cannot see.
-    await seedBill(vendorId, 'fully_paid');
+    const billId = await seedBill(vendorId, 'fully_paid');
+    billIds.push(billId);
+    await seedPrimaryInvoiceLink(sourceDocId, billId, trace_id); // document-sourced ⇒ dup fires
 
     const result = await ingestDocument({
       org_id: SEED.ORG_HOLDING,
@@ -263,6 +296,56 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
     expect(stages).not.toContain('match_against_existing_state');
     expect(stages).not.toContain('router_match_against_state');
     expect(stages).not.toContain('build_proposal');
+  });
+
+  it('MUST-NOT-FIRE — a matching bill with NO primary_invoice link (manual/PO origin) → dup DEFERS, full pipeline attaches', async () => {
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const { sourceDocId, caseId } = await seedSourceDocument({ trace_id });
+    const billId = await seedBill(vendorId, 'approved_for_payment');
+    billIds.push(billId);
+    // NO seedPrimaryInvoiceLink → the bill reads as manual → dup must defer.
+    void sourceDocId;
+
+    const result = await ingestDocument({ org_id: SEED.ORG_HOLDING, source_document_id: sourceDocId, trace_id });
+    expect(result.failure_class).toBeNull();
+
+    const stages = result.pipeline_trace.map((r) => r.stage_name);
+    expect(stages).toContain('match_against_existing_state'); // Stage 6 ran (attach path)
+    expect(stages).toContain('build_proposal');
+
+    const { data: dupExceptions } = await db
+      .from('exception_queue_entries')
+      .select('exception_reason')
+      .eq('document_case_id', caseId)
+      .eq('exception_reason', 'duplicate_invoice_suspected');
+    expect(dupExceptions).toHaveLength(0);
+  });
+
+  it('MUST-NOT-FIRE — a matching bill whose primary_invoice link is REVERSED (voided) → dup DEFERS (link_status guard)', async () => {
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    const { sourceDocId, caseId } = await seedSourceDocument({ trace_id });
+    const billId = await seedBill(vendorId, 'approved_for_payment');
+    billIds.push(billId);
+    await seedPrimaryInvoiceLink(sourceDocId, billId, trace_id);
+    const { error: revErr } = await db.rpc('reverse_source_document_link_with_audit', {
+      p_input: { linked_entity_type: 'bill', linked_entity_id: billId },
+      p_audit: { controller_user_id: SEED.USER_CONTROLLER, reversal_trace_id: trace_id, reversal_reason: 'test void' },
+    });
+    if (revErr) throw new Error(`reverse failed: ${revErr.message}`);
+
+    const result = await ingestDocument({ org_id: SEED.ORG_HOLDING, source_document_id: sourceDocId, trace_id });
+    expect(result.failure_class).toBeNull();
+    const stages = result.pipeline_trace.map((r) => r.stage_name);
+    expect(stages).toContain('match_against_existing_state');
+
+    const { data: dupExceptions } = await db
+      .from('exception_queue_entries')
+      .select('exception_reason')
+      .eq('document_case_id', caseId)
+      .eq('exception_reason', 'duplicate_invoice_suspected');
+    expect(dupExceptions).toHaveLength(0);
   });
 
   it('NEGATIVE CONTROL — same confident extraction + matched vendor but NO colliding bill → full pipeline runs (matcher + proposal), NO duplicate_invoice_suspected exception', async () => {
@@ -300,7 +383,9 @@ describe('Board #4 Fork C — semantic-duplicate handler wired into ingestDocume
     const trace_id = crypto.randomUUID();
     traceIds.push(trace_id);
     const { sourceDocId, caseId } = await seedSourceDocument({ trace_id });
-    await seedBill(vendorId, 'fully_paid');
+    const billId = await seedBill(vendorId, 'fully_paid');
+    billIds.push(billId);
+    await seedPrimaryInvoiceLink(sourceDocId, billId, trace_id); // document-sourced ⇒ dup fires
 
     // First ingest → parks as duplicate_invoice_suspected (case → needs_review).
     const first = await ingestDocument({
