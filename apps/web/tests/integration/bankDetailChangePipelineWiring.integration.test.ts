@@ -207,8 +207,21 @@ async function seedBill(vendor_id: string, lifecycle_state: string): Promise<str
   return bill_id;
 }
 
+// Seed a LIVE (created) primary_invoice link on a bill via the REAL RPC — the
+// same write path billService.post uses (write-path fidelity). Makes the bill
+// read as document-sourced → the dup handler's provenance gate would fire (see
+// design §8.1) — used here to prove the bank-detail handler wins anyway.
+async function seedPrimaryInvoiceLink(sourceDocId: string, billId: string, trace_id: string): Promise<void> {
+  const { error } = await db.rpc('create_source_document_link_with_audit', {
+    p_link: { id: crypto.randomUUID(), source_document_id: sourceDocId, linked_entity_type: 'bill', linked_entity_id: billId, link_role: 'primary_invoice', trace_id, created_by: SEED.USER_CONTROLLER },
+    p_audit: { user_id: SEED.USER_CONTROLLER, trace_id, action: 'source_document_link_created', entity_type: 'source_document_link', tool_name: null },
+  });
+  if (error) throw new Error(`link seed failed: ${error.message}`);
+}
+
 describe('Board #4 Fork C — bank-detail handler wired into ingestDocument', () => {
   const traceIds: string[] = [];
+  const billIds: string[] = [];
   let vendorId: string;
 
   beforeEach(async () => {
@@ -221,6 +234,10 @@ describe('Board #4 Fork C — bank-detail handler wired into ingestDocument', ()
   });
 
   afterEach(async () => {
+    for (const b of billIds) {
+      await db.from('source_document_links').delete().eq('linked_entity_id', b);
+    }
+    billIds.length = 0;
     await db.from('bills').delete().eq('vendor_id', vendorId);
     await db.from('vendors').delete().eq('vendor_id', vendorId);
     for (const tid of traceIds) {
@@ -339,6 +356,32 @@ describe('Board #4 Fork C — bank-detail handler wired into ingestDocument', ()
     });
     expect(result.status).toBe('parked_unposted');
 
+    const { data: exceptions } = await db
+      .from('exception_queue_entries')
+      .select('exception_reason')
+      .eq('document_case_id', caseId);
+    expect(exceptions).toHaveLength(1);
+    expect(exceptions![0].exception_reason).toBe('bank_detail_change_suspected');
+  });
+
+  it('COVERAGE — a coordinate-bearing invoice that ALSO matches a live document-sourced bill still routes to bank_detail_change_suspected (route-to-human is correct even when it would attach; head pointer deferred per design §4.2)', async () => {
+    const trace_id = crypto.randomUUID();
+    traceIds.push(trace_id);
+    // Vendor line included (as in BOTH_TRIP_LINES) so vendorMatch genuinely
+    // resolves — the dup handler's provenance gate is truly satisfiable here,
+    // not just structurally seeded.
+    setArtifact(BOTH_TRIP_LINES);
+    const { sourceDocId, caseId } = await seedSourceDocument({ trace_id });
+    const billId = await seedBill(vendorId, 'approved_for_payment'); // bill_number === INVOICE_NUMBER
+    billIds.push(billId);
+    await seedPrimaryInvoiceLink(sourceDocId, billId, trace_id); // document-sourced ⇒ dup handler WOULD otherwise be eligible
+
+    const result = await ingestDocument({
+      org_id: SEED.ORG_HOLDING,
+      source_document_id: sourceDocId,
+      trace_id,
+    });
+    expect(result.status).toBe('parked_unposted');
     const { data: exceptions } = await db
       .from('exception_queue_entries')
       .select('exception_reason')

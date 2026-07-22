@@ -498,6 +498,13 @@ export async function ingestDocument(
   // for the same reason (advanceCaseAutomation no-ops at/past target; the
   // re-enqueue is caught). Parks; does not assert auto-commit is off (Wave -1
   // safety note; re-verify when governed auto-commit returns, ADR-0007 §Tier 2 Q78).
+  //
+  // SEAM NOTE (design §4.2): this handler routes to a human even when the
+  // document would ALSO legitimately attach to an existing bill — its trigger is
+  // a claim about the document's own content (payment coordinates), true regardless
+  // of a matching bill. It intentionally does NOT get the
+  // dup handler's provenance gate. Cost: the attachment head pointer is not set
+  // (convenience loss, not a wrong disposition) — recovery is deferred (design §7).
   if (
     documentCaseId &&
     classification.result.documentType === 'vendor_invoice' &&
@@ -577,6 +584,13 @@ export async function ingestDocument(
   // NOTHING before the enqueue → clean idempotent re-park. Parks; does not assert
   // auto-commit is off (Wave -1 safety; re-verify when governed auto-commit returns,
   // ADR-0007 §Tier 2 Q78).
+  //
+  // SEAM NOTE (design §4.2): this handler routes to a human even when the
+  // document would ALSO legitimately attach to an existing bill — its trigger is
+  // a claim about the document's own content (statement shape), true regardless
+  // of a matching bill. It intentionally does NOT get the
+  // dup handler's provenance gate. Cost: the attachment head pointer is not set
+  // (convenience loss, not a wrong disposition) — recovery is deferred (design §7).
   if (
     documentCaseId &&
     classification.result.documentType === 'vendor_invoice' &&
