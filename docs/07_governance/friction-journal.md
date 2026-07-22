@@ -19350,6 +19350,11 @@ GROUNDING GRAIN: detector-identified over the Fork-C window; all four fixture co
 first-hand (WSL) this arc; the advisor independently corroborated the two most recent fires (#3, #4)
 first-hand.
 
+AUTHORED 2026-07-22 (operator-triggered arc-close): this graduate-ready bank is DISCHARGED — the
+codification landed at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline
+fixtures (N=4), routed through `codify-convention`. The four-commit provenance banked above is the
+codification's Evidence basis.
+
 DESIGN DECISION (N=1, correctly uncodified — application of the already-graduated
 `regex-permissive-matching` convention, per the detector) — presence-AND-weak-invoice-signal,
 labeled-vs-bare guard. The detector fires only when a statement-EXCLUSIVE marker is present AND no
@@ -19409,3 +19414,97 @@ push-time insurance, not a known gap). Commit `1dc8c62b` landed on the operator'
 the `board-4-slice-2-build` lock label. Recorded on `feat/board-4-fork-c` (local, unpushed; migrations
 `20240190/191` applied to local dev only — they reach staging/prod via the operator's separate push +
 deploy). Ahead of `origin/main` by 3 (the three Fork-C handlers), counted against disk.
+
+## 2026-07-22 — board #4 Fork C seam fix (dup over-fire → Phase-4 attachment restore) + review wave + arc-close codification
+
+CLOSE (the seam-fix arc + arc-close). Between tranche 3 and this close, the FIRST full-suite
+`test:full` run at push-readiness surfaced a regression the per-unit grounding had not: the
+tranche-1 semantic-dup handler OVER-FIRES. The arc remediated it (design → plan → 4-task
+subagent-driven build → whole-branch review → fix wave), restored INV-WORKFLOW-002, and pushed the
+whole Fork C spine (10 commits) to `origin/feat/board-4-fork-c` @ `2f396dd5` + the scoring-bug
+finding to `origin/docs/scoring-bug` @ `640c8057`. Design/plan:
+`docs/09_briefs/post-mvp/2026-07-22-board-4-fork-c-attachment-seam-{design,plan}.md`.
+
+WRONG (the dup over-fire — correct-per-unit, broke only at full-suite scope). The semantic-dup
+handler (tranche 1, `612b05a9`) fires when an incoming vendor invoice's `(vendor, bill_number)`
+matches a LIVE bill. But that signature is ALSO the precondition for a legitimate first-arrival
+attachment (an invoice arriving for an existing manual/PO bill), which Wave-6 D2.1 T4 / INV-WORKFLOW-
+002 routes as a matched ATTACHMENT EXIT (head pointer set). The handler, keyed on bill-existence
+alone, collapsed a designed two-outcome routing (attach vs. duplicate) into one — parking every
+matching invoice as a suspected duplicate and short-circuiting Stage 6, so the head pointer was
+never set. It shipped clean at unit grain (its own fires-correctly test + negative control + the
+targeted regression sweep all passed) and was invisible until `routingTerminalDisposition`'s
+ATTACHMENT-EXIT case broke at the first `test:full`. The push-readiness gate (Condition 1 =
+`test:full`) is exactly what caught it — the gate earning its keep.
+
+GROUNDING-GAP LESSON (the arc's durable output, attributed straight). A route-to-human danger
+handler needs a **must-not-fire-on-the-legitimate-adjacent-case** test — not just fires-on-danger +
+a negative control. The tranche-1 dup suite had all three of the wrong things: a fires-correctly
+positive, a no-colliding-bill negative control, and an unmatched-vendor guard-arm — but NO "a
+colliding bill that is a legitimate first-arrival attachment → must NOT fire" case, because that
+case requires understanding the attachment path the handler was preempting. That absent assertion
+is precisely what let the over-fire ship. This is a grounding-discipline gap in BOTH lanes' tranche-1
+passes: the handler was grounded as "fires on the danger case + the negative control runs the full
+pipeline," and neither lane checked that it did NOT fire on an existing attachment-routing test that
+seeds the same `(vendor, number)` signature. Recorded straight, not softened — the advisor's own
+tranche-1 grounding carried the same gap, and named it as the load-bearing learning. Banked as an
+articulated discipline (observation-grain N=1 at this articulation); the next fire routes through
+`codify-convention` toward `docs/04_engineering/conventions/testing.md`.
+
+THE FIX (Option 1, operator-approved — provenance gate). The dup handler now fires ONLY when the
+matched bill is document-sourced: it carries a LIVE (`link_status='created'`) `primary_invoice`
+`source_document_links` row (INV-DOC-001 writes it via `billService.post`; the pipeline passes
+`primary_document_id`). A manual/PO/override-committed or voided bill has no live link → the incoming
+invoice is a legitimate first-arrival attachment → defer to Stage 6 (ATTACHMENT EXIT restored). No
+new substrate; the discriminator is a second read on an already-invariant-backed signal. Bank-detail
+and statement are UNCHANGED — their triggers are claims about the document's own content (payment
+coordinates / statement shape), correct even for a would-attach doc, so they keep routing-to-human;
+their only cost is the lost head pointer, deferred (design §7). `is_document_sourced` (`12b50e95`) →
+handler gate (`b2fc0e2f`, restores INV-WORKFLOW-002) → seam note + coverage (`2e8b5843`).
+
+CATCH — `link_status='created'` is load-bearing (advisor, ratified into the discriminator). Links
+are reversed, never deleted: a voided bill retains a `link_status='reversed'` `primary_invoice` row.
+A discriminator querying link-EXISTENCE without the status filter would read that stale reversed link
+as "document-sourced → fire" and re-introduce the over-fire on a re-book-after-void — the exact
+population the dup lifecycle filter excludes. The predicate is filtered `link_status='created'` and
+guarded by a reversed-link must-not-fire test at both the read and the pipeline level (seed the link
+via the real RPC, reverse it via the real RPC, assert defer). This is the catch that kept the fix
+from shipping a subtler version of the bug it fixed.
+
+REVIEW WAVE (whole-branch review found one Important + tidy-ups). The final whole-branch review (0
+Critical / 1 Important / 4 Minor, `2f396dd5`) caught that `findLiveBillByVendorAndNumber` was called
+OUTSIDE the dup handler's try/catch, so its `PIPELINE_TRANSIENT_EXHAUSTED` throw escaped
+`ingestDocument`'s structured-result contract (losing `pipeline_trace`, leaving the `classifyFailure`
+mapping dead). Pre-existing since tranche 1; the seam fix's link-query doubled the throw surface on
+that already-unwrapped call. Wrapped to `pipeline_failed`, guarded by a three-part transient test
+(status + `failure_class='transient_exhausted'` + `pipeline_trace` populated — not a status-only
+green; the same must-not-fire-vacuously discipline applied to the error path). Tidy-ups: a dead
+`void` no-op removed; a doc note on the oldest-live-bill provenance semantics; the stale
+`Reserved 2 → 3` exception_reason header reconciled (naming `provider_unavailable`). The bank-detail
+bare-label breadth (#2) left as the accepted permissive-to-flag posture.
+
+CODIFICATION (this entry authors it). The **Tier-A-sufficient live-pipeline fixtures** discipline —
+banked graduate-ready at observation-grain N=4 in the 2026-07-21 tranche-3 entry — is authored here
+at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline fixtures (N=4), the
+complement of the two eval-suite sections (mock-to-throw for eval suites vs. content-sufficiency for
+pipeline integration tests). The tranche-3 bank is DISCHARGED (see its AUTHORED note).
+
+CARRY-FORWARDS (named, not closed): the `ReviewCaseDetailView` stale-text divergence shipped
+known-red via the Condition-1 escape clause (pre-existing, branch-unchanged, documented) — its fix
+is a separate item; the **scoring bug** (`docs/scoring-bug`) is a FINDING, not a fix — vendor-only
+scoring, aggregate-capped at `0.3 × vendor_match`, still live in the code, the ADR-0018/0019
+disposition item and a pre-condition on governed auto-commit returning; the accepted
+override-committed re-book miss (documented coverage envelope, design §6); the deferred
+bank-detail/statement head-pointer recovery (design §7).
+
+LANE — the fix ran through subagent-driven-development (4 TDD tasks + a whole-branch review + a fix
+wave), each built surface WSL-first-hand-verified (diff read + tests re-run + typecheck + `callClaude`
+count 0); the advisor independently grounded the LOAD-BEARING surfaces first-hand (the
+`link_status='created'` predicate, the reversed-link must-not-fire consequence at the handler,
+`routingTerminalDisposition` green-for-the-right-reason, and the three-part transient assertion the
+hardest), taking adjacent surfaces (some coverage-test assertions, migration ADD-VALUE bodies,
+`types.ts` regens) on WSL's report; each commit operator-per-act. Commits `12b50e95`
+`b2fc0e2f` `2e8b5843` `2f396dd5` on `feat/board-4-fork-c` (10 total with the tranche + docs commits),
+pushed to origin at the operator's separate word; migrations reach staging/prod only via a further
+merge + deploy (unchanged — the whole arc stayed local-dev-only on the real ledger). This entry IS a
+codification (the N=4); the grounding-gap lesson is banked (N=1), not codified.
