@@ -184,7 +184,7 @@ function buildCompleteInput(
     source_document_id: fixture.sourceDocId,
     document_type: 'vendor_invoice',
     classification_confidence: 0.95,
-    extracted_fields: { invoice_amount: 1000, invoice_date: '2026-05-14' },
+    extracted_fields: { amount: 1000, accounting_date: '2026-05-14' },
     vendor_match: {
       vendor_id: fixture.vendorId,
       confidence: 0.95,
@@ -351,6 +351,103 @@ describe('dispatchTrigger T5 — candidate_superseded path (D-partial-no-idempot
     expect(before.decision_outcome).toBe('candidate_superseded');
     expect(before.candidate_count_before).toBe(1);
     expect(before.candidate_count_after).toBe(1);
+  });
+
+  // Closes the blind spot that let the 2026-07-22 field-name split ship
+  // undetected on the re-evaluation path: every other T5 test asserts
+  // OUTCOMES (decision_outcome, candidate counts), none asserted SCORES, so
+  // rematchCandidate's reconstruction could silently zero an axis. It also
+  // fences the transient regression Task 1 introduced — site 1 reading
+  // `amount`/`accounting_date` while site 5 still wrote
+  // `invoice_amount`/`invoice_date` made rematch amount+date read undefined.
+  it('T5 re-evaluation reconstructs amount/date/reference (regression: split reader/writer vocabulary)', async () => {
+    const db = adminClient();
+    const vendorId = await seedVendor(SEED.ORG_HOLDING);
+    const billId = crypto.randomUUID();
+    const { error: billErr } = await db.from('bills').insert({
+      bill_id: billId,
+      org_id: SEED.ORG_HOLDING,
+      vendor_id: vendorId,
+      issue_date: '2026-05-14',
+      lifecycle_state: 'approved_for_payment',
+      amount_cad: 1000,
+      bill_number: 'BILL-RE-001',
+    });
+    expect(billErr).toBeNull();
+
+    const fixture = await seedRouterCase(SEED.ORG_HOLDING, ctx, vendorId);
+    await completeCandidate(
+      {
+        document_case_id: fixture.caseId,
+        source_document_id: fixture.sourceDocId,
+        document_type: 'vendor_invoice',
+        classification_confidence: 0.95,
+        extracted_fields: {
+          amount: 1000,
+          accounting_date: '2026-05-14',
+          vendor_invoice_number: 'BILL-RE-001',
+        },
+        vendor_match: {
+          vendor_id: vendorId,
+          confidence: 0.95,
+          match_type: 'exact_name',
+          candidate_alternatives: [],
+        },
+        trace_id: ctx.trace_id,
+      },
+      ctx,
+    );
+    await transitionCaseToClassifiedDirect(db, SEED.ORG_HOLDING, fixture.caseId, ctx);
+
+    await dispatchTrigger(buildT5Envelope(SEED.ORG_HOLDING, billId, ctx.trace_id), ctx);
+
+    // NB: supersedes_candidate_id is hardcoded null at every emission site —
+    // "supersession" at v1 is decision_outcome bookkeeping, not a row link —
+    // so the rematch-produced candidate is identified as the most recent row.
+    const { data: rows, error } = await db
+      .from('document_relationship_candidates')
+      .select('candidate_features, created_at')
+      .eq('document_case_id', fixture.caseId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    expect(error).toBeNull();
+    expect(rows).toHaveLength(1);
+
+    // CHARACTERIZATION of a known limitation this fix SURFACES but does not
+    // cause (carry-forward, 2026-07-22; out of the five-site scope).
+    //
+    // completeCandidate dedups only against COMMITTED source_document_links
+    // (existingKeys, :913), not against prior candidate rows, and
+    // supersedes_candidate_id is never populated. So re-evaluation emits a
+    // SECOND row for the same bill. loadCandidatesForCase (:410) selects *
+    // with no dedup, so resolveCandidates sees N=2 with two IDENTICAL scores
+    // → ambiguity_margin = 0 → below AMBIGUITY_MARGIN_V1_PROVISIONAL (0.05)
+    // → branch (b) → exception queue.
+    //
+    // Pre-alignment every candidate tied at vendor-only anyway, so this was
+    // invisible. Post-alignment it means a re-evaluated case routes to human
+    // review even on a near-perfect match — observed here at 0.985. The
+    // direction is fail-safe (a human sees it, under the Wave -1 bleed-stop,
+    // no ledger write), which is why this is characterized rather than fixed.
+    // Flip this assertion when candidate-set dedup or real supersession lands.
+    const { data: allRows } = await db
+      .from('document_relationship_candidates')
+      .select('id, linked_entity_id, confidence_score')
+      .eq('document_case_id', fixture.caseId);
+    expect(allRows).toHaveLength(2);
+    expect(new Set(allRows!.map((r) => r.linked_entity_id)).size).toBe(1);
+    expect(new Set(allRows!.map((r) => r.confidence_score)).size).toBe(1);
+
+    const features = (
+      rows![0].candidate_features as {
+        features: Array<{ feature_name: string; normalized_score: number }>;
+      }
+    ).features;
+    const axes = Object.fromEntries(features.map((f) => [f.feature_name, f.normalized_score]));
+    expect(axes.amount_match).toBe(1);
+    expect(axes.date_proximity).toBe(1);
+    // Never reconstructed at all pre-fix — site 5 carried no reference value.
+    expect(axes.reference_alignment).toBe(1);
   });
 });
 

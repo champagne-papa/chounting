@@ -19284,3 +19284,197 @@ the codification-none verdict is corroborated by both slice-2 entries' self-decl
 plus the friction-pattern-detector; commits landed on the operator's explicit word. Not a
 codification. Recorded on `feat/board-4-slice-2` (local, banked for the
 slice/retrospective-close push — the push is the operator's separate act).
+
+[2026-07-15] [WRONG] Vendor-invoice candidate scoring silently collapsed to
+vendor-match alone — an extractor↔matcher field-name mismatch zeroes 3 of the 5
+scoring axes. Discovered during Fork C (board #4 spine) chunk-1 onset grounding;
+ANTI-SCOPE to Fork C — flagged, not fixed. Disposition is the operator's to place.
+
+THE BUG (grounded end-to-end at `2f70a040`). The vendor-invoice extractor writes
+`amount` / `accounting_date` / `vendor_invoice_number`
+(`shared/schemas/extraction/vendorInvoiceExtractionSchema.ts`). `completeCandidate`'s
+bill-scoring reads `parsed.extracted_fields.invoice_amount` / `.invoice_date` /
+`.invoice_number` (`services/document-platform/documentRouterService.ts:933/937/941`)
+— three names the extractor never writes. There is NO remap between them: Stage-6
+passes `extracted_fields: extracted.fields` verbatim
+(`agent/orchestrator/extraction/ingestDocument.ts:489`) and
+`CompleteCandidateInputSchema.extracted_fields` is a passthrough `z.record(z.unknown())`
+(`shared/schemas/document-platform/documentRelationshipCandidate.schema.ts:155`). So all
+three reads return `undefined`. The compute helpers degrade to null on absent input
+rather than throwing (`computeAmountFeatures` / `computeDateFeatures` /
+`computeStringMatchFeature`, `documentRouterService.ts:704-755`) — nothing errors; the
+axes just go dark.
+
+THE ARITHMETIC. `normalizeFeature` normalizes the one live axis `vendor_match` by a
+CLAMP (`Math.max(0, Math.min(1, vendor_match_confidence))`,
+`core/document-platform/scoreComposition.ts:83`), but the four boolean axes
+(amount / date / reference / payment_method) by `=== true ? 1 : 0` (`:84-91`) — so an
+absent/null input on any of those four normalizes to 0 (not to "excluded").
+`composeScore` is a straight weighted sum with NO renormalization over live axes
+(`:123-135`). vendor_invoice weights are `{vendor_match: 0.3, amount_match: 0.3,
+date_proximity: 0.15, reference_alignment: 0.25, payment_method_consistency: 0}`
+(`V1_PROVISIONAL_WEIGHTS`, `:37-40`). With amount/date/reference dead,
+`aggregate_score = 0.3 × vendor_match_confidence`, ceiling 0.3 — 70% of the
+vendor-invoice scoring weight is structurally zero on the mainline path.
+
+THE ROUTING CONSEQUENCE. `resolveCandidates`: `N===0 → branch c`; `N===1 → branch a`
+(winner elected, NO score threshold); `N≥2 → margin ≥ 0.05 ? a : b`. So (1) a vendor
+with exactly one open bill auto-matches → head-pointer-set → `matched` on vendor
+identity ALONE, with no check that the amount, date, or invoice number resemble the
+bill; (2) any vendor with ≥2 open bills — the only live axis, `vendor_match_confidence`,
+is per-document not per-bill, so every candidate ties, `top − runner_up = 0 < 0.05`, and
+every such case routes to branch (b) / exception queue. Branch-(a)-via-margin is
+unreachable — not by the design property the code comment claims, but because the
+differentiating axes are dead.
+
+THE STALE-COMMENT TELL. `AMBIGUITY_MARGIN_V1_PROVISIONAL` says branch-(a)-via-margin is
+unreachable "at v1 under single-feature scoring" and "activates when chunks-3+ ship
+multi-feature scoring." Chunk 3 SHIPPED multi-feature scoring (`composeScore` is right
+there) — the promised activation silently did not fire, because three of five axes read
+absent keys. The comment is both stale (describes a chunk-1 condition that was supposed
+to end) and a symptom (the bug is why it didn't). Its stated mechanism (`confidence_score
+= vendor_match.confidence`) is also now arithmetically inaccurate — post-chunk-3 it is
+`0.3 × vendor_match.confidence`; same tie-at-every-candidate outcome, so the conclusion
+survived by coincidence.
+
+BLAST RADIUS (bounded today; sharper tomorrow). The Wave -1 A-now bleed-stop disables
+auto-commit — `matched` cases PARK to `needs_review`, no ledger write. That mitigation is
+very likely what has kept this invisible: a human sees every matched case regardless of
+how it scored. So today's exposure is wasted differentiation (N≥2 always to a human) + an
+unchecked N=1 auto-match that a human still reviews — NOT a wrong post. BUT it makes the
+field-name fix a PRE-CONDITION on governed auto-commit returning post-V1 (ADR-0007 §Tier 2
+"V1 re-scoping of the Q78 auto-commit exercise", ratified 2026-05-31 by CTO): the bleed-stop is
+currently the only thing between this bug and a confident wrong post on vendor identity
+alone. Sharper still — the fix is a pre-condition on prerequisite #3 SPECIFICALLY (ADR-0007
+§Tier 2 four return-prerequisites, `:388,395-396`: the V1 evaluation harness establishes a
+published match/extraction precision threshold on a golden set). Measuring the matcher
+before the fix would calibrate that threshold against vendor-identity-only scoring, baking
+the defect into the golden-set baseline — so the framing is fix-before-MEASURING, not merely
+fix-before-re-enabling.
+
+SCOPE / lane. Anti-scope for Fork C: the semantic-duplicate handler sidesteps this by
+construction — it keys its own lookup on `extracted.fields.vendor_invoice_number` (the
+field that actually lands in `bills.bill_number` via `buildPostBillInput`,
+`ingestDocument.ts:1036`) against `bills` directly, and never reads the matcher's axes.
+Grounded FIRST-HAND independently by both lanes: WSL traced extractor→schema→normalize→
+composeScore; the advisor independently read the Stage-6 passthrough call-site and the
+`resolveCandidates` branch logic. One absence-check remains OPEN in WSL's lane: whether any
+consumer OTHER than the parked `needs_review` path reads `matched` / the head-pointer (if
+one does, the "bounded today" framing narrows).
+
+DISPOSITION (pending — the operator's to place). Its own investigation, not a Fork C task.
+Territory: ADR-0018 (routing/margin) + ADR-0019 (score calibration). Urgent framing
+(advisor lean, endorsed): less "calibration is off," more "a pre-condition on governed
+auto-commit re-enablement." NOT a codification — a discovered-defect record, not a
+convention graduating at observation-grain N≥3, so `codify-convention` is correctly not
+invoked. Recorded on `docs/scoring-bug` — a standalone branch off `origin/main`,
+deliberately NOT the Fork C feature branch: the finding outlives Fork C and its disposition
+(ADR-0018 / ADR-0019) is not a Fork C task. Committed on the operator's explicit word, per
+the report-before-mainline-touch / hold-for-go discipline held across this arc.
+
+RADIUS AMENDMENT [2026-07-22]. The original entry above scoped the defect to
+vendor_invoice. Grounding the remediation showed it is broader, and asymmetric —
+all three SCORED document types read placeholder keys, on different key sets:
+  - vendor_invoice: invoice_amount/invoice_date/invoice_number vs the extractor's
+    amount/accounting_date/vendor_invoice_number → 3 dead axes (0.70 weight).
+  - receipt: receipt_amount/receipt_date/authorization_reference vs total/date/auth_ref
+    → 3 dead axes (0.60 weight); only payment_method matched.
+  - payment_confirmation: authorization_reference vs auth_ref → 1 dead axis, but it is
+    the HEAVIEST in the system: reference_alignment carries 0.35 (vs receipt's 0.20)
+    precisely BECAUSE bank-issued references are canonical (scoreComposition.ts:11-17).
+    The axis that rationale exists to weight is the one that never fired.
+Plus a fourth site outside the three-type frame: rematchCandidate (Subsystem 3
+re-evaluation) reconstructed extracted_fields with the placeholder names AND carried no
+reference or payment_method value at all, so re-evaluation was blind on those axes for
+every type and blind on ALL non-vendor axes for payment_confirmation. Root cause is one
+un-executed deferred obligation, not four bugs: documentRelationshipCandidate.schema.ts
+left extracted_fields as z.record(z.unknown()) at chunk-1 "until Phase 7's per-type
+schemas ship"; Phase 7 shipped them; the lift never happened. Remediation SHIPPED
+2026-07-22 (five-site hand-alignment; typed lift re-filed against the governed-auto-commit
+trigger) — see the next entry.
+
+## 2026-07-22 — scoring-bug remediation: extraction↔router field-name alignment (five sites; transient-regression + duplicate-accumulation surfaced)
+
+Fixed the [2026-07-15] scoring defect (amended above to its true 3/3/1 radius). The fix is
+narrow — align five reader/writer sites in documentRouterService.completeCandidate +
+rematchCandidate to the Phase 7 extractor vocabulary — but the arc surfaced three things
+worth banking beyond the fix itself.
+
+THE PATTERN (banked, not codified — observation-grain N=2). An un-executed deferred
+obligation whose named trigger fired unobserved. The chunk-1 code left extracted_fields
+permissive "until Phase 7's per-type schemas ship" and invented placeholder key names to
+read in the meantime; Phase 7 shipped the schemas; the lift-to-typed obligation had a
+real trigger but no watcher, so the placeholders silently became the permanent contract
+and 0.70/0.60/0.35 of the per-type scoring weight went dead for an entire phase. The
+remedy the code itself named (typed per-type contract) is re-filed at
+documentRelationshipCandidate.schema.ts against a gate WITH an owner — governed
+auto-commit return (ADR-0007 §Tier 2 Q78) — not another calendar trigger that can pass
+unobserved. Companion pattern to the [2026-06-07]-era header-drift family: a comment/
+contract whose truth silently lapsed.
+
+WHY IT SHIPPED GREEN (the masking mechanism, observed from the inside). Every router test
+seeded the reader's INVENTED vocabulary (invoice_amount, receipt_amount, …), so in tests
+the axes were always live while in production they were always dead. A test that seeds
+extracted_fields cannot, on its own, prove the extractor and matcher agree — only running
+the real extractor can. The remediation adds that proof: a pipeline-level test
+(scoringFieldAlignmentPipeline.integration.test.ts) runs the real Tier-A extractor through
+ingestDocument with callClaude unmocked-but-never-reached (Tier-A-sufficient fixture, 0
+paid calls), and asserts the emitted candidate clears the 0.30 pre-fix ceiling (observed
+1.0 end-to-end). During its construction the fix surfaced a live-pipeline fact worth
+recording: the Tier-A vendor capture is sender-LABEL-only and precision-biased — a bare
+name line is a miss — so the fixture needs "Vendor: <name>", not a bare name line, or the
+pipeline emits zero candidates.
+
+MUST-NOT-FIRE, applied (the Fork C dup-over-fire lesson, now N=2). Re-activating the axes
+has a legitimate adjacent case that MUST NOT change: the Scenario A inferred-target paths
+(vendor_invoice and receipt) pass literal nulls by design (ADR-0015 §7) and must stay
+vendor-only. Both got a must-not-fire test asserting the axes stay 0 even though
+extracted_fields now carries real matchable values. This is the SECOND observation of the
+"a change with a legitimate adjacent case needs a must-not-fire-on-the-adjacent-case test"
+pattern (Fork C dup over-fire was N=1). Banked as a graduate-ready candidate; authoring
+deferred to the next fire per the deferred-authoring precedent. On the third fire, route
+through codify-convention (likely testing.md).
+
+TRANSIENT REGRESSION the fix introduced and closed (grounded, RED-proven). Between the
+site-1 fix and the site-5 fix, completeCandidate read `amount`/`accounting_date` while
+rematchCandidate still WROTE `invoice_amount`/`invoice_date`, so re-evaluation amount+date
+went live→dead — this arc's own bug class reintroduced on a narrower path, and
+test-invisible because the dispatchTrigger suite asserted OUTCOMES only, never SCORES. A
+new T5 test now asserts rematch-path scores (the first in that suite to do so), which
+both RED-proved the regression and fences it permanently. Note the regression was NOT
+found by a test — it was caught by grounding the intermediate reader/writer state at the
+Task-1 checkpoint, before any test for it existed; the RED came after. So two lessons
+stack. Discovery (banked, N=1): a multi-site fix has intermediate states that need
+grounding on their own, independent of the end-state tests. Coverage (banked, N=1): a
+suite that asserts only outcomes cannot catch a scoring regression on the path it covers.
+
+CARRY-FORWARD (surfaced by the fix, NOT caused by it; out of the five-site scope):
+  1. Duplicate-candidate accumulation. supersedes_candidate_id is hardcoded null at all
+     six emission sites and never populated; completeCandidate dedups only against
+     COMMITTED source_document_links, not prior candidate rows. So a re-matched case
+     accumulates a second identical-score row for the same entity; resolveCandidates
+     loads both (loadCandidatesForCase, no dedup), they tie at margin 0, and the case
+     routes to branch (b) → exception queue EVEN ON A NEAR-PERFECT MATCH (observed: two
+     rows, same bill, both 0.985). Pre-fix this was invisible (everything tied at
+     vendor-only anyway). Fail-safe in direction (a human sees it, under the Wave -1
+     bleed-stop, no ledger write), so characterized in a test rather than fixed. Flip the
+     characterization assertion when candidate-set dedup or real supersession lands.
+  2. The typed lift itself — re-filed against governed-auto-commit return (above).
+  3. The margin/threshold calibration — ADR-0019's first cycle, gated on auto-commit
+     return; the fix is what finally generates real (non-zero) margins to calibrate
+     against.
+
+STALE COMMENTS SWEPT (five, header-drift family): the AMBIGUITY_MARGIN tombstone
+(:203-era, "single-feature scoring… branch (a) structurally unreachable"); the file-header
+claim that Subsystem 3 writes supersedes_candidate_id (false — see carry-forward #1); the
+rematchCandidate "Reconstruction fidelity" doc block (listed placeholder key names); the
+candidatesToProduce preamble ("single-feature scoring… chunks-2+ enhancement"); and the
+runPerCaseReEvaluation "single-feature scoring" note. The :1054-1055 "capped at 0.65"
+comment was VERIFIED-not-edited: it documented intent, the bug falsified it, and the fix
+restores its truth (receipt Scenario B = vendor 0.25 + amount 0.25 + date 0.15 = 0.65).
+
+BRANCH. Built on fix/scoring-field-name-alignment off docs/scoring-bug (not the Fork C
+branch): the fix and the finding it discharges belong together, docs/scoring-bug is 1
+commit off origin/main (a clean base vs 11 unmerged Fork C commits), and the design frames
+this as anti-scope to Fork C. NOT a codification. Committed on the operator's explicit word
+per the report-before-mainline-touch discipline.
