@@ -207,7 +207,7 @@ function buildCompleteInput(
     source_document_id: fixture.sourceDocId,
     document_type: documentType,
     classification_confidence: 0.95,
-    extracted_fields: { invoice_amount: 1000 },
+    extracted_fields: { amount: 1000 },
     vendor_match: {
       vendor_id: fixture.vendorId,
       confidence: 0.95,

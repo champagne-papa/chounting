@@ -151,7 +151,7 @@ async function buildClassifiedCaseWithBillCandidate(
     source_document_id: sourceResult.id,
     document_type: 'vendor_invoice',
     classification_confidence: 0.95,
-    extracted_fields: { invoice_amount: 1000, invoice_date: '2026-05-14' },
+    extracted_fields: { amount: 1000, accounting_date: '2026-05-14' },
     vendor_match: {
       vendor_id: vendorId,
       confidence: 0.95,

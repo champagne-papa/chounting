@@ -126,9 +126,12 @@
 // candidates ONLY; does NOT write document_cases.current_relationship_candidate_id
 // or transition state. resolveCandidates writes the head pointer (branch
 // a) AND transitions state (branch a directly; branches b/c via
-// chunk-6's enqueueException). Subsystem 3 (chunks 3+) writes new
-// candidate rows with supersedes_candidate_id and may invoke
-// supersede_case_head_pointer_with_audit to replace the head pointer.
+// chunk-6's enqueueException). Subsystem 3 (rematchCandidate) writes new
+// candidate rows via resolveCandidates' branch (a) path. NB at v1
+// supersedes_candidate_id is hardcoded null at every emission site and never
+// populated — "supersession" is decision_outcome bookkeeping, not a row link
+// (grounded 2026-07-22). Re-matched cases therefore accumulate candidate rows
+// for the same entity; see the 2026-07-22 friction-journal carry-forward.
 //
 // audit_log idempotency_key (chunk-2 first-instance per F-J-β):
 // deriveDecisionIdempotencyKey constructs a deterministic
@@ -200,13 +203,18 @@ const CONFIDENCE_THRESHOLDS_V1_PROVISIONAL: Record<DocumentType, number | null> 
 // (v1_ship_at + 6 months per ADR-0019 §3 + §9 row 13) ratifies. Same
 // V1-PROVISIONAL pattern as CONFIDENCE_THRESHOLDS_V1_PROVISIONAL.
 //
-// v1-operational observation per F-J-α: chunk-1's completeCandidate
-// emits every candidate with confidence_score = vendor_match.confidence
-// (single-feature scoring). For N≥2 cases, margin = top − runner_up = 0
-// structurally. Under any positive threshold, every N≥2 case routes to
-// branch (b) → exception queue. Branch (a) via margin filter is
-// structurally unreachable at v1; activates when chunks-3+ ship multi-
-// feature scoring per ADR-0018 §item 2.
+// v1-operational history: from chunk-1 through the 2026-07-22 field-name
+// alignment, completeCandidate read placeholder extracted_fields keys that no
+// extraction schema emitted, so amount/date/reference normalized to 0 and every
+// candidate scored vendor_match alone. For N≥2 that made margin = top −
+// runner_up = 0 structurally, so every such case routed to branch (b) →
+// exception queue and this threshold was never exercised. The alignment
+// restored genuine multi-feature scoring, so branch (a) via the margin filter
+// is now reachable and margins are non-zero. This threshold has therefore never
+// been exercised against a real margin distribution — its ratification is
+// ADR-0019's first calibration cycle (v1_ship_at + 6 months), which calibrates
+// it as a coupled set with the three CONFIDENCE_THRESHOLDS_V1_PROVISIONAL.
+// See the 2026-07-22 friction-journal entry.
 // ---------------------------------------------------------------------
 const AMBIGUITY_MARGIN_V1_PROVISIONAL = 0.05;
 
@@ -525,8 +533,11 @@ function deriveDispatchIdempotencyKey(
 //   - classification_confidence ← candidate_features.classification_confidence
 //   - vendor_match.confidence ← candidate_features.vendor_match_confidence
 //   - vendor_match.match_type ← candidate_features.vendor_match_type
-//   - extracted_fields.invoice_amount / receipt_amount ← candidate_features.extracted_amount
-//   - extracted_fields.invoice_date ← candidate_features.extracted_invoice_date
+//   - extracted_fields.{amount,total,payment_amount} ← amount_match raw_value.extracted
+//   - extracted_fields.{accounting_date,date,payment_date} ← date_proximity raw_value.extracted
+//   - extracted_fields.{vendor_invoice_number,auth_ref} ← reference_alignment raw_value.extracted
+//   - extracted_fields.payment_method ← payment_method_consistency raw_value.extracted
+//     (all extractor-vocabulary keys per the 2026-07-22 field-name alignment)
 //   - vendor_match.vendor_id ← priorCandidate.linked_entity_id +
 //     Phase 5 entity row lookup (bills/vendor_prepayments carry
 //     vendor_id at Phase 5 ship)
@@ -571,6 +582,12 @@ async function rematchCandidate(
   const dateFeature = candidateFeatures.features.find(
     (f) => f.feature_name === 'date_proximity',
   );
+  const referenceFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'reference_alignment',
+  );
+  const paymentMethodFeature = candidateFeatures.features.find(
+    (f) => f.feature_name === 'payment_method_consistency',
+  );
   const vendorRaw = vendorFeature?.raw_value as
     | { match_type?: string; confidence?: number }
     | null
@@ -580,6 +597,14 @@ async function rematchCandidate(
     | null
     | undefined;
   const dateRaw = dateFeature?.raw_value as
+    | { extracted?: string | null }
+    | null
+    | undefined;
+  const referenceRaw = referenceFeature?.raw_value as
+    | { extracted?: string | null }
+    | null
+    | undefined;
+  const paymentMethodRaw = paymentMethodFeature?.raw_value as
     | { extracted?: string | null }
     | null
     | undefined;
@@ -649,10 +674,29 @@ async function rematchCandidate(
     source_document_id: priorCandidate.source_document_id,
     document_type: candidateFeatures.document_type as DocumentType,
     classification_confidence: candidateFeatures.classification_confidence ?? 0,
+    // Extractor vocabulary, matching what completeCandidate's per-type
+    // branches read after the 2026-07-22 field-name alignment. Keys are
+    // distinct across document types, so the unconditional-write pattern
+    // still holds — each branch reads only its own keys.
+    //
+    // Pre-alignment this wrote the chunk-1 placeholder names and carried NO
+    // reference or payment_method value at all, so re-evaluation was blind on
+    // those axes for every type and blind on ALL non-vendor axes for
+    // payment_confirmation. Both gaps close here.
     extracted_fields: {
-      invoice_amount: amountRaw?.extracted ?? null,
-      invoice_date: dateRaw?.extracted ?? null,
-      receipt_amount: amountRaw?.extracted ?? null,
+      // vendor_invoice
+      amount: amountRaw?.extracted ?? null,
+      accounting_date: dateRaw?.extracted ?? null,
+      vendor_invoice_number: referenceRaw?.extracted ?? null,
+      // receipt
+      total: amountRaw?.extracted ?? null,
+      date: dateRaw?.extracted ?? null,
+      // payment_confirmation
+      payment_amount: amountRaw?.extracted ?? null,
+      payment_date: dateRaw?.extracted ?? null,
+      // receipt + payment_confirmation
+      auth_ref: referenceRaw?.extracted ?? null,
+      payment_method: paymentMethodRaw?.extracted ?? null,
     },
     vendor_match: {
       vendor_id,
@@ -883,14 +927,15 @@ export async function completeCandidate(
     ),
   );
 
-  // Match by document_type. v1 scoring: confidence_score =
-  // vendor_match.confidence (single-feature scoring). candidate_features
-  // captures the feature vector for forensic reconstruction per
-  // ADR-0018 §item 2 ("the Router writes the feature vector and the
-  // resulting score into candidate_features so a reviewer can
-  // reconstruct why a particular score landed"). More sophisticated
-  // scoring (amount-match, date-proximity) is a chunks-2+ Subsystem 1
-  // enhancement.
+  // Match by document_type. Scoring is multi-feature: composeScore weights
+  // vendor_match + amount_match + date_proximity + reference_alignment
+  // (+ payment_method_consistency for receipt/payment_confirmation) into
+  // confidence_score. candidate_features captures the per-axis vector for
+  // forensic reconstruction per ADR-0018 §item 2 ("the Router writes the
+  // feature vector and the resulting score into candidate_features so a
+  // reviewer can reconstruct why a particular score landed"). NB: the
+  // non-vendor axes only became live at the 2026-07-22 field-name alignment —
+  // before it they read placeholder keys and normalized to 0.
   const candidatesToProduce: NewCandidatePayload[] = [];
 
   if (parsed.vendor_match.confidence < threshold) {
@@ -929,16 +974,20 @@ export async function completeCandidate(
     const openBills = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBills) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      // Keys are VendorInvoiceExtractionSchema's vocabulary (amount /
+      // accounting_date / vendor_invoice_number), NOT the chunk-1 placeholder
+      // names (invoice_amount / invoice_date / invoice_number) that no
+      // extractor ever emitted. See the 2026-07-22 friction-journal entry.
       const amountFeatures = computeAmountFeatures(
-        parsed.extracted_fields.invoice_amount,
+        parsed.extracted_fields.amount,
         bill.amount_cad,
       );
       const dateFeatures = computeDateFeatures(
-        parsed.extracted_fields.invoice_date,
+        parsed.extracted_fields.accounting_date,
         bill.issue_date,
       );
       const billNumberMatch = computeStringMatchFeature(
-        parsed.extracted_fields.invoice_number,
+        parsed.extracted_fields.vendor_invoice_number,
         bill.bill_number,
       );
       const signals: RawFeatureSignals = {
@@ -949,7 +998,7 @@ export async function completeCandidate(
         },
         amount_match: amountFeatures.match,
         amount_raw_value: {
-          extracted: parsed.extracted_fields.invoice_amount ?? null,
+          extracted: parsed.extracted_fields.amount ?? null,
           candidate: bill.amount_cad,
           diff_cad: amountFeatures.diff_cad,
           match: amountFeatures.match,
@@ -957,14 +1006,14 @@ export async function completeCandidate(
         },
         date_within_window: dateFeatures.within_window,
         date_raw_value: {
-          extracted: parsed.extracted_fields.invoice_date ?? null,
+          extracted: parsed.extracted_fields.accounting_date ?? null,
           candidate: bill.issue_date,
           proximity_days: dateFeatures.proximity_days,
           within_window_14d: dateFeatures.within_window,
         },
         reference_match: billNumberMatch,
         reference_raw_value: {
-          extracted: parsed.extracted_fields.invoice_number ?? null,
+          extracted: parsed.extracted_fields.vendor_invoice_number ?? null,
           candidate: bill.bill_number,
           match: billNumberMatch,
         },
@@ -1060,16 +1109,21 @@ export async function completeCandidate(
     const openPayments = await loadOpenPaymentsForVendor(db, org_id, vendor_id);
     for (const payment of openPayments) {
       if (existingKeys.has(existingPairKey('payment', payment.payment_id))) continue;
+      // ReceiptExtractionSchema vocabulary (total / date / auth_ref), NOT the
+      // chunk-1 placeholders (receipt_amount / receipt_date /
+      // authorization_reference). `subtotal` is deliberately unread: it
+      // excludes tax and would not match a committed payment or bill amount.
+      // See the 2026-07-22 friction-journal entry.
       const amountFeatures = computeAmountFeatures(
-        parsed.extracted_fields.receipt_amount,
+        parsed.extracted_fields.total,
         payment.amount,
       );
       const dateFeatures = computeDateFeatures(
-        parsed.extracted_fields.receipt_date,
+        parsed.extracted_fields.date,
         payment.payment_date,
       );
       const authorizationReferenceMatch = computeStringMatchFeature(
-        parsed.extracted_fields.authorization_reference,
+        parsed.extracted_fields.auth_ref,
         payment.authorization_reference,
       );
       const paymentMethodMatch = computeStringMatchFeature(
@@ -1084,7 +1138,7 @@ export async function completeCandidate(
         },
         amount_match: amountFeatures.match,
         amount_raw_value: {
-          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          extracted: parsed.extracted_fields.total ?? null,
           candidate: payment.amount,
           diff_cad: amountFeatures.diff_cad,
           match: amountFeatures.match,
@@ -1092,14 +1146,14 @@ export async function completeCandidate(
         },
         date_within_window: dateFeatures.within_window,
         date_raw_value: {
-          extracted: parsed.extracted_fields.receipt_date ?? null,
+          extracted: parsed.extracted_fields.date ?? null,
           candidate: payment.payment_date,
           proximity_days: dateFeatures.proximity_days,
           within_window_14d: dateFeatures.within_window,
         },
         reference_match: authorizationReferenceMatch,
         reference_raw_value: {
-          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          extracted: parsed.extracted_fields.auth_ref ?? null,
           candidate: payment.authorization_reference,
           match: authorizationReferenceMatch,
         },
@@ -1134,12 +1188,15 @@ export async function completeCandidate(
     const openBillsForReceipt = await loadOpenBillsForVendor(db, org_id, vendor_id);
     for (const bill of openBillsForReceipt) {
       if (existingKeys.has(existingPairKey('bill', bill.bill_id))) continue;
+      // ReceiptExtractionSchema vocabulary (total / date); `subtotal`
+      // deliberately unread (excludes tax). Scenario B has no reference or
+      // payment_method semantics — those stay literal null below by design.
       const amountFeatures = computeAmountFeatures(
-        parsed.extracted_fields.receipt_amount,
+        parsed.extracted_fields.total,
         bill.amount_cad,
       );
       const dateFeatures = computeDateFeatures(
-        parsed.extracted_fields.receipt_date,
+        parsed.extracted_fields.date,
         bill.issue_date,
       );
       const signals: RawFeatureSignals = {
@@ -1150,7 +1207,7 @@ export async function completeCandidate(
         },
         amount_match: amountFeatures.match,
         amount_raw_value: {
-          extracted: parsed.extracted_fields.receipt_amount ?? null,
+          extracted: parsed.extracted_fields.total ?? null,
           candidate: bill.amount_cad,
           diff_cad: amountFeatures.diff_cad,
           match: amountFeatures.match,
@@ -1158,7 +1215,7 @@ export async function completeCandidate(
         },
         date_within_window: dateFeatures.within_window,
         date_raw_value: {
-          extracted: parsed.extracted_fields.receipt_date ?? null,
+          extracted: parsed.extracted_fields.date ?? null,
           candidate: bill.issue_date,
           proximity_days: dateFeatures.proximity_days,
           within_window_14d: dateFeatures.within_window,
@@ -1261,8 +1318,15 @@ export async function completeCandidate(
         parsed.extracted_fields.payment_date,
         payment.payment_date,
       );
+      // PaymentConfirmationExtractionSchema writes `auth_ref`; the chunk-1
+      // placeholder `authorization_reference` was borrowed from the payments
+      // COLUMN name on the candidate side (payment.authorization_reference,
+      // just below) and no extractor ever emitted it. This is the heaviest
+      // axis in the system — reference_alignment 0.35, weighted that way
+      // precisely because bank-issued references are canonical — and it never
+      // fired. See the 2026-07-22 friction-journal entry.
       const authorizationReferenceMatch = computeStringMatchFeature(
-        parsed.extracted_fields.authorization_reference,
+        parsed.extracted_fields.auth_ref,
         payment.authorization_reference,
       );
       const paymentMethodMatch = computeStringMatchFeature(
@@ -1292,7 +1356,7 @@ export async function completeCandidate(
         },
         reference_match: authorizationReferenceMatch,
         reference_raw_value: {
-          extracted: parsed.extracted_fields.authorization_reference ?? null,
+          extracted: parsed.extracted_fields.auth_ref ?? null,
           candidate: payment.authorization_reference,
           match: authorizationReferenceMatch,
         },
@@ -1701,9 +1765,11 @@ export async function resolveCandidates(
 //   5. If newCandidates non-empty AND case is not stranded: invoke
 //      Subsystem 2 resolveCandidates for ambiguity resolution. Branch
 //      (a) writes head pointer; branches (b)/(c) enqueue fresh
-//      exception. At v1 with single-feature scoring, every N≥2 case
-//      routes to branch (b) → exception; N=1 routes to branch (a) →
-//      matched.
+//      exception. N=1 routes to branch (a) → matched. Post-2026-07-22
+//      alignment, N≥2 with a genuine score margin ≥ threshold can also
+//      route to branch (a); but note re-matched cases accumulate
+//      identical-score duplicate rows (supersedes_candidate_id never
+//      populated), which tie at margin 0 → branch (b) (carry-forward).
 //   6. 6-rule discriminator:
 //      | # | count_before | count_after | open exception | outcome | Action |
 //      |---|---|---|---|---|---|

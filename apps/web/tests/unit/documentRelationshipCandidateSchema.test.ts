@@ -137,7 +137,7 @@ describe('CompleteCandidateInputSchema — parse edges', () => {
     source_document_id: '00000000-0000-0000-0000-000000000002',
     document_type: 'vendor_invoice' as const,
     classification_confidence: 0.95,
-    extracted_fields: { invoice_amount: 1000 },
+    extracted_fields: { amount: 1000 },
     vendor_match: null,
     trace_id: '00000000-0000-0000-0000-000000000003',
   };

@@ -207,7 +207,7 @@ function buildInput(
     source_document_id: fixture.sourceDocId,
     document_type: opts.documentType ?? 'vendor_invoice',
     classification_confidence: 0.95,
-    extracted_fields: opts.extractedFields ?? { invoice_amount: 1000 },
+    extracted_fields: opts.extractedFields ?? { amount: 1000 },
     vendor_match: {
       vendor_id: opts.vendorIdOverride !== undefined ? opts.vendorIdOverride : fixture.vendorId,
       confidence: opts.vendorMatchConfidence ?? 0.95,
@@ -908,9 +908,9 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     const result = await completeCandidate(
       buildInput(fixture, ctx, {
         extractedFields: {
-          invoice_amount: 1000,
-          invoice_date: '2026-05-13',
-          invoice_number: 'BILL-001',
+          amount: 1000,
+          accounting_date: '2026-05-13',
+          vendor_invoice_number: 'BILL-001',
         },
       }),
       ctx,
@@ -929,6 +929,80 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     expect(refRaw?.match).toBe(true);
   });
 
+  // Regression guard for the 2026-07-22 field-name alignment. Until then,
+  // completeCandidate read chunk-1 placeholder keys (invoice_amount /
+  // invoice_date / invoice_number) that NO extraction schema emits, so
+  // amount/date/reference all normalized to 0 and the aggregate pinned at
+  // 0.3 x vendor_match_confidence. This test seeds the REAL extractor
+  // vocabulary per VendorInvoiceExtractionSchema.
+  it('vendor_invoice scores amount/date/reference from extractor vocabulary (regression: chunk-1 placeholder keys)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const billId = await seedOpenBill(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      issueDate: '2026-05-13',
+      billNumber: 'BILL-001',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        vendorMatchConfidence: 0.95,
+        extractedFields: {
+          amount: 1000,
+          accounting_date: '2026-05-13',
+          vendor_invoice_number: 'BILL-001',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBe(billId);
+
+    const features = result[0].candidate_features;
+    expect(getFeature(features, 'amount_match')?.normalized_score).toBe(1);
+    expect(getFeature(features, 'date_proximity')?.normalized_score).toBe(1);
+    expect(getFeature(features, 'reference_alignment')?.normalized_score).toBe(1);
+
+    // vendor .30*.95 = .285 is the pre-fix structural ceiling.
+    // Post-fix: .285 + .30 + .15 + .25 = .985.
+    expect(result[0].confidence_score).toBeGreaterThan(0.9);
+  });
+
+  // MUST-NOT-FIRE guard for the legitimate adjacent case. The Scenario A
+  // inferred-target path passes literal nulls for amount/date/reference by
+  // design (ADR-0015 §7) — an inferred target has no counterpart to compare
+  // against. The field-name alignment must NOT leak into it. Absence of this
+  // shape of test is what let the Fork C dup over-fire ship.
+  it('MUST NOT FIRE: vendor_invoice inferred-target (Scenario A) stays vendor-only after field-name alignment', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    // Deliberately no seedOpenBill — no existing bill, so Scenario A fires.
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        vendorMatchConfidence: 0.95,
+        extractedFields: {
+          amount: 1000,
+          accounting_date: '2026-05-13',
+          vendor_invoice_number: 'BILL-001',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].linked_entity_id).toBeNull();
+    const features = result[0].candidate_features;
+    expect((features as { scenario?: string }).scenario).toBe('invoice_inferred_target');
+
+    // Intended-null: only vendor_match contributes, even though
+    // extracted_fields now carries real, matchable values.
+    expect(getFeature(features, 'amount_match')?.normalized_score).toBe(0);
+    expect(getFeature(features, 'date_proximity')?.normalized_score).toBe(0);
+    expect(getFeature(features, 'reference_alignment')?.normalized_score).toBe(0);
+    expect(result[0].confidence_score).toBeCloseTo(0.285, 5);
+  });
+
   it('vendor_invoice + non-matching extracted amount → amount_match=false; diff_cad=200', async () => {
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
@@ -939,7 +1013,7 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
 
     const result = await completeCandidate(
       buildInput(fixture, ctx, {
-        extractedFields: { invoice_amount: 1200, invoice_date: '2026-05-13' },
+        extractedFields: { amount: 1200, accounting_date: '2026-05-13' },
       }),
       ctx,
     );
@@ -961,7 +1035,7 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
 
     const result = await completeCandidate(
       buildInput(fixture, ctx, {
-        extractedFields: { invoice_amount: 1000, invoice_date: '2026-06-15' },
+        extractedFields: { amount: 1000, accounting_date: '2026-06-15' },
       }),
       ctx,
     );
@@ -1012,9 +1086,9 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
       buildInput(fixture, ctx, {
         documentType: 'receipt',
         extractedFields: {
-          receipt_amount: 1000,
-          receipt_date: '2026-05-13',
-          authorization_reference: 'AUTH-12345',
+          total: 1000,
+          date: '2026-05-13',
+          auth_ref: 'AUTH-12345',
           payment_method: 'wire',
         },
       }),
@@ -1037,6 +1111,81 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     expect(methodRaw?.match).toBe(true);
   });
 
+  // Regression guard for the 2026-07-22 field-name alignment, receipt branch.
+  // ReceiptExtractionSchema writes total / date / auth_ref; the chunk-1
+  // placeholders were receipt_amount / receipt_date / authorization_reference.
+  // Only payment_method ever matched, so 0.60 of the receipt weight was dead.
+  it('receipt scores amount/date/reference from extractor vocabulary (total/date/auth_ref)', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    const paymentId = await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 1000,
+      paymentDate: '2026-05-13',
+      authorizationReference: 'AUTH-12345',
+      paymentMethod: 'eft',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'receipt',
+        vendorMatchConfidence: 0.95,
+        extractedFields: {
+          total: 1000,
+          date: '2026-05-13',
+          auth_ref: 'AUTH-12345',
+          payment_method: 'eft',
+        },
+      }),
+      ctx,
+    );
+
+    const toPayment = result.find((c) => c.linked_entity_type === 'payment');
+    expect(toPayment).toBeDefined();
+    expect(toPayment!.linked_entity_id).toBe(paymentId);
+
+    const features = toPayment!.candidate_features;
+    expect(getFeature(features, 'amount_match')?.normalized_score).toBe(1);
+    expect(getFeature(features, 'date_proximity')?.normalized_score).toBe(1);
+    expect(getFeature(features, 'reference_alignment')?.normalized_score).toBe(1);
+    expect(getFeature(features, 'payment_method_consistency')?.normalized_score).toBe(1);
+  });
+
+  // MUST-NOT-FIRE guard, receipt inferred-target. Same adjacent-case shape as
+  // the vendor_invoice guard above: the Scenario A receipt-as-primary path
+  // passes literal nulls by design (ADR-0015 §7) and must stay vendor-only.
+  it('MUST NOT FIRE: receipt inferred-target stays vendor-only after field-name alignment', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    // Deliberately no seedOpenPayment and no seedOpenBill → inferred-target fires.
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'receipt',
+        vendorMatchConfidence: 0.95,
+        extractedFields: {
+          total: 1000,
+          date: '2026-05-13',
+          auth_ref: 'AUTH-12345',
+          payment_method: 'eft',
+        },
+      }),
+      ctx,
+    );
+
+    const inferred = result.find(
+      (c) => (c.candidate_features as { scenario?: string }).scenario === 'receipt_inferred_target',
+    );
+    expect(inferred).toBeDefined();
+    expect(inferred!.linked_entity_id).toBeNull();
+
+    const features = inferred!.candidate_features;
+    expect(getFeature(features, 'amount_match')?.normalized_score).toBe(0);
+    expect(getFeature(features, 'date_proximity')?.normalized_score).toBe(0);
+    expect(getFeature(features, 'reference_alignment')?.normalized_score).toBe(0);
+    expect(getFeature(features, 'payment_method_consistency')?.normalized_score).toBe(0);
+    // receipt vendor weight .25 x .95 = .2375
+    expect(inferred!.confidence_score).toBeCloseTo(0.2375, 5);
+  });
+
   it('payment_confirmation + matching extracted features → candidate_features carries per-feature contributions', async () => {
     const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
     const db = adminClient();
@@ -1053,7 +1202,7 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
         extractedFields: {
           payment_amount: 5000,
           payment_date: '2026-05-10',
-          authorization_reference: 'ACH-TRACE-99999',
+          auth_ref: 'ACH-TRACE-99999',
           payment_method: 'eft',
         },
       }),
@@ -1073,6 +1222,45 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     expect(refRaw?.match).toBe(true);
     const methodRaw = getRawValue<{ match: boolean }>(features, 'payment_method_consistency');
     expect(methodRaw?.match).toBe(true);
+  });
+
+  // Regression guard for the 2026-07-22 field-name alignment,
+  // payment_confirmation branch. Only ONE axis was dead here — but it is the
+  // heaviest in the system. V1_PROVISIONAL_WEIGHTS gives
+  // payment_confirmation reference_alignment 0.35 (vs receipt's 0.20)
+  // BECAUSE bank-issued authorization references are canonical
+  // (scoreComposition.ts:11-17). That rationale's own axis never fired:
+  // the reader wanted `authorization_reference`, the extractor writes
+  // `auth_ref` (PaymentConfirmationExtractionSchema).
+  it('payment_confirmation scores its heaviest axis (reference 0.35) from auth_ref', async () => {
+    const fixture = await buildRouterCaseFixture(SEED.ORG_HOLDING, ctx);
+    const db = adminClient();
+    await seedOpenPayment(db, SEED.ORG_HOLDING, fixture.vendorId, {
+      amount: 5000,
+      paymentDate: '2026-05-10',
+      authorizationReference: 'ACH-TRACE-99999',
+      paymentMethod: 'eft',
+    });
+
+    const result = await completeCandidate(
+      buildInput(fixture, ctx, {
+        documentType: 'payment_confirmation',
+        vendorMatchConfidence: 0.95,
+        extractedFields: {
+          payment_amount: 5000,
+          payment_date: '2026-05-10',
+          auth_ref: 'ACH-TRACE-99999',
+          payment_method: 'eft',
+        },
+      }),
+      ctx,
+    );
+
+    expect(result).toHaveLength(1);
+    const features = result[0].candidate_features;
+    expect(getFeature(features, 'reference_alignment')?.normalized_score).toBe(1);
+    // vendor .20*.95=.19 + amount .25 + date .10 + reference .35 + pm .10 = .99
+    expect(result[0].confidence_score).toBeGreaterThan(0.95);
   });
 
   it('all emitted candidates carry (linked_entity_type, link_role) pair in VALID_PAIRS (Task 4 structural assertion)', async () => {
@@ -1097,7 +1285,7 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
 
     // vendor_invoice → primary_invoice pair.
     const invoiceResult = await completeCandidate(
-      buildInput(fixture, ctx, { extractedFields: { invoice_amount: 1000 } }),
+      buildInput(fixture, ctx, { extractedFields: { amount: 1000 } }),
       ctx,
     );
     for (const c of invoiceResult) {
@@ -1113,7 +1301,7 @@ describe('documentRouterService.completeCandidate — Phase 8 chunk 2 per-featur
     const receiptResult = await completeCandidate(
       buildInput(receiptFixture, ctx, {
         documentType: 'receipt',
-        extractedFields: { receipt_amount: 1000 },
+        extractedFields: { total: 1000 },
       }),
       ctx,
     );
