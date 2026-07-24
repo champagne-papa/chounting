@@ -19478,3 +19478,227 @@ branch): the fix and the finding it discharges belong together, docs/scoring-bug
 commit off origin/main (a clean base vs 11 unmerged Fork C commits), and the design frames
 this as anti-scope to Fork C. NOT a codification. Committed on the operator's explicit word
 per the report-before-mainline-touch discipline.
+
+## 2026-07-21 — board #4 Fork C tranche-3 (statement-vs-invoice presence tripwire; graduate-ready codification candidate banked; authoring deferred to Fork-C arc-close per operator decision)
+
+CLOSE (narrative; the third and final Fork-C danger handler). Fork C's fail-safe spine —
+make route-to-human explicit/typed/instrumented, add explicit handlers only for the
+dangerous-when-uncertain scenarios — now carries all three named handlers: semantic-duplicate
+(`612b05a9`), bank-detail/remittance (`f53f67cf`), and statement-vs-invoice (`1dc8c62b`, this
+arc). Tranche 3 routes a document that classifies as `vendor_invoice` but reads as a STATEMENT
+to a human under `exception_reason='statement_not_invoice_suspected'` (12th v1-active; migrations
+`20240190` ADD VALUE + `20240191` `chunk_11_active`→`chunk_12_active`; Zod header 11→12;
+`db/types.ts` regenerated). Detector `statementScan.looksLikeStatementNotInvoice` is a pure
+boolean; handler at ingestDocument Stage 5.5, placed bank-detail→statement→dup. Tier-A-only
+tests, 0 paid Claude, RED→GREEN watched; typecheck + agent:validate 26/26 + 0 ERRORs green.
+
+WRONG→GROUNDED (the onset reframe — hazard is real, not inferred). The tranche-3 onset's first
+question ("where does `vendor_statement` flow?") grounded to: **it never gets that label.** The
+classifier's whole output domain is 4 values (`vendor_invoice|receipt|payment_confirmation|
+unknown`); `vendor_statement` is one of 14 *reserved* `document_type` enum values (migration
+`20240143:50‑59`) that no Tier-A/C/D path emits. The hazard is instead a **misclassification**:
+`vendorInvoiceRules.ts:38` lists `/\bstatement\b/i` as a POSITIVE `vendor_invoice` header
+(deliberately — Step-18 "matches Invoice/Bill/Statement headers"; the filename set matches
+`/statement/` too), so a vendor statement is a confident (0.90) Tier-A `vendor_invoice` match and
+flows toward booking. Grounded first-hand against the classifier bytes before a line was built.
+
+WRONG (advisor self-correction, owned in the advisor's favor) — the reserved set was first
+described as "seven" (a truncated-grep artifact), then corrected against the migration to **4
+active + 14 reserved**; the onset's "vendor_statement uniquely reserved" framing was also wrong
+(it's a family). Re-reading the migration corrected the count against the person who raised it —
+a further instance of the arc's re-read-against-the-bytes discipline catching its own errors.
+
+CODIFICATION CANDIDATE — GRADUATE-READY at N=4 (banked here with provenance; authoring DEFERRED
+to Fork-C arc-close). The friction-pattern-detector (run over the Fork-C window to corroborate the
+verdict rather than assert it) CORRECTED an initial "no codification" read: the test-authoring
+discipline below has fired observation-grain N=4, never journaled. **Tier-A-extraction-sufficient
+integration fixtures.** When a live-pipeline integration test must drive an ingestion branch /
+handler through Stage 4, construct the OCR fixture with the minimal Tier-A-sufficient field set
+(labeled invoice-number + amount + date) so extraction stays on the free/deterministic Tier-A path,
+AND control the Stage-2.5 `looksMultiInvoice` trigger — rather than mocking `callClaude` to block a
+paid Tier-C call. It is DISTINCT from `testing.md`'s two adjacent sections (fixture-offline
+eval-suite teeth + additive-named-export-for-eval), which prove no-live-AI-*reachability* via
+mock-to-throw; this engineers content *sufficiency* so the real Tier-A path naturally wins. Fired
+N=4 across two arcs / three calendar days — all four fixture constructions verified first-hand (WSL)
+at this close:
+  1. `multiInvoicePipelineWiring` (board-4 slice-2 T2c, `d687243f`, 2026-07-11) —
+     GOLDEN_VENDOR_INVOICE_LINES keep the single path Tier-A; the two-token line + a MOCKED
+     multi-extract control `looksMultiInvoice`. Named in-comment ("so the single path stays in Tier
+     A, no Tier C callClaude").
+  2. `semanticDuplicatePipelineWiring` (Fork C #1, `612b05a9`, 2026-07-20) — `Invoice #`+Date+Total;
+     comment names "Stays in Tier A (no Claude call — unlike a receipt, which classifies via Tier C)".
+  3. `bankDetailChangePipelineWiring` (Fork C #2, `f53f67cf`, 2026-07-21) — same fixture shape; the
+     BANK_LINE comment names the `looksMultiInvoice`-avoidance half (digit-only token), the
+     Tier-C-extraction-sufficiency half practiced-not-named.
+  4. `statementNotInvoicePipelineWiring` (Fork C #3, `1dc8c62b`, 2026-07-21) — a bare `Invoice 12345`
+     engineered against BOTH gates; named in-comment AND in the commit message.
+DISPOSITION — the N=4 provenance is BANKED here so the count is settled, not re-litigated. The
+codify-TIMING is DECIDED by the operator (in their own word, 2026-07-21): DEFER authoring the
+`testing.md` codification block to Fork-C arc-close, routed through `codify-convention` (likely
+destination `testing.md`, sibling to the two eval-suite sections). Rationale — Fork C has no
+arc-close / retro / push yet, every consequential artifact this arc landed at a terminal point, and
+banking-now-authoring-at-close cannot be wrong if a fifth fire or refinement surfaces at close.
+(Provenance note: this disposition was first de-ratified when a relayed advisor lean had been recorded
+as the operator's choice; it is re-ratified here only because the operator gave the decision directly.)
+GROUNDING GRAIN: detector-identified over the Fork-C window; all four fixture constructions verified
+first-hand (WSL) this arc; the advisor independently corroborated the two most recent fires (#3, #4)
+first-hand.
+
+AUTHORED 2026-07-22 (operator-triggered arc-close): this graduate-ready bank is DISCHARGED — the
+codification landed at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline
+fixtures (N=4), routed through `codify-convention`. The four-commit provenance banked above is the
+codification's Evidence basis.
+
+DESIGN DECISION (N=1, correctly uncodified — application of the already-graduated
+`regex-permissive-matching` convention, per the detector) — presence-AND-weak-invoice-signal,
+labeled-vs-bare guard. The detector fires only when a statement-EXCLUSIVE marker is present AND no
+strong single-invoice identity is present — the "weak invoice signal" derived from the OCR header
+DIRECTLY, never the matcher's composed score (the logged vendor-only scoring bug, `docs/scoring-bug`,
+caps that score at 0.3×vendor_match and zeroes the invoice axes; reading it would inherit the
+dead-axis bug — the scoring bug's blast radius reached even this detector's design). The guard is
+labeled-vs-bare: a labeled `Invoice #/No/Number: <n>` = the document's own identity → suppresses; a
+bare `Invoice 12345` line-item = a statement's table reference → does not. Pinned by unit cases from
+both sides.
+
+NOTE — classifier kind-suppression coherence (queued design question, NOT a codification — N=1 per
+the detector). `vendorInvoiceRules` carries `RECEIPT_FOOTER_NEGATIVE_PATTERNS` +
+`PAYMENT_CONFIRMATION_NEGATIVE_PATTERNS` (Session 71's "kind-defining header beats a cross-reference"
+fix, `:55‑79`) but NO statement negative set — which is *why* `/statement/` cleanly matches
+`vendor_invoice`. This reframes the family question: statement (and later credit_memo) may be more
+naturally a **classifier negative-pattern** (two precedents already live there) than a Stage-5.5
+tripwire. Left on the operator's queue next to the named-not-built `credit_memo`/`purchase_order`
+sibling (Option-1 scope) + `docs/scoring-bug`. Fork C's additive-reason treatment is sound and
+shipped; the coherence question is a design fork, not a defect.
+
+NOTE — coverage boundaries documented in-code, not hidden (reinforcement of the already-graduated
+`prediction-grounding` + `regex-permissive-matching` conventions, per the detector) — `statementScan.ts`:
+(1) gated on the `vendor_invoice` label, a statement mislabeled receipt/payment_confirmation sails
+past — acceptable (those don't book into AP); (2) a statement with a clean labeled invoice identity
+is suppressed by the AND-weak guard; (3) a statement carrying the bare word `statement` but none of
+the specific markers classifies `vendor_invoice` yet doesn't trip — a within-label recall ceiling the
+marker set widens as corpus accrues. All Wave-1-bounded. Markers are ungrounded v1 heuristics (no
+statement OCR corpus in-repo).
+
+NOTE — three-wide precedence + both-trip-of-three (accept-for-v1, an explicit choice). Stage 5.5 now
+holds bank-detail→statement→dup; one-open-exception-per-case means a doc tripping multiple parks
+under the FIRST only. Tested both ways (statement+bank→`bank_detail_change_suspected`; statement+dup
+→`statement_not_invoice_suspected`). Dropped signals are not separately recorded — accept-for-v1
+(fraud-first triage); a secondary non-exception audit note is the scoped follow-up if the operator
+wants it. On the operator's queue.
+
+NOTE — no new `resolution_action`. The statement disposition reuses existing routes
+(`route_to_manual_entry`/`mark_non_accounting`/`archive`); `ResolutionActionSchema` stays 9 —
+grounded against the schema at onset (verified-not-assumed).
+
+NOTE — mid-arc entry (substrate reconciliation for the eventual Fork-C close). This is a per-tranche
+entry written on operator request; tranches #1 (`612b05a9`) and #2 (`f53f67cf`) are recorded in their
+commit messages but NOT yet in this journal — consistent with the push-terminal-close pattern (the
+full arc write-up lands at arc-close, not per-commit). The eventual Fork-C close entry reconciles all
+three tranches and authors the N=4 codification banked above (per the operator's defer-to-arc-close
+decision).
+
+LANE — the code/detector/handler/migration/schema/test claims are WSL first-hand (verified against
+disk each step, RED→GREEN watched, `callClaude`=0 counted); the N=4 codification-candidate provenance
+is detector-identified then WSL-first-hand-verified across all four fixtures (advisor corroborated #3
++ #4 first-hand). The advisor independently grounded the built surface (the `vendorInvoiceRules`
+hazard, the detector's labeled-vs-bare, both migrations, the Zod schema, the regenerated
+`db/types.ts`, the unit + integration assertions) and owns the doc-sync confirmation (no governance
+doc enumerates `exception_reason` by count; the `control_matrix.md` "Expected:N" confirming-grep is
+push-time insurance, not a known gap). Commit `1dc8c62b` landed on the operator's explicit word under
+the `board-4-slice-2-build` lock label. Recorded on `feat/board-4-fork-c` (local, unpushed; migrations
+`20240190/191` applied to local dev only — they reach staging/prod via the operator's separate push +
+deploy). Ahead of `origin/main` by 3 (the three Fork-C handlers), counted against disk.
+
+## 2026-07-22 — board #4 Fork C seam fix (dup over-fire → Phase-4 attachment restore) + review wave + arc-close codification
+
+CLOSE (the seam-fix arc + arc-close). Between tranche 3 and this close, the FIRST full-suite
+`test:full` run at push-readiness surfaced a regression the per-unit grounding had not: the
+tranche-1 semantic-dup handler OVER-FIRES. The arc remediated it (design → plan → 4-task
+subagent-driven build → whole-branch review → fix wave), restored INV-WORKFLOW-002, and pushed the
+whole Fork C spine (10 commits) to `origin/feat/board-4-fork-c` @ `2f396dd5` + the scoring-bug
+finding to `origin/docs/scoring-bug` @ `640c8057`. Design/plan:
+`docs/09_briefs/post-mvp/2026-07-22-board-4-fork-c-attachment-seam-{design,plan}.md`.
+
+WRONG (the dup over-fire — correct-per-unit, broke only at full-suite scope). The semantic-dup
+handler (tranche 1, `612b05a9`) fires when an incoming vendor invoice's `(vendor, bill_number)`
+matches a LIVE bill. But that signature is ALSO the precondition for a legitimate first-arrival
+attachment (an invoice arriving for an existing manual/PO bill), which Wave-6 D2.1 T4 / INV-WORKFLOW-
+002 routes as a matched ATTACHMENT EXIT (head pointer set). The handler, keyed on bill-existence
+alone, collapsed a designed two-outcome routing (attach vs. duplicate) into one — parking every
+matching invoice as a suspected duplicate and short-circuiting Stage 6, so the head pointer was
+never set. It shipped clean at unit grain (its own fires-correctly test + negative control + the
+targeted regression sweep all passed) and was invisible until `routingTerminalDisposition`'s
+ATTACHMENT-EXIT case broke at the first `test:full`. The push-readiness gate (Condition 1 =
+`test:full`) is exactly what caught it — the gate earning its keep.
+
+GROUNDING-GAP LESSON (the arc's durable output, attributed straight). A route-to-human danger
+handler needs a **must-not-fire-on-the-legitimate-adjacent-case** test — not just fires-on-danger +
+a negative control. The tranche-1 dup suite had all three of the wrong things: a fires-correctly
+positive, a no-colliding-bill negative control, and an unmatched-vendor guard-arm — but NO "a
+colliding bill that is a legitimate first-arrival attachment → must NOT fire" case, because that
+case requires understanding the attachment path the handler was preempting. That absent assertion
+is precisely what let the over-fire ship. This is a grounding-discipline gap in BOTH lanes' tranche-1
+passes: the handler was grounded as "fires on the danger case + the negative control runs the full
+pipeline," and neither lane checked that it did NOT fire on an existing attachment-routing test that
+seeds the same `(vendor, number)` signature. Recorded straight, not softened — the advisor's own
+tranche-1 grounding carried the same gap, and named it as the load-bearing learning. Banked as an
+articulated discipline (observation-grain N=1 at this articulation); the next fire routes through
+`codify-convention` toward `docs/04_engineering/conventions/testing.md`.
+
+THE FIX (Option 1, operator-approved — provenance gate). The dup handler now fires ONLY when the
+matched bill is document-sourced: it carries a LIVE (`link_status='created'`) `primary_invoice`
+`source_document_links` row (INV-DOC-001 writes it via `billService.post`; the pipeline passes
+`primary_document_id`). A manual/PO/override-committed or voided bill has no live link → the incoming
+invoice is a legitimate first-arrival attachment → defer to Stage 6 (ATTACHMENT EXIT restored). No
+new substrate; the discriminator is a second read on an already-invariant-backed signal. Bank-detail
+and statement are UNCHANGED — their triggers are claims about the document's own content (payment
+coordinates / statement shape), correct even for a would-attach doc, so they keep routing-to-human;
+their only cost is the lost head pointer, deferred (design §7). `is_document_sourced` (`12b50e95`) →
+handler gate (`b2fc0e2f`, restores INV-WORKFLOW-002) → seam note + coverage (`2e8b5843`).
+
+CATCH — `link_status='created'` is load-bearing (advisor, ratified into the discriminator). Links
+are reversed, never deleted: a voided bill retains a `link_status='reversed'` `primary_invoice` row.
+A discriminator querying link-EXISTENCE without the status filter would read that stale reversed link
+as "document-sourced → fire" and re-introduce the over-fire on a re-book-after-void — the exact
+population the dup lifecycle filter excludes. The predicate is filtered `link_status='created'` and
+guarded by a reversed-link must-not-fire test at both the read and the pipeline level (seed the link
+via the real RPC, reverse it via the real RPC, assert defer). This is the catch that kept the fix
+from shipping a subtler version of the bug it fixed.
+
+REVIEW WAVE (whole-branch review found one Important + tidy-ups). The final whole-branch review (0
+Critical / 1 Important / 4 Minor, `2f396dd5`) caught that `findLiveBillByVendorAndNumber` was called
+OUTSIDE the dup handler's try/catch, so its `PIPELINE_TRANSIENT_EXHAUSTED` throw escaped
+`ingestDocument`'s structured-result contract (losing `pipeline_trace`, leaving the `classifyFailure`
+mapping dead). Pre-existing since tranche 1; the seam fix's link-query doubled the throw surface on
+that already-unwrapped call. Wrapped to `pipeline_failed`, guarded by a three-part transient test
+(status + `failure_class='transient_exhausted'` + `pipeline_trace` populated — not a status-only
+green; the same must-not-fire-vacuously discipline applied to the error path). Tidy-ups: a dead
+`void` no-op removed; a doc note on the oldest-live-bill provenance semantics; the stale
+`Reserved 2 → 3` exception_reason header reconciled (naming `provider_unavailable`). The bank-detail
+bare-label breadth (#2) left as the accepted permissive-to-flag posture.
+
+CODIFICATION (this entry authors it). The **Tier-A-sufficient live-pipeline fixtures** discipline —
+banked graduate-ready at observation-grain N=4 in the 2026-07-21 tranche-3 entry — is authored here
+at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline fixtures (N=4), the
+complement of the two eval-suite sections (mock-to-throw for eval suites vs. content-sufficiency for
+pipeline integration tests). The tranche-3 bank is DISCHARGED (see its AUTHORED note).
+
+CARRY-FORWARDS (named, not closed): the `ReviewCaseDetailView` stale-text divergence shipped
+known-red via the Condition-1 escape clause (pre-existing, branch-unchanged, documented) — its fix
+is a separate item; the **scoring bug** (`docs/scoring-bug`) is a FINDING, not a fix — vendor-only
+scoring, aggregate-capped at `0.3 × vendor_match`, still live in the code, the ADR-0018/0019
+disposition item and a pre-condition on governed auto-commit returning; the accepted
+override-committed re-book miss (documented coverage envelope, design §6); the deferred
+bank-detail/statement head-pointer recovery (design §7).
+
+LANE — the fix ran through subagent-driven-development (4 TDD tasks + a whole-branch review + a fix
+wave), each built surface WSL-first-hand-verified (diff read + tests re-run + typecheck + `callClaude`
+count 0); the advisor independently grounded the LOAD-BEARING surfaces first-hand (the
+`link_status='created'` predicate, the reversed-link must-not-fire consequence at the handler,
+`routingTerminalDisposition` green-for-the-right-reason, and the three-part transient assertion the
+hardest), taking adjacent surfaces (some coverage-test assertions, migration ADD-VALUE bodies,
+`types.ts` regens) on WSL's report; each commit operator-per-act. Commits `12b50e95`
+`b2fc0e2f` `2e8b5843` `2f396dd5` on `feat/board-4-fork-c` (10 total with the tranche + docs commits),
+pushed to origin at the operator's separate word; migrations reach staging/prod only via a further
+merge + deploy (unchanged — the whole arc stayed local-dev-only on the real ledger). This entry IS a
+codification (the N=4); the grounding-gap lesson is banked (N=1), not codified.

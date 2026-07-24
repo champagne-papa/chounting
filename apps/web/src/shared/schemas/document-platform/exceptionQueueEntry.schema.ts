@@ -34,10 +34,12 @@ export type ResolutionAction = z.infer<typeof ResolutionActionSchema>;
 export const ExceptionStatusSchema = z.enum(['open', 'resolved']);
 export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 
-// 8 v1-active exception_reason values. Each has a named v1 consumer
-// in a ratified ADR. Reserved 2 values (wrong_entity_exception per
+// 12 v1-active exception_reason values. Each has a named v1 consumer
+// in a ratified ADR. Reserved 3 values (wrong_entity_exception per
 // ADR-0011 §10 multi-entity post-v1; drift_detected per ADR-0013
-// §5-§6 supabase_storage-v1-exempt) stay in DB ENUM.
+// §5-§6 supabase_storage-v1-exempt; provider_unavailable per Charter B
+// D-5, migration 20240180, reserved NOT-active pending the Phase-7
+// routing surface) stay in DB ENUM.
 //
 // 5 candidate values were considered at scope-lock and OMITTED
 // entirely (NOT in enum, NOT reserved, NOT in any future migration
@@ -62,6 +64,25 @@ export type ExceptionStatus = z.infer<typeof ExceptionStatusSchema>;
 // pending' graduates to v1-active (8th value). Named v1 consumer:
 // postV1ReconciliationOrchestrator (Stage 7 Bundle partial-commit
 // reconciliation path).
+//
+// Board #4 slice-2 addendum: 'multi_invoice' graduates to v1-active
+// (9th value). Named v1 consumer: the T2c multi-invoice split branch
+// (migrations 20240182 ADD VALUE + 20240183 chunk_9_active CHECK).
+//
+// Board #4 Fork C addendum: 'duplicate_invoice_suspected' graduates to
+// v1-active (10th value). Named v1 consumer: the semantic-duplicate
+// handler #1 (migrations 20240186 ADD VALUE + 20240187 chunk_10_active
+// CHECK).
+//
+// Board #4 Fork C addendum: 'bank_detail_change_suspected' graduates to
+// v1-active (11th value). Named v1 consumer: the bank-detail / remittance
+// presence tripwire, handler #2 (migrations 20240188 ADD VALUE + 20240189
+// chunk_11_active CHECK).
+//
+// Board #4 Fork C addendum: 'statement_not_invoice_suspected' graduates to
+// v1-active (12th value). Named v1 consumer: the statement-vs-invoice presence
+// tripwire, handler #3 (migrations 20240190 ADD VALUE + 20240191
+// chunk_12_active CHECK).
 export const ExceptionReasonSchema = z.enum([
   'manual_route',
   'low_confidence_classification',
@@ -77,6 +98,29 @@ export const ExceptionReasonSchema = z.enum([
   // exception_reason_chunk_9_active (migrations 20240182 ADD VALUE +
   // 20240183 CHECK broaden).
   'multi_invoice',
+  // Board #4 Fork C handler #1 (10th value): a SEMANTIC duplicate — a
+  // re-book of an already-booked invoice (same (vendor_id, bill_number)
+  // as a live bill) that Stage-0 dedupByHash (byte-identity) misses. NOT
+  // 'unmatched_router_candidate' (this IS matched, to an existing bill).
+  // Layer-1 CHECK exception_reason_chunk_10_active (migrations 20240186
+  // ADD VALUE + 20240187 CHECK broaden).
+  'duplicate_invoice_suspected',
+  // Board #4 Fork C handler #2 (11th value): a bank-detail / remittance
+  // PRESENCE tripwire — a vendor invoice whose OCR carries payment-coordinate-
+  // shaped content (account/routing/IBAN/SWIFT/wire/ACH/remit-to). Detect-and-
+  // route ONLY (ADR-0007 §Tier 2 read boundary): grounds PRESENCE, not a proven
+  // change (no vendor bank-detail baseline; does not read vendor-master control
+  // fields; does not discharge the Tier-1 Q28 3(e) control). Layer-1 CHECK
+  // exception_reason_chunk_11_active (migrations 20240188 + 20240189).
+  'bank_detail_change_suspected',
+  // Board #4 Fork C handler #3 (12th value): a statement-vs-invoice PRESENCE
+  // tripwire — a document that classifies as vendor_invoice (Tier A matches
+  // /\bstatement\b/ as an invoice header, vendorInvoiceRules.ts:38) but reads
+  // as a STATEMENT (balance-forward summary of already-invoiced charges, not a
+  // single bookable invoice). Presence-AND-weak-invoice-signal on the doc's OWN
+  // OCR; Tier-2-clean (ADR-0007 §Tier 2 read boundary). Layer-1 CHECK
+  // exception_reason_chunk_12_active (migrations 20240190 + 20240191).
+  'statement_not_invoice_suspected',
 ]);
 export type ExceptionReason = z.infer<typeof ExceptionReasonSchema>;
 

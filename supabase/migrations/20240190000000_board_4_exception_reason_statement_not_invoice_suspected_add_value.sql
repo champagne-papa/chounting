@@ -1,0 +1,27 @@
+-- ============================================================
+-- Board #4 Fork C — exception_reason ENUM ADD VALUE
+-- 'statement_not_invoice_suspected'
+-- ============================================================
+-- Fork C dangerous-when-uncertain handler #3 (statement-vs-invoice): a document
+-- that classifies as vendor_invoice but reads as a STATEMENT (a summary of
+-- already-invoiced charges / balance-forward, which must not be booked as a
+-- single new bill) routes to a human under this reason.
+--
+-- WHY THE HAZARD IS REAL (grounded): the Tier A vendor_invoice classifier
+-- matches /\bstatement\b/ as a positive header pattern (vendorInvoiceRules.ts:38,
+-- Step-18 "matches Invoice/Bill/Statement headers"), so a vendor statement
+-- classifies as vendor_invoice and flows toward booking. The handler is a
+-- Stage-5.5 PRESENCE tripwire (presence-AND-weak-invoice-signal) on the
+-- document's OWN OCR text — Tier-2-clean (ADR-0007 §Tier 2 read boundary): it
+-- reads no vendor-master field, extracts/persists nothing, classifies no fraud.
+--
+-- SPLIT per the Postgres ALTER TYPE ADD VALUE same-transaction restriction (a
+-- CHECK cannot reference the new value in the same transaction; the
+-- 20240188/189 bank_detail_change_suspected precedent split them for exactly
+-- this reason). This migration ADDs the value ONLY; the Layer-1 CHECK broaden
+-- (exception_reason_chunk_11_active → chunk_12_active) lands in 20240191.
+--
+-- ADR-0010 admit framework + ADR-0022 additive provenance-preserving.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'statement_not_invoice_suspected';
