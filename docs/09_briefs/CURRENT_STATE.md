@@ -10,14 +10,17 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
-## Prod migrated 20240180 → 20240185 (slice-2 α substrate closed the code-ahead-of-schema gap) — 2026-07-24 (APPLIED LIVE)
+## Prod migrated 20240180 → 20240191 (slice-2 α substrate + Fork C exception-reason substrate) — 2026-07-24 (APPLIED LIVE)
 
-Prod (`ollyqiiwdvbpbngqgjqk`) was at migration `20240180` while `main`'s
-deployed code was at `20240185` since the ~2026-07-13 slice-2 production
-deploy — a five-migration code-ahead-of-schema gap (the multi-invoice α path
-referenced `extracted_invoices` / the `multi_invoice` enum value, absent on
-prod). Closed today by applying `20240181`–`20240185` to prod via
-`supabase db push --linked`.
+Prod (`ollyqiiwdvbpbngqgjqk`) advanced from `20240180` to `20240191` in two
+gated steps today, both via `supabase db push --linked` (each with a fresh
+full pg_dump taken first): (1) `20240181`–`20240185` closed the ~5-migration
+code-ahead-of-schema gap that had been open since the ~2026-07-13 slice-2
+production deploy (the multi-invoice α path referenced `extracted_invoices` /
+the `multi_invoice` enum value, absent on prod); (2) `20240186`–`20240191`
+pre-staged the Fork C exception-reason substrate so its merge (still held) can
+auto-deploy onto a schema that already carries the three danger-handler
+values. Prod schema is now at parity with `feat/board-4-fork-c` (`20240191`).
 
 - **What applied (all additive; verified live post-apply):** `20240181`
   `extracted_invoices` table + `extracted_invoice_post_status` type +
@@ -28,15 +31,27 @@ prod). Closed today by applying `20240181`–`20240185` to prod via
   `post_extracted_invoice_with_audit` RPC; `20240185`
   `mark_extracted_invoice_unrepairable_with_audit` RPC. None touches
   existing data.
+- **What applied, step 2 (`20240186`–`20240191`; all additive):** three
+  (ADD VALUE + CHECK-broaden) pairs adding the Fork C danger-handler
+  exception reasons — `duplicate_invoice_suspected` (186/187),
+  `bank_detail_change_suspected` (188/189), `statement_not_invoice_suspected`
+  (190/191). The three ADD VALUEs are **irreversible** (enum values can't be
+  cleanly dropped); the CHECK broadens ran `chunk_9`→`10`→`11`→`12` on
+  `exception_queue_entries` (which carries data) — each a strict superset, so
+  no existing row could fail. Pre-flight verified prod's live constraint was
+  exactly `exception_reason_chunk_9_active` before applying. Verified live
+  post-apply: all three values present, sole active constraint is
+  `exception_reason_chunk_12_active`.
 - **Verified:** `supabase migration list --linked` shows remote at
-  `20240185000000`; a post-apply schema dump confirms all five migrations'
+  `20240191000000`; post-apply schema dumps confirm all migrations'
   objects present (table + type + 3 RPCs + enum value + constraint).
-- **Backup / restore point:** full `pg_dump` (schema + data) taken before
-  apply, stored **outside the repo** at
-  `/home/philc/chounting-prod-backups/prod-2026-07-24-{schema,data}.sql`
-  (274 KB + 398 KB). Free tier = no PITR; this dump is the sole restore
-  point. NB: prod is **not** empty (33 tables carry real data — orgs,
-  memberships, permissions, some pipeline rows), so the backup is
+- **Backup / restore points:** a fresh full `pg_dump` (schema + data) was
+  taken before each of the two apply steps, stored **outside the repo** in
+  `/home/philc/chounting-prod-backups/` — `prod-2026-07-24-{schema,data}.sql`
+  (pre-181-185) and `prod-2026-07-24-pre-186-191-{schema,data}.sql`
+  (pre-186-191). Free tier = no PITR; these dumps are the only restore
+  points. NB: prod is **not** empty (33 tables carry real data — orgs,
+  memberships, permissions, some pipeline rows), so the backups are
   meaningful. Re-verify prod level any time:
   `select max(version) from supabase_migrations.schema_migrations;`.
 - **Access model (new this session):** a permanent Supabase access token was
@@ -48,10 +63,10 @@ prod). Closed today by applying `20240181`–`20240185` to prod via
   default + `sweepStrandedCases` re-eligibility (a permanent failure retried
   hourly, never escalated) is live-prod and independent of this apply; the
   stalled-case diagnostic is now runnable against prod's real rows. Fork C
-  merge still held per its own sequence — and note its migrations
-  (`20240186`–`20240191`) are **not** on prod, so the same
-  apply-before-merge ordering constraint will apply to it (merge
-  auto-deploys; apply its six migrations to prod first).
+  merge still held per its own sequence — but its migrations
+  (`20240186`–`20240191`) are **now applied to prod** (step 2 above), so the
+  apply-before-merge ordering constraint is **satisfied**: the merge can
+  auto-deploy onto a schema already carrying the three danger-handler values.
 
 ## SharePoint go-live grounding — Graph upload fixes (drive-addressing + filename-encode) — 2026-06-14 (UNIT-PROVEN, live-gated)
 
