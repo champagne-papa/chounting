@@ -10,6 +10,49 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## Prod migrated 20240180 → 20240185 (slice-2 α substrate closed the code-ahead-of-schema gap) — 2026-07-24 (APPLIED LIVE)
+
+Prod (`ollyqiiwdvbpbngqgjqk`) was at migration `20240180` while `main`'s
+deployed code was at `20240185` since the ~2026-07-13 slice-2 production
+deploy — a five-migration code-ahead-of-schema gap (the multi-invoice α path
+referenced `extracted_invoices` / the `multi_invoice` enum value, absent on
+prod). Closed today by applying `20240181`–`20240185` to prod via
+`supabase db push --linked`.
+
+- **What applied (all additive; verified live post-apply):** `20240181`
+  `extracted_invoices` table + `extracted_invoice_post_status` type +
+  `create_extracted_invoice_with_audit` RPC; `20240182` `exception_reason`
+  ADD VALUE `'multi_invoice'` (**the one irreversible step** — enum values
+  can't be cleanly dropped); `20240183` CHECK broaden
+  `exception_reason_chunk_8_active` → `_chunk_9_active`; `20240184`
+  `post_extracted_invoice_with_audit` RPC; `20240185`
+  `mark_extracted_invoice_unrepairable_with_audit` RPC. None touches
+  existing data.
+- **Verified:** `supabase migration list --linked` shows remote at
+  `20240185000000`; a post-apply schema dump confirms all five migrations'
+  objects present (table + type + 3 RPCs + enum value + constraint).
+- **Backup / restore point:** full `pg_dump` (schema + data) taken before
+  apply, stored **outside the repo** at
+  `/home/philc/chounting-prod-backups/prod-2026-07-24-{schema,data}.sql`
+  (274 KB + 398 KB). Free tier = no PITR; this dump is the sole restore
+  point. NB: prod is **not** empty (33 tables carry real data — orgs,
+  memberships, permissions, some pipeline rows), so the backup is
+  meaningful. Re-verify prod level any time:
+  `select max(version) from supabase_migrations.schema_migrations;`.
+- **Access model (new this session):** a permanent Supabase access token was
+  provisioned + the CLI linked to prod (`ollyqiiwdvbpbngqgjqk`); token stored
+  in `~/.supabase/` (outside the repo). Standing rule unchanged: read-only
+  queries run freely; every prod write shown in plain language and applied
+  only on the operator's explicit go.
+- **Carry-forward, unchanged:** the `classifyFailure` → `transient_exhausted`
+  default + `sweepStrandedCases` re-eligibility (a permanent failure retried
+  hourly, never escalated) is live-prod and independent of this apply; the
+  stalled-case diagnostic is now runnable against prod's real rows. Fork C
+  merge still held per its own sequence — and note its migrations
+  (`20240186`–`20240191`) are **not** on prod, so the same
+  apply-before-merge ordering constraint will apply to it (merge
+  auto-deploys; apply its six migrations to prod first).
+
 ## SharePoint go-live grounding — Graph upload fixes (drive-addressing + filename-encode) — 2026-06-14 (UNIT-PROVEN, live-gated)
 
 Opening board #1 (SharePoint go-live) with read-only grounding surfaced — and
