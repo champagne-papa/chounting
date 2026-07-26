@@ -73,8 +73,14 @@ describe('ReviewCaseDetailView', () => {
     );
     fireEvent.click(screen.getByTestId('approve-post'));
     await waitFor(() =>
+      // Component's T3(3b) "honest message": when the response carries
+      // case_state (the real approve-post route always does on success) and
+      // status !== 'partially_posted', it renders "Posted and committed
+      // (<status>)." — echoing the outcome sub-status (posted / recovered).
+      // The mock above returns status:'posted', so the rendered text is
+      // "Posted and committed (posted).", NOT the bare "Posted and committed."
       expect(screen.getByRole('status')).toHaveTextContent(
-        'Posted and committed.',
+        'Posted and committed (posted).',
       ),
     );
     const [url, init] = mockFetch.mock.calls[1]! as [string, RequestInit];
