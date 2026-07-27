@@ -2541,13 +2541,18 @@ glossary promises.
   guard in `documentCaseService.transition` throws `INVALID_TRANSITION`
   on any automation-only edge at the human boundary), with
   `TransitionInputSchema` (approved/rejected/proposed only) as
-  belt-and-suspenders; all nine
-  `advanceCaseAutomation` call sites enumerate to
-  classified/needs_review targets except the approve→post route's
-  single `target_state: 'committed'` — which sits downstream of the
+  belt-and-suspenders; every `advanceCaseAutomation` call site targets
+  classified/needs_review **except** the approve→post route's
+  `target_state: 'committed'` marks — which sit downstream of the
   persist seam; the `update_document_case_state_with_audit` RPC has no
   callers outside `documentCaseService`; the preserved commit composite
-  is unreferenced.
+  is unreferenced. (Verified at EVIDENCE-001's Wave 6 D5 registration
+  HEAD as nine call sites / **one** committed-mark; re-verified board #4
+  T4, 2026-07-11, as fourteen call sites / **two** committed-marks —
+  both still in the approve→post route: the single-invoice path's
+  unconditional mark and the multi-invoice N-branch's aggregate
+  committed guard (INV-WORKFLOW-003), each downstream of this persist
+  seam. The route remains the sole committed-marking **surface**.)
 - **Test-verified support:**
   `apps/web/tests/integration/evidenceObjectPersistence.integration.test.ts`
   (8 tests: producer happy path; the teeth test — injected persist
@@ -2645,6 +2650,90 @@ grep-invisible by location and is cited from the anchor rather than
 grep-counted. The reverse window had been open code-side since Wave 4
 (the registry and the check carried the token, warn-only); this leaf
 closes it.
+
+---
+
+### INV-WORKFLOW-003 — aggregate committed-marking: a committed case has all its extracted-invoices posted (Layer 2)
+
+**Invariant.** A `document_case` that bears α (`extracted_invoices`)
+rows and is in state `committed` has **every** α carrying a non-NULL
+`posted_bill_id`. The **safety direction only**: `committed ⇒
+all-α-posted` — a multi-invoice case cannot reach `committed` while any
+α is unposted. The completeness reverse (`all-α-posted ⇒ committed`) is
+deliberately **not** registered: it is transiently false in the crash
+window (a crash after the last α post but before
+`advanceCaseAutomation('committed')` leaves a case
+all-posted-but-not-yet-committed until the next approval re-commits it),
+so registering the "iff" would put a rule in the ledger with a findable
+counterexample state. Governing that reverse would need a
+WORKFLOW-002-shaped sweep backstop — deferred (unnecessary while
+auto-commit is disabled). Named at build-spec §1.5.3's atomicity-posture
+lock ("per-invoice-independent + aggregate committed-marking: the case
+reaches `committed` only when all α carry `posted_bill_id`"), realized
+at board #4 slice-2 T3 (the approve-post N-branch), registered here at
+T4 per the register-on-enforcement rule (the enforcing guard landed at
+T3 3b).
+
+**Scope.** Covers multi-invoice cases — those bearing α (T2c writes N≥2
+α). Single-invoice cases bear **no** α, so the antecedent is vacuous:
+they satisfy the invariant trivially and carry no annotation. The
+guarantee is the review path — the sole live commit surface at V1 (the
+approve→post route; the preserved auto-commit composite is
+unreferenced).
+
+**Threat model.** Marking a multi-invoice case `committed` with an
+unposted α asserts a false terminal truth: the case reads as "fully
+posted to the ledger" while an invoice has no bill — the exact
+partial-post gap α was locked to make visible. The aggregate guard is
+what keeps a partially-posted case operator-visible at `approved` (the
+unposted α flagged by its own NULL `posted_bill_id`) rather than
+silently committed.
+
+**Enforcement.** Layer 2 (runtime/structural), no Layer-1 half. The
+aggregate committed guard in the approve→post route's multi-invoice
+N-branch (`postMultiInvoiceCase`, annotated `INV-WORKFLOW-003`):
+`advanceCaseAutomation('committed')` runs **only** when
+`unposted.length === 0` — every α either posted this request or already
+`post_status='posted'`; a partial post returns `partially_posted` with
+the case held at `approved`. This is the INV-EVIDENCE-001 /
+INV-WORKFLOW-002 runtime/structural sub-type — the control is the guard
+(the one aggregate-committed path checks all α first) + review
+discipline, no DB sentinel.
+
+**Sibling of INV-EVIDENCE-001** at the same route: both gate the
+`committed` transition (EVIDENCE-001 on evidence-persisted, WORKFLOW-003
+on all-α-posted). The approve→post route now bears **two**
+`target_state: 'committed'` sites — the single-invoice path's
+unconditional mark and this multi-branch aggregate guard — both
+downstream of the EVIDENCE-001 persist seam.
+
+**Residual (named, not hidden).**
+
+1. **Runtime/structural, not DB-enforced:** a future edit that marks a
+   multi-invoice case `committed` without the all-α-posted check
+   compiles cleanly and is caught by review + the test below, not by a
+   DB sentinel. A Layer-1 committed-transition trigger (reject
+   `committed` with any unposted α) is a **named, deferred**
+   defense-in-depth (marginal value while the route is the sole
+   committed-marker; passes vacuously for α-less cases).
+2. **Safety direction only** (see Invariant): the reverse is
+   unregistered by design.
+3. **DB-grain bypass (the standard partial):** `service_role` raw-SQL
+   writes outside the service path are not barred.
+
+**Test-verified support.**
+`apps/web/tests/integration/reviewApprovePostMultiInvoice.integration.test.ts`
+(test 1: happy N-post → all α posted → `committed`, two bills under the
+per-invoice keys; test 2: partial post → one α unposted →
+`partially_posted`/`approved`, then the gap resolved → re-approval →
+all α posted → `committed`, with the already-posted α's `posted_bill_id`
+byte-identical across the two POSTs — no double-write).
+
+**Annotation site.** `INV-WORKFLOW-003` at the aggregate committed guard
+in
+`apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts`
+(`postMultiInvoiceCase`), establishing bidirectional reachability with
+this leaf.
 
 ---
 

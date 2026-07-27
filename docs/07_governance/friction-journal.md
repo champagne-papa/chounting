@@ -19042,3 +19042,774 @@ via `session-end.sh`; diag Modal apps `chounting-deploy-diag` +
 `.coordination/_wsl_writetest.txt` removed; empty untracked `message_id` left
 (unknown origin). Parked-and-now-tracked: secrets rotation (POSTMARK + MODAL
 HMAC) → prod-readiness "Open security deferrals."
+
+WRONG (2026-06-15, Tier-C eval/repro-harness buildable-now arc) — the
+brainstormed design doc (`post-mvp/2026-06-14-tier-c-eval-harness-design.md`)
+asserted the system lacked "an honest accuracy metric it does not have today"
+and framed the scored-eval set as greenfield save a thin runner + a new
+`expectedExtraction?` fixture field. Plan-authoring verify-from-disk found 3 of
+the 5 named buildable-now items ALREADY SHIPPED under Wave 5 D1: the per-doc
+ground-truth labels live in `EXTRACTION_GROUND_TRUTH` (`extractionGolden.ts`,
+label-from-source + anti-circular), the deterministic Tier-A baseline metric is
+CI-runnable (`extractionAccuracy.integration.test.ts` + frozen `BASELINE_TALLY`,
+2026-06-02), and the three clean single-invoice docs are already labeled. Only
+`runExtractionEval` (extractor-parameterized) + the #3 repro-runner were
+genuinely new; the proposed `expectedExtraction?`-on-fixture would have been a
+SECOND ground-truth home prone to drift. Caught at plan-authoring, not impl —
+the design doc was reconciled (§1/§2.1/§2.2/§2.3/§4/§7) before any code, and the
+baseline harness was refactored onto the new runner behavior-preservingly
+(`BASELINE_TALLY` byte-identical). Same verify-the-actual-artifact discipline as
+the cron-registration and Postmark-HMAC catches: verifying a cited artifact (the
+scorer) is NOT the same as grounding the claim it supports (that nothing
+consumes it) — the latter needed a consumer-search. Recurrence of the already-
+codified verify-from-disk / drift-discipline-prophylactic pattern (N=1 new
+instance, not a new convention).
+
+NOTE (2026-06-15) — the board-#3 classify-unknown repro-runner shipped this arc
+(`classifyUnknownRepro.ts` pure logic + gated
+`classifyUnknownRepro.integration.test.ts`) is the verbatim-repro mechanism the
+**Issue A** carry-forward above calls for ("get a verbatim repro of a legible
+invoice classifying `unknown`"): it tallies `exception_reason`, selects
+`unknown_document_type` rows, and re-runs the real classifier repro-or-drop
+(still-`unknown` → repro / keep; real type → drop). Grounded 2026-06-14: 0 such
+prod rows (all 4 are `unmatched_router_candidate`), so the repro set is empty
+today — consistent with Issue A's "may not be real." When a row appears, this
+runner (gated `RUN_CLASSIFY_UNKNOWN_REPRO=1` + `ANTHROPIC_API_KEY`) is the
+repro-or-drop tool. Issue B (Tier-C extract array-vs-Zod) is untouched here.
+
+## 2026-07-11 — board #4 slice-2 T2c grounding catch (report-before-wiring gate held; a direct-advance wire would have thrown INVALID_TRANSITION at runtime)
+
+CATCH (grounding-before-building, observation-grain N=+1 of the already-codified
+verify-from-disk / report-before-mainline-touch discipline; NOT a new convention)
+— T2c wires the multi-invoice branch into `ingestDocument.ts` (the LIVE pipeline,
+Stage 2.5, between OCR and classify). Per the handoff's report-before-wiring gate,
+STEP 1 grounded the enqueue-exception transition + state-coupling FIRST-HAND and
+HELD for the operator's go before any mainline byte was touched. The grounding
+caught a design error the convenient wire would have shipped: parking a
+pre-classify case at `needs_review` CANNOT be a direct
+`advanceCaseAutomation('needs_review')`. The automation-owned matrix slice
+(`documentCaseService.ts:273-279`, `AUTOMATION_ADVANCE_EDGES`) DELIBERATELY OMITS
+`classified→{matched,needs_review}` — that segment is Subsystem-2-owned, and the
+function throws INVALID_TRANSITION on a classified-source advance
+(`documentCaseService.ts:381-392`). The legal path is the two-step:
+`advanceCaseAutomation('classified')` (the owned received→extracting→classified
+chain) THEN `enqueueException('multi_invoice')`, whose RPC does the
+`classified→needs_review` hop internally under `UPDATE ... WHERE state IN
+('classified','matched')` + `IF NOT FOUND RAISE check_violation`
+(`supabase/migrations/20240148000000_exception_queue_substrate.sql:402-410`). A
+direct-advance wire would have thrown at runtime; the grounding dissolved it at
+the report gate, before the touch.
+
+HONEST PROVENANCE (the instructive half) — the error caught was the ADVISOR's OWN
+lean: a direct `classified→needs_review` advance the advisor had proposed two
+turns before STEP 1. The transition-matrix grounding is what corrected it — not a
+builder error the verifier caught, but the reverse. That is the lesson worth
+banking: the report-before-mainline discipline catches the VERIFIER's errors too,
+not only the builder's, which is exactly why a load-bearing routing claim gets
+grounded first-hand against the bytes rather than inheriting even a trusted peer's
+lean. The handoff had already banked it as precedent ("grounding the transition
+matrix already caught a bug"); this session re-confirmed it first-hand rather than
+inheriting the claim.
+
+BONUS (de-risk, same grounding pass) — reading the insertion neighborhood
+surfaced a structurally-identical SHIPPED precedent: the `documentType==='unknown'`
+short-circuit (just below the new T2c branch in `ingestDocument.ts` — cited by
+symbol because the T2c insertion shifts its line numbers; the `if` sits at `:349`
+as of `d687243f`, was `:223` pre-wire) is the same
+`lookupDocumentCaseId → advanceCaseAutomation('classified') → enqueueException →
+EXCEPTION_ALREADY_OPEN-tolerant catch → return parked_unposted` skeleton. T2c is
+that skeleton + 4 named diffs (fires pre-Stage-3, gated on `looksMultiInvoice`,
+loops `createExtractedInvoice`, degrades by falling through). The risky part — the
+routing-and-park sequence — was a COPY of a proven path, not novel code, which is
+what made the mainline touch low-risk. Same "find the shipped precedent before
+writing new mainline" value the arc keeps rewarding.
+
+NOTE (surface-don't-guess, same arc) — the N=1-within-`{valid:true}` case (trigger
+over-fires on 2 tokens, the AI resolves them to 1 reconciling invoice) was SURFACED
+to the operator as a decision, not silently wired: the handoff pseudocode parked
+ANY `{valid:true}`, but that collided with the schema's "1-element degrades to the
+single path" intent. Operator chose fall-through (the `invoices.length > 1` guard);
+the schema comment (`multiInvoiceExtractionSchema.ts`) was reconciled to
+bidirectionally link the wire, and a discriminating 4th integration test pins it
+(fails under the rejected park-any-valid behavior, and asserts the multi-extract
+call actually fired so it is not a vacuous pass). Same "stop, surface, explain"
+shape as the prediction-grounding convention.
+
+Shipped `d687243f` (local on `feat/board-4-slice-2`, banked for the slice/retro
+push per the push-terminal-close timing rule). 5 files; 4 observable-state
+integration tests; typecheck green; 13/13 (4 T2c + 9 sibling orchestrator, no
+regression); `agent:validate` 26/26 floor. A recorded standing gate rode out with
+it: **T2c must NOT reach prod without T2.5** — `buildReviewPreview`
+(`reviewPreview.ts:266`) Tier-A re-extracts and never reads α, so a multi-invoice
+case in the T2c→T2.5 window renders a misleading merged single card
+(auto-commit-disabled means it can't post, but a human could act on the wrong
+card). Grounded first-hand; recorded in the T2b design §6.1.
+
+## 2026-07-11 — board #4 slice-2 T5 verify-and-close (subsumed into T3; deterministic-recompute + write-once persist realizes "persisted, not recomputed")
+
+CLOSE (verify-and-close, not a build) — T5 ("persisted per-α idempotency key",
+middle-design §5) shipped inside T3: 3a (`d881243c`, `post_extracted_invoice_with_audit`
+RPC + `postExtractedInvoice`) persists the key write-once under the T1 write-once
+trigger (`20240181000000:184-188`, AP-3); 3b (`9597dc45`, `postMultiInvoiceCase`)
+computes it via `childKeyFor` and passes it as both the JE `source_external_id` and the
+α `idempotency_key`. Verified FIRST-HAND this session against the bytes
+(`route.ts:365-455`; `extractedInvoiceWriteService.ts:135-186`; migrations 20240181 +
+20240184); the "subsumed" conclusion was re-derived, not inherited.
+
+KEY SHAPE MATCHES §1.5.2 — `childKeyFor` (route.ts:365-379) produces
+`${caseId}:bill:${suffix}`, `suffix = vendor_invoice_number` when present-and-unique
+over a count of the fixed α set, else `String(ordinal)` — exactly the §1.5.2 LOCKED
+shape. Its inputs (`caseId`, `extracted_fields.vendor_invoice_number`, `ordinal`) are
+all immutable anchors per the T1 immutability trigger (`20240181000000:166-179`), and
+the α set is fixed (no re-segmentation on the post/recovery path). So `childKeyFor` is
+DETERMINISTIC: first-post and crash-recovery compute byte-identical keys.
+
+THE CHICKEN-AND-EGG IS DECISIVE — the key is needed at
+`billService.post({source_external_id: childKey})` (route.ts:418) BEFORE it is persisted
+at the α-write (route.ts:449). At first post `α.idempotency_key` is NULL; on
+crash-recovery (bill posted, α-write crashed) the α is still `pending` and the key still
+NULL. So "read the persisted key at the post that needs it" is STRUCTURALLY IMPOSSIBLE
+on both paths — deterministic recompute is not a shortcut, it is the only realizable
+design, safe precisely because it is deterministic. An already-posted α short-circuits
+(route.ts:387, `post_status==='posted' → continue`) and never re-derives the key.
+
+DOC-PHRASING RECONCILIATION (the reason this close-record exists) — two design phrasings
+read as a read-back the code does not do; a future reader of the code (which recomputes
+at the post site) must not think it violates the design:
+- middle-design §2 (line 55): "per-invoice key from `α.idempotency_key`, T5" — impossible
+  at first-post (key NULL) and unnecessary on re-visit (posted-α short-circuit).
+- build-spec §1.6 watch-item #1 (lines 293-296): "decide each α's key at first post and
+  store it on the α row … persisted, not recomputed." The "decide at first post and
+  store" half is implemented verbatim; "not recomputed" holds literally only for the
+  posted-α short-circuit; the transient pre-persist derivation DOES recompute —
+  deterministically.
+SHIPPED GUARANTEE, stated precisely: `childKeyFor` deterministically recomputes over
+write-once α fields, and `postExtractedInvoice` persists the result write-once (AP-3).
+Recompute and persisted value provably agree; the persisted copy can never silently
+diverge. This MEETS §1.6's real concern — "re-run dedup (§1.5.2) and crash-class recovery
+(§1.5.3/G3) can never disagree about an invoice's key" — by determinism + write-once, not
+by read-back.
+
+NO NEW OBLIGATION — write-once persistence is already tested (3a: same-key no-op /
+different-key reject). The one untested property — that a crash-recovery recompute is
+byte-identical to first-post's — is the ALREADY-NAMED crash-window composition-test gap
+(bill-posted-but-α-write-crashed; proven in halves, not composed end-to-end), an
+accepted-and-named carry-forward, not a new T5 obligation.
+
+RESIDUAL CARRIED FORWARD — B3 re-segmentation ordinal-drift (§1.5.2 lines 234-237;
+watch-item #1) stays tracked-not-solved. It is orthogonal to persist-timing: the floated
+"persist-at-segmentation so it's readable at post" alternative would contradict §1.6's
+"decide at first post" AND would not close B3 (re-segmentation mints new α with new keys
+regardless). So its absence is not a remnant — T5 is fully subsumed.
+
+LANE — code claims first-hand (WSL, this session); advisor independently affirmed the
+grounding from the T3/T4 passes (re-affirmed this pass) + widened the honesty flag to
+cover §1.6 (Phil relayed); the close decision Phil's; committed on Phil's word. Not a
+codification (narrative close-record; `codify-convention` not triggered). No runtime
+code; no invariants/control_matrix/ledger touch (T5 registered no INV-* row), so the
+bidirectional reachability diff is not in blast radius.
+
+Recorded on `feat/board-4-slice-2` (local, banked for the slice/retro push per the
+push-terminal-close timing rule); this close-record is the commit.
+
+## 2026-07-12 — board #4 slice-2 T6 arc + slice close (G3 stuck-invoice affordance; narrative close, no codification)
+
+CLOSE (retrospective-drafting narrative; NOT a codification — `codify-convention` not
+triggered, no N≥3 graduation this arc, confirmed by the friction-pattern-detector over
+the 20-commit window plus both prior slice-2 entries' own self-declarations). T6 shipped
+the G3 stuck-invoice affordance end to end: T6a (`4fb6c518`) the `unrepairable`
+write-path substrate (RPC `mark_extracted_invoice_unrepairable_with_audit`, migration
+`20240185` + service + behavioral test); T6b-1 (`435a75f2`) the route mechanism (catch at
+the recovery sub-call → mark → route-to-unposted → continue, plus the top-of-loop skip,
+plus the crash-class-X integration test); T6b-2 (`e8711ad4`) the display (guarded
+`anyPostable` + honest `not_postable_reason='unrepairable_present'` + the per-card
+manual-repair affordance + tests). The `post_status='unrepairable'` coupling — flagged at
+the T6 onset (the reserved enum with no writer) — is CLOSED: writer + route wiring + UI,
+all three grounded first-hand, and the crash-class-X test proves the case can never reach
+committed while an `'unrepairable'` α exists (INV-WORKFLOW-003 holds).
+
+PATTERN BANKED (new articulation, N=1 — NOT codify-ready; banked as a reusable
+discriminator) — **fail-loud on a gating mutation.** In `postMultiInvoiceCase` the
+`markExtractedInvoiceUnrepairable` call is deliberately UNWRAPPED: if it throws (a genuine
+infra failure — the CHECK's 23514 posted-α reject cannot fire on a pending crash-class α),
+it fails loud rather than routing a not-actually-marked α to `unposted`. The discriminator
+is sharper than "handle errors": *a write that gates subsequent read-back or skip logic
+must not swallow its errors* — because the failure mode isn't "the write failed," it's
+"the response claims a state the DB doesn't hold, and the downstream skip keys on the
+persisted `post_status`." Wrapping it would desync the response from the DB and silently
+break the top-of-loop skip contract on the next re-approval. Likely to recur at other
+crash-class / skip-contract write sites; banked so the next such site inherits the
+reasoning.
+
+WATCH-ITEM (N=2, NOT codified — a third fire crosses N=3 and routes through
+`codify-convention` then) — **earlier-phase artifact left stale by a later chunk's
+behavior change.** Two named in-window fires, recorded so the eventual N=3 decision is a
+count, not a re-litigation of whether they counted:
+  (1) `7da4469b` (T2.5 review-copy fix) — the T2.5-era badge/comment strings in
+      `ReviewCaseDetailView.tsx` went self-contradictory after T3's postability flip
+      (`9597dc45`), fixed post-hoc (UI-copy-vs-code sub-shape).
+  (2) The T5 close's DOC-PHRASING RECONCILIATION (this journal, the T5 entry above) —
+      middle-design §2 "per-invoice key from `α.idempotency_key`" + build-spec §1.6 "not
+      recomputed" read as a read-back the shipped code does not do, reconciled in-place
+      without a code change (spec-vs-code sub-shape).
+Same shape both times: a change updated the behavior and left adjacent explanatory text
+describing the old behavior. A third fire (either sub-shape) graduates.
+
+KNOWN-ADJACENT, NOT A DEFECT (T1.5 loop-close — the `e8711ad4` commit message self-flagged
+this as a retro candidate; closing it here) — `ReviewCaseDetailView.test.tsx` **test 1**
+("postable preview … click POSTs approve-post and shows done") fails on the async
+post-click `getByRole('status')` "Posted and committed." assertion. It is **pre-existing**:
+it fails identically on the clean committed `435a75f2` with none of the T6b-2 changes
+present (verified by stash-and-run: stash the three T6b-2 source/test files → `vitest run`
+the component file → the same 1 failure → stash pop). T6b-2 neither caused nor fixes it; it
+was kept out of every green claim. Carried forward as a friction-journal/retro item, not a
+slice-2 defect.
+
+REINFORCEMENTS (no new codification — cited as evidence of already-mature disciplines, not
+re-codified): the reciprocal executor↔advisor correction rhythm fired repeatedly across
+the arc — the executor grounding the crash-class origin corrected both sides' "else-throw"
+mislocation; the advisor's `anyPostable`-edge catch was refined by the executor to the
+guarded `!hasUnrepairable` form; the ahead-count slip and the "iff"-over-registration were
+owned in both directions — a further evidence instance of the bilateral advisor-grain in
+`projection-from-model.md`. And the report-before-mainline-touch / hold-for-go discipline
+held every chunk (grounding reported before any mainline byte; commits and the local
+migration-apply on the operator's explicit per-act word; the push held entirely separate) —
+a further sub-grain of `scope-lock.md`'s verify-from-disk-at-non-standard-grain. Neither is
+re-codified; both are noted as evidence.
+
+LANE — the arc's code/route/UI claims are WSL first-hand (verified against disk each
+chunk); the advisor independently grounded each surface (substrate, route, render, test
+assertions) and owns the C2 doc-sync reachability confirmation across the three surfaces;
+the codification-none verdict is corroborated by both slice-2 entries' self-declarations
+plus the friction-pattern-detector; commits landed on the operator's explicit word. Not a
+codification. Recorded on `feat/board-4-slice-2` (local, banked for the
+slice/retrospective-close push — the push is the operator's separate act).
+
+[2026-07-15] [WRONG] Vendor-invoice candidate scoring silently collapsed to
+vendor-match alone — an extractor↔matcher field-name mismatch zeroes 3 of the 5
+scoring axes. Discovered during Fork C (board #4 spine) chunk-1 onset grounding;
+ANTI-SCOPE to Fork C — flagged, not fixed. Disposition is the operator's to place.
+
+THE BUG (grounded end-to-end at `2f70a040`). The vendor-invoice extractor writes
+`amount` / `accounting_date` / `vendor_invoice_number`
+(`shared/schemas/extraction/vendorInvoiceExtractionSchema.ts`). `completeCandidate`'s
+bill-scoring reads `parsed.extracted_fields.invoice_amount` / `.invoice_date` /
+`.invoice_number` (`services/document-platform/documentRouterService.ts:933/937/941`)
+— three names the extractor never writes. There is NO remap between them: Stage-6
+passes `extracted_fields: extracted.fields` verbatim
+(`agent/orchestrator/extraction/ingestDocument.ts:489`) and
+`CompleteCandidateInputSchema.extracted_fields` is a passthrough `z.record(z.unknown())`
+(`shared/schemas/document-platform/documentRelationshipCandidate.schema.ts:155`). So all
+three reads return `undefined`. The compute helpers degrade to null on absent input
+rather than throwing (`computeAmountFeatures` / `computeDateFeatures` /
+`computeStringMatchFeature`, `documentRouterService.ts:704-755`) — nothing errors; the
+axes just go dark.
+
+THE ARITHMETIC. `normalizeFeature` normalizes the one live axis `vendor_match` by a
+CLAMP (`Math.max(0, Math.min(1, vendor_match_confidence))`,
+`core/document-platform/scoreComposition.ts:83`), but the four boolean axes
+(amount / date / reference / payment_method) by `=== true ? 1 : 0` (`:84-91`) — so an
+absent/null input on any of those four normalizes to 0 (not to "excluded").
+`composeScore` is a straight weighted sum with NO renormalization over live axes
+(`:123-135`). vendor_invoice weights are `{vendor_match: 0.3, amount_match: 0.3,
+date_proximity: 0.15, reference_alignment: 0.25, payment_method_consistency: 0}`
+(`V1_PROVISIONAL_WEIGHTS`, `:37-40`). With amount/date/reference dead,
+`aggregate_score = 0.3 × vendor_match_confidence`, ceiling 0.3 — 70% of the
+vendor-invoice scoring weight is structurally zero on the mainline path.
+
+THE ROUTING CONSEQUENCE. `resolveCandidates`: `N===0 → branch c`; `N===1 → branch a`
+(winner elected, NO score threshold); `N≥2 → margin ≥ 0.05 ? a : b`. So (1) a vendor
+with exactly one open bill auto-matches → head-pointer-set → `matched` on vendor
+identity ALONE, with no check that the amount, date, or invoice number resemble the
+bill; (2) any vendor with ≥2 open bills — the only live axis, `vendor_match_confidence`,
+is per-document not per-bill, so every candidate ties, `top − runner_up = 0 < 0.05`, and
+every such case routes to branch (b) / exception queue. Branch-(a)-via-margin is
+unreachable — not by the design property the code comment claims, but because the
+differentiating axes are dead.
+
+THE STALE-COMMENT TELL. `AMBIGUITY_MARGIN_V1_PROVISIONAL` says branch-(a)-via-margin is
+unreachable "at v1 under single-feature scoring" and "activates when chunks-3+ ship
+multi-feature scoring." Chunk 3 SHIPPED multi-feature scoring (`composeScore` is right
+there) — the promised activation silently did not fire, because three of five axes read
+absent keys. The comment is both stale (describes a chunk-1 condition that was supposed
+to end) and a symptom (the bug is why it didn't). Its stated mechanism (`confidence_score
+= vendor_match.confidence`) is also now arithmetically inaccurate — post-chunk-3 it is
+`0.3 × vendor_match.confidence`; same tie-at-every-candidate outcome, so the conclusion
+survived by coincidence.
+
+BLAST RADIUS (bounded today; sharper tomorrow). The Wave -1 A-now bleed-stop disables
+auto-commit — `matched` cases PARK to `needs_review`, no ledger write. That mitigation is
+very likely what has kept this invisible: a human sees every matched case regardless of
+how it scored. So today's exposure is wasted differentiation (N≥2 always to a human) + an
+unchecked N=1 auto-match that a human still reviews — NOT a wrong post. BUT it makes the
+field-name fix a PRE-CONDITION on governed auto-commit returning post-V1 (ADR-0007 §Tier 2
+"V1 re-scoping of the Q78 auto-commit exercise", ratified 2026-05-31 by CTO): the bleed-stop is
+currently the only thing between this bug and a confident wrong post on vendor identity
+alone. Sharper still — the fix is a pre-condition on prerequisite #3 SPECIFICALLY (ADR-0007
+§Tier 2 four return-prerequisites, `:388,395-396`: the V1 evaluation harness establishes a
+published match/extraction precision threshold on a golden set). Measuring the matcher
+before the fix would calibrate that threshold against vendor-identity-only scoring, baking
+the defect into the golden-set baseline — so the framing is fix-before-MEASURING, not merely
+fix-before-re-enabling.
+
+SCOPE / lane. Anti-scope for Fork C: the semantic-duplicate handler sidesteps this by
+construction — it keys its own lookup on `extracted.fields.vendor_invoice_number` (the
+field that actually lands in `bills.bill_number` via `buildPostBillInput`,
+`ingestDocument.ts:1036`) against `bills` directly, and never reads the matcher's axes.
+Grounded FIRST-HAND independently by both lanes: WSL traced extractor→schema→normalize→
+composeScore; the advisor independently read the Stage-6 passthrough call-site and the
+`resolveCandidates` branch logic. One absence-check remains OPEN in WSL's lane: whether any
+consumer OTHER than the parked `needs_review` path reads `matched` / the head-pointer (if
+one does, the "bounded today" framing narrows).
+
+DISPOSITION (pending — the operator's to place). Its own investigation, not a Fork C task.
+Territory: ADR-0018 (routing/margin) + ADR-0019 (score calibration). Urgent framing
+(advisor lean, endorsed): less "calibration is off," more "a pre-condition on governed
+auto-commit re-enablement." NOT a codification — a discovered-defect record, not a
+convention graduating at observation-grain N≥3, so `codify-convention` is correctly not
+invoked. Recorded on `docs/scoring-bug` — a standalone branch off `origin/main`,
+deliberately NOT the Fork C feature branch: the finding outlives Fork C and its disposition
+(ADR-0018 / ADR-0019) is not a Fork C task. Committed on the operator's explicit word, per
+the report-before-mainline-touch / hold-for-go discipline held across this arc.
+
+RADIUS AMENDMENT [2026-07-22]. The original entry above scoped the defect to
+vendor_invoice. Grounding the remediation showed it is broader, and asymmetric —
+all three SCORED document types read placeholder keys, on different key sets:
+  - vendor_invoice: invoice_amount/invoice_date/invoice_number vs the extractor's
+    amount/accounting_date/vendor_invoice_number → 3 dead axes (0.70 weight).
+  - receipt: receipt_amount/receipt_date/authorization_reference vs total/date/auth_ref
+    → 3 dead axes (0.60 weight); only payment_method matched.
+  - payment_confirmation: authorization_reference vs auth_ref → 1 dead axis, but it is
+    the HEAVIEST in the system: reference_alignment carries 0.35 (vs receipt's 0.20)
+    precisely BECAUSE bank-issued references are canonical (scoreComposition.ts:11-17).
+    The axis that rationale exists to weight is the one that never fired.
+Plus a fourth site outside the three-type frame: rematchCandidate (Subsystem 3
+re-evaluation) reconstructed extracted_fields with the placeholder names AND carried no
+reference or payment_method value at all, so re-evaluation was blind on those axes for
+every type and blind on ALL non-vendor axes for payment_confirmation. Root cause is one
+un-executed deferred obligation, not four bugs: documentRelationshipCandidate.schema.ts
+left extracted_fields as z.record(z.unknown()) at chunk-1 "until Phase 7's per-type
+schemas ship"; Phase 7 shipped them; the lift never happened. Remediation SHIPPED
+2026-07-22 (five-site hand-alignment; typed lift re-filed against the governed-auto-commit
+trigger) — see the next entry.
+
+## 2026-07-22 — scoring-bug remediation: extraction↔router field-name alignment (five sites; transient-regression + duplicate-accumulation surfaced)
+
+Fixed the [2026-07-15] scoring defect (amended above to its true 3/3/1 radius). The fix is
+narrow — align five reader/writer sites in documentRouterService.completeCandidate +
+rematchCandidate to the Phase 7 extractor vocabulary — but the arc surfaced three things
+worth banking beyond the fix itself.
+
+THE PATTERN (banked, not codified — observation-grain N=2). An un-executed deferred
+obligation whose named trigger fired unobserved. The chunk-1 code left extracted_fields
+permissive "until Phase 7's per-type schemas ship" and invented placeholder key names to
+read in the meantime; Phase 7 shipped the schemas; the lift-to-typed obligation had a
+real trigger but no watcher, so the placeholders silently became the permanent contract
+and 0.70/0.60/0.35 of the per-type scoring weight went dead for an entire phase. The
+remedy the code itself named (typed per-type contract) is re-filed at
+documentRelationshipCandidate.schema.ts against a gate WITH an owner — governed
+auto-commit return (ADR-0007 §Tier 2 Q78) — not another calendar trigger that can pass
+unobserved. Companion pattern to the [2026-06-07]-era header-drift family: a comment/
+contract whose truth silently lapsed.
+
+WHY IT SHIPPED GREEN (the masking mechanism, observed from the inside). Every router test
+seeded the reader's INVENTED vocabulary (invoice_amount, receipt_amount, …), so in tests
+the axes were always live while in production they were always dead. A test that seeds
+extracted_fields cannot, on its own, prove the extractor and matcher agree — only running
+the real extractor can. The remediation adds that proof: a pipeline-level test
+(scoringFieldAlignmentPipeline.integration.test.ts) runs the real Tier-A extractor through
+ingestDocument with callClaude unmocked-but-never-reached (Tier-A-sufficient fixture, 0
+paid calls), and asserts the emitted candidate clears the 0.30 pre-fix ceiling (observed
+1.0 end-to-end). During its construction the fix surfaced a live-pipeline fact worth
+recording: the Tier-A vendor capture is sender-LABEL-only and precision-biased — a bare
+name line is a miss — so the fixture needs "Vendor: <name>", not a bare name line, or the
+pipeline emits zero candidates.
+
+MUST-NOT-FIRE, applied (the Fork C dup-over-fire lesson, now N=2). Re-activating the axes
+has a legitimate adjacent case that MUST NOT change: the Scenario A inferred-target paths
+(vendor_invoice and receipt) pass literal nulls by design (ADR-0015 §7) and must stay
+vendor-only. Both got a must-not-fire test asserting the axes stay 0 even though
+extracted_fields now carries real matchable values. This is the SECOND observation of the
+"a change with a legitimate adjacent case needs a must-not-fire-on-the-adjacent-case test"
+pattern (Fork C dup over-fire was N=1). Banked as a graduate-ready candidate; authoring
+deferred to the next fire per the deferred-authoring precedent. On the third fire, route
+through codify-convention (likely testing.md).
+
+TRANSIENT REGRESSION the fix introduced and closed (grounded, RED-proven). Between the
+site-1 fix and the site-5 fix, completeCandidate read `amount`/`accounting_date` while
+rematchCandidate still WROTE `invoice_amount`/`invoice_date`, so re-evaluation amount+date
+went live→dead — this arc's own bug class reintroduced on a narrower path, and
+test-invisible because the dispatchTrigger suite asserted OUTCOMES only, never SCORES. A
+new T5 test now asserts rematch-path scores (the first in that suite to do so), which
+both RED-proved the regression and fences it permanently. Note the regression was NOT
+found by a test — it was caught by grounding the intermediate reader/writer state at the
+Task-1 checkpoint, before any test for it existed; the RED came after. So two lessons
+stack. Discovery (banked, N=1): a multi-site fix has intermediate states that need
+grounding on their own, independent of the end-state tests. Coverage (banked, N=1): a
+suite that asserts only outcomes cannot catch a scoring regression on the path it covers.
+
+CARRY-FORWARD (surfaced by the fix, NOT caused by it; out of the five-site scope):
+  1. Duplicate-candidate accumulation. supersedes_candidate_id is hardcoded null at all
+     six emission sites and never populated; completeCandidate dedups only against
+     COMMITTED source_document_links, not prior candidate rows. So a re-matched case
+     accumulates a second identical-score row for the same entity; resolveCandidates
+     loads both (loadCandidatesForCase, no dedup), they tie at margin 0, and the case
+     routes to branch (b) → exception queue EVEN ON A NEAR-PERFECT MATCH (observed: two
+     rows, same bill, both 0.985). Pre-fix this was invisible (everything tied at
+     vendor-only anyway). Fail-safe in direction (a human sees it, under the Wave -1
+     bleed-stop, no ledger write), so characterized in a test rather than fixed. Flip the
+     characterization assertion when candidate-set dedup or real supersession lands.
+  2. The typed lift itself — re-filed against governed-auto-commit return (above).
+  3. The margin/threshold calibration — ADR-0019's first cycle, gated on auto-commit
+     return; the fix is what finally generates real (non-zero) margins to calibrate
+     against.
+
+STALE COMMENTS SWEPT (five, header-drift family): the AMBIGUITY_MARGIN tombstone
+(:203-era, "single-feature scoring… branch (a) structurally unreachable"); the file-header
+claim that Subsystem 3 writes supersedes_candidate_id (false — see carry-forward #1); the
+rematchCandidate "Reconstruction fidelity" doc block (listed placeholder key names); the
+candidatesToProduce preamble ("single-feature scoring… chunks-2+ enhancement"); and the
+runPerCaseReEvaluation "single-feature scoring" note. The :1054-1055 "capped at 0.65"
+comment was VERIFIED-not-edited: it documented intent, the bug falsified it, and the fix
+restores its truth (receipt Scenario B = vendor 0.25 + amount 0.25 + date 0.15 = 0.65).
+
+BRANCH. Built on fix/scoring-field-name-alignment off docs/scoring-bug (not the Fork C
+branch): the fix and the finding it discharges belong together, docs/scoring-bug is 1
+commit off origin/main (a clean base vs 11 unmerged Fork C commits), and the design frames
+this as anti-scope to Fork C. NOT a codification. Committed on the operator's explicit word
+per the report-before-mainline-touch discipline.
+
+## 2026-07-21 — board #4 Fork C tranche-3 (statement-vs-invoice presence tripwire; graduate-ready codification candidate banked; authoring deferred to Fork-C arc-close per operator decision)
+
+CLOSE (narrative; the third and final Fork-C danger handler). Fork C's fail-safe spine —
+make route-to-human explicit/typed/instrumented, add explicit handlers only for the
+dangerous-when-uncertain scenarios — now carries all three named handlers: semantic-duplicate
+(`612b05a9`), bank-detail/remittance (`f53f67cf`), and statement-vs-invoice (`1dc8c62b`, this
+arc). Tranche 3 routes a document that classifies as `vendor_invoice` but reads as a STATEMENT
+to a human under `exception_reason='statement_not_invoice_suspected'` (12th v1-active; migrations
+`20240190` ADD VALUE + `20240191` `chunk_11_active`→`chunk_12_active`; Zod header 11→12;
+`db/types.ts` regenerated). Detector `statementScan.looksLikeStatementNotInvoice` is a pure
+boolean; handler at ingestDocument Stage 5.5, placed bank-detail→statement→dup. Tier-A-only
+tests, 0 paid Claude, RED→GREEN watched; typecheck + agent:validate 26/26 + 0 ERRORs green.
+
+WRONG→GROUNDED (the onset reframe — hazard is real, not inferred). The tranche-3 onset's first
+question ("where does `vendor_statement` flow?") grounded to: **it never gets that label.** The
+classifier's whole output domain is 4 values (`vendor_invoice|receipt|payment_confirmation|
+unknown`); `vendor_statement` is one of 14 *reserved* `document_type` enum values (migration
+`20240143:50‑59`) that no Tier-A/C/D path emits. The hazard is instead a **misclassification**:
+`vendorInvoiceRules.ts:38` lists `/\bstatement\b/i` as a POSITIVE `vendor_invoice` header
+(deliberately — Step-18 "matches Invoice/Bill/Statement headers"; the filename set matches
+`/statement/` too), so a vendor statement is a confident (0.90) Tier-A `vendor_invoice` match and
+flows toward booking. Grounded first-hand against the classifier bytes before a line was built.
+
+WRONG (advisor self-correction, owned in the advisor's favor) — the reserved set was first
+described as "seven" (a truncated-grep artifact), then corrected against the migration to **4
+active + 14 reserved**; the onset's "vendor_statement uniquely reserved" framing was also wrong
+(it's a family). Re-reading the migration corrected the count against the person who raised it —
+a further instance of the arc's re-read-against-the-bytes discipline catching its own errors.
+
+CODIFICATION CANDIDATE — GRADUATE-READY at N=4 (banked here with provenance; authoring DEFERRED
+to Fork-C arc-close). The friction-pattern-detector (run over the Fork-C window to corroborate the
+verdict rather than assert it) CORRECTED an initial "no codification" read: the test-authoring
+discipline below has fired observation-grain N=4, never journaled. **Tier-A-extraction-sufficient
+integration fixtures.** When a live-pipeline integration test must drive an ingestion branch /
+handler through Stage 4, construct the OCR fixture with the minimal Tier-A-sufficient field set
+(labeled invoice-number + amount + date) so extraction stays on the free/deterministic Tier-A path,
+AND control the Stage-2.5 `looksMultiInvoice` trigger — rather than mocking `callClaude` to block a
+paid Tier-C call. It is DISTINCT from `testing.md`'s two adjacent sections (fixture-offline
+eval-suite teeth + additive-named-export-for-eval), which prove no-live-AI-*reachability* via
+mock-to-throw; this engineers content *sufficiency* so the real Tier-A path naturally wins. Fired
+N=4 across two arcs / three calendar days — all four fixture constructions verified first-hand (WSL)
+at this close:
+  1. `multiInvoicePipelineWiring` (board-4 slice-2 T2c, `d687243f`, 2026-07-11) —
+     GOLDEN_VENDOR_INVOICE_LINES keep the single path Tier-A; the two-token line + a MOCKED
+     multi-extract control `looksMultiInvoice`. Named in-comment ("so the single path stays in Tier
+     A, no Tier C callClaude").
+  2. `semanticDuplicatePipelineWiring` (Fork C #1, `612b05a9`, 2026-07-20) — `Invoice #`+Date+Total;
+     comment names "Stays in Tier A (no Claude call — unlike a receipt, which classifies via Tier C)".
+  3. `bankDetailChangePipelineWiring` (Fork C #2, `f53f67cf`, 2026-07-21) — same fixture shape; the
+     BANK_LINE comment names the `looksMultiInvoice`-avoidance half (digit-only token), the
+     Tier-C-extraction-sufficiency half practiced-not-named.
+  4. `statementNotInvoicePipelineWiring` (Fork C #3, `1dc8c62b`, 2026-07-21) — a bare `Invoice 12345`
+     engineered against BOTH gates; named in-comment AND in the commit message.
+DISPOSITION — the N=4 provenance is BANKED here so the count is settled, not re-litigated. The
+codify-TIMING is DECIDED by the operator (in their own word, 2026-07-21): DEFER authoring the
+`testing.md` codification block to Fork-C arc-close, routed through `codify-convention` (likely
+destination `testing.md`, sibling to the two eval-suite sections). Rationale — Fork C has no
+arc-close / retro / push yet, every consequential artifact this arc landed at a terminal point, and
+banking-now-authoring-at-close cannot be wrong if a fifth fire or refinement surfaces at close.
+(Provenance note: this disposition was first de-ratified when a relayed advisor lean had been recorded
+as the operator's choice; it is re-ratified here only because the operator gave the decision directly.)
+GROUNDING GRAIN: detector-identified over the Fork-C window; all four fixture constructions verified
+first-hand (WSL) this arc; the advisor independently corroborated the two most recent fires (#3, #4)
+first-hand.
+
+AUTHORED 2026-07-22 (operator-triggered arc-close): this graduate-ready bank is DISCHARGED — the
+codification landed at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline
+fixtures (N=4), routed through `codify-convention`. The four-commit provenance banked above is the
+codification's Evidence basis.
+
+DESIGN DECISION (N=1, correctly uncodified — application of the already-graduated
+`regex-permissive-matching` convention, per the detector) — presence-AND-weak-invoice-signal,
+labeled-vs-bare guard. The detector fires only when a statement-EXCLUSIVE marker is present AND no
+strong single-invoice identity is present — the "weak invoice signal" derived from the OCR header
+DIRECTLY, never the matcher's composed score (the logged vendor-only scoring bug, `docs/scoring-bug`,
+caps that score at 0.3×vendor_match and zeroes the invoice axes; reading it would inherit the
+dead-axis bug — the scoring bug's blast radius reached even this detector's design). The guard is
+labeled-vs-bare: a labeled `Invoice #/No/Number: <n>` = the document's own identity → suppresses; a
+bare `Invoice 12345` line-item = a statement's table reference → does not. Pinned by unit cases from
+both sides.
+
+NOTE — classifier kind-suppression coherence (queued design question, NOT a codification — N=1 per
+the detector). `vendorInvoiceRules` carries `RECEIPT_FOOTER_NEGATIVE_PATTERNS` +
+`PAYMENT_CONFIRMATION_NEGATIVE_PATTERNS` (Session 71's "kind-defining header beats a cross-reference"
+fix, `:55‑79`) but NO statement negative set — which is *why* `/statement/` cleanly matches
+`vendor_invoice`. This reframes the family question: statement (and later credit_memo) may be more
+naturally a **classifier negative-pattern** (two precedents already live there) than a Stage-5.5
+tripwire. Left on the operator's queue next to the named-not-built `credit_memo`/`purchase_order`
+sibling (Option-1 scope) + `docs/scoring-bug`. Fork C's additive-reason treatment is sound and
+shipped; the coherence question is a design fork, not a defect.
+
+NOTE — coverage boundaries documented in-code, not hidden (reinforcement of the already-graduated
+`prediction-grounding` + `regex-permissive-matching` conventions, per the detector) — `statementScan.ts`:
+(1) gated on the `vendor_invoice` label, a statement mislabeled receipt/payment_confirmation sails
+past — acceptable (those don't book into AP); (2) a statement with a clean labeled invoice identity
+is suppressed by the AND-weak guard; (3) a statement carrying the bare word `statement` but none of
+the specific markers classifies `vendor_invoice` yet doesn't trip — a within-label recall ceiling the
+marker set widens as corpus accrues. All Wave-1-bounded. Markers are ungrounded v1 heuristics (no
+statement OCR corpus in-repo).
+
+NOTE — three-wide precedence + both-trip-of-three (accept-for-v1, an explicit choice). Stage 5.5 now
+holds bank-detail→statement→dup; one-open-exception-per-case means a doc tripping multiple parks
+under the FIRST only. Tested both ways (statement+bank→`bank_detail_change_suspected`; statement+dup
+→`statement_not_invoice_suspected`). Dropped signals are not separately recorded — accept-for-v1
+(fraud-first triage); a secondary non-exception audit note is the scoped follow-up if the operator
+wants it. On the operator's queue.
+
+NOTE — no new `resolution_action`. The statement disposition reuses existing routes
+(`route_to_manual_entry`/`mark_non_accounting`/`archive`); `ResolutionActionSchema` stays 9 —
+grounded against the schema at onset (verified-not-assumed).
+
+NOTE — mid-arc entry (substrate reconciliation for the eventual Fork-C close). This is a per-tranche
+entry written on operator request; tranches #1 (`612b05a9`) and #2 (`f53f67cf`) are recorded in their
+commit messages but NOT yet in this journal — consistent with the push-terminal-close pattern (the
+full arc write-up lands at arc-close, not per-commit). The eventual Fork-C close entry reconciles all
+three tranches and authors the N=4 codification banked above (per the operator's defer-to-arc-close
+decision).
+
+LANE — the code/detector/handler/migration/schema/test claims are WSL first-hand (verified against
+disk each step, RED→GREEN watched, `callClaude`=0 counted); the N=4 codification-candidate provenance
+is detector-identified then WSL-first-hand-verified across all four fixtures (advisor corroborated #3
++ #4 first-hand). The advisor independently grounded the built surface (the `vendorInvoiceRules`
+hazard, the detector's labeled-vs-bare, both migrations, the Zod schema, the regenerated
+`db/types.ts`, the unit + integration assertions) and owns the doc-sync confirmation (no governance
+doc enumerates `exception_reason` by count; the `control_matrix.md` "Expected:N" confirming-grep is
+push-time insurance, not a known gap). Commit `1dc8c62b` landed on the operator's explicit word under
+the `board-4-slice-2-build` lock label. Recorded on `feat/board-4-fork-c` (local, unpushed; migrations
+`20240190/191` applied to local dev only — they reach staging/prod via the operator's separate push +
+deploy). Ahead of `origin/main` by 3 (the three Fork-C handlers), counted against disk.
+
+## 2026-07-22 — board #4 Fork C seam fix (dup over-fire → Phase-4 attachment restore) + review wave + arc-close codification
+
+CLOSE (the seam-fix arc + arc-close). Between tranche 3 and this close, the FIRST full-suite
+`test:full` run at push-readiness surfaced a regression the per-unit grounding had not: the
+tranche-1 semantic-dup handler OVER-FIRES. The arc remediated it (design → plan → 4-task
+subagent-driven build → whole-branch review → fix wave), restored INV-WORKFLOW-002, and pushed the
+whole Fork C spine (10 commits) to `origin/feat/board-4-fork-c` @ `2f396dd5` + the scoring-bug
+finding to `origin/docs/scoring-bug` @ `640c8057`. Design/plan:
+`docs/09_briefs/post-mvp/2026-07-22-board-4-fork-c-attachment-seam-{design,plan}.md`.
+
+WRONG (the dup over-fire — correct-per-unit, broke only at full-suite scope). The semantic-dup
+handler (tranche 1, `612b05a9`) fires when an incoming vendor invoice's `(vendor, bill_number)`
+matches a LIVE bill. But that signature is ALSO the precondition for a legitimate first-arrival
+attachment (an invoice arriving for an existing manual/PO bill), which Wave-6 D2.1 T4 / INV-WORKFLOW-
+002 routes as a matched ATTACHMENT EXIT (head pointer set). The handler, keyed on bill-existence
+alone, collapsed a designed two-outcome routing (attach vs. duplicate) into one — parking every
+matching invoice as a suspected duplicate and short-circuiting Stage 6, so the head pointer was
+never set. It shipped clean at unit grain (its own fires-correctly test + negative control + the
+targeted regression sweep all passed) and was invisible until `routingTerminalDisposition`'s
+ATTACHMENT-EXIT case broke at the first `test:full`. The push-readiness gate (Condition 1 =
+`test:full`) is exactly what caught it — the gate earning its keep.
+
+GROUNDING-GAP LESSON (the arc's durable output, attributed straight). A route-to-human danger
+handler needs a **must-not-fire-on-the-legitimate-adjacent-case** test — not just fires-on-danger +
+a negative control. The tranche-1 dup suite had all three of the wrong things: a fires-correctly
+positive, a no-colliding-bill negative control, and an unmatched-vendor guard-arm — but NO "a
+colliding bill that is a legitimate first-arrival attachment → must NOT fire" case, because that
+case requires understanding the attachment path the handler was preempting. That absent assertion
+is precisely what let the over-fire ship. This is a grounding-discipline gap in BOTH lanes' tranche-1
+passes: the handler was grounded as "fires on the danger case + the negative control runs the full
+pipeline," and neither lane checked that it did NOT fire on an existing attachment-routing test that
+seeds the same `(vendor, number)` signature. Recorded straight, not softened — the advisor's own
+tranche-1 grounding carried the same gap, and named it as the load-bearing learning. Banked as an
+articulated discipline (observation-grain N=1 at this articulation); the next fire routes through
+`codify-convention` toward `docs/04_engineering/conventions/testing.md`.
+
+THE FIX (Option 1, operator-approved — provenance gate). The dup handler now fires ONLY when the
+matched bill is document-sourced: it carries a LIVE (`link_status='created'`) `primary_invoice`
+`source_document_links` row (INV-DOC-001 writes it via `billService.post`; the pipeline passes
+`primary_document_id`). A manual/PO/override-committed or voided bill has no live link → the incoming
+invoice is a legitimate first-arrival attachment → defer to Stage 6 (ATTACHMENT EXIT restored). No
+new substrate; the discriminator is a second read on an already-invariant-backed signal. Bank-detail
+and statement are UNCHANGED — their triggers are claims about the document's own content (payment
+coordinates / statement shape), correct even for a would-attach doc, so they keep routing-to-human;
+their only cost is the lost head pointer, deferred (design §7). `is_document_sourced` (`12b50e95`) →
+handler gate (`b2fc0e2f`, restores INV-WORKFLOW-002) → seam note + coverage (`2e8b5843`).
+
+CATCH — `link_status='created'` is load-bearing (advisor, ratified into the discriminator). Links
+are reversed, never deleted: a voided bill retains a `link_status='reversed'` `primary_invoice` row.
+A discriminator querying link-EXISTENCE without the status filter would read that stale reversed link
+as "document-sourced → fire" and re-introduce the over-fire on a re-book-after-void — the exact
+population the dup lifecycle filter excludes. The predicate is filtered `link_status='created'` and
+guarded by a reversed-link must-not-fire test at both the read and the pipeline level (seed the link
+via the real RPC, reverse it via the real RPC, assert defer). This is the catch that kept the fix
+from shipping a subtler version of the bug it fixed.
+
+REVIEW WAVE (whole-branch review found one Important + tidy-ups). The final whole-branch review (0
+Critical / 1 Important / 4 Minor, `2f396dd5`) caught that `findLiveBillByVendorAndNumber` was called
+OUTSIDE the dup handler's try/catch, so its `PIPELINE_TRANSIENT_EXHAUSTED` throw escaped
+`ingestDocument`'s structured-result contract (losing `pipeline_trace`, leaving the `classifyFailure`
+mapping dead). Pre-existing since tranche 1; the seam fix's link-query doubled the throw surface on
+that already-unwrapped call. Wrapped to `pipeline_failed`, guarded by a three-part transient test
+(status + `failure_class='transient_exhausted'` + `pipeline_trace` populated — not a status-only
+green; the same must-not-fire-vacuously discipline applied to the error path). Tidy-ups: a dead
+`void` no-op removed; a doc note on the oldest-live-bill provenance semantics; the stale
+`Reserved 2 → 3` exception_reason header reconciled (naming `provider_unavailable`). The bank-detail
+bare-label breadth (#2) left as the accepted permissive-to-flag posture.
+
+CODIFICATION (this entry authors it). The **Tier-A-sufficient live-pipeline fixtures** discipline —
+banked graduate-ready at observation-grain N=4 in the 2026-07-21 tranche-3 entry — is authored here
+at `docs/04_engineering/conventions/testing.md` §Tier-A-sufficient live-pipeline fixtures (N=4), the
+complement of the two eval-suite sections (mock-to-throw for eval suites vs. content-sufficiency for
+pipeline integration tests). The tranche-3 bank is DISCHARGED (see its AUTHORED note).
+
+CARRY-FORWARDS (named, not closed): the `ReviewCaseDetailView` stale-text divergence shipped
+known-red via the Condition-1 escape clause (pre-existing, branch-unchanged, documented) — its fix
+is a separate item; the **scoring bug** (`docs/scoring-bug`) is a FINDING, not a fix — vendor-only
+scoring, aggregate-capped at `0.3 × vendor_match`, still live in the code, the ADR-0018/0019
+disposition item and a pre-condition on governed auto-commit returning; the accepted
+override-committed re-book miss (documented coverage envelope, design §6); the deferred
+bank-detail/statement head-pointer recovery (design §7).
+
+LANE — the fix ran through subagent-driven-development (4 TDD tasks + a whole-branch review + a fix
+wave), each built surface WSL-first-hand-verified (diff read + tests re-run + typecheck + `callClaude`
+count 0); the advisor independently grounded the LOAD-BEARING surfaces first-hand (the
+`link_status='created'` predicate, the reversed-link must-not-fire consequence at the handler,
+`routingTerminalDisposition` green-for-the-right-reason, and the three-part transient assertion the
+hardest), taking adjacent surfaces (some coverage-test assertions, migration ADD-VALUE bodies,
+`types.ts` regens) on WSL's report; each commit operator-per-act. Commits `12b50e95`
+`b2fc0e2f` `2e8b5843` `2f396dd5` on `feat/board-4-fork-c` (10 total with the tranche + docs commits),
+pushed to origin at the operator's separate word; migrations reach staging/prod only via a further
+merge + deploy (unchanged — the whole arc stayed local-dev-only on the real ledger). This entry IS a
+codification (the N=4); the grounding-gap lesson is banked (N=1), not codified.
+
+## ENTRY: "A wrong convention in an authority doc reproduces the error indefinitely"
+
+2026-07-27. The finding that outlives the incident. `conventions/testing.md`
+recommended `pnpm test:integration <path>` as a "path-narrowed variant" for dev
+iteration (`:170`, `:202`). It does not narrow. Vitest treats positional filters
+as **OR'd alternatives**, not as an AND against the script's own arguments:
+`test` is bare `vitest run`, so `pnpm test <path>` → `vitest run <path>` and
+genuinely scopes; `test:integration` is `vitest run tests/integration`, so
+`pnpm test:integration <path>` → `vitest run tests/integration <path>`, the glob
+survives, and the whole suite runs. Measured via `vitest list` (collects without
+executing): **1259 tests vs 2**.
+
+**This was a rediscovery, not a discovery.** The mechanism was recorded at
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md` §"What we learned"
+on 2026-05-24, after it silently widened a **paid** Modal e2e run past its
+intended scope. It never propagated. For two months the canonical discipline doc
+taught the broken form while a closeout in the briefs tree documented why it was
+broken — and five other surfaces carried the same command shape, three of them
+gated paid-Modal e2e headers.
+
+**Consequence.** On 2026-07-27 the SharePoint live-e2e was fired with the
+documented command. It ran the full 244-file integration suite. Because the org
+pointed at `sharepoint_drive` was `SEED.ORG_HOLDING` — shared by the whole suite
+— every document-creating test routed through live Graph and **114 real files
+were written into a customer SharePoint library.** The spill was real. The
+remediation turned out to be nil: a presence pass over all 114 candidate
+driveItem ids returned 404 on every one, because the suite's own teardown
+deleted them on the way out (the tests' `delete` calls routed to Graph alongside
+their writes). **N = 0 of 114 still present.** That is luck of the pipeline's
+teardown, not a mitigation anyone designed — had those tests lacked teardown,
+114 orphans would have needed a hand sweep. "We got lucky on the cleanup" is not
+"the system was safe," and N=0 must not round the incident down to no-harm-done.
+
+**The named discipline: check whether the canonical doc actually teaches the
+right thing.** Individual care does not scale against a wrong authority doc — it
+reproduces the error for everyone, indefinitely, including people who verify
+carefully. The May closeout proves the knowledge existing somewhere is not
+enough; codification routing is what converts a finding into a defense, and it
+did not fire. When a closeout records a mechanism that contradicts a convention,
+propagating it to the canonical surface is the work, not an optional tidy-up.
+
+**Thread — the narrow-vs-broad trap.** Three appearances in one session of
+proving a narrow claim and treating it as the broad one: "the gate opens" ≠ "the
+run is safe" (verified the four-way `skipIf` predicate would fire, never verified
+what else the command would run); "`test:full` printed a pass" ≠ "the suite ran"
+(see the companion entry below); "N candidates" ≠ "N deletions" (the sweep TSV
+was a candidate list — treating it as a deletion list would have fired 114
+deletes at an already-empty library). Subtle enough to recur; worth naming.
+
+CODIFICATION (this entry authors it). `conventions/testing.md` §"Path-narrowing
+only works where the script carries no glob" — mechanism, the scoping command
+(`pnpm --filter @chounting/web exec vitest run <path>`), the
+`vitest list --filesOnly` verification, the `Test Files 1 passed (1)` gate, and
+both real external costs. Shipped `f1d687fc`, merged to `main` at `2b327dcc`
+(PR #14) — the correction had to reach `main` because the broken command was
+live there and billed full-suite runs to people other than its author.
+
+CARRY-FORWARDS (named, not closed). **FLAGGED LIVE-MONEY HAZARD, not tidy-up:**
+three gated Modal e2e headers still document the broken form —
+`documentPipeline.receipt.e2e.test.ts:16`,
+`documentPipeline.paymentConfirmation.e2e.test.ts:17`,
+`documentPipeline.vendorInvoice.e2e.test.ts:22` — plus
+`docs/09_briefs/post-mvp/charter-b-proven-live-plan.md:71` (historical).
+Following them bills a full-suite run the operator did not intend, which is
+exactly how the trap surfaced in May. Left to their own reviewed pass per
+ratified-contract-scope (a different arc's paid surface should not be swept in
+from this one), but tracked as an active hazard, not a cleanup. Possible
+intersection: if those e2e files exercise the same `documentPipeline` a UI
+document drop traverses, that follow-up and the queued UI dry-run are partly one
+investigation — resolve the overlap before grounding twice.
+
+LANE — the mis-scoped run was fired by WSL on the advisor's explicit "fire it,"
+given in the advisor's own voice with two checkable facts unverified (that
+`pnpm test:integration <path>` ORs rather than narrows, and that `11111111-…` is
+`SEED.ORG_HOLDING` rather than a throwaway). Accountability is shared and named
+in both directions: the advisor had the reasoning in hand and did not follow its
+own stated discipline at the moment it was least convenient; WSL had the shell,
+and both facts were seconds from being checked before typing the command.
+Neither is collateral of the other. The clean re-fire, the four-surface
+correction, and this entry are the correction; they do not erase the first run.
+
+## ENTRY: "`pnpm test:full` can reset the DB and then replay a cached suite"
+
+2026-07-27. A second green-that-proves-nothing, one layer up — in the
+push-readiness gate itself. `test:full` is `pnpm db:reset:clean && pnpm test`,
+and `pnpm test` is `turbo run test`. The reset is a plain pnpm script and always
+executes; the suite behind it is a **turbo-cached task**. So `test:full` can wipe
+and reseed the database, then replay stdout from an earlier run without executing
+a single test against it — reporting `FULL TURBO` in ~344ms.
+
+**Why it is invisible.** Observed first-hand: the replayed output was byte-identical
+in its counts to a real re-run (`1932 passed / 16 skipped` both times). A cache hit
+is indistinguishable from a pass in the summary anyone would quote. Confirmed by a
+deliberate cache-miss run — `pnpm --filter @chounting/web test`, which invokes
+`vitest run` directly with no turbo layer — executing for 300.18s and producing the
+same numbers. The mechanism is real; the numbers happening to match is what makes it
+dangerous rather than reassuring.
+
+**Consequence for the gate.** CLAUDE.md §Push readiness three-condition gate names
+"`pnpm test:full` green at HEAD" as Condition-1 evidence. That evidence is silently
+stale on any cache hit. A sub-second `test:full` reporting `FULL TURBO` is
+**non-evidence** and must not be cited as Condition 1.
+
+CARRY-FORWARD (not codified — N=1, own pass). Fix candidates, unassessed: `--force`
+in the `test:full` script; excluding `test` from turbo's cache; or a read-the-result
+step mirroring the runbook's `Test Files 1 passed (1)` / `2 passed, not 2 skipped`
+discipline. Worth confirming with a deliberate cache-miss run before trusting
+whichever is chosen. Filed as its own entry rather than a footnote to the
+mis-scoping entry above: same shape, distinct surface, and folding it in is how
+findings get lost — which is precisely the failure the companion entry documents.

@@ -62,6 +62,19 @@ interface PreviewPayload {
   vendor_match: { vendor_id: string | null; match_type: string } | null;
   postable: boolean;
   not_postable_reason: string | null;
+  // Board #4 T2.5 — per-invoice α cards for a multi-invoice case; null for
+  // single-invoice / α-absent cases (which render the single card above).
+  invoices: Array<{
+    ordinal: number;
+    document_type: string;
+    extracted_fields: Record<string, unknown>;
+    vendor_match: { vendor_id: string | null; match_type: string } | null;
+    proposal: { kind: string } | null;
+    postable: boolean;
+    not_postable_reason: string | null;
+    post_status: string;
+    posted_bill_id: string | null;
+  }> | null;
   posted_journal_entries: Array<{
     journal_entry_id: string;
     entry_number: number;
@@ -142,6 +155,7 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         error?: string;
         reason?: string;
         status?: string;
+        case_state?: string;
       };
       if (!res.ok) {
         setState({
@@ -153,7 +167,16 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         });
         return;
       }
-      setState({ kind: 'done', message: doneMessage });
+      // Board #4 T3 (3b): a multi-invoice approve-post can partially post
+      // (case holds at 'approved' with some α still unposted) — derive an
+      // HONEST message from the response rather than always claiming committed.
+      const doneMsg =
+        segment === 'approve-post' && resBody.case_state
+          ? resBody.status === 'partially_posted'
+            ? 'Some invoices posted; the case is held at approved — the rest still need attention (resolve or re-approve).'
+            : `Posted and committed (${resBody.status ?? 'posted'}).`
+          : doneMessage;
+      setState({ kind: 'done', message: doneMsg });
     } catch {
       setState({ kind: 'error', message: 'network error' });
     }
@@ -248,33 +271,111 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
         </div>
       ) : null}
 
-      <h3 className="mt-4 font-medium">
-        Rebuilt proposal{' '}
-        <span className="text-sm font-normal text-neutral-500">
-          {preview.proposal ? preview.proposal.kind : 'none'}
-        </span>
-      </h3>
-      <table className="mt-2 w-full text-sm">
-        <tbody>
-          {fields.length === 0 ? (
-            <tr>
-              <td className="py-1 text-neutral-500">No extracted fields</td>
-            </tr>
-          ) : (
-            fields.map(([k, v]) => (
-              <tr key={k} className="border-t">
-                <td className="py-1 pr-4 font-mono text-neutral-600">{k}</td>
-                <td className="py-1">{String(v)}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-      {preview.vendor_match ? (
-        <p className="mt-1 text-sm text-neutral-600">
-          Vendor match: {preview.vendor_match.match_type}
-        </p>
-      ) : null}
+      {preview.invoices ? (
+        // Board #4 T2.5 — multi-invoice case: one card per α row (the honest
+        // N-card view that replaced the pre-T2.5 merged single card). Post-T3
+        // (3b): the case-level Approve & Post below DRIVES the N-bill loop when
+        // any α is postable (preview.postable), so these are no longer
+        // display-only.
+        <>
+          <h3 className="mt-4 font-medium">
+            Invoices{' '}
+            <span
+              data-testid="invoice-count"
+              className="text-sm font-normal text-neutral-500"
+            >
+              ({preview.invoices.length} invoices — each posts as its own bill on approve)
+            </span>
+          </h3>
+          {preview.invoices.map((inv) => (
+            <div
+              key={inv.ordinal}
+              data-testid="invoice-card"
+              className="mt-3 rounded border border-neutral-200 p-3"
+            >
+              <h4 className="font-medium">
+                Invoice {inv.ordinal}{' '}
+                <span className="text-sm font-normal text-neutral-500">
+                  {inv.proposal ? inv.proposal.kind : 'none'} ·{' '}
+                  {inv.post_status === 'unrepairable'
+                    ? 'manual repair required'
+                    : inv.postable
+                      ? 'postable'
+                      : `not postable (${inv.not_postable_reason ?? '—'})`}
+                </span>
+              </h4>
+              {/* Board #4 T6b-2 — G3 manual-repair affordance (inert, NOT a
+                  retry: build-spec §1.6 watch-item #2). Shown only for an α whose
+                  bill failed to post and cannot be auto-repaired. */}
+              {inv.post_status === 'unrepairable' ? (
+                <p
+                  data-testid="unrepairable-affordance"
+                  className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800"
+                >
+                  Manual repair required — this invoice&apos;s bill did not post,
+                  and re-approving will not resolve it. It needs manual handling
+                  and doesn&apos;t block the other invoices.
+                </p>
+              ) : null}
+              <table className="mt-2 w-full text-sm">
+                <tbody>
+                  {Object.entries(inv.extracted_fields).length === 0 ? (
+                    <tr>
+                      <td className="py-1 text-neutral-500">
+                        No extracted fields
+                      </td>
+                    </tr>
+                  ) : (
+                    Object.entries(inv.extracted_fields).map(([k, v]) => (
+                      <tr key={k} className="border-t">
+                        <td className="py-1 pr-4 font-mono text-neutral-600">
+                          {k}
+                        </td>
+                        <td className="py-1">{String(v)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {inv.vendor_match ? (
+                <p className="mt-1 text-sm text-neutral-600">
+                  Vendor match: {inv.vendor_match.match_type}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          <h3 className="mt-4 font-medium">
+            Rebuilt proposal{' '}
+            <span className="text-sm font-normal text-neutral-500">
+              {preview.proposal ? preview.proposal.kind : 'none'}
+            </span>
+          </h3>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {fields.length === 0 ? (
+                <tr>
+                  <td className="py-1 text-neutral-500">No extracted fields</td>
+                </tr>
+              ) : (
+                fields.map(([k, v]) => (
+                  <tr key={k} className="border-t">
+                    <td className="py-1 pr-4 font-mono text-neutral-600">{k}</td>
+                    <td className="py-1">{String(v)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          {preview.vendor_match ? (
+            <p className="mt-1 text-sm text-neutral-600">
+              Vendor match: {preview.vendor_match.match_type}
+            </p>
+          ) : null}
+        </>
+      )}
 
       {preview.candidates.length > 0 ? (
         <>
@@ -304,6 +405,15 @@ export function ReviewCaseDetailView({ orgId, caseId, onBack }: Props) {
           >
             Approve &amp; Post
           </button>
+        ) : preview.not_postable_reason === 'unrepairable_present' ? (
+          <div
+            data-testid="unrepairable-case-banner"
+            className="rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800"
+          >
+            This case can&apos;t be posted — one or more invoices failed to post
+            and need manual repair (re-approving won&apos;t resolve them). The
+            flagged invoices above require manual handling.
+          </div>
         ) : (
           <div
             data-testid="not-postable-banner"

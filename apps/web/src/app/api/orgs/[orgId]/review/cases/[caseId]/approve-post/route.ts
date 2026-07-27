@@ -51,6 +51,10 @@ import {
   advanceCaseAutomation,
 } from '@/services/document-platform/documentCaseService';
 import { evidenceObjectService } from '@/services/evidence/evidenceObjectService';
+import {
+  postExtractedInvoice,
+  markExtractedInvoiceUnrepairable,
+} from '@/services/document-platform/extractedInvoiceWriteService';
 // Agent-entry surface (the api/agent/message/route.ts:16 precedent):
 // the approve→post route drives the orchestrator-layer rebuild +
 // builders, the designated entry-point shape, exempted explicitly.
@@ -113,6 +117,14 @@ export async function POST(
         { status: 409 },
       );
     }
+
+    // Board #4 T3 (3b) — multi-invoice case: post the N α through the loop
+    // (per-invoice-independent; aggregate committed). The single-invoice path
+    // below is untouched (preview.invoices is null for it).
+    if (preview.invoices) {
+      return await postMultiInvoiceCase(preview, orgId, caseId, ctx);
+    }
+
     if (!preview.postable) {
       return NextResponse.json(
         {
@@ -317,4 +329,183 @@ export async function POST(
     }
     throw err;
   }
+}
+
+// Board #4 T3 (3b) — the multi-invoice N-branch. Loops the case's α cards
+// through the SAME buildPostBillInput → billService.post the single path uses,
+// re-keyed per invoice (`${caseId}:bill:${suffix}`), per-invoice-independent,
+// writing each α's posted_bill_id via the T3 substrate (3a). The case advances
+// to committed ONLY IF every α now carries posted_bill_id (§1.5.3); a partial
+// post holds at 'approved' — operator-visible and resumable, since re-approval
+// skips already-posted α and dup-catch-recovers a crash between the post and
+// the α write. Attribution is the HUMAN reviewer throughout (ctx). Errors
+// propagate to POST's outer catch.
+async function postMultiInvoiceCase(
+  preview: Awaited<ReturnType<typeof buildReviewPreview>>,
+  orgId: string,
+  caseId: string,
+  ctx: Awaited<ReturnType<typeof buildServiceContext>>,
+): Promise<NextResponse> {
+  const invoices = preview.invoices ?? [];
+  const state = preview.document_case.state;
+
+  // Forward transitions (state-aware resume; same edges as the single path).
+  if (state === 'needs_review') {
+    await transition(caseId, { target_state: 'proposed' }, ctx);
+  }
+  if (state === 'needs_review' || state === 'proposed') {
+    await transition(caseId, { target_state: 'approved' }, ctx);
+  }
+
+  const builderInput = {
+    org_id: orgId,
+    source_document_id: preview.source_document?.id ?? '',
+    trace_id: ctx.trace_id,
+  };
+
+  // Per-invoice dedup key (build-spec §1.5.2): vendor_invoice_number when
+  // UNIQUE within the case's N α, else the α ordinal. Compute uniqueness once.
+  const numberCounts = new Map<string, number>();
+  for (const inv of invoices) {
+    const n = inv.extracted_fields.vendor_invoice_number;
+    if (typeof n === 'string' && n.length > 0) {
+      numberCounts.set(n, (numberCounts.get(n) ?? 0) + 1);
+    }
+  }
+  const childKeyFor = (inv: (typeof invoices)[number]): string => {
+    const n = inv.extracted_fields.vendor_invoice_number;
+    const suffix =
+      typeof n === 'string' && n.length > 0 && numberCounts.get(n) === 1
+        ? n
+        : String(inv.ordinal);
+    return `${caseId}:bill:${suffix}`;
+  };
+
+  const posted: Array<{ ordinal: number; bill_id: string; recovered: boolean }> =
+    [];
+  const unposted: Array<{ ordinal: number; reason: string }> = [];
+
+  for (const inv of invoices) {
+    // Already posted (recovery / re-approval): don't re-post; count as done.
+    if (inv.post_status === 'posted') {
+      posted.push({
+        ordinal: inv.ordinal,
+        bill_id: inv.posted_bill_id ?? '',
+        recovered: true,
+      });
+      continue;
+    }
+    // G3 crash-class (T6b): an α already marked 'unrepairable' is NOT retryable
+    // (build-spec §1.6 watch-item #2) — route it straight to unposted, never
+    // re-attempt. The case holds at approved with the stuck α flagged; it can
+    // never reach committed while this α lacks a posted_bill_id (INV-WORKFLOW-003).
+    if (inv.post_status === 'unrepairable') {
+      unposted.push({ ordinal: inv.ordinal, reason: 'unrepairable' });
+      continue;
+    }
+    // Must be a post_bill card the builder can satisfy; else leave it pending
+    // (per-invoice-independent — one unpostable α does not fail the others).
+    const card = inv.proposal
+      ? ((inv.proposal as { kind: string; card?: unknown }).card as
+          | Record<string, unknown>
+          | undefined)
+      : undefined;
+    if (!card || (card.proposed_action as string) !== 'post_bill') {
+      unposted.push({ ordinal: inv.ordinal, reason: 'not_postable' });
+      continue;
+    }
+    const billInput = await buildPostBillInput(card, builderInput);
+    if (!billInput) {
+      unposted.push({ ordinal: inv.ordinal, reason: 'missing_required_fields' });
+      continue;
+    }
+
+    const childKey = childKeyFor(inv);
+    let billId: string;
+    let recovered = false;
+    try {
+      const result = await withInvariants(billService.post, {
+        action: 'bill.post',
+      })({ ...billInput, source_external_id: childKey }, ctx);
+      billId = result.bill_id;
+    } catch (err) {
+      if (
+        err instanceof ServiceError &&
+        err.code === 'DUPLICATE_SOURCE_EXTERNAL_ID'
+      ) {
+        // Crash between billService.post and the α write: the bill exists under
+        // childKey. Recover its JE → bill_id; NO second ledger write.
+        const jeId = await journalEntryService.lookupBySourceExternalId(
+          { org_id: orgId, source_external_id: childKey },
+          ctx,
+        );
+        try {
+          billId = await billService.getRecoveryBillIdByJournalEntry(
+            { org_id: orgId, posted_journal_entry_id: jeId },
+            ctx,
+          );
+          recovered = true;
+        } catch (recoveryErr) {
+          // G3 crash-class-X (T6b): the JE landed but its bill never did, so
+          // recovery cannot resolve a bill_id — POSTING_RECOVERY_UNREPAIRABLE.
+          // Mark this α 'unrepairable' (T6a substrate) and route it to unposted;
+          // do NOT re-throw — siblings still post, the case holds at approved
+          // with the stuck α flagged (§1.5.3 per-invoice-independence; §1.6
+          // watch-item #2 — a distinct manual-repair state, not a retry loop).
+          if (
+            recoveryErr instanceof ServiceError &&
+            recoveryErr.code === 'POSTING_RECOVERY_UNREPAIRABLE'
+          ) {
+            await markExtractedInvoiceUnrepairable({
+              extracted_invoice_id: inv.id,
+              trace_id: ctx.trace_id,
+              marked_by: ctx.caller.user_id,
+            });
+            unposted.push({ ordinal: inv.ordinal, reason: 'unrepairable' });
+            continue;
+          }
+          throw recoveryErr;
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    // INV-EVIDENCE-001 — persist-before-marking at the multi-branch (the
+    // SECOND committed-marking site; the single-invoice path holds the first).
+    // Then write the α's posted_bill_id + status + resolved key (3a substrate;
+    // write-once — a same-bill re-post no-ops on recovery).
+    await evidenceObjectService.persist(
+      { subject_type: 'bill', subject_id: billId, org_id: orgId },
+      ctx,
+    );
+    await postExtractedInvoice({
+      extracted_invoice_id: inv.id,
+      posted_bill_id: billId,
+      idempotency_key: childKey,
+      trace_id: ctx.trace_id,
+      posted_by: ctx.caller.user_id,
+    });
+
+    posted.push({ ordinal: inv.ordinal, bill_id: billId, recovered });
+  }
+
+  // INV-WORKFLOW-003 — aggregate committed marking (§1.5.3), safety direction:
+  // advance `committed` ONLY when every α is posted (committed ⇒ all-α-posted);
+  // a partial post holds at `approved`. The reverse is not guaranteed — a crash
+  // here leaves all-posted-but-not-committed until re-approval (see the leaf).
+  if (unposted.length === 0) {
+    await advanceCaseAutomation(
+      { document_case_id: caseId, target_state: 'committed' },
+      ctx,
+    );
+    return NextResponse.json(
+      { status: 'posted', case_state: 'committed', posted },
+      { status: 200 },
+    );
+  }
+  return NextResponse.json(
+    { status: 'partially_posted', case_state: 'approved', posted, unposted },
+    { status: 200 },
+  );
 }

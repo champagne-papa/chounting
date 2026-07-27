@@ -42,6 +42,11 @@ export interface ReviewPreviewRows {
   /** Posted-JE probe by the per-child dedup triples
    *  (`${caseId}:bill` / `${caseId}:payment`) — multi-JE-aware. */
   jeRows: Array<Record<string, unknown>>;
+  /** Board #4 T2.5 — the case's persisted per-invoice α rows
+   *  (`extracted_invoices`), ordered by ordinal. Present only for
+   *  multi-invoice cases (T2c writes N≥2 α; single-invoice writes none).
+   *  Empty array drives the α-absent Tier-A re-extract fallback. */
+  alphaRows: Array<Record<string, unknown>>;
 }
 
 export async function loadReviewPreviewRows(
@@ -98,6 +103,26 @@ export async function loadReviewPreviewRows(
     );
   }
 
+  // Board #4 T2.5 — the case's persisted per-invoice α rows, ordered by the
+  // natural key (ordinal). Present only for multi-invoice cases (T2c writes
+  // N≥2 α; single-invoice writes none). extracted_invoices has NO own org_id
+  // column (RLS through-parent document_cases.org_id); org-safe here because
+  // document_case_id derives from the org-verified caseRow above — the IDOR
+  // root sequencing is preserved. Empty → the α-absent Tier-A fallback.
+  const { data: alphaRows, error: alphaErr } = await db
+    .from('extracted_invoices')
+    .select(
+      'id, ordinal, document_type, extracted_fields, region_ref, post_status, posted_bill_id',
+    )
+    .eq('document_case_id', caseRow.id)
+    .order('ordinal', { ascending: true });
+  if (alphaErr) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `[reviewPreview] extracted_invoices read failed: ${alphaErr.message}`,
+    );
+  }
+
   // Open exception (if any) — derived from the verified case id.
   const { data: exRow, error: exErr } = await db
     .from('exception_queue_entries')
@@ -147,16 +172,20 @@ export async function loadReviewPreviewRows(
     artifactRow = art ?? null;
   }
 
-  // Posted-JE probe by the PER-CHILD dedup triples (T6 ruling: uniform
-  // suffixing). Exact-match .in() on the known child keys — multi-JE-
-  // aware so a two-child bundle's recovery lookup sees both rows.
-  const childKeys = [`${caseRow.id}:bill`, `${caseRow.id}:payment`];
+  // Posted-JE probe. Board #4 T3: PREFIX-match the case's child-key namespace
+  // `${caseId}:%` instead of exact-match on the two single-invoice keys. It
+  // catches the single-invoice keys (`${caseId}:bill` / `${caseId}:payment`)
+  // AND the T3 per-invoice keys (`${caseId}:bill:${suffix}`), so a
+  // multi-invoice case's recovery lookup + operator-visible JE list see all N
+  // children — the exact-match .in() was blind to the per-ordinal suffix (the
+  // read-side half of the re-key; write key + read probe move together). The
+  // caseId is a uuid, so the `${caseId}:` prefix is collision-safe across cases.
   const { data: jeRows, error: jeErr } = await db
     .from('journal_entries')
     .select('journal_entry_id, entry_number, source_external_id')
     .eq('org_id', caseRow.org_id)
     .eq('source_system', 'manual')
-    .in('source_external_id', childKeys);
+    .like('source_external_id', `${caseRow.id}:%`);
   if (jeErr) {
     throw new ServiceError(
       'READ_FAILED',
@@ -172,5 +201,6 @@ export async function loadReviewPreviewRows(
     sourceDocRow,
     artifactRow,
     jeRows: jeRows ?? [],
+    alphaRows: alphaRows ?? [],
   };
 }

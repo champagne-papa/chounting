@@ -167,8 +167,10 @@ iteration.
 
 **Discipline rule.** Match command to invocation shape:
 
-- Bare `pnpm test` (or `pnpm test:integration`, or path-narrowed
-  variants like `pnpm test path/to/file.test.ts`) for dev iteration.
+- Bare `pnpm test`, or the path-narrowed variant
+  `pnpm test path/to/file.test.ts`, for dev iteration. **`pnpm
+  test:integration <path>` does NOT narrow** — see "Path-narrowing
+  only works where the script carries no glob" below.
 - `pnpm test:full` for push-readiness Condition-1 evidence capture
   and any empty-state-sensitive full-suite sweep.
 - Manual `pnpm db:reset:clean` between dev iterations when
@@ -198,8 +200,40 @@ change.
 
 **How to apply.**
 
-- At dev-iteration time: bare `pnpm test [path]` or
-  `pnpm test:integration [path]`.
+- At dev-iteration time: bare `pnpm test [path]`. Do NOT use
+  `pnpm test:integration [path]` — it runs the whole suite.
+
+**Path-narrowing only works where the script carries no glob.**
+Vitest treats positional filters as OR'd alternatives, not as an
+AND against the script's own arguments. `apps/web`'s `test` script
+is bare `vitest run`, so `pnpm test <path>` becomes
+`vitest run <path>` and genuinely narrows. But `test:integration`
+is `vitest run tests/integration`, so `pnpm test:integration <path>`
+becomes `vitest run tests/integration <path>` — the glob stays and
+the whole integration suite runs. Measured 2026-07-27:
+**1259 tests collected** for the two-filter form versus **2** for
+the single-path form.
+
+To scope to one file, bypass the globbed script:
+
+```bash
+pnpm --filter @chounting/web exec vitest run <path>
+```
+
+Verify the scoping rather than trusting it — `vitest list
+--filesOnly <path>` collects without executing, and the run header
+must read `Test Files 1 passed (1)`. The failure mode is a command
+that *looks* scoped and isn't, so a green count proves nothing
+until the file count is checked.
+
+**Why this is load-bearing.** Twice this trap has produced real
+external cost: an over-scoped paid Modal e2e run (2026-05-24, see
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`
+§"What we learned") and a SharePoint live-e2e run that wrote 114
+real files into a customer library (2026-07-27). The second
+happened because this convention still recommended the broken
+form — the mechanism had been documented in a closeout for two
+months without reaching the canonical surface.
 - At push-readiness time: `pnpm test:full` (the Pre-push sanity
   sequence in CLAUDE.md names this as Condition-1 evidence).
 - When accumulation surfaces during dev iteration as test failure:
@@ -375,3 +409,73 @@ greppable handle on exactly the shipped logic.
 - **Stable.** The pattern applied unchanged across all three fires; the
   third (D3 T5) was a routine application with no variation or
   re-litigation. Not exploratory.
+
+## Tier-A-sufficient live-pipeline fixtures (N=4)
+
+The complement of §Fixture-offline eval-suite teeth. Where an EVAL suite proves it
+reaches no live-AI call by mocking `callClaude` to THROW, a live-pipeline INTEGRATION
+test — one that drives the real ingestion pipeline (`ingestDocument`) through Stage 3
+(classify) and Stage 4 (extract) and beyond — needs the AI call *reachable but not
+taken*: the real classifier and extractor run, and the OCR fixture must carry enough
+content that the free/deterministic Tier-A path wins. It reaches Tier A by CONSTRUCTION
+(content sufficiency), not by mocking the AI unreachable — mocking `callClaude` here
+would break or hollow out the very pipeline the test exercises.
+
+Two gates the fixture must satisfy, both grounded in the pipeline's own trigger logic:
+
+- **Stage-4 extraction sufficiency.** `vendorInvoiceExtractor`'s `tierASufficient`
+  falls to the paid Tier-C AI fallback unless Tier A extracts amount AND
+  `vendor_invoice_number` AND `accounting_date`. The fixture carries all three as
+  labeled lines (`Invoice #<n>` / `Total: $x` / `Date: yyyy-mm-dd`) so extraction stays
+  Tier-A.
+- **Stage-2.5 `looksMultiInvoice` control.** The multi-invoice segmentation invokes a
+  paid AI multi-extract when ≥2 distinct 6+-char letter-AND-digit tokens appear. The
+  fixture must not trip it unintentionally: a pure-digit invoice number (`Invoice 12345`)
+  and a word-only `Vendor:` name do not count as tokens; a labeled alphanumeric like
+  `INV-1001A` would. (This is why a statement fixture listing a bare `Invoice 12345`
+  stays single-path while still extracting a number.)
+
+Verify per test: `grep -c "callClaude: API call complete"` on the run output is `0`. A
+pipeline test that silently falls to a paid tier is both non-deterministic and a real
+API charge — the 3-`callClaude` catch on the statement handler's first fixture run is
+the canonical miss this discipline prevents.
+
+**Fixture fidelity corollary.** Where the same test needs a seeded relationship the
+pipeline reads (a `source_document_links` primary_invoice link, an α `extracted_invoices`
+row), seed it via the real write-path RPC (`create_source_document_link_with_audit` /
+`reverse_source_document_link_with_audit`), never a raw insert — so the test exercises
+the exact `(entity, role, status)` shape the pipeline queries, at production fidelity.
+
+---
+**Origin:**
+- First codified: Board #4 Fork C arc-close, 2026-07-22
+- Evidence basis: observation-grain N=4 — `d687243f` (multiInvoicePipelineWiring T2c,
+  2026-07-11), `612b05a9` (semanticDuplicatePipelineWiring, Fork C #1, 2026-07-20),
+  `f53f67cf` (bankDetailChangePipelineWiring, Fork C #2, 2026-07-21), `1dc8c62b`
+  (statementNotInvoicePipelineWiring, Fork C #3, 2026-07-21)
+- Promoted from: friction-journal 2026-07-21 board #4 Fork C tranche-3 entry (banked
+  graduate-ready; authoring deferred to arc-close, triggered by the operator 2026-07-22)
+- Cross-references: §Fixture-offline eval-suite teeth (the complementary sibling —
+  mock-to-throw for eval suites vs. content-sufficiency for pipeline integration tests);
+  §Additive-named-export-for-eval
+
+**Evaluation basis:**
+
+- **Load-bearing (prescriptive).** Generates a concrete fixture-authoring move at every
+  live-pipeline integration-test onset: carry the Tier-A-sufficient field triple and
+  keep the multi-invoice token count controlled. Without it named, a pipeline test
+  silently makes paid, non-deterministic Tier-C calls — the exact 3-`callClaude` miss
+  that surfaced on the statement fixture's first run and was caught only by the
+  grep-for-`callClaude` check.
+
+- **Generalizable.** Fired across four structurally-distinct pipeline branches
+  (multi-invoice segmentation, semantic-dup, bank-detail, statement) over two arcs and
+  three calendar days — different handler, same fixture-construction move. The shape
+  (engineer input so the real cheap/deterministic path wins, for a test that must run
+  the real pipeline end-to-end) generalizes to any pipeline with a tiered cheap-path /
+  expensive-path fallback keyed on input content, not only the AP OCR domain.
+
+- **Stable.** The construction was practiced from the first fire (T2c) and named
+  explicitly by the fourth (statement, where the bare-`Invoice 12345` token choice was
+  deliberate against both gates); the arc-close fix wave reaffirmed the fidelity
+  corollary. No re-litigation across the four fires. Not exploratory.

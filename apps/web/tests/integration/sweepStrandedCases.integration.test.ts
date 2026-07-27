@@ -375,7 +375,7 @@ async function seedCandidateBearingStranding(
       source_document_id: sourceResult.id,
       document_type: 'vendor_invoice',
       classification_confidence: 0.95,
-      extracted_fields: { invoice_amount: 1000 },
+      extracted_fields: { amount: 1000 },
       vendor_match: {
         vendor_id: vendorId,
         confidence: 0.95,

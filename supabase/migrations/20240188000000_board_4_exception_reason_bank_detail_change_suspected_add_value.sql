@@ -1,0 +1,30 @@
+-- ============================================================
+-- Board #4 Fork C — exception_reason ENUM ADD VALUE
+-- 'bank_detail_change_suspected'
+-- ============================================================
+-- Fork C dangerous-when-uncertain handler #2 (bank-detail / remittance
+-- change): a vendor invoice whose OCR carries payment-coordinate-shaped
+-- content (labeled bank account / routing / IBAN / SWIFT / wire / ACH /
+-- remit-to) routes to a human under this reason — the classic fraud-redirect
+-- tripwire.
+--
+-- DETECT-AND-ROUTE ONLY (ADR-0007 §Tier 2 read boundary). The handler is a
+-- Tier-2 ingestion-pipeline detector that scans the incoming DOCUMENT text.
+-- It does NOT read the vendor master's control / payment-risk fields (bank
+-- account, payment instructions, bank-detail-confirmed flag — those are Tier
+-- 2.5), does NOT extract or persist the detected coordinates, and does NOT
+-- discharge the Tier-1 Q28 3(e) bank-detail-change re-verification control
+-- (ADR-0007 §Q28, gated on the as-yet-unbuilt bank-detail-confirmed flag). It
+-- is a COARSE PRESENCE tripwire raising a suspicion for human judgment — with
+-- no vendor bank-detail baseline it grounds presence, not a proven change.
+--
+-- SPLIT per the Postgres ALTER TYPE ADD VALUE same-transaction restriction (a
+-- CHECK cannot reference the new value in the same transaction; the
+-- 20240186/187 duplicate_invoice_suspected precedent split them for exactly
+-- this reason). This migration ADDs the value ONLY; the Layer-1 CHECK broaden
+-- (exception_reason_chunk_10_active → chunk_11_active) lands in 20240189.
+--
+-- ADR-0010 admit framework + ADR-0022 additive provenance-preserving.
+-- ============================================================
+
+ALTER TYPE exception_reason ADD VALUE IF NOT EXISTS 'bank_detail_change_suspected';

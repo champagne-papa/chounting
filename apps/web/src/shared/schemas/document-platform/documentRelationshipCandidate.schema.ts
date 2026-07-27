@@ -131,14 +131,28 @@ export type ReRoutingTrigger = z.infer<typeof ReRoutingTriggerSchema>;
 // Naming follows chunks-5-6 <Verb><Entity>InputSchema convention:
 // documentRouterService.completeCandidate() → CompleteCandidateInputSchema.
 //
-// extracted_fields is permissive at chunk-1 — Subsystem 1 reads
-// per-document-type field projections (e.g., for vendor_invoice:
-// {invoice_amount, invoice_date, vendor_name, invoice_number}).
-// The per-document-type field schemas are owned by ADR-0014 §6
-// + agent_architecture_policy.md §2.1; chunk-1 doesn't import
-// those schemas because they don't yet exist on disk (Phase 7
-// territory). Lift to typed shape when Phase 7's per-type field
-// schemas ship; same trigger as VendorMatchResultSchema lift-out.
+// extracted_fields is permissive — one z.record(z.unknown()) for all scored
+// document types, with no per-type discrimination.
+//
+// DEFERRED OBLIGATION (re-filed 2026-07-22). The original note here said
+// "lift to typed shape when Phase 7's per-type field schemas ship." Phase 7
+// shipped them (vendorInvoiceExtractionSchema.ts et al) and that trigger fired
+// with nothing watching it, so the chunk-1 PLACEHOLDER key names
+// (invoice_amount / invoice_date / invoice_number, receipt_amount / …) stayed
+// the live contract while completeCandidate's per-type branches read them —
+// names no extractor emits. Result: three of five scoring axes read undefined
+// and normalized to 0 for an entire phase. See the 2026-07-22 friction-journal
+// entry.
+//
+// The 2026-07-22 fix aligned the reader keys to the extractor vocabulary by
+// hand (five sites). That is correct but NOT structural: nothing makes a future
+// mismatch a compile error. The lift to a per-document-type discriminated
+// contract (importing the Phase 7 extraction schemas) is the remedy that closes
+// the bug class.
+//
+// RE-FILED TRIGGER: governed auto-commit return (ADR-0007 §Tier 2 Q78) — a real
+// gate with an owner, not a date that can pass unobserved. This is a deliberate
+// deferral, not an oversight.
 //
 // vendor_match is typed via VendorMatchResultSchema (consumed by
 // Subsystem 1 to look up bills/payments/prepayments for the

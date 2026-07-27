@@ -202,12 +202,25 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
     beforeAll(async () => {
       const db = adminClient();
       // Supabase requires the bucket to be empty before deletion.
-      // Earlier describes' afterAll cleanups should have emptied
-      // their own keys. Defensive: list any remaining keys and
-      // remove them across the org_-prefixed folder structure.
-      const remainingKeys = await listAllStorageKeys(db, STORAGE_BUCKET);
-      if (remainingKeys.length > 0) {
-        await db.storage.from(STORAGE_BUCKET).remove(remainingKeys);
+      //
+      // FULL-SUITE ISOLATION FIX (2026-07-24): this describe drops the
+      // SHARED 'documents' bucket, but in a full-suite run OTHER test files
+      // (e.g. documentPlatformServiceIntegration) leave objects in it. The
+      // previous defensive cleanup walked only this file's org_*/sources/*
+      // structure (listAllStorageKeys), so it was blind to objects at any
+      // other path — deleteBucket then failed with "objects still present"
+      // in full-suite while passing 8/8 in isolation (nothing else writes
+      // there). emptyBucket() removes ALL objects server-side regardless of
+      // path, making the drop robust to whatever earlier files left behind.
+      // (files run sequentially — vitest fileParallelism:false — so this is
+      // leftover-object contention, not a concurrent-write race.)
+      const { error: emptyError } = await db.storage.emptyBucket(
+        STORAGE_BUCKET,
+      );
+      if (emptyError) {
+        throw new Error(
+          `emptyBucket(${STORAGE_BUCKET}) failed: ${emptyError.message}`,
+        );
       }
       const { error: deleteError } = await db.storage.deleteBucket(
         STORAGE_BUCKET,
@@ -215,7 +228,7 @@ describe('Phase 1.Storage chunk N+M: supabaseStorageProvider integration', () =>
       if (deleteError) {
         const stillPresent = await listAllStorageKeys(db, STORAGE_BUCKET);
         throw new Error(
-          `deleteBucket(${STORAGE_BUCKET}) failed: ${deleteError.message} (${stillPresent.length} objects still present after defensive cleanup)`,
+          `deleteBucket(${STORAGE_BUCKET}) failed: ${deleteError.message} (${stillPresent.length} org_*/sources/* objects visible after emptyBucket)`,
         );
       }
     });

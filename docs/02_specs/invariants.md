@@ -29,13 +29,17 @@ again at the Arc A Step 11 doc-sync (Arc A added INV-AUDIT-002
 at Step 1, INV-ADJUSTMENT-001 at Step 9a, and INV-RECURRING-001
 at Step 10a; Step 11 of Arc A formalizes all three in this
 index), and re-verified at the Wave 6 D8 doc-sync (live run at
-`c42a402f`; D8's doc-only edits are outside both grep scopes):
+`c42a402f`; D8's doc-only edits are outside both grep scopes), and again at
+board #4 slice-2 T4 (2026-07-11), which registered INV-WORKFLOW-003 (Layer 2;
+total 28→29, Layer 2 12→13) and reconciled INV-EVIDENCE-001's committed-marking-
+site enumeration to the T3-3b two-site reality (count-neutral — EVIDENCE-001
+already registered):
 
-- **28 registered INV-IDs** documented in
-  `docs/02_specs/ledger_truth_model.md` (**16 Layer 1a**, **12 Layer 2**,
+- **29 registered INV-IDs** documented in
+  `docs/02_specs/ledger_truth_model.md` (**16 Layer 1a**, **13 Layer 2**,
   0 Layer 1b)
-- **28 registered INV-IDs** annotated in code (`apps/web/src/` +
-  `supabase/migrations/`) (16 Layer 1a, 12 Layer 2, 0 Layer 1b)
+- **29 registered INV-IDs** annotated in code (`apps/web/src/` +
+  `supabase/migrations/`) (16 Layer 1a, 13 Layer 2, 0 Layer 1b)
 - **Symmetric difference at the registered-set grain: empty.**
   Every registered invariant has at least one annotation site in
   code; every registered INV-ID annotated in code has a
@@ -127,6 +131,23 @@ validation harness; merge-blocking is operator-grain (branch protection). Its
 registration closed a reverse-only reachability window open since Wave 4 (the
 registry had carried the token warn-only).
 
+Board #4 slice-2 T4 (2026-07-11) added INV-WORKFLOW-003 (Layer 2; a `committed`
+document_case bearing α has every α carrying `posted_bill_id` — the aggregate
+committed-marking **safety direction**, `committed ⇒ all-α-posted`) per
+build-spec §1.5.3's atomicity-posture lock, registered on enforcement (the guard
+landed at T3 3b, `9597dc45`). Layer 2 count updates from
+12 → 13; total distinct INV-IDs from 28 → 29. Runtime/structural,
+INV-EVIDENCE-001-templated (the same approve-post `committed` transition). Only
+the safety direction is registered; the completeness reverse
+(`all-posted ⇒ committed`) is transiently false in the crash window and stays
+unregistered (a WORKFLOW-002-shaped sweep backstop, deferred). The same pass
+reconciled INV-EVIDENCE-001's now-stale "sole committed-marking site" enumeration
+(its leaf + this file's row 27 + `control_matrix.md`) to the **two**
+committed-marking sites T3 3b created — both in the approve-post route, both
+persist-before-marking, so EVIDENCE-001 still holds (a descriptive fix, not a
+violated-invariant one); a second `INV-EVIDENCE-001` annotation now sits on the
+multi-branch persist seam.
+
 The Ring 2B implementation-arc close (2026-05-30) reconciled the frozen-count
 snapshots to the live 25 in the same pass as the per-addition note above (the arc's
 Condition-2 doc-sync): the heading below (`## The 24 invariants` → `## The 25
@@ -201,8 +222,9 @@ layer, the order matches the order the invariants appear in
 | 24 | INV-RULE-003 | 2 | `rule_evaluation_log` has a single writer | Runtime/structural (sole-writer service pattern + code-review discipline) | [leaf](ledger_truth_model.md#inv-rule-003--rule_evaluation_log-has-a-single-writer-layer-2) | `apps/web/src/services/rules/ruleEvaluationService.ts` (`recordEvaluation`, the sole append site; `// INV-RULE-003`) |
 | 25 | INV-RULE-004 | 1a | `rule_branches` / `rule_conditions` are logic-frozen (write-once) | Column-immutability triggers (UPDATE+TRUNCATE, all-path) + RLS `USING(false)` (DELETE user-path) + REVOKE TRUNCATE | [leaf](ledger_truth_model.md#inv-rule-004--rule_branches--rule_conditions-are-logic-frozen-layer-1a) | `supabase/migrations/20240169000000_ring2b_branch_condition_substrate.sql` (functions `reject_rule_branches_mutation` / `reject_rule_conditions_mutation` + triggers); `apps/web/src/services/rules/ruleBranchService.ts` (single-writer contract) |
 | 26 | INV-WORKFLOW-002 | 2 | Every pipeline-processed document case reaches a terminal disposition (no silent drops; `needs_review` = the terminal hand-off to the human, not a final state) | Runtime/structural (orchestrator routing path + automation chain-advance + Subsystem-2 routing; test-verified support) | [leaf](ledger_truth_model.md#inv-workflow-002--terminal-disposition-completeness--no-silent-drops-layer-2) | `apps/web/src/agent/orchestrator/extraction/ingestDocument.ts` (Stage-6.5 routing + park-exit hand-offs; `INV-WORKFLOW-002` annotation); `apps/web/src/services/document-platform/documentCaseService.ts` (`advanceCaseAutomation`); `apps/web/src/services/document-platform/documentRouterService.ts` (`resolveCandidates`); `apps/web/src/agent/orchestrator/maintenance/sweepStrandedCases.ts` (D2.3 sweep — the eventual-consistency backstop; Class-1 RETIRED 2026-06-04 via the backlog-clearing run, run_trace_id `2855c8e3-…`) |
-| 27 | INV-EVIDENCE-001 | 2 | Every AP posting committed through the review path produces exactly one canonical evidence object per subject (org-scoped) before the case reaches `committed`; completeness is descriptive at V1 | Layer-1 UNIQUE `(org_id, subject_type, subject_id)` + runtime/structural persist-before-marking at the sole committed-marking site (test-verified support) | [leaf](ledger_truth_model.md#inv-evidence-001--canonical-evidence-object-required-at-commit-layer-2) | `supabase/migrations/20240177000000_wave_6_d5_evidence_objects_persistence_substrate.sql` (constraint `evidence_objects_subject_unique` — the Layer-1 half); `apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts` (persist-before-marking seam; `INV-EVIDENCE-001` annotation); `apps/web/src/services/evidence/evidenceObjectService.ts` (`persist` — subject-ownership guard + idempotent upsert) |
+| 27 | INV-EVIDENCE-001 | 2 | Every AP posting committed through the review path produces exactly one canonical evidence object per subject (org-scoped) before the case reaches `committed`; completeness is descriptive at V1 | Layer-1 UNIQUE `(org_id, subject_type, subject_id)` + runtime/structural persist-before-marking at the approve-post route's committed-marking sites (two as of board #4 T4 — the single-invoice path's mark + the multi-invoice N-branch's aggregate guard, each persist-first; the route remains the sole committed-marking surface) (test-verified support) | [leaf](ledger_truth_model.md#inv-evidence-001--canonical-evidence-object-required-at-commit-layer-2) | `supabase/migrations/20240177000000_wave_6_d5_evidence_objects_persistence_substrate.sql` (constraint `evidence_objects_subject_unique` — the Layer-1 half); `apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts` (persist-before-marking seam; `INV-EVIDENCE-001` annotation); `apps/web/src/services/evidence/evidenceObjectService.ts` (`persist` — subject-ownership guard + idempotent upsert) |
 | 28 | INV-WORKFLOW-001 | 2 | Every Intent in the producer registry has ≥1 non-AI producer (no AI-only path to any intent; `query` carved out at V1 by the ratified Q2 scope-out, re-include trigger named at the carve-out) | Build-time structural — the producer-coverage check exits non-zero on any unscoped gap, wired as a blocking ci.yml job + the root validation harness; a red CI run blocks merge only where branch protection requires the check (operator-grain); the CI job's first execution occurs at the wave-close push (test-verified support) | [leaf](ledger_truth_model.md#inv-workflow-001--no-ai-only-paths--producer-coverage-layer-2) | `apps/web/src/core/intent/producers.ts` (the registry + `runCheck` + `V1_TEETH_SCOPE_OUT`; `INV-WORKFLOW-001` annotation — the grep-visible anchor; the enforcing mechanism — `scripts/check-intent-producers.ts` + the ci.yml `intent-producers` job — is grep-invisible by location and cited from the anchor) |
+| 29 | INV-WORKFLOW-003 | 2 | A `committed` document_case bearing α (`extracted_invoices`) rows has every α carrying `posted_bill_id` (the aggregate committed-marking **safety direction**: `committed ⇒ all-α-posted`; the completeness reverse is unregistered — transiently false in the crash window; α-less single-invoice cases are vacuously satisfied) | Runtime/structural — the approve-post multi-invoice N-branch's aggregate committed guard (`advanceCaseAutomation('committed')` reached only when every α is posted; a partial post holds at `approved`; test-verified support); a Layer-1 committed-transition trigger is named, deferred defense-in-depth | [leaf](ledger_truth_model.md#inv-workflow-003--aggregate-committed-marking-a-committed-case-has-all-its-extracted-invoices-posted-layer-2) | `apps/web/src/app/api/orgs/[orgId]/review/cases/[caseId]/approve-post/route.ts` (`postMultiInvoiceCase` aggregate committed guard; `INV-WORKFLOW-003` annotation); verified by `apps/web/tests/integration/reviewApprovePostMultiInvoice.integration.test.ts` (test 1 all-posted→`committed`; test 2 partial→`approved` then recovery→`committed`) |
 
 ## Cross-layer pairings
 

@@ -143,6 +143,22 @@ export function correctness(t: AggregateTally): number {
   return t.populated === 0 ? 1 : t.correct / t.populated;
 }
 
+/** A document-type-aware extractor: OCR text + type → a flat field record. */
+export type ExtractionFn = (
+  ocrText: string,
+  type: DocumentType,
+) => Record<string, unknown>;
+
+/**
+ * One corpus doc the runner scores — a structural subset of `RealOcrFixture`,
+ * kept here so the helper stays decoupled from the test fixture's full shape.
+ */
+export interface EvalCorpusDoc {
+  label: string;
+  expectedType: DocumentType;
+  lines: string[];
+}
+
 /**
  * Build the production OCR text from a corpus doc's `lines` by routing through
  * the real `extractOcrText` on a synthetic flat-line artifact (the canonical
@@ -164,4 +180,35 @@ export function ocrTextFromLines(textLines: string[]): string {
     confidence: 0.95,
   } as unknown as DocumentArtifactRow;
   return extractOcrText(artifact);
+}
+
+/**
+ * Run an extractor over a corpus, scoring each doc against its ground truth on
+ * the type's SCORED_FIELDS, grouped per document type. Pure (no AI/DB of its
+ * own; ocrTextFromLines routes through the real production extractOcrText).
+ * Extractor-parameterized so the SAME runner scores a baseline vs. a new
+ * structured-output extractor over the same frozen corpus + SCORED_FIELDS —
+ * diff the per-type aggregates for the #2 before/after delta. Processes EVERY
+ * doc (truthFor returns {} for an unlabeled doc → trulyPresent 0; a populate of
+ * it is spurious), exactly preserving the prior inline scoreCorpus behavior.
+ */
+export function runExtractionEval(
+  extractor: ExtractionFn,
+  corpus: EvalCorpusDoc[],
+  truthFor: (label: string) => GroundTruth,
+): Record<DocumentType, DocScore[]> {
+  const byType: Record<DocumentType, DocScore[]> = {
+    vendor_invoice: [],
+    receipt: [],
+    payment_confirmation: [],
+  };
+  for (const doc of corpus) {
+    const ocrText = ocrTextFromLines(doc.lines);
+    const extracted = extractor(ocrText, doc.expectedType);
+    const truth = truthFor(doc.label);
+    byType[doc.expectedType].push(
+      scoreExtraction(extracted, truth, SCORED_FIELDS[doc.expectedType]),
+    );
+  }
+  return byType;
 }

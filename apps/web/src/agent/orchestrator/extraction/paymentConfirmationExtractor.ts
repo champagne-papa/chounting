@@ -74,7 +74,7 @@ function tryExtractTierA(ocrText: string): Partial<PaymentConfirmationExtraction
   return fields;
 }
 
-const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a payment confirmation document.
+export const SYSTEM_PROMPT_CONTENT = `You are a deterministic field-extraction assistant. Extract structured fields from the OCR text of a payment confirmation document.
 
 Return a single JSON object matching this schema (all fields OPTIONAL — omit fields you cannot extract with confidence):
 

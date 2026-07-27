@@ -162,6 +162,45 @@ stand-up pass."
   → run the seed script against that environment. (Prod: present since
   2026-06-13, `pipeline@chou.ca`.)
 
+### 10. Migrations are applied to prod AND the level is recorded
+- Migrations do **not** deploy with the code. A merge to `main` auto-deploys
+  the app (`next build`), but **nothing applies Supabase migrations to the
+  prod DB** — that is a separate, manual operator step. Skipping it leaves
+  **code ahead of schema**: the build is green and the app deploys, but a code
+  path referencing a not-yet-created table / enum value fails at runtime — and
+  under the Wave-1 bleed-stop, fails *quietly* into the exception/retry path.
+  This is the exact drift that left prod five migrations behind `main` for ~6
+  weeks (2026-06-14 → 2026-07-24), unnoticed because its level went unrecorded.
+- **The procedure** (reusable — promoted here from the one-off
+  `docs/09_briefs/post-mvp/staging-to-main-substrate-release-notes.md`, which
+  remains the detailed provenance for the original 133→180 release):
+  1. **Back up first.** Free tier = **no PITR**, so a full `pg_dump` (schema
+     **and** data, e.g. `supabase db dump -f …` + `--data-only`) taken before
+     the apply is the *only* restore point. Store it **outside the repo** (e.g.
+     `~/chounting-prod-backups/`) so prod data can't be committed. Confirm it
+     includes data, not just schema.
+  2. **Dry-run.** `supabase db push --dry-run --linked` — confirm the plan is
+     *exactly* the intended migrations and nothing more. Anything extra → stop.
+  3. **Pre-flight any migration with an external dependency** (read-only): a
+     `DROP CONSTRAINT <name>` needs that exact constraint present on prod first;
+     a data backfill's predicate needs its referenced columns present. Verify
+     against a fresh prod schema dump before applying.
+  4. **Apply in strict version order** — `supabase db push --linked` (preferred:
+     it applies in order AND writes the `schema_migrations` rows itself). If you
+     apply via the dashboard SQL editor instead, you must manually `INSERT INTO
+     supabase_migrations.schema_migrations (version, name)` after each, or the
+     CLI's view of prod drifts. Stop at the first error — later migrations may
+     depend on earlier ones.
+  5. **Verify:** `select max(version) from supabase_migrations.schema_migrations;`
+     equals the target, and each new object actually exists (re-dump the schema
+     and grep for the new tables / enum values / constraints).
+  6. **Record the new level in `docs/09_briefs/CURRENT_STATE.md` with the date.**
+     ← the step whose absence caused the 6-week drift. A prod schema version
+     nobody can state from the docs is what makes an incident hard to diagnose.
+- *Why it hides:* migrations are the one prod-state change the deploy pipeline
+  never performs and the build never checks — additive ones can sit unapplied
+  for weeks with no loud failure.
+
 ## Open security deferrals (tracked, not done)
 
 **Update 2026-06-14 — closed-CONDITIONALLY, NOT done.** The POSTMARK + MODAL

@@ -47,7 +47,12 @@ import { dedupByHash } from './stages/dedupByHash';
 import { byteFetch } from './stages/byteFetch';
 import { runOCR } from './stages/runOCR';
 import { classifyDocumentType } from './classifier';
+import { extractOcrText } from './classifier/extractOcrText';
 import { extractFields } from './extractFields';
+import {
+  looksMultiInvoice,
+  runAiMultiExtract,
+} from './multiInvoiceExtractor';
 import { buildProposal } from './stages/proposalBuilder';
 import { shadowEvaluateRules } from './stages/shadowRuleEvaluation';
 import { recordAutonomyGateAttempt } from './stages/recordAutonomyGate';
@@ -64,7 +69,13 @@ import {
   lookupBillCommitDefaults,
   lookupPaymentCommitDefaults,
 } from '@/services/document-platform/commitDefaultsReadService';
-import { lookupDocumentCaseId } from '@/services/document-platform/extractionReadService';
+import {
+  lookupDocumentCaseId,
+  findLiveBillByVendorAndNumber,
+} from '@/services/document-platform/extractionReadService';
+import { looksLikeBankDetailPresent } from './bankDetailScan';
+import { looksLikeStatementNotInvoice } from './statementScan';
+import { createExtractedInvoice } from '@/services/document-platform/extractedInvoiceWriteService';
 import { resolveRuleDefaultAccount } from '@/services/rules/ruleOutcomeReadService';
 import { loggerWith } from '@/shared/logger/pino';
 import { withInvariants } from '@/services/middleware/withInvariants';
@@ -179,6 +190,126 @@ export async function ingestDocument(
     };
   }
   pipeline_trace.push(ocrResult.trace_record);
+
+  // Stage 2.5 — multi-invoice segmentation (board #4 slice-2 T2c). Between OCR
+  // and classify: if the OCR text looks like it holds more than one invoice
+  // (permissive over-detect per T2b D-1 — a false positive degrades safely to
+  // the single path), attempt an AI multi-extract. On a clean, arithmetically
+  // reconciled split of TWO OR MORE invoices ({valid:true}, N≥2), write one
+  // PENDING extracted_invoices (α) row per invoice and PARK the case at
+  // needs_review (reason 'multi_invoice') for human review; Stages 3-7 are
+  // skipped (no classify/extract/match/propose on a multi-invoice document —
+  // per-invoice bills are a later task, T3).
+  //
+  // FALL THROUGH to the existing single-invoice path (Stages 3-7) UNTOUCHED on
+  // EITHER a degrade ({valid:false} — budget/invocation/parse/Zod/reconciliation)
+  // OR a {valid:true} result the AI resolved to a single invoice (the trigger
+  // over-fired). In both cases nothing is written and the case stays at
+  // 'received' — exactly the state Stage 3 expects on entry. This is the D (N=1
+  // degrade) fallback, and the false-negative safety: a missed/garbled split
+  // degrades to the normal path rather than mis-posting. That last guarantee
+  // rests PARTLY on the Wave -1 auto-commit being DISABLED (the reconciliation
+  // gate is the model-independent half; the disabled commit is the bleed-stop).
+  // This branch parks; it does not itself assert auto-commit is off — the
+  // guarantee MUST be re-verified when governed auto-commit returns post-V1.
+  //
+  // Routing (grounded STEP 1): the case is at 'received' here. enqueueException's
+  // RPC requires the case at classified|matched, and advanceCaseAutomation
+  // REFUSES a direct classified→needs_review advance (that segment is
+  // Subsystem-2-owned). So parking is the two-step
+  // advanceCaseAutomation('classified') → enqueueException, identical to the
+  // shipped documentType==='unknown' short-circuit below.
+  const ocrText = extractOcrText(ocrResult.artifact);
+  if (looksMultiInvoice(ocrText)) {
+    const multi = await runAiMultiExtract(
+      {
+        ocrText,
+        source_document_id: input.source_document_id,
+        trace_id: input.trace_id,
+      },
+      ctx,
+    );
+    // N≥2 only. A reconciling 1-invoice result means the trigger over-fired
+    // (looksMultiInvoice needs 2+ tokens, but the AI resolved them to a single
+    // invoice) — that is NOT a multi-invoice case, so it falls through to the
+    // single path rather than parking a lone α under the 'multi_invoice' reason
+    // (audit accuracy) and rather than skipping the richer classify→extract→
+    // match→propose the reviewer benefits from. The reconciled 1-invoice
+    // extraction is intentionally DISCARDED and re-derived by Stage 4 — the
+    // single path is authoritative for single-invoice docs; this drop is
+    // deliberate, not an oversight.
+    if (multi.valid && multi.extraction.invoices.length > 1) {
+      const multiCaseId = await lookupDocumentCaseId(
+        input.org_id,
+        input.source_document_id,
+      );
+      if (multiCaseId) {
+        try {
+          // One PENDING α per invoice, ordinal 1..N over the AI array order,
+          // BEFORE advancing/parking. source_locator is stored twice by design:
+          // region_ref is the typed soft-provenance the review/audit path reads
+          // ({kind:'ai_soft', source_locator}); extracted_fields is the verbatim
+          // AI payload. Do NOT dedupe — the two consumers differ.
+          for (const [i, inv] of multi.extraction.invoices.entries()) {
+            await createExtractedInvoice({
+              document_case_id: multiCaseId,
+              source_document_id: input.source_document_id,
+              ordinal: i + 1,
+              document_type: 'vendor_invoice',
+              extracted_fields: inv,
+              region_ref: {
+                kind: 'ai_soft',
+                source_locator: inv.source_locator,
+              },
+              trace_id: input.trace_id,
+            });
+          }
+          // Two-step park: received→classified (owned automation chain), then
+          // enqueue does the classified→needs_review hop the matrix refuses to
+          // let advanceCaseAutomation do directly.
+          await advanceCaseAutomation(
+            { document_case_id: multiCaseId, target_state: 'classified' },
+            ctx,
+          );
+          await enqueueException(
+            {
+              document_case_id: multiCaseId,
+              trace_id: input.trace_id,
+              exception_reason: 'multi_invoice',
+            },
+            ctx,
+          );
+        } catch (err) {
+          // EXCEPTION_ALREADY_OPEN mirrors the unknown short-circuit's re-run
+          // tolerance (one open exception per case). NOTE: unlike that path, the
+          // α writes above are NOT re-run idempotent — a reprocess with fresh
+          // bytes that dodged Stage-0 dedup would hit the (document_case_id,
+          // ordinal) UNIQUE as POST_FAILED → pipeline_failed here. Identical-byte
+          // re-ingestion short-circuits upstream at Stage 0, so this is off the
+          // normal path (known residual; recorded in the T2c design doc).
+          if (
+            !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+          ) {
+            return {
+              status: 'pipeline_failed',
+              pipeline_trace,
+              proposal_id: null,
+              failure_class: classifyFailure(err),
+            };
+          }
+        }
+      }
+      return {
+        status: 'parked_unposted',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: null,
+      };
+    }
+    // {valid:false} degrade, OR {valid:true} with a single invoice (trigger
+    // over-fire), → fall through to Stage 3 (single path). No α written, case
+    // untouched at 'received'; the single path re-derives the extraction.
+  }
 
   // Stage 3 — classify (active at chunk 7.2 per ADR-0014 §7).
   // Invokes Tier A rule-based classifier, falls through to Tier C
@@ -334,6 +465,282 @@ export async function ingestDocument(
   // documentRouterService.completeCandidate consumer interface per Phase 4
   // chunk 1 substrate (Subsystem 1 Ledger-State Candidate Completion).
   const documentCaseId = await lookupDocumentCaseId(input.org_id, input.source_document_id);
+
+  // Board #4 Fork C handler #2 — bank-detail / remittance PRESENCE tripwire.
+  // Placed BEFORE the semantic-dup handler (below): both fire post-Stage-5 on
+  // vendor_invoice and each RETURNS on trip, so only the first-placed one fires
+  // on a document that trips both — a suspected payment redirect is the more
+  // dangerous signal to surface, so it wins (and the cheap OCR scan runs before
+  // the semantic-dup DB read).
+  //
+  // DELIBERATE PREEMPTION (documented design consequence): because this branch
+  // returns, it preempts BOTH downstream routes for a vendor invoice carrying
+  // coordinates — the semantic-dup check (a re-book that ALSO carries
+  // coordinates parks as bank_detail_change_suspected ONLY; the duplicate signal
+  // is not separately recorded, one open exception per case) AND the
+  // unmatched_router_candidate route (an unmatched vendor whose invoice carries
+  // coordinates parks here, not at branch c). Both are intended: coordinates-
+  // present is the more dangerous signal to surface, and either reason routes to
+  // the same human, who sees the full document. Whether the queue should
+  // distinguish "coordinates present" from "coordinates present AND a known
+  // duplicate" is a product judgment (fraud-first triage at v1).
+  //
+  // DETECT-AND-ROUTE only (ADR-0007 §Tier 2 read
+  // boundary): scans the document's OWN OCR text (the function-scope `ocrText` —
+  // the full artifact, the same string the multi-invoice scan uses) for
+  // payment-coordinate-shaped content and routes to a human. It reads NO
+  // vendor-master control field, extracts/persists NO coordinates (the enqueue
+  // carries reason + case + trace only), classifies no fraud, and does NOT
+  // discharge the Tier-1 Q28 3(e) bank-detail-change control — a coarse upstream
+  // tripwire that grounds PRESENCE, not a proven change (no vendor bank-detail
+  // baseline exists at Tier 2). Guard: vendor_invoice only. Two-step park +
+  // EXCEPTION_ALREADY_OPEN catch mirror the other short-circuits; reprocess-safe
+  // for the same reason (advanceCaseAutomation no-ops at/past target; the
+  // re-enqueue is caught). Parks; does not assert auto-commit is off (Wave -1
+  // safety note; re-verify when governed auto-commit returns, ADR-0007 §Tier 2 Q78).
+  //
+  // SEAM NOTE (design §4.2): this handler routes to a human even when the
+  // document would ALSO legitimately attach to an existing bill — its trigger is
+  // a claim about the document's own content (payment coordinates), true regardless
+  // of a matching bill. It intentionally does NOT get the
+  // dup handler's provenance gate. Cost: the attachment head pointer is not set
+  // (convenience loss, not a wrong disposition) — recovery is deferred (design §7).
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    looksLikeBankDetailPresent(ocrText)
+  ) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'classified' },
+        ctx,
+      );
+      await enqueueException(
+        {
+          document_case_id: documentCaseId,
+          source_document_id: input.source_document_id,
+          trace_id: input.trace_id,
+          exception_reason: 'bank_detail_change_suspected',
+        },
+        ctx,
+      );
+    } catch (err) {
+      if (
+        !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+      ) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
+    return {
+      status: 'parked_unposted',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: null,
+    };
+  }
+
+  // Board #4 Fork C handler #3 — statement-vs-invoice presence tripwire. Placed
+  // AFTER the bank-detail handler (fraud-first precedence: coordinates-present is
+  // the more dangerous signal) and BEFORE the semantic-dup handler (a statement
+  // must not be dup-checked as a bookable bill at all). Fires when the document
+  // classifies as vendor_invoice but reads as a STATEMENT — a summary of
+  // already-invoiced charges / balance-forward that must not be booked as a single
+  // new bill.
+  //
+  // WHY REACHABLE (grounded first-hand): the Tier A vendor_invoice classifier
+  // matches /\bstatement\b/ as a positive header pattern (vendorInvoiceRules.ts:38,
+  // "matches Invoice/Bill/Statement headers"), so a vendor statement classifies as
+  // vendor_invoice and arrives here; this tripwire routes it to a human under
+  // 'statement_not_invoice_suspected'.
+  //
+  // DETECT-AND-ROUTE only (ADR-0007 §Tier 2 read boundary): scans the document's
+  // OWN OCR text (the function-scope `ocrText`) via looksLikeStatementNotInvoice
+  // (presence-AND-weak-invoice-signal — a statement-exclusive marker present AND no
+  // strong single-invoice identity). It reads NO vendor-master field, extracts /
+  // persists nothing, and does NOT read the matcher's composed score (the logged
+  // vendor-only scoring bug would make it meaningless). Guard: vendor_invoice only.
+  //
+  // COVERAGE BOUNDARY (documented): gated on the vendor_invoice label, so it
+  // catches only statements that landed on that label. A statement misclassified
+  // as receipt/payment_confirmation (Tier A non-invoice-outranks-invoice
+  // precedence) sails past — acceptable, those labels do not book into AP.
+  //
+  // PRECEDENCE (three-wide, compounding drop): bank-detail → statement → dup. Each
+  // RETURNS on trip and one-open-exception-per-case holds, so a document that trips
+  // more than one parks under the FIRST-placed handler only (statement + bank-detail
+  // → bank_detail_change_suspected; statement + dup → statement_not_invoice_suspected).
+  // Dropped signals are not separately recorded — accept-for-v1 (fraud-first triage);
+  // a secondary non-exception audit note is a scoped follow-up (product-call, mirrors
+  // the both-trip ratification).
+  //
+  // Two-step park (received→classified, then enqueue does classified→needs_review)
+  // + EXCEPTION_ALREADY_OPEN catch mirror the other short-circuits; reprocess-safe
+  // (advanceCaseAutomation no-ops at/past target; the re-enqueue is caught). Writes
+  // NOTHING before the enqueue → clean idempotent re-park. Parks; does not assert
+  // auto-commit is off (Wave -1 safety; re-verify when governed auto-commit returns,
+  // ADR-0007 §Tier 2 Q78).
+  //
+  // SEAM NOTE (design §4.2): this handler routes to a human even when the
+  // document would ALSO legitimately attach to an existing bill — its trigger is
+  // a claim about the document's own content (statement shape), true regardless
+  // of a matching bill. It intentionally does NOT get the
+  // dup handler's provenance gate. Cost: the attachment head pointer is not set
+  // (convenience loss, not a wrong disposition) — recovery is deferred (design §7).
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    looksLikeStatementNotInvoice(ocrText)
+  ) {
+    try {
+      await advanceCaseAutomation(
+        { document_case_id: documentCaseId, target_state: 'classified' },
+        ctx,
+      );
+      await enqueueException(
+        {
+          document_case_id: documentCaseId,
+          source_document_id: input.source_document_id,
+          trace_id: input.trace_id,
+          exception_reason: 'statement_not_invoice_suspected',
+        },
+        ctx,
+      );
+    } catch (err) {
+      if (
+        !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+      ) {
+        return {
+          status: 'pipeline_failed',
+          pipeline_trace,
+          proposal_id: null,
+          failure_class: classifyFailure(err),
+        };
+      }
+    }
+    return {
+      status: 'parked_unposted',
+      pipeline_trace,
+      proposal_id: null,
+      failure_class: null,
+    };
+  }
+
+  // Board #4 Fork C handler #1 — semantic-duplicate detection. Between Stage 5
+  // (vendor resolved) and Stage 6 (matcher): if the extracted invoice already
+  // exists as a LIVE, DOCUMENT-SOURCED bill for the matched vendor — a re-book
+  // of an already-booked invoice that Stage-0 dedupByHash (byte-identity)
+  // misses — route to a human under 'duplicate_invoice_suspected' and SKIP
+  // Stages 6-7. Fires EVEN under confident extraction: the danger is orthogonal
+  // to extraction confidence (that is the handler's whole point). Guard: only
+  // vendor_invoice docs, only when the vendor matched (an unmatched vendor
+  // already routes to needs_review via router branch c), only when an invoice
+  // number was extracted (a null number can't be a keyed duplicate), AND only
+  // when the matched bill itself is document-sourced (a live primary_invoice
+  // link) — see the provenance-gate comment at the `if (dup...)` check below.
+  // A matching bill with no live link is manual/PO/override/voided origin, so
+  // the incoming invoice is a legitimate first-arrival attachment that must
+  // fall through to Stage 6 (INV-WORKFLOW-002 ATTACHMENT EXIT), not park as a
+  // false-positive duplicate.
+  //
+  // Two-step park (received→classified, then enqueue does classified→needs_review)
+  // mirrors the multi_invoice / unknown_document_type short-circuits: the case is
+  // at 'received' here (Stage 6.5 owns the classified advance), enqueueException's
+  // RPC requires classified|matched, and a direct classified→needs_review advance
+  // is refused (Subsystem-2-owned). BOTH steps are reprocess-safe: on a re-run
+  // (the different-bytes semantic duplicate that dodges Stage-0 dedup — this
+  // handler's raison d'être) the case is already at needs_review, so
+  // advanceCaseAutomation('classified') is an idempotent no-op (at/past target
+  // per PIPELINE_ORDER, documentCaseService.ts:361 — it does NOT attempt, and get
+  // refused for, a needs_review→classified back-advance), and the re-enqueue
+  // throws EXCEPTION_ALREADY_OPEN (one open exception per case), caught below.
+  // Unlike multi_invoice this handler writes NOTHING before the enqueue (no
+  // α-UNIQUE reprocess residual), so a reprocessed duplicate re-parks cleanly
+  // rather than stranding to pipeline_failed. (Proven: semanticDuplicatePipeline
+  // Wiring reprocess case.)
+  //
+  // This branch PARKS; it does not assert auto-commit is off. The never-mis-post
+  // guarantee rests partly on the Wave -1 bleed-stop being disabled and MUST be
+  // re-verified when governed auto-commit returns post-V1 (ADR-0007 §Tier 2 Q78).
+  const rawInvoiceNumber = (
+    extracted.fields as { vendor_invoice_number?: unknown }
+  ).vendor_invoice_number;
+  const extractedInvoiceNumber =
+    typeof rawInvoiceNumber === 'string' && rawInvoiceNumber.length > 0
+      ? rawInvoiceNumber
+      : null;
+  if (
+    documentCaseId &&
+    classification.result.documentType === 'vendor_invoice' &&
+    vendorMatch.vendor_id &&
+    extractedInvoiceNumber
+  ) {
+    let dup;
+    try {
+      dup = await findLiveBillByVendorAndNumber({
+        org_id: input.org_id,
+        vendor_id: vendorMatch.vendor_id,
+        bill_number: extractedInvoiceNumber,
+      });
+    } catch (err) {
+      // Fix wave finding #1: findLiveBillByVendorAndNumber throws ServiceError
+      // ('PIPELINE_TRANSIENT_EXHAUSTED') on a query error. Without this wrap the
+      // throw escaped ingestDocument's structured-result contract entirely (no
+      // pipeline_failed return, pipeline_trace lost, classifyFailure mapping
+      // dead). Abort to pipeline_failed rather than falling through to Stage 6 —
+      // a transient error must not risk mis-attaching a real duplicate on
+      // incomplete provenance.
+      return {
+        status: 'pipeline_failed',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: classifyFailure(err),
+      };
+    }
+    // Provenance gate (design §4.1): fire ONLY when the matched live bill is
+    // itself document-sourced (a live primary_invoice link). A matching bill with
+    // no live link is manual/PO/override/voided origin → the incoming invoice is a
+    // legitimate first-arrival attachment → fall through to Stage 6 (INV-WORKFLOW-002
+    // ATTACHMENT EXIT). Distinguishes re-book (fire) from attachment (defer).
+    if (dup.matched_bill_id && dup.is_document_sourced) {
+      try {
+        await advanceCaseAutomation(
+          { document_case_id: documentCaseId, target_state: 'classified' },
+          ctx,
+        );
+        await enqueueException(
+          {
+            document_case_id: documentCaseId,
+            source_document_id: input.source_document_id,
+            trace_id: input.trace_id,
+            exception_reason: 'duplicate_invoice_suspected',
+          },
+          ctx,
+        );
+      } catch (err) {
+        if (
+          !(err instanceof ServiceError && err.code === 'EXCEPTION_ALREADY_OPEN')
+        ) {
+          return {
+            status: 'pipeline_failed',
+            pipeline_trace,
+            proposal_id: null,
+            failure_class: classifyFailure(err),
+          };
+        }
+      }
+      return {
+        status: 'parked_unposted',
+        pipeline_trace,
+        proposal_id: null,
+        failure_class: null,
+      };
+    }
+  }
 
   // Stage 6 — match_against_existing_state per ADR-0014 §1 canonical
   // (brief Task 7.3a.5 brief-named "Stage 5 relationship-candidate";

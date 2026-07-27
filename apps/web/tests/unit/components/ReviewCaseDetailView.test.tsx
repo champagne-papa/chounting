@@ -73,8 +73,14 @@ describe('ReviewCaseDetailView', () => {
     );
     fireEvent.click(screen.getByTestId('approve-post'));
     await waitFor(() =>
+      // Component's T3(3b) "honest message": when the response carries
+      // case_state (the real approve-post route always does on success) and
+      // status !== 'partially_posted', it renders "Posted and committed
+      // (<status>)." — echoing the outcome sub-status (posted / recovered).
+      // The mock above returns status:'posted', so the rendered text is
+      // "Posted and committed (posted).", NOT the bare "Posted and committed."
       expect(screen.getByRole('status')).toHaveTextContent(
-        'Posted and committed.',
+        'Posted and committed (posted).',
       ),
     );
     const [url, init] = mockFetch.mock.calls[1]! as [string, RequestInit];
@@ -185,5 +191,107 @@ describe('ReviewCaseDetailView', () => {
       expect(screen.getByTestId('approve-post')).toBeInTheDocument(),
     );
     expect(screen.queryByTestId('resolve-exception')).toBeNull();
+  });
+
+  it('multi-invoice with an unrepairable α: the manual-repair affordance + case banner render; Approve & Post is suppressed', async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse(
+        previewPayload({
+          proposal: null,
+          extracted_fields: {},
+          vendor_match: null,
+          postable: false,
+          not_postable_reason: 'unrepairable_present',
+          invoices: [
+            {
+              ordinal: 1,
+              document_type: 'vendor_invoice',
+              extracted_fields: { amount: '100.00', vendor_invoice_number: 'INVP1' },
+              vendor_match: null,
+              proposal: { kind: 'proposed_entry_card' },
+              postable: false,
+              not_postable_reason: null,
+              post_status: 'posted',
+              posted_bill_id: 'bill-1',
+            },
+            {
+              ordinal: 2,
+              document_type: 'vendor_invoice',
+              extracted_fields: { amount: '50.00', vendor_invoice_number: 'INVU2' },
+              vendor_match: null,
+              proposal: { kind: 'proposed_entry_card' },
+              // The trap: extraction is fine → postable can read true even though
+              // the bill failed. The view keys the affordance on post_status.
+              postable: true,
+              not_postable_reason: null,
+              post_status: 'unrepairable',
+              posted_bill_id: null,
+            },
+          ],
+        }),
+      ),
+    );
+    render(
+      <ReviewCaseDetailView orgId="org-1" caseId="case-1" onBack={() => {}} />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('unrepairable-affordance')).toBeInTheDocument(),
+    );
+    // Per-card manual-repair affordance (inert, NOT a retry — watch-item #2).
+    expect(screen.getByTestId('unrepairable-affordance')).toHaveTextContent(
+      'Manual repair required',
+    );
+    // Case-level honest banner (not the generic 'missing_required_fields').
+    expect(screen.getByTestId('unrepairable-case-banner')).toBeInTheDocument();
+    // The futile Approve & Post is suppressed (postable=false).
+    expect(screen.queryByTestId('approve-post')).toBeNull();
+  });
+
+  it('mixed [pending-postable, unrepairable]: Approve & Post renders (post the pending α) AND the unrepairable affordance still shows', async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse(
+        previewPayload({
+          proposal: null,
+          extracted_fields: {},
+          vendor_match: null,
+          postable: true,
+          not_postable_reason: null,
+          invoices: [
+            {
+              ordinal: 1,
+              document_type: 'vendor_invoice',
+              extracted_fields: { amount: '100.00', vendor_invoice_number: 'INVM1' },
+              vendor_match: { vendor_id: 'v-1', match_type: 'exact_name' },
+              proposal: { kind: 'proposed_entry_card' },
+              postable: true,
+              not_postable_reason: null,
+              post_status: 'pending',
+              posted_bill_id: null,
+            },
+            {
+              ordinal: 2,
+              document_type: 'vendor_invoice',
+              extracted_fields: { amount: '50.00', vendor_invoice_number: 'INVU2' },
+              vendor_match: null,
+              proposal: { kind: 'proposed_entry_card' },
+              postable: false,
+              not_postable_reason: null,
+              post_status: 'unrepairable',
+              posted_bill_id: null,
+            },
+          ],
+        }),
+      ),
+    );
+    render(
+      <ReviewCaseDetailView orgId="org-1" caseId="case-1" onBack={() => {}} />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('approve-post')).toBeInTheDocument(),
+    );
+    // The button shows (a pending-postable α is real work) AND the unrepairable
+    // α still carries its manual-repair affordance.
+    expect(screen.getByTestId('approve-post')).toBeInTheDocument();
+    expect(screen.getByTestId('unrepairable-affordance')).toBeInTheDocument();
   });
 });

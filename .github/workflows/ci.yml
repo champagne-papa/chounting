@@ -176,3 +176,21 @@ jobs:
 
       - name: Build
         run: pnpm exec turbo run build
+        env:
+          # Build-only placeholders. `next build` collects page data, which
+          # imports apps/web/src/shared/env.ts — its assertEnv() checks only
+          # that each var is NON-EMPTY (presence), and the build never calls
+          # Supabase / Anthropic / Redis / Postmark. So fake non-empty values
+          # are sufficient to pass assertEnv. NONE of these are real
+          # credentials, and the CI build artifact is a check that is never
+          # deployed (Vercel does the real build with real values). If a
+          # future real build-time data fetch is added, this will fail past
+          # assertEnv and these must become real values via `${{ secrets.* }}`.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-build-placeholder
+          NEXT_PUBLIC_APP_URL: https://placeholder.local
+          SUPABASE_SERVICE_ROLE_KEY: ci-build-placeholder
+          ANTHROPIC_API_KEY: ci-build-placeholder
+          UPSTASH_REDIS_KV_REST_API_URL: https://placeholder.upstash.io
+          UPSTASH_REDIS_KV_REST_API_TOKEN: ci-build-placeholder
+          POSTMARK_INBOUND_BASIC_AUTH_PASSWORD: ci-build-placeholder

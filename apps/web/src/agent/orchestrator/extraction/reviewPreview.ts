@@ -63,6 +63,27 @@ export interface ReviewPreviewCaseSummary {
   trace_id: string;
 }
 
+/** Board #4 T2.5 — one card per persisted α row for a multi-invoice case.
+ *  Built by reading `α.extracted_fields` (the verbatim pipeline extraction —
+ *  no re-extraction) and re-running the pure Stage-5 matchVendor + Stage-7
+ *  buildProposal per invoice. `postable`/`not_postable_reason` here are
+ *  per-invoice ADVISORY only — the case-level Approve & Post is deferred to
+ *  T3 (the N-bill loop); see ReviewPreview.postable. */
+export interface ReviewInvoiceCard {
+  /** The α (extracted_invoices) row id — the T3 approve-post loop's write
+   *  target for postExtractedInvoice (posted_bill_id/post_status/key). */
+  id: string;
+  ordinal: number;
+  document_type: string;
+  extracted_fields: Record<string, unknown>;
+  vendor_match: VendorMatchResult | null;
+  proposal: ProposalResult | null;
+  postable: boolean;
+  not_postable_reason: ReviewPreview['not_postable_reason'];
+  post_status: string;
+  posted_bill_id: string | null;
+}
+
 export interface ReviewPreview {
   document_case: ReviewPreviewCaseSummary;
   source_document: {
@@ -97,7 +118,21 @@ export interface ReviewPreview {
     | 'bundle_requires_manual_entry'
     | 'no_proposal'
     | 'missing_required_fields'
+    // Board #4 T6b-2 — the case holds a G3 'unrepairable' α (JE landed, bill
+    // didn't); it can never reach committed, so it presents as manual-repair,
+    // not a retryable "Approve & Post" (§1.6 watch-item #2).
+    | 'unrepairable_present'
+    // Board #4 T2.5 — case-level multi-invoice deferral. SUPERSEDED 2026-07-11
+    // by T3 (3b): the N-bill loop now exists, so a multi-invoice case is
+    // postable-via-loop and this value is NO LONGER PRODUCED (the multi branch
+    // aggregates per-card postability). Kept in the type for historical
+    // audit_log/response payloads; safe to retire once none remain.
+    | 'multi_invoice_post_deferred'
     | null;
+  /** Board #4 T2.5 — the per-invoice α cards for a multi-invoice case (N≥2 α
+   *  rows read `ORDER BY ordinal`). null for single-invoice / α-absent cases,
+   *  which use the top-level single-card Tier-A rebuild (the fallback). */
+  invoices: ReviewInvoiceCard[] | null;
   /** The per-child dedup-triple probe (T6 ruling: uniform suffixing —
    *  `${caseId}:bill` / `${caseId}:payment`). Multi-JE-aware: a
    *  born-paid bundle would carry two children; the probe returns ALL
@@ -240,11 +275,136 @@ export async function buildReviewPreview(
     })),
   };
 
+  // Board #4 T2.5 — multi-invoice case: read the case's N α rows → N cards. No
+  // re-extraction; each card is built from α.extracted_fields (the verbatim
+  // pipeline extraction) + a pure per-α matchVendor + buildProposal. Only
+  // multi-invoice cases carry α (T2c writes N≥2; single-invoice writes none),
+  // so this branch is the two-path reversal of middle-design §3 (see the
+  // supersession there). The case-level Approve & Post is deferred to T3 (the
+  // N-bill loop): the case is NOT postable via the single-bill path, and
+  // per-card postability is advisory only.
+  const alphaRows = rows.alphaRows ?? [];
+  if (alphaRows.length > 0) {
+    const relationshipCandidates: RelationshipCandidate[] = sourceDocumentId
+      ? candidates.map((c) => ({
+          id: c.id,
+          document_case_id: caseRow.id as string,
+          source_document_id: sourceDocumentId,
+          linked_entity_type: c.linked_entity_type,
+          linked_entity_id: c.linked_entity_id,
+          link_role: c.link_role,
+          confidence_score: c.confidence_score,
+        }))
+      : [];
+    const invoices: ReviewInvoiceCard[] = [];
+    for (const a of alphaRows) {
+      // Copy so the read row is not mutated by the money normalization below.
+      const aFields = {
+        ...((a.extracted_fields as Record<string, unknown>) ?? {}),
+      };
+      // Money-string normalization (INV-MONEY-001): α stores amount as a
+      // NUMBER (the MultiInvoiceItem schema), same as the single-card path
+      // normalizes below before postability + the T3 builders.
+      if (typeof aFields.amount === 'number' && Number.isFinite(aFields.amount)) {
+        aFields.amount = (aFields.amount as number).toFixed(2);
+      }
+      const aDocType = a.document_type as string;
+      const aVendorMatch = await vendorService.matchVendor(
+        {
+          org_id: caseRow.org_id as string,
+          vendorField: extractVendorFields(aFields),
+          trace_id: input.trace_id,
+        },
+        ctx,
+      );
+      const aProposal =
+        sourceDocumentId && aDocType !== 'unknown'
+          ? buildProposal({
+              source_document_id: sourceDocumentId,
+              classification: {
+                documentType: aDocType as
+                  | 'vendor_invoice'
+                  | 'receipt'
+                  | 'payment_confirmation'
+                  | 'unknown',
+                confidence: Number(caseRow.classification_confidence ?? 0),
+                rationale: 'review-time α read (board #4 T2.5)',
+                tier: 'A',
+              },
+              extractedFields: aFields,
+              vendorMatch: aVendorMatch,
+              relationshipCandidates,
+              trace_id: crypto.randomUUID(),
+            })
+          : null;
+      const aVerdict = postability(aProposal, aFields, aVendorMatch);
+      invoices.push({
+        id: a.id as string,
+        ordinal: a.ordinal as number,
+        document_type: aDocType,
+        extracted_fields: aFields,
+        vendor_match: aVendorMatch,
+        proposal: aProposal,
+        postable: aVerdict.postable,
+        not_postable_reason: aVerdict.reason,
+        post_status: a.post_status as string,
+        posted_bill_id: (a.posted_bill_id as string) ?? null,
+      });
+    }
+    log.info(
+      {
+        document_case_id: caseRow.id,
+        invoice_count: invoices.length,
+        postable_count: invoices.filter((i) => i.postable).length,
+      },
+      'reviewPreview — multi-invoice α read (N cards)',
+    );
+    // Board #4 T3 (3b): the case-level Approve & Post now DRIVES the N-branch
+    // post loop (was T2.5's deferred gate, multi_invoice_post_deferred). The
+    // case is postable if any α can post (per-card postable — required fields +
+    // a vendor match) OR any α is already posted while the case has not reached
+    // committed (crash-recovery of the aggregate committed marking). The route
+    // posts the postable α per-invoice-independently and advances committed iff
+    // all α carry posted_bill_id.
+    // Board #4 T6b-2: a G3 'unrepairable' α can NEVER post, and a case holding
+    // one can never reach committed. Exclude it from postable via its own verdict
+    // AND guard the 'posted' disjunct with !hasUnrepairable — so a permanently-
+    // uncommittable [posted, unrepairable] case presents as manual-repair, not an
+    // unwinnable "Approve & Post" (§1.6 watch-item #2), while a pending-postable α
+    // in a mixed case still shows the button (real work the operator can do).
+    // hasUnrepairable is hoisted (one scan) — NOT inlined into the some() below.
+    const hasUnrepairable = invoices.some(
+      (i) => i.post_status === 'unrepairable',
+    );
+    const anyPostable = invoices.some(
+      (i) =>
+        (i.postable && i.post_status !== 'unrepairable') ||
+        (i.post_status === 'posted' && !hasUnrepairable),
+    );
+    return {
+      ...base,
+      invoices,
+      // Case-level single-card fields are inert for a multi-invoice case — the
+      // N cards live in `invoices`.
+      proposal: null,
+      extracted_fields: {},
+      vendor_match: null,
+      postable: anyPostable,
+      not_postable_reason: anyPostable
+        ? null
+        : hasUnrepairable
+          ? 'unrepairable_present'
+          : 'missing_required_fields',
+    };
+  }
+
   // Degraded previews (honest, named): no artifacts → no rebuild;
-  // unknown type → no extractor.
+  // unknown type → no extractor. (α-absent single-invoice path continues
+  // below with the Tier-A rebuild — the fallback.)
   if (!artifact || !sourceDocumentId) {
     return {
       ...base,
+      invoices: null,
       proposal: null,
       extracted_fields: {},
       vendor_match: null,
@@ -255,6 +415,7 @@ export async function buildReviewPreview(
   if (caseRow.document_type === 'unknown') {
     return {
       ...base,
+      invoices: null,
       proposal: null,
       extracted_fields: {},
       vendor_match: null,
@@ -334,6 +495,7 @@ export async function buildReviewPreview(
 
   return {
     ...base,
+    invoices: null,
     proposal,
     extracted_fields: extracted,
     vendor_match: vendorMatch,

@@ -86,15 +86,89 @@ endpoint shapes in Graph Explorer for your tenant):
   (`io.uploadSmall({ driveId, … })`, `downloadBytes(driveId, …)`). It is **not**
   the per-file `storage_key` — that's the **driveItem id**, recorded on each
   `source_documents` row by the provider at put-time.
-- Then the data write (operator, prod DB):
+- Then the data write. **Which database this row lands in is a safety
+  decision, not a detail — read the Step-5 pre-run gate before running it.**
+
+  - **For the Step-5 live e2e (the PROVEN-LIVE discharge): write it to the
+    LOCAL test database, NOT prod** — with the REAL tenant site/drive ids
+    from the lookups above. Local DB row + real SharePoint drive is what
+    makes the run both safe and meaningful: the Graph transfer is genuinely
+    live, the accounting rows stay out of production.
+  - **Do NOT configure the prod org merely to satisfy Step 5.** It does not
+    point the harness at prod — it *removes the only fail-fast guard*. The
+    harness's step-1 config-sanity assert (`default_storage_provider ===
+    'sharepoint_drive'`) is what stops a mis-pointed run early, and it fails
+    safe only while prod is unconfigured. Configure prod and a run that has
+    drifted onto prod pointers sails through the guard and writes real
+    `ingest_batches` / `source_documents` rows plus real files in the
+    customer's SharePoint library.
+  - **A genuine production activation** (a real customer org going live on
+    SharePoint) runs the same UPDATE against prod — a separate, later,
+    deliberate act, after Step 5 is green.
+
+  - **Use a DEDICATED THROWAWAY org — never a shared seed org.** Pointing a
+    seed org (`SEED.ORG_HOLDING` = `11111111-…`, `SEED.ORG_REAL_ESTATE` =
+    `22222222-…`) at live storage routes **every document-creating test in
+    the integration suite** through live Graph, because the suite shares
+    those orgs. On 2026-07-27 that wrote 114 real files into the live
+    library in a single run. Create a fresh random org id for this.
+  - Provisioning a throwaway org is **four statements, not one** — the
+    harness needs an `organizations` row (FK target for `source_documents`,
+    `ingest_batches`, `org_settings`), a `memberships` row for the
+    `makeTestContext` caller, and only then the storage columns:
 
   ```sql
+  BEGIN;
+  INSERT INTO organizations (
+    org_id, name, legal_name, industry, industry_id, business_structure,
+    functional_currency, fiscal_year_start_month
+  ) VALUES (
+    '<fresh-random-uuid>', 'SharePoint E2E Throwaway (DO NOT REUSE)',
+    'SharePoint E2E Throwaway Ltd.', 'holding_company',
+    (SELECT industry_id FROM industries WHERE slug = 'holding_company'),
+    'corporation', 'CAD', 1
+  ) ON CONFLICT (org_id) DO NOTHING;
+
+  INSERT INTO memberships (user_id, org_id, role, role_id, status, is_org_owner)
+  VALUES (
+    '00000000-0000-0000-0000-000000000002',    -- SEED.USER_CONTROLLER
+    '<fresh-random-uuid>', 'controller',
+    (SELECT role_id FROM roles WHERE role_key = 'controller'), 'active', true
+  ) ON CONFLICT (user_id, org_id) DO NOTHING;
+
+  -- UPDATE, not INSERT: the org_settings row already exists. The
+  -- organizations_create_org_settings trigger auto-creates it on the
+  -- INSERT above, defaulted to 'supabase_storage'. An INSERT here either
+  -- errors on the PK or silently no-ops, leaving the org on
+  -- supabase_storage — the "provisioning looked fine but didn't take"
+  -- failure. Confirm the statement tag reads UPDATE 1, not UPDATE 0.
   UPDATE org_settings
      SET default_storage_provider = 'sharepoint_drive',
          sharepoint_site_id = '<site id>',
          sharepoint_drive_id = '<drive id>'
-   WHERE org_id = '<org>';
+   WHERE org_id = '<fresh-random-uuid>';
+  COMMIT;
   ```
+
+  Verify table-wide, not just by org id — join `organizations` so the row
+  names itself, and confirm **exactly one** org is on `sharepoint_drive`
+  and it is the throwaway:
+
+  ```sql
+  SELECT o.org_id, o.name, s.default_storage_provider
+    FROM org_settings s JOIN organizations o USING (org_id)
+   WHERE s.default_storage_provider = 'sharepoint_drive';
+  ```
+
+  **Lifecycle.** A throwaway org survives `pnpm db:seed` (`dev.sql` deletes
+  only the two `(DEV)`-named orgs) but **NOT** `pnpm db:reset` /
+  `db:reset:clean`. If a reset happens between provisioning and the run,
+  re-provision first or Step 5 fails "not provisioned".
+
+  **Revert when done.** Flip the org back to `supabase_storage` with both
+  ids NULL as soon as the run is green. While any org points at
+  `sharepoint_drive`, a stray `pnpm test` / `test:full` can reach live
+  Graph.
 
 **Done is not "the resolver stops throwing"** (necessary, not sufficient). The
 org is provisioned-and-proven only when **Step 5's live e2e is green**: bytes
@@ -108,12 +182,93 @@ set is the named gated-ops step (sibling to the Postmark allowlist).
 ### 5. Run the live e2e (the honesty gate's discharge)
 
 With the GRAPH_* env set (steps 1-2) and a per-site grant (step 3) + an org
-pointed at SharePoint (step 4):
+pointed at SharePoint **in the local test DB** (step 4).
+
+**Pre-run gate — four checks, in order. Two are safety, not hygiene: a naive
+run proves nothing (silent skip), and a mis-pointed run writes to production.**
+
+**1. Both DB pointers must resolve LOCAL.** The run uses *two independent*
+resolutions and neither asserts it is local:
+
+- The **code under test** (`documentPlatformService.createSourceDocument`,
+  `resolveStorageProvider`, `orgDriveResolver`) goes through
+  `@/db/adminClient` → `env.SUPABASE_URL` → **`NEXT_PUBLIC_SUPABASE_URL`**
+  (`apps/web/src/shared/env.ts:62`). This is where the real `ingest_batches` /
+  `source_documents` writes land **and** where the provider-selection read
+  happens — so it, not `SUPABASE_TEST_URL`, governs whether bytes and rows
+  hit production.
+- The **harness's own reads/fixtures** (`tests/setup/testDb.ts:3-7`) resolve
+  `SUPABASE_TEST_URL ?? SUPABASE_URL ?? throw` — the step-1 config-sanity
+  assert, `createIngestBatchForTest`, and the `audit_log` cleanup.
+
+If those two diverge, the guard asserts against one database while the code
+under test writes to another. Exported shell vars **win over `.env.local`**
+(`tests/setup/loadEnv.ts:15` sets a key only when it is not already in
+`process.env`), so a shell that has sourced prod values silently overrides the
+local defaults. Confirm in the shell you will actually run from:
 
 ```bash
-cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> pnpm test:integration \
+cd apps/web && env | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|SUPABASE_TEST_URL|SUPABASE_URL)='
+```
+
+Every value printed must be the local Supabase (`http://127.0.0.1:54321`). A
+bare `SUPABASE_URL` should not be set at all — the app never reads it; it
+exists only as `testDb.ts`'s silent fallback.
+
+**2. Local Supabase is up** (`pnpm db:start`). `tests/setup/globalSetup.ts:57`
+loads `test_helpers.sql` over a *hardcoded* `postgresql://postgres:postgres@
+127.0.0.1:54322/postgres` connection that is INDEPENDENT of both pointers
+above — it succeeding proves nothing about where the harness writes. Note the
+test-only RPC `create_ingest_batch_for_test` ships in migration `20240153`, so
+it exists in prod too: there is no accidental protection there.
+
+**3. All three `GRAPH_*` must reach the process, not just the run flag.** The
+gate is a four-way AND (`sharepointDriveRealFlow.e2e.test.ts:35-40`):
+`GRAPH_TENANT_ID && GRAPH_CLIENT_ID && GRAPH_CLIENT_CERT_PEM &&
+RUN_SHAREPOINT_E2E`. They are **not** in `.env.local`. Miss any one and the
+whole `describe` silently skips. Prefer adding the three `GRAPH_*` to
+`apps/web/.env.local` (gitignored via `.gitignore:37 .env*`) over passing them
+inline — `GRAPH_CLIENT_CERT_PEM` is a private key and an inline assignment
+lands in shell history. `RUN_SHAREPOINT_E2E` stays out of `.env.local`, so the
+suite still skips by default.
+
+**4. The org row is provisioned in the LOCAL DB** (step 4) for the org id
+passed as `SHAREPOINT_E2E_ORG_ID`, carrying the real tenant site/drive ids.
+
+```bash
+RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<throwaway-org> \
+  pnpm --filter @chounting/web exec vitest run \
   tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
 ```
+
+**Do NOT use `pnpm test:integration <path>` — it does not scope.** The script
+is `vitest run tests/integration`, and a positional path is **OR'd** with that
+glob rather than narrowing it, so the whole integration suite runs: measured at
+**1259 tests collected** versus **2** for the command above. On 2026-07-27 this
+is what turned a two-file live-proving run into a 244-file suite run that wrote
+114 real files into the live library. (The trap is not new — it was recorded at
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md` §"What we learned"
+after it caused an over-scoped paid Modal run, and never propagated here.)
+Note the distinction: `pnpm test <path>` **does** scope, because the `test`
+script carries no glob of its own; only `test:integration` does.
+
+**Verify the scoping before trusting any result.** The failure mode is a
+command that *looks* scoped and isn't, so check the selection, not just the
+pass count — `vitest list` collects without executing:
+
+```bash
+pnpm --filter @chounting/web exec vitest list --filesOnly \
+  tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
+```
+
+Expect exactly **1 file**. At run time the header must read `Test Files 1
+passed (1)`; anything above 1 means the scoping regressed — stop and fix the
+command before reading a single result.
+
+**Then read the result line: it must say `2 passed`, not `2 skipped`.** The two
+cases are the ≤4 MiB round-trip (`uploadSmall`) and the >4 MiB case
+(`uploadLarge` — the drive-addressing fix, which the small case never
+exercises). A skip on either is a false-green, not a discharge.
 
 This is the gated harness (skips by default with `RUN_SHAREPOINT_E2E` unset).
 A green run is the first **PROVEN-LIVE** evidence: a real `sharepoint_drive`

@@ -11,7 +11,9 @@ import {
   coverage,
   correctness,
   valuesMatch,
+  runExtractionEval,
 } from '../helpers/extractionEval';
+import type { ExtractionFn, EvalCorpusDoc, GroundTruth } from '../helpers/extractionEval';
 
 const FIELDS = ['amount', 'currency', 'vendor_invoice_number'];
 
@@ -86,5 +88,55 @@ describe('aggregate / coverage / correctness', () => {
     const s = scoreExtraction({}, { amount: 100 }, FIELDS);
     expect(correctness(aggregate([s]))).toBe(1);
     expect(coverage(aggregate([s]))).toBe(0);
+  });
+});
+
+describe('runExtractionEval — extractor-parameterized corpus scoring', () => {
+  const corpus: EvalCorpusDoc[] = [
+    { label: 'doc_a', expectedType: 'vendor_invoice', lines: ['Total: $100.00', 'Invoice # INV-1'] },
+    { label: 'doc_b', expectedType: 'receipt', lines: ['Total: $50.00'] },
+  ];
+  const truth: Record<string, GroundTruth> = {
+    doc_a: { amount: 100, vendor_invoice_number: 'INV-1' },
+    doc_b: { total: 50 },
+  };
+  const truthFor = (label: string): GroundTruth => truth[label] ?? {};
+  const perfect: ExtractionFn = (_ocr, type) =>
+    type === 'vendor_invoice'
+      ? { amount: 100, vendor_invoice_number: 'INV-1' }
+      : { total: 50 };
+
+  it('groups per-doc scores by document type', () => {
+    const byType = runExtractionEval(perfect, corpus, truthFor);
+    expect(byType.vendor_invoice).toHaveLength(1);
+    expect(byType.receipt).toHaveLength(1);
+    expect(byType.payment_confirmation).toHaveLength(0);
+  });
+
+  it('different extractors → different aggregates (the before/after delta premise)', () => {
+    const blind: ExtractionFn = () => ({});
+    const good = aggregate(runExtractionEval(perfect, corpus, truthFor).vendor_invoice);
+    const bad = aggregate(runExtractionEval(blind, corpus, truthFor).vendor_invoice);
+    expect(good.correct).toBe(2); // amount + vendor_invoice_number recovered
+    expect(bad.correct).toBe(0); // blind extractor recovers nothing
+  });
+
+  it('an unlabeled doc contributes 0 truly-present; a spurious populate hurts correctness', () => {
+    const spurious: ExtractionFn = () => ({ amount: 999 });
+    const byType = runExtractionEval(
+      spurious,
+      [{ label: 'unlabeled', expectedType: 'vendor_invoice', lines: ['x'] }],
+      () => ({}),
+    );
+    const t = aggregate(byType.vendor_invoice);
+    expect(t.trulyPresent).toBe(0);
+    expect(t.populated).toBe(1);
+    expect(t.correct).toBe(0);
+  });
+
+  it('deterministic: identical inputs → identical tallies', () => {
+    const a = aggregate(runExtractionEval(perfect, corpus, truthFor).vendor_invoice);
+    const b = aggregate(runExtractionEval(perfect, corpus, truthFor).vendor_invoice);
+    expect(a).toEqual(b);
   });
 });
