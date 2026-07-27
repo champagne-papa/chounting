@@ -10,7 +10,7 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
-## classify-failure arc — design + wrapper prerequisite SHIPPED to PR #13; deploy held on an ACCESS blocker — 2026-07-27 (OPEN, NOT MERGED)
+## classify-failure arc — design + wrapper prerequisite SHIPPED to PR #13; deploy gated on the migration bundle — 2026-07-27 (OPEN, NOT MERGED)
 
 The `classifyFailure` finding — permanent pipeline failures labelled
 retryable, re-run hourly by the stranded-case sweep, never surfaced to a
@@ -31,23 +31,37 @@ throw-site split, the four-class union, the sweep branching on
 `failure_class`, per-class ceilings, the C-1 sibling RPC + ADR-0011 §3 matrix
 amendment, and the three-CHECK migration bundle.
 
-### CF-1 — stranded-case diagnostic — **OWNER: UNASSIGNED**
+### CF-1 — stranded-case diagnostic — **RESOLVED 2026-07-27 (benign)**
 
-**Blocks the deploy. The blocker is ACCESS, not analysis.** Two SQL queries
-(spec §6): stranded `document_cases` older than the staleness cutoff, and the
-repeat-failure audit signature. Neither the author nor the reviewer of the
-design holds prod database or Vercel log credentials, and everything on this
-arc that could be settled by reading bytes has been read.
+Ran against prod. **Query 1 non-empty (9 rows), query 2 empty — and the two
+agree.** The 9 `received`-state cases (org `f0fa6501…`, created 2026-06-11/12)
+are the **by-design `B3-D` content-duplicate floor** — the `.eml` / Outlook-
+signature-image dup class — **not** a stranded population.
 
-**Next action is naming a person with prod DB + Vercel access — not code
-review.** A green PR with an unnamed blocker is the thing that sits for weeks
-because the green reads as done.
+Confirmed four ways: (1) **code** — `sweepOneCase` short-circuits at the
+`dedup_carveout` exit before `runIngest`, so no re-ingestion and no
+`pipeline_*` audit events; (2) **prod-readiness §5 caveat** (2026-06-14) —
+documents this exact floor, mechanism and dup class; (3) **live SweepReport
+telemetry, 2026-07-27** — 9 consecutive hourly prod fires reading
+`B3-D: 9 / B4: 0 / b3_reruns_executed: 0`, `env=production`; (4) **query 2's
+emptiness is correct** — no B4 and no re-runs means no `pipeline_*` events
+could exist. Action names and target table (`audit_log`) were verified to
+match the query, so the empty result is a true signal, not an instrument miss.
 
-Why it gates the deploy rather than the estimate (spec §9.1): the new ceilings
-key off `document_jobs.attempt_count`, and **every existing row is `0`**.
-Shipping forward-prevention alone hands the longest-looping cases a *fresh*
-grace period — the documents most overdue for a human get the most additional
-delay. If the queries return non-empty, a backfill/triage half ships with it.
+**No loop. No spend. No customer impact — the dups' originals were already
+processed; no outreach is warranted.**
+
+**Deploy is no longer gated on CF-1.** The remaining gate is the three-CHECK
+migration bundle alone (§5).
+
+**§9 backfill must EXCLUDE this population.** Backfilling content-duplicates
+into human review would push nine junk items at a reviewer — the opposite of
+the intent.
+
+**Invariant caveat:** the floor's *existence* is by design; the **number 9 is
+an empirical reading** (measured 2026-06-14, re-confirmed still 9 on
+2026-07-27). Do not treat 9 as a designed constant — the health signal is new
+`received` cases accumulating *above* the floor.
 
 ### CF-2 — `delivery-model.md:193` describes a dead branch — **OWNER: UNASSIGNED**
 
@@ -78,13 +92,15 @@ describe the main-direct flow that has been practice for six weeks.
   `eslint-disable` directive for `no-console`, in `emitAuditEvent`). Confirmed
   via diff as **outside** this arc's change; it predates the wrapper fix.
   Parked as pre-existing debt.
-- **Resumption-branch decision — DEFERRED, to be made when CF-1 unblocks.**
-  Does the enumeration + C-1 RPC + three-CHECK bundle extend PR #13, or does
-  #13 merge (prerequisite + design) first with enumeration opening as its own
-  PR against the new `main`? **Lean: the latter** — the wrapper fix is
-  revertable-alone by spec §2.4.1's design, and piling enumeration onto #13
-  re-couples what that edge decoupled. Recorded as a decision-to-be-made, not
-  a decision.
+- **Resumption-branch decision — LIVE as of 2026-07-27; the trigger has fired.**
+  CF-1 resolving was the event this was waiting on, so the decision is now open
+  and needs an owner rather than a date. Does the enumeration + C-1 RPC +
+  three-CHECK bundle extend PR #13, or does #13 merge (prerequisite + design)
+  first with enumeration opening as its own PR against the new `main`?
+  **Lean: the latter** — the wrapper fix is revertable-alone by spec §2.4.1's
+  design, and piling enumeration onto #13 re-couples what that edge decoupled.
+  Still recorded as a decision-to-be-made, not a decision — only its status
+  changed, from waiting to actionable.
 
 ## Prod migrated 20240180 → 20240191 (slice-2 α substrate + Fork C exception-reason substrate) — 2026-07-24 (APPLIED LIVE)
 
@@ -221,6 +237,15 @@ integration); no separate push event.
   read-only ($0, not re-run — the `.eml`/signature-dup class). `received`
   floors at 9 by design (prod-readiness §5 caveat). "Drain-to-2" was the
   wrong model; the source bucket logic is the right one.
+  - **Superseded in part 2026-07-27 (classify-failure arc, CF-1):** "floors at
+    9 **by design**" over-reads its source. prod-readiness §5 (`:111-119`)
+    makes the floor's *existence* by-design — *"for an org carrying
+    content-duplicate documents the `received` count does not drain to 0"* —
+    while the **number 9** is a dated measurement: *"As of 2026-06-14 this org
+    floors at 9 such dupes."* Re-confirmed still 9 on 2026-07-27 via live
+    `SweepReport` telemetry (`B3-D: 9 / B4: 0 / b3_reruns_executed: 0`,
+    `env=production`). Treat the floor as **expected**, the count as
+    **observed**.
 - **The 3 recovered as `unmatched_router_candidate` → `needs_review`, NOT
   as auto-proposed bills.** Classified `vendor_invoice`, no vendor match,
   routed to the human review inbox — correct V1 behavior. **"A review item
