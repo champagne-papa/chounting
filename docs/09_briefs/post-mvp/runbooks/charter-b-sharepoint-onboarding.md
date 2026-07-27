@@ -86,7 +86,25 @@ endpoint shapes in Graph Explorer for your tenant):
   (`io.uploadSmall({ driveId, … })`, `downloadBytes(driveId, …)`). It is **not**
   the per-file `storage_key` — that's the **driveItem id**, recorded on each
   `source_documents` row by the provider at put-time.
-- Then the data write (operator, prod DB):
+- Then the data write. **Which database this row lands in is a safety
+  decision, not a detail — read the Step-5 pre-run gate before running it.**
+
+  - **For the Step-5 live e2e (the PROVEN-LIVE discharge): write it to the
+    LOCAL test database, NOT prod** — with the REAL tenant site/drive ids
+    from the lookups above. Local DB row + real SharePoint drive is what
+    makes the run both safe and meaningful: the Graph transfer is genuinely
+    live, the accounting rows stay out of production.
+  - **Do NOT configure the prod org merely to satisfy Step 5.** It does not
+    point the harness at prod — it *removes the only fail-fast guard*. The
+    harness's step-1 config-sanity assert (`default_storage_provider ===
+    'sharepoint_drive'`) is what stops a mis-pointed run early, and it fails
+    safe only while prod is unconfigured. Configure prod and a run that has
+    drifted onto prod pointers sails through the guard and writes real
+    `ingest_batches` / `source_documents` rows plus real files in the
+    customer's SharePoint library.
+  - **A genuine production activation** (a real customer org going live on
+    SharePoint) runs the same UPDATE against prod — a separate, later,
+    deliberate act, after Step 5 is green.
 
   ```sql
   UPDATE org_settings
@@ -108,12 +126,68 @@ set is the named gated-ops step (sibling to the Postmark allowlist).
 ### 5. Run the live e2e (the honesty gate's discharge)
 
 With the GRAPH_* env set (steps 1-2) and a per-site grant (step 3) + an org
-pointed at SharePoint (step 4):
+pointed at SharePoint **in the local test DB** (step 4).
+
+**Pre-run gate — four checks, in order. Two are safety, not hygiene: a naive
+run proves nothing (silent skip), and a mis-pointed run writes to production.**
+
+**1. Both DB pointers must resolve LOCAL.** The run uses *two independent*
+resolutions and neither asserts it is local:
+
+- The **code under test** (`documentPlatformService.createSourceDocument`,
+  `resolveStorageProvider`, `orgDriveResolver`) goes through
+  `@/db/adminClient` → `env.SUPABASE_URL` → **`NEXT_PUBLIC_SUPABASE_URL`**
+  (`apps/web/src/shared/env.ts:62`). This is where the real `ingest_batches` /
+  `source_documents` writes land **and** where the provider-selection read
+  happens — so it, not `SUPABASE_TEST_URL`, governs whether bytes and rows
+  hit production.
+- The **harness's own reads/fixtures** (`tests/setup/testDb.ts:3-7`) resolve
+  `SUPABASE_TEST_URL ?? SUPABASE_URL ?? throw` — the step-1 config-sanity
+  assert, `createIngestBatchForTest`, and the `audit_log` cleanup.
+
+If those two diverge, the guard asserts against one database while the code
+under test writes to another. Exported shell vars **win over `.env.local`**
+(`tests/setup/loadEnv.ts:15` sets a key only when it is not already in
+`process.env`), so a shell that has sourced prod values silently overrides the
+local defaults. Confirm in the shell you will actually run from:
+
+```bash
+cd apps/web && env | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|SUPABASE_TEST_URL|SUPABASE_URL)='
+```
+
+Every value printed must be the local Supabase (`http://127.0.0.1:54321`). A
+bare `SUPABASE_URL` should not be set at all — the app never reads it; it
+exists only as `testDb.ts`'s silent fallback.
+
+**2. Local Supabase is up** (`pnpm db:start`). `tests/setup/globalSetup.ts:57`
+loads `test_helpers.sql` over a *hardcoded* `postgresql://postgres:postgres@
+127.0.0.1:54322/postgres` connection that is INDEPENDENT of both pointers
+above — it succeeding proves nothing about where the harness writes. Note the
+test-only RPC `create_ingest_batch_for_test` ships in migration `20240153`, so
+it exists in prod too: there is no accidental protection there.
+
+**3. All three `GRAPH_*` must reach the process, not just the run flag.** The
+gate is a four-way AND (`sharepointDriveRealFlow.e2e.test.ts:35-40`):
+`GRAPH_TENANT_ID && GRAPH_CLIENT_ID && GRAPH_CLIENT_CERT_PEM &&
+RUN_SHAREPOINT_E2E`. They are **not** in `.env.local`. Miss any one and the
+whole `describe` silently skips. Prefer adding the three `GRAPH_*` to
+`apps/web/.env.local` (gitignored via `.gitignore:37 .env*`) over passing them
+inline — `GRAPH_CLIENT_CERT_PEM` is a private key and an inline assignment
+lands in shell history. `RUN_SHAREPOINT_E2E` stays out of `.env.local`, so the
+suite still skips by default.
+
+**4. The org row is provisioned in the LOCAL DB** (step 4) for the org id
+passed as `SHAREPOINT_E2E_ORG_ID`, carrying the real tenant site/drive ids.
 
 ```bash
 cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> pnpm test:integration \
   tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
 ```
+
+**Then read the result line: it must say `2 passed`, not `2 skipped`.** The two
+cases are the ≤4 MiB round-trip (`uploadSmall`) and the >4 MiB case
+(`uploadLarge` — the drive-addressing fix, which the small case never
+exercises). A skip on either is a false-green, not a discharge.
 
 This is the gated harness (skips by default with `RUN_SHAREPOINT_E2E` unset).
 A green run is the first **PROVEN-LIVE** evidence: a real `sharepoint_drive`
