@@ -657,6 +657,45 @@ Per §9.1 the two-part case is not merely bigger — deploying part one alone is
 actively wrong for the stranded population, so the diagnostic gates the deploy,
 not just the estimate.
 
+> **CARRY-FORWARD 1 — stranded-case diagnostic.**
+> **Owner: UNASSIGNED.** Needs prod database + Vercel log access.
+> **Blocks:** §5 step 6 (deploy).
+> **Nature of blocker:** access, not analysis.
+
+### 7.1 CARRY-FORWARD 2 — `delivery-model.md` describes a dead branch
+
+Surfaced while resolving this arc's PR base. **Recorded, deliberately not
+fixed** — amending a governance doc under cover of a classify-failure PR is the
+scope breach `ratified-contract-scope` exists to prevent.
+
+`docs/04_engineering/delivery-model.md:193` states *"Feature branch → staging:
+PR-driven,"* with `staging` as integration trunk and `main` released from it.
+Measured against the remote on 2026-07-27:
+
+| | |
+|---|---|
+| `staging` last commit | 2026-06-14 (six weeks stale) |
+| `main` ahead of `staging` | 60 commits |
+| `staging` ahead of `main` | 0 |
+
+`staging` is fully contained in `main` and has not been an integration trunk
+since mid-June. Every arc since — board-4, Fork C, the housekeeping, the CI
+fix — merged to `main` directly.
+
+**Why this is a defect and not merely staleness:** obeying the doc breaks the
+thing it governs. A PR diff is branch-vs-base, so basing a `main`-forked branch
+on `staging` renders as **62 commits** — two signal, sixty noise. The written
+rule, followed literally by someone careful enough to trust it, produces an
+unreviewable PR. It punishes the virtue.
+
+**Decision required (two defensible answers, needs an owner to pick):** revive
+`staging` as a real integration trunk, or amend §Merge rules to describe the
+main-direct flow that has been practice for six weeks.
+
+> **Owner: UNASSIGNED.** Belongs to whoever owns the delivery model.
+> **Blocks:** nothing in this arc. Left unowned, it re-traps the next careful
+> reader.
+
 ---
 
 ## 8. Out of scope
