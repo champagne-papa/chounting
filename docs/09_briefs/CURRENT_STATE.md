@@ -10,6 +10,82 @@
 > here as live (this doc's own 2026-04-22 push-decision rule,
 > generalized).
 
+## classify-failure arc — design + wrapper prerequisite SHIPPED to PR #13; deploy held on an ACCESS blocker — 2026-07-27 (OPEN, NOT MERGED)
+
+The `classifyFailure` finding — permanent pipeline failures labelled
+retryable, re-run hourly by the stranded-case sweep, never surfaced to a
+human. Design resolved and the one prerequisite fix landed. **Nothing
+deployed; nothing merged.** PR #13 targets `main`, titled `[DO NOT MERGE]`.
+
+Branch `fix/classify-failure-terminalization`, three commits:
+`965a62bc` design spec v3 · `8d8e9ecf` wrapper error-identity fix ·
+`9f7f2d6b` carry-forward record. Spec:
+`docs/superpowers/specs/2026-07-26-classify-failure-design.md`.
+
+What shipped: the wrapper fix only (`withFailureClassification` now rethrows
+the original error instead of a synthesised `PIPELINE_TRANSIENT_EXHAUSTED`,
+and its exhausted audit event records `error_code` + `error_message`).
+Classification behaviour is deliberately unchanged — the fix is the *ground*
+the enumeration stands on, not the enumeration. Held behind it: the `AGENT_*`
+throw-site split, the four-class union, the sweep branching on
+`failure_class`, per-class ceilings, the C-1 sibling RPC + ADR-0011 §3 matrix
+amendment, and the three-CHECK migration bundle.
+
+### CF-1 — stranded-case diagnostic — **OWNER: UNASSIGNED**
+
+**Blocks the deploy. The blocker is ACCESS, not analysis.** Two SQL queries
+(spec §6): stranded `document_cases` older than the staleness cutoff, and the
+repeat-failure audit signature. Neither the author nor the reviewer of the
+design holds prod database or Vercel log credentials, and everything on this
+arc that could be settled by reading bytes has been read.
+
+**Next action is naming a person with prod DB + Vercel access — not code
+review.** A green PR with an unnamed blocker is the thing that sits for weeks
+because the green reads as done.
+
+Why it gates the deploy rather than the estimate (spec §9.1): the new ceilings
+key off `document_jobs.attempt_count`, and **every existing row is `0`**.
+Shipping forward-prevention alone hands the longest-looping cases a *fresh*
+grace period — the documents most overdue for a human get the most additional
+delay. If the queries return non-empty, a backfill/triage half ships with it.
+
+### CF-2 — `delivery-model.md:193` describes a dead branch — **OWNER: UNASSIGNED**
+
+**Recorded, explicitly NOT fixed** — amending a governance doc under cover of a
+classify-failure PR is the scope breach `ratified-contract-scope` exists to
+prevent. Surfaced while resolving that PR's base branch.
+
+The doc states *"Feature branch → staging: PR-driven"*, with `staging` as
+integration trunk. Measured against the remote 2026-07-27: `staging` last
+commit **2026-06-14**; `main` **+60** commits; `staging` **+0**. Staging is
+fully contained in main and stopped being an integration trunk in mid-June;
+every arc since merged to `main` directly.
+
+**Why a defect and not mere staleness: obeying the doc breaks what it
+governs.** A PR diff is branch-vs-base, so basing a `main`-forked branch on
+`staging` renders as **62 commits — 2 signal, 60 noise**. The written rule,
+followed literally by someone careful enough to trust it, produces an
+unreviewable PR. It punishes the virtue.
+
+Two defensible resolutions; **the decision needs an owner, not a note**:
+(a) revive `staging` as a real integration trunk, or (b) amend §Merge rules to
+describe the main-direct flow that has been practice for six weeks.
+
+### Closeout notes
+
+- **Pre-existing lint debt, already diagnosed — do not re-investigate.**
+  `failureClassification.ts` carries one ESLint warning (unused
+  `eslint-disable` directive for `no-console`, in `emitAuditEvent`). Confirmed
+  via diff as **outside** this arc's change; it predates the wrapper fix.
+  Parked as pre-existing debt.
+- **Resumption-branch decision — DEFERRED, to be made when CF-1 unblocks.**
+  Does the enumeration + C-1 RPC + three-CHECK bundle extend PR #13, or does
+  #13 merge (prerequisite + design) first with enumeration opening as its own
+  PR against the new `main`? **Lean: the latter** — the wrapper fix is
+  revertable-alone by spec §2.4.1's design, and piling enumeration onto #13
+  re-couples what that edge decoupled. Recorded as a decision-to-be-made, not
+  a decision.
+
 ## Prod migrated 20240180 → 20240191 (slice-2 α substrate + Fork C exception-reason substrate) — 2026-07-24 (APPLIED LIVE)
 
 Prod (`ollyqiiwdvbpbngqgjqk`) advanced from `20240180` to `20240191` in two
