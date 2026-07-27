@@ -31,11 +31,12 @@ import os
 
 import modal
 
+import config
 from middleware.hmac import verify_hmac
 from schemas.extraction import OCRRequest, OCRResponse, DocumentArtifact
 
 
-app = modal.App("chounting-ocr-sidecar")
+app = modal.App(config.app_name())
 
 # PaddleOCR PP-OCRv4 weights live in a Modal Volume, populated ONCE by
 # populate_models() and mounted read-write at /root/.paddleocr on run_ocr.
@@ -53,7 +54,9 @@ app = modal.App("chounting-ocr-sidecar")
 # the first (cold) request pays no ~50s bcebos download. populate_models uses
 # Python stdlib (urllib+tarfile) at RUNTIME, never at build, so the build is
 # never re-triggered.
-models_volume = modal.Volume.from_name("paddleocr-models", create_if_missing=True)
+models_volume = modal.Volume.from_name(
+    config.volume_name(), create_if_missing=True
+)
 
 PADDLE_HOME = "/root/.paddleocr"
 
@@ -141,7 +144,7 @@ def populate_models() -> str:
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("modal-ocr-hmac-secret")],
+    secrets=[modal.Secret.from_name(config.secret_name())],
     volumes={PADDLE_HOME: models_volume},
 )
 @modal.fastapi_endpoint(method="POST")
