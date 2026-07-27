@@ -93,5 +93,39 @@ class TestInnerSecretKeyNotParameterized(unittest.TestCase):
         )
 
 
+class TestConfigShipsToContainer(unittest.TestCase):
+    """config.py MUST be in add_local_python_source or the container dies.
+
+    main.py does `import config` at module level, which runs INSIDE the
+    Modal container as well as locally. Modal 1.x does not automount loose
+    sibling modules — only what add_local_python_source names. Omitting
+    "config" deploys cleanly and then ModuleNotFoundError's on every
+    invocation, which is a latent PROD-deploy breakage, not just a dev one.
+
+    Caught empirically 2026-07-27 by `modal run populate_models` failing with
+    `No module named 'config'` — the unit tests above could not catch it,
+    because they import config from the local filesystem where it exists.
+    """
+
+    def test_config_is_added_as_local_python_source(self) -> None:
+        src = (pathlib.Path(__file__).parent / "main.py").read_text()
+        self.assertIn('add_local_python_source("middleware", "schemas", "config")', src)
+
+    def test_every_local_import_in_main_is_shipped(self) -> None:
+        """Generalized: each local module main.py imports must be shipped."""
+        src = (pathlib.Path(__file__).parent / "main.py").read_text()
+        here = pathlib.Path(__file__).parent
+        local = {
+            p.stem for p in here.glob("*.py") if p.stem not in ("main", "test_config")
+        } | {d.name for d in here.iterdir() if d.is_dir() and (d / "__init__.py").exists()}
+        for mod in sorted(local):
+            if f"\nimport {mod}" in src or f"\nfrom {mod} import" in src:
+                self.assertIn(
+                    f'"{mod}"', src.split("add_local_python_source(")[1].split(")")[0],
+                    f"main.py imports local module {mod!r} but it is not in "
+                    "add_local_python_source — it will ModuleNotFoundError in-container",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

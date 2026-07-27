@@ -89,7 +89,7 @@ image = (
     # containing @app decorators by default; sibling middleware/ + schemas/
     # subpackages must be explicitly mounted, otherwise container crashes
     # at cold-start with `ModuleNotFoundError: No module named 'middleware'`.
-    .add_local_python_source("middleware", "schemas")
+    .add_local_python_source("middleware", "schemas", "config")
 )
 
 
