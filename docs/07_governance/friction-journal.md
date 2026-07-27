@@ -19702,3 +19702,114 @@ hardest), taking adjacent surfaces (some coverage-test assertions, migration ADD
 pushed to origin at the operator's separate word; migrations reach staging/prod only via a further
 merge + deploy (unchanged — the whole arc stayed local-dev-only on the real ledger). This entry IS a
 codification (the N=4); the grounding-gap lesson is banked (N=1), not codified.
+
+## ENTRY: "A wrong convention in an authority doc reproduces the error indefinitely"
+
+2026-07-27. The finding that outlives the incident. `conventions/testing.md`
+recommended `pnpm test:integration <path>` as a "path-narrowed variant" for dev
+iteration (`:170`, `:202`). It does not narrow. Vitest treats positional filters
+as **OR'd alternatives**, not as an AND against the script's own arguments:
+`test` is bare `vitest run`, so `pnpm test <path>` → `vitest run <path>` and
+genuinely scopes; `test:integration` is `vitest run tests/integration`, so
+`pnpm test:integration <path>` → `vitest run tests/integration <path>`, the glob
+survives, and the whole suite runs. Measured via `vitest list` (collects without
+executing): **1259 tests vs 2**.
+
+**This was a rediscovery, not a discovery.** The mechanism was recorded at
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md` §"What we learned"
+on 2026-05-24, after it silently widened a **paid** Modal e2e run past its
+intended scope. It never propagated. For two months the canonical discipline doc
+taught the broken form while a closeout in the briefs tree documented why it was
+broken — and five other surfaces carried the same command shape, three of them
+gated paid-Modal e2e headers.
+
+**Consequence.** On 2026-07-27 the SharePoint live-e2e was fired with the
+documented command. It ran the full 244-file integration suite. Because the org
+pointed at `sharepoint_drive` was `SEED.ORG_HOLDING` — shared by the whole suite
+— every document-creating test routed through live Graph and **114 real files
+were written into a customer SharePoint library.** The spill was real. The
+remediation turned out to be nil: a presence pass over all 114 candidate
+driveItem ids returned 404 on every one, because the suite's own teardown
+deleted them on the way out (the tests' `delete` calls routed to Graph alongside
+their writes). **N = 0 of 114 still present.** That is luck of the pipeline's
+teardown, not a mitigation anyone designed — had those tests lacked teardown,
+114 orphans would have needed a hand sweep. "We got lucky on the cleanup" is not
+"the system was safe," and N=0 must not round the incident down to no-harm-done.
+
+**The named discipline: check whether the canonical doc actually teaches the
+right thing.** Individual care does not scale against a wrong authority doc — it
+reproduces the error for everyone, indefinitely, including people who verify
+carefully. The May closeout proves the knowledge existing somewhere is not
+enough; codification routing is what converts a finding into a defense, and it
+did not fire. When a closeout records a mechanism that contradicts a convention,
+propagating it to the canonical surface is the work, not an optional tidy-up.
+
+**Thread — the narrow-vs-broad trap.** Three appearances in one session of
+proving a narrow claim and treating it as the broad one: "the gate opens" ≠ "the
+run is safe" (verified the four-way `skipIf` predicate would fire, never verified
+what else the command would run); "`test:full` printed a pass" ≠ "the suite ran"
+(see the companion entry below); "N candidates" ≠ "N deletions" (the sweep TSV
+was a candidate list — treating it as a deletion list would have fired 114
+deletes at an already-empty library). Subtle enough to recur; worth naming.
+
+CODIFICATION (this entry authors it). `conventions/testing.md` §"Path-narrowing
+only works where the script carries no glob" — mechanism, the scoping command
+(`pnpm --filter @chounting/web exec vitest run <path>`), the
+`vitest list --filesOnly` verification, the `Test Files 1 passed (1)` gate, and
+both real external costs. Shipped `f1d687fc`, merged to `main` at `2b327dcc`
+(PR #14) — the correction had to reach `main` because the broken command was
+live there and billed full-suite runs to people other than its author.
+
+CARRY-FORWARDS (named, not closed). **FLAGGED LIVE-MONEY HAZARD, not tidy-up:**
+three gated Modal e2e headers still document the broken form —
+`documentPipeline.receipt.e2e.test.ts:16`,
+`documentPipeline.paymentConfirmation.e2e.test.ts:17`,
+`documentPipeline.vendorInvoice.e2e.test.ts:22` — plus
+`docs/09_briefs/post-mvp/charter-b-proven-live-plan.md:71` (historical).
+Following them bills a full-suite run the operator did not intend, which is
+exactly how the trap surfaced in May. Left to their own reviewed pass per
+ratified-contract-scope (a different arc's paid surface should not be swept in
+from this one), but tracked as an active hazard, not a cleanup. Possible
+intersection: if those e2e files exercise the same `documentPipeline` a UI
+document drop traverses, that follow-up and the queued UI dry-run are partly one
+investigation — resolve the overlap before grounding twice.
+
+LANE — the mis-scoped run was fired by WSL on the advisor's explicit "fire it,"
+given in the advisor's own voice with two checkable facts unverified (that
+`pnpm test:integration <path>` ORs rather than narrows, and that `11111111-…` is
+`SEED.ORG_HOLDING` rather than a throwaway). Accountability is shared and named
+in both directions: the advisor had the reasoning in hand and did not follow its
+own stated discipline at the moment it was least convenient; WSL had the shell,
+and both facts were seconds from being checked before typing the command.
+Neither is collateral of the other. The clean re-fire, the four-surface
+correction, and this entry are the correction; they do not erase the first run.
+
+## ENTRY: "`pnpm test:full` can reset the DB and then replay a cached suite"
+
+2026-07-27. A second green-that-proves-nothing, one layer up — in the
+push-readiness gate itself. `test:full` is `pnpm db:reset:clean && pnpm test`,
+and `pnpm test` is `turbo run test`. The reset is a plain pnpm script and always
+executes; the suite behind it is a **turbo-cached task**. So `test:full` can wipe
+and reseed the database, then replay stdout from an earlier run without executing
+a single test against it — reporting `FULL TURBO` in ~344ms.
+
+**Why it is invisible.** Observed first-hand: the replayed output was byte-identical
+in its counts to a real re-run (`1932 passed / 16 skipped` both times). A cache hit
+is indistinguishable from a pass in the summary anyone would quote. Confirmed by a
+deliberate cache-miss run — `pnpm --filter @chounting/web test`, which invokes
+`vitest run` directly with no turbo layer — executing for 300.18s and producing the
+same numbers. The mechanism is real; the numbers happening to match is what makes it
+dangerous rather than reassuring.
+
+**Consequence for the gate.** CLAUDE.md §Push readiness three-condition gate names
+"`pnpm test:full` green at HEAD" as Condition-1 evidence. That evidence is silently
+stale on any cache hit. A sub-second `test:full` reporting `FULL TURBO` is
+**non-evidence** and must not be cited as Condition 1.
+
+CARRY-FORWARD (not codified — N=1, own pass). Fix candidates, unassessed: `--force`
+in the `test:full` script; excluding `test` from turbo's cache; or a read-the-result
+step mirroring the runbook's `Test Files 1 passed (1)` / `2 passed, not 2 skipped`
+discipline. Worth confirming with a deliberate cache-miss run before trusting
+whichever is chosen. Filed as its own entry rather than a footnote to the
+mis-scoping entry above: same shape, distinct surface, and folding it in is how
+findings get lost — which is precisely the failure the companion entry documents.

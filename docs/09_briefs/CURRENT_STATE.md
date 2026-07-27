@@ -459,7 +459,11 @@ Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
   production in principle — but no live SharePoint Graph transfer has
   occurred; the gated harness (`RUN_SHAREPOINT_E2E`) throws until
   implemented against a real tenant, so nothing false-greens as
-  proven-live. Carries: (a) Layer-2 Zod admit-set DISCHARGED; (b)
+  proven-live. **[STATE AS OF 2026-06-07 — SUPERSEDED 2026-07-27: the
+  harness body landed at `77e4b520`, and the live transfer is now
+  PROVEN — see the carry-forward #2 discharge below. The two sentences
+  above are the record of what was true at this chapter's close, not
+  current status.]** Carries: (a) Layer-2 Zod admit-set DISCHARGED; (b)
   `provider_unavailable` — honest classification (the D-5 two-layer wire
   contract) + reserved `exception_reason` value landed, but the
   exception-queue ROUTING surface deferred-with-consumer to Phase-7
@@ -469,8 +473,12 @@ Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
   push pending the three-condition gate). Full record: friction-journal
   2026-06-08 Charter B real-flow closeout + retrospective at
   `docs/07_governance/retrospectives/charter-b-real-flow-retrospective.md`.
-  - **"Charter B real-flow ✓" must carry "reachable, unit-proven, live
-    transfer gated"** — it is not yet live.
+  - ~~**"Charter B real-flow ✓" must carry "reachable, unit-proven, live
+    transfer gated"** — it is not yet live.~~ **SUPERSEDED 2026-07-27.**
+    This directive is retired: `sharepoint_drive` IS live-proven as of the
+    carry-forward #2 discharge below. The qualifier it mandated would now
+    state the opposite of the truth. Kept struck-through rather than
+    deleted so the supersession is visible.
 
 - **Still-queued carries** (not part of the real-flow arc): the mailbox
   multi-attachment picking gap; the five V1 governance one-offs
@@ -478,14 +486,25 @@ Advisory map: `docs/09_briefs/post-v1-revisit-notes.md`.
   branch-protection, INV-AP-001/002 severity, Q2 re-include);
   `folder-structure.md` / `monorepo.md` refreshes. From the real-flow
   arc: the Phase-7 `provider_unavailable` routing surface + enqueue
-  coupling-wall design. **The live SharePoint e2e is now READY, not
-  PROVEN:** the gated harness body landed (Charter B PROVEN-LIVE arc,
-  `77e4b520`) — the live proof is one `RUN_SHAREPOINT_E2E=1` away — but
-  PROVEN-LIVE still requires operator runbook ops (Azure `Sites.Selected`
-  + cert + per-site grant + an org pointed at `sharepoint_drive`) + the
-  live green run, which no agent can perform. `sharepoint_drive` status:
-  **reachable, unit-proven, harness-ready, live transfer gated** —
-  "carry-forward #2 done" is NOT "SharePoint proven live."
+  coupling-wall design. **Carry-forward #2 — the live SharePoint e2e — is
+  DISCHARGED as of 2026-07-27: `sharepoint_drive` is PROVEN LIVE.** A scoped
+  run (`Test Files 1 passed (1)`, `Tests 2 passed (2)`) against a dedicated
+  throwaway org round-tripped both size paths byte-faithfully — 58 B via
+  `uploadSmall` and 4,194,305 B via `uploadLarge` — with
+  `computeHash(fetched.result.bytes) === created.content_hash` through the
+  `byteFetch` dispatch-on-row seam, not the row's stored hash. Proven
+  first-hand: app-only `Sites.Selected` cert auth, both upload paths,
+  `downloadBytes`, `delete`. The `graphIo` drive-addressing (`be0e3de5`) and
+  filename-encode (`c2dfa1d1`) fixes are no longer unit-proven-only.
+  **The discharge came on the second attempt.** The first firing used the
+  runbook's then-documented `pnpm test:integration <path>`, which does not
+  scope, and ran the full 244-file suite against `SEED.ORG_HOLDING` — writing
+  114 real files into a customer SharePoint library. A presence pass found
+  N = 0 of 114 still present (the suite's own teardown deleted them), which is
+  luck of the pipeline's teardown, not a designed mitigation. Corrections
+  shipped at `f1d687fc` + `acbb99ab`, merged to `main` at `2b327dcc` (PR #14).
+  Full record: `retrospectives/charter-b-proven-live-retrospective.md` +
+  friction-journal 2026-07-27 (two entries).
 
 ## Post-Wave-6 boundary-cleanup chapter + post-V1 doc-refresh — 2026-06-07
 
