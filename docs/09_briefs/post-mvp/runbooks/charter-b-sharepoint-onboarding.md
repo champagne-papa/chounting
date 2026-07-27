@@ -106,13 +106,69 @@ endpoint shapes in Graph Explorer for your tenant):
     SharePoint) runs the same UPDATE against prod — a separate, later,
     deliberate act, after Step 5 is green.
 
+  - **Use a DEDICATED THROWAWAY org — never a shared seed org.** Pointing a
+    seed org (`SEED.ORG_HOLDING` = `11111111-…`, `SEED.ORG_REAL_ESTATE` =
+    `22222222-…`) at live storage routes **every document-creating test in
+    the integration suite** through live Graph, because the suite shares
+    those orgs. On 2026-07-27 that wrote 114 real files into the live
+    library in a single run. Create a fresh random org id for this.
+  - Provisioning a throwaway org is **four statements, not one** — the
+    harness needs an `organizations` row (FK target for `source_documents`,
+    `ingest_batches`, `org_settings`), a `memberships` row for the
+    `makeTestContext` caller, and only then the storage columns:
+
   ```sql
+  BEGIN;
+  INSERT INTO organizations (
+    org_id, name, legal_name, industry, industry_id, business_structure,
+    functional_currency, fiscal_year_start_month
+  ) VALUES (
+    '<fresh-random-uuid>', 'SharePoint E2E Throwaway (DO NOT REUSE)',
+    'SharePoint E2E Throwaway Ltd.', 'holding_company',
+    (SELECT industry_id FROM industries WHERE slug = 'holding_company'),
+    'corporation', 'CAD', 1
+  ) ON CONFLICT (org_id) DO NOTHING;
+
+  INSERT INTO memberships (user_id, org_id, role, role_id, status, is_org_owner)
+  VALUES (
+    '00000000-0000-0000-0000-000000000002',    -- SEED.USER_CONTROLLER
+    '<fresh-random-uuid>', 'controller',
+    (SELECT role_id FROM roles WHERE role_key = 'controller'), 'active', true
+  ) ON CONFLICT (user_id, org_id) DO NOTHING;
+
+  -- UPDATE, not INSERT: the org_settings row already exists. The
+  -- organizations_create_org_settings trigger auto-creates it on the
+  -- INSERT above, defaulted to 'supabase_storage'. An INSERT here either
+  -- errors on the PK or silently no-ops, leaving the org on
+  -- supabase_storage — the "provisioning looked fine but didn't take"
+  -- failure. Confirm the statement tag reads UPDATE 1, not UPDATE 0.
   UPDATE org_settings
      SET default_storage_provider = 'sharepoint_drive',
          sharepoint_site_id = '<site id>',
          sharepoint_drive_id = '<drive id>'
-   WHERE org_id = '<org>';
+   WHERE org_id = '<fresh-random-uuid>';
+  COMMIT;
   ```
+
+  Verify table-wide, not just by org id — join `organizations` so the row
+  names itself, and confirm **exactly one** org is on `sharepoint_drive`
+  and it is the throwaway:
+
+  ```sql
+  SELECT o.org_id, o.name, s.default_storage_provider
+    FROM org_settings s JOIN organizations o USING (org_id)
+   WHERE s.default_storage_provider = 'sharepoint_drive';
+  ```
+
+  **Lifecycle.** A throwaway org survives `pnpm db:seed` (`dev.sql` deletes
+  only the two `(DEV)`-named orgs) but **NOT** `pnpm db:reset` /
+  `db:reset:clean`. If a reset happens between provisioning and the run,
+  re-provision first or Step 5 fails "not provisioned".
+
+  **Revert when done.** Flip the org back to `supabase_storage` with both
+  ids NULL as soon as the run is green. While any org points at
+  `sharepoint_drive`, a stray `pnpm test` / `test:full` can reach live
+  Graph.
 
 **Done is not "the resolver stops throwing"** (necessary, not sufficient). The
 org is provisioned-and-proven only when **Step 5's live e2e is green**: bytes
@@ -180,9 +236,34 @@ suite still skips by default.
 passed as `SHAREPOINT_E2E_ORG_ID`, carrying the real tenant site/drive ids.
 
 ```bash
-cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> pnpm test:integration \
+RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<throwaway-org> \
+  pnpm --filter @chounting/web exec vitest run \
   tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
 ```
+
+**Do NOT use `pnpm test:integration <path>` — it does not scope.** The script
+is `vitest run tests/integration`, and a positional path is **OR'd** with that
+glob rather than narrowing it, so the whole integration suite runs: measured at
+**1259 tests collected** versus **2** for the command above. On 2026-07-27 this
+is what turned a two-file live-proving run into a 244-file suite run that wrote
+114 real files into the live library. (The trap is not new — it was recorded at
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md` §"What we learned"
+after it caused an over-scoped paid Modal run, and never propagated here.)
+Note the distinction: `pnpm test <path>` **does** scope, because the `test`
+script carries no glob of its own; only `test:integration` does.
+
+**Verify the scoping before trusting any result.** The failure mode is a
+command that *looks* scoped and isn't, so check the selection, not just the
+pass count — `vitest list` collects without executing:
+
+```bash
+pnpm --filter @chounting/web exec vitest list --filesOnly \
+  tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
+```
+
+Expect exactly **1 file**. At run time the header must read `Test Files 1
+passed (1)`; anything above 1 means the scoping regressed — stop and fix the
+command before reading a single result.
 
 **Then read the result line: it must say `2 passed`, not `2 skipped`.** The two
 cases are the ≤4 MiB round-trip (`uploadSmall`) and the >4 MiB case

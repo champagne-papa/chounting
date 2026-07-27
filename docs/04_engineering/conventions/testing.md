@@ -167,8 +167,10 @@ iteration.
 
 **Discipline rule.** Match command to invocation shape:
 
-- Bare `pnpm test` (or `pnpm test:integration`, or path-narrowed
-  variants like `pnpm test path/to/file.test.ts`) for dev iteration.
+- Bare `pnpm test`, or the path-narrowed variant
+  `pnpm test path/to/file.test.ts`, for dev iteration. **`pnpm
+  test:integration <path>` does NOT narrow** — see "Path-narrowing
+  only works where the script carries no glob" below.
 - `pnpm test:full` for push-readiness Condition-1 evidence capture
   and any empty-state-sensitive full-suite sweep.
 - Manual `pnpm db:reset:clean` between dev iterations when
@@ -198,8 +200,40 @@ change.
 
 **How to apply.**
 
-- At dev-iteration time: bare `pnpm test [path]` or
-  `pnpm test:integration [path]`.
+- At dev-iteration time: bare `pnpm test [path]`. Do NOT use
+  `pnpm test:integration [path]` — it runs the whole suite.
+
+**Path-narrowing only works where the script carries no glob.**
+Vitest treats positional filters as OR'd alternatives, not as an
+AND against the script's own arguments. `apps/web`'s `test` script
+is bare `vitest run`, so `pnpm test <path>` becomes
+`vitest run <path>` and genuinely narrows. But `test:integration`
+is `vitest run tests/integration`, so `pnpm test:integration <path>`
+becomes `vitest run tests/integration <path>` — the glob stays and
+the whole integration suite runs. Measured 2026-07-27:
+**1259 tests collected** for the two-filter form versus **2** for
+the single-path form.
+
+To scope to one file, bypass the globbed script:
+
+```bash
+pnpm --filter @chounting/web exec vitest run <path>
+```
+
+Verify the scoping rather than trusting it — `vitest list
+--filesOnly <path>` collects without executing, and the run header
+must read `Test Files 1 passed (1)`. The failure mode is a command
+that *looks* scoped and isn't, so a green count proves nothing
+until the file count is checked.
+
+**Why this is load-bearing.** Twice this trap has produced real
+external cost: an over-scoped paid Modal e2e run (2026-05-24, see
+`docs/09_briefs/phase-8/2026-05-24-needs-fixture-closeout.md`
+§"What we learned") and a SharePoint live-e2e run that wrote 114
+real files into a customer library (2026-07-27). The second
+happened because this convention still recommended the broken
+form — the mechanism had been documented in a closeout for two
+months without reaching the canonical surface.
 - At push-readiness time: `pnpm test:full` (the Pre-push sanity
   sequence in CLAUDE.md names this as Condition-1 evidence).
 - When accumulation surfaces during dev iteration as test failure:

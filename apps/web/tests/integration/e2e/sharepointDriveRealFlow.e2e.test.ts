@@ -7,11 +7,19 @@
 // Requires the onboarding runbook complete:
 //   docs/09_briefs/post-mvp/runbooks/charter-b-sharepoint-onboarding.md
 //   — Azure Sites.Selected app + client cert (GRAPH_* env) + per-site grant +
-//     an org pointed at sharepoint_drive (default_storage_provider +
-//     sharepoint_site_id/drive_id) via SHAREPOINT_E2E_ORG_ID.
+//     a DEDICATED THROWAWAY org pointed at sharepoint_drive
+//     (default_storage_provider + sharepoint_site_id/drive_id) via
+//     SHAREPOINT_E2E_ORG_ID. NEVER a shared seed org: the suite shares
+//     SEED.ORG_HOLDING, so pointing it at live storage routes every
+//     document-creating test through live Graph (114 real files, 2026-07-27).
 // Then:
-//   cd apps/web && RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<org> \
-//     pnpm test:integration tests/integration/e2e/sharepointDriveRealFlow.e2e
+//   RUN_SHAREPOINT_E2E=1 SHAREPOINT_E2E_ORG_ID=<throwaway-org> \
+//     pnpm --filter @chounting/web exec vitest run \
+//     tests/integration/e2e/sharepointDriveRealFlow.e2e.test.ts
+//
+// NOT `pnpm test:integration <path>` — the script is `vitest run
+// tests/integration` and the positional path is OR'd with that glob, so the
+// whole suite runs (1259 tests vs 2). Confirm `Test Files 1 passed (1)`.
 //
 // Proof shape (charter §4 fix-direction): exercise the byteFetch SEAM and
 // RECOMPUTE the fetched bytes — NOT a verifyIntegrity shortcut (a different
