@@ -246,6 +246,34 @@ prod.
 | Buckets | `select id from storage.buckets` |
 | Extensions | `select extname from pg_extension order by 1` |
 
+### Tooling gotcha — `gh pr edit` fails silently on this repo (2026-07-27)
+
+`gh pr edit <n> --body-file …` errors with a **Projects (classic)
+deprecation** message from `repository.pullRequest.projectCards` and **does
+not apply the edit**. The output reads like a warning on a completed command;
+it is a hard failure. A caller who trusts the exit will believe the PR was
+updated when it was not.
+
+Use the REST API instead:
+
+```bash
+gh api -X PATCH repos/<owner>/<repo>/pulls/<n> -F body=@body.md
+```
+
+Then **verify against the live body**, not the command's exit — the whole
+point is that the exit is untrustworthy here:
+
+```bash
+gh api repos/<owner>/<repo>/pulls/<n> --jq .body > live.md
+diff live.md body.md   # expect only GitHub's appended trailing newline
+```
+
+`--body-file` / this PATCH touch the body only; the PR title is unaffected.
+
+*Found while reconciling PR #13 (classify-failure arc). The first edit
+reported failure-as-noise and silently no-op'd; caught by diffing the live
+body afterward.*
+
 ---
 
 *Origin: forwarded-mailbox→production arc, 2026-06-11. The systemic fix
