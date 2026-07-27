@@ -1,8 +1,8 @@
 # classifyFailure — permanent-failure terminalization
 
-**Status:** v3 — brainstorm RESOLVED, self-review applied. No migration
-authored, no code changed, no deploy. One item open, and it blocks the deploy:
-§6's diagnostic.
+**Status:** v4 — brainstorm RESOLVED, self-review applied, **§6 diagnostic RUN
+and RESOLVED BENIGN 2026-07-27**. No migration authored, no deploy. The sole
+remaining deploy gate is the §5 three-CHECK migration bundle.
 
 **Implementation order is not the section order.** §2.4.1 is a hard
 prerequisite: the wrapper-rethrow fix ships first, alone, with its own test.
@@ -13,11 +13,12 @@ Every enumeration mapping in §2 is unobservable until it lands.
 labelled retryable, re-run hourly by the stranded-case sweep, never surfaced
 to a human.
 
-**Conditional scope:** §6's diagnostic is scope-determining, not confirmatory.
-Until one of its queries returns empty, this design is provisionally
-**two-part**: forward-prevention (this doc) plus a backfill/triage pass for
-already-stranded cases. Forward-prevention does not rescue a case that has
-looped since 2026-07-13. §9 holds the conditional half.
+**Conditional scope — RESOLVED 2026-07-27 to ONE-PART.** §6's diagnostic was
+scope-determining, not confirmatory. It has now run: query 1 returned 9 rows,
+query 2 empty, and the two **agree** — the 9 are the by-design content-duplicate
+floor, not stranded cases (§6). This design is therefore **one-part**:
+forward-prevention only. §9's backfill half does **not** activate, and must
+explicitly **exclude** that population (§9.3).
 
 ---
 
@@ -563,20 +564,47 @@ earlier drafts are retired to avoid implying three separable applies.
 
 ---
 
-## 6. Diagnostic — DEPLOY-BLOCKING TASK
+## 6. Diagnostic — RUN 2026-07-27, RESOLVED BENIGN
 
-> **TASK — blocks deploy, not just the estimate.**
-> **Owner:** UNASSIGNED — needs someone with prod database + Vercel log access.
-> **Action:** run both queries below; record results in this section.
-> **Blocks:** §5 step 6 (the deploy). Not merely §9's scope.
-> **Why it blocks:** per §9.1, shipping forward-prevention alone hands the
-> longest-looping cases a *fresh* grace period. If the stranded set is
-> non-empty, part one without part two is actively wrong.
+> **RESULT — no longer a deploy gate.**
+> **Ran:** 2026-07-27 against prod.
+> **Outcome:** query 1 non-empty (9 rows), query 2 empty — **and the two
+> agree.** The 9 `received`-state cases are the by-design content-duplicate
+> floor, **not** a stranded population.
+> **Consequence:** §5 step 6 is no longer blocked by this. The sole remaining
+> deploy gate is the §5 three-CHECK migration bundle.
+> **§9:** does **not** activate. The backfill must **exclude** this population
+> (§9.3).
 
-Neither party to this design can run it: my credential-path inspection was
-denied, and the founder does not run prod SQL from the session. This is the one
-item on the board that cannot be resolved by reasoning about bytes — it needs
-access, not analysis.
+The 9 cases (org `f0fa6501…`, created 2026-06-11/12) are `B3-D` content
+duplicates — the `.eml` / Outlook-signature-image class. **No stranding, no
+loop, no spend, no customer impact:** their originals were already processed,
+so no outreach is warranted.
+
+**Confirmed four ways.**
+
+1. **Code.** `sweepOneCase` short-circuits at the `dedup_carveout` exit
+   *before* `runIngest`, so these cases are swept hourly but never re-ingested
+   and never emit `pipeline_*` audit events.
+2. **prod-readiness §5 caveat** (2026-06-14,
+   `docs/05_operations/prod-readiness-checklist.md:111-119`) — documents this
+   exact floor, its mechanism, and the dup class.
+3. **Live `SweepReport` telemetry, 2026-07-27** — 9 consecutive hourly prod
+   fires reading `B3-D: 9 / B4: 0 / b3_reruns_executed: 0`, `env=production`.
+4. **Query 2's emptiness is correct, not an instrument miss.** The four action
+   names and the target table (`audit_log`) were verified against the code to
+   match the query, so with no B4 and no re-runs there are no `pipeline_*`
+   events that *could* exist.
+
+**Invariant caveat.** The floor's *existence* is by design; the **number 9 is
+an empirical reading** (measured 2026-06-14, re-confirmed 2026-07-27). Do not
+treat 9 as a designed constant — the health signal is new `received` cases
+accumulating *above* the floor.
+
+Full resolution record: `1d8ad6e1` on `docs/classify-failure-arc-closeout`
+(`CURRENT_STATE.md`, CF-1).
+
+The queries below are retained verbatim as the reproducible instrument.
 
 ```sql
 -- Are any cases already looping?
@@ -645,22 +673,24 @@ distinction. Third application of §2.1.1:
 | `AGENT_AUTH_FAILED`, key-not-configured | `unavailable` | `provider_unavailable` |
 | `AGENT_REQUEST_INVALID`, malformed input, corrupt PDF | `permanent_malformed` | `pipeline_permanent_failure` |
 
-**Open, and blocking the deploy rather than the design:**
+**Closed 2026-07-27 — the diagnostic ran:**
 
-**§6's diagnostic is unrun, and neither party can currently run it.** My
-credential-path inspection was denied; the founder cannot run prod SQL from the
-session either. It is therefore not assigned-and-pending — it is genuinely
-blocked on someone obtaining prod database / Vercel log access.
+**§6's diagnostic is RUN and RESOLVED BENIGN.** Query 1 returned 9 rows, query
+2 empty, and the two agree: the 9 are the by-design `B3-D` content-duplicate
+floor, not a stranded population. Confirmed four ways (code, prod-readiness §5
+caveat, live `SweepReport` telemetry `B3-D: 9 / B4: 0 / b3_reruns_executed: 0`
+`env=production`, and query 2's verified-correct emptiness). See §6.
 
-Consequence: this arc **cannot be declared one-part**. §9 stays live-conditional.
-Per §9.1 the two-part case is not merely bigger — deploying part one alone is
-actively wrong for the stranded population, so the diagnostic gates the deploy,
-not just the estimate.
+Consequence: this arc **is one-part**. §9 does not activate; its backfill must
+**exclude** this population (§9.3). The diagnostic no longer gates the deploy —
+the sole remaining gate is the §5 three-CHECK migration bundle.
 
-> **CARRY-FORWARD 1 — stranded-case diagnostic.**
-> **Owner: UNASSIGNED.** Needs prod database + Vercel log access.
-> **Blocks:** §5 step 6 (deploy).
-> **Nature of blocker:** access, not analysis.
+> **CARRY-FORWARD 1 — stranded-case diagnostic. RESOLVED 2026-07-27 (benign).**
+> **Was:** Owner UNASSIGNED; blocked on prod database + Vercel log access.
+> **Outcome:** ran against prod; 9 `received` cases are the by-design duplicate
+> floor. No stranding, no loop, no spend, no customer impact.
+> **Blocks:** nothing. §5 step 6 is cleared of this gate.
+> **Record:** `1d8ad6e1` on `docs/classify-failure-arc-closeout`.
 
 ### 7.1 CARRY-FORWARD 2 — `delivery-model.md` describes a dead branch
 
@@ -711,10 +741,21 @@ uncoupled from this fix.
 
 ---
 
-## 9. CONDITIONAL — backfill / triage half
+## 9. CONDITIONAL — backfill / triage half — **RESOLVED TO EXCLUDED 2026-07-27**
 
-**Activates only if §6 returns non-empty. Marked conditional; not designed in
-detail until the diagnostic decides.**
+> **DOES NOT ACTIVATE.** §6 ran on 2026-07-27. Query 1 *was* non-empty (9 rows)
+> — but benign: those 9 are the by-design content-duplicate floor, not stranded
+> cases. The trigger condition below was written assuming non-empty ⇒ stranded;
+> that inference does not hold for this population. **See §9.3 for the binding
+> exclusion.**
+>
+> §9.1 and §9.2 are **retained unchanged** — their reasoning stays correct for
+> any genuinely-stranded population found later, and the amnesty argument is
+> exactly why the exclusion in §9.3 has to be explicit rather than assumed.
+
+**Original trigger (superseded — see above):** Activates only if §6 returns
+non-empty. Marked conditional; not designed in detail until the diagnostic
+decides.
 
 ### 9.1 The amnesty inversion — why this is not optional cleanup
 
@@ -745,3 +786,25 @@ Shape if activated:
   not behaviour.
 - Spend bound: the triage pass must **not** re-run ingestion for cases it
   escalates — escalate from the recorded failure, do not re-derive it.
+
+### 9.3 BINDING EXCLUSION — the B3-D duplicate floor (added 2026-07-27)
+
+**Any backfill or triage pass MUST exclude `B3-D` content-duplicate cases.**
+
+These are not stranded work. They are recognised duplicates whose originals
+were already processed, deliberately carved out read-only at 0 spend. Routing
+them through `enqueue_terminal_failure_with_audit` would push nine junk items
+into a human review queue — the precise opposite of what terminalization is
+for, and a direct harm to the reviewer this arc exists to serve.
+
+The exclusion is stated as a rule rather than left implicit because §9.1's
+amnesty argument creates pressure in the wrong direction: it argues that
+*aged, never-escalated* cases are the most urgent to rescue, and these 9 match
+that description on every surface signal — old, at `received`, never surfaced.
+The one thing that disqualifies them is invisible to those signals and visible
+only in the bucket. **Filter on the `B3-D` / `dedup_carveout` outcome, not on
+age or state.**
+
+If a future diagnostic finds a genuinely-stranded population, §9.1 and §9.2
+govern it unchanged; this exclusion narrows the set, it does not retire the
+design.
