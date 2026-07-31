@@ -123,13 +123,42 @@ describe('Phase 8 chunk 1 — sidecar deployment validation harness', () => {
     // N=5 — Modal image explicitly mounts sibling Python packages.
     //
     // Session 42 §2.1 N=5: Modal copies only the file containing
-    // @app decorators by default. middleware/ + schemas/ subpackages
-    // must be explicitly mounted via .add_local_python_source(),
-    // otherwise cold-start fails with ModuleNotFoundError.
+    // @app decorators by default. Sibling packages/modules must be
+    // explicitly mounted via .add_local_python_source(), otherwise
+    // cold-start fails with ModuleNotFoundError.
+    //
+    // 2026-07-31: assertion widened from the exact two-arg literal
+    // '.add_local_python_source("middleware", "schemas")' to a
+    // per-module membership check. The literal made every LEGITIMATE
+    // addition a failure, and that is exactly what happened: the
+    // config.py split (a937858a) added a third local module, and this
+    // test then failed for the wrong reason — it read as "the mount is
+    // broken" when the mount was correct and the assertion was stale.
+    //
+    // The wider history is the point of this comment. This guard was
+    // written for precisely the ModuleNotFoundError it now fences, and
+    // it did NOT catch the config.py omission that shipped to main:
+    // nothing ran it. CI defines five jobs (typecheck, lint, adr,
+    // intent-producers, build) and none invokes vitest, so "all checks
+    // pass" never included this test. The bug surfaced instead at a
+    // live `modal run` against the dev sidecar. Keep the assertion
+    // membership-based so it survives future modules — a guard that
+    // fails on correct changes gets edited away, and then it guards
+    // nothing.
     // -----------------------------------------------------------------
-    it('N=5 — sidecar-ocr/main.py image config mounts middleware + schemas via add_local_python_source', () => {
+    it('N=5 — sidecar-ocr/main.py mounts EVERY local module it imports via add_local_python_source', () => {
       const mainPy = readSidecarFile('main.py');
-      expect(mainPy).toContain('.add_local_python_source("middleware", "schemas")');
+      const call = mainPy.match(/\.add_local_python_source\(([^)]*)\)/);
+      expect(call, 'main.py must call .add_local_python_source(...)').not.toBeNull();
+
+      const mounted = [...(call?.[1].matchAll(/"([^"]+)"/g) ?? [])].map((m) => m[1]);
+      for (const required of ['middleware', 'schemas', 'config']) {
+        expect(
+          mounted,
+          `main.py imports "${required}" at module level; unmounted modules ` +
+            'ModuleNotFoundError at container start',
+        ).toContain(required);
+      }
     });
 
     // -----------------------------------------------------------------
