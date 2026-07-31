@@ -200,7 +200,15 @@ exception=bank_detail_change_suspected/open` — one row, three axes.
 
 ---
 
-## 4. Build item #1 — the document-bytes endpoint (critical path)
+## 4. Build item #1 — the document-bytes endpoint (BUILT — merged 2026-07-31)
+
+**Status: shipped.** `20b1c63b` (PR #19), merged to `main` at `8a96a86e`, as
+specified below (302 redirect). Added beyond this spec: an org-filtered read
+(`getStorageProviderForOrgSourceDocument`) because the read-side membership
+guard proves the CALLER belongs to the named org, not that the DOCUMENT does —
+without it a member of org A could mint a signed URL for org B's document by
+id. Cross-org now returns NOT_FOUND (never 403; no existence leak),
+mutation-verified. Screens 4/5/6/7 are unblocked.
 
 Everything in the review half waits on this.
 
@@ -303,8 +311,7 @@ touches that state machine. The rail arrays do not.
    editable inputs at all.
 
 **Foundation — the review half cannot render without these**
-3. **Document-bytes endpoint** (§4). Decide redirect-vs-proxy; recommendation
-   redirect. Unblocks screens 4/5/6/7.
+3. ~~**Document-bytes endpoint**~~ — **DONE** (§4; `20b1c63b`, PR #19).
 4. **PDF viewer integration.** Library choice, bundle cost, zoom/paginate for
    screen 7. Depends on #3.
 
@@ -325,14 +332,101 @@ touches that state machine. The rail arrays do not.
 
 ---
 
+## 7b. Edit-fields scoping outcome (added 2026-07-31, after §7 was written)
+
+A read-only pass answered §8 Q3. It inverted the premise the question was
+framed on, so the conclusion differs from what §0.2 anticipated.
+
+### The pipeline has a cheap partial re-run — and it is why edit is hard
+
+`buildReviewPreview` (`reviewPreview.ts:3-18`) is a **review-time rebuild**:
+*"rebuild, not persist… no Modal, no Claude, no writes."* On every review load
+it re-runs Stage 4 extraction, Stage 5 `matchVendor` (`:312`), and Stage 7
+`buildProposal` (`:41`).
+
+So "re-run matching" is **free and automatic**, not a pipeline re-entry. That
+half is good news, and it means `vendor_name` edits are not blocked by re-run
+cost.
+
+But the fields it rebuilds come from OCR, not from any stored value —
+`reviewPreview.ts:428-429`:
+
+```ts
+const ocrText = extractOcrText(artifact);
+const extracted = tierAFieldsFor(caseRow.document_type as string, ocrText);
+```
+
+A grep for `confirmed|override|human|edited` across that file returns **zero
+hits**. Nothing reads `extracted_invoices.extracted_fields` back for review or
+post. `approve-post` posts from this rebuild (`approve-post/route.ts:149` →
+`buildPostBillInput`).
+
+**Consequence — the load-bearing one.** An edit persisted today would be
+silently discarded at the next preview, and the ledger would post the
+OCR-derived value. The endpoint is therefore **larger** than a field write: it
+requires an override-precedence layer that both `buildReviewPreview` and
+`buildPostBillInput` consult, inverting the deliberate "rebuild, not persist"
+decision (brief D-2). Scoping this as "wire the UI to a value flow the backend
+already honours" would ship edits that appear to save and then vanish.
+
+### Field consumption — PROVEN for vendor_invoice, NOT for other types
+
+Read from `buildPostBillInput` (`ingestDocument.ts:1278-1360`):
+
+| Field | Class |
+|---|---|
+| `amount` | consumed, required (null-guard at `:1291`) |
+| `accounting_date` / `issue_date` | consumed, required (`:1296-1302`) |
+| `vendor_invoice_number` | consumed → `bill_number` |
+| `due_date` | consumed |
+| `vendor_name` | **NOT consumed** — post reads `card.vendor_match.vendor_id`, so an edited name changes the display and not the posted vendor |
+| `tax_amount` | not consumed — `tax_amount_total: '0'` hardcoded |
+| `currency` | not consumed — `currency: 'CAD'` hardcoded |
+| `line_items`, `account_code`, `tax_code_id` | not consumed — single synthetic line; account from matched rule or org default |
+
+**This table is proven for `vendor_invoice` only.** `buildRecordPaymentInput`
+(`:1408+`) consumes a DIFFERENT set — `cited_bill_id`, `amount` — so the
+boundary is **per-document-type**. Receipt and payment_confirmation paths are
+unmapped. Treating this table as universal would ship a wrong "safe write" on a
+non-invoice document.
+
+### Tripwires do not re-run at review time
+
+`looksLikeBankDetailPresent` / `looksLikeStatementNotInvoice` are referenced 5×
+in `ingestDocument.ts` and **zero** times in `reviewPreview.ts` (its one
+apparent hit, `:136`, is a comment about a dedup-triple probe). So an edited
+`vendor_name` would be re-matched but would **not** re-fire
+`bank_detail_change_suspected` or duplicate detection. That is the real reason
+to defer `vendor_name` — a fraud-check bypass, not re-run cost.
+
+### v1 scope
+
+| | |
+|---|---|
+| **The work** | The override-precedence layer. Until it exists no edit persists, and every field is equally blocked. |
+| **Ship after it** | `amount`, `accounting_date`, `vendor_invoice_number`, `due_date` (vendor_invoice) — consumed by post, no tripwire implication |
+| **Defer** | `vendor_name` — technically works (auto re-match) but bypasses pipeline-only tripwires |
+| **Do not build** | `tax_amount`, `currency`, `line_items`, `account_code` — not consumed; editing them is theatre |
+
+### Two gates before the endpoint is built
+
+1. **Design the override layer.** Not "where does the edit persist" — nothing
+   reads a persisted field today, so the write target is a design decision, not
+   a discovery. It must define precedence against the rebuild and be honoured by
+   both the preview and the post path.
+2. **Prove the field boundary per document type.** The table above is read from
+   code for `vendor_invoice`. Receipt and payment_confirmation are unmapped, and
+   `buildRecordPaymentInput` already demonstrates the sets differ.
+
 ## 8. Open questions
 
 1. **Redirect or proxy** for the bytes endpoint (§4)? Recommendation: redirect.
 2. **Amber flagging** — defer to hard-failure-only, or fund field-to-line
    attribution (§1)?
-3. **Edit-fields in scope** (§0.2)? This is "do we build a mutation endpoint,"
-   including validation, audit, and whether an edit re-runs matching — not a UI
-   checkbox.
+3. ~~**Edit-fields in scope**~~ — **ANSWERED, see §7b.** The premise inverted:
+   re-matching is free (the review rebuild already does it), but nothing reads a
+   persisted field back, so the endpoint needs an override-precedence layer and
+   is LARGER than a field write. Two gates remain in §7b.
 4. **Queue modelling** — one row per case, and how is the
    (state × exception × post_status) tuple rendered (§2)?
 5. **SharePoint inline preview** — `mode` is unenforceable on Graph (§4 Watch).
