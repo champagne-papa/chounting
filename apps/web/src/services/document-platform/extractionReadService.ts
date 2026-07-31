@@ -45,6 +45,52 @@ export async function getStorageProviderForSourceDocument(
   return row.storage_provider as StorageProviderEnum;
 }
 
+/**
+ * Read a source_document's storage_provider for the preview/download
+ * read site, ORG-FILTERED.
+ *
+ * Distinct from getStorageProviderForSourceDocument above, which filters
+ * by id ALONE. That is correct for byteFetch (an internal pipeline stage
+ * whose org gating happened upstream at Stage 0), but NOT for a route
+ * reachable by any authenticated org member: filtering by id alone would
+ * let a member of org A mint a signed URL for org B's document by id.
+ * The membership check a read-side route performs
+ * (ctx.caller.org_ids.includes(orgId)) proves the CALLER belongs to the
+ * org they named — not that the DOCUMENT does.
+ *
+ * Org-filtered rather than fetch-then-compare so a foreign org's
+ * source_document_id misses identically to a nonexistent one (NOT_FOUND,
+ * never 403) — the no-existence-leak discipline this module's header
+ * describes.
+ *
+ * Read-only; no withInvariants (INV-SERVICE-001 read asymmetry).
+ */
+export async function getStorageProviderForOrgSourceDocument(
+  orgId: string,
+  sourceDocumentId: string,
+): Promise<StorageProviderEnum> {
+  const db = adminClient();
+  const { data: row, error } = await db
+    .from('source_documents')
+    .select('storage_provider')
+    .eq('id', sourceDocumentId)
+    .eq('org_id', orgId)
+    .maybeSingle();
+  if (error) {
+    throw new ServiceError(
+      'READ_FAILED',
+      `[documentPreview] source_documents read failed: ${error.message}`,
+    );
+  }
+  if (!row) {
+    throw new ServiceError(
+      'NOT_FOUND',
+      `[documentPreview] source_document ${sourceDocumentId} not found`,
+    );
+  }
+  return row.storage_provider as StorageProviderEnum;
+}
+
 export interface PriorDocumentByHashInput {
   org_id: string;
   source_document_id: string;
