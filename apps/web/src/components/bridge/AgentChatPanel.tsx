@@ -939,7 +939,7 @@ function ProductionChat({
               ? 'Add a message or attach a file to send'
               : undefined
           }
-          className="bg-emerald-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="whitespace-nowrap bg-emerald-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="agent-send"
         >
           {submitting
