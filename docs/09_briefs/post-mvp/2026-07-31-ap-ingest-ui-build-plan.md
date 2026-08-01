@@ -408,12 +408,56 @@ to defer `vendor_name` — a fraud-check bypass, not re-run cost.
 | **Defer** | `vendor_name` — technically works (auto re-match) but bypasses pipeline-only tripwires |
 | **Do not build** | `tax_amount`, `currency`, `line_items`, `account_code` — not consumed; editing them is theatre |
 
-### Two gates before the endpoint is built
+### Correction (2026-08-01): the rebuild has TWO paths, not one
 
-1. **Design the override layer.** Not "where does the edit persist" — nothing
-   reads a persisted field today, so the write target is a design decision, not
-   a discovery. It must define precedence against the rebuild and be honoured by
-   both the preview and the post path.
+§7b above states flatly that the review surface re-derives fields from OCR.
+**That is true for single-invoice cases and false for multi-invoice ones.**
+The blanket claim was generalized from the single-invoice path without reading
+the other; correcting it here rather than editing the original, so the error
+and its correction both stay visible.
+
+| Case type | Field source at review | Evidence |
+|---|---|---|
+| **Multi-invoice (α)** | reads **stored** `α.extracted_fields` — *"no re-extraction"* | `reviewPreview.ts:67`, `:279-281` |
+| **Single-invoice** | **re-extracts from OCR** via `tierAFieldsFor` | `reviewPreview.ts:428-429` |
+
+The split rule is stated at `reviewPreview.ts:281`: *"Only multi-invoice cases
+carry α (T2c writes N≥2; single-invoice writes none)."*
+
+**Why it matters for the override design.** The override is not one problem
+with one shape:
+
+- **α path — the easier half.** The review surface already reads stored
+  `extracted_fields`, so an override written there has somewhere to live *and*
+  is already consulted on the read side. The work is a write path plus
+  precedence.
+- **Single-invoice path — the harder half.** There is no α row at all, and the
+  rebuild re-derives from OCR, so an override is discarded no matter where it
+  is stored **until post is changed to read it**. Here "design a store" also
+  means "change what the post path reads" — a larger change than the α case,
+  and the one that inverts the deliberate "rebuild, not persist" decision
+  (brief D-2).
+
+Sizing the endpoint off the α path alone would under-scope it by the whole
+single-invoice half.
+
+### Gates before the endpoint is built
+
+1. **Design the override layer — net-new, confirmed on BOTH sides.**
+   - *Read side:* nothing consumes an override — a grep for
+     `confirmed|override|human|edited` in `reviewPreview.ts` returns zero.
+   - *Write side:* `extracted_invoices` is **insert-only** — a repo-wide grep
+     for `update|upsert` against it returns nothing; the sole post-creation
+     mutation is `postExtractedInvoice` → `post_extracted_invoice_with_audit`,
+     which writes only `posted_bill_id` / `post_status`;
+     `createExtractedInvoice` has exactly one caller
+     (`ingestDocument.ts:254`, the pipeline).
+   - No override/confirmed-value table exists in the schema.
+
+   So this is a **design pass, not a wiring pass**: there is no existing store
+   to connect and no orphaned mechanism to investigate. Design where an edit
+   persists, how precedence works against the rebuild, and — per the correction
+   above — how the single-invoice path's post read changes to honour it.
 2. **Prove the field boundary per document type.** The table above is read from
    code for `vendor_invoice`. Receipt and payment_confirmation are unmapped, and
    `buildRecordPaymentInput` already demonstrates the sets differ.
