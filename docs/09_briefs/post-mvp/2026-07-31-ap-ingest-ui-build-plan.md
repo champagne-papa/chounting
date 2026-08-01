@@ -458,9 +458,70 @@ single-invoice half.
    to connect and no orphaned mechanism to investigate. Design where an edit
    persists, how precedence works against the rebuild, and — per the correction
    above — how the single-invoice path's post read changes to honour it.
-2. **Prove the field boundary per document type.** The table above is read from
-   code for `vendor_invoice`. Receipt and payment_confirmation are unmapped, and
-   `buildRecordPaymentInput` already demonstrates the sets differ.
+2. ~~**Prove the field boundary per document type.**~~ **DISCHARGED
+   2026-08-01 — see §7c.**
+
+## 7c. Gate-2 discharged — the per-type field boundary, proven
+
+Read 2026-08-01, one consumer at a time. Every row below is grounded in that
+type's OWN consumer; no row is carried over from another type's reading. That
+constraint is the point: generalizing `vendor_invoice`'s table — the error that
+produced §7b's correction and this plan's two prior amendments — would have
+missed four fields and invented four others.
+
+### Two structural corrections to the question itself
+
+1. **The post consumer is keyed on `proposed_action`, not `document_type`**
+   (`approve-post/route.ts:166, 203`). The map is
+   *type -> proposal builder -> action -> consumer*, not type -> consumer.
+2. **Of the 18 `document_type` enum values, only 3 have extractors**
+   (`extractFields.ts:40-46`) and only **2** reach a post consumer.
+
+### The boundary
+
+| Type | Proposal builder | `proposed_action` | Post consumer | Fields consumed |
+|---|---|---|---|---|
+| `vendor_invoice` | `buildVendorInvoiceProposal` (`proposalBuilder.ts:50`) | `post_bill` (`:223`) | `buildPostBillInput` (`ingestDocument.ts:1278-1360`) | `amount`*, `accounting_date`/`issue_date`*, `vendor_invoice_number`, `due_date` |
+| `payment_confirmation` | `buildPaymentConfirmationProposal` (`:53`) | `record_bill_payment` (`:255`) | `buildRecordPaymentInput` (`ingestDocument.ts:1408-1466`) | `amount`*, `cited_bill_id`+, `payment_date`, `payment_method`, `payment_reference` |
+| `receipt` | `buildReceiptProposal` (`:56`) | attachment card / `receipt_unmatched_defensive_guard` only | **none** | **none reach post** |
+
+`*` required — the consumer returns `null` without it.
+`+` or `matched_candidate.linked_entity_id` (`ingestDocument.ts:1420-1428`).
+
+`vendor_invoice` can also emit a `proposed_attachment_card`, but attachment
+cards have nothing to post, so the row is unchanged. Non-postable actions are
+rejected at `route.ts:243`.
+
+**The two consumed sets overlap on `amount` alone.** Everything else differs.
+
+**Consumed by NEITHER path** — editing these changes the display and not the
+ledger: `tax_amount` (`tax_amount_total: '0'` hardcoded), `currency` (`'CAD'`
+hardcoded), `line_items`, `account_code`, `tax_code_id`, and `vendor_name`
+(post reads `vendor_match.vendor_id`).
+
+### A fourth consumer, with a different field source
+
+`buildRecordPaymentInputFromChildMutation` (`ingestDocument.ts:1468+`) reads
+**`child.params`**, NOT `extracted_fields` — a different source, so an override
+on extracted fields would never reach it.
+
+It is **currently unreachable from review**: `route.ts:29-32` records that
+*"born-paid BUNDLES are structurally unreachable under the Tier-A-only rebuild
+and route to manual entry (409)."* So it adds no boundary row today. Recorded
+because it is a fourth consumer with a different source, and if bundles become
+review-reachable the override design must account for it. Omitting it is
+exactly how the next reader would generalize wrongly.
+
+### What this gives the override design
+
+- Precedence needs **two field sets**, not one.
+- **`receipt` needs no override at all** — nothing it produces posts. Editable
+  fields on a receipt review screen would be theatre, the same finding as
+  `tax_amount` but for a whole document type.
+- `cited_bill_id` is a special case: it can come from the extracted field **or**
+  from `matched_candidate.linked_entity_id`, so an override there competes with
+  a *matcher result* rather than an OCR value — a different precedence question
+  from the rest.
 
 ## 8. Open questions
 
