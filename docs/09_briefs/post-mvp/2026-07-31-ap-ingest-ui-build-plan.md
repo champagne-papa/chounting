@@ -523,6 +523,59 @@ exactly how the next reader would generalize wrongly.
   a *matcher result* rather than an OCR value — a different precedence question
   from the rest.
 
+### Correction (2026-07-31): `vendor_invoice_number` is safe-write on the SINGLE-INVOICE path only
+
+The boundary table above lists `vendor_invoice_number` among the fields
+`buildPostBillInput` consumes, which reads as "safe write — post rebuilds the
+bill from it." **That is true on the single-invoice path and a double-post
+hazard on the multi-invoice (α) path.** Correcting it here rather than editing
+the row, so the original claim and its correction both stay visible — the same
+shape as the §7b two-path correction.
+
+The α path does not only *consume* this field; it **derives the ledger
+idempotency key from it**. Two mechanisms, both re-verified at the lines cited.
+
+**Mechanism 1 — the key is derived from the overridable field.**
+`childKeyFor` (`approve-post/route.ts:375-382`) reads
+`inv.extracted_fields.vendor_invoice_number` (`:376`) and returns
+`` `${caseId}:bill:${suffix}` `` (`:381`), where the suffix is that number when
+unique within the case and the α `ordinal` otherwise (`:377-380`). The result is
+used as the JE `source_external_id` (`:423`, passed at `:428`).
+
+The double-post guard is the `23505` on `idx_je_source_external`, caught as
+`DUPLICATE_SOURCE_EXTERNAL_ID` at `:431-434` — and it **only fires if the key
+repeats**. The window is named in that catch's own comment (`:436-437`):
+*"Crash between `billService.post` and the α write."* Between the successful post
+(`:427`) and `postExtractedInvoice` (`:474`) the α is still `pending`, so a
+re-approve re-attempts it (`:389-397` skips only `post_status === 'posted'`). If
+`vendor_invoice_number` is overridden inside that window, the retry computes a
+**different** key, the `23505` never fires, and the invoice **posts to the ledger
+twice**.
+
+**Mechanism 2 — an override on one invoice can change another invoice's key.**
+`numberCounts` is computed **set-wide** across the case's N α
+(`approve-post/route.ts:368-374`), and the suffix falls back to `ordinal` when a
+number is *non-unique* (`:378`). So overriding invoice B's number to collide with
+invoice A's flips **A's** key from its number to its ordinal — an invoice the
+reviewer never touched. Same consequence as mechanism 1, on a different row.
+
+Note also that `extracted_invoices.idempotency_key` is **write-once** (the
+`enforce_extracted_invoices_immutability` trigger, migration
+`20240181000000`), so the first-resolved key is durable and a later
+differently-keyed post cannot be reconciled by rewriting it.
+
+**The single-invoice path is immune.** Its key is
+`` `${caseId}:bill` `` (`approve-post/route.ts:167`) — field-independent, as is
+the payment key `` `${caseId}:payment` `` (`:204`).
+
+**Consequence for the override design.** `vendor_invoice_number` is admissible
+as a v1 override on the single-invoice path. On the α path it is **not** safe
+until the key derivation stops depending on it, and any α override work needs a
+test proving the `23505` still fires after an override — CI runs no tests
+(`docs/05_operations/ci-runs-no-tests.md`), so that guard's absence is a
+ledger-integrity hole, not a coverage gap. Treating the boundary table's
+consumed-set as a uniform safe-write list is exactly how this ships.
+
 ## 8. Open questions
 
 1. **Redirect or proxy** for the bytes endpoint (§4)? Recommendation: redirect.
