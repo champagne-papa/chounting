@@ -35,6 +35,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { StagedFileTile } from './composer/StagedFileTile';
+import { StagedFilePreview } from './composer/StagedFilePreview';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createBrowserClient } from '@supabase/ssr';
@@ -284,6 +286,9 @@ function ProductionChat({
   // Sub-Q9.d.α session-only; File objects don't serialize so
   // localStorage / IndexedDB persistence is post-v1 candidate.
   const [attachments, setAttachments] = useState<File[]>([]);
+  // Index of the staged file open in the full-size preview; null = closed.
+  // Index (not the File) so a remove that shifts the array closes cleanly.
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -858,52 +863,36 @@ function ProductionChat({
         </div>
       )}
 
-      {/* Phase 6.5 chunk 3 (Task 4): staged attachments tray. Renders
-          between transcript and form when attachments present.
-          Max-height ~144px (~4 entries at 36px each); scrollbar
-          beyond. Per-file remove button on hover. */}
+      {/* Pre-send composer tray (build plan screen 2). Tiles replace the
+          Phase 6.5 chunk 3 text rows; staging semantics unchanged — these
+          files live in browser memory and reach the pipeline only at Send. */}
       {attachments.length > 0 && (
         <div
           className="border-t border-neutral-200 bg-neutral-50 px-3 py-2"
-          style={{ maxHeight: 144, overflowY: 'auto' }}
+          style={{ maxHeight: 180, overflowY: 'auto' }}
           data-testid="agent-staged-tray"
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap gap-2">
             {attachments.map((file, idx) => (
-              <div
-                key={`${file.name}-${idx}`}
-                className="group flex h-9 items-center gap-2 rounded px-2 hover:bg-neutral-100"
-                data-testid="agent-staged-tray-entry"
-              >
-                <span className="text-xs text-neutral-400">
-                  {/^image\//.test(file.type)
-                    ? '\u{1F5BC}'
-                    : file.type === 'application/pdf'
-                    ? '\u{1F4C4}'
-                    : '\u{1F4CE}'}
-                </span>
-                <span
-                  className="flex-1 truncate text-xs text-neutral-700"
-                  title={file.name}
-                >
-                  {file.name}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {Math.round(file.size / 1024)}KB
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAttachment(idx)}
-                  className="text-neutral-400 opacity-0 hover:text-neutral-700 group-hover:opacity-100"
-                  aria-label={`Remove ${file.name}`}
-                  data-testid="agent-staged-tray-remove"
-                >
-                  ×
-                </button>
-              </div>
+              <StagedFileTile
+                key={`${file.name}-${file.size}-${idx}`}
+                file={file}
+                onRemove={() => handleRemoveAttachment(idx)}
+                onPreview={() => setPreviewIdx(idx)}
+              />
             ))}
           </div>
         </div>
+      )}
+
+      {/* Full-size preview of a staged (not-yet-uploaded) file. Guarded on
+          the index still being in range — a remove can shrink the array
+          while the overlay is open. */}
+      {previewIdx !== null && attachments[previewIdx] && (
+        <StagedFilePreview
+          file={attachments[previewIdx]}
+          onClose={() => setPreviewIdx(null)}
+        />
       )}
 
       <form
@@ -922,7 +911,7 @@ function ProductionChat({
           aria-label="Attach file"
           data-testid="agent-attach-button"
         >
-          +
+          {'\u{1F4CE}'}
         </button>
         <input
           ref={fileInputRef}
@@ -953,7 +942,11 @@ function ProductionChat({
           className="bg-emerald-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="agent-send"
         >
-          {submitting ? '...' : 'Send'}
+          {submitting
+            ? '...'
+            : attachments.length > 0
+              ? `Send ${attachments.length} ${attachments.length === 1 ? 'file' : 'files'}`
+              : 'Send'}
         </button>
       </form>
     </aside>
